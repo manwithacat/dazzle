@@ -121,6 +121,11 @@ CAP_MATRIX: list[tuple[str, dict, dict]] = [
         _t(columns=[{"key": "name", "type": "str"}]),
         {"id": "o'brien", "name": "x"},
     ),
+    (
+        "file_cell",  # #1551: file href → scoped /_dazzle/documents route
+        _t(columns=[{"key": "attachment", "type": "file"}]),
+        {"id": "rec-1", "attachment": "/files/some-uuid/download"},
+    ),
 ]
 
 _IDS = [c[0] for c in CAP_MATRIX]

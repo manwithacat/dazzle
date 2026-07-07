@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `GET /_dazzle/documents/pending/{file_id}` uploader-scoped pending-file route (#1551).
 
+### Changed
+- `GET /_dazzle/documents/{entity}/{id}/{field}/file` and `/download` now stream via `serve_bytes` (Range-aware, no buffering) (#1551).
+- File-cell emitter in the list row renderer now links to the scope-gated `/_dazzle/documents/{entity}/{id}/{field}/file` route instead of the retired ID-keyed path (#1551).
+
+### Removed
+- ID-keyed `/files/{id}/download`, `/files/{id}/stream`, and `/files/{id}/thumbnail` byte reads (retired — use the scope-gated `/_dazzle/documents` route) (#1551).
+
 ## [0.94.0] - 2026-07-07
 
 Minor release rolling up the 0.93.x arc (publishable milestone; no

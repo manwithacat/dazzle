@@ -46,7 +46,6 @@ from dazzle.http.runtime.access.gated import (
     gated_read,
 )
 from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
-from dazzle.http.runtime.file_routes import content_disposition
 from dazzle.http.runtime.http_errors import require_found
 
 logger = logging.getLogger(__name__)
@@ -54,21 +53,6 @@ logger = logging.getLogger(__name__)
 _UUID_RE = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 )
-
-# single-range form only: bytes=a-b | bytes=a- | bytes=-suffix
-_RANGE_RE = re.compile(r"^bytes=(\d*)-(\d*)$")
-
-# Content types safe to render inline from the app origin. Upload-time
-# content types are client-controlled; a stored text/html served inline
-# would run as origin HTML (nosniff does not stop an honest label).
-_INLINE_SAFE = ("application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp")
-
-
-class _Unsatisfiable:
-    """Sentinel: a well-formed but out-of-bounds Range (→ 416)."""
-
-
-_UNSATISFIABLE = _Unsatisfiable()
 
 
 def _extract_file_id(raw: Any) -> UUID | None:
@@ -90,41 +74,6 @@ def _extract_file_id(raw: Any) -> UUID | None:
         return UUID(m.group(0))
     except ValueError:  # pragma: no cover - regex guarantees shape
         return None
-
-
-# RFC 6266 disposition builder promoted to file_routes (#1551) —
-# single source for every file-serving surface (spec §18: filenames
-# are sanitized).
-_disposition = content_disposition
-
-
-def _parse_range(header: str | None, size: int) -> tuple[int, int] | _Unsatisfiable | None:
-    """Return (start, end) inclusive for a satisfiable single range,
-    the ``_UNSATISFIABLE`` sentinel for a well-formed but out-of-bounds
-    range, or ``None`` when the header is absent/invalid/multipart
-    (RFC 9110: ignore and serve the whole body)."""
-    if not header:
-        return None
-    m = _RANGE_RE.match(header.strip())
-    if not m:
-        return None
-    start_s, end_s = m.group(1), m.group(2)
-    if start_s == "" and end_s == "":
-        return None
-    if start_s == "":
-        # suffix range: last N bytes (N >= size → whole body, RFC-legal)
-        n = int(end_s)
-        if n == 0:
-            return _UNSATISFIABLE
-        start = max(0, size - n)
-        return (start, size - 1)
-    start = int(start_s)
-    if start >= size:
-        return _UNSATISFIABLE
-    end = int(end_s) if end_s else size - 1
-    if end < start:
-        return None
-    return (start, min(end, size - 1))
 
 
 async def _no_auth() -> Any:
@@ -200,17 +149,28 @@ def create_document_routes(
     specs = cedar_access_specs or {}
     auth_dep = optional_auth_dep if optional_auth_dep is not None else _no_auth
 
-    async def _resolve_bytes(
+    async def _resolve_access(
         entity: str, entity_id: str, field: str, auth_context: Any
-    ) -> tuple[bytes, Any]:
+    ) -> tuple[Any, UUID, str, str | None]:
+        """Enforce scope/permit, verify the file triple, and return
+        ``(metadata, file_id, matched_policy, uid)`` for the caller to
+        build an ``AccessDecision`` and call ``serve_bytes``.
+
+        ``matched_policy`` is:
+        - ``"cedar"``   — a Cedar access spec evaluated and allowed the read;
+        - ``"posture"`` — no spec; the app's auth-posture floor was satisfied.
+        """
         service = require_found(services.get(entity))
         try:
             eid = UUID(entity_id)
         except ValueError:
             raise HTTPException(status_code=404, detail="Not found")
 
+        uid: str | None = str(getattr(getattr(auth_context, "user", None), "id", "") or "") or None
+
         spec = specs.get(entity)
         record: Any = None
+        matched_policy: str
         if spec is not None:
             access = access_context_from(
                 auth_context=auth_context,
@@ -223,6 +183,7 @@ def create_document_routes(
                 record = await gated_read(service, access, eid)
             except RecordNotFound:
                 raise HTTPException(status_code=404, detail="Not found")
+            matched_policy = "cedar"
         else:
             # No scope rules to evaluate — but the app's auth posture
             # still applies: anonymous callers are denied exactly where
@@ -233,6 +194,7 @@ def create_document_routes(
             ):
                 raise HTTPException(status_code=404, detail="Not found")
             record = await service.execute(operation="read", id=eid)
+            matched_policy = "posture"
         record = require_found(record)
 
         raw = record.get(field) if isinstance(record, dict) else getattr(record, field, None)
@@ -249,24 +211,7 @@ def create_document_routes(
         ):
             raise HTTPException(status_code=404, detail="Not found")
 
-        try:
-            content, _ = await file_service.download(file_id)
-        except FileNotFoundError:
-            raise HTTPException(status_code=404, detail="Not found")
-        return content, metadata
-
-    def _headers(metadata: Any, kind: str) -> dict[str, str]:
-        media_type = str(metadata.content_type or "")
-        if kind == "inline" and media_type not in _INLINE_SAFE:
-            kind = "attachment"
-        return {
-            "Content-Disposition": _disposition(  # nosemgrep
-                kind, str(metadata.filename or "document")
-            ),
-            "X-Content-Type-Options": "nosniff",
-            "Accept-Ranges": "bytes",
-            "Cache-Control": "private, max-age=0",
-        }
+        return metadata, file_id, matched_policy, uid
 
     @router.get("/pending/{file_id}")
     async def pending_document(
@@ -316,25 +261,25 @@ def create_document_routes(
         request: Request,
         auth_context: Any = Depends(auth_dep),
     ) -> Response:
-        content, metadata = await _resolve_bytes(entity, entity_id, field, auth_context)
-        size = len(content)
-        rng = _parse_range(request.headers.get("range"), size)
-        headers = _headers(metadata, "inline")
-        media_type = str(metadata.content_type or "application/octet-stream")
-        if isinstance(rng, _Unsatisfiable):
-            return Response(
-                status_code=416,
-                headers={**headers, "Content-Range": f"bytes */{size}"},
-            )
-        if rng is None:
-            return Response(content=content, media_type=media_type, headers=headers)
-        start, end = rng
-        headers["Content-Range"] = f"bytes {start}-{end}/{size}"
-        return Response(
-            content=content[start : end + 1],
-            status_code=206,
-            media_type=media_type,
-            headers=headers,
+        metadata, file_id, matched_policy, uid = await _resolve_access(
+            entity, entity_id, field, auth_context
+        )
+        decision = AccessDecision(
+            user_id=uid,
+            entity=entity,
+            record_id=entity_id,
+            field=field,
+            matched_policy=matched_policy,
+            verb="read",
+        )
+        return await serve_bytes(
+            decision=decision,
+            file_service=file_service,
+            metadata=metadata,
+            file_id=file_id,
+            range_header=request.headers.get("range"),
+            disposition_kind="inline",
+            audit=getattr(request.app.state, "byte_audit", None),
         )
 
     @router.get("/{entity}/{entity_id}/{field}/download")
@@ -346,12 +291,13 @@ def create_document_routes(
         request: Request,
         auth_context: Any = Depends(auth_dep),
     ) -> Response:
-        content, metadata = await _resolve_bytes(entity, entity_id, field, auth_context)
+        metadata, file_id, matched_policy, uid = await _resolve_access(
+            entity, entity_id, field, auth_context
+        )
         if audit_logger is not None:
             # AuditLogger's real API is log_decision (there is no
             # log_event) — the call shape must fail tests on drift, so
             # only transport failures are tolerated here.
-            user = getattr(auth_context, "user", None)
             try:
                 await audit_logger.log_decision(
                     operation="document_download",
@@ -360,16 +306,28 @@ def create_document_routes(
                     decision="allow",
                     matched_policy=f"field={field} filename={metadata.filename or ''}",
                     policy_effect="allow",
-                    user_id=str(getattr(user, "id", "") or "") or None,
+                    user_id=uid,
                     request_path=str(request.url.path),
                     request_method="GET",
                 )
             except (OSError, RuntimeError):  # pragma: no cover - transport only
                 logger.warning("document_download audit failed", exc_info=True)
-        return Response(
-            content=content,
-            media_type=str(metadata.content_type or "application/octet-stream"),
-            headers=_headers(metadata, "attachment"),
+        decision = AccessDecision(
+            user_id=uid,
+            entity=entity,
+            record_id=entity_id,
+            field=field,
+            matched_policy=matched_policy,
+            verb="read",
+        )
+        return await serve_bytes(
+            decision=decision,
+            file_service=file_service,
+            metadata=metadata,
+            file_id=file_id,
+            range_header=request.headers.get("range"),
+            disposition_kind="attachment",
+            audit=getattr(request.app.state, "byte_audit", None),
         )
 
     return router

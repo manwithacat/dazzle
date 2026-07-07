@@ -46,11 +46,24 @@ class _FakeFileService:
     def __init__(self, meta: _Meta | None, content: bytes = PDF_BYTES) -> None:
         self._meta = meta
         self._content = content
+        self.read_range_calls: list[tuple[Any, int, int]] = []
 
     def get_metadata(self, file_id: Any) -> _Meta | None:
         if self._meta and str(file_id) == str(self._meta.id):
             return self._meta
         return None
+
+    async def read_range(self, file_id: Any, start: int, end: int) -> tuple[Any, _Meta | None]:
+        """Range-read used by serve_bytes — returns an async iterator + metadata."""
+        self.read_range_calls.append((file_id, start, end))
+        if not self._meta or str(file_id) != str(self._meta.id):
+            raise FileNotFoundError(file_id)
+        chunk = self._content[start : end + 1]
+
+        async def _aiter() -> Any:
+            yield chunk
+
+        return _aiter(), self._meta
 
     async def download(self, file_id: Any) -> tuple[bytes, _Meta]:
         if not self._meta or str(file_id) != str(self._meta.id):
@@ -368,3 +381,38 @@ def test_single_byte_range() -> None:
     r = _client().get(_url(), headers={"Range": "bytes=0-0"})
     assert r.status_code == 206
     assert r.content == PDF_BYTES[:1]
+
+
+# ── serve_bytes integration (TDD: must fail until Step 2) ──────────────
+
+
+def test_handler_streams_via_serve_bytes_not_download() -> None:
+    """After the document_routes repoint, the handler MUST call
+    file_service.read_range (serve_bytes' streaming path) — not the
+    buffering file_service.download call that _resolve_bytes used.
+    A Range request that returns 206 is also a proxy for 'serve_bytes
+    handled this', since the old buffering path returns 200 for all
+    satisfiable ranges."""
+    app = FastAPI()
+    fake_fs = _FakeFileService(_meta())
+    router = create_document_routes(
+        file_service=fake_fs,
+        services={
+            "Attachment": _FakeService({"id": str(ENTITY_ID), "file": f"/files/{FILE_ID}/download"})
+        },
+        cedar_access_specs={},
+        fk_graph=None,
+        optional_auth_dep=None,
+        admin_personas=None,
+    )
+    app.include_router(router)
+    client = TestClient(app)
+
+    # A satisfiable Range on /file must return 206 (serve_bytes) and
+    # must have called read_range, NOT download.
+    r = client.get(_url(), headers={"Range": "bytes=0-9"})
+    assert r.status_code == 206, f"expected 206 from serve_bytes, got {r.status_code}"
+    assert len(fake_fs.read_range_calls) == 1, (
+        "serve_bytes must call file_service.read_range, not download"
+    )
+    assert fake_fs.read_range_calls[0] == (FILE_ID, 0, 9)

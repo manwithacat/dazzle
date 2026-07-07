@@ -41,11 +41,11 @@ def _auth_dep(authenticated: bool):
     return dep
 
 
-def _metadata(content_type: str = "application/pdf") -> MagicMock:
+def _metadata() -> MagicMock:
     md = MagicMock()
     md.id = "11111111-1111-1111-1111-111111111111"
     md.filename = "doc.bin"
-    md.content_type = content_type
+    md.content_type = "application/pdf"
     md.size = 4
     md.url = "/files/x/doc.bin"
     md.thumbnail_url = None
@@ -60,20 +60,14 @@ def _make_app(
     *,
     require_auth_by_default: bool,
     authenticated: bool,
-    stream_content_type: str = "application/pdf",
     files_root: Path | None = None,
 ) -> FastAPI:
     app = FastAPI()
     file_service = MagicMock()
-    md = _metadata(stream_content_type)
+    md = _metadata()
     file_service.upload = AsyncMock(return_value=md)
     file_service.get_metadata = MagicMock(return_value=md)
     file_service.download = AsyncMock(return_value=(b"data", md))
-
-    async def _stream():
-        yield b"data"
-
-    file_service.stream = AsyncMock(return_value=(_stream(), md))
     file_service.delete = AsyncMock(return_value=True)
     file_service.get_files_for_entity = MagicMock(return_value=[])
 
@@ -107,42 +101,31 @@ class TestApiPosture:
             == 401
         )
         assert client.get(f"/files/{_FID}").status_code == 401
-        assert client.get(f"/files/{_FID}/download").status_code == 401
-        assert client.get(f"/files/{_FID}/stream").status_code == 401
-        assert client.get(f"/files/{_FID}/thumbnail").status_code == 401
         assert client.delete(f"/files/{_FID}").status_code == 401
         assert client.get("/files/entity/Task/abc").status_code == 401
 
     def test_authenticated_caller_allowed(self) -> None:
         client = TestClient(_make_app(require_auth_by_default=True, authenticated=True))
         assert client.get(f"/files/{_FID}").status_code == 200
-        assert client.get(f"/files/{_FID}/download").status_code == 200
 
     def test_authless_app_keeps_anonymous_access(self) -> None:
         client = TestClient(_make_app(require_auth_by_default=False, authenticated=False))
         assert client.get(f"/files/{_FID}").status_code == 200
 
+    def test_retired_byte_routes_return_404(self) -> None:
+        """ID-keyed byte reads are retired (#1551).
+        Use /_dazzle/documents/{entity}/{id}/{field}/file instead."""
+        client = TestClient(_make_app(require_auth_by_default=False, authenticated=True))
+        assert client.get(f"/files/{_FID}/download").status_code == 404
+        assert client.get(f"/files/{_FID}/stream").status_code == 404
+        assert client.get(f"/files/{_FID}/thumbnail").status_code == 404
+
 
 class TestInlineSafelist:
-    def test_stream_serves_unsafe_type_as_attachment_with_nosniff(self) -> None:
-        client = TestClient(
-            _make_app(
-                require_auth_by_default=False,
-                authenticated=False,
-                stream_content_type="text/html",
-            )
-        )
-        r = client.get(f"/files/{_FID}/stream")
-        assert r.status_code == 200
-        assert r.headers["content-disposition"].startswith("attachment")
-        assert r.headers["x-content-type-options"] == "nosniff"
-
-    def test_stream_keeps_pdf_inline(self) -> None:
+    def test_retired_stream_route_is_gone(self) -> None:
+        """/files/{id}/stream is retired (#1551) — 404 regardless of content-type."""
         client = TestClient(_make_app(require_auth_by_default=False, authenticated=False))
-        r = client.get(f"/files/{_FID}/stream")
-        assert r.status_code == 200
-        assert r.headers["content-disposition"].startswith("inline")
-        assert r.headers["x-content-type-options"] == "nosniff"
+        assert client.get(f"/files/{_FID}/stream").status_code == 404
 
 
 class TestStaticPath:

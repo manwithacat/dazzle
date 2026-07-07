@@ -11,7 +11,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse
 
 import dazzle.http.runtime.rate_limit as _rl
 
@@ -236,120 +236,6 @@ async def _get_file_info(deps: _FileDeps, file_id: str) -> dict[str, Any]:
     }
 
 
-async def _download_file(deps: _FileDeps, file_id: str) -> Any:
-    """Download file content."""
-    try:
-        uuid_id = UUID(file_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid file ID")
-
-    try:
-        content, metadata = await deps.file_service.download(uuid_id)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="File not found")
-
-    return Response(
-        content=content,
-        media_type=metadata.content_type,
-        headers={
-            "Content-Disposition": content_disposition(  # nosemgrep
-                "attachment", metadata.filename
-            ),
-            "Content-Length": str(metadata.size),
-            "X-Content-Type-Options": "nosniff",
-        },
-    )
-
-
-async def _stream_file(deps: _FileDeps, file_id: str) -> Any:
-    """Stream file content."""
-    try:
-        uuid_id = UUID(file_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid file ID")
-
-    try:
-        metadata = deps.file_service.get_metadata(uuid_id)
-    except Exception as e:
-        logger.error("Failed to read file metadata for %s: %s", file_id, e)
-        raise HTTPException(status_code=500, detail="Failed to read file metadata")
-    if not metadata:
-        raise HTTPException(status_code=404, detail="File not found")
-
-    try:
-        stream, _ = await deps.file_service.stream(uuid_id)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="File not found")
-    except Exception as e:
-        logger.error("Failed to stream file %s: %s", file_id, e)
-        raise HTTPException(status_code=500, detail="Failed to stream file")
-
-    kind = "inline" if metadata.content_type in INLINE_SAFE_CONTENT_TYPES else "attachment"
-    return StreamingResponse(
-        stream,
-        media_type=metadata.content_type,
-        headers={
-            "Content-Disposition": content_disposition(kind, metadata.filename),  # nosemgrep
-            "X-Content-Type-Options": "nosniff",
-        },
-    )
-
-
-async def _get_thumbnail(
-    deps: _FileDeps,
-    file_id: str,
-    width: int = 200,
-    height: int = 200,
-) -> Any:
-    """Get thumbnail for an image.
-
-    Generates on-the-fly if not cached.
-    """
-    from .image_processor import ImageProcessor, ThumbnailService
-
-    thumbnail_service = ThumbnailService()
-
-    try:
-        uuid_id = UUID(file_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid file ID")
-
-    try:
-        content, metadata = await deps.file_service.download(uuid_id)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="File not found")
-
-    if not thumbnail_service.should_generate(metadata.content_type):
-        raise HTTPException(
-            status_code=400,
-            detail="Thumbnails not supported for this file type",
-        )
-
-    if not ImageProcessor.is_available():
-        raise HTTPException(
-            status_code=501,
-            detail="Image processing not available (Pillow not installed)",
-        )
-
-    try:
-        thumbnail = thumbnail_service.generate(content, width, height)
-    except Exception as e:
-        logger.error("Thumbnail generation failed: %s", e)
-        raise HTTPException(
-            status_code=500,
-            detail="Thumbnail generation failed",
-        )
-
-    return Response(
-        content=thumbnail,
-        media_type="image/jpeg",
-        headers={
-            "Content-Disposition": f'inline; filename="thumb_{metadata.filename}"',  # nosemgrep
-            "Cache-Control": "public, max-age=86400",
-        },
-    )
-
-
 async def _delete_file(deps: _FileDeps, file_id: str) -> dict[str, Any]:
     """Delete a file."""
     try:
@@ -419,10 +305,13 @@ def create_file_routes(
 
     Routes:
         POST /files/upload - Upload a file
-        GET /files/{file_id} - Get file info
-        GET /files/{file_id}/download - Download file
-        GET /files/{file_id}/thumbnail - Get thumbnail
+        GET /files/{file_id} - Get file metadata (JSON, not bytes)
         DELETE /files/{file_id} - Delete file
+
+    Retired routes (scope-gated replacement: /_dazzle/documents/{entity}/{id}/{field}/file):
+        GET /files/{file_id}/download - REMOVED (#1551)
+        GET /files/{file_id}/stream   - REMOVED (#1551)
+        GET /files/{file_id}/thumbnail - REMOVED (#1551)
 
     Args:
         app: FastAPI application
@@ -470,38 +359,6 @@ def create_file_routes(
     async def get_file_info(file_id: str, auth_context: Any = Depends(auth_dep)) -> dict[str, Any]:
         _require_posture(deps, auth_context)
         return await _get_file_info(deps, file_id)
-
-    # Download — byte route, download_limit (#1551 item 4)
-    @app.get(f"{prefix}/{{file_id}}/download")  # nosemgrep
-    @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
-    async def download_file(
-        request: Request, file_id: str, auth_context: Any = Depends(auth_dep)
-    ) -> Any:
-        _require_posture(deps, auth_context)
-        return await _download_file(deps, file_id)
-
-    # Stream — byte route, download_limit (#1551 item 4)
-    @app.get(f"{prefix}/{{file_id}}/stream")  # nosemgrep
-    @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
-    async def stream_file(
-        request: Request, file_id: str, auth_context: Any = Depends(auth_dep)
-    ) -> Any:
-        _require_posture(deps, auth_context)
-        return await _stream_file(deps, file_id)
-
-    # Thumbnail — byte route AND on-the-fly image generation (CPU),
-    # download_limit (#1551 item 4)
-    @app.get(f"{prefix}/{{file_id}}/thumbnail")  # nosemgrep
-    @_rl.limits.limiter.limit(_rl.limits.download_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
-    async def get_thumbnail(
-        request: Request,
-        file_id: str,
-        width: int = Query(200, ge=10, le=1000),
-        height: int = Query(200, ge=10, le=1000),
-        auth_context: Any = Depends(auth_dep),  # noqa: B008
-    ) -> Any:
-        _require_posture(deps, auth_context)
-        return await _get_thumbnail(deps, file_id, width, height)
 
     # Delete
     @app.delete(f"{prefix}/{{file_id}}")  # nosemgrep

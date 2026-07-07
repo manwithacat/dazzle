@@ -163,7 +163,14 @@ def _json_summary(value: Any, *, max_pairs: int = 4, length: int = 80) -> str:
     return text[:length] + "…" if len(text) > length else text
 
 
-def _render_cell_display(col: dict[str, Any], value: Any, *, truncate: bool = True) -> str:
+def _render_cell_display(
+    col: dict[str, Any],
+    value: Any,
+    *,
+    truncate: bool = True,
+    entity_name: str = "",
+    record_id: str = "",
+) -> str:
     """Render the display-mode value for one table cell.
 
     Mirrors the type-dispatch in `table_rows.html` (badge / bool /
@@ -237,11 +244,19 @@ def _render_cell_display(col: dict[str, Any], value: Any, *, truncate: bool = Tr
             return "—"
         return _html_mod.escape(f"{value}%", quote=False)
     if col_type == "file":
-        # ADR-0049 Phase 2: file fields render a download link (detail-view
-        # parity). Files aren't typical list columns, so this is additive.
+        # ADR-0049 Phase 2 / #1551: file fields render a download link via the
+        # scope-gated document route. ``entity_name`` + ``record_id`` are
+        # threaded from the row caller (``_render_table_row``); callers that
+        # don't have that context (e.g. the detail-view seam) fall back to the
+        # raw stored value as the href.
         if value in (None, "", "—"):
             return "—"
-        href = _html_mod.escape(str(value), quote=True)
+        if entity_name and record_id:
+            col_key = str(col.get("key", ""))
+            url = f"/_dazzle/documents/{entity_name}/{record_id}/{col_key}/file"
+            href = _html_mod.escape(url, quote=True)
+        else:
+            href = _html_mod.escape(str(value), quote=True)
         label = _html_mod.escape(str(_basename_or_url_filter(value)), quote=False)
         return (
             f'<a href="{href}" target="_blank" rel="noopener" class="dz-detail-file-link">'
@@ -413,9 +428,13 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             if explicit:
                 display_html = _html_mod.escape(str(explicit), quote=False)
             else:
-                display_html = _render_cell_display(col, cell_value)
+                display_html = _render_cell_display(
+                    col, cell_value, entity_name=entity_name, record_id=item_id
+                )
         else:
-            display_html = _render_cell_display(col, cell_value)
+            display_html = _render_cell_display(
+                col, cell_value, entity_name=entity_name, record_id=item_id
+            )
 
         if col_key in inline_editable:
             # Convergence C2.3: the CELL owns its edit affordance — one seam
