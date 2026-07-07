@@ -20,6 +20,7 @@ from dazzle.core.capabilities import resolve_capabilities
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 from dazzle.core.environment import is_production
 from dazzle.core.ir import AppSpec, EntitySpec, TenancyMode
+from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.manifest import load_manifest
 from dazzle.core.strings import entity_slug as _entity_slug
 from dazzle.core.validator import validate_storage_refs
@@ -1914,6 +1915,38 @@ class DazzleBackendApp:
         if self._appspec and self._appspec.tenancy:
             _admin_personas = list(self._appspec.tenancy.admin_personas)
 
+        # #1551: early-construct the FileService so the route generator can
+        # wire attach-time triple verification into create/update handlers.
+        # _mount_file_routes (called later) skips reconstruction when the
+        # service is already set and proceeds directly to route mounting.
+        # This must happen before generate_all_routes because handler
+        # factories capture file_service at construction time (closures).
+        _entity_file_fields: dict[str, list[str]] = {}
+        if self._enable_files and self._appspec:
+            from dazzle.http.runtime.file_storage import (
+                FileMetadataStore,
+                FileValidator,
+                LocalStorageBackend,
+            )
+
+            _storage = LocalStorageBackend(self._files_path, "/files")
+            _metadata_store = FileMetadataStore(database_url=self._database_url)
+            _validator = FileValidator()
+            self._file_service = FileService(_storage, _metadata_store, _validator)
+
+            for _ent in self._appspec.domain.entities:
+                _ff = [f.name for f in _ent.fields if f.type.kind == FieldTypeKind.FILE]
+                if _ff:
+                    _entity_file_fields[_ent.name] = _ff
+
+        # #1551 review fix — wire byte_audit whenever document routes will be
+        # mounted, NOT only when _has_auditable_entities. An app with file
+        # fields but no scope:/permit:/audit: declarations (the "posture" access
+        # path) serves stored bytes with byte_audit = None → silently unaudited.
+        # _wire_byte_audit reuses audit_logger if already constructed above;
+        # otherwise it builds one from the same inputs when a DB is present.
+        self._wire_byte_audit(audit_logger)
+
         route_generator = RouteGenerator(
             security_profile=self._security_profile,
             services=self._services,
@@ -1941,6 +1974,8 @@ class DazzleBackendApp:
             entity_storage_bindings=entity_storage_bindings,
             entity_soft_delete={e.name: e.soft_delete for e in self._entities},
             admin_personas=_admin_personas,
+            file_service=self._file_service,
+            entity_file_fields=_entity_file_fields or None,
         )
 
         # Cycle 249 (EX-049): populate persona_backed_entities from appspec
@@ -2178,16 +2213,22 @@ class DazzleBackendApp:
         _files_auth_posture = self._enable_auth and not self._enable_test_mode
         # File uploads
         if self._enable_files:
-            from dazzle.http.runtime.file_storage import (
-                FileMetadataStore,
-                FileValidator,
-                LocalStorageBackend,
-            )
+            # #1551: the FileService may already be constructed (early-init in
+            # _setup_routes for route-generator wiring). Reuse it if so; build
+            # it now if not (e.g. when _mount_file_routes is called standalone
+            # in tests or subsystem contexts that skip _setup_routes).
+            if self._file_service is None:
+                from dazzle.http.runtime.file_storage import (
+                    FileMetadataStore,
+                    FileValidator,
+                    LocalStorageBackend,
+                )
 
-            storage = LocalStorageBackend(self._files_path, "/files")
-            metadata_store = FileMetadataStore(database_url=self._database_url)
-            validator = FileValidator()
-            self._file_service = FileService(storage, metadata_store, validator)
+                storage = LocalStorageBackend(self._files_path, "/files")
+                metadata_store = FileMetadataStore(database_url=self._database_url)
+                validator = FileValidator()
+                self._file_service = FileService(storage, metadata_store, validator)
+            # else: already early-constructed in _setup_routes (no reconstruction needed)
 
             # Profile-based upload size limits (v1.0.0)
             _upload_limits = {"basic": 50, "standard": 10, "strict": 5}
@@ -2196,8 +2237,6 @@ class DazzleBackendApp:
             # Per-entity/field size overrides from DSL (v0.39.0, #436)
             _field_size_overrides: dict[tuple[str, str], int] = {}
             if self._appspec:
-                from dazzle.core.ir.fields import FieldTypeKind
-
                 for _ent in self._appspec.domain.entities:
                     for _f in _ent.fields:
                         if _f.type.kind == FieldTypeKind.FILE and _f.type.max_size:
@@ -2305,6 +2344,41 @@ class DazzleBackendApp:
                 # routes module itself is stdlib-only; an ImportError
                 # here means the package is broken, not opted out.
                 logger.exception("Failed to import dazzle.signing.routes")
+
+    def _wire_byte_audit(self, audit_logger: "AuditLogger | None") -> None:
+        """Set app.state.byte_audit whenever stored bytes can be served.
+
+        The predicate is ``self._file_service is not None`` — the same
+        condition that gates ``_mount_document_routes``.  This covers apps
+        that have file fields but no RBAC/audit declarations (the "posture"
+        access path): without this fix those apps would serve bytes with
+        ``byte_audit = None`` → silently unaudited first-access.
+
+        When ``audit_logger`` is already constructed (``_has_auditable_entities``
+        was True) it is reused.  Otherwise a fresh ``AuditLogger`` is built
+        from the same inputs, provided a database is configured.  If no database
+        is available (a fileless / DB-less test rig) this is a no-op —
+        ``serve_bytes`` already handles ``audit=None`` as a permitted no-op.
+
+        Must be called in ``_setup_routes`` after ``self._file_service`` is
+        potentially constructed (i.e. after the early-init block at #1551).
+        """
+        if not getattr(self, "_file_service", None):
+            return
+        _logger = audit_logger
+        if _logger is None and self._database_url:
+            from dazzle.http.runtime.audit_log import AuditLogger
+
+            _logger = AuditLogger(
+                database_url=self._database_url,
+                audit_integrity=self._config.audit_integrity,
+            )
+            self._audit_logger = _logger
+        if _logger is not None:
+            assert self._app is not None
+            from dazzle.http.runtime.byte_serving import ByteAudit
+
+            self._app.state.byte_audit = ByteAudit(_logger)
 
     def _mount_document_routes(
         self, cedar_access_specs: Any, _fk_graph: Any, optional_auth_dep: Any, _admin_personas: Any

@@ -10,7 +10,7 @@
 # lens. Adding/removing a route, changing its path template, HTTP
 # method, handler name, or signature all fire the drift gate.
 
-# Counts: 57 routes across 18 modules
+# Counts: 58 routes across 18 modules
 
 module: atomic_flow_routes
   POST | /api/atomic/{flow_name}
@@ -45,6 +45,8 @@ module: consent_routes
     handler: get_consent_state(request: Request) -> JSONResponse
 
 module: document_routes
+  GET | /pending/{file_id}
+    handler: pending_document(file_id: str, request: Request, auth_context: Any = Depends(auth_dep)) -> Response
   GET | /{entity}/{entity_id}/{field}/download
     handler: document_download(entity: str, entity_id: str, field: str, request: Request, auth_context: Any = Depends(auth_dep)) -> Response
   GET | /{entity}/{entity_id}/{field}/file

@@ -616,9 +616,10 @@
   },
   {
     "signature": "5d4130261ee3008b68e9fddfe088586a",
-    "count": 2,
+    "count": 3,
     "names": [
       "dazzle/http/runtime/device_registry.py::ensure_device_tables",
+      "dazzle/http/runtime/file_storage.py::ensure_file_storage_tables",
       "dazzle/http/runtime/token_store.py::ensure_refresh_token_tables"
     ]
   },

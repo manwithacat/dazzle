@@ -102,4 +102,13 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:7b2cdf52c19c9f32e3b0ca3a173ae751318fee28d95f73185d6e9f27e7e8dc3e -->
+## Compliance posture
+
+Design assets attached to records are served through an entity-scoped, audited
+byte-access boundary: bytes are released only when the same rule that governs
+the record allows it, and each access is recorded. A static proof holds every
+byte-serving route to that boundary, so no new route can stream asset bytes
+outside it without being explicitly listed. (Verify:
+`dazzle rbac byte-routes --strict`.)
+
+<!-- dazzle-spec-brief: sha256:2f77d032a1a05d532bb9a318efd11054af2c9a581da603116ef895fcffa4cb3c -->

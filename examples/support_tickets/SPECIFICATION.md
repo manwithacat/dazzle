@@ -119,4 +119,13 @@ keeps the product fast, accessible, and simple to operate (verify:
 record type, with escalation tiers — the commitment is explicit and
 inspectable rather than a support-page promise (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:0db5f008f508d914fe766b135c51015d2e627032ec3dd770c4891e87a513f245 -->
+## Compliance posture
+
+Signed waiver documents are served through an entity-scoped, audited
+byte-access boundary: bytes are released only when the same rule that governs
+the associated ticket allows it, and each access is recorded. A static proof
+holds every byte-serving route to that boundary, so no new route can stream
+document bytes outside it without being explicitly listed (verify:
+`dazzle rbac byte-routes --strict`).
+
+<!-- dazzle-spec-brief: sha256:085292f77eaacdac1cbc7077d65d228aa43b21bcef5ecab90fca7b25957b4282 -->

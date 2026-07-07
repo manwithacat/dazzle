@@ -48,6 +48,9 @@ class FileMetadata(BaseModel):
     entity_id: str | None = Field(default=None, description="Associated record ID")
     field_name: str | None = Field(default=None, description="Field name")
     thumbnail_key: str | None = Field(default=None, description="Thumbnail storage key")
+    uploaded_by: str | None = Field(
+        default=None, description="Session user id that uploaded this file (#1551)"
+    )
     created_at: datetime = Field(description="Upload timestamp")
     url: str = Field(description="Public URL")
     thumbnail_url: str | None = Field(default=None, description="Thumbnail URL")
@@ -114,6 +117,19 @@ class StorageBackend(ABC):
             File content in chunks
         """
         ...
+
+    @abstractmethod
+    async def read_range(
+        self, storage_key: str, start: int, end: int | None
+    ) -> AsyncIterator[bytes]:
+        """Yield bytes [start, end] inclusive; end=None → to EOF.
+
+        Absolute offsets — the caller (serve_bytes) resolves suffix/open
+        ranges against the known size before calling. Raises
+        FileNotFoundError if the object is absent.
+        """
+        ...
+        yield b""  # pragma: no cover — abstract
 
     @abstractmethod
     async def delete(self, storage_key: str) -> bool:
@@ -230,6 +246,25 @@ class LocalStorageBackend(StorageBackend):
                 chunk = f.read(chunk_size)
                 if not chunk:
                     break
+                yield chunk
+
+    async def read_range(
+        self, storage_key: str, start: int, end: int | None
+    ) -> AsyncIterator[bytes]:
+        full_path = self.base_path / storage_key
+        if not full_path.exists():
+            raise FileNotFoundError(f"File not found: {storage_key}")
+        chunk_size = 64 * 1024
+        remaining = None if end is None else (end - start + 1)
+        with open(full_path, "rb") as f:
+            f.seek(start)
+            while remaining is None or remaining > 0:
+                want = chunk_size if remaining is None else min(chunk_size, remaining)
+                chunk = f.read(want)
+                if not chunk:
+                    break
+                if remaining is not None:
+                    remaining -= len(chunk)
                 yield chunk
 
     async def delete(self, storage_key: str) -> bool:
@@ -380,6 +415,21 @@ class S3StorageBackend(StorageBackend):
                 async for chunk in stream.iter_chunks():
                     yield chunk
 
+    async def read_range(
+        self, storage_key: str, start: int, end: int | None
+    ) -> AsyncIterator[bytes]:
+        try:
+            import aioboto3
+        except ImportError:
+            raise ImportError("aioboto3 is required for S3 storage")
+        rng = f"bytes={start}-" if end is None else f"bytes={start}-{end}"
+        session = aioboto3.Session()
+        async with session.client("s3", **self._get_client_config()) as s3:
+            response = await s3.get_object(Bucket=self.bucket, Key=storage_key, Range=rng)
+            async with response["Body"] as stream:
+                async for chunk in stream.iter_chunks():
+                    yield chunk
+
     async def delete(self, storage_key: str) -> bool:
         """Delete file from S3."""
         try:
@@ -460,6 +510,7 @@ def ensure_file_storage_tables(cur: Any) -> None:
             entity_id TEXT,
             field_name TEXT,
             thumbnail_key TEXT,
+            uploaded_by TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT
         )
@@ -472,6 +523,9 @@ def ensure_file_storage_tables(cur: Any) -> None:
         CREATE INDEX IF NOT EXISTS idx_files_field
         ON dazzle_files(entity_name, field_name)
     """)
+    # #1551: additive column for existing tables (raw-DDL store, not Alembic).
+    # IF NOT EXISTS avoids a transaction-aborting duplicate-column error on PG.
+    cur.execute("ALTER TABLE dazzle_files ADD COLUMN IF NOT EXISTS uploaded_by TEXT")
 
 
 class FileMetadataStore:
@@ -537,6 +591,7 @@ class FileMetadataStore:
             metadata.entity_id,
             metadata.field_name,
             metadata.thumbnail_key,
+            metadata.uploaded_by,
             metadata.created_at.isoformat(),
         )
 
@@ -547,8 +602,8 @@ class FileMetadataStore:
                 """
                 INSERT INTO dazzle_files
                 (id, filename, content_type, size, storage_key, storage_backend,
-                 entity_name, entity_id, field_name, thumbnail_key, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 entity_name, entity_id, field_name, thumbnail_key, uploaded_by, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
                     filename = EXCLUDED.filename,
                     content_type = EXCLUDED.content_type,
@@ -559,6 +614,7 @@ class FileMetadataStore:
                     entity_id = EXCLUDED.entity_id,
                     field_name = EXCLUDED.field_name,
                     thumbnail_key = EXCLUDED.thumbnail_key,
+                    uploaded_by = EXCLUDED.uploaded_by,
                     updated_at = EXCLUDED.created_at
                 """,
                 params,
@@ -693,6 +749,7 @@ class FileMetadataStore:
             entity_id=row.get("entity_id"),
             field_name=row.get("field_name"),
             thumbnail_key=row.get("thumbnail_key"),
+            uploaded_by=row.get("uploaded_by"),  # None for legacy rows missing the column
             created_at=datetime.fromisoformat(row["created_at"]),
             url=url,
             thumbnail_url=thumbnail_url,
@@ -922,6 +979,7 @@ class FileService:
         entity_id: str | None = None,
         field_name: str | None = None,
         path_prefix: str = "",
+        uploaded_by: str | None = None,
     ) -> FileMetadata:
         """
         Upload a file.
@@ -934,6 +992,7 @@ class FileService:
             entity_id: Associated record ID
             field_name: Field name
             path_prefix: Optional storage path prefix
+            uploaded_by: Session user id sourced from auth_context (#1551)
 
         Returns:
             FileMetadata for the uploaded file
@@ -953,16 +1012,17 @@ class FileService:
         file.seek(0)
         metadata = await self.storage.store(file, filename, content_type, path_prefix)
 
-        # Update with entity association
-        if entity_name or entity_id or field_name:
-            metadata = FileMetadata(
-                **{
-                    **metadata.model_dump(),
-                    "entity_name": entity_name,
-                    "entity_id": entity_id,
-                    "field_name": field_name,
-                }
-            )
+        # Merge entity association and session-sourced uploaded_by (#1551).
+        # Always reconstruct so both fields (entity + uploader) are set correctly.
+        metadata = FileMetadata(
+            **{
+                **metadata.model_dump(),
+                "entity_name": entity_name,
+                "entity_id": entity_id,
+                "field_name": field_name,
+                "uploaded_by": uploaded_by,
+            }
+        )
 
         # Save metadata
         self.metadata_store.save(metadata)
@@ -1005,6 +1065,40 @@ class FileService:
 
         stream = self.storage.stream(metadata.storage_key)
         return stream, metadata
+
+    async def read_range(
+        self, file_id: UUID | str, start: int, end: int | None
+    ) -> tuple[AsyncIterator[bytes], FileMetadata]:
+        """Return a byte-range stream and the file metadata.
+
+        Args:
+            file_id: File ID
+            start: Absolute start offset (inclusive)
+            end: Absolute end offset (inclusive); None means to EOF
+
+        Returns:
+            Tuple of (async byte iterator, FileMetadata)
+
+        Raises:
+            FileNotFoundError: If the file record is not found
+            RuntimeError: If local disk size diverges from metadata size
+        """
+        metadata = self.metadata_store.get(file_id)
+        if not metadata:
+            raise FileNotFoundError(f"File not found: {file_id}")
+        # size-drift guard (LOCAL only — S3 HEAD would cost a round-trip; the
+        # metadata size is authoritative for Content-Length, and a local
+        # metadata/disk mismatch is a served-truncation hazard).
+        if metadata.storage_backend == "local":
+            from pathlib import Path
+
+            disk = Path(self.storage.base_path) / metadata.storage_key  # type: ignore[attr-defined]
+            if disk.exists() and disk.stat().st_size != metadata.size:
+                raise RuntimeError(
+                    f"size drift for {file_id}: metadata {metadata.size} != disk "
+                    f"{disk.stat().st_size} — refusing to serve a wrong Content-Length"
+                )
+        return self.storage.read_range(metadata.storage_key, start, end), metadata
 
     async def delete(self, file_id: UUID | str) -> bool:
         """
