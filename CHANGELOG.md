@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.121] - 2026-07-07
+
+### Added
+- **Tier A2 — the 2FA chrome is an HM Hyperpart** (HM 0.1.51 → 0.1.52):
+  the live `dz-auth-*` family (setup/settings/challenge cards, big-digit
+  code input, QR container, recovery alert/grid/pills, factor status
+  rows) promoted as `two-factor` with a gallery entry. Zero markup/JS
+  changes — the 2FA scaffolds' stable IDs mean the classes moved free of
+  lockstep. Three latent mismatches fixed in the move: the card
+  title/subtitle rules were named for classes the scaffold never emitted
+  (headings rendered unstyled), the QR `<img>` is classless (now styled
+  via its container), and `dz-auth-page` gains centering for standalone
+  consumers.
+- **CSS comment-bomb gates, both sides** (new
+  `test_css_parse_integrity.py` in the HM package and tests/unit): after
+  browser-faithful comment stripping, no stray `*/` and balanced braces.
+  This is the SECOND `*/`-in-a-comment incident (F3 ate the
+  command-palette overlay; this slice's review caught three more
+  swallowed rules — `.dz-auth-page`, `.dz-auth-success`, and
+  `.dz-loading-spinner` — before ship). Substring gates cannot see this
+  class; the parse gate can.
+
+### Removed
+- Dead auth CSS (zero producers): product/title/subtitle/link-muted/
+  link-button family and the never-matching qr/qr-image/qr-secret rules.
+
+### Agent Guidance
+- **The comment-bomb gate now enforces what the F3 guidance asked** —
+  never write `*/` inside a CSS comment; the gate fails the build if you
+  do.
+- Follow-ups filed: #1549 (site-sections auth block collides with the
+  2FA chrome in-product — the big-digit input loses its font there),
+  #1550 (no `.hidden` utility exists; the 2FA scaffolds' hidden sections
+  are always visible — convert to the native `hidden` attribute).
+
 ## [0.93.120] - 2026-07-07
 
 ### Added

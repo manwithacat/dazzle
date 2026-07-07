@@ -83,6 +83,7 @@ CSS_SOURCES = [
     ("components", "components/date-range.css"),
     ("components", "components/search-select.css"),
     ("components", "components/profile-card.css"),
+    ("components", "components/two-factor.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
 ]

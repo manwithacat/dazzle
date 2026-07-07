@@ -8214,3 +8214,269 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 .dz-tree-flat-item:last-child {
   border-block-end: 0;
 }
+/* --- hatchi-maxchi/components/two-factor.css --- */
+/* HYPERPART: two-factor */
+/* Promoted from Dazzle fragments.css (Tier A2, fleet convergence) —
+ * the 2FA setup/settings/challenge chrome (two_factor_views.py
+ * scaffolds + the dz-2fa-*.js-created rows/pills). Deltas from the
+ * source, each fixing a latent mismatch:
+ *   - .dz-auth-card-title/-subtitle: the scaffolds emit these names,
+ *     but the rules were named .dz-auth-title/-subtitle (never
+ *     matched — the 2FA card heading rendered unstyled). Renamed to
+ *     the emitted classes.
+ *   - .dz-auth-qr-container img: the setup JS appends a CLASSLESS
+ *     <img>; the old .dz-auth-qr-image rule never matched. Restyled
+ *     via the container.
+ *   - .dz-auth-page: gains centering for standalone HM consumers. In
+ *     Dazzle's own bundle the later site-sections.css gradient rule
+ *     still wins (same layer, later) — the site-sections auth-block
+ *     collision is filed as #1549.
+ * The dead subset (product/title/subtitle/link-muted/link-button and pseudo-states /
+ * qr/qr-image/qr-secret) was deleted at source. */
+
+.dz-auth-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+  background: var(--colour-bg);
+}
+
+.dz-auth-card-title {
+  text-align: center;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin-block-end: var(--space-lg);
+}
+
+.dz-auth-card-subtitle {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block: calc(var(--space-md) * -0.5) var(--space-md);
+}
+
+.dz-auth-qr-container img {
+  inline-size: 12rem;
+  block-size: 12rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+}
+
+.dz-auth-card {
+  width: 100%;
+  max-width: 24rem;
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-lg);
+}
+
+.dz-auth-error {
+  display: none;  /* gated by JS via classList.remove('hidden') */
+  flex-direction: row;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin-block-end: var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-danger);
+  background: color-mix(in oklch, var(--colour-danger) 8%, transparent);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-auth-error:not(.hidden) {
+  display: flex;
+}
+
+/* Success alert — mirror of .dz-auth-error but brand-toned. Used by
+ * the forgot-password flow's "email sent" confirmation. */
+.dz-auth-success {
+  display: none;
+  flex-direction: row;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin-block-end: var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-brand);
+  background: color-mix(in oklch, var(--colour-brand) 8%, transparent);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-auth-success:not(.hidden) {
+  display: flex;
+}
+
+.dz-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.dz-auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dz-auth-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-auth-submit {
+  inline-size: 100%;
+  margin-block-start: var(--space-md);
+  block-size: 2.25rem;
+}
+
+.dz-auth-input-code {
+  inline-size: 100%;
+  block-size: 2.5rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  color: var(--colour-text);
+  font-size: 1.25rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.4em;
+  text-align: center;
+  transition: box-shadow var(--duration-base) var(--ease-out),
+              border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-auth-input-code::placeholder {
+  color: var(--colour-text-muted);
+  letter-spacing: 0.4em;
+}
+
+.dz-auth-input-code:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+.dz-auth-section-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin-block-end: 0.25rem;
+}
+
+.dz-auth-section-body {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block-end: var(--space-md);
+}
+
+.dz-auth-qr-container {
+  display: flex;
+  justify-content: center;
+  margin-block: var(--space-md);
+}
+
+.dz-auth-secret-inline {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.6875rem;
+  color: var(--colour-text);
+  background: var(--colour-bg);
+  padding-inline: 0.25rem;
+  padding-block: 0.125rem;
+  border-radius: var(--radius-xs, 0.1875rem);
+}
+
+.dz-auth-hr {
+  border: 0;
+  border-block-start: 1px solid var(--colour-border);
+  margin-block: var(--space-xl);
+}
+
+.dz-auth-recovery-alert {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-bg);
+  padding: var(--space-md);
+}
+
+.dz-auth-recovery-alert-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+}
+
+.dz-auth-recovery-alert-body {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.25rem;
+}
+
+.dz-auth-recovery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+  margin-block-start: var(--space-md);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+}
+
+.dz-auth-recovery-pill {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-sm);
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--colour-text);
+}
+
+.dz-auth-back-link {
+  display: block;
+  inline-size: 100%;
+  block-size: 2.25rem;
+  line-height: 2.25rem;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  text-decoration: none;
+  margin-block-start: var(--space-xl);
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.dz-auth-back-link:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.dz-auth-status-loading {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin-block-start: var(--space-sm);
+}
+
+.dz-auth-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-block: var(--space-md);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-auth-status-row.is-last {
+  border-block-end: 0;
+}
+
+.dz-auth-status-label {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}

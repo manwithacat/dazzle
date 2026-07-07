@@ -1045,6 +1045,65 @@ HYPERPARTS: list[Hyperpart] = [
         composes=("field",),
     ),
     Hyperpart(
+        "two-factor",
+        "Two-factor panel",
+        "Forms",
+        "The 2FA enrolment/settings card: QR + manual secret, the "
+        "big-digit code input, recovery-code grid, and factor status "
+        "rows.",
+        '<div class="dz-auth-card hm-measure">'
+        '<h1 class="dz-auth-card-title">Set Up 2FA</h1>'
+        '<p class="dz-auth-card-subtitle">Aurora Ops</p>'
+        '<h2 class="dz-auth-section-title">Authenticator App</h2>'
+        '<p class="dz-auth-section-body">Scan this QR code with your '
+        "authenticator app.</p>"
+        '<div class="dz-auth-qr-container">'
+        '<button class="dz-button" data-dz-variant="outline">Generate QR '
+        "Code</button></div>"
+        '<p class="dz-auth-section-body">Or enter the secret manually: '
+        '<code class="dz-auth-secret-inline">JBSW Y3DP EHPK 3PXP</code></p>'
+        '<form class="dz-auth-form">'
+        '<div class="dz-auth-field">'
+        '<label for="hm-2fa-code" class="dz-auth-label">Enter code from app</label>'
+        '<input type="text" id="hm-2fa-code" inputmode="numeric" '
+        'pattern="[0-9]*" maxlength="6" placeholder="000000" '
+        'class="dz-auth-input-code">'
+        "</div>"
+        '<button type="submit" class="dz-button dz-auth-submit" '
+        'data-dz-variant="primary">Verify and Enable</button>'
+        "</form>"
+        '<hr class="dz-auth-hr">'
+        '<div class="dz-auth-recovery-alert" role="alert">'
+        '<h3 class="dz-auth-recovery-alert-title">Save Your Recovery Codes</h3>'
+        '<p class="dz-auth-recovery-alert-body">Store these codes in a safe '
+        "place. Each code can only be used once.</p></div>"
+        '<div class="dz-auth-recovery-grid">'
+        '<span class="dz-auth-recovery-pill">QK2M-8Y1D</span>'
+        '<span class="dz-auth-recovery-pill">HW7C-04RA</span>'
+        '<span class="dz-auth-recovery-pill">ZX3N-55PT</span>'
+        '<span class="dz-auth-recovery-pill">MB9E-71LQ</span>'
+        "</div>"
+        '<div class="dz-auth-status-row">'
+        '<div class="dz-auth-status-label">Authenticator app</div>'
+        '<span class="dz-badge" data-dz-tone="success">Enabled</span></div>'
+        '<div class="dz-auth-status-row is-last">'
+        '<div class="dz-auth-status-label">Email codes</div>'
+        '<span class="dz-badge">Off</span></div>'
+        '<a href="#" class="dz-auth-back-link">Back to App</a>'
+        "</div>",
+        notes="In Dazzle the enrolment flow is driven by ID-anchored "
+        "vanilla JS (<code>dz-2fa-setup.js</code>/<code>-settings.js</code> "
+        "against JSON endpoints): the QR image lands CLASSLESS in "
+        "<code>dz-auth-qr-container</code> (the container styles it), "
+        "recovery pills and status rows are JS-created (shown here with status badges; the Dazzle settings JS renders dz-button action controls in that slot), and the "
+        "error/success alerts toggle via a <code>hidden</code> class on "
+        "stable ids. The code input reserves letter-spacing for six "
+        "digits. Wrap full pages in <code>dz-auth-page</code> for the "
+        "centered layout.",
+        tags=("forms",),
+        composes=("button", "badge"),
+    ),
+    Hyperpart(
         "search-select",
         "Search select",
         "Forms",
