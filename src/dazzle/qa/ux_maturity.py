@@ -24,7 +24,9 @@ from typing import Any
 
 # Hoisted (no cycle: qa -> render/page/core is the correct layer direction; #1438).
 from dazzle._version import get_version
+from dazzle.core import ir
 from dazzle.core.ir import AggregateRef, PeekMode, state_machine, workspaces
+from dazzle.core.ir.rhythm import PhaseKind
 from dazzle.page import app_paths
 from dazzle.page.runtime.action_prominence_resolver import (
     resolve_action_prominence,
@@ -37,6 +39,7 @@ from dazzle.page.runtime.column_economy_resolver import (
 )
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.page.runtime.form_engagement_resolver import annotate_form_fields_by_usage
+from dazzle.page.runtime.landing_resolver import check_landing_drift, infer_landing_workspace
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
 from dazzle.render.context import ColumnContext
@@ -232,6 +235,45 @@ def _probe_1d() -> ProbeResult:
     )
 
 
+def _probe_2a() -> ProbeResult:
+    """Answer-first landing is inferred from a persona's rhythm when
+    default_workspace is unset, declaration stays authoritative, and
+    declared-vs-rhythm drift is detectable (level 4, #1558). Exercised against
+    synthetic in-memory IR — the route-precedence integration lives in
+    tests/unit/test_landing_resolver.py."""
+    ws = [ir.WorkspaceSpec(name="queue"), ir.WorkspaceSpec(name="reports")]
+    rhythm = ir.RhythmSpec(
+        name="agent_daily",
+        persona="agent",
+        phases=[
+            ir.PhaseSpec(
+                name="active",
+                kind=PhaseKind.ACTIVE,
+                scenes=[ir.SceneSpec(name="review", surface="queue")],
+            )
+        ],
+    )
+    # (a) infer when default_workspace is unset
+    p_unset = ir.PersonaSpec(id="agent", label="Agent")
+    infers = infer_landing_workspace(p_unset, [rhythm], ws) == "queue"
+    # (b) declaration is distinguished from the rhythm (drift fires on conflict)
+    p_conflict = ir.PersonaSpec(id="agent", label="Agent", default_workspace="reports")
+    drift_fires = check_landing_drift(p_conflict, [rhythm], ws) is not None
+    # (c) coherent declaration is silent
+    p_ok = ir.PersonaSpec(id="agent", label="Agent", default_workspace="queue")
+    drift_silent = check_landing_drift(p_ok, [rhythm], ws) is None
+    # cold-start: no rhythm -> no inference (fall through unchanged)
+    cold_start_safe = infer_landing_workspace(p_unset, [], ws) is None
+    ok = infers and drift_fires and drift_silent and cold_start_safe
+    return ProbeResult(
+        ok=ok,
+        note=(
+            f"infer={infers} drift_fires={drift_fires} "
+            f"drift_silent={drift_silent} cold_start_safe={cold_start_safe}"
+        ),
+    )
+
+
 def _probe_2b() -> ProbeResult:
     """List->detail drill is the default AND perceived-instant (level 4, #1491):
     a clickable row carries `hx-preload="mouseover"`, so the vendored htmx-4
@@ -411,10 +453,16 @@ CRITERIA: list[Criterion] = [
         "2a",
         "progressive_disclosure",
         "answer-first landing",
-        3,
-        "workspaces + default_workspace are answer-first by design (regions, not raw CRUD)",
+        4,
+        "#1558 L3 + rhythm inference L4 — the answer-first landing is inferred from a "
+        "persona's rhythm (first ACTIVE-phase scene naming a workspace) when "
+        "default_workspace is unset, via `infer_landing_workspace` consulted in "
+        "`_resolve_persona_route` (step 2.5, after the declared default_workspace, before "
+        "the generic workspace fallbacks). An explicit default_workspace stays "
+        "authoritative and cold-start (no rhythm) is byte-identical; declared-vs-rhythm "
+        "drift surfaces as an advisory line in `dazzle rhythm fidelity`.",
         "medium",
-        None,
+        _probe_2a,
     ),
     Criterion(
         "2b",
