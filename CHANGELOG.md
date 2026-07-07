@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.130] - 2026-07-07
+
+### Changed
+- **The gallery's app-shell demo rides the blueprint iframe treatment**
+  (HM 0.1.55, the queued follow-up from the blueprints-iframe ship):
+  the only `framed` Hyperpart now emits a standalone
+  `hyperparts/app-shell-live.html` and the index embeds it via
+  `<iframe class="hm-hp-frame">` — the translateZ containment hack is
+  gone; nothing full-page shares a DOM with gallery chrome. The
+  snippet stays the pure partial.
+
+### Removed
+- Dead gallery CSS: `.hm-blueprint-live` (zero usages since
+  blueprints went iframe) and `.hm-blueprint-live--framed`; the inert
+  `Blueprint.framed` field (all blueprints get live pages
+  unconditionally).
+
+### Agent Guidance
+- The review caught THREE stale-prose sites describing the removed
+  transformed-box mechanism — including the shipped "Agent
+  Implementation Guidance" text that coding agents read to embed the
+  app-shell. When a mechanism changes, grep for its DESCRIPTION
+  (here: "transformed", "device frame"), not just its selectors.
+
 ## [0.93.129] - 2026-07-07
 
 ### Security

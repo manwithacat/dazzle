@@ -288,3 +288,28 @@ def test_blueprint_doc_pages_embed_the_live_iframe(page) -> None:  # type: ignor
         "Math.abs(document.querySelector('iframe.hm-bp-frame')"
         ".getBoundingClientRect().width - 390) < 2"
     )
+
+
+class TestFramedHyperpartIframe:
+    """The index never inlines a framed (fixed-position) Hyperpart demo
+    either — the app-shell demo gets the same iframe treatment as the
+    blueprints (the translateZ containment hack is gone with it)."""
+
+    def test_index_embeds_app_shell_via_iframe(self, page) -> None:  # type: ignore[no-untyped-def]
+        html = (PKG / "site" / "index.html").read_text(encoding="utf-8")
+        assert 'class="hm-hp-frame" src="hyperparts/app-shell-live.html"' in html
+        assert "hm-blueprint-live--framed" not in html
+        assert "hm-blueprint-live" not in html  # the base rule is dead too
+
+    def test_app_shell_live_page_renders_standalone(self, page) -> None:  # type: ignore[no-untyped-def]
+        page.set_viewport_size({"width": 1280, "height": 900})
+        page.goto((PKG / "site" / "hyperparts" / "app-shell-live.html").as_uri())
+        page.wait_for_timeout(150)
+        assert page.query_selector(".app-shell") is not None
+        # the controller mounts in the standalone context
+        assert page.eval_on_selector(".app-shell", "e => e.getAttribute('data-sidebar')") == "open"
+        page.click("[data-sidebar-toggle]")
+        page.wait_for_timeout(100)
+        assert (
+            page.eval_on_selector(".app-shell", "e => e.getAttribute('data-sidebar')") == "closed"
+        )

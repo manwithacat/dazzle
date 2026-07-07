@@ -85,10 +85,11 @@ class Hyperpart:
     #    tools/hyperpart.py assembles the full anatomy; test_hyperpart_cohesion
     #    keeps the manifest and the markers honest.
     controller: str | None = None  # a controllers/*.js file, if it needs client behaviour
-    # Render the live demo inside the gallery's device frame (a transformed
-    # box that contains position:fixed descendants). The frame is GALLERY
-    # CHROME added by the builder — never part of the partial, which stays
-    # the copyable snippet (the Blueprint.framed precedent).
+    # Render the live demo as a STANDALONE page (hyperparts/{id}-live.html)
+    # embedded via <iframe class="hm-hp-frame"> — fixed-position
+    # compositions get their own browsing context, same treatment as the
+    # Blueprint live pages. The iframe is GALLERY CHROME added by the
+    # builder — never part of the partial, which stays the copyable snippet.
     framed: bool = False
     # OPTIONAL extension controllers riding this Hyperpart's seams (each a
     # controllers/*.js file). An extension adds behaviour a consumer can take
@@ -1602,9 +1603,10 @@ HYPERPARTS: list[Hyperpart] = [
         "persistent and the content pane pads around it; narrow: it slides "
         "off-canvas and overlays (this component owns that media query "
         "deliberately — viewport policy, not intrinsic wrapping — the layout "
-        "primitives inside stay media-query-free). The demo above sits in a "
-        "device frame the GALLERY adds (a transformed box contains the "
-        "fixed-position sidebar) — the snippet below is the pure, copyable "
+        "primitives inside stay media-query-free). The demo above is a "
+        "standalone page embedded via iframe (its own browsing context, so "
+        "the fixed sidebar behaves exactly as shipped) — the snippet below "
+        "is the pure, copyable "
         "shell markup, with one embedding concession: the workspace slot is "
         "a <code>&lt;div&gt;</code> here because this demo lives inside the "
         "gallery's own <code>&lt;main&gt;</code>; in your app it is "

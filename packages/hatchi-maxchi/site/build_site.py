@@ -722,16 +722,13 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-blueprint-head { margin-block-end: 2rem; }
 .hm-blueprint-head a { color: var(--colour-brand); text-decoration: none; font-size: var(--text-sm); }
 .hm-blueprint-head h1 { margin: .5rem 0 .25rem; letter-spacing: -.02em; }
-.hm-blueprint-live { border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: 1.5rem; margin-block-end: 1.5rem; background: var(--colour-surface); }
-/* Device frame: the transform makes this the containing block for
- * position:fixed descendants, so an app shell demos in-page. */
 .hm-bp-toolbar { display: flex; align-items: center; gap: .5rem; margin-block-end: .75rem; }
 .hm-bp-toolbar button { font: inherit; font-size: var(--text-sm); padding: .25rem .75rem; border-radius: var(--radius-sm); border: 1px solid var(--colour-border); background: var(--colour-surface); color: var(--colour-text-muted); cursor: pointer; }
 .hm-bp-toolbar button[aria-current="true"] { border-color: var(--colour-brand); color: var(--colour-text); }
 .hm-bp-open { margin-inline-start: auto; font-size: var(--text-sm); color: var(--colour-brand); text-decoration: none; }
 .hm-bp-stage { display: flex; justify-content: center; background: var(--colour-bg); border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: .75rem; }
 .hm-bp-frame { width: 100%; height: 40rem; max-width: 100%; border: 0; border-radius: var(--radius-sm); background: var(--colour-surface); transition: width var(--duration-base) var(--ease-out); }
-.hm-blueprint-live--framed { padding: 0; height: 40rem; overflow: auto; transform: translateZ(0); }
+.hm-hp-frame { display: block; inline-size: 100%; block-size: 22rem; border: 1px solid var(--colour-border); border-radius: var(--radius-md); background: var(--colour-surface); }
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
 .hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }
@@ -812,6 +809,16 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         "</button>"
     )
 
+    theme_js = (
+        "function hmTheme(t){document.documentElement.setAttribute('data-theme',t);"
+        "localStorage.setItem('hm-theme',t);}"
+        "(function(){var t=localStorage.getItem('hm-theme');if(t){"
+        "document.documentElement.setAttribute('data-theme',t);"
+        "document.addEventListener('DOMContentLoaded',function(){"
+        "var r=document.querySelector('input[name=hm-theme][data-hm-theme='+t+']');"
+        "if(r)r.checked=true;});}})();"
+    )
+
     for c in HYPERPARTS:
         # Expand icon placeholders ONCE and use the SAME string for the
         # live demo and the snippet — so copied markup carries real
@@ -823,14 +830,42 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         # (e.g. controllers/dz-command.js) and HYPERPART markers, which keep
         # the source form regardless of the published class namespace.
         live = apply_prefix(expand_icons(c.partial), prefix)
-        # framed Hyperparts (fixed-position compositions) demo inside the
-        # gallery's device frame — chrome around the DEMO only; the snippet
-        # below stays the pure partial (partial-is-snippet holds).
-        framed_live = (
-            f'<div class="hm-blueprint-live--framed" style="height: 22rem">{live}</div>'
-            if c.framed
-            else live
-        )
+        # framed Hyperparts (fixed-position compositions) render as a
+        # STANDALONE live page embedded via iframe — the same treatment
+        # the Blueprints got (2026-07-06 Pages-layout breakage class):
+        # nothing full-page ever shares a DOM with gallery chrome, and
+        # the translateZ containment hack is gone. The snippet below
+        # stays the pure partial (partial-is-snippet holds).
+        if c.framed:
+            hp_dir = out_dir / "hyperparts"
+            hp_dir.mkdir(exist_ok=True)
+            hp_live_doc = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{_html.escape(c.title)} — live</title>
+<link rel="stylesheet" href="../hatchi-maxchi.css">
+<script>{theme_js}
+// live-update the scheme when the parent gallery toggles it
+window.addEventListener('storage', function (e) {{
+  if (e.key === 'hm-theme' && e.newValue)
+    document.documentElement.setAttribute('data-theme', e.newValue);
+}});</script>
+</head>
+<body>
+{sheet}
+{live}
+<script src="../hatchi-maxchi.js" defer></script>
+</body>
+</html>"""
+            (hp_dir / f"{c.id}-live.html").write_text(hp_live_doc + "\n", encoding="utf-8")
+            framed_live = (
+                f'<iframe class="hm-hp-frame" src="hyperparts/{c.id}-live.html" '
+                f'title="{_html.escape(c.title)} — live preview"></iframe>'
+            )
+        else:
+            framed_live = live
         # The live demo uses the compact one-line `live`; the SNIPPET is
         # pretty-printed so the structure is legible (render-faithful — see
         # site/pretty.py). Sprite-dependency note prepended to the snippet only.
@@ -866,16 +901,6 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
             f"{_anatomy_html(c)}"
             f"{notes}</section>"
         )
-
-    theme_js = (
-        "function hmTheme(t){document.documentElement.setAttribute('data-theme',t);"
-        "localStorage.setItem('hm-theme',t);}"
-        "(function(){var t=localStorage.getItem('hm-theme');if(t){"
-        "document.documentElement.setAttribute('data-theme',t);"
-        "document.addEventListener('DOMContentLoaded',function(){"
-        "var r=document.querySelector('input[name=hm-theme][data-hm-theme='+t+']');"
-        "if(r)r.checked=true;});}})();"
-    )
 
     # opener references the published selectors (dialog.dz-command,
     # .dz-command__input) — reprefix to match the shipped namespace.

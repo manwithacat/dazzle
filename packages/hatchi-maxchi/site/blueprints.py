@@ -25,12 +25,6 @@ class Blueprint:
     partial: str  # the full page BODY — rendered live AND shown as the snippet
     composes: tuple[str, ...] = field(default_factory=tuple)  # Hyperpart ids used
     notes: str = ""
-    # Render the live composition inside a device frame (a transformed,
-    # scrollable box). A transformed ancestor becomes the containing block
-    # for position:fixed descendants (CSS transforms spec) — so a shell
-    # with a FIXED sidebar demos honestly inside the page instead of
-    # overlaying the gallery chrome.
-    framed: bool = False
 
 
 BLUEPRINTS: list[Blueprint] = [
@@ -297,6 +291,5 @@ BLUEPRINTS: list[Blueprint] = [
         "shell. The collapse toggle writes the <code>dz_sidebar</code> cookie "
         "so the SERVER renders <code>data-dz-sidebar</code> correctly on the "
         "next full page load — state-in-DOM at SSR, no client hydration flash.",
-        framed=True,
     ),
 ]
