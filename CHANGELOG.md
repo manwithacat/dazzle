@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.142] - 2026-07-07
+
+### Fixed
+- **Wizard early-Submit jumps to the first invalid stage** (#1548,
+  HM 0.1.57): submitting an experience form with an empty required
+  field in a later (hidden) stage was a silent no-op — the browser's
+  constraint validation drops the submission because a hidden control
+  is unfocusable, and the submit event never even fires. dz-wizard.js
+  now hooks the `invalid` event at capture (fires per failing control
+  in BOTH the native and htmx validation paths, hidden or not): the
+  first invalid control inside a hidden stage jumps the wizard there,
+  focuses it, and surfaces the validity bubble; controls in the
+  visible stage keep the native UI; a fully-valid form submits
+  untouched. Per-pass latch stops a later hidden stage stealing the
+  jump.
+
+### Agent Guidance
+- Don't hook `submit` to catch invalid-form submissions — native
+  constraint validation runs BEFORE the submit event dispatches, so
+  the event never fires for the case you're catching. The `invalid`
+  event (capture) is the reliable seam; it also fires under
+  `reportValidity()` from htmx/JS.
+
 ## [0.93.141] - 2026-07-07
 
 ### Changed

@@ -2778,6 +2778,44 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     }
   }
 
+  // #1548: an early Submit with an invalid required field in a LATER
+  // (hidden) stage must not be a silent no-op. The submit event never
+  // fires in that case — the browser's constraint validation runs
+  // FIRST and drops the submission because a hidden control is
+  // unfocusable (console noise only). The reliable hook is the
+  // `invalid` event, which fires per failing control during any
+  // validation pass (native submit OR htmx's reportValidity): on the
+  // first invalid control inside a HIDDEN wizard stage, jump the
+  // wizard there and surface the bubble on the now-visible input.
+  // Controls in the visible stage keep the native UI untouched.
+  document.addEventListener(
+    "invalid",
+    function (evt) {
+      var input = evt.target;
+      if (!input || !input.closest) return;
+      var root = input.closest("[data-wizard]");
+      if (!root) return;
+      var stage = input.closest("[data-stage]");
+      if (!stage || !stage.hidden) return; // visible → native bubble is fine
+      // One validation pass fires one invalid event PER failing
+      // control — only the first may drive the jump, or a later
+      // hidden stage would immediately steal the render.
+      if (root.__dzWizardJumping) {
+        evt.preventDefault();
+        return;
+      }
+      root.__dzWizardJumping = true;
+      setTimeout(function () {
+        root.__dzWizardJumping = false;
+      }, 0);
+      evt.preventDefault(); // suppress the unfocusable-control drop
+      render(root, parseInt(stage.getAttribute("data-stage"), 10));
+      input.focus();
+      input.reportValidity();
+    },
+    true,
+  );
+
   document.addEventListener("click", function (evt) {
     var item = evt.target.closest && evt.target.closest("[data-step-to]");
     if (!item) return;

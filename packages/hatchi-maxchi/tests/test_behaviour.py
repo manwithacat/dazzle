@@ -1639,3 +1639,52 @@ def _assert_pdf_viewer(page) -> None:  # type: ignore[no-untyped-def]
     page.wait_for_function(f"document.querySelector('{root} [data-pdf-page]').value === '2'")
     page.click(f"{root} [data-pdf-prev]")
     page.wait_for_function(f"document.querySelector('{root} [data-pdf-page]').value === '1'")
+
+
+def test_wizard_submit_jumps_to_first_invalid_stage(page) -> None:  # type: ignore[no-untyped-def]
+    """#1548: submitting the enclosing form with an invalid required
+    field in a LATER (hidden) stage must not be a silent no-op — the
+    wizard intercepts at capture phase, jumps to the first invalid
+    stage, and surfaces the validity bubble. A fully-valid form
+    submits normally."""
+    root = "#wizard [data-wizard]"
+    # Wrap the demo wizard in a form with a submit button and make the
+    # stage-1 date required — the page shape the experience renderer
+    # produces (one form around all stages, always-visible Submit).
+    page.evaluate(
+        """() => {
+          const wiz = document.querySelector('#wizard [data-wizard]');
+          const form = document.createElement('form');
+          form.id = 'wiz-form';
+          form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            window.__wizSubmitted = true;
+          });
+          wiz.parentElement.insertBefore(form, wiz);
+          form.appendChild(wiz);
+          const btn = document.createElement('button');
+          btn.type = 'submit';
+          btn.id = 'wiz-submit';
+          btn.textContent = 'Submit';
+          form.appendChild(btn);
+          document.querySelector('#wizard [data-stage="1"] input[type=date]')
+            .setAttribute('required', '');
+        }"""
+    )
+    # Stage 0 valid; stage 1's required date is empty and HIDDEN.
+    page.fill(f'{root} [data-stage="0"] input[type=text]', "Aurora refit")
+    page.click("#wiz-submit")
+    page.wait_for_timeout(50)
+    # Not submitted; the wizard jumped forward to the invalid stage.
+    assert page.evaluate("window.__wizSubmitted || false") is False
+    assert page.is_visible(f'{root} [data-stage="1"]')
+    assert page.is_hidden(f'{root} [data-stage="0"]')
+    focused = page.evaluate("document.activeElement && document.activeElement.type")
+    assert focused == "date", "the invalid input is focused for the validity bubble"
+
+    # Fill it → submit proceeds.
+    page.fill(f'{root} [data-stage="1"] input[type=date]', "2026-07-07")
+    page.click("#wiz-submit")
+    page.wait_for_timeout(50)
+    assert page.evaluate("window.__wizSubmitted") is True
+    page.reload()
