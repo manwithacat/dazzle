@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `GET /_dazzle/documents/pending/{file_id}` uploader-scoped pending-file route (#1551).
+
 ## [0.94.0] - 2026-07-07
 
 Minor release rolling up the 0.93.x arc (publishable milestone; no

@@ -45,6 +45,7 @@ from dazzle.http.runtime.access.gated import (
     access_context_from,
     gated_read,
 )
+from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
 from dazzle.http.runtime.file_routes import content_disposition
 from dazzle.http.runtime.http_errors import require_found
 
@@ -277,8 +278,6 @@ def create_document_routes(
         attached to any record. All denials → opaque 404 (no information
         leak about which condition failed).
         """
-        from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
-
         uid = str(getattr(getattr(auth_context, "user", None), "id", "") or "")
         metadata = file_service.get_metadata(file_id)
         # opaque 404 on: unknown file, unauthenticated, wrong uploader,

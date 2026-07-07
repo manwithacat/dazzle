@@ -20,6 +20,7 @@ from dazzle.core.capabilities import resolve_capabilities
 from dazzle.core.db_url import add_psycopg_driver, normalise_postgres_scheme
 from dazzle.core.environment import is_production
 from dazzle.core.ir import AppSpec, EntitySpec, TenancyMode
+from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.manifest import load_manifest
 from dazzle.core.strings import entity_slug as _entity_slug
 from dazzle.core.validator import validate_storage_refs
@@ -1922,7 +1923,6 @@ class DazzleBackendApp:
         # factories capture file_service at construction time (closures).
         _entity_file_fields: dict[str, list[str]] = {}
         if self._enable_files and self._appspec:
-            from dazzle.core.ir.fields import FieldTypeKind
             from dazzle.http.runtime.file_storage import (
                 FileMetadataStore,
                 FileValidator,
@@ -2229,8 +2229,6 @@ class DazzleBackendApp:
             # Per-entity/field size overrides from DSL (v0.39.0, #436)
             _field_size_overrides: dict[tuple[str, str], int] = {}
             if self._appspec:
-                from dazzle.core.ir.fields import FieldTypeKind
-
                 for _ent in self._appspec.domain.entities:
                     for _f in _ent.fields:
                         if _f.type.kind == FieldTypeKind.FILE and _f.type.max_size:

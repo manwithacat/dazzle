@@ -32,6 +32,7 @@ from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
 from dazzle.http.runtime.audit_wrap import _wrap_with_auth
+from dazzle.http.runtime.document_routes import verify_file_triple
 from dazzle.http.runtime.htmx_render import _with_htmx_triggers
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.http.runtime.repository import ConstraintViolationError
@@ -336,8 +337,6 @@ def create_create_handler(
         # a pending file has entity_id="" so ("" in ("", "")) holds, while
         # a foreign already-attached file's entity_id won't match.
         if file_service is not None and file_fields:
-            from dazzle.http.runtime.document_routes import verify_file_triple
-
             for _ff in file_fields:
                 if _ff in body and body[_ff] is not None:
                     try:
@@ -479,8 +478,6 @@ def create_update_handler(
         # #1551: triple-verify every file-field value before the write.
         # Uses the actual record id (known on update, unlike create).
         if file_service is not None and file_fields:
-            from dazzle.http.runtime.document_routes import verify_file_triple
-
             for _ff in file_fields:
                 if _ff in body and body[_ff] is not None:
                     try:
