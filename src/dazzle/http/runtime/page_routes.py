@@ -1281,7 +1281,18 @@ async def _list_entity_in_process(
             temporal_as_of_raw=as_of_raw,
             temporal_include_closed=include_closed,
         )
-    except (AccessForbidden, InvalidTemporalParam):
+    except InvalidTemporalParam:
+        return _empty
+    except AccessForbidden as e:
+        # #1541: a scope/permit denial must not be indistinguishable from
+        # a genuinely-empty collection in the logs — the zero-rows class
+        # is undiagnosable otherwise. The response stays the empty page
+        # (row-existence opacity), but the denial is on record.
+        logger.info(
+            "page list denied for %s (scope/permit): %s — rendering empty state",
+            entity_name,
+            e,
+        )
         return _empty
     encoded = jsonable_encoder(result)
     return encoded if isinstance(encoded, dict) else _empty

@@ -109,6 +109,16 @@ def build_scope_predicate(
         ValueError: If a dotted path cannot be resolved in the FK graph.
     """
     if condition is None:
+        # ADR-0052 (#1541): `all` on a tenant-KIND entity (a `tenant_host:`
+        # anchor — usually unfenced/`entities_excluded`) must not mean
+        # "every row of every tenant". Where the linker provides the entity
+        # map (READ/LIST, mirroring the ADR-0036 gating), compile the
+        # partition-root subtree instead of Tautology. Non-kind entities
+        # and write verbs keep Tautology.
+        if entities_by_name:
+            subtree = _tenant_subtree_predicate(entity_name, fk_graph, entities_by_name)
+            if subtree is not None:
+                return subtree
         return Tautology()
 
     # -- Role / grant checks are not allowed in scope: blocks ---------------
@@ -310,6 +320,69 @@ def _expand_current_tenant_hierarchy(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _tenant_subtree_predicate(
+    entity_name: str,
+    fk_graph: FKGraph,
+    entities_by_name: dict[str, Any],
+) -> ScopePredicate | None:
+    """ADR-0052 — the partition-root subtree for a tenant-kind entity.
+
+    For an entity that itself declares ``tenant_host:``, ``all`` compiles
+    to "rows within the session's partition-root subtree"::
+
+        id = current_user.tenant_id                     -- the row IS the root
+        OR <parent> = current_user.tenant_id            -- parent is the root
+        OR <parent>.<parent> = current_user.tenant_id   -- deeper ancestors
+
+    walking the entity's OWN ``tenant_host.parent`` chain — the inverse of
+    the ADR-0036 self-or-ancestor expansion (which walks an FK *to* a
+    kind). ``current_user.tenant_id`` resolves to the #1463 membership
+    partition root at request time; a membership-less session hits the
+    deny sentinel (fail-closed, zero rows).
+
+    Returns ``None`` for non-tenant-kind entities (caller keeps
+    Tautology). A broken or cyclic parent chain stops the walk and keeps
+    the legs built so far — a NARROWER predicate, never a broader one.
+    """
+    entity = entities_by_name.get(entity_name)
+    th = getattr(entity, "tenant_host", None) if entity is not None else None
+    if th is None:
+        return None
+
+    root_ref = ValueRef(user_attr="tenant_id")
+    legs: list[ScopePredicate] = [ColumnCheck(field="id", op=CompOp.EQ, value=root_ref)]
+    path: list[str] = []
+    seen: set[str] = {entity_name}
+    cur: Any = entity
+    depth = 0
+    while True:
+        cur_th = getattr(cur, "tenant_host", None)
+        parent_fk = getattr(cur_th, "parent", None) if cur_th is not None else None
+        if parent_fk is None:
+            break  # reached the hierarchy root
+        depth += 1
+        if depth > _MAX_TENANT_HIERARCHY_DEPTH:
+            break  # runaway / cycle → keep the narrower partial legs
+        path = [*path, str(parent_fk)]
+        if len(path) == 1:
+            # first hop: the parent FK is a column on the entity itself
+            legs.append(ColumnCheck(field=path[0], op=CompOp.EQ, value=root_ref))
+        else:
+            legs.append(PathCheck(path=list(path), op=CompOp.EQ, value=root_ref))
+        nxt = fk_graph.resolve_target(cur.name, str(parent_fk))
+        if not nxt or nxt in seen:
+            break  # broken or cyclic parent chain → narrower partial legs
+        seen.add(nxt)
+        nxt_kind = entities_by_name.get(nxt)
+        if nxt_kind is None:
+            break  # parent kind missing from the spec → partial legs
+        cur = nxt_kind
+
+    if len(legs) == 1:
+        return legs[0]
+    return BoolComposite.make(BoolOp.OR, legs)
 
 
 def _resolve_value_ref(raw: str | int | float | bool | None) -> ValueRef:

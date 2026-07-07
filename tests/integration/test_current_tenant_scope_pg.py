@@ -241,3 +241,108 @@ def test_current_tenant_hierarchy_aggregate_vs_single() -> None:
         with psycopg.connect(_PG_URL, autocommit=True) as teardown:
             # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             teardown.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+
+
+# ─────────────────────── ADR-0052 (#1541): `all` on a tenant kind = subtree ───────────────────────
+
+_SUBTREE_DSL = """module t
+app t "T"
+persona staff "Staff":
+  capabilities: [read]
+entity Trust "Trust":
+  id: uuid pk
+  slug: str(60) unique required
+  tenant_host:
+    domain: app.example
+    slug_field: slug
+entity School "School":
+  id: uuid pk
+  slug: str(60) unique required
+  trust: ref Trust required
+  tenant_host:
+    domain: app.example
+    slug_field: slug
+    parent: trust
+  permit:
+    list: role(staff)
+  scope:
+    list: all
+      as: staff
+"""
+
+
+@pytest.mark.skipif(not _PG_URL, reason="no TEST_DATABASE_URL / DATABASE_URL — needs real Postgres")
+def test_all_on_tenant_kind_filters_to_partition_subtree() -> None:
+    """ADR-0052 — `list: all` on an unfenced tenant-kind entity (School)
+    compiles to the partition-root subtree and, against real Postgres,
+    returns ONLY the session root's schools: the #1541 cross-tenant leak
+    (every school of every trust) is closed, and a deny-sentinel root
+    (membership-less session) returns zero rows. Drives the REAL compiler
+    output with the REAL UserAttrRef substitution semantics.
+    """
+    import tempfile
+    from pathlib import Path
+
+    import psycopg
+
+    from dazzle.core.ir.fk_graph import FKGraph
+    from dazzle.core.linker import build_appspec
+    from dazzle.core.parser import parse_modules
+    from dazzle.http.runtime.predicate_compiler import UserAttrRef, compile_predicate
+
+    d = Path(tempfile.mkdtemp()) / "s.dsl"
+    d.write_text(_SUBTREE_DSL)
+    appspec = build_appspec(parse_modules([d]), "t")
+    fk = FKGraph.from_entities(list(appspec.domain.entities))
+    school = next(e for e in appspec.domain.entities if e.name == "School")
+    rule = next(s for s in school.access.scopes if str(s.operation).endswith("list"))
+
+    schema = f"_sub_{uuid.uuid4().hex[:8]}"
+    where, params = compile_predicate(rule.predicate, "School", fk, schema=schema)
+    assert where, "subtree predicate must compile to a non-empty WHERE"
+    assert all(isinstance(p, UserAttrRef) and p.attr_name == "tenant_id" for p in params)
+
+    trust_a, trust_b = str(uuid.uuid4()), str(uuid.uuid4())
+    school_a1, school_a2, school_b1 = (str(uuid.uuid4()) for _ in range(3))
+
+    with psycopg.connect(_PG_URL, autocommit=True) as conn:
+        for stmt in (
+            f'CREATE SCHEMA "{schema}"',
+            f'CREATE TABLE "{schema}"."Trust" (id uuid primary key, slug text not null)',
+            f'CREATE TABLE "{schema}"."School" '
+            "(id uuid primary key, slug text not null, trust uuid not null)",
+        ):
+            # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            conn.execute(stmt)
+        for tid in (trust_a, trust_b):
+            # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            conn.execute(
+                f'INSERT INTO "{schema}"."Trust" (id, slug) VALUES (%s, %s)', [tid, tid[:8]]
+            )
+        for sid, tid in ((school_a1, trust_a), (school_a2, trust_a), (school_b1, trust_b)):
+            # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            conn.execute(
+                f'INSERT INTO "{schema}"."School" (id, slug, trust) VALUES (%s, %s, %s)',
+                [sid, sid[:8], tid],
+            )
+
+        try:
+            select = f'SELECT id::text FROM "{schema}"."School" WHERE {where}'
+
+            def _rows(root: str) -> set[str]:
+                # UserAttrRef markers substitute to the session's resolved
+                # partition root (scope_filters._resolve_user_attr semantics).
+                bound = [root if isinstance(p, UserAttrRef) else p for p in params]
+                # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+                return {r[0] for r in conn.execute(select, bound).fetchall()}
+
+            # Trust-A-rooted session: exactly A's schools — B's never leak.
+            assert _rows(trust_a) == {school_a1, school_a2}
+            assert _rows(trust_b) == {school_b1}
+            # School-rooted session (leaf membership): just that school.
+            assert _rows(school_a1) == {school_a1}
+            # Deny sentinel (membership-less) → zero rows, no error.
+            assert _rows("00000000-0000-0000-0000-000000000000") == set()
+        finally:
+            # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query,python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+            conn.execute(f'DROP SCHEMA "{schema}" CASCADE')

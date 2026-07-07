@@ -684,7 +684,10 @@ def _resolve_scope_filters(
     for rule in matched_rules:
         condition = getattr(rule, "condition", None)
         predicate = getattr(rule, "predicate", None)
-        # scope: all produces either predicate=None or predicate=Tautology()
+        # scope: all produces predicate=None or predicate=Tautology() — EXCEPT
+        # on tenant-kind entities, where READ/LIST `all` compiles to the
+        # ADR-0052 partition-root subtree (a real predicate that must fall
+        # through to compilation below; do not widen this bypass to it)
         is_tautology = getattr(predicate, "kind", None) == "tautology"
         if (condition is None and predicate is None) or is_tautology:
             return {}  # scope: all — no filter

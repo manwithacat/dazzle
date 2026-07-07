@@ -326,3 +326,133 @@ entity Doc "Doc":
     appspec = build_appspec(parse_modules([p]), "t")
     pred = _scope(appspec, "Doc", "read").predicate
     assert type(pred).__name__ == "ColumnCheck"  # Plain is not a tenant_host kind → not expanded
+
+
+# ─────────────────────── ADR-0052 (#1541): `all` on a tenant kind = subtree ───────────────────────
+
+_SUBTREE_DSL = """module t
+app t "T"
+persona staff "Staff":
+  capabilities: [read]
+entity Region "Region":
+  id: uuid pk
+  slug: str(60) unique required
+  tenant_host:
+    domain: app.example
+    slug_field: slug
+  permit:
+    list: role(staff)
+  scope:
+    list: all
+      as: staff
+entity Trust "Trust":
+  id: uuid pk
+  slug: str(60) unique required
+  region: ref Region required
+  tenant_host:
+    domain: app.example
+    slug_field: slug
+    parent: region
+  permit:
+    list: role(staff)
+    update: role(staff)
+  scope:
+    list: all
+      as: staff
+    update: all
+      as: staff
+entity School "School":
+  id: uuid pk
+  slug: str(60) unique required
+  trust: ref Trust required
+  tenant_host:
+    domain: app.example
+    slug_field: slug
+    parent: trust
+  permit:
+    list: role(staff)
+  scope:
+    list: all
+      as: staff
+entity Note "Note":
+  id: uuid pk
+  body: str(200)
+  permit:
+    list: role(staff)
+  scope:
+    list: all
+      as: staff
+"""
+
+
+def _scope_predicate(appspec, entity_name: str, op: str):
+    from dazzle.core.ir import PermissionKind
+
+    e = _entity(appspec, entity_name)
+    rule = next(r for r in e.access.scopes if r.operation == PermissionKind(op))
+    return rule.predicate
+
+
+def test_all_on_leaf_kind_compiles_to_subtree_disjunction(tmp_path) -> None:
+    from dazzle.core.ir.predicates import BoolComposite, ColumnCheck, PathCheck
+
+    appspec = _appspec(tmp_path, _SUBTREE_DSL)
+    pred = _scope_predicate(appspec, "School", "list")
+    assert isinstance(pred, BoolComposite)
+    legs = pred.children
+    assert isinstance(legs[0], ColumnCheck)
+    assert legs[0].field == "id"
+    assert legs[0].value.user_attr == "tenant_id"
+    assert isinstance(legs[1], ColumnCheck)
+    assert legs[1].field == "trust"
+    assert legs[1].value.user_attr == "tenant_id"
+    assert isinstance(legs[2], PathCheck)
+    assert legs[2].path == ["trust", "region"]
+
+
+def test_all_on_root_kind_compiles_to_single_id_check(tmp_path) -> None:
+    from dazzle.core.ir.predicates import ColumnCheck
+
+    appspec = _appspec(tmp_path, _SUBTREE_DSL)
+    pred = _scope_predicate(appspec, "Region", "list")
+    assert isinstance(pred, ColumnCheck)
+    assert pred.field == "id"
+    assert pred.value.user_attr == "tenant_id"
+
+
+def test_all_on_non_kind_entity_stays_tautology(tmp_path) -> None:
+    from dazzle.core.ir.predicates import Tautology
+
+    appspec = _appspec(tmp_path, _SUBTREE_DSL)
+    assert isinstance(_scope_predicate(appspec, "Note", "list"), Tautology)
+
+
+def test_all_on_write_verb_stays_tautology(tmp_path) -> None:
+    """Writes keep Tautology this ADR — subtree writes need the #1455
+    payload-probe machinery (documented follow-up)."""
+    from dazzle.core.ir.predicates import Tautology
+
+    appspec = _appspec(tmp_path, _SUBTREE_DSL)
+    assert isinstance(_scope_predicate(appspec, "Trust", "update"), Tautology)
+
+
+def test_subtree_membershipless_session_hits_deny_sentinel(tmp_path) -> None:
+    """ADR-0052 fail-closed: a membership-less session resolving
+    `current_user.tenant_id` hits the __RBAC_DENY__ sentinel, which the
+    resolver intercepts IN PYTHON (returns None → default-deny) — the
+    sentinel string never reaches SQL, so no uuid-cast error and no rows."""
+    from types import SimpleNamespace
+
+    from dazzle.core.ir.fk_graph import FKGraph
+    from dazzle.http.runtime.scope_filters import _resolve_predicate_filters
+
+    appspec = _appspec(tmp_path, _SUBTREE_DSL)
+    fk = FKGraph.from_entities(list(appspec.domain.entities))
+    school = _entity(appspec, "School")
+    from dazzle.core.ir import PermissionKind
+
+    rule = next(r for r in school.access.scopes if r.operation == PermissionKind("list"))
+
+    anon = SimpleNamespace(active_membership=None, user=None, preferences=None)
+    resolved = _resolve_predicate_filters(rule.predicate, "School", fk, "u1", anon)
+    assert resolved is None

@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.138] - 2026-07-07
+
+### Security
+- **`scope: all` on tenant-kind entities compiles to the
+  partition-root subtree** (#1541, ADR-0052): tenant-KIND entities
+  (`tenant_host:` anchors, usually `entities_excluded` — no fence)
+  previously got `Tautology` from `all`, meaning every row of every
+  tenant — a trust admin listing Schools saw every trust's schools
+  (reproduced live). READ/LIST `all` on a kind now compiles to
+  `id = current_user.tenant_id OR <parent> = … OR <parent>.<parent> = …`
+  walking the entity's own `tenant_host.parent` chain (the inverse of
+  ADR-0036's expansion, same depth bound, fail-closed on broken
+  chains; `current_user.tenant_id` resolves to the #1463 membership
+  partition root, deny sentinel intercepted in Python — never reaches
+  SQL). Write-verb `all` and non-kind entities are unchanged. Proven
+  against real Postgres with the real compiler output.
+- Scope/permit denials at the page list seam are now logged (they
+  previously rendered the surface's empty state with zero trace —
+  the #1541 zero-rows report was undiagnosable from evidence; it did
+  not reproduce as a scope bug).
+
+### Changed
+- **Behaviour change**: apps relying on `all` to mean "platform-wide"
+  on a tenant kind now get subtree rows. Platform-wide listings belong
+  to admin personas (which bypass scopes upstream) or a non-kind
+  reporting entity. Verify any affected scope with
+  `dazzle db explain-scope <Kind> list`.
+
 ## [0.93.137] - 2026-07-07
 
 ### Fixed
