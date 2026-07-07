@@ -5,7 +5,7 @@ These tests are NOT marked e2e so they run on every CI push.
 
 from pathlib import Path
 
-from dazzle.testing.byte_route_proof import find_byte_route_violations
+from dazzle.rbac.byte_route_proof import find_byte_route_violations
 
 REPO = Path(__file__).resolve().parents[2]
 

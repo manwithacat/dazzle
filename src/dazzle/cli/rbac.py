@@ -10,7 +10,7 @@ from typing import Any
 import typer
 
 from dazzle.cli.common import resolve_project
-from dazzle.testing.byte_route_proof import find_byte_route_violations
+from dazzle.rbac.byte_route_proof import find_byte_route_violations
 
 rbac_app = typer.Typer(help="RBAC verification and compliance.", no_args_is_help=True)
 

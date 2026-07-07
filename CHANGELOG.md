@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.95.2] - 2026-07-07
+
+### Fixed
+- **PyPI wheel smoke-test red (httpx pull into the CLI)**: the #1551
+  static-proof helper landed in `dazzle.testing`, and importing
+  anything from that package eagerly imports `e2e_runner` → `httpx`
+  — so `cli/rbac.py`'s module-top import pulled `httpx` (an optional
+  extra) into the `dazzle` console-script path, breaking a bare
+  install. Moved `byte_route_proof` to `dazzle.rbac` (its logical home
+  — it's an RBAC verification tool, and that package is httpx-free);
+  `dazzle --help` now imports cleanly without the optional deps.
+
+### Agent Guidance
+- The `dazzle.testing` package eagerly imports `httpx` via
+  `e2e_runner` — never import from `dazzle.testing` at module top in a
+  CLI/console-script import path, or a core-only install breaks. RBAC
+  verification tooling belongs in `dazzle.rbac`.
+
 ## [0.95.1] - 2026-07-07
 
 ### Fixed
