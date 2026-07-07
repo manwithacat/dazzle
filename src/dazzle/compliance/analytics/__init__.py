@@ -53,7 +53,6 @@ from .registry import (
     FRAMEWORK_SUBPROCESSORS,
     get_framework_subprocessor,
     list_framework_subprocessors,
-    merge_app_subprocessors,
 )
 from .render import analytics_globally_disabled, resolve_active_providers
 from .sinks import (
@@ -96,7 +95,6 @@ __all__ = [
     "get_provider_definition",
     "list_framework_subprocessors",
     "list_provider_definitions",
-    "merge_app_subprocessors",
     "merge_regenerated_into_existing",
     "COMMON_PARAMS",
     "EVENT_SCHEMAS",

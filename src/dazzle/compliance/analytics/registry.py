@@ -176,20 +176,3 @@ def get_framework_subprocessor(name: str) -> SubprocessorSpec | None:
 def list_framework_subprocessors() -> list[SubprocessorSpec]:
     """Return a copy of the framework defaults list."""
     return list(FRAMEWORK_SUBPROCESSORS)
-
-
-def merge_app_subprocessors(
-    app_declared: list[SubprocessorSpec],
-) -> list[SubprocessorSpec]:
-    """Merge app-level declarations with framework defaults.
-
-    App-level entries override framework entries of the same name. Other
-    framework defaults are included unchanged. Order: app-declared first
-    (declaration order), followed by any framework defaults not overridden.
-    """
-    app_names = {s.name for s in app_declared}
-    merged = list(app_declared)
-    for default in FRAMEWORK_SUBPROCESSORS:
-        if default.name not in app_names:
-            merged.append(default)
-    return merged

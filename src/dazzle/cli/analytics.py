@@ -177,7 +177,10 @@ def _scan_subprocessors(spec) -> list[dict[str, object]]:  # type: ignore[no-unt
 
     out: list[dict[str, object]] = []
 
-    # Emit a row per declared subprocessor (framework + app merged view).
+    # #1542 (strict declared-only): declared entries are the INCLUDED
+    # set (what the privacy/ROPA artefacts assert); framework defaults
+    # not declared are shown as reference-only rows so the catalogue
+    # stays inspectable ("declare to include").
     for name, sp in {**framework_by_name, **app_by_name}.items():
         overridden = name in app_by_name and name in framework_by_name
         collision_details: dict[str, str] | None = None
@@ -212,6 +215,7 @@ def _scan_subprocessors(spec) -> list[dict[str, object]]:  # type: ignore[no-unt
                 "cookies": list(sp.cookies),
                 "needs_sccs": sp.needs_sccs,
                 "is_framework_default": sp.is_framework_default,
+                "included_in_artefacts": name in app_by_name,
                 "collision_with_framework_default": collision_details,
             }
         )

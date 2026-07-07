@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.141] - 2026-07-07
+
+### Changed
+- **The compliance privacy generator is strictly declared-only**
+  (#1542, James's ratified choice): the app's `subprocessor` register
+  is authoritative and complete — the 8 framework-default
+  subprocessors (Stripe/Twilio/GA4/…) are NO LONGER force-merged into
+  privacy_policy.md / cookie_policy.md / ropa.md. Zero declarations =
+  zero vendors asserted (a compliance document never carries a
+  default superset). `merge_app_subprocessors` is deleted (clean
+  break); the framework catalogue remains as the reference set for
+  `dazzle analytics audit`, whose rows now carry
+  `included_in_artefacts` so "declare to include" is inspectable.
+
+### Agent Guidance
+- Downstream apps must regenerate committed `docs/privacy/*.md` after
+  upgrading — undeclared framework vendors (and their cookies, e.g.
+  GA4's `_ga`) disappear from the artefacts. Declare the
+  subprocessors the app actually uses.
+
 ## [0.93.140] - 2026-07-07
 
 ### Fixed

@@ -31,7 +31,6 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-from dazzle.compliance.analytics.registry import merge_app_subprocessors
 from dazzle.core.ir import (
     AppSpec,
     FieldSpec,
@@ -110,7 +109,11 @@ def generate_privacy_page_markdown(
 
     # Enumerate data.
     pii_fields_by_category = _collect_pii_fields(appspec)
-    subprocessors = merge_app_subprocessors(list(appspec.subprocessors))
+    # #1542 (strict declared-only): the app's `subprocessor` register is
+    # authoritative and complete — framework defaults are a REFERENCE
+    # catalogue for `dazzle analytics audit`, never force-merged into
+    # legal artefacts. Zero declarations = zero vendors asserted.
+    subprocessors = list(appspec.subprocessors)
 
     block_names: list[str] = []
 

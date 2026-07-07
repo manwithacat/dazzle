@@ -6,7 +6,6 @@ from dazzle.compliance.analytics import (
     FRAMEWORK_SUBPROCESSORS,
     get_framework_subprocessor,
     list_framework_subprocessors,
-    merge_app_subprocessors,
 )
 from dazzle.core.ir import (
     ConsentCategory,
@@ -74,43 +73,53 @@ class TestMerge:
             consent_category=ConsentCategory.ANALYTICS,
         )
 
-    def test_empty_app_returns_all_defaults(self) -> None:
-        merged = merge_app_subprocessors([])
-        assert len(merged) == len(FRAMEWORK_SUBPROCESSORS)
-        assert {sp.name for sp in merged} == {sp.name for sp in FRAMEWORK_SUBPROCESSORS}
+    def test_framework_defaults_are_reference_only(self) -> None:
+        """#1542 (strict declared-only): the framework catalogue exists as
+        a REFERENCE for the audit command — it is never merged into an
+        app's compliance artefacts. The old merge helper is deleted."""
+        import dazzle.compliance.analytics as analytics
 
-    def test_app_overrides_framework(self) -> None:
-        app_ga = self._app_ga()
-        merged = merge_app_subprocessors([app_ga])
-        ga_entries = [sp for sp in merged if sp.name == "google_analytics"]
-        # Exactly one entry; it's the app version.
-        assert len(ga_entries) == 1
-        assert ga_entries[0].handler == "ACME Corp"
-        assert ga_entries[0].is_framework_default is False
+        assert not hasattr(analytics, "merge_app_subprocessors")
+        assert len(FRAMEWORK_SUBPROCESSORS) > 0  # the reference catalogue remains
 
-    def test_override_does_not_duplicate(self) -> None:
-        merged = merge_app_subprocessors([self._app_ga()])
-        # Total count unchanged — override replaces, doesn't append.
-        assert len(merged) == len(FRAMEWORK_SUBPROCESSORS)
+    def test_declared_register_is_authoritative(self) -> None:
+        """#1542: the privacy generator consumes appspec.subprocessors
+        verbatim — a declared GA entry appears exactly once (the app's
+        version), and NO undeclared framework default rides along."""
+        from types import SimpleNamespace
 
-    def test_new_app_subprocessor_appended(self) -> None:
-        """App-only subprocessor (no framework default) appears in the merged list."""
-        new_sp = SubprocessorSpec(
-            name="custom_crm",
-            label="Custom CRM",
-            handler="Example Co",
-            jurisdiction="UK",
-            retention="5 years",
-            legal_basis=LegalBasis.CONTRACT,
-            consent_category=ConsentCategory.FUNCTIONAL,
+        from dazzle.compliance.analytics.privacy_page import (
+            generate_privacy_page_markdown,
         )
-        merged = merge_app_subprocessors([new_sp])
-        names = {sp.name for sp in merged}
-        assert "custom_crm" in names
-        assert len(merged) == len(FRAMEWORK_SUBPROCESSORS) + 1
 
-    def test_order_app_first(self) -> None:
-        """App-declared entries come first in the merged list (declaration order)."""
-        merged = merge_app_subprocessors([self._app_ga()])
-        assert merged[0].name == "google_analytics"
-        assert merged[0].is_framework_default is False
+        spec = SimpleNamespace(
+            name="t",
+            title="T",
+            subprocessors=[self._app_ga()],
+            domain=SimpleNamespace(entities=[]),
+            analytics=None,
+        )
+        md = generate_privacy_page_markdown(spec).privacy_policy
+        assert "ACME Corp" in md
+        assert "Twilio" not in md  # undeclared framework default stays out
+
+    def test_zero_declarations_yield_empty_register(self) -> None:
+        """#1542 strict mode: an app with no `subprocessor` declarations
+        asserts NO vendors — a compliance document never carries a
+        default superset."""
+        from types import SimpleNamespace
+
+        from dazzle.compliance.analytics.privacy_page import (
+            generate_privacy_page_markdown,
+        )
+
+        spec = SimpleNamespace(
+            name="t",
+            title="T",
+            subprocessors=[],
+            domain=SimpleNamespace(entities=[]),
+            analytics=None,
+        )
+        md = generate_privacy_page_markdown(spec).privacy_policy
+        for default in FRAMEWORK_SUBPROCESSORS:
+            assert default.handler not in md

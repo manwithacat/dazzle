@@ -125,11 +125,15 @@ class TestSubprocessorsSection:
         assert "7 years" in md
         assert "https://stripe.com/legal/dpa" in md
 
-    def test_framework_defaults_merged_in(self, sample_appspec) -> None:
+    def test_undeclared_framework_defaults_stay_out(self, sample_appspec) -> None:
+        """#1542 strict declared-only: the fixture declares stripe (and
+        an mmm_analytics override) — every OTHER framework default must
+        NOT be asserted in the legal artefact."""
         md = generate_privacy_page_markdown(sample_appspec).privacy_policy
-        # Framework defaults not explicitly overridden should appear.
-        framework_names = {sp.label for sp in FRAMEWORK_SUBPROCESSORS}
-        assert any(name in md for name in framework_names)
+        declared = {sp.name for sp in sample_appspec.subprocessors}
+        for sp in FRAMEWORK_SUBPROCESSORS:
+            if sp.name not in declared:
+                assert sp.label not in md, f"undeclared default leaked: {sp.name}"
 
     def test_sccs_flagged_for_non_eea(self, sample_appspec) -> None:
         md = generate_privacy_page_markdown(sample_appspec).privacy_policy
@@ -143,10 +147,11 @@ class TestCookiePolicy:
         assert "__stripe_mid" in cookie_md
         assert "__stripe_sid" in cookie_md
 
-    def test_framework_cookies_included(self, sample_appspec) -> None:
-        """Framework-default GA4 cookies appear without explicit app declaration."""
+    def test_undeclared_framework_cookies_stay_out(self, sample_appspec) -> None:
+        """#1542 strict declared-only: GA4 cookies only appear when the
+        app declares the GA subprocessor — no default cookie superset."""
         cookie_md = generate_privacy_page_markdown(sample_appspec).cookie_policy
-        assert "_ga" in cookie_md  # GA4 default subprocessor
+        assert "_ga" not in cookie_md
 
     def test_empty_section_when_no_cookies(self, tmp_path: Path) -> None:
         spec = _load_appspec(
