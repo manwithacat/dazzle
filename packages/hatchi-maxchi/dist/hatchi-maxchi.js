@@ -2115,6 +2115,19 @@
 (function () {
   "use strict";
 
+  // A parked destination is only promoted into a live `href` if it is a
+  // relative URL or an http(s) absolute — never a `javascript:`/`data:`
+  // scheme. Control chars and surrounding whitespace are stripped first so a
+  // `java\tscript:` cannot smuggle past the scheme check (browsers ignore
+  // them when parsing the scheme). Returns the href if safe, else null.
+  function safeHref(raw) {
+    var v = String(raw == null ? "" : raw).replace(/[\u0000-\u0020]+/g, "");
+    var scheme = /^([a-zA-Z][a-zA-Z0-9+.\-]*):/.exec(v);
+    if (!scheme) return raw; // scheme-less = relative (#, /, ?, …) — safe
+    var s = scheme[1].toLowerCase();
+    return s === "http" || s === "https" ? raw : null;
+  }
+
   document.addEventListener("change", function (evt) {
     var input = evt.target;
     if (!input || !input.matches || !input.matches('input[type="checkbox"]'))
@@ -2139,7 +2152,8 @@
     var href = primary.getAttribute("data-confirm-href");
 
     if (needed === 0 || ticked >= needed) {
-      if (href) primary.setAttribute("href", href);
+      var safe = href && safeHref(href);
+      if (safe) primary.setAttribute("href", safe);
       primary.removeAttribute("aria-disabled");
     } else {
       primary.removeAttribute("href");

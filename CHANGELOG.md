@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.96.1] - 2026-07-07
+
+### Security
+- **Confirm-gate href promotion now scheme-validates** (`dz-confirm-gate.js`,
+  clears CodeQL `js/xss-through-dom` on the controller + both built copies):
+  the irreversible-action consent gate promotes its parked
+  `data-dz-confirm-href` into a live `href` when armed. It now only promotes
+  relative URLs and `http(s)` absolutes — a `javascript:`/`data:`/`vbscript:`
+  scheme (or a `java\tscript:` variant smuggled through control chars) is
+  never written to the DOM sink. The source is server-owned SSR markup, so
+  practical risk was low; this is defense-in-depth on the DOM-attribute→href
+  sink. Rebuilt `packages/hatchi-maxchi/{dist,site}/hatchi-maxchi.js` and the
+  framework bundle `src/dazzle/page/runtime/static/dist/dazzle.min.js` (HM
+  0.1.58→0.1.59). Playwright regression added
+  (`test_confirm_gate_never_promotes_a_dangerous_scheme_href`).
+
+### Agent Guidance
+- **HM controller edits touch four artifacts, not one.** A change to
+  `packages/hatchi-maxchi/controllers/*.js` must be followed by: (1) `python
+  packages/hatchi-maxchi/build.py` (rebuilds `dist/`), (2) `python
+  packages/hatchi-maxchi/site/build_site.py` (rebuilds `site/`, the gallery
+  the Playwright tests run against), and (3) `python scripts/build_dist.py`
+  (rebuilds the framework bundle `dazzle.min.js`, which re-derives the HM JS
+  with `build_js("dz-")` at ingest). The `test_contract.py` and
+  `test_hm_boundary.py` drift gates fail if any copy is stale.
+
 ## [0.96.0] - 2026-07-07
 
 ### Changed

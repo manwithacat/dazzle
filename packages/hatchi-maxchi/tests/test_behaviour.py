@@ -1436,6 +1436,33 @@ def test_confirm_gate_arms_primary_only_when_required_boxes_checked(page) -> Non
     assert page.get_attribute(primary, "href") is None
 
 
+def test_confirm_gate_never_promotes_a_dangerous_scheme_href(page) -> None:  # type: ignore[no-untyped-def]
+    """The gate promotes the parked destination into the live ``href`` when
+    armed — but a hostile scheme (``javascript:``/``data:``) must never reach
+    the DOM sink. Even with such a URL parked in ``data-confirm-href``, arming
+    the gate leaves the anchor without that href (no DOM-XSS via click)."""
+    root = "#confirm-panel [data-confirm-gate]"
+    primary = f"{root} .confirm-primary"
+
+    # Park a hostile scheme where the safe destination normally sits.
+    page.eval_on_selector(
+        primary,
+        "el => el.setAttribute('data-confirm-href', 'javascript:alert(1)')",
+    )
+
+    # Tick both required boxes to arm the gate.
+    required = page.query_selector_all(f"{root} input[data-required='true']")
+    assert len(required) == 2
+    required[0].check()
+    required[1].check()
+
+    # The gate is logically armed (aria-disabled dropped) but the dangerous
+    # scheme is NOT promoted into the live href.
+    href = page.get_attribute(primary, "href")
+    assert href != "javascript:alert(1)", "javascript: scheme must never be promoted"
+    assert href is None or href.startswith(("#", "/", "http")), href
+
+
 def test_drawer_lazy_trigger_opens_dialog_and_loads_body(page) -> None:  # type: ignore[no-untyped-def]
     """The Dazzle peek slide_over contract: ONE trigger carrying BOTH an
     hx-get (body content) and data-dz-dialog-open (the drawer id). The
