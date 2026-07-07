@@ -774,3 +774,27 @@ cognition_tips = [
     "The scaffold operation creates static/images/ with a .gitkeep",
     "CombinedStaticFiles checks project dir first, then framework dir"
 ]
+
+[concepts.app_scripts]
+category = "Frontend"
+since_version = "0.93.0"
+doc_page = "frontend"
+doc_order = 11
+definition = """Custom client JS threading (`[ui] app_scripts`). Project files in `static/js/*.js` \
+are served automatically, but a script is only *loaded* when it's referenced from the page \
+`<head>`. To thread your own client JS (custom islands, controllers) into the app shell, list \
+the served URLs under `[ui] app_scripts` in `dazzle.toml`:
+
+```toml
+[ui]
+app_scripts = [
+  "/static/js/dz-islands.js",
+  "/static/js/charts.js",
+]
+```
+
+The scripts are appended to the app-shell `<head>` **after** the framework bundle, in declared \
+order (so they can depend on the framework runtime), and go through the same content-hash \
+fingerprinting as framework assets in production. Point at any served path; an empty/absent \
+list leaves the framework-only script set unchanged."""
+related = ["sitespec", "section_types"]

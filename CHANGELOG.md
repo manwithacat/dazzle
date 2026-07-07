@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.93.140] - 2026-07-07
+
+### Fixed
+- **`dazzle docs generate` no longer deletes reference content**
+  (#1534): the three sections that had been hand-edited into
+  auto-generated pages (frontend.md `[ui] app_scripts`; surfaces.md
+  `emits:` verification and the route-override contract) now live in
+  the semantics-KB TOML sources (`frontend.toml` / `misc.toml`) and
+  survive regeneration. A new drift gate
+  (`test_generated_reference_pages_match_disk`) fails when any
+  generated page differs from a fresh regeneration — hand-edits to
+  generated pages are caught at commit time instead of silently
+  deleted later.
+
+### Agent Guidance
+- Reference pages under `docs/reference/` marked auto-generated are
+  now drift-GATED: edit `src/dazzle/mcp/semantics_kb/*.toml` and run
+  `dazzle docs generate`, never the .md files.
+
 ## [0.93.139] - 2026-07-07
 
 ### Fixed

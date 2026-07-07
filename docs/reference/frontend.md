@@ -676,9 +676,13 @@ pages:
 # sitespec(operation="scaffold")
 ```
 
-### Custom client JS (`[ui] app_scripts`)
+**Related:** [Sitespec](frontend.md#sitespec), [Section Types](frontend.md#section-types)
 
-Project files in `static/js/*.js` are served automatically, but a script is only *loaded* when it's referenced from the page `<head>`. To thread your own client JS (custom islands, controllers) into the app shell, list the served URLs under `[ui] app_scripts` in `dazzle.toml`:
+---
+
+## App Scripts
+
+Custom client JS threading (`[ui] app_scripts`). Project files in `static/js/*.js` are served automatically, but a script is only *loaded* when it's referenced from the page `<head>`. To thread your own client JS (custom islands, controllers) into the app shell, list the served URLs under `[ui] app_scripts` in `dazzle.toml`:
 
 ```toml
 [ui]

@@ -291,3 +291,28 @@ def test_coverage_tool_constructs_all_exist_in_parser() -> None:
         f"doesn't dispatch on them. Remove them from coverage.py or "
         f"add parser dispatches."
     )
+
+
+def test_generated_reference_pages_match_disk() -> None:
+    """#1534 — the auto-generated reference pages must be byte-identical
+    to a fresh `dazzle docs generate`. Hand-edits to generated pages get
+    silently deleted on the next regeneration (three sections were lost
+    that way); content belongs in the semantics-KB TOML sources. On
+    drift: move your edit into `src/dazzle/mcp/semantics_kb/*.toml` and
+    run `dazzle docs generate`.
+    """
+    pytest.importorskip("mcp")
+    import dazzle.mcp.server.docs_inventory  # noqa: F401 — registers the mcp_tools auto-source
+    from dazzle.core.docs_gen import generate_reference_docs
+
+    docs_dir = REPO_ROOT / "docs" / "reference"
+    stale: list[str] = []
+    for slug, content in generate_reference_docs().items():
+        on_disk = (docs_dir / f"{slug}.md").read_text(encoding="utf-8")
+        if on_disk != content:
+            stale.append(slug)
+    assert not stale, (
+        f"generated reference pages drifted from disk: {stale} — hand-edits to "
+        "auto-generated pages are deleted on regeneration; move the content into "
+        "src/dazzle/mcp/semantics_kb/*.toml and run `dazzle docs generate`"
+    )

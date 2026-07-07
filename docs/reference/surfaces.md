@@ -334,14 +334,9 @@ workspace dashboard "Dashboard":
 
 ---
 
-## Emitted-target verification (`emits:`)
+## Emits Verification
 
-A custom surface (`mode: custom` / `render: <name>`) renders Turing-complete Python,
-so the framework can't see the links it emits — a dead "View"/drill button ships green
-and 404s only on click. Declare the surfaces it links to with `emits:` and the linker
-verifies each at build time (the custom-mode analogue of `primary_action -> surface`):
-
-### Syntax
+Emitted-target verification (`emits:`). A custom surface (`mode: custom` / `render: <name>`) renders Turing-complete Python, so the framework can't see the links it emits — a dead "View"/drill button ships green and 404s only on click. Declare the surfaces it links to with `emits:` and the linker verifies each at build time (the custom-mode analogue of `primary_action -> surface`):
 
 ```dsl
 surface task_board "Board":
@@ -351,13 +346,9 @@ surface task_board "Board":
   emits: [task_detail, task_create]   # surface names this viewer links to
 ```
 
-Each name must resolve to a **declared surface**; an unresolvable target fails
-`dazzle validate` with `E_DEAD_EMIT_TARGET`. `emits:` is **opt-in** — a custom surface
-with no `emits:` is unconstrained (today's behaviour); declaring it buys back the
-dead-target build gate.
+Each name must resolve to a **declared surface**; an unresolvable target fails `dazzle validate` with `E_DEAD_EMIT_TARGET`. `emits:` is **opt-in** — a custom surface with no `emits:` is unconstrained; declaring it buys back the dead-target build gate.
 
-**Route-overrides** declare the same contract via a `# dazzle:emits <path>` header
-alongside `# dazzle:route-override` (each path must match a mounted route):
+**Route-overrides** declare the same contract via a `# dazzle:emits <path>` header alongside `# dazzle:route-override` (each path must match a mounted route):
 
 ```python
 # dazzle:route-override GET /app/board
@@ -370,23 +361,16 @@ See `fixtures/custom_renderer` (the `tag_cloud` surface) for a worked example.
 
 ---
 
-## Route-override contract (custom routes)
+## Route Override Contract
 
-A project can hand-write routes in `routes/*.py` with declaration headers. The framework
-reads these headers statically (no code execution) so it can reason about custom routes.
-Two guardrails, two postures:
+Route-override contract (custom routes). A project can hand-write routes in `routes/*.py` with declaration headers. The framework reads these headers statically (no code execution) so it can reason about custom routes. Two guardrails, two postures:
 
-- **RBAC is the line — mandatory.** A handler that touches a domain entity declares
-  `# dazzle:implements <Entity>.<op> via <param>` (permit/scope runs before the body) or
-  fails `dazzle rbac routes --strict`. Novel UI does not skip permit/scope.
-- **Response shape + chrome are your declared choice — novel UI welcome.** Declare
-  `# dazzle:returns <kind>` so the framework knows what you return and whether you live in
-  the app shell:
+- **RBAC is the line — mandatory.** A handler that touches a domain entity declares `# dazzle:implements <Entity>.<op> via <param>` (permit/scope runs before the body) or fails `dazzle rbac routes --strict`. Novel UI does not skip permit/scope.
+- **Response shape + chrome are your declared choice — novel UI welcome.** Declare `# dazzle:returns <kind>` so the framework knows what you return and whether you live in the app shell:
 
 | `# dazzle:returns` | meaning | framework |
-|--------------------|---------|-----------|
-| `fragment` | inner HTML that lives in the app shell | shell-wrapped (HTMX-aware) |
-| `partial` | raw HTML for a targeted HTMX swap | served as-is |
+|---|---|---|
+| `fragment` / `partial` | inner HTML for the app shell | chromed into the shell |
 | `page` | a full HTML document (full-bleed / novel UI / island host) | served as-is, **never refused** |
 | `json` | a JSON response | passed through |
 
@@ -401,11 +385,8 @@ async def handler(request, task_id: str):
     return "<section>…</section>"            # inner HTML — the framework chromes it
 ```
 
-The framework enforces *consistency with what you declared*: a `fragment`/`partial` that
-returns a full `<!doctype>` is a loud error; a `page` is untouched. An undeclared HTML
-override under `/app` gets a one-time advisory (a nudge, never a block). See the
-[`custom-route-undeclared-response`](https://github.com/manwithacat/dazzle/blob/main/docs/counter-priors/custom-route-undeclared-response.md) counter-prior.
+The framework enforces *consistency with what you declared*: a `fragment`/`partial` that returns a full `<!doctype>` is a loud error; a `page` is untouched. An undeclared HTML override under `/app` gets a one-time advisory (a nudge, never a block). See the [`custom-route-undeclared-response`](https://github.com/manwithacat/dazzle/blob/main/docs/counter-priors/custom-route-undeclared-response.md) counter-prior.
 
-**Related:** [Emitted-target verification](surfaces.md#emitted-target-verification-emits)
+**Related:** [Emits Verification](surfaces.md#emits-verification)
 
 ---

@@ -109,7 +109,10 @@ def generate_reference_docs(kb_dir: Path | None = None) -> dict[str, str]:
         if page_meta.get("handwritten"):
             continue
         concepts = by_page.get(slug, [])
-        result[slug] = _render_page(slug, page_meta, concepts, all_concepts)
+        # Exactly one trailing newline — the repo's end-of-file-fixer
+        # hook normalises committed files the same way, so the generator
+        # and the hook never tug-of-war (#1534 drift gate).
+        result[slug] = _render_page(slug, page_meta, concepts, all_concepts).rstrip("\n") + "\n"
 
     result["index"] = _render_index(pages)
     return result
