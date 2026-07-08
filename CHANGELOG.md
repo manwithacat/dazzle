@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.22] - 2026-07-09
+
+### Changed
+- **HM-convergence (HMC-020 + HMC-021): rich-text editor + detail-drawer width → HaTchi-MaXchi.**
+  Two clean ports. `richtext.css` (the `.dz-form-richtext` editor internals — toolbar,
+  `[data-dz-editor]` contenteditable, content typography) → new HM component
+  `components/richtext.css` (complements the `.dz-form-richtext` field base in HM form.css).
+  `dashboard.css`'s only remaining rule (the `#dz-detail-drawer` width instance) folded into
+  HM `drawer.css` (travels with the drawer component); the now-empty `dashboard.css` dropped.
+  Both removed from `css_loader.CSS_SOURCE_FILES` and deleted from the Dazzle tree; served
+  via the HM dist. Reservoir `css_lines_dazzle_native` 625→471.
+
 ## [0.98.21] - 2026-07-09
 
 ### Removed

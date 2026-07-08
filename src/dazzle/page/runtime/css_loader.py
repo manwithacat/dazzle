@@ -51,7 +51,9 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # vendor/pickr.css removed in #976 — `widget=color` uses native
     # <input type="color">, no vendor CSS required.
     ("utilities", "css/utilities.css"),
-    ("components", "css/components/dashboard.css"),
+    # dashboard.css migrated into HaTchi-MaXchi (HMC-020): its only remaining rule
+    # (the #dz-detail-drawer width instance) now lives in HM drawer.css (travels
+    # with the drawer component). Card grid/shell/chrome already moved in 007b/c/d.
     # detail.css (HMC-012) + fragments.css (HMC-016) migrated into HaTchi-MaXchi —
     # the detail-view family + the shared fragment/region chrome families now live
     # in packages/hatchi-maxchi/components/{detail,fragments}.css (heavily
@@ -64,8 +66,9 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # rules, so shipping it to every browser was dead weight. File retained on
     # disk as the provenance index (+ read by a few content-union tests).
     ("components", "css/components/mobile-scroll.css"),
-    # #977 cycle 1 — Dazzle-native rich-text editor (replaces Quill in cycle 4).
-    ("components", "css/components/richtext.css"),
+    # richtext.css migrated into HaTchi-MaXchi (HMC-021): the rich-text editor
+    # internals now live in packages/hatchi-maxchi/components/richtext.css
+    # (complements the .dz-form-richtext field base in HM form.css). Served via HM dist.
     # onboarding.css migrated into HaTchi-MaXchi (HMC-014) — guided-onboarding
     # overlay primitives now live in packages/hatchi-maxchi/components/onboarding.css
     # (mostly HM-token-based; bespoke spotlight geometry retained). Served via HM dist.

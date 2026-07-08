@@ -45,6 +45,7 @@ CSS_SOURCES = [
     ("components", "components/dialog.css"),
     ("components", "components/drawer.css"),
     ("components", "components/form.css"),
+    ("components", "components/richtext.css"),
     ("components", "components/fragment-primitives.css"),
     ("components", "components/hm-core.css"),
     ("components", "components/htmx-states.css"),

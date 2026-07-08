@@ -207,3 +207,9 @@ dialog.dz-drawer > form {
   dialog.dz-drawer:not([open]) { translate: 0 0; }
   .dz-drawer__close { transition: none; }
 }
+
+/* Detail-drawer width instance (migrated from Dazzle dashboard.css, HMC-020):
+   the entity detail slide-over is wider than the HM drawer default. */
+#dz-detail-drawer.dz-drawer {
+  width: min(42rem, calc(100vw - 3rem));
+}

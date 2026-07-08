@@ -1,7 +1,11 @@
-/* dz-richtext — native rich-text editor (#977 cycle 1).
- * Spec: dev_docs/2026-05-04-dz-richtext-spec.md
- * Replaces Quill's snow theme (~28KB) with ~1KB of layered styles.
- * Mounts on the existing .dz-form-richtext shell from form_field.html.
+/*
+ * richtext.css — rich-text editor internals (HaTchi-MaXchi).
+ *
+ * The `.dz-form-richtext` editor surface: toolbar buttons, the
+ * `[data-dz-editor]` contenteditable area, and its typographic content
+ * (headings, lists, marks). Complements the `.dz-form-richtext` field
+ * wrapper base defined in form.css. Migrated from Dazzle into HM
+ * (HMC-021, aggressive-mode convergence 2026-07-09).
  */
 
 .dz-form-richtext .dz-richtext-toolbar {
