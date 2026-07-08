@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.4] - 2026-07-08
+
+### Removed
+- **HM-convergence Tier-A (HMC-003a): pruned 10 dead classes from `dazzle-layer.css`.**
+  `dz-btn-ghost`/`-link`, `dz-detail-panel`, `dz-field-label`(+`--required`),
+  `dz-form-panel`, `dz-list-panel`, `dz-metric-card`, `dz-label`, `dz-text-label` —
+  all with zero emitter/template references (the only "uses" were the self-compiled
+  `dazzle.min.css` and stale `dnr-ui` code-gen artifacts), so removing their rules is
+  provably inert (no rendered DOM carries these classes). `dazzle-layer.css` 204→124
+  lines; the reservoir metric fell 4037→3958. The 4 live classes (`dz-app`,
+  `dz-workspace`, `dz-empty-state`, `dz-text-muted`) are retained pending migration
+  into an HM base layer (HMC-003b). Dist rebuilt.
+
 ## [0.98.3] - 2026-07-08
 
 ### Changed
