@@ -157,6 +157,7 @@ tests/audit/classification.json
 # Local OpenTelemetry trace runs from `dazzle perf trace` (#1153 follow-on).
 .dazzle/perf/
 PLAN.md
+PLAN-*.md
 .github/codeql/extensions/**/.codeql/
 
 # HaTchi-MaXchi pycache (site fonts became TRACKED in Stage 3 — the split

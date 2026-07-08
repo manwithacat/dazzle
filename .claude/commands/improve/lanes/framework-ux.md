@@ -52,12 +52,12 @@ Skip if contract is already `DONE`.
 ### 3. REFACTOR (only if impl is PENDING or PARTIAL)
 
 Apply contract to Dazzle code. Typical files:
-- `src/dazzle/render/fragment/...` + `src/dazzle/page/runtime/static/css/design-system.css` — Fragment renderers + design-system HSL variables (no Jinja2 templates since #1042)
-- `src/dazzle/page/runtime/static/js/dz-alpine.js` — Alpine controllers aligning with contract's state grammar
+- `src/dazzle/render/fragment/...` (the typed Fragment substrate — THE universal render path per ADR-0049) + `src/dazzle/page/runtime/static/css/` (`dz.css`, `dz-tones.css`, `dz-widgets.css`, `dazzle-layer.css`) — Fragment renderers + the HM semantic `dz-*` class / design-token layer (no Jinja2 since #1042/ADR-0023)
+- `src/dazzle/page/runtime/static/js/dz-utils.js` + `.../js/islands/` — HM delegated vanilla controllers (haptics, toast, row-action, island controllers) aligning with the contract's state grammar (Alpine REMOVED in Tier F4e — never author `x-*` attributes)
 - Backend endpoints for new server APIs
 - `src/dazzle/page/converters/template_compiler.py` — new context fields
 
-Follow rules from `~/.claude/skills/ux-architect/stack-adapters/htmx-alpine-tailwind.md`.
+Follow the ratified UI invariants (CLAUDE.md "UI Invariants" + `docs/reference/taste.md`): the HM Hyperpart idiom — delegated document-level vanilla controllers, state in the DOM (attributes/`.checked`/`aria-*`), server-owned rendering; semantic `dz-*` classes; `[data-dz-variant]`/`[data-dz-size]` for buttons. Never author `x-data`/`@click`/`x-show` (the morph path strips Alpine-applied classes).
 
 Update row's `impl` to `DONE`.
 

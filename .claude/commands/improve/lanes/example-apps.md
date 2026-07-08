@@ -50,7 +50,7 @@ Apply the fix appropriate to the gap type:
 | `validation` | Edit DSL to satisfy parser/validator |
 | `conformance` | Add missing entity/surface/workspace per `mcp__dazzle__conformance` |
 | `fidelity` | Add missing IR-graph edges per `mcp__dazzle__dsl operation=fidelity` |
-| `visual_quality` | Implement design-system fix per `dazzle qa visual` finding |
+| `visual_quality` | Implement design-system fix per the Tier-2 visual scrape (`dazzle qa capture` + the visual_tier2 subagent) finding |
 
 For framework-related gaps (e.g. lint flagging an auto-generated entity), file a GitHub issue and mark `BLOCKED`.
 
@@ -68,7 +68,7 @@ If errors → fix and retry (up to 3 attempts).
 cd examples/<app> && dazzle ux verify --contracts 2>&1 | tail -20
 ```
 
-Verify the gap closed. For visual_quality fixes, optionally re-run `dazzle qa visual --json` and compare.
+Verify the gap closed. For visual_quality fixes, optionally re-run the Tier-2 visual scrape (`dazzle qa capture` + the visual_tier2 subagent) and compare.
 
 ### 5. REPORT (lane-internal)
 
@@ -114,4 +114,4 @@ Increments shared budget by 5 (significantly more expensive).
 - **One gap per cycle.** Don't chain.
 - **Three attempts then BLOCKED.** Never let a gap run forever.
 - **Framework-related gaps file issues, don't fix.** This lane targets app DSL only — framework fixes belong in `framework-ux` or /issues.
-- **Stale-finding TTL.** `visual_quality` rows come from Tier-2 `dazzle qa visual` scrapes (Step 6). A single-observation row (`seen=1`) that stays `PENDING` longer than **14 days** ages out behind framework releases — by pickup time the issue is often already fixed, so it inflates `actionable_count`, mis-biases lane selection, and wastes investigation re-confirming non-issues. **Delete such rows in OBSERVE rather than carrying them**; the next Tier-2 scrape re-discovers anything still extant with a fresh `ts`/`seen` (cheap by design). Exceptions that are NEVER pruned on age: rows linked to a filed issue (`FILED→#…`), rows recording a shipped fix (`RESOLVED→#…`), and reinforced rows (`seen≥2`, where repeated observation across scrapes is signal). Validated by cycle 157 (2026-05-29): rows 103/106 sat `PENDING` 14 days, then proved stale — the empty list-region empty-state had since been wired (confirmed by direct `ListRegion` render at v0.80.27).
+- **Stale-finding TTL.** `visual_quality` rows come from Tier-2 `dazzle qa capture` scrapes (Step 6, via the visual_tier2 subagent). A single-observation row (`seen=1`) that stays `PENDING` longer than **14 days** ages out behind framework releases — by pickup time the issue is often already fixed, so it inflates `actionable_count`, mis-biases lane selection, and wastes investigation re-confirming non-issues. **Delete such rows in OBSERVE rather than carrying them**; the next Tier-2 scrape re-discovers anything still extant with a fresh `ts`/`seen` (cheap by design). Exceptions that are NEVER pruned on age: rows linked to a filed issue (`FILED→#…`), rows recording a shipped fix (`RESOLVED→#…`), and reinforced rows (`seen≥2`, where repeated observation across scrapes is signal). Validated by cycle 157 (2026-05-29): rows 103/106 sat `PENDING` 14 days, then proved stale — the empty list-region empty-state had since been wired (confirmed by direct `ListRegion` render at v0.80.27).

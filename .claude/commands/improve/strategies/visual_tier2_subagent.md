@@ -2,7 +2,7 @@
 
 Detailed playbook for `example-apps` lane's **Tier 2** visual-QA explore. Runs as a Claude Code Task-tool subagent (NOT a Claude API call). Cognitive work bills to the Claude Code subscription; browser work (screenshot capture) happens via `dazzle qa capture` per app.
 
-Replaces the API-bound `dazzle qa visual` command — that CLI was removed in the same commit that introduced this strategy.
+Replaces the API-bound screenshot-scrape CLI (`qa visual`, removed in the same commit that introduced this strategy) — capture is now `dazzle qa capture` + this subagent.
 
 ## Prerequisites
 

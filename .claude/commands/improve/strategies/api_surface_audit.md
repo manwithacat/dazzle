@@ -51,7 +51,7 @@ If it does: pick the surface with the oldest last-audit cycle. Tie-break by surf
 pytest tests/unit/test_api_surface_drift.py -q
 ```
 
-If red: this strategy cannot run. Mark `BLOCKED` and return — fix the drift first via `dazzle inspect-api <surface> --write` and a CHANGELOG entry, then come back.
+If red: this strategy cannot run. Mark `BLOCKED` and return — fix the drift first via `dazzle inspect api <surface> --write` and a CHANGELOG entry, then come back.
 
 ### 3. Read the chosen baseline
 
