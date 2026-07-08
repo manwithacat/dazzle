@@ -58,6 +58,24 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
+| `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux *(proposed)* | — | UNOWNED |
+| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps *(proposed)* | — | UNOWNED |
+| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux *(proposed)* | — | UNOWNED |
+| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps *(proposed)* | — | UNOWNED |
+| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps *(proposed)* | — | UNOWNED |
+| MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux *(proposed)* | — | UNOWNED |
+| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite *(proposed)* | — | UNOWNED |
+| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps *(proposed)* | — | UNOWNED |
+
+> **Capability-sweep cycle 190 (2026-07-08).** First sweep to run. Re-derived the
+> inventory from `dazzle --help` + the MCP table + the `.claude/` tree and found the
+> 8 UNOWNED rows above — real, substantial quality/verification capabilities that no
+> lane invokes. Flagship: `dazzle rbac` (the provable-RBAC substrate, shipped
+> v0.90–0.91) had rotted unexercised by the loop. Owning lanes are *proposed*; the
+> driver's capability-coverage rule (Step 1 rule 6) will route directed-explore
+> cycles to exercise each, flipping UNOWNED → USED/OWNED-IDLE as they run.
+> STALE recompute (cycle 190, threshold last-exercised ≤170): no existing numeric
+> row (188/187/186/185) flips.
 
 ---
 
