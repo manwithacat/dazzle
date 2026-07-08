@@ -25,7 +25,7 @@ from typing import Any
 # Hoisted (no cycle: qa -> render/page/core is the correct layer direction; #1438).
 from dazzle._version import get_version
 from dazzle.core import ir
-from dazzle.core.ir import AggregateRef, PeekMode, state_machine, workspaces
+from dazzle.core.ir import AggregateRef, PeekMode, workspaces
 from dazzle.core.ir.rhythm import PhaseKind
 from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.page import app_paths
@@ -43,9 +43,10 @@ from dazzle.page.runtime.form_engagement_resolver import annotate_form_fields_by
 from dazzle.page.runtime.landing_resolver import check_landing_drift, infer_landing_route
 from dazzle.page.runtime.peek_resolver import resolve_peek_mode
 from dazzle.render import filters
-from dazzle.render.context import ColumnContext
+from dazzle.render.context import ColumnContext, TransitionContext
 from dazzle.render.fragment.region._dispatcher import WorkspaceRegionAdapter
 from dazzle.render.fragment.renderer._data_row import _render_cell_display, drill_row_attrs
+from dazzle.render.fragment.state_affordance import gated_row_transitions
 
 # ── Ladder ───────────────────────────────────────────────────────────────
 LEVEL_NAMES = {
@@ -400,9 +401,27 @@ def _probe_3b() -> ProbeResult:
 
 
 def _probe_3c() -> ProbeResult:
-    """State-gated affordance via the state machine (transitions)."""
-    has_sm = hasattr(state_machine, "StateMachineSpec")
-    return ProbeResult(has_sm, "state-machine transitions gate actions by entity state")
+    """State-gated affordances: only transitions valid from a record's current
+    state are offered (detail view + list rows) via the shared
+    `gated_row_transitions` gate — from_state == current or the '*' wildcard
+    (level 4, #1558)."""
+    ts = [
+        TransitionContext(from_state="open", to_state="in_progress", label="Start"),
+        TransitionContext(from_state="in_progress", to_state="resolved", label="Resolve"),
+        TransitionContext(from_state="*", to_state="open", label="Reopen"),
+    ]
+    from_open = [t.to_state for t in gated_row_transitions(ts, "open")]
+    from_resolved = [t.to_state for t in gated_row_transitions(ts, "resolved")]
+    # From open: in_progress is offered; resolved is NOT (can't skip a state).
+    open_ok = "in_progress" in from_open and "resolved" not in from_open
+    # From resolved: only the '*' wildcard reopen applies; resolved-self is absent.
+    resolved_reopen = "open" in from_resolved and "resolved" not in from_resolved
+    empty_ok = gated_row_transitions(ts, "") == []
+    ok = open_ok and resolved_reopen and empty_ok
+    return ProbeResult(
+        ok=ok,
+        note=f"from_open={from_open} from_resolved={from_resolved} empty_gated={empty_ok}",
+    )
 
 
 def _probe_3d() -> ProbeResult:
@@ -533,8 +552,13 @@ CRITERIA: list[Criterion] = [
         "3c",
         "negative_space",
         "state-gated affordance",
-        3,
-        "state-machine transitions offer only the actions the current state allows (inferred from the state graph)",
+        4,
+        "#1558 L3 + current-state gating L4 — state-machine transition affordances are "
+        "filtered to those valid FROM the record's current state (from_state == current or "
+        "'*', via the shared `gated_row_transitions`) on BOTH the detail view (request-time "
+        "filter in page_routes) and regular list rows (per-row, in the row actions cell). "
+        "The compile build preserves `from_state` on TransitionContext; guards remain "
+        "enforced by HTTP validation on click; no state machine = byte-identical.",
         "low",
         _probe_3c,
     ),
