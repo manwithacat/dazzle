@@ -8564,6 +8564,496 @@ a.action-card:hover {
 }
 
 }
+/* ── components/onboarding.css ── */
+@layer components {
+/*
+ * onboarding.css — guided-onboarding overlay primitives (HaTchi-MaXchi).
+ *
+ * Styles for the 8 step kinds (popover, spotlight, inline_card, empty_state,
+ * banner, checklist_item, blocking_task, nudge) emitted by
+ * `dazzle.render.onboarding.renderer`. Every overlay shares the outer
+ * `<onboarding-step>` custom element; per-kind appearance is a
+ * `.onboarding-<kind>` block + BEM child classes. The bulk routes through HM
+ * tokens; the spotlight-ring / scrim geometry (6rem ring, 999px cutout shadow,
+ * scrim opacity) is intentionally bespoke, not design-system-tokenizable.
+ * Migrated from Dazzle into HM (HMC-014, aggressive-mode convergence 2026-07-08).
+ * NOTE: no `@layer components {` wrapper here — HM build.py adds it.
+ */
+
+/* ─────────────────────────────────────────────────────────────────
+ * Shared outer element. Custom elements default to display: inline
+ * — that's almost always wrong for an overlay. Make every kind
+ * `block` by default; per-kind overrides take it from there.
+ * ───────────────────────────────────────────────────────────────── */
+onboarding-step {
+  display: block;
+}
+
+/* Hide overlay visibly during dismiss-fade so the htmx outer-swap
+ * isn't jarring. Reduced motion respects the user preference. */
+@media (prefers-reduced-motion: no-preference) {
+  onboarding-step {
+    transition: opacity 0.15s ease;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * popover — floating callout, anchored or bottom-fixed
+ * ───────────────────────────────────────────────────────────────── */
+.onboarding-popover {
+  position: fixed;
+  bottom: var(--space-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9000;
+  max-width: min(28rem, calc(100vw - var(--space-xl) * 2));
+  padding: var(--space-lg);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+}
+
+.onboarding-popover__chrome {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.onboarding-popover__title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.onboarding-popover__body {
+  margin: 0 0 var(--space-md);
+  color: var(--colour-text-muted);
+  line-height: 1.5;
+}
+
+.onboarding-popover__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * spotlight — dimmed page + halo ring + callout
+ * ───────────────────────────────────────────────────────────────── */
+.onboarding-spotlight {
+  position: fixed;
+  inset: 0;
+  z-index: 9100;
+}
+
+.onboarding-spotlight__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.55);
+}
+
+.onboarding-spotlight__ring {
+  /* JS positions this against the target in v0.71.6+; the default
+   * shape is a centered translucent ring as a fallback so the dim
+   * is non-blocking. */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6rem;
+  height: 6rem;
+  margin: -3rem 0 0 -3rem;
+  border-radius: var(--radius-full);
+  box-shadow:
+    0 0 0 999px rgb(0 0 0 / 0.0),
+    0 0 0 4px var(--colour-brand);
+  pointer-events: none;
+}
+
+.onboarding-spotlight__card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Offset by 8rem so the ring (3rem half-height + 4px border-shadow)
+   * has visible breathing room before the card starts. Tighter than
+   * this and the ring and card visually fuse. */
+  transform: translate(-50%, calc(-50% + 8rem));
+  max-width: min(26rem, calc(100vw - var(--space-xl) * 2));
+  padding: var(--space-lg);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.onboarding-spotlight__title {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+}
+
+.onboarding-spotlight__body {
+  margin: 0 0 var(--space-md);
+  color: var(--colour-text-muted);
+  line-height: 1.5;
+}
+
+.onboarding-spotlight__dismiss {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * inline_card — solid card in page flow
+ * ───────────────────────────────────────────────────────────────── */
+.onboarding-inline-card {
+  margin: var(--space-lg) 0;
+  padding: var(--space-lg);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.onboarding-inline-card__chrome {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.onboarding-inline-card__title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+.onboarding-inline-card__body {
+  margin: 0 0 var(--space-md);
+  color: var(--colour-text-muted);
+  line-height: 1.5;
+}
+
+.onboarding-inline-card__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * empty_state — large-format replace-the-list prompt
+ * ───────────────────────────────────────────────────────────────── */
+.onboarding-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-md);
+  padding: var(--space-3xl) var(--space-xl);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px dashed var(--colour-border);
+  border-radius: var(--radius-lg);
+  margin: var(--space-xl) 0;
+}
+
+.onboarding-empty-state__icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-full);
+  background: var(--colour-brand);
+  opacity: 0.15;
+}
+
+.onboarding-empty-state__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+}
+
+.onboarding-empty-state__body {
+  margin: 0;
+  max-width: 36rem;
+  color: var(--colour-text-muted);
+  line-height: 1.5;
+}
+
+.onboarding-empty-state__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * banner — full-width strip across the top
+ * ───────────────────────────────────────────────────────────────── */
+.onboarding-banner {
+  position: sticky;
+  top: 0;
+  z-index: 8000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  font-size: var(--text-sm);
+}
+
+.onboarding-banner__message {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.onboarding-banner__title {
+  font-weight: var(--weight-medium);
+}
+
+.onboarding-banner__separator {
+  opacity: 0.7;
+}
+
+.onboarding-banner__body {
+  opacity: 0.9;
+}
+
+.onboarding-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 0 0 auto;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * checklist_item — list row with checkbox indicator
+ * ───────────────────────────────────────────────────────────────── */
+.onboarding-checklist-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  margin: var(--space-sm) 0;
+}
+
+.onboarding-checklist-item__indicator {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--colour-border);
+  background: transparent;
+}
+
+.onboarding-checklist-item__content {
+  min-width: 0;
+}
+
+.onboarding-checklist-item__title {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.onboarding-checklist-item__body {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  line-height: 1.4;
+}
+
+.onboarding-checklist-item__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.onboarding-checklist-item__dismiss--hidden {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * blocking_task — native <dialog> modal with scrim
+ * ───────────────────────────────────────────────────────────────── */
+.onboarding-blocking-task {
+  /* Outer custom element is just a container; the <dialog> handles
+   * positioning + the modal stacking context. */
+  display: contents;
+}
+
+.onboarding-blocking-task__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.55);
+  z-index: 9199;
+}
+
+.onboarding-blocking-task__dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9200;
+  max-width: min(32rem, calc(100vw - var(--space-xl) * 2));
+  padding: var(--space-xl);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.onboarding-blocking-task__title {
+  margin: 0 0 var(--space-md);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-medium);
+}
+
+.onboarding-blocking-task__body {
+  margin: 0 0 var(--space-lg);
+  color: var(--colour-text-muted);
+  line-height: 1.5;
+}
+
+.onboarding-blocking-task__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * nudge — small toast, bottom-right
+ * ───────────────────────────────────────────────────────────────── */
+.onboarding-nudge {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: var(--space-xl);
+  z-index: 8500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  max-width: min(24rem, calc(100vw - var(--space-xl) * 2));
+  padding: var(--space-md) var(--space-lg);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+}
+
+.onboarding-nudge__content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.onboarding-nudge__title {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-weight: var(--weight-medium);
+}
+
+.onboarding-nudge__body {
+  display: block;
+  color: var(--colour-text-muted);
+}
+
+.onboarding-nudge__actions {
+  display: flex;
+  gap: var(--space-xs);
+  flex: 0 0 auto;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * Shared dismiss + CTA styling for every kind. The renderer emits
+ * per-kind classes (`__dismiss`, `__cta`) but every kind uses the
+ * same visual baseline; per-kind blocks above override positioning
+ * only where they need to.
+ * ───────────────────────────────────────────────────────────────── */
+/* Wrapped in :where() so the shared baseline has specificity (0,0,0).
+ * That lets per-kind overrides (e.g. `.onboarding-banner__cta`) win
+ * on a single class selector — otherwise the attribute-pair (0,2,0)
+ * would beat the class (0,1,0) and per-kind chrome inversions would
+ * silently lose the cascade. */
+:where([class*="onboarding-"][class$="__dismiss"]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  cursor: pointer;
+  font-size: var(--text-base);
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.1s ease;
+}
+
+:where([class*="onboarding-"][class$="__dismiss"]):hover {
+  opacity: 1;
+}
+
+:where([class*="onboarding-"][class$="__cta"]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xs) var(--space-md);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: none;
+  transition: filter 0.1s ease;
+}
+
+:where([class*="onboarding-"][class$="__cta"]):hover {
+  filter: brightness(0.92);
+}
+
+/* Empty-state dismiss is a labelled "Skip" — give it ghost-button
+ * shape rather than the bare ✕ chrome. */
+.onboarding-empty-state__dismiss {
+  width: auto;
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  opacity: 1;
+  color: var(--colour-text-muted);
+}
+
+/* Banner CTA + dismiss sit on a coloured ground — invert chrome
+ * colours to stay legible. */
+.onboarding-banner__cta {
+  background: var(--colour-brand-contrast);
+  color: var(--colour-brand);
+}
+
+.onboarding-banner__cta:hover {
+  filter: brightness(0.96);
+}
+
+.onboarding-banner__dismiss {
+  color: var(--colour-brand-contrast);
+}
+
+
+}
 /* ── components/tree.css ── */
 @layer components {
 /* HYPERPART: tree */

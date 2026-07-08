@@ -65,8 +65,9 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     ("components", "css/components/mobile-scroll.css"),
     # #977 cycle 1 — Dazzle-native rich-text editor (replaces Quill in cycle 4).
     ("components", "css/components/richtext.css"),
-    # v0.71.x guided onboarding (overlay primitives for the eight step kinds).
-    ("components", "css/components/onboarding.css"),
+    # onboarding.css migrated into HaTchi-MaXchi (HMC-014) — guided-onboarding
+    # overlay primitives now live in packages/hatchi-maxchi/components/onboarding.css
+    # (mostly HM-token-based; bespoke spotlight geometry retained). Served via HM dist.
     # dazzle-layer.css removed from the bundle (HMC-003b, 2026-07-08): its
     # remaining rules are all dead for the main HM runtime — `#app`/`.dz-app`
     # (root layout; the main shell is `<body class="dz-page">` + `.dz-app-shell`,

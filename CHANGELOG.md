@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.18] - 2026-07-08
+
+### Changed
+- **HM-convergence (HMC-014): guided-onboarding overlays → HaTchi-MaXchi.** The whole
+  `onboarding.css` family (the 8 step kinds — popover/spotlight/inline_card/empty_state/
+  banner/checklist_item/blocking_task/nudge — plus the shared `<dz-onboarding-step>`
+  element and BEM child classes) moved from `page/runtime/static/css/components/` into a
+  new HM component `packages/hatchi-maxchi/components/onboarding.css`. Mostly HM-token-based
+  already; the bespoke spotlight-ring / scrim geometry (6rem ring, 999px cutout shadow,
+  scrim opacity) is retained as-is (not design-system-tokenizable). Its self `@layer
+  components {` wrapper was stripped so HM's build wraps it once (no nested layer). Removed
+  from `css_loader.CSS_SOURCE_FILES`; served via the HM dist (verified via `get_bundled_css`,
+  no nested `@layer`). Reservoir `css_lines_dazzle_native` 2833→2336 (−497).
+
 ## [0.98.17] - 2026-07-08
 
 ### Changed

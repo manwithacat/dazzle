@@ -1,25 +1,16 @@
 /*
- * onboarding.css — guided-onboarding overlay primitives (v0.71.x).
+ * onboarding.css — guided-onboarding overlay primitives (HaTchi-MaXchi).
  *
- * Styles for the 8 step kinds emitted by
- * `dazzle.render.onboarding.renderer`:
- *
- *   popover, spotlight, inline_card, empty_state,
- *   banner, checklist_item, blocking_task, nudge
- *
- * Every overlay shares the same outer `<dz-onboarding-step>` custom
- * element. Per-kind appearance comes from the kind's own
- * `.dz-onboarding-<kind>` block + BEM-style child classes
- * (`__chrome`, `__title`, `__body`, `__actions`, `__cta`,
- * `__dismiss`).
- *
- * Tokens used: `--colour-*`, `--space-*`, `--radius-*`, `--shadow-*`,
- * `--text-*`, `--weight-*`. No literal values.
- *
- * Wrapped in @layer components.
+ * Styles for the 8 step kinds (popover, spotlight, inline_card, empty_state,
+ * banner, checklist_item, blocking_task, nudge) emitted by
+ * `dazzle.render.onboarding.renderer`. Every overlay shares the outer
+ * `<dz-onboarding-step>` custom element; per-kind appearance is a
+ * `.dz-onboarding-<kind>` block + BEM child classes. The bulk routes through HM
+ * tokens; the spotlight-ring / scrim geometry (6rem ring, 999px cutout shadow,
+ * scrim opacity) is intentionally bespoke, not design-system-tokenizable.
+ * Migrated from Dazzle into HM (HMC-014, aggressive-mode convergence 2026-07-08).
+ * NOTE: no `@layer components {` wrapper here — HM build.py adds it.
  */
-
-@layer components {
 
 /* ─────────────────────────────────────────────────────────────────
  * Shared outer element. Custom elements default to display: inline
@@ -492,5 +483,3 @@ dz-onboarding-step {
 .dz-onboarding-banner__dismiss {
   color: var(--colour-brand-contrast);
 }
-
-}  /* @layer components */

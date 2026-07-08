@@ -77,6 +77,7 @@ CSS_SOURCES = [
     ("components", "components/grid-list.css"),
     ("components", "components/list-region.css"),
     ("components", "components/detail.css"),
+    ("components", "components/onboarding.css"),
     ("components", "components/tree.css"),
     ("components", "components/diagram.css"),
     ("components", "components/confirm-panel.css"),
