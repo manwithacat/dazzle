@@ -1135,12 +1135,18 @@ def _compile_view_surface(
     if entity and entity.state_machine:
         sm = entity.state_machine
         status_field = sm.status_field if hasattr(sm, "status_field") else "status"
-        seen_targets: set[str] = set()
+        # #1558 3c: keep from_state so the request-time detail filter and the
+        # list-row render can gate by the record's current state. Dedup by
+        # (from_state, to_state) — two edges to the same target from different
+        # sources are distinct affordances.
+        seen: set[tuple[str, str]] = set()
         for t in sm.transitions:
-            if t.to_state not in seen_targets:
-                seen_targets.add(t.to_state)
+            key = (t.from_state, t.to_state)
+            if key not in seen:
+                seen.add(key)
                 transitions.append(
                     TransitionContext(
+                        from_state=t.from_state,
                         to_state=t.to_state,
                         label=t.to_state.replace("_", " ").title(),
                         api_url=f"{api_endpoint}/{{id}}",

@@ -247,6 +247,7 @@ class TransitionContext(BaseModel):
     to_state: str
     label: str
     api_url: str = ""
+    from_state: str = ""  # #1558 3c: source state for current-state gating ("*" = any)
 
 
 class RelatedTabContext(BaseModel):
