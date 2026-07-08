@@ -243,11 +243,16 @@ rhythm <name> "<Title>":
   phase <phase_name>:
     [kind: <phase_kind>]
     scene <scene_name> "<Scene Title>":
-      on: <surface_name>
+      [on: <surface_name>]                # optional if `story:` is cited (derived)
       [action: <verb1>[, <verb2>, ...]]
       [entity: <EntityName>]
       [expects: "<expected_outcome>"]
       [story: <story_id>]
+
+    # Thin form — surface/action/entity derived from the cited story:
+    scene <scene_name> "<Scene Title>":
+      story: <story_id>
+      [expects: "<expected_outcome>"]
 
     [scene ...]
 
@@ -261,7 +266,7 @@ rhythm <name> "<Title>":
 | `persona:` | rhythm | identifier | Yes — must reference existing persona | Who takes this journey |
 | `cadence:` | rhythm | quoted string | No — agent-interpreted | Temporal frequency hint |
 | `kind:` | phase | keyword | Yes if present — must be a valid phase kind | Phase lifecycle classification |
-| `on:` | scene | identifier | Yes — must reference existing surface | Which surface this scene exercises |
+| `on:` | scene | identifier | Yes — must reference an existing surface/workspace. Optional when `story:` is cited: the surface is then derived from the story (loud error if ambiguous). | Which surface this scene exercises |
 | `action:` | scene | identifier(s) | No — agent-interpreted | What the persona does |
 | `entity:` | scene | identifier | Yes if present — must reference existing entity | What data is involved |
 | `expects:` | scene | quoted string | No — agent-interpreted | Expected outcome assertion |
@@ -272,7 +277,7 @@ rhythm <name> "<Title>":
 The linker validates structural references at compile time:
 
 1. `rhythm.persona` must match a defined persona
-2. `scene.on` must match a defined surface
+2. `scene.on` must match a defined surface/workspace — or be omitted when `scene.story` is cited, in which case the surface is derived from the story (and a derivation that is ambiguous or has no candidate is a loud link error)
 3. `scene.entity` (if present) must match a defined entity
 4. `scene.story` (if present) must match a defined story
 5. Phase names must be unique within the rhythm

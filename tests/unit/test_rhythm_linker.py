@@ -385,3 +385,92 @@ rhythm onboarding "Onboarding":
 """
     with pytest.raises(Exception, match="story|ST-999"):
         _build_appspec(dsl)
+
+
+def test_rhythm_thin_scene_derives_binding_at_link():
+    """#1559 slice 3: a scene citing a story may omit on/action/entity; they are
+    derived at link time. user_click → list surface + browse."""
+    dsl = """\
+module test_app
+app test "Test"
+
+persona new_user "New User":
+  goals:
+    - "Learn"
+
+entity Course "Course":
+  id: uuid pk
+  title: str(200) required
+
+surface course_list "Courses":
+  uses entity Course
+  mode: list
+  section main:
+    field title "Title"
+
+story ST-001 "User browses courses":
+  status: accepted
+  persona: new_user
+  trigger: user_click
+  entities: [Course]
+  then:
+    - "Courses are listed"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase discovery:
+    scene browse "Browse":
+      story: ST-001
+"""
+    appspec = _build_appspec(dsl)
+    scene = appspec.rhythms[0].phases[0].scenes[0]
+    assert scene.surface == "course_list"
+    assert scene.actions == ["browse"]
+    assert scene.entity == "Course"
+
+
+def test_rhythm_thin_scene_ambiguous_surface_errors_loudly():
+    """Two list surfaces for the same entity → derivation is ambiguous, which is
+    a loud link error asking for an explicit `on:` (never a silent guess)."""
+    dsl = """\
+module test_app
+app test "Test"
+
+persona new_user "New User":
+  goals:
+    - "Learn"
+
+entity Course "Course":
+  id: uuid pk
+  title: str(200) required
+
+surface course_list "Courses":
+  uses entity Course
+  mode: list
+  section main:
+    field title "Title"
+
+surface course_grid "Courses Grid":
+  uses entity Course
+  mode: list
+  section main:
+    field title "Title"
+
+story ST-001 "User browses courses":
+  status: accepted
+  persona: new_user
+  trigger: user_click
+  entities: [Course]
+  then:
+    - "Courses are listed"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase discovery:
+    scene browse "Browse":
+      story: ST-001
+"""
+    with pytest.raises(Exception, match="surfaces serve entity|explicit"):
+        _build_appspec(dsl)

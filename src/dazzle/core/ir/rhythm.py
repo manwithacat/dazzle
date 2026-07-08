@@ -60,7 +60,12 @@ class SceneSpec(BaseModel):
 
     name: str = Field(..., description="Scene identifier")
     title: str | None = Field(default=None, description="Human-readable title")
-    surface: str = Field(..., description="Surface or workspace this scene exercises")
+    # Optional at parse time: a scene that cites a story may omit `on:` and have
+    # its surface derived from the story at link time (#1559 slice 3). After a
+    # successful link it is always populated (derivation failure is a link error).
+    surface: str | None = Field(
+        default=None, description="Surface or workspace this scene exercises"
+    )
     actions: list[str] = Field(default_factory=list, description="Action verbs")
     entity: str | None = Field(default=None, description="Entity reference")
     expects: str | None = Field(default=None, description="Expected outcome")

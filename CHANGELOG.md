@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.97.4] - 2026-07-08
+
+### Added
+- **Rhythms derive from stories (#1559 slice 3 — "the big win").** A scene that
+  cites a `story:` may now omit `on:` (surface), `action:`, and `entity:` — they
+  are derived from the cited story at link time, so a rhythm can be a thin
+  temporal ordering over story references rather than a re-description. `entity`
+  comes from the story's first entity and `action` from a trigger→verb map
+  (both exact, fully traceable); `surface` is looked up by the `(entity, mode)`
+  the story's trigger implies (form_submitted→create, status_changed→view,
+  user_click→list). Explicit values always win. New `core/rhythm_binding.py`;
+  derivation runs once in the linker so every consumer sees resolved scenes.
+- **Surface derivation is loud on ambiguity (MDE hidden-derivation guard).** A
+  surface is derived only when exactly one surface serves the implied
+  `(entity, mode)`. Zero or more-than-one candidates — or a trigger with no
+  default surface — is a hard link error naming the ambiguity and asking for an
+  explicit `on:`, never a silent guess. So an inferred binding is always either
+  obviously correct or a clear ask.
+- `fieldtest_hub`'s `register_device` and `check_assignments` scenes converted
+  to the thin form (just `story:` + `expects:`) as worked examples; they resolve
+  byte-identically to their former explicit bindings (fidelity still 1.0).
+
+### Changed
+- `SceneSpec.surface` is now optional (`str | None`) at parse time — populated
+  by link-time derivation, or a link error if it can't be. After a successful
+  link it is always set. (ir-types API surface bumped.)
+
+### Agent Guidance
+- When authoring a rhythm scene that maps 1:1 to a story, prefer the thin form
+  (`scene x "...": / story: ST-nnn`) and let the surface/action/entity derive.
+  Add an explicit `on:` only when the link error tells you derivation is
+  ambiguous (multiple surfaces for the entity) or when the scene targets a
+  workspace (workspaces are never derived).
+
 ## [0.97.3] - 2026-07-08
 
 ### Added

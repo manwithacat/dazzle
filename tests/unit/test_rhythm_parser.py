@@ -380,6 +380,26 @@ rhythm onboarding "Onboarding":
         parse_dsl(dsl, Path("test.dsl"))
 
 
+def test_parse_scene_thin_form_omits_on_when_story_cited():
+    """A scene citing a story may omit `on:` — the surface is derived at link
+    time (#1559 slice 3), so parsing leaves it None rather than raising."""
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase discovery:
+    scene enroll "Enroll":
+      story: ST-001
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    scene = fragment.rhythms[0].phases[0].scenes[0]
+    assert scene.surface is None
+    assert scene.story == "ST-001"
+
+
 def test_classify_action_standard():
     """classify_action returns archetype for standard verbs."""
     from dazzle.core.ir.rhythm import classify_action

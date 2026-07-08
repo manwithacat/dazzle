@@ -1251,10 +1251,9 @@ rhythm engineer_lifecycle "Engineer — Device Lifecycle":
   # Setup — bring a new device online.
   phase setup:
     kind: onboarding
+    # Thin form (#1559 slice 3): surface (device_create), action (submit) and
+    # entity (Device) are all derived from the cited story ST-019 at link time.
     scene register_device "Register a new device":
-      on: device_create
-      action: submit
-      entity: Device
       story: ST-019
       expects: "A new device is recorded in prototype state"
     scene activate_device "Promote the device to active":
@@ -1333,10 +1332,9 @@ rhythm tester_fieldwork "Field Tester — Test Visit":
 
   phase fieldwork:
     kind: active
+    # Thin form (#1559 slice 3): device_list / browse / Device all derived from
+    # the cited story ST-044.
     scene check_assignments "Check assigned devices":
-      on: device_list
-      action: browse
-      entity: Device
       story: ST-044
       expects: "The tester sees the devices assigned to them for this visit"
     scene run_session "Log a test session":

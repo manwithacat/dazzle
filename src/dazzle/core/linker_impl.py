@@ -1376,6 +1376,19 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                     "default_model: in llm_config."
                 )
 
+    # Derive omitted scene bindings from cited stories (#1559 slice 3) BEFORE
+    # validation, so the checks below see the effective (resolved) surface and
+    # entity. Explicit values are untouched; ambiguous/underivable surfaces
+    # surface as loud errors here.
+    from .rhythm_binding import resolve_rhythm
+
+    for _rname in list(symbols.rhythms.keys()):
+        _resolved, _derive_errors = resolve_rhythm(
+            symbols.rhythms[_rname], symbols.surfaces, symbols.stories
+        )
+        symbols.rhythms[_rname] = _resolved
+        errors.extend(_derive_errors)
+
     # Validate rhythm references (v0.39.0)
     for rhythm_name, rhythm in symbols.rhythms.items():
         # Persona must exist
@@ -1390,8 +1403,13 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                     errors.append(f"Rhythm '{rhythm_name}' has duplicate scene name '{scene.name}'")
                 seen_scenes.add(scene.name)
 
+                # scene.surface is None only when derivation failed — the
+                # resolver already reported a specific error, so skip the
+                # generic surface check to avoid a confusing "unknown surface
+                # 'None'" pile-on.
                 if (
-                    scene.surface not in symbols.surfaces
+                    scene.surface is not None
+                    and scene.surface not in symbols.surfaces
                     and scene.surface not in symbols.workspaces
                 ):
                     errors.append(

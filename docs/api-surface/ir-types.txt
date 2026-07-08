@@ -2476,13 +2476,13 @@ ir_class: SceneEvaluation
 ir_class: SceneSpec
   required:
     - name: str
-    - surface: str
   optional:
     - actions: list[str] = []
     - entity: str | None = None
     - expects: str | None = None
     - source: SourceLocation | None = None
     - story: str | None = None
+    - surface: str | None = None
     - title: str | None = None
 
 ir_class: ScheduleSpec

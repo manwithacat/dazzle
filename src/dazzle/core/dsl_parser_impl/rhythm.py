@@ -257,11 +257,15 @@ class RhythmParserMixin:
 
         self.expect(TokenType.DEDENT)
 
-        if surface is None:
+        # `on:` is optional only when the scene cites a story — the surface is
+        # then derived from that story at link time (#1559 slice 3). A scene
+        # with neither is a genuine error.
+        if surface is None and story is None:
             from ..errors import make_parse_error
 
             raise make_parse_error(
-                "Scene missing required 'on' field (surface reference)",
+                "Scene missing required 'on' field (surface reference). A scene may "
+                "omit 'on:' only when it cites a 'story:' to derive the surface from.",
                 self.file,
                 self.current_token().line,
                 self.current_token().column,
