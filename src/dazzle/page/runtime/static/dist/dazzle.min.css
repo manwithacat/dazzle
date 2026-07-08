@@ -1,4 +1,4 @@
-/* dazzle v0.98.5 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.98.6 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -10358,33 +10358,6 @@ border-left-color: var(--colour-danger);
 background: color-mix(in oklch, var(--colour-danger) 6%, var(--colour-surface));
 }
 }
-[data-dz-show] {
-transition: opacity 150ms ease-in, transform 150ms ease-in;
-}
-[data-dz-toggleable]:not([data-dz-open]) [data-dz-show] {
-display: none;
-}
-[data-dz-show="dropdown"] {
-transition: opacity 150ms ease-out, transform 150ms ease-out;
-transform-origin: top right;
-}
-[data-dz-toggleable][data-dz-open] [data-dz-show="dropdown"] {
-opacity: 1;
-transform: scale(1) translateY(0);
-}
-[data-dz-slide-over] [data-dz-show="backdrop"] {
-transition: opacity 200ms ease-out;
-}
-[data-dz-slide-over] [data-dz-show="panel"] {
-transition: transform 200ms ease-out;
-transform: translateX(100%);
-}
-[data-dz-slide-over][data-dz-open] [data-dz-show="panel"] {
-transform: translateX(0);
-}
-[data-dz-bulk-bar] {
-transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
 .dz-toast-enter {
 opacity: 0;
 transform: translateX(1rem);
@@ -10397,33 +10370,6 @@ transition: opacity 150ms ease-in, transform 150ms ease-in;
 }
 #dz-toast .alert {
 transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
-@media (min-width: 1024px) {
-.drawer[data-dz-sidebar="open"] {
-grid-template-columns: max-content 1fr;
-}
-.drawer[data-dz-sidebar="open"] > .drawer-side {
-position: sticky;
-top: 0;
-height: 100vh;
-overflow-y: auto;
-visibility: visible;
-pointer-events: auto;
-opacity: 1;
-display: block;
-width: auto;
-overscroll-behavior: auto;
-}
-.drawer[data-dz-sidebar="open"] > .drawer-side > .drawer-overlay {
-visibility: hidden;
-}
-.drawer[data-dz-sidebar="open"] > .drawer-side > *:not(.drawer-overlay) {
-translate: 0%;
-transform: translateX(0);
-}
-.drawer[data-dz-sidebar="open"] > .drawer-content > [data-dz-sidebar-navbar] {
-display: none;
-}
 }
 tr.htmx-swapping {
 opacity: 0;

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.6] - 2026-07-08
+
+### Removed
+- **HM-convergence Tier-A (HMC-006a): pruned dead blocks from `dz.css`.** Removed the
+  toggle / dropdown / slide-over / bulk-bar animation blocks (their `data-dz-show` /
+  `-toggleable` / `-slide-over` / `-bulk-bar` attributes are emitted by nothing — those
+  toggle systems were replaced by HM delegated controllers) and the desktop-sidebar
+  block (it targeted DaisyUI's `.drawer`/`.drawer-side`/`.drawer-overlay`, removed with
+  DaisyUI in v0.56.0; the live sidebar is `.dz-app-shell[data-dz-sidebar]` + HM `.dz-drawer`).
+  Provably inert — no rendered DOM carried those selectors. `dz.css` 234→160; reservoir
+  3945→3872. Deferred (HMC-006b): the `tr.htmx-*`/`.htmx-indicator` rules are duplicates
+  of HM `htmx-states.css` but use hardcoded values vs HM's tokens — deleting them is a
+  token-vs-hardcoded change needing its own verification; view-transitions, dialog
+  backdrop, and resize-drag body classes stay pending their components' migration.
+
 ## [0.98.5] - 2026-07-08
 
 ### Changed

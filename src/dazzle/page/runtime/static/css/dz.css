@@ -4,48 +4,10 @@
  * ~40 lines. Works with Tailwind/DaisyUI.
  */
 
-/* ── Toggle show/hide with fade ─────────────────────────────────────── */
-
-[data-dz-show] {
-  transition: opacity 150ms ease-in, transform 150ms ease-in;
-}
-
-[data-dz-toggleable]:not([data-dz-open]) [data-dz-show] {
-  display: none;
-}
-
-/* ── Dropdown animation ─────────────────────────────────────────────── */
-
-[data-dz-show="dropdown"] {
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
-  transform-origin: top right;
-}
-
-[data-dz-toggleable][data-dz-open] [data-dz-show="dropdown"] {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-}
-
-/* ── Slide-over panel ───────────────────────────────────────────────── */
-
-[data-dz-slide-over] [data-dz-show="backdrop"] {
-  transition: opacity 200ms ease-out;
-}
-
-[data-dz-slide-over] [data-dz-show="panel"] {
-  transition: transform 200ms ease-out;
-  transform: translateX(100%);
-}
-
-[data-dz-slide-over][data-dz-open] [data-dz-show="panel"] {
-  transform: translateX(0);
-}
-
-/* ── Bulk actions bar ───────────────────────────────────────────────── */
-
-[data-dz-bulk-bar] {
-  transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
+/* Toggle / dropdown / slide-over / bulk-bar animation blocks PRUNED (HMC-006):
+ * their `data-dz-show` / `-toggleable` / `-slide-over` / `-bulk-bar` attributes
+ * are emitted by nothing (0 references) — those toggle systems were replaced by
+ * HM delegated controllers. Provably inert (selectors never matched live DOM). */
 
 /* ── Toast notifications ────────────────────────────────────────────── */
 
@@ -65,45 +27,10 @@
   transition: opacity 200ms ease-out, transform 200ms ease-out;
 }
 
-/* ── Desktop sidebar (DaisyUI provides drawer base via @plugin;
-     this adds data-dz-sidebar toggling for the Dazzle micro-runtime) ── */
-
-@media (min-width: 1024px) {
-  /* Two-column grid when sidebar is open */
-  .drawer[data-dz-sidebar="open"] {
-    grid-template-columns: max-content 1fr;
-  }
-
-  /* Show sidebar in-place (not overlay) */
-  .drawer[data-dz-sidebar="open"] > .drawer-side {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
-    visibility: visible;
-    pointer-events: auto;
-    opacity: 1;
-    display: block;
-    width: auto;
-    overscroll-behavior: auto;
-  }
-
-  /* No overlay needed on desktop */
-  .drawer[data-dz-sidebar="open"] > .drawer-side > .drawer-overlay {
-    visibility: hidden;
-  }
-
-  /* Slide content into view */
-  .drawer[data-dz-sidebar="open"] > .drawer-side > *:not(.drawer-overlay) {
-    translate: 0%;
-    transform: translateX(0);
-  }
-
-  /* Hide top navbar when sidebar provides navigation */
-  .drawer[data-dz-sidebar="open"] > .drawer-content > [data-dz-sidebar-navbar] {
-    display: none;
-  }
-}
+/* Desktop-sidebar block PRUNED (HMC-006): it targeted DaisyUI's `.drawer` /
+ * `.drawer-side` / `.drawer-overlay` classes (removed with DaisyUI in v0.56.0).
+ * The live sidebar is `.dz-app-shell[data-dz-sidebar]` + HM `.dz-drawer`; this
+ * DaisyUI-class block never matched the rendered DOM. */
 
 /* ── Optimistic UI feedback ─────────────────────────────────────────── */
 
