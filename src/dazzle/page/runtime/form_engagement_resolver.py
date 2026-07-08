@@ -8,8 +8,9 @@ primitive dispatch:
 - **Autofocus** — the most-engaged plain field gets ``autofocus``, so the form
   opens where users actually start. Plain means it will render as a native
   ``Field``/``Combobox`` input; rich client-controller widgets (TomSelect,
-  Flatpickr, …) are skipped — HTML5 ``autofocus`` on a JS-enhanced control
+  …) are skipped — HTML5 ``autofocus`` on a JS-enhanced control
   races its mount.
+
 - **Combobox upgrade** — a heavily-engaged plain ``select`` with a long option
   list is promoted to the searchable ``combobox`` widget. An author-declared
   ``widget`` is authoritative and never overridden.

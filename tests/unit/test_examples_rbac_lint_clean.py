@@ -61,7 +61,7 @@ _KNOWN_EXAMPLES = [
 # (showcase one capability) and don't claim to teach the write-op scope
 # idiom. Each entry needs a one-line rationale.
 _DOGFOOD_EXEMPT = {
-    # UX component expansion demo (Quill/Flatpickr/Tom Select). RBAC is
+    # UX component expansion demo (Quill/Tom Select). RBAC is
     # standard but the focus is widget integration, not the scope idiom.
     "project_tracker",
     # Brand/asset management demo. Same shape as project_tracker.

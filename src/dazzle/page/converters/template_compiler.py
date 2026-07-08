@@ -612,22 +612,9 @@ def _build_form_fields(
         # Widget override from DSL: field name "Label" widget=rich_text
         widget_hint = element_options.get("widget")
 
-        # Default widget fallback for date/datetime fields (cycle 232).
-        # The form-field macro branches on `field.widget == "picker"` to
-        # activate the Flatpickr datepicker; it also has a fallback branch
-        # on `field.type == "date"` that just emits a plain HTML5
-        # `<input type="date">`, which is functional but ugly and not the
-        # contracted widget. The IR unambiguously says "use the datepicker
-        # for date fields" (WidgetKind.DATE_PICKER in triples.py's
-        # FIELD_TYPE_TO_WIDGET map), but that resolution never reached
-        # the template because `_build_form_fields` was only setting
-        # `widget` from explicit DSL overrides. Propagate the intent by
-        # defaulting to "picker" for date/datetime fields when the DSL
-        # didn't override it.
-        if widget_hint is None and field_spec and field_spec.type:
-            _k = field_spec.type.kind
-            if _k in (FieldTypeKind.DATE, FieldTypeKind.DATETIME):
-                widget_hint = "picker"
+        # Date/datetime fields render as native HTML5 `<input type=date>` /
+        # `datetime-local` (the JS `widget=picker` date-widget was removed —
+        # zero fleet usage); no widget default is injected here.
 
         # Ref / belongs_to auto-wiring (cycle 236 — closes EX-044).
         # When a field is a plain `ref Entity` with no explicit `source:`
@@ -750,11 +737,8 @@ def _build_form_sections(
             # Widget override from DSL: field name "Label" widget=rich_text
             widget_hint = element.options.get("widget")
 
-            # Default widget fallback for date/datetime fields (cycle 232).
-            if widget_hint is None and field_spec and field_spec.type:
-                _k = field_spec.type.kind
-                if _k in (FieldTypeKind.DATE, FieldTypeKind.DATETIME):
-                    widget_hint = "picker"
+            # Date/datetime fields render as native HTML5 date inputs (the
+            # JS `widget=picker` date-widget was removed); no widget default.
 
             # Ref / belongs_to auto-wiring (cycle 236 — closes EX-044).
             ref_entity_name = ""

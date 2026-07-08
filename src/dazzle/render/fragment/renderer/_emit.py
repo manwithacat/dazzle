@@ -44,7 +44,6 @@ from dazzle.render.fragment.primitives import (
     DashboardCard,
     DashboardGrid,
     DataListScroll,
-    DatePickerField,
     DateRangePicker,
     DayTimelineRegion,
     DetailGrid,
@@ -397,8 +396,6 @@ class FragmentRenderer(
                 return self._emit_widget_combobox(fragment, ctx)
             case TagsField():
                 return self._emit_tags_field(fragment, ctx)
-            case DatePickerField():
-                return self._emit_date_picker(fragment, ctx)
             case ColorField():
                 return self._emit_color_field(fragment, ctx)
             case SliderField():

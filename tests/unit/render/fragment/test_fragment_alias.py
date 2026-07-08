@@ -116,7 +116,6 @@ def test_fragment_alias_includes_all_primitives() -> None:
         "MoneyField",
         "WidgetCombobox",
         "TagsField",
-        "DatePickerField",
         "ColorField",
         "SliderField",
         "RichTextField",

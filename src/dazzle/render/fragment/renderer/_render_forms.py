@@ -29,7 +29,6 @@ from dazzle.render.fragment.primitives import (
     CardPicker,
     ColorField,
     Combobox,
-    DatePickerField,
     Field,
     FileUpload,
     FormSection,
@@ -490,23 +489,6 @@ class _RenderFormsMixin:
             f"{placeholder_attr}{required_attr}>"
         )
         return self._widget_label(ctx.escape(t.label), name, inner)
-
-    def _emit_date_picker(self, d: DatePickerField, ctx: RenderContext) -> str:
-        name = ctx.escape_attr(d.name)
-        date_format = "Y-m-d H:i" if d.is_datetime else "Y-m-d"
-        enable_time = ',"enableTime":true' if d.is_datetime else ""
-        placeholder_attr = (
-            f' placeholder="{ctx.escape_attr(d.placeholder)}"' if d.placeholder else ""
-        )
-        required_attr = ' required aria-required="true"' if d.required else ""
-        inner = (
-            f'<input id="field-{name}" name="{name}" type="text" '
-            'data-dz-widget="datepicker" '
-            f'data-dz-options=\'{{"dateFormat":"{date_format}"{enable_time}}}\' '
-            f'class="dz-form-input" value="{ctx.escape_attr(d.initial_value)}"'
-            f"{placeholder_attr}{required_attr}>"
-        )
-        return self._widget_label(ctx.escape(d.label), name, inner)
 
     def _emit_color_field(self, c: ColorField, ctx: RenderContext) -> str:
         name = ctx.escape_attr(c.name)

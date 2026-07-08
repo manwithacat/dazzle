@@ -20,7 +20,6 @@ from dazzle.render.fragment import (
     URL,
     ColorField,
     Combobox,
-    DatePickerField,
     Field,
     FileUpload,
     FragmentRenderer,
@@ -100,7 +99,7 @@ def field_context_to_dict(field: Any, initial_values: dict[str, Any]) -> dict[st
 
 def field_dict_to_primitive(
     field_dict: dict[str, Any],
-) -> "Field | Combobox | RefPicker | SearchSelect | MoneyField | FileUpload | WidgetCombobox | TagsField | DatePickerField | ColorField | SliderField | RichTextField":
+) -> "Field | Combobox | RefPicker | SearchSelect | MoneyField | FileUpload | WidgetCombobox | TagsField | ColorField | SliderField | RichTextField":
     """Map a field-shape dict to the right Fragment form primitive.
 
     The `kind` carried in field_dict is the *widget* kind — matching
@@ -208,10 +207,12 @@ def field_dict_to_primitive(
         )
 
     # WIDGET overrides (ADR-0049 Phase 3a): a `widget=` clause selects a
-    # client-controller widget (combobox/tags/picker/color/slider/rich_text).
+    # client-controller widget (combobox/tags/color/slider/rich_text).
     # Routed before the plain enum/select branch — `widget=combobox` is a
-    # TomSelect-enhanced select, not the vanilla Combobox. `multi_select` and
-    # `range`/date_range are intentionally unported (zero fleet usage).
+    # TomSelect-enhanced select, not the vanilla Combobox. `multi_select`,
+    # `range`/date_range, and the JS `picker` date-widget are unported
+    # (zero fleet usage); a date/datetime field renders as a native
+    # `<input type=date>`/`datetime-local` via the plain Field branch below.
     widget = str(field_dict.get("widget", "") or "").strip()
     extra = field_dict.get("extra") or {}
     default = str(field_dict.get("default", "") or "")
@@ -233,15 +234,6 @@ def field_dict_to_primitive(
             required=required,
             placeholder=placeholder,
             initial_value=initial_value,
-        )
-    if widget == "picker":
-        return DatePickerField(
-            name=name,
-            label=label,
-            is_datetime=(kind == "datetime"),
-            required=required,
-            placeholder=placeholder,
-            initial_value=widget_initial,
         )
     if widget == "color":
         return ColorField(

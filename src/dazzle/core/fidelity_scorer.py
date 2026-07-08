@@ -53,8 +53,6 @@ DEFAULT_INPUT_TYPE = "text"
 # DSL-declared field type. These equivalences let the scorer accept those
 # widget-rendered shapes as satisfying the expected type.
 _WIDGET_TYPE_EQUIVALENCES: dict[str, dict[str, set[str]]] = {
-    "datepicker": {"text": {"date", "datetime-local"}},
-    "daterange": {"text": {"date", "datetime-local"}},
     "range-tooltip": {"range": {"number"}},
     "richtext": {"hidden": {"text", "textarea", "select"}},
     "tags": {"text": {"text"}},
@@ -179,8 +177,8 @@ def _iter_inputs_with_widget_context(
 def _input_type_satisfies(expected_type: str, actual_type: str, widget: str) -> bool:
     """Whether the rendered input type matches the DSL-expected type.
 
-    Accepts widget-rendered equivalences (e.g. datepicker renders a text
-    input that semantically satisfies a ``date`` field).
+    Accepts widget-rendered equivalences (e.g. the richtext widget renders a
+    hidden input that semantically satisfies a ``text`` field).
     """
     if expected_type == actual_type:
         return True

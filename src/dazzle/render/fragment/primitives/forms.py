@@ -254,24 +254,6 @@ class TagsField:
 
 
 @dataclass(frozen=True, slots=True)
-class DatePickerField:
-    """Flatpickr date/datetime picker (`widget=picker`). Parity with the legacy
-    `_render_date_picker` — `data-dz-widget="datepicker"` + a `data-dz-options`
-    JSON carrying `dateFormat` (+ `enableTime` for datetime)."""
-
-    name: str
-    label: str
-    is_datetime: bool = False
-    required: bool = False
-    placeholder: str = ""
-    initial_value: str = ""
-
-    def __post_init__(self) -> None:
-        if not self.name:
-            raise ValueError("DatePickerField requires a non-empty name")
-
-
-@dataclass(frozen=True, slots=True)
 class ColorField:
     """Native colour input with a live hex readout (`widget=color`). Parity
     with the legacy `_render_color` (`x-data`/`x-model` self-contained)."""

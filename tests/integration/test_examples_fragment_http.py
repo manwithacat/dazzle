@@ -206,22 +206,18 @@ def test_simple_task_create_form_enum_field_renders_as_select() -> None:
         )
 
 
-def test_simple_task_create_form_date_field_renders_as_datepicker() -> None:
-    """`due_date: date` → Flatpickr datepicker (ADR-0049 Phase 3a).
+def test_simple_task_create_form_date_field_renders_as_native_date_input() -> None:
+    """`due_date: date` → native HTML5 `<input type="date">`.
 
-    The compiler auto-assigns `widget="picker"` to date/datetime fields
-    (template_compiler — "the IR unambiguously says use the datepicker"), so
-    the legacy form path renders these as a Flatpickr `data-dz-widget="datepicker"`
-    text input. The substrate form path used to *ignore* the widget and emit a
-    native `<input type="date">` — a divergence from legacy. Phase 3a's
-    `DatePickerField` closes that gap: the substrate now honours `widget=picker`
-    too, matching the legacy datepicker contract."""
+    The flatpickr `widget=picker` datepicker was removed (zero fleet usage);
+    date/datetime fields now render as native date inputs, so no
+    `data-dz-widget="datepicker"` mount attribute appears."""
     client = _client_for("simple_task")
     resp = client.get("/task/create")
     body = resp.text
     assert 'name="due_date"' in body, "task_create has no due_date field."
-    assert 'data-dz-widget="datepicker"' in body, "due_date is not the Flatpickr datepicker."
-    assert '"dateFormat":"Y-m-d"' in body
+    assert 'data-dz-widget="datepicker"' not in body, "flatpickr datepicker should be removed."
+    assert 'type="date"' in body, "due_date is not a native date input."
 
 
 # ─────────────────── Fragment chrome opt-in (P17 P3 + P4) ───────────────────

@@ -41,7 +41,6 @@ from dazzle.render.fragment import (
     DashboardGrid,
     DashboardNotice,
     DataListScroll,
-    DatePickerField,
     DateRangePicker,
     DayTimelineRegion,
     DayTimelineSlot,
@@ -482,8 +481,6 @@ def _sample_for(primitive_type: type) -> object:
         return WidgetCombobox(name="wc", label="WC", options=(("a", "A"),))
     if primitive_type is TagsField:
         return TagsField(name="tg", label="Tags")
-    if primitive_type is DatePickerField:
-        return DatePickerField(name="dp", label="Date")
     if primitive_type is ColorField:
         return ColorField(name="cl", label="Colour")
     if primitive_type is SliderField:

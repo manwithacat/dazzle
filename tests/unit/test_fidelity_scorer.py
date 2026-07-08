@@ -620,34 +620,6 @@ class TestWidgetRenderedInputTypes:
     @pytest.mark.parametrize(
         "surface_name,surface_mode,field_name,field_type,html",
         [
-            # test_datepicker_on_date_field:
-            # Flatpickr datepicker: type='text' + data-dz-widget='datepicker' satisfies date.
-            (
-                "event_create",
-                SurfaceMode.CREATE,
-                "starts_on",
-                FieldType(kind=FieldTypeKind.DATE),
-                """
-                <form hx-post="/events">
-                    <input name="starts_on" type="text" data-dz-widget="datepicker">
-                    <button type="submit">Save</button>
-                </form>
-                """,
-            ),
-            # test_datepicker_on_datetime_field:
-            # Flatpickr datepicker with enableTime: satisfies datetime field.
-            (
-                "event_create",
-                SurfaceMode.CREATE,
-                "starts_at",
-                FieldType(kind=FieldTypeKind.DATETIME),
-                """
-                <form hx-post="/events">
-                    <input name="starts_at" type="text" data-dz-widget="datepicker">
-                    <button type="submit">Save</button>
-                </form>
-                """,
-            ),
             # test_range_slider_on_int_field:
             # Range slider: type='range' satisfies int/number field.
             (
@@ -735,8 +707,6 @@ class TestWidgetRenderedInputTypes:
             ),
         ],
         ids=[
-            "test_datepicker_on_date_field",
-            "test_datepicker_on_datetime_field",
             "test_range_slider_on_int_field",
             "test_range_slider_on_decimal_field",
             "test_richtext_hidden_input_on_str_field",

@@ -5,8 +5,8 @@
  * Each registration maps a data-dz-widget type to a { mount, unmount } pair.
  * The bridge calls mount() on htmx:after:settle and unmount() on htmx:before:swap.
  *
- * Widget types: combobox, multiselect, tags, datepicker, daterange,
- * range-tooltip. (Note: colorpicker dropped in #976 — `widget=color`
+ * Widget types: combobox, multiselect, tags, range-tooltip.
+ * (Note: colorpicker dropped in #976 — `widget=color`
  * uses native input. richtext moved to dz-richtext.js in #977 cycle 4
  * — Dazzle-native editor, no vendor dependency.)
  */
@@ -119,57 +119,6 @@
       );
     },
     unmount: unmountTomSelect,
-  });
-
-  // ── Flatpickr widgets ───────────────────────────────────────────────
-
-  function warnFlatpickrMissing() {
-    console.warn(
-      "[dz-widget-registry] flatpickr vendor JS not loaded — datepicker/daterange widget left inert. Ensure /static/vendor/flatpickr.min.js is served (see app_chrome.js_scripts).",
-    );
-  }
-
-  bridge.registerWidget("datepicker", {
-    mount: function (el, options) {
-      if (typeof flatpickr === "undefined") {
-        warnFlatpickrMissing();
-        return null;
-      }
-      var defaults = {
-        dateFormat: options.dateFormat || "Y-m-d",
-        altInput: true,
-        altFormat: options.altFormat || "F j, Y",
-        allowInput: true,
-      };
-      return flatpickr(el, Object.assign(defaults, options));
-    },
-    unmount: function (el, instance) {
-      if (instance && typeof instance.destroy === "function") {
-        instance.destroy();
-      }
-    },
-  });
-
-  bridge.registerWidget("daterange", {
-    mount: function (el, options) {
-      if (typeof flatpickr === "undefined") {
-        warnFlatpickrMissing();
-        return null;
-      }
-      var defaults = {
-        mode: "range",
-        dateFormat: options.dateFormat || "Y-m-d",
-        altInput: true,
-        altFormat: options.altFormat || "F j, Y",
-        allowInput: true,
-      };
-      return flatpickr(el, Object.assign(defaults, options));
-    },
-    unmount: function (el, instance) {
-      if (instance && typeof instance.destroy === "function") {
-        instance.destroy();
-      }
-    },
   });
 
   // ── Color picker — native <input type="color"> (#976 — dropped Pickr).

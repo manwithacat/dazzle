@@ -91,7 +91,6 @@ from dazzle.render.fragment.primitives.data import (
 from dazzle.render.fragment.primitives.forms import (
     ColorField,
     Combobox,
-    DatePickerField,
     Field,
     FileUpload,
     FormSection,
@@ -229,7 +228,6 @@ Fragment = (
     | MoneyField
     | WidgetCombobox
     | TagsField
-    | DatePickerField
     | ColorField
     | SliderField
     | RichTextField

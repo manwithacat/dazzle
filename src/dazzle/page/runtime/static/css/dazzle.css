@@ -8,7 +8,7 @@
  *
  * Layer order (DO NOT REORDER):
  *   reset      — modern element reset (Andy Bell + Open Props normalise)
- *   vendor     — vendored widget CSS (Tom Select, Flatpickr, Quill)
+ *   vendor     — vendored widget CSS (Tom Select)
  *   tokens     — custom property declarations (the design system)
  *   base       — element defaults (typography, links, form controls)
  *   utilities  — small semantic utility layer (.row, .stack, etc.)
@@ -26,7 +26,6 @@
 
 @import url("reset.css") layer(reset);
 @import url("../vendor/tom-select.css") layer(vendor);
-@import url("../vendor/flatpickr.css") layer(vendor);
 /* Geist @font-face + ALL design-system CSS (tokens/base/components) come
  * from the HaTchi-MaXchi dist artifact (packages/hatchi-maxchi/dist/
  * hatchi-maxchi.css, pre-layered) — consumed by css_loader/build_dist as

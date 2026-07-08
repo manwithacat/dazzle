@@ -3,11 +3,11 @@
  *
  * Used by the render_field macro (templates/macros/form_field.html)
  * which dispatches across ~14 field types: checkbox, ref-entity
- * select, search-select, plain text/number/email/date/datetime,
- * textarea, select, money, file, plus widget-driven combobox /
- * multi_select / tags / picker / range / color / rich_text /
- * slider (which delegate to vendored libraries — Tom Select,
- * Flatpickr, Quill). Native <input type="color"> covers the colour widget.
+ * select, search-select, plain text/number/email/date/datetime
+ * (native <input type=date>/datetime-local — the JS calendar `picker`
+ * widget was dropped 2026-07-09), textarea, select, money, file, plus
+ * widget-driven combobox / tags (Tom Select) / color / rich_text.
+ * Native <input type="color"> covers the colour widget.
  *
  * Pre-CSS-refactor every branch composed its own inline Tailwind
  * class string with conditional Jinja for the error/idle border.

@@ -39,7 +39,6 @@ CSS_LAYER_ORDER = "@layer reset, vendor, tokens, base, utilities, components, ov
 CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     ("reset", "css/reset.css"),
     ("vendor", "vendor/tom-select.css"),
-    ("vendor", "vendor/flatpickr.css"),
     # HaTchi-MaXchi — consumed as its PUBLISHED dist artifact (boundary
     # Phase 2), not per-source files. The bundle is pre-layered by the
     # package's build.py (vendor fonts, tokens, base, components — the

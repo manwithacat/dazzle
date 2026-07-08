@@ -1,14 +1,15 @@
 """ADR-0049 Phase 3a — substrate parity for the `widget=`-driven form widgets
-(combobox / tags / picker / color / slider / rich_text), widgets 3-8/9.
+(combobox / tags / color / slider / rich_text), widgets 3-7/9.
 
 These are exercised by the `component_showcase` gallery fixture and ~12-20 fleet
 DSL files each. Each emits the `data-dz-widget` + `data-dz-options` mount
-contract the client controllers (TomSelect, Flatpickr, dzRichText,
-dzRangeTooltip) read — so this pins the substrate primitives to the legacy
-`form_renderer` markup that keeps those controllers working after the 3b flip.
+contract the client controllers (TomSelect, dzRichText, dzRangeTooltip) read —
+so this pins the substrate primitives to the legacy `form_renderer` markup that
+keeps those controllers working after the 3b flip.
 
-`multi_select` and `range`/date_range are intentionally NOT ported (zero fleet
-usage) — they are dropped from the legacy renderer at the 3b delete.
+`multi_select`, `range`/date_range, and the flatpickr `picker` datepicker are
+NOT ported (zero fleet usage); date/datetime fields render as native
+`<input type=date>`.
 """
 
 from __future__ import annotations
@@ -16,7 +17,6 @@ from __future__ import annotations
 from dazzle.http.runtime.renderers.fragment_adapter import _field_to_primitive
 from dazzle.render.fragment import (
     ColorField,
-    DatePickerField,
     FragmentRenderer,
     RichTextField,
     SliderField,
@@ -56,20 +56,6 @@ def test_tags_widget() -> None:
     assert '"create":true' in html
     assert '"plugins":["remove_button"]' in html
     assert 'id="field-labels"' in html
-
-
-def test_picker_date_vs_datetime() -> None:
-    date_fd = {"name": "start", "label": "Start", "widget": "picker", "kind": "date"}
-    dt_fd = {"name": "due", "label": "Due", "widget": "picker", "kind": "datetime"}
-    assert isinstance(_field_to_primitive(date_fd), DatePickerField)
-    date_html = _render(date_fd)
-    dt_html = _render(dt_fd)
-    assert 'data-dz-widget="datepicker"' in date_html
-    assert '"dateFormat":"Y-m-d"' in date_html
-    assert '"enableTime":true' not in date_html
-    # datetime variant enables time + the H:i format.
-    assert '"dateFormat":"Y-m-d H:i"' in dt_html
-    assert '"enableTime":true' in dt_html
 
 
 def test_color_widget_state_in_dom() -> None:

@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.21] - 2026-07-09
+
+### Removed
+- **Dropped the Flatpickr `widget=picker` date-picker (HMC-017, James directive).** Zero
+  fleet usage; default `date`/`datetime` fields already render as native `<input type=date>`
+  /`datetime-local` (good modern pickers). Removed atomically: the `DatePickerField`
+  primitive + all fragment-substrate registration points, `form_field.py` widget mapping,
+  `fidelity_scorer` equivalence (`datepicker` + inert `daterange`), the `template_compiler`
+  branch, the vendor JS/CSS inclusion (`app_chrome.py`, `css_loader.py`, `dazzle.css`),
+  the `dz-widget-registry.js` mounts, the `.flatpickr-*` theming (Dazzle `dz-widgets.css`
+  **and** the HM `base/design-system.css` Linear-override block), and the vendored
+  `vendor/flatpickr.{css,min.js}` (~67 KB). A `widget=picker` on a date field now degrades
+  to a native input. The overloaded `date_range` **report/aggregation** feature is
+  untouched. Reservoir `css_lines_dazzle_native` 678→625.
+
+### Agent Guidance
+- **No Flatpickr / `widget=picker`.** Date/datetime fields are native `<input>`; author no
+  JS date-picker. Tom Select remains (for `widget=combobox`/`tags`) pending a 2026 design
+  pass on whether an HM-native replacement should supersede it (HMC-018).
+
 ## [0.98.20] - 2026-07-09
 
 ### Changed

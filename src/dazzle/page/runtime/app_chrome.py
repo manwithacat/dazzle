@@ -63,17 +63,16 @@ class AppChrome:
     # Jinja head included this script via a CDN link; the typed substrate
     # had silently dropped it, leaving every data-lucide icon invisible on
     # marketing/site pages.
-    # #1336: the vendor widget JS (TomSelect, flatpickr) must load on every
-    # app page, mirroring css_loader.py's unconditional vendor *CSS* entries.
-    # Without these, `data-dz-widget=combobox`/`datepicker` fields render an
-    # inert empty <select>/<input> (the mount bails on `window.TomSelect`/
-    # `flatpickr` being undefined) and required-FK create/edit forms can't be
-    # submitted. defer preserves document order, so vendor globals exist
-    # before the bundle's DOMContentLoaded mountWidgets() pass.
+    # #1336: the vendor widget JS (TomSelect) must load on every app page,
+    # mirroring css_loader.py's unconditional vendor *CSS* entries. Without
+    # it, `data-dz-widget=combobox` fields render an inert empty <select>
+    # (the mount bails on `window.TomSelect` being undefined) and required-FK
+    # create/edit forms can't be submitted. defer preserves document order,
+    # so vendor globals exist before the bundle's DOMContentLoaded
+    # mountWidgets() pass.
     js_scripts: tuple[str, ...] = (
         "/static/dist/dazzle-icons.min.js",
         "/static/vendor/tom-select.min.js",
-        "/static/vendor/flatpickr.min.js",
         "/static/dist/dazzle.min.js",
     )
     theme: str | None = None
@@ -91,12 +90,11 @@ _FRAMEWORK_BUNDLE_JS = "/static/dist/dazzle.min.js"
 # resolves on first page render.
 _LUCIDE_UMD_JS = "/static/dist/dazzle-icons.min.js"
 # #1336: vendor widget runtimes. Loaded on every app page (mirrors the
-# always-on vendor CSS in css_loader.py) so combobox/FK-ref and datepicker
-# widgets actually enhance instead of silently no-op'ing. Placed before the
-# framework bundle; defer ordering guarantees the globals exist when the
-# bundle's mountWidgets() runs on DOMContentLoaded.
+# always-on vendor CSS in css_loader.py) so combobox/FK-ref widgets actually
+# enhance instead of silently no-op'ing. Placed before the framework bundle;
+# defer ordering guarantees the globals exist when the bundle's
+# mountWidgets() runs on DOMContentLoaded.
 _VENDOR_TOM_SELECT_JS = "/static/vendor/tom-select.min.js"
-_VENDOR_FLATPICKR_JS = "/static/vendor/flatpickr.min.js"
 _DEFAULT_FAVICON = "/static/assets/dazzle-favicon.svg"
 
 
@@ -178,7 +176,6 @@ def resolve_app_chrome(
     js_scripts: list[str] = [
         _LUCIDE_UMD_JS,
         _VENDOR_TOM_SELECT_JS,
-        _VENDOR_FLATPICKR_JS,
         _FRAMEWORK_BUNDLE_JS,
     ]
     font_preconnect: list[str] = []

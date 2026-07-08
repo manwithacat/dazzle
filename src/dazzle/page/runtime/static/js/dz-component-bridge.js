@@ -2,7 +2,7 @@
  * Dazzle Component Bridge — manages vendored widget lifecycle across HTMX swaps.
  *
  * Each widget mount point is an element with:
- *   data-dz-widget   — widget type key (e.g., "datepicker", "combobox")
+ *   data-dz-widget   — widget type key (e.g., "combobox", "tags")
  *   data-dz-options  — JSON-encoded options for the widget
  *
  * Widget types are registered via window.dz.bridge.registerWidget(type, { mount, unmount }).

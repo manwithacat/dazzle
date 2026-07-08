@@ -1,7 +1,7 @@
 /**
  * dz-widgets.css — DaisyUI-aligned theme overrides for vendored widget libraries.
  *
- * Overrides default styles of Tom Select, Flatpickr, and Quill
+ * Overrides default styles of Tom Select and Quill
  * to match DaisyUI v4 design tokens. Loaded conditionally via asset_manifest.
  */
 
@@ -70,59 +70,6 @@
 
 .ts-wrapper .ts-control .item .remove:hover {
   color: oklch(var(--er));
-}
-
-/* ── Flatpickr ───────────────────────────────────────────────────────── */
-
-.flatpickr-calendar {
-  font-family: inherit;
-  background: oklch(var(--b1));
-  border: 1px solid oklch(var(--bc) / 0.2);
-  border-radius: var(--rounded-box, 1rem);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-}
-
-.flatpickr-months .flatpickr-month {
-  background: oklch(var(--b1));
-  color: oklch(var(--bc));
-}
-
-.flatpickr-current-month .flatpickr-monthDropdown-months {
-  background: oklch(var(--b1));
-  color: oklch(var(--bc));
-}
-
-.flatpickr-day {
-  color: oklch(var(--bc));
-  border-radius: var(--rounded-btn, 0.5rem);
-}
-
-.flatpickr-day:hover {
-  background: oklch(var(--b2));
-  border-color: oklch(var(--b2));
-}
-
-.flatpickr-day.selected,
-.flatpickr-day.startRange,
-.flatpickr-day.endRange {
-  background: oklch(var(--p));
-  border-color: oklch(var(--p));
-  color: oklch(var(--pc));
-}
-
-.flatpickr-day.inRange {
-  background: oklch(var(--p) / 0.1);
-  border-color: oklch(var(--p) / 0.1);
-  box-shadow: -5px 0 0 oklch(var(--p) / 0.1), 5px 0 0 oklch(var(--p) / 0.1);
-}
-
-.flatpickr-day.today:not(.selected) {
-  border-color: oklch(var(--p));
-}
-
-.flatpickr-weekday {
-  color: oklch(var(--bc) / 0.5);
-  font-weight: 600;
 }
 
 /* Pickr theme-overrides removed in #976 — `widget=color` now renders a

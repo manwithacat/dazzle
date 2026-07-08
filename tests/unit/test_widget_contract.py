@@ -41,8 +41,9 @@ _BRIDGE_MOUNTED_WIDGET_KINDS = frozenset(
         "combobox",
         "multiselect",
         "tags",
-        "datepicker",
-        "daterange",
+        # `datepicker`/`daterange` removed — the flatpickr datepicker form
+        # widget was retired (zero fleet usage); date fields render as native
+        # `<input type=date>`.
         # `colorpicker` removed in #976 — `widget=color` uses native
         # <input type="color"> with an Alpine x-data scope of its own
         # (the dual-lifecycle gate this set drives doesn't apply).
