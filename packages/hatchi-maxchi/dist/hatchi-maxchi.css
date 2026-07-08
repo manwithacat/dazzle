@@ -7087,9 +7087,8 @@ a.action-card:hover {
  * Responsive 1/2/4-col grid of KPI tiles. Each tile is plain (no
  * border — the dashboard slot owns card chrome) with a soft
  * background tint, label / value, and optional delta row.
- * Per-tile tone tinting still routes through tones.css keyed
- * off data-tone (unchanged); same pattern for the delta-arrow
- * tone via data-delta-tone. */
+ * Per-tile tone tinting travels with the component (moved verbatim
+ * from Dazzle tones.css, keyed off data-tone). */
 
 .metrics-grid {
   display: grid;
@@ -7113,6 +7112,22 @@ a.action-card:hover {
   padding: var(--space-md);
   border-radius: var(--radius-sm);
   background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+}
+
+/* Tone tints (moved from Dazzle tones.css with the component, #894).
+ * Keyed off data-tone; the [attr] selector out-specifies the base
+ * rule above. neutral falls back to the base background. */
+.metric-tile[data-tone="positive"] {
+  background: color-mix(in oklab, var(--colour-success) 10%, transparent);
+}
+.metric-tile[data-tone="warning"] {
+  background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
+}
+.metric-tile[data-tone="destructive"] {
+  background: color-mix(in oklab, var(--colour-danger) 10%, transparent);
+}
+.metric-tile[data-tone="accent"] {
+  background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
 }
 
 .metric-label {

@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.5] - 2026-07-08
+
+### Changed
+- **HM-convergence Tier-A (HMC-005): metric-tile tone tints migrated into HM.** The
+  4 `.dz-metric-tile[data-dz-tone="…"]` background tints moved verbatim from Dazzle
+  `dz-tones.css` into HaTchi-MaXchi `components/metrics.css` — where the `.dz-metric-tile`
+  base already lives — following the "the tinting travels with its component" precedent
+  (action-grid / status-list did the same). Byte-faithful: the served bundle emits the
+  identical rules (same `color-mix(in oklab, …)` declarations), now sourced from the HM
+  dist; cascade-safe (the `[data-dz-tone]` attribute selector out-specifies the base).
+  HM visual gallery baselines unchanged; HM↔Dazzle lockstep green. `dz-tones.css` 69→56;
+  reservoir 3958→3945. The notice-band tones stay Dazzle-side until the notice-band
+  component itself migrates (HMC-007). HM package 0.1.60→0.1.61.
+
 ## [0.98.4] - 2026-07-08
 
 ### Removed

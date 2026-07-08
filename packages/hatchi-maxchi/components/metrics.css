@@ -6,9 +6,8 @@
  * Responsive 1/2/4-col grid of KPI tiles. Each tile is plain (no
  * border — the dashboard slot owns card chrome) with a soft
  * background tint, label / value, and optional delta row.
- * Per-tile tone tinting still routes through dz-tones.css keyed
- * off data-dz-tone (unchanged); same pattern for the delta-arrow
- * tone via data-dz-delta-tone. */
+ * Per-tile tone tinting travels with the component (moved verbatim
+ * from Dazzle dz-tones.css, keyed off data-dz-tone). */
 
 .dz-metrics-grid {
   display: grid;
@@ -32,6 +31,22 @@
   padding: var(--space-md);
   border-radius: var(--radius-sm);
   background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+}
+
+/* Tone tints (moved from Dazzle dz-tones.css with the component, #894).
+ * Keyed off data-dz-tone; the [attr] selector out-specifies the base
+ * rule above. neutral falls back to the base background. */
+.dz-metric-tile[data-dz-tone="positive"] {
+  background: color-mix(in oklab, var(--colour-success) 10%, transparent);
+}
+.dz-metric-tile[data-dz-tone="warning"] {
+  background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
+}
+.dz-metric-tile[data-dz-tone="destructive"] {
+  background: color-mix(in oklab, var(--colour-danger) 10%, transparent);
+}
+.dz-metric-tile[data-dz-tone="accent"] {
+  background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
 }
 
 .dz-metric-label {

@@ -21,25 +21,12 @@
  *   - No dynamic Tailwind classes on the element, no JIT dependency.
  */
 
-/* ── Metric tile background tints (#894 / roadmap #2) ────────────── */
-
-.dz-metric-tile[data-dz-tone="positive"] {
-  background: color-mix(in oklab, var(--colour-success) 10%, transparent);
-}
-.dz-metric-tile[data-dz-tone="warning"] {
-  background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
-}
-.dz-metric-tile[data-dz-tone="destructive"] {
-  background: color-mix(in oklab, var(--colour-danger) 10%, transparent);
-}
-.dz-metric-tile[data-dz-tone="accent"] {
-  background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
-}
-/* No rule for `data-dz-tone="neutral"` — neutral tiles fall back to
- * the default `bg-[hsl(var(--muted)/0.4)]` Tailwind class baked into
- * the template (the only static tile bg). */
+/* ── Metric tile tone tints: MOVED to HaTchi-MaXchi components/metrics.css
+ *    (HMC-005 — the tinting travels with its component). ─────────────── */
 
 /* ── Notice band background + left rail (#7 / roadmap #7) ─────────── */
+/* Stays Dazzle-side until the notice-band component itself migrates to HM
+ * (its base rules live in components/dashboard.css → HMC-007). */
 
 .dz-notice-band[data-dz-notice-tone="positive"] {
   background: color-mix(in oklab, var(--colour-success) 8%, transparent);

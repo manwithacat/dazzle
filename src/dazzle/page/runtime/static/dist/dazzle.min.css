@@ -1,4 +1,4 @@
-/* dazzle v0.98.4 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.98.5 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -5044,6 +5044,18 @@ grid-template-columns: repeat(4, minmax(0, 1fr));
 padding: var(--space-md);
 border-radius: var(--radius-sm);
 background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+}
+.dz-metric-tile[data-dz-tone="positive"] {
+background: color-mix(in oklab, var(--colour-success) 10%, transparent);
+}
+.dz-metric-tile[data-dz-tone="warning"] {
+background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
+}
+.dz-metric-tile[data-dz-tone="destructive"] {
+background: color-mix(in oklab, var(--colour-danger) 10%, transparent);
+}
+.dz-metric-tile[data-dz-tone="accent"] {
+background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
 }
 .dz-metric-label {
 font-size: var(--text-xs);
@@ -10596,18 +10608,6 @@ border-color: oklch(var(--p));
 .flatpickr-weekday {
 color: oklch(var(--bc) / 0.5);
 font-weight: 600;
-}
-.dz-metric-tile[data-dz-tone="positive"] {
-background: color-mix(in oklab, var(--colour-success) 10%, transparent);
-}
-.dz-metric-tile[data-dz-tone="warning"] {
-background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
-}
-.dz-metric-tile[data-dz-tone="destructive"] {
-background: color-mix(in oklab, var(--colour-danger) 10%, transparent);
-}
-.dz-metric-tile[data-dz-tone="accent"] {
-background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
 }
 .dz-notice-band[data-dz-notice-tone="positive"] {
 background: color-mix(in oklab, var(--colour-success) 8%, transparent);
