@@ -54,6 +54,41 @@ Run the metric and compare to `.dazzle/hm-reservoir-baseline.json`:
   picks it up. Do NOT re-anchor the baseline to hide it.
 - Numbers **fell** → progress; update the row(s), emit `hm-convergence-progress`.
 
+## Verification gate (how to prove a migration is safe)
+
+**Do NOT rely on `dazzle qa taste-panel` as the gate — its LLM judge is
+billing-blocked** (Anthropic API key has no credit balance → 400) *and* it answers
+the wrong question (aesthetic quality vs Linear/shadcn refs, not "did this change
+rendering?"). The regression gate that works, on the **subscription** (zero API
+credits), has two tiers — pick by the change's nature:
+
+**Tier A — byte-faithful move (rule relocation, HM-tokenised, no value change).**
+Proof = the *served bundle* emits the rule identically and the cascade winner is
+unchanged. Verify with `get_bundled_css()`: the moved selectors appear **once each**,
+byte-identical to the pre-move rule, and (if a class is dual-defined) the new HM
+component is registered so it still wins source-order ties. Confirm `dz-*` keyframe/token
+values aren't silently swapped (hardcoded→token is NOT byte-faithful — that's Tier B).
+No fleet capture needed. Precedents: HMC-005 (metric-tile tints), 007b (drawer chrome).
+
+**Tier B — genuinely-visual change (anything a static screenshot would show).**
+Run the deterministic capture + pixel-diff loop (the `visual_tier2` idiom — cognitive
+work bills to the CC subscription, no API spend):
+1. Boot: `dazzle e2e env start simple_task` (daemonises) → URL from `dazzle e2e env status`
+   (NOT the port the CLI prints).
+2. Capture **before**: `dazzle qa capture --url <URL> --app simple_task -p admin [--dark] -m /tmp/b.json`; snapshot the affected PNGs from `examples/simple_task/.dazzle/qa/screenshots/`.
+3. Migrate, rebuild HM + Dazzle dist, **restart the env** (it caches the bundle at boot).
+4. Capture **after**; pixel-diff via PIL `ImageChops.difference(before,after).getbbox()`.
+5. `None` = identical → pass. **Any diff → investigate before shipping:** crop the bbox
+   and Read both crops; re-capture after-vs-after — if the *same* band differs regardless,
+   it's a non-deterministic skeleton/lazy-load flake (not your change), not a regression
+   (precedent HMC-007c team_overview). A real, reproducible diff blocks the ship.
+6. `dazzle e2e env stop simple_task`.
+
+Transient animations (row-highlight easing, spinner) aren't captured by a static
+screenshot — for those, reason about token/value equality (Tier A) or defer.
+`dazzle qa taste-panel` remains available as an *optional aesthetic-quality* pass **iff
+credits are topped up** — never the regression gate.
+
 ## Explore phase (when no actionable rows)
 
 Sub-strategies, pick the highest-leverage:
@@ -65,16 +100,27 @@ Sub-strategies, pick the highest-leverage:
    coherent CSS chunk. This is the "full HM-reservoir audit" the governance rollout
    deferred to the loop.
 2. **css_migration** — take one `HMC` migration row: move that CSS chunk into the HM
-   package (`packages/hatchi-maxchi/`), rebuild the HM dist (`build.py`), repoint
-   Dazzle to consume it, delete the Dazzle-native copy. Verify: `dazzle qa taste-panel`
-   (blind parity) stays green + no visual-baseline dance + the reservoir metric fell.
+   package (`packages/hatchi-maxchi/`), register it in `build.py` (order matters — put a
+   component that **dual-defines** a selector *after* the file it must out-win, e.g. the
+   Dazzle-side load position it had before), rebuild the HM dist (`build.py`), repoint
+   Dazzle to stop bundling the native copy, delete/trim it. **Verify per the Verification
+   gate above** — Tier A (byte-faithful) or Tier B (genuinely-visual capture+pixel-diff) —
+   AND the reservoir metric fell. Drop, don't duplicate, any keyframe/token HM already owns.
+   **Prefer byte-faithful moves** (rules already `var(--…)`-tokenised); a hardcoded→token
+   rewrite is a Tier-B visual change, do it as a separate, gated step.
 3. **markup_drain** — retire the residual emitter Tailwind tokens (the spinner
    `opacity-*`) into semantic `dz-*`/HM classes. When `total_tailwind_tokens` hits 0,
    **delete the legacy Tailwind detection path in `contract_checker._has_card_chrome`**
    (the migration debt Phase 1 flagged) and its legacy fixtures.
-4. **taste_gate** — run `dazzle qa taste-panel` (the blind fleet-vs-dialect aesthetic
-   gate this lane co-owns) and act on regressions vs the baseline in
-   `dev_docs/taste/`.
+4. **dead_prune** — a section whose classes are 0-reference is a provably-inert prune
+   (no gate needed). **Scope the deadness check to ALL of `src/dazzle` (incl.
+   `page/*.py` top-level like `command_render.py`, not just `render/`), `tests/`, and JS
+   dynamic construction (`'dz-x-' + var`)** — grep-by-full-class MISSES JS-applied and
+   dynamically-built classes (fragments.css HMC-009 caught `dz-island`/`dz-error` as
+   false-dead this way). Prune only what survives that scope.
+5. **taste_gate** (optional, credits-permitting only) — `dazzle qa taste-panel` is an
+   *aesthetic-quality* pass vs `dev_docs/taste/`, NOT the regression gate, and is
+   billing-blocked by default. Skip unless credits are known-available.
 
 ## Owns (capability-map)
 
@@ -94,7 +140,9 @@ push) inside the cycle.
 - **Author in HM, not Dazzle.** New design-system/token/layout CSS goes into the HM
   package and is consumed via dist — never a fresh rule in `src/dazzle/.../css/`. That
   is the whole point; a new Dazzle-native rule is the regression this lane exists to catch.
-- **Blind parity is the safety net.** Every migration is gated by `dazzle qa taste-panel`
-  staying green — the number falling is necessary, not sufficient.
+- **Pixel-diff is the regression gate, not taste-panel.** Every genuinely-visual
+  migration is gated by the capture + pixel-diff loop (see Verification gate); byte-faithful
+  moves by served-bundle equality. The reservoir number falling is necessary, not
+  sufficient. `dazzle qa taste-panel` (LLM judge) is billing-blocked and is not the gate.
 - **No baseline laundering.** Re-anchor `.dazzle/hm-reservoir-baseline.json` only on a
   genuine, logged progress checkpoint — never to paper over a rise.

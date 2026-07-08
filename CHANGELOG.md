@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.11] - 2026-07-08
+
+### Changed
+- **`hm-convergence` lane playbook: pixel-diff is the regression gate, not the
+  billing-blocked LLM `taste-panel`.** Added a "Verification gate" section encoding the
+  proven subscription recipe — Tier A (byte-faithful move → served-bundle rule equality,
+  no capture) vs Tier B (genuinely-visual → boot env → capture → PIL pixel-diff →
+  investigate any diff for skeleton/lazy-load flake → teardown) — so `/loop /improve` can
+  run the lane autonomously without hitting the Anthropic-credit wall. Demoted
+  `dazzle qa taste-panel` to an optional aesthetic-quality pass (credits-permitting).
+  Added a `dead_prune` sub-strategy carrying the scope lesson (deadness checks must cover
+  ALL of `src/dazzle` incl. `page/*.py`, `tests/`, and JS dynamic class construction —
+  grep-by-full-class misses JS-applied/dynamically-built classes).
+
+### Agent Guidance
+- **HM-convergence migrations gate on pixel-diff (subscription), not `qa taste-panel`.**
+  Byte-faithful CSS relocations verify via served-bundle equality; genuinely-visual moves
+  via the capture + before/after pixel-diff loop. The LLM taste-panel judge is
+  billing-blocked and only answers aesthetic-quality, not regression. See
+  `improve/lanes/hm-convergence.md` "Verification gate".
+
 ## [0.98.10] - 2026-07-08
 
 ### Changed
