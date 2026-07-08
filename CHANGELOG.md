@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.7] - 2026-07-08
+
+### Removed
+- **HM-convergence (HMC-007): dropped `regions.css` from the served CSS bundle.**
+  The file had become 130 lines of pure tombstone comments — every region family
+  (progress-region, status-list, metrics, bar-chart, kanban, queue, heatmap, …) was
+  already promoted to HaTchi-MaXchi — so it shipped zero CSS rules to every browser.
+  Removed from the three bundle-composition points (`css_loader`, `dazzle.css` @import,
+  `build_dist`); the file is retained on disk as the provenance index (read by a few
+  content-union tests). Reservoir 3872→3742. **First migration verified through the
+  visual gate:** the dashboard capture is pixel-identical before/after (deterministic
+  diff), confirming the removal is visually inert.
+
 ## [0.98.6] - 2026-07-08
 
 ### Removed

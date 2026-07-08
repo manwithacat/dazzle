@@ -68,7 +68,7 @@ CSS_SOURCES: list[tuple[str | None, Path]] = [
     ("components", STATIC / "css" / "components" / "detail.css"),
     ("components", STATIC / "css" / "components" / "fragments.css"),
     ("components", STATIC / "css" / "components" / "pdf-viewer.css"),
-    ("components", STATIC / "css" / "components" / "regions.css"),
+    # regions.css removed from the bundle (HMC-007) — rules-free tombstone index.
     ("components", STATIC / "css" / "components" / "mobile-scroll.css"),
     # #977 cycle 1 — Dazzle-native rich-text editor.
     ("components", STATIC / "css" / "components" / "richtext.css"),

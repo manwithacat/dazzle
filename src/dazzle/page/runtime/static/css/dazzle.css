@@ -45,7 +45,8 @@
 @import url("components/detail.css") layer(components);
 @import url("components/fragments.css") layer(components);
 @import url("components/pdf-viewer.css") layer(components);
-@import url("components/regions.css") layer(components);
+/* components/regions.css removed from the bundle (HMC-007) — now a
+   rules-free tombstone index; every region family lives in HM. */
 
 /* Legacy framework files retained from the pre-v0.62 stack. The
  * templates were migrated to .dz-* semantic classes that live in the

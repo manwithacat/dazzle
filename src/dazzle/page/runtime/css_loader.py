@@ -56,7 +56,10 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     ("components", "css/components/detail.css"),
     ("components", "css/components/fragments.css"),
     ("components", "css/components/pdf-viewer.css"),
-    ("components", "css/components/regions.css"),
+    # regions.css removed from the bundle (HMC-007): it is now 130 lines of
+    # pure tombstone comments (every region family promoted to HM) — zero CSS
+    # rules, so shipping it to every browser was dead weight. File retained on
+    # disk as the provenance index (+ read by a few content-union tests).
     ("components", "css/components/mobile-scroll.css"),
     # #977 cycle 1 — Dazzle-native rich-text editor (replaces Quill in cycle 4).
     ("components", "css/components/richtext.css"),
