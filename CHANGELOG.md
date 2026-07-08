@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.15] - 2026-07-08
+
+### Changed
+- **HM-convergence (HMC-006b part 1): dz.css htmx animation overrides → HaTchi-MaXchi.**
+  The `tr.htmx-swapping` / `tr.htmx-added`/`tr.htmx-settling` row animations, the
+  `@keyframes dz-row-highlight`, the dead `.btn.htmx-request` rule, and their
+  reduced-motion guards were unlayered overrides in `dz.css` that shadowed HM's own
+  tokenised `htmx-states.css` with hardcoded values. Removed them so HM's canonical
+  rules apply: row-swap easing `ease-out` → `--ease-out`, and the row-highlight keyframe
+  `oklch(0.85 0.1 145 / 0.3)` → scheme-aware `--colour-success-soft` — a **dark-mode fix**
+  (the fixed green was wrong on dark surfaces). `.btn.htmx-request` was dead (0 emitters
+  use bare `.btn`; HM covers `button`/`.dz-button`). HTMX indicator-visibility rules and
+  the view-transition block stay in `dz.css` (no token debt / part 2). Transient
+  animations aren't in static captures → value-reasoning per the lane gate; the HM token
+  values are the canonical design-system values. Reservoir `css_lines_dazzle_native`
+  3050→3033.
+
+### Agent Guidance
+- **htmx row animations are HM-owned.** `dz.css` no longer carries `tr.htmx-swapping`/
+  `htmx-added`/`htmx-settling`/`dz-row-highlight`; author/adjust them in HM
+  `components/htmx-states.css` (they route through `--duration-slow`/`--ease-out`/
+  `--colour-success-soft`). Row-highlight is now scheme-aware.
+
 ## [0.98.14] - 2026-07-08
 
 ### Changed

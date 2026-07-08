@@ -1,4 +1,4 @@
-/* dazzle v0.98.13 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.98.14 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -10370,23 +10370,6 @@ transition: opacity 150ms ease-in, transform 150ms ease-in;
 #dz-toast .alert {
 transition: opacity 200ms ease-out, transform 200ms ease-out;
 }
-tr.htmx-swapping {
-opacity: 0;
-transform: translateX(1rem);
-transition: opacity 300ms ease-out, transform 300ms ease-out;
-}
-tr.htmx-added,
-tr.htmx-settling {
-animation: dz-row-highlight 600ms ease-out;
-}
-@keyframes dz-row-highlight {
-from { background-color: oklch(0.85 0.1 145 / 0.3); }
-to { background-color: transparent; }
-}
-.btn.htmx-request {
-pointer-events: none;
-opacity: 0.7;
-}
 .htmx-indicator {
 display: none;
 }
@@ -10423,13 +10406,6 @@ transform: translateY(4px);
 @media (prefers-reduced-motion: reduce) {
 ::view-transition-old(main-content),
 ::view-transition-new(main-content) {
-animation: none;
-}
-tr.htmx-swapping {
-transition: none;
-}
-tr.htmx-added,
-tr.htmx-settling {
 animation: none;
 }
 }

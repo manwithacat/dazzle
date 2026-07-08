@@ -33,32 +33,21 @@
  * DaisyUI-class block never matched the rendered DOM. */
 
 /* ── Optimistic UI feedback ─────────────────────────────────────────── */
-
-/* Row fades out during delete swap (swap:300ms on hx-swap) */
-tr.htmx-swapping {
-  opacity: 0;
-  transform: translateX(1rem);
-  transition: opacity 300ms ease-out, transform 300ms ease-out;
-}
-
-/* Row highlights briefly after creation or update */
-tr.htmx-added,
-tr.htmx-settling {
-  animation: dz-row-highlight 600ms ease-out;
-}
-
-@keyframes dz-row-highlight {
-  from { background-color: oklch(0.85 0.1 145 / 0.3); }
-  to   { background-color: transparent; }
-}
-
-/* Form button feedback on successful submit */
-.btn.htmx-request {
-  pointer-events: none;
-  opacity: 0.7;
-}
+/* Row swap/highlight animations + submit-button feedback MIGRATED to HM
+   `components/htmx-states.css` (HMC-006b, 2026-07-08). These were unlayered
+   overrides that shadowed HM's own tokenised versions with hardcoded values —
+   the exact "override HM = debt" signal this lane drains. Removing them lets HM's
+   canonical rules apply: row-swap easing → `--ease-out`, and the row-highlight
+   keyframe → scheme-aware `--colour-success-soft` (a dark-mode fix; the old fixed
+   `oklch(0.85 0.1 145 / 0.3)` green was wrong on dark surfaces). Transient
+   animations aren't in static captures → value-reasoning per the lane gate; the
+   HM token values are the canonical design-system values. `.btn.htmx-request` was
+   a dead selector (0 emitters use bare `.btn`; HM covers `button`/`.dz-button`). */
 
 /* ── HTMX indicator visibility ─────────────────────────────────────── */
+/* Kept here (not deleted with the animations) because these must apply on every
+   page including ones outside the HM-dist bundle; they carry no token debt
+   (display values only) and are byte-identical to HM's copy. */
 /* Override htmx built-in opacity with display:none so hidden indicators
    don't occupy layout space (opacity:0 still reserves vertical space). */
 .htmx-indicator {
@@ -112,17 +101,11 @@ tr.htmx-settling {
 /* Reduce motion for accessibility */
 /* Respect reduced motion for all Dazzle animations */
 @media (prefers-reduced-motion: reduce) {
+  /* View-transition reduced-motion stays here (view-transitions live in dz.css,
+     part 2 of HMC-006b). The tr.htmx-* reduced-motion overrides moved to HM
+     htmx-states.css with the animations they guard (HMC-006b). */
   ::view-transition-old(main-content),
   ::view-transition-new(main-content) {
-    animation: none;
-  }
-
-  tr.htmx-swapping {
-    transition: none;
-  }
-
-  tr.htmx-added,
-  tr.htmx-settling {
     animation: none;
   }
 }
