@@ -96,12 +96,13 @@ Selection priority:
 
 1. **Any lane with REGRESSION rows** → that lane (most urgent — it shipped broken)
 2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`.
-3. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
-4. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
-5. **All counts zero** → pick lane with oldest `last_run_at` and run its **explore phase**
-6. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit. The log entry must name the two renewal routes so the loop never looks permanently stuck: the budget resets automatically on the next `dazzle-updated` release signal, or manually via `/improve --reset-budget`.
+3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute `STALE` (last-exercised ≥20 cycles behind the current cycle). Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt.
+4. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
+5. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
+6. **All counts zero → explore phase, capability-coverage-directed.** Consult `improve/capability-map.md`: if any capability is `UNOWNED` or `STALE`, pick its owning lane and have the lane **exercise that specific capability** this cycle (log `picked {lane} to exercise {capability} — {UNOWNED | STALE N cycles}`). This is what keeps the full toolset live against the framework's velocity — nothing we build rots unexercised. Otherwise pick the lane with oldest `last_run_at` and run its ordinary **explore phase**.
+7. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit. The log entry must name the two renewal routes so the loop never looks permanently stuck: the budget resets automatically on the next `dazzle-updated` release signal, or manually via `/improve --reset-budget`.
 
-Record the choice. Bias from signals must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N") so future operators can audit.
+Record the choice. Bias from signals or capability-coverage must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N"; "picked hm-convergence to exercise the Tailwind-reservoir metric — STALE 24 cycles") so future operators can audit.
 
 ### Step 2: Hand off to lane
 
@@ -132,7 +133,13 @@ If the lane requires sub-strategy dispatch (framework-ux explore phase has 5: `m
    from dazzle.cli.runtime_impl.ux_cycle_signals import mark_run
    mark_run(source="improve")
    ```
-5. **Commit** if the lane modified tracked files (the lane's playbook reports this). Use message format: `improve: cycle N {lane} — {summary}`
+5. **Stamp capability coverage**: in `improve/capability-map.md`, set `last-exercised = N`
+   for every capability the cycle actually invoked (the lane reports which), flip its
+   status toward `USED`, and recompute `STALE` (owned + `last-exercised` ≥20 cycles
+   behind N). This is the maintenance half of the capability-coverage rule — it keeps
+   the registry an honest picture of what the loop is really exercising. The commit in
+   step 6 includes `capability-map.md` when it changed.
+6. **Commit** if the lane modified tracked files (the lane's playbook reports this). Use message format: `improve: cycle N {lane} — {summary}`
 
 ### Step 4: Release lock
 
