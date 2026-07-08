@@ -24,9 +24,29 @@ from dazzle.testing.ux.htmx_client import _extract_workspace_layout, parse_html
 # Shape-nesting gate (issue #794)
 # ---------------------------------------------------------------------------
 
-# A "card chrome" is a visual card layer — has rounded corners AND a
-# border or background. Two nested chrome layers read as "card within a
-# card," which is the regression we want to catch.
+# A "card chrome" is a visual card layer — the bordered/padded surface
+# that reads as a card. Two nested chrome layers read as "card within a
+# card," which is the regression we want to catch (#794).
+#
+# Since ADR-0049 the typed substrate is THE render path, and a card surface
+# is emitted with the SEMANTIC token `dz-card` — both the dashboard slot
+# (`<article class="dz-card">`, _render_dashboard.py) and the standalone
+# Card primitive (`<div class="dz-card dz-card--border-* …">`, _render_layout.py)
+# use `dz-card` as the base surface class; the border/radius live in CSS.
+# The primary guarantee against nested cards is now STRUCTURAL —
+# `Card.__post_init__` (containers.py) raises `CardSafetyError` on Card-in-Card,
+# so substrate-composed DOM cannot nest. This HTML scanner is defence-in-depth
+# for the RAW-HTML bypass paths that skip the Card primitive: adapter
+# `section.body` passthrough (cohort/timeline/entity-card regions), custom_renderer,
+# and project-authored region bodies. It must therefore inspect the real
+# `dz-card` vocabulary — the Tailwind-utility heuristic below is LEGACY
+# (pre-substrate Jinja era) and retained only for hand-authored utility markup.
+#
+# Sub-part classes (`dz-card-wrapper`, `dz-card-header`, `dz-card-body`,
+# `dz-card-title`, `dz-card__header`, …) are NOT surfaces — match the EXACT
+# `dz-card` token so the positioning wrapper and header/body never self-nest.
+_SEMANTIC_CARD_SURFACE = "dz-card"
+
 _ROUNDED_CLASSES = (
     "rounded",
     "rounded-sm",
@@ -66,22 +86,31 @@ def _is_side_border_class(cls: str) -> bool:
 
 
 def _has_card_chrome(class_attr: str | None) -> bool:
-    """Return True if a class string represents a visible card layer —
-    a rounded element with a **full border** (the defining edge of a
-    card surface).
+    """Return True if a class string represents a visible card layer.
 
-    A bg-only rounded element is not chrome: it could be a progress
-    bar track (``rounded-full bg-muted``), a kanban column backdrop
-    (``rounded-[6px] bg-muted/0.4``), or a decorative tile. A card
-    reads as a card because of its edge, not its fill. So we require
-    a non-side border to flag the element as card chrome.
+    Two detection paths:
 
-    Side-scoped borders (``border-l-4``, ``border-t-red-500``) are
-    accents, not a card edge, and explicitly excluded.
+    1. **Semantic (current substrate).** The class list carries the exact
+       ``dz-card`` token — the card surface emitted by both the dashboard slot
+       and the standalone Card primitive since ADR-0049. Matched exactly so the
+       ``dz-card-wrapper`` positioner and ``dz-card-header``/``-body``/``__header``
+       sub-parts never count as their own surface (which would self-nest).
+
+    2. **Legacy (pre-substrate).** A rounded element with a **full border**
+       (the defining edge of a card surface). A bg-only rounded element is not
+       chrome: it could be a progress-bar track (``rounded-full bg-muted``), a
+       kanban column backdrop (``rounded-[6px] bg-muted/0.4``), or a decorative
+       tile. A card reads as a card because of its edge, not its fill, so we
+       require a non-side border. Side-scoped borders (``border-l-4``,
+       ``border-t-red-500``) are accents, not a card edge, and excluded.
     """
     if not class_attr:
         return False
     classes = class_attr.split()
+    # (1) Semantic substrate card surface — the production shape since #1042.
+    if _SEMANTIC_CARD_SURFACE in classes:
+        return True
+    # (2) Legacy Tailwind-utility heuristic (hand-authored markup only).
     has_rounded = any(_is_rounded_class(c) for c in classes)
     if not has_rounded:
         return False
@@ -710,8 +739,9 @@ def check_contract(contract: Contract, html: str) -> Contract:
             pairs = ", ".join(f"{outer}>{inner}" for outer, inner in nested[:3])
             more = f" (+ {len(nested) - 3} more)" if len(nested) > 3 else ""
             errors.append(
-                f"Nested card chrome detected — a rounded+bordered/background "
-                f"element has an ancestor with the same chrome: {pairs}{more}. "
+                f"Nested card chrome detected — a card-surface element "
+                f"(a `dz-card` layer, or a legacy rounded+bordered element) has an "
+                f"ancestor with the same chrome: {pairs}{more}. "
                 f"Card chrome must live on exactly one layer."
             )
 

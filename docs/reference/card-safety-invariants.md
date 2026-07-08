@@ -56,15 +56,34 @@ The remedy is structural:
 
 ## What counts as "card chrome"
 
-A DOM element is card chrome iff it is a **block container** AND has
-**both**:
+**Primary guarantee is structural, not scanner-based.** Since ADR-0049 the
+typed substrate is THE render path, and the Card-in-Card regression is
+enforced *by construction*: `Card.__post_init__` (`render/fragment/primitives/containers.py`)
+raises `CardSafetyError` if a `Card` contains a `Card` in any slot; `Region`
+has no `title` field by design; `Toolbar.__post_init__` bans a hidden first
+action. Substrate-composed DOM therefore *cannot* nest chrome. The HTML
+scanner below is **defence-in-depth** for the raw-HTML bypass paths that skip
+the primitives — adapter `section.body` passthrough (cohort/timeline/entity-card
+regions), `custom_renderer`, and project-authored region bodies.
 
-- a `rounded-*` class (any scale, including arbitrary values like
-  `rounded-[6px]`, side-scoped like `rounded-t-md`), and
-- a **full border** (`border`, `border-<shade>`, `border-<color>`)
-  that is NOT side-scoped (`border-l-*`, `border-r-*`, `border-t-*`,
-  `border-b-*`, `border-x-*`, `border-y-*` are accents, not card
-  edges).
+A DOM element is card chrome iff it is a **block container** AND either:
+
+- **(semantic — current substrate)** its class list carries the exact
+  `dz-card` token — the card surface emitted by both the dashboard slot
+  (`<article class="dz-card">`) and the standalone Card primitive
+  (`<div class="dz-card dz-card--border-* …">`). Matched **exactly**, so the
+  `dz-card-wrapper` positioner and `dz-card-header`/`-body`/`-title`/`__header`
+  sub-parts do NOT count (they would self-nest against their own surface); **or**
+- **(legacy — pre-substrate Jinja era)** a `rounded-*` class (any scale, incl.
+  arbitrary `rounded-[6px]`, side-scoped `rounded-t-md`) **and** a **full border**
+  (`border`, `border-<shade>`, `border-<color>`) that is NOT side-scoped
+  (`border-l-*`/`-r-*`/`-t-*`/`-b-*`/`-x-*`/`-y-*` are accents, not card edges).
+
+> **HM-convergence note.** The legacy Tailwind-utility path is **migration debt**.
+> The house direction (2026-07-08) is to delegate all frontend design into
+> HaTchi-MaXchi; the `dz-*` semantic vocabulary is the HM-aligned target, and this
+> Tailwind path is retired by the `hm-convergence` improve lane once the
+> Tailwind reservoir in the emitters reaches zero.
 
 Block containers: `div`, `article`, `section`, `aside`, `nav`,
 `main`, `header`, `footer`, `li`. Inline elements (`span`, `button`,
@@ -73,13 +92,15 @@ chrome-shaped classes — a status-badge `<span>` with `bg-primary
 rounded-full` is a pill label, not a card.
 
 A background colour alone (`bg-*` without border) is also **not**
-chrome. Progress-bar tracks (`bg-muted rounded-full`), kanban column
-backdrops (`bg-muted/0.4 rounded-[6px]`), and filled tiles are
+chrome under the legacy path. Progress-bar tracks (`bg-muted rounded-full`),
+kanban column backdrops (`bg-muted/0.4 rounded-[6px]`), and filled tiles are
 decorative fills, not card surfaces. This rule was tightened in
 v0.57.37 after the composite gate over-flagged them.
 
 Enforcement: `_has_card_chrome()` in
-`src/dazzle/testing/ux/contract_checker.py`.
+`src/dazzle/testing/ux/contract_checker.py` (defence-in-depth); the
+structural invariants in `render/fragment/primitives/containers.py` are the
+primary guarantee.
 
 ---
 

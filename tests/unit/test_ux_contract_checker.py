@@ -346,6 +346,42 @@ class TestFindNestedChromes:
                 "</div></div>",
                 [],
             ),
+            # ── SEMANTIC substrate cases (ADR-0049 dz-card vocabulary) ──
+            # F4 fix: the scanner must inspect the REAL production shape, not just
+            # legacy Tailwind utilities. `dz-card` is the card surface; the primary
+            # Card-in-Card guarantee is structural (containers.py Card.__post_init__),
+            # this is defence-in-depth for raw-HTML region bodies that bypass it.
+            #
+            # Real dashboard shape: wrapper (positioner, NOT chrome) > article.dz-card
+            # (one surface) > bare region body. Single chrome layer → clean.
+            (
+                '<div data-card-id="c0" class="dz-card-wrapper is-animating" tabindex="0">'
+                '<article class="dz-card" role="article">'
+                '<div class="dz-card-header"><h3 class="dz-card-title">Total Tasks</h3></div>'
+                '<div class="dz-card-body" id="region-metrics-c0">'
+                '<div data-dz-region data-dz-region-name="metrics"><p>5</p></div>'
+                "</div></article></div>",
+                [],
+            ),
+            # The #794 regression on the raw-HTML bypass path: a region body emits its
+            # OWN dz-card surface inside the dashboard slot's article.dz-card → nested.
+            (
+                '<div data-card-id="c0" class="dz-card-wrapper" tabindex="0">'
+                '<article class="dz-card">'
+                '<div class="dz-card-body" id="region-metrics-c0">'
+                '<div class="dz-card dz-card--border-md"><h3>Total Tasks</h3><p>chart</p></div>'
+                "</div></article></div>",
+                [("article", "div")],
+            ),
+            # Standalone Card primitive: dz-card surface with dz-card__body sub-part
+            # (a BEM element, NOT a second surface) → single chrome layer, clean.
+            (
+                '<div class="dz-card dz-card--radius-md dz-card--border-md">'
+                '<div class="dz-card__header"><h3>Title</h3></div>'
+                '<div class="dz-card__body"><p>body</p></div>'
+                "</div>",
+                [],
+            ),
         ],
         ids=[
             "test_detects_rounded_plus_border_nested",
@@ -357,6 +393,9 @@ class TestFindNestedChromes:
             "test_dashboard_slot_plus_region_card_is_card_in_card",
             "test_dashboard_slot_with_bare_region_card_is_clean",
             "test_fixed_grid_region_shape",
+            "test_semantic_dashboard_slot_bare_region_is_clean",
+            "test_semantic_region_emitting_own_dz_card_is_nested",
+            "test_semantic_standalone_card_bem_subparts_are_clean",
         ],
     )
     def test_find_nested_chromes(self, html: str, expected: list) -> None:
