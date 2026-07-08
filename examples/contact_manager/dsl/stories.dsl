@@ -1,8 +1,8 @@
 story ST-001 "User creates a new Contact":
   status: accepted
-  actor: user
+  persona: user
   trigger: form_submitted
-  scope: [Contact]
+  entities: [Contact]
   given:
     - "User has permission to create Contact"
   then:
@@ -10,9 +10,9 @@ story ST-001 "User creates a new Contact":
     - "User sees confirmation message"
 
 story ST-004 "User browses contacts alphabetically":
-  actor: user
+  persona: user
   trigger: user_click
-  scope: [Contact]
+  entities: [Contact]
   given:
     - "Contacts exist in the directory"
     - "User is on the contacts workspace"
@@ -21,9 +21,9 @@ story ST-004 "User browses contacts alphabetically":
     - "Contact list is scrollable"
 
 story ST-005 "User searches contacts by name or company":
-  actor: user
+  persona: user
   trigger: form_submitted
-  scope: [Contact]
+  entities: [Contact]
   given:
     - "User is on the contact list surface"
     - "Contacts exist matching the query"
@@ -32,9 +32,9 @@ story ST-005 "User searches contacts by name or company":
     - "Search is case-insensitive"
 
 story ST-006 "User views full contact details":
-  actor: user
+  persona: user
   trigger: user_click
-  scope: [Contact]
+  entities: [Contact]
   given:
     - "User clicked a contact row in the list"
   then:
@@ -42,9 +42,9 @@ story ST-006 "User views full contact details":
     - "User can return to the list via breadcrumb"
 
 story ST-007 "User favourites a contact":
-  actor: user
+  persona: user
   trigger: user_click
-  scope: [Contact]
+  entities: [Contact]
   given:
     - "Contact.is_favorite = false"
   then:
@@ -52,9 +52,9 @@ story ST-007 "User favourites a contact":
     - "Favourite contacts sort to the top of the list"
 
 story ST-008 "User edits an existing contact":
-  actor: user
+  persona: user
   trigger: form_submitted
-  scope: [Contact]
+  entities: [Contact]
   given:
     - "Contact exists"
     - "User has update permission on Contact"

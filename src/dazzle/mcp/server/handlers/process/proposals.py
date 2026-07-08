@@ -200,7 +200,7 @@ def _is_crud_story(story: StorySpec) -> bool:
         return False
 
     # Must have single entity in scope
-    if len(story.scope) != 1:
+    if len(story.entities) != 1:
         return False
 
     # At least one outcome must be a CRUD action, and the rest must be
@@ -240,8 +240,8 @@ def _cluster_stories_into_workflows(
     ungrouped: list[StorySpec] = []
 
     for story in stories:
-        if story.scope:
-            key = story.scope[0]
+        if story.entities:
+            key = story.entities[0]
             entity_groups.setdefault(key, []).append(story)
         else:
             ungrouped.append(story)
@@ -375,7 +375,7 @@ def _build_proposal(
             "story_id": s.story_id,
             "title": s.title,
             "trigger": s.trigger.value,
-            "actor": s.actor,
+            "persona": s.persona,
         }
         for s in stories
     ]
@@ -454,7 +454,7 @@ def _generate_design_questions(
     questions: list[str] = []
 
     triggers = {s.trigger for s in stories}
-    actors = {s.actor for s in stories}
+    personas = {s.persona for s in stories}
 
     # No user trigger (automated)
     automated_triggers = {
@@ -469,11 +469,11 @@ def _generate_design_questions(
             "or event from another process."
         )
 
-    # Multiple actors
-    if len(actors) > 1:
-        actor_list = ", ".join(sorted(actors))
+    # Multiple personas
+    if len(personas) > 1:
+        persona_list = ", ".join(sorted(personas))
         questions.append(
-            f"Multiple actors involved ({actor_list}). How are handoffs between them managed?"
+            f"Multiple personas involved ({persona_list}). How are handoffs between them managed?"
         )
 
     # Entity has state machine
@@ -493,7 +493,7 @@ def _generate_design_questions(
     # External service references (heuristic: scope mentions multiple entities)
     all_scopes: set[str] = set()
     for s in stories:
-        all_scopes.update(s.scope)
+        all_scopes.update(s.entities)
     if len(all_scopes) > 1:
         questions.append(
             "Multiple entities in scope. What's the failure/retry strategy "

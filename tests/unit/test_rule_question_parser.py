@@ -233,9 +233,9 @@ entity Invoice "Invoice":
   amount: decimal(10,2)
 
 story ST-001 "Submit invoice":
-  actor: Staff
+  persona: Staff
   trigger: form_submitted
-  scope: [Invoice]
+  entities: [Invoice]
 
 rule R-001 "Invoice must have amount":
   kind: precondition

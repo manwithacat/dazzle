@@ -437,8 +437,8 @@ class PopulationHandlers:
                 entity_type="dsl_story",
                 metadata={
                     "title": story.title,
-                    "actor": story.actor,
-                    "scope": story.scope,
+                    "persona": story.persona,
+                    "entities": story.entities,
                     "status": story.status.value
                     if hasattr(story.status, "value")
                     else str(story.status),
@@ -446,18 +446,18 @@ class PopulationHandlers:
             )
             stats["stories_created"] += 1
 
-            # Story -> Persona (actor)
-            if story.actor:
+            # Story -> Persona
+            if story.persona:
                 self._create_relation_counted(
                     stats,
                     source_id=story_id,
-                    target_id=f"persona:{story.actor}",
+                    target_id=f"persona:{story.persona}",
                     relation_type="acts_as",
-                    metadata={"role": "actor"},
+                    metadata={"role": "persona"},
                 )
 
             # Story -> Entities (scope)
-            for entity_name in story.scope:
+            for entity_name in story.entities:
                 self._create_relation_counted(
                     stats,
                     source_id=story_id,

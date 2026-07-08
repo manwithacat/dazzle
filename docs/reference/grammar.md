@@ -1496,9 +1496,9 @@ workspace dashboard "Dashboard":
 
 ```dsl
 story ST-001 "User completes task":
-  actor: StaffUser
+  persona: StaffUser
   trigger: status_changed
-  scope: [Task]
+  entities: [Task]
 
   given:
     - Task.status is 'in_progress'

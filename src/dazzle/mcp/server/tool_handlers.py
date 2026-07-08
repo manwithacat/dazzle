@@ -1118,9 +1118,9 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
             StorySpec(
                 story_id=next_id(),
                 title=f"{actor} creates a new {entity.title or entity.name}",
-                actor=actor,
+                persona=actor,
                 trigger=StoryTrigger.FORM_SUBMITTED,
-                scope=[entity.name],
+                entities=[entity.name],
                 given=[
                     StoryCondition(expression=f"{actor} has permission to create {entity.name}"),
                 ],
@@ -1146,9 +1146,9 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                     StorySpec(
                         story_id=next_id(),
                         title=f"{actor} changes {entity.name} from {transition.from_state} to {transition.to_state}",
-                        actor=actor,
+                        persona=actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
-                        scope=[entity.name],
+                        entities=[entity.name],
                         given=[
                             StoryCondition(
                                 expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
@@ -1177,9 +1177,9 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
         {
             "story_id": s.story_id,
             "title": s.title,
-            "actor": s.actor,
+            "persona": s.persona,
             "trigger": s.trigger.value,
-            "scope": s.scope,
+            "entities": s.entities,
             "given": [c.expression for c in s.given],
             "when": [c.expression for c in s.when],
             "then": [c.expression for c in s.then],
@@ -1219,9 +1219,11 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         story = StorySpec(
             story_id=s["story_id"],
             title=s["title"],
-            actor=s["actor"],
+            # #1559 renamed keys actor→persona, scope→entities; tolerate the
+            # old spellings in in-flight proposal JSON written pre-rename.
+            persona=s.get("persona") or s["actor"],
             trigger=StoryTrigger(s["trigger"]),
-            scope=s.get("scope", []),
+            entities=s.get("entities") or s.get("scope") or [],
             given=[StoryCondition(expression=c) for c in given_raw],
             when=[StoryCondition(expression=c) for c in when_raw],
             then=[StoryCondition(expression=c) for c in then_raw],
@@ -1258,9 +1260,9 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         {
             "story_id": s.story_id,
             "title": s.title,
-            "actor": s.actor,
+            "persona": s.persona,
             "trigger": s.trigger.value if s.trigger else None,
-            "scope": s.scope,
+            "entities": s.entities,
             "given": [c.expression for c in s.given],
             "when": [c.expression for c in s.when],
             "then": [c.expression for c in s.then],

@@ -88,7 +88,7 @@ class TestExtractEvidence:
         story = MagicMock()
         story.story_id = "create_task"
         story.title = "Create Task"
-        story.actor = "teacher"
+        story.persona = "teacher"
         appspec = _make_appspec(stories=[story])
         result = extract_evidence(appspec)
         assert len(result.items.get("story", [])) == 1

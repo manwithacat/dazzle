@@ -31,16 +31,16 @@ class TestStorySpec:
         story = StorySpec(
             story_id="ST-001",
             title="User creates a task",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.FORM_SUBMITTED,
         )
 
         assert story.story_id == "ST-001"
         assert story.title == "User creates a task"
-        assert story.actor == "User"
+        assert story.persona == "User"
         assert story.trigger == StoryTrigger.FORM_SUBMITTED
         assert story.status == StoryStatus.DRAFT
-        assert story.scope == []
+        assert story.entities == []
         assert story.given == []
 
     def test_create_full_story(self):
@@ -48,9 +48,9 @@ class TestStorySpec:
         story = StorySpec(
             story_id="ST-002",
             title="Staff sends an invoice",
-            actor="StaffUser",
+            persona="StaffUser",
             trigger=StoryTrigger.STATUS_CHANGED,
-            scope=["Invoice", "Client"],
+            entities=["Invoice", "Client"],
             given=[StoryCondition(expression="Invoice.status is 'Draft'")],
             when=[StoryCondition(expression="Invoice.status changes to 'Sent'")],
             then=[StoryCondition(expression="Invoice.status becomes 'Sent'")],
@@ -64,7 +64,7 @@ class TestStorySpec:
         )
 
         assert story.story_id == "ST-002"
-        assert story.scope == ["Invoice", "Client"]
+        assert story.entities == ["Invoice", "Client"]
         assert len(story.given) == 1
         assert len(story.then) == 1
         assert len(story.unless) == 1
@@ -77,7 +77,7 @@ class TestStorySpec:
         story = StorySpec(
             story_id="ST-001",
             title="Test",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.USER_CLICK,
         )
 
@@ -100,7 +100,7 @@ class TestStorySpec:
             story = StorySpec(
                 story_id="ST-001",
                 title="Test",
-                actor="User",
+                persona="User",
                 trigger=trigger,
             )
             assert story.trigger == trigger
@@ -142,14 +142,14 @@ class TestEmitStoryDsl:
         story = StorySpec(
             story_id="ST-001",
             title="User creates a task",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.FORM_SUBMITTED,
         )
 
         dsl = emit_story_dsl(story)
 
         assert 'story ST-001 "User creates a task":' in dsl
-        assert "  actor: User" in dsl
+        assert "  persona: User" in dsl
         assert "  trigger: form_submitted" in dsl
         # Draft status should be omitted
         assert "status:" not in dsl
@@ -159,7 +159,7 @@ class TestEmitStoryDsl:
         story = StorySpec(
             story_id="ST-001",
             title="Test",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.USER_CLICK,
             status=StoryStatus.ACCEPTED,
         )
@@ -173,9 +173,9 @@ class TestEmitStoryDsl:
         story = StorySpec(
             story_id="ST-001",
             title="Test",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.STATUS_CHANGED,
-            scope=["Task"],
+            entities=["Task"],
             given=[StoryCondition(expression="Task.status is 'pending'")],
             when=[StoryCondition(expression="Task.status changes to 'done'")],
             then=[StoryCondition(expression="Task is completed")],
@@ -193,7 +193,7 @@ class TestEmitStoryDsl:
         story = StorySpec(
             story_id="ST-001",
             title="Test",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.STATUS_CHANGED,
             unless=[
                 StoryException(
@@ -214,7 +214,7 @@ class TestEmitStoryDsl:
         story = StorySpec(
             story_id="ST-001",
             title="Test",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.USER_CLICK,
         )
 
@@ -230,14 +230,14 @@ class TestEmitStoryDsl:
         story = StorySpec(
             story_id="ST-001",
             title="Test",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.USER_CLICK,
-            scope=["Invoice", "Client"],
+            entities=["Invoice", "Client"],
         )
 
         dsl = emit_story_dsl(story)
 
-        assert "  scope: [Invoice, Client]" in dsl
+        assert "  entities: [Invoice, Client]" in dsl
 
     def test_description_emitted(self):
         """Test description is emitted as docstring."""
@@ -245,7 +245,7 @@ class TestEmitStoryDsl:
             story_id="ST-001",
             title="Test",
             description="A longer description of this story",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.USER_CLICK,
         )
 
@@ -264,15 +264,15 @@ class TestGetNextStoryIdFromAppspec:
     def test_sequential(self):
         """Test with sequential IDs."""
         stories = [
-            StorySpec(story_id="ST-001", title="S1", actor="U", trigger=StoryTrigger.USER_CLICK),
-            StorySpec(story_id="ST-003", title="S3", actor="U", trigger=StoryTrigger.USER_CLICK),
+            StorySpec(story_id="ST-001", title="S1", persona="U", trigger=StoryTrigger.USER_CLICK),
+            StorySpec(story_id="ST-003", title="S3", persona="U", trigger=StoryTrigger.USER_CLICK),
         ]
         assert get_next_story_id_from_appspec(stories) == "ST-004"
 
     def test_non_sequential(self):
         """Test with gaps in IDs."""
         stories = [
-            StorySpec(story_id="ST-007", title="S7", actor="U", trigger=StoryTrigger.USER_CLICK),
+            StorySpec(story_id="ST-007", title="S7", persona="U", trigger=StoryTrigger.USER_CLICK),
         ]
         assert get_next_story_id_from_appspec(stories) == "ST-008"
 
@@ -293,7 +293,7 @@ class TestAppendStoriesToDsl:
         story = StorySpec(
             story_id="ST-001",
             title="Test",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.USER_CLICK,
         )
 
@@ -306,12 +306,12 @@ class TestAppendStoriesToDsl:
     def test_appends_to_existing(self, temp_project):
         """Test appending to an existing stories.dsl file."""
         stories_file = temp_project / "dsl" / "stories.dsl"
-        stories_file.write_text('story ST-001 "First":\n  actor: User\n  trigger: user_click\n')
+        stories_file.write_text('story ST-001 "First":\n  persona: User\n  trigger: user_click\n')
 
         story = StorySpec(
             story_id="ST-002",
             title="Second",
-            actor="Admin",
+            persona="Admin",
             trigger=StoryTrigger.FORM_SUBMITTED,
         )
 
@@ -327,7 +327,7 @@ class TestAppendStoriesToDsl:
             StorySpec(
                 story_id=f"ST-{i:03d}",
                 title=f"Story {i}",
-                actor="User",
+                persona="User",
                 trigger=StoryTrigger.USER_CLICK,
             )
             for i in range(1, 4)
@@ -345,7 +345,7 @@ class TestAppendStoriesToDsl:
         story = StorySpec(
             story_id="ST-001",
             title="Test",
-            actor="User",
+            persona="User",
             trigger=StoryTrigger.USER_CLICK,
         )
 

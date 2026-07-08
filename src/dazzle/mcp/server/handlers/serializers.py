@@ -22,16 +22,16 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-_STORY_SUMMARY_FIELDS = frozenset({"story_id", "title", "actor", "status", "scope"})
+_STORY_SUMMARY_FIELDS = frozenset({"story_id", "title", "persona", "status", "entities"})
 
 _STORY_FULL_FIELDS = frozenset(
     {
         "story_id",
         "title",
         "description",
-        "actor",
+        "persona",
         "trigger",
-        "scope",
+        "entities",
         "given",
         "when",
         "then",
@@ -42,7 +42,7 @@ _STORY_FULL_FIELDS = frozenset(
 
 
 def serialize_story_summary(story: StorySpec) -> dict[str, Any]:
-    """Compact story summary: ID, title, actor, status, scope.
+    """Compact story summary: ID, title, persona, status, entities.
 
     Used by default in list/propose responses to reduce context window usage.
     """

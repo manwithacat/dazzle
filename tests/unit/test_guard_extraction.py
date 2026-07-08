@@ -94,7 +94,7 @@ def _make_story(story_id, title="Test", scope=None, constraints=None):
     story = MagicMock()
     story.story_id = story_id
     story.title = title
-    story.scope = scope or []
+    story.entities = scope or []
     story.constraints = constraints or []
     return story
 

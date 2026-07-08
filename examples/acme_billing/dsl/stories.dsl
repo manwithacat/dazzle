@@ -7,9 +7,9 @@ module acme_billing.stories
 # =============================================================================
 
 story ST-001 "Org owner manages projects within their organization":
-  actor: org_owner
+  persona: org_owner
   trigger: form_submitted
-  scope: [Project, Organization]
+  entities: [Project, Organization]
 
   given:
     - "Org owner is authenticated and belongs to the Acme organization"
@@ -24,9 +24,9 @@ story ST-001 "Org owner manages projects within their organization":
     - "Org owner cannot see projects belonging to Globex"
 
 story ST-002 "Auditor reviews invoices but cannot modify them":
-  actor: auditor
+  persona: auditor
   trigger: user_click
-  scope: [Invoice, Project]
+  entities: [Invoice, Project]
 
   given:
     - "Auditor is authenticated and scoped to the Acme organization"
@@ -40,9 +40,9 @@ story ST-002 "Auditor reviews invoices but cannot modify them":
     - "Auditor cannot create, update, or delete any invoice"
 
 story ST-003 "Project member sees only their assigned projects":
-  actor: project_member
+  persona: project_member
   trigger: user_click
-  scope: [Project, Membership]
+  entities: [Project, Membership]
 
   given:
     - "Project member is authenticated"
@@ -57,9 +57,9 @@ story ST-003 "Project member sees only their assigned projects":
     - "Project Beta is not visible to the project member"
 
 story ST-004 "External contractor views non-sensitive invoices within their organization":
-  actor: external_contractor
+  persona: external_contractor
   trigger: user_click
-  scope: [Invoice]
+  entities: [Invoice]
 
   given:
     - "External contractor is authenticated and belongs to the Acme organization"
@@ -79,9 +79,9 @@ story ST-004 "External contractor views non-sensitive invoices within their orga
         then: "Invoice is excluded from the result set"
 
 story ST-005 "Admin has cross-organization access":
-  actor: admin
+  persona: admin
   trigger: user_click
-  scope: [Organization, Project, Invoice, User, Membership]
+  entities: [Organization, Project, Invoice, User, Membership]
 
   given:
     - "Admin is authenticated"

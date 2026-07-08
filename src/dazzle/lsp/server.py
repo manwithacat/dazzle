@@ -379,9 +379,9 @@ def _format_process_hover_section(spec: ir.ProcessSpec, lines: list[str]) -> Non
 
 
 def _format_story_hover_section(spec: ir.StorySpec, lines: list[str]) -> None:
-    actor = getattr(spec, "actor", None)
-    if actor:
-        lines.append(f"**Actor:** {actor}")
+    persona = getattr(spec, "persona", None)
+    if persona:
+        lines.append(f"**Persona:** {persona}")
     steps = getattr(spec, "steps", None)
     if steps:
         lines.append(f"**Steps:** {len(steps)}")

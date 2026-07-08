@@ -2731,14 +2731,14 @@ ir_class: StoryException
 
 ir_class: StorySpec
   required:
-    - actor: str
+    - persona: str
     - story_id: str
     - title: str
     - trigger: StoryTrigger
   optional:
     - description: str | None = None
+    - entities: list[str] = []
     - given: list[StoryCondition] = []
-    - scope: list[str] = []
     - source: SourceLocation | None = None
     - status: StoryStatus = <StoryStatus.DRAFT: 'draft'>
     - then: list[StoryCondition] = []

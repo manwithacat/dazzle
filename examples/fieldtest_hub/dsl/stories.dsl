@@ -1,8 +1,8 @@
 story ST-019 "Engineer creates a new Device":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: form_submitted
-  scope: [Device]
+  entities: [Device]
   given:
     - "Engineer has permission to create Device"
   then:
@@ -11,9 +11,9 @@ story ST-019 "Engineer creates a new Device":
 
 story ST-020 "Engineer changes Device from prototype to active":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [Device]
+  entities: [Device]
   given:
     - "Device.status is 'prototype'"
   then:
@@ -21,9 +21,9 @@ story ST-020 "Engineer changes Device from prototype to active":
 
 story ST-021 "Engineer changes Device from active to recalled":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [Device]
+  entities: [Device]
   given:
     - "Device.status is 'active'"
   then:
@@ -31,9 +31,9 @@ story ST-021 "Engineer changes Device from active to recalled":
 
 story ST-022 "Engineer changes Device from active to retired":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [Device]
+  entities: [Device]
   given:
     - "Device.status is 'active'"
   then:
@@ -41,9 +41,9 @@ story ST-022 "Engineer changes Device from active to retired":
 
 story ST-023 "Engineer creates a new Tester":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: form_submitted
-  scope: [Tester]
+  entities: [Tester]
   given:
     - "Engineer has permission to create Tester"
   then:
@@ -52,9 +52,9 @@ story ST-023 "Engineer creates a new Tester":
 
 story ST-024 "Engineer creates a new Issue Report":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: form_submitted
-  scope: [IssueReport]
+  entities: [IssueReport]
   given:
     - "Engineer has permission to create IssueReport"
   then:
@@ -63,9 +63,9 @@ story ST-024 "Engineer creates a new Issue Report":
 
 story ST-025 "Engineer changes IssueReport from open to triaged":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [IssueReport]
+  entities: [IssueReport]
   given:
     - "IssueReport.status is 'open'"
   then:
@@ -73,9 +73,9 @@ story ST-025 "Engineer changes IssueReport from open to triaged":
 
 story ST-026 "Engineer changes IssueReport from triaged to in_progress":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [IssueReport]
+  entities: [IssueReport]
   given:
     - "IssueReport.status is 'triaged'"
   then:
@@ -83,9 +83,9 @@ story ST-026 "Engineer changes IssueReport from triaged to in_progress":
 
 story ST-027 "Engineer changes IssueReport from in_progress to fixed":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [IssueReport]
+  entities: [IssueReport]
   given:
     - "IssueReport.status is 'in_progress'"
   then:
@@ -93,9 +93,9 @@ story ST-027 "Engineer changes IssueReport from in_progress to fixed":
 
 story ST-028 "Engineer creates a new Test Session":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: form_submitted
-  scope: [TestSession]
+  entities: [TestSession]
   given:
     - "Engineer has permission to create TestSession"
   then:
@@ -104,9 +104,9 @@ story ST-028 "Engineer creates a new Test Session":
 
 story ST-029 "Engineer creates a new Firmware Release":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: form_submitted
-  scope: [FirmwareRelease]
+  entities: [FirmwareRelease]
   given:
     - "Engineer has permission to create FirmwareRelease"
   then:
@@ -115,9 +115,9 @@ story ST-029 "Engineer creates a new Firmware Release":
 
 story ST-030 "Engineer changes FirmwareRelease from draft to released":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [FirmwareRelease]
+  entities: [FirmwareRelease]
   given:
     - "FirmwareRelease.status is 'draft'"
   then:
@@ -125,9 +125,9 @@ story ST-030 "Engineer changes FirmwareRelease from draft to released":
 
 story ST-031 "Engineer changes FirmwareRelease from released to deprecated":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [FirmwareRelease]
+  entities: [FirmwareRelease]
   given:
     - "FirmwareRelease.status is 'released'"
   then:
@@ -135,9 +135,9 @@ story ST-031 "Engineer changes FirmwareRelease from released to deprecated":
 
 story ST-032 "Engineer changes FirmwareRelease from deprecated to draft":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [FirmwareRelease]
+  entities: [FirmwareRelease]
   given:
     - "FirmwareRelease.status is 'deprecated'"
   then:
@@ -145,9 +145,9 @@ story ST-032 "Engineer changes FirmwareRelease from deprecated to draft":
 
 story ST-033 "Engineer creates a new Task":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: form_submitted
-  scope: [Task]
+  entities: [Task]
   given:
     - "Engineer has permission to create Task"
   then:
@@ -156,9 +156,9 @@ story ST-033 "Engineer creates a new Task":
 
 story ST-034 "Engineer changes Task from open to in_progress":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [Task]
+  entities: [Task]
   given:
     - "Task.status is 'open'"
   then:
@@ -166,9 +166,9 @@ story ST-034 "Engineer changes Task from open to in_progress":
 
 story ST-035 "Engineer changes Task from in_progress to completed":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [Task]
+  entities: [Task]
   given:
     - "Task.status is 'in_progress'"
   then:
@@ -176,18 +176,18 @@ story ST-035 "Engineer changes Task from in_progress to completed":
 
 story ST-036 "Engineer changes Task from in_progress to open":
   status: accepted
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [Task]
+  entities: [Task]
   given:
     - "Task.status is 'in_progress'"
   then:
     - "Task.status becomes 'open'"
 
 story ST-037 "Engineer triages recent issue reports":
-  actor: engineer
+  persona: engineer
   trigger: user_click
-  scope: [IssueReport]
+  entities: [IssueReport]
   given:
     - "IssueReports exist with status 'open'"
   then:
@@ -195,9 +195,9 @@ story ST-037 "Engineer triages recent issue reports":
     - "Engineer can transition a report from 'open' to 'triaged'"
 
 story ST-038 "Engineer links firmware release to a device batch":
-  actor: engineer
+  persona: engineer
   trigger: form_submitted
-  scope: [FirmwareRelease, Device]
+  entities: [FirmwareRelease, Device]
   given:
     - "FirmwareRelease exists with status 'draft'"
   then:
@@ -205,9 +205,9 @@ story ST-038 "Engineer links firmware release to a device batch":
     - "Devices matching the batch_number show the new firmware version"
 
 story ST-039 "Engineer marks a device as recalled":
-  actor: engineer
+  persona: engineer
   trigger: status_changed
-  scope: [Device]
+  entities: [Device]
   given:
     - "Device.status is 'active'"
     - "A critical IssueReport references the device batch"
@@ -216,9 +216,9 @@ story ST-039 "Engineer marks a device as recalled":
     - "Associated testers are notified"
 
 story ST-040 "Manager reviews team workload":
-  actor: manager
+  persona: manager
   trigger: user_click
-  scope: [Task, Tester]
+  entities: [Task, Tester]
   given:
     - "Manager is on the engineering dashboard"
   then:
@@ -226,9 +226,9 @@ story ST-040 "Manager reviews team workload":
     - "Manager can reassign a Task from one Engineer to another"
 
 story ST-041 "Manager tracks release progress":
-  actor: manager
+  persona: manager
   trigger: user_click
-  scope: [FirmwareRelease]
+  entities: [FirmwareRelease]
   given:
     - "FirmwareReleases exist in various statuses"
   then:
@@ -236,9 +236,9 @@ story ST-041 "Manager tracks release progress":
     - "Manager can see counts of drafted vs released vs deprecated"
 
 story ST-042 "Field Tester reports a device issue":
-  actor: tester
+  persona: tester
   trigger: form_submitted
-  scope: [IssueReport, Device]
+  entities: [IssueReport, Device]
   given:
     - "Field Tester is assigned to a Device with an issue"
   then:
@@ -246,9 +246,9 @@ story ST-042 "Field Tester reports a device issue":
     - "IssueReport.status starts as 'open'"
 
 story ST-043 "Field Tester logs a test session":
-  actor: tester
+  persona: tester
   trigger: form_submitted
-  scope: [TestSession, Device]
+  entities: [TestSession, Device]
   given:
     - "Field Tester has completed a hands-on test"
   then:
@@ -256,9 +256,9 @@ story ST-043 "Field Tester logs a test session":
     - "Session appears in the tester's dashboard"
 
 story ST-044 "Field Tester views devices assigned to them":
-  actor: tester
+  persona: tester
   trigger: user_click
-  scope: [Device]
+  entities: [Device]
   given:
     - "Field Tester is on their tester_dashboard"
   then:

@@ -11,7 +11,7 @@ Stories capture expected user-visible outcomes in a structured format tied to pe
 
 A behavioural user story that bridges DSL specifications and implementation.
 Stories describe what should happen (outcomes), when (triggers), who is involved
-(actors, entities), and what constraints must hold. Stories use Gherkin-style
+(persona, entities), and what constraints must hold. Stories use Gherkin-style
 given/when/then conditions and can include unless branches for exception handling.
 
 Stories can be defined in DSL syntax (v0.22.0) or proposed by LLM and stored as
@@ -23,9 +23,9 @@ Workflow: propose -> save -> get -> generate_tests -> coverage
 
 ```dsl
 story <story_id> "<Title>":
-  actor: <PersonaName>
+  persona: <PersonaName>
   trigger: <form_submitted|status_changed|timer_elapsed|external_event|user_click|cron_daily|cron_hourly>
-  scope: [<Entity1>, <Entity2>, ...]
+  entities: [<Entity1>, <Entity2>, ...]
 
   given:
     - <precondition expression>
@@ -47,9 +47,9 @@ story <story_id> "<Title>":
 
 ```dsl
 story ST-001 "Staff sends invoice to client":
-  actor: StaffUser
+  persona: StaffUser
   trigger: status_changed
-  scope: [Invoice, Client]
+  entities: [Invoice, Client]
 
   given:
     - Invoice.status is 'draft'
@@ -67,9 +67,9 @@ story ST-001 "Staff sends invoice to client":
         then: FollowupTask is created
 
 story ST-002 "Customer creates support ticket":
-  actor: Customer
+  persona: Customer
   trigger: form_submitted
-  scope: [Ticket]
+  entities: [Ticket]
 
   given:
     - Customer is authenticated

@@ -183,7 +183,7 @@ def _journeys(app: ir.AppSpec) -> list[JourneyItem]:
         JourneyItem(
             id=s.story_id,
             title=s.title,
-            actor=s.actor,
+            actor=s.persona,
             description=s.description,
             when=[c.expression for c in s.when],
             outcomes=[c.expression for c in s.then],

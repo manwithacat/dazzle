@@ -177,7 +177,7 @@ surface course_list "Courses":
     field title "Title"
 
 story ST-020 "Browse available courses":
-  actor: new_user
+  persona: new_user
   trigger: user_click
 
   then:

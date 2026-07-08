@@ -760,7 +760,7 @@ def rhythm_gaps_impl(project_root: Path) -> dict[str, Any]:
                     "scene": None,
                     "phase": None,
                     "rhythm": "",
-                    "persona": getattr(story, "actor", ""),
+                    "persona": story.persona,
                     "story_ref": story_id,
                     "surface_ref": None,
                     "description": f"Story '{story_id}' is not referenced by any scene",
@@ -785,7 +785,7 @@ def rhythm_gaps_impl(project_root: Path) -> dict[str, Any]:
             )
 
     # Unscored personas
-    personas_with_stories = {s.actor for s in app_spec.stories}
+    personas_with_stories = {s.persona for s in app_spec.stories}
     for pid in sorted(personas_with_stories - personas_with_rhythms):
         gaps.append(
             {

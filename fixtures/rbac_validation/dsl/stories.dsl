@@ -6,9 +6,9 @@
 module clinic.stories
 
 story ST-001 "Doctor creates prescription for patient":
-  actor: doctor
+  persona: doctor
   trigger: form_submitted
-  scope: [Prescription, Patient]
+  entities: [Prescription, Patient]
 
   given:
     - "Patient record exists"
@@ -22,9 +22,9 @@ story ST-001 "Doctor creates prescription for patient":
     - "Prescription.prescribed_by is set to current doctor"
 
 story ST-002 "Pharmacist dispenses prescription":
-  actor: pharmacist
+  persona: pharmacist
   trigger: form_submitted
-  scope: [Prescription]
+  entities: [Prescription]
 
   given:
     - "Prescription exists with status issued"
@@ -38,9 +38,9 @@ story ST-002 "Pharmacist dispenses prescription":
     - "Prescription.dispensed_by is set to current pharmacist"
 
 story ST-003 "Receptionist registers new patient":
-  actor: receptionist
+  persona: receptionist
   trigger: form_submitted
-  scope: [Patient]
+  entities: [Patient]
 
   given:
     - "Receptionist is authenticated"
@@ -56,9 +56,9 @@ story ST-003 "Receptionist registers new patient":
         then: "Error is shown to receptionist"
 
 story ST-004 "Lab tech enters lab results":
-  actor: lab_tech
+  persona: lab_tech
   trigger: form_submitted
-  scope: [LabResult, Patient]
+  entities: [LabResult, Patient]
 
   given:
     - "Patient record exists"
@@ -72,9 +72,9 @@ story ST-004 "Lab tech enters lab results":
     - "LabResult.performed_by is set to current lab tech"
 
 story ST-005 "Billing clerk creates invoice":
-  actor: billing_clerk
+  persona: billing_clerk
   trigger: form_submitted
-  scope: [BillingRecord, Patient]
+  entities: [BillingRecord, Patient]
 
   given:
     - "Patient record exists"
@@ -87,9 +87,9 @@ story ST-005 "Billing clerk creates invoice":
     - "BillingRecord is created with status pending"
 
 story ST-006 "Intern is denied access to clinical data":
-  actor: intern
+  persona: intern
   trigger: user_click
-  scope: [MedicalRecord, Prescription, LabResult, BillingRecord]
+  entities: [MedicalRecord, Prescription, LabResult, BillingRecord]
 
   given:
     - "Intern is authenticated with intern role"

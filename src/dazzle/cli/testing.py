@@ -2179,9 +2179,9 @@ def test_populate(
             StorySpec(
                 story_id=next_story_id(),
                 title=f"{default_actor} creates a new {entity.title or entity.name}",
-                actor=default_actor,
+                persona=default_actor,
                 trigger=StoryTrigger.FORM_SUBMITTED,
-                scope=[entity.name],
+                entities=[entity.name],
                 given=[
                     StoryCondition(
                         expression=f"{default_actor} has permission to create {entity.name}"
@@ -2214,9 +2214,9 @@ def test_populate(
                             f" from {transition.from_state}"
                             f" to {transition.to_state}"
                         ),
-                        actor=default_actor,
+                        persona=default_actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
-                        scope=[entity.name],
+                        entities=[entity.name],
                         given=[
                             StoryCondition(
                                 expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
@@ -2262,13 +2262,13 @@ def test_populate(
             steps: list[TestDesignStep] = [
                 TestDesignStep(
                     action=TestDesignAction.LOGIN_AS,
-                    target=story.actor,
-                    rationale=f"Test from {story.actor}'s perspective",
+                    target=story.persona,
+                    rationale=f"Test from {story.persona}'s perspective",
                 )
             ]
 
             if story.trigger == StoryTrigger.FORM_SUBMITTED:
-                scope_entity = story.scope[0] if story.scope else "form"
+                scope_entity = story.entities[0] if story.entities else "form"
                 steps.extend(
                     [
                         TestDesignStep(
@@ -2290,7 +2290,7 @@ def test_populate(
                     ]
                 )
             elif story.trigger == StoryTrigger.STATUS_CHANGED:
-                scope_entity = story.scope[0] if story.scope else "entity"
+                scope_entity = story.entities[0] if story.entities else "entity"
                 steps.append(
                     TestDesignStep(
                         action=TestDesignAction.TRIGGER_TRANSITION,
@@ -2304,11 +2304,11 @@ def test_populate(
                     test_id=test_id,
                     title=f"Verify: {story.title}",
                     description=f"Test generated from story {story.story_id}",
-                    persona=story.actor,
+                    persona=story.persona,
                     trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
                     steps=steps,
                     expected_outcomes=[c.expression for c in story.then],
-                    entities=story.scope.copy(),
+                    entities=story.entities.copy(),
                     tags=[f"story:{story.story_id}", "auto-populated"],
                     status=TestDesignStatus.PROPOSED,
                 )

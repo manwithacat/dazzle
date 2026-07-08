@@ -1,8 +1,8 @@
 story ST-013 "User creates a new User":
   status: accepted
-  actor: customer
+  persona: customer
   trigger: form_submitted
-  scope: [User]
+  entities: [User]
   given:
     - "User has permission to create User"
   then:
@@ -11,9 +11,9 @@ story ST-013 "User creates a new User":
 
 story ST-014 "User creates a new Support Ticket":
   status: accepted
-  actor: customer
+  persona: customer
   trigger: form_submitted
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "User has permission to create Ticket"
   then:
@@ -22,9 +22,9 @@ story ST-014 "User creates a new Support Ticket":
 
 story ST-015 "User changes Ticket from open to in_progress":
   status: accepted
-  actor: customer
+  persona: customer
   trigger: status_changed
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Ticket.status is 'open'"
   then:
@@ -32,9 +32,9 @@ story ST-015 "User changes Ticket from open to in_progress":
 
 story ST-016 "User changes Ticket from in_progress to resolved":
   status: accepted
-  actor: customer
+  persona: customer
   trigger: status_changed
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Ticket.status is 'in_progress'"
   then:
@@ -42,9 +42,9 @@ story ST-016 "User changes Ticket from in_progress to resolved":
 
 story ST-017 "User changes Ticket from in_progress to open":
   status: accepted
-  actor: customer
+  persona: customer
   trigger: status_changed
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Ticket.status is 'in_progress'"
   then:
@@ -52,9 +52,9 @@ story ST-017 "User changes Ticket from in_progress to open":
 
 story ST-018 "User creates a new Comment":
   status: accepted
-  actor: customer
+  persona: customer
   trigger: form_submitted
-  scope: [Comment]
+  entities: [Comment]
   given:
     - "User has permission to create Comment"
   then:
@@ -62,9 +62,9 @@ story ST-018 "User creates a new Comment":
     - "User sees confirmation message"
 
 story ST-019 "Support Agent views all open tickets in a filterable list":
-  actor: agent
+  persona: agent
   trigger: user_click
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Support Agent is on the ticket_queue workspace"
   then:
@@ -72,9 +72,9 @@ story ST-019 "Support Agent views all open tickets in a filterable list":
     - "Agent can filter by priority, category, and assigned_to"
 
 story ST-020 "Support Agent picks up a ticket":
-  actor: agent
+  persona: agent
   trigger: form_submitted
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Ticket.assigned_to is null"
     - "Ticket.status is 'open'"
@@ -83,9 +83,9 @@ story ST-020 "Support Agent picks up a ticket":
     - "Ticket.status transitions to 'in_progress'"
 
 story ST-021 "Support Agent views full ticket detail with comment history":
-  actor: agent
+  persona: agent
   trigger: user_click
-  scope: [Ticket, Comment]
+  entities: [Ticket, Comment]
   given:
     - "Ticket exists"
   then:
@@ -93,9 +93,9 @@ story ST-021 "Support Agent views full ticket detail with comment history":
     - "Internal comments are visually distinguished from customer-visible comments"
 
 story ST-022 "Support Agent adds an internal note":
-  actor: agent
+  persona: agent
   trigger: form_submitted
-  scope: [Comment]
+  entities: [Comment]
   given:
     - "Support Agent is viewing a Ticket"
   then:
@@ -103,9 +103,9 @@ story ST-022 "Support Agent adds an internal note":
     - "Comment is visible only to agents and managers"
 
 story ST-023 "Support Agent resolves a ticket":
-  actor: agent
+  persona: agent
   trigger: status_changed
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Ticket.status is 'in_progress'"
     - "Resolution is provided"
@@ -114,9 +114,9 @@ story ST-023 "Support Agent resolves a ticket":
     - "Customer is notified"
 
 story ST-024 "Customer creates a support ticket":
-  actor: customer
+  persona: customer
   trigger: form_submitted
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Customer is on the my_tickets workspace"
   then:
@@ -124,9 +124,9 @@ story ST-024 "Customer creates a support ticket":
     - "Ticket.status starts as 'open'"
 
 story ST-025 "Customer views their submitted tickets":
-  actor: customer
+  persona: customer
   trigger: user_click
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Customer has submitted at least one Ticket"
   then:
@@ -134,9 +134,9 @@ story ST-025 "Customer views their submitted tickets":
     - "Customer cannot see Tickets from other customers"
 
 story ST-026 "Customer follows up on an existing ticket":
-  actor: customer
+  persona: customer
   trigger: form_submitted
-  scope: [Comment]
+  entities: [Comment]
   given:
     - "Ticket exists created by the customer"
   then:
@@ -144,9 +144,9 @@ story ST-026 "Customer follows up on an existing ticket":
     - "Support Agent is notified of the new comment"
 
 story ST-027 "Support Manager reviews team performance":
-  actor: manager
+  persona: manager
   trigger: user_click
-  scope: [Ticket, User]
+  entities: [Ticket, User]
   given:
     - "Support Manager is on the agent_dashboard"
   then:
@@ -154,9 +154,9 @@ story ST-027 "Support Manager reviews team performance":
     - "Manager sees average resolution time across the team"
 
 story ST-028 "Support Manager reassigns a ticket":
-  actor: manager
+  persona: manager
   trigger: form_submitted
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Ticket.assigned_to is set"
     - "Support Manager is viewing the Ticket"
@@ -165,9 +165,9 @@ story ST-028 "Support Manager reassigns a ticket":
     - "Previous assignee is notified of the reassignment"
 
 story ST-029 "Support Manager escalates a critical ticket":
-  actor: manager
+  persona: manager
   trigger: status_changed
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Ticket.priority is 'critical'"
   then:
@@ -175,9 +175,9 @@ story ST-029 "Support Manager escalates a critical ticket":
     - "All online agents are notified"
 
 story ST-030 "Administrator triages the full ticket queue":
-  actor: admin
+  persona: admin
   trigger: user_click
-  scope: [Ticket]
+  entities: [Ticket]
   given:
     - "Administrator is on the _platform_admin workspace"
   then:

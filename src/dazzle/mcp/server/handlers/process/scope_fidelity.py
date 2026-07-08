@@ -216,7 +216,7 @@ def scope_fidelity_impl(
             active_stories.append(s)
 
     for story in active_stories:
-        scope = story.scope
+        scope = story.entities
         implementing = implements_map.get(story.story_id, [])
 
         if not scope:

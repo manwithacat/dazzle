@@ -182,7 +182,7 @@ def _extract_stories(appspec: AppSpec) -> list[EvidenceItem]:
         EvidenceItem(
             entity=s.story_id,
             construct="story",
-            detail=f"{s.title or s.story_id} (actor: {s.actor})",
+            detail=f"{s.title or s.story_id} (persona: {s.persona})",
             dsl_ref=f"{s.story_id}.story",
         )
         for s in appspec.stories

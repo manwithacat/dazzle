@@ -994,9 +994,9 @@ def _build_story_section() -> str:
     return """\
 story_decl    ::= "story" IDENT STRING? ":" NEWLINE
                   INDENT
-                    ("actor" ":" IDENT NEWLINE)?
+                    ("persona" ":" IDENT NEWLINE)?
                     ("trigger" ":" IDENT NEWLINE)?
-                    ("scope" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
+                    ("entities" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
                     given_block?
                     then_block?
                     unless_block?

@@ -234,13 +234,13 @@ def _compute_accessible_surfaces(persona_id: str, appspec: AppSpec) -> set[str]:
 
 
 def _get_persona_stories(persona_id: str, appspec: AppSpec) -> list[Any]:
-    """Get stories where this persona is the actor."""
-    return [s for s in appspec.stories if s.actor == persona_id]
+    """Get stories where this persona is the story's persona."""
+    return [s for s in appspec.stories if s.persona == persona_id]
 
 
 def _get_story_entities(story: Any) -> list[str]:
-    """Extract entity names from a story's scope."""
-    scope = story.scope
+    """Extract entity names from a story's entities."""
+    scope = story.entities
     if not scope:
         return []
     if isinstance(scope, list):

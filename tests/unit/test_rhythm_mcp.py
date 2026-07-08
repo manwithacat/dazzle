@@ -780,9 +780,9 @@ def _make_story(
     return StorySpec(
         story_id=story_id,
         title=f"Story {story_id}",
-        actor=actor,
+        persona=actor,
         trigger=StoryTrigger.USER_CLICK,
-        scope=["Task"],
+        entities=["Task"],
         status=status,
         created_at="2026-01-01T00:00:00",
     )

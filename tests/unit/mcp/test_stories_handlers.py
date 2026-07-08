@@ -198,9 +198,9 @@ def mock_story():
     return StorySpec(
         story_id="ST-001",
         title="User creates a new Task",
-        actor="User",
+        persona="User",
         trigger=StoryTrigger.FORM_SUBMITTED,
-        scope=["Task"],
+        entities=["Task"],
         given=[StoryCondition(expression="User has permission to create Task")],
         when=[],
         then=[StoryCondition(expression="New Task is saved to database")],
@@ -253,9 +253,9 @@ class TestSerializeStorySummary:
 
         assert result["story_id"] == "ST-001"
         assert result["title"] == "User creates a new Task"
-        assert result["actor"] == "User"
+        assert result["persona"] == "User"
         assert result["status"] == "draft"
-        assert result["scope"] == ["Task"]
+        assert result["entities"] == ["Task"]
 
     def test_excludes_detailed_fields(self, mock_story) -> None:
         """Test that summary excludes detailed fields."""
@@ -552,9 +552,9 @@ class TestGetStoriesHandler:
             """
 story ST-001 "Test Story":
   status: accepted
-  actor: User
+  persona: User
   trigger: form_submitted
-  scope: [Task]
+  entities: [Task]
   given:
     - "User has permission"
   then:
@@ -576,9 +576,9 @@ story ST-001 "Test Story":
         stories_dsl.write_text(
             """
 story ST-001 "Test Story":
-  actor: User
+  persona: User
   trigger: form_submitted
-  scope: [Task]
+  entities: [Task]
   given:
     - "User has permission"
   then:
@@ -623,7 +623,7 @@ class TestProposeStoriesHandler:
         assert "stories" in data
         # All stories should be scoped to Task
         for story in data["stories"]:
-            assert "Task" in story["scope"]
+            assert "Task" in story["entities"]
 
     def test_planning_inversion_generates_stories_from_unmapped_scenes(self, tmp_path) -> None:
         """Unmapped scenes in rhythms produce stories via planning inversion."""
@@ -691,9 +691,9 @@ class TestGenerateTestsHandler:
             """
 story ST-001 "User creates Task":
   status: accepted
-  actor: User
+  persona: User
   trigger: form_submitted
-  scope: [Task]
+  entities: [Task]
   given:
     - "User has permission"
   then:
@@ -715,9 +715,9 @@ story ST-001 "User creates Task":
         stories_dsl.write_text(
             """
 story ST-001 "Draft Story":
-  actor: User
+  persona: User
   trigger: form_submitted
-  scope: [Task]
+  entities: [Task]
 """
         )
 
@@ -736,15 +736,15 @@ story ST-001 "Draft Story":
             """
 story ST-001 "Story 1":
   status: accepted
-  actor: User
+  persona: User
   trigger: form_submitted
-  scope: [Task]
+  entities: [Task]
 
 story ST-002 "Story 2":
   status: accepted
-  actor: User
+  persona: User
   trigger: form_submitted
-  scope: [Task]
+  entities: [Task]
 """
         )
 

@@ -92,7 +92,7 @@ __all__ = [
     # Filter / multi-result queries
     "get_flows_by_entity",
     "get_flows_by_priority",
-    "get_stories_by_actor",
+    "get_stories_by_persona",
     "get_stories_by_entity",
     "get_rules_by_scope",
     "get_questions_blocking",
@@ -415,14 +415,14 @@ def get_flows_by_priority(appspec: AppSpec, priority: FlowPriority) -> list[Flow
     return [f for f in appspec.e2e_flows if f.priority == priority]
 
 
-def get_stories_by_actor(appspec: AppSpec, actor: str) -> list[StorySpec]:
-    """Get all stories for a given actor/persona."""
-    return [s for s in appspec.stories if s.actor == actor]
+def get_stories_by_persona(appspec: AppSpec, persona: str) -> list[StorySpec]:
+    """Get all stories for a given persona."""
+    return [s for s in appspec.stories if s.persona == persona]
 
 
 def get_stories_by_entity(appspec: AppSpec, entity_name: str) -> list[StorySpec]:
     """Get all stories involving a specific entity."""
-    return [s for s in appspec.stories if entity_name in s.scope]
+    return [s for s in appspec.stories if entity_name in s.entities]
 
 
 def get_rules_by_scope(appspec: AppSpec, entity_name: str) -> list[RuleSpec]:

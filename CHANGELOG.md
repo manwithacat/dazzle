@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.97.0] - 2026-07-08
+
+### Changed
+- **Story vocabulary unified with rhythms (#1559, breaking DSL change).** The
+  `story` construct's two fields are renamed to match the rhythm/scene
+  vocabulary agents already use: `actor:` → **`persona:`** and `scope: [...]`
+  → **`entities: [...]`**. This removes a pure translation tax when reasoning
+  across `story` and `rhythm` (same ontology, previously two dialects) and
+  frees `story`'s `scope:` from overloading the RBAC/rule `scope:` keyword.
+  Clean break per ADR-0003 (no dual-keyword support). Carried through the IR
+  (`StorySpec.persona` / `StorySpec.entities`), the lexer (`actor` token
+  retired; `entities` is an ident-keyword, not a reserved word — so an entity
+  field named `entities` still parses), all ~30 consumers, the `story`/`dsl`
+  MCP output keys, 86 example/fixture story blocks, docs, and drift baselines.
+  `AppSpec.get_stories_by_actor()` → `get_stories_by_persona()`.
+- Only slice 1 of #1559 (vocabulary) landed; the story↔rhythm coherence query
+  surface and rhythm-derives-from-stories slices stay open on the issue,
+  gated on real rhythm adoption (the fleet currently authors exactly one
+  rhythm).
+
+### Agent Guidance
+- **Author stories with `persona:` and `entities:`, never `actor:`/`scope:`.**
+  An unmigrated `actor:`/`scope:` inside a `story` block now raises an
+  actionable parse error with a `sed` one-liner (it is not silently ignored).
+  Downstream `.dsl` story files must be migrated:
+  `sed -i '' -E 's/^([[:space:]]+)actor:/\1persona:/; s/^([[:space:]]+)scope:/\1entities:/' <stories.dsl>`
+  — apply only to story files (the RBAC/rule `scope:` and any non-story
+  `scope:` are unaffected and must not be rewritten).
+- `story` MCP `get`/`list` and story-derived export output now emit
+  `persona`/`entities` keys. The story-save/propose JSON reader tolerates the
+  old `actor`/`scope` keys as a transition convenience.
+
 ## [0.96.7] - 2026-07-08
 
 ### Added

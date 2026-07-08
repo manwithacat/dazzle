@@ -335,8 +335,10 @@ class TokenType(Enum):
     START_ROUTE = "start_route"
 
     # v0.22.0 Story DSL Keywords
+    # #1559: `actor` retired — stories now use the `persona` token (shared
+    # with persona/scenario blocks); `entities` is an ident-keyword, not a
+    # reserved token. `scope` stays reserved for RBAC/param blocks.
     STORY = "story"
-    ACTOR = "actor"
     TRIGGER = "trigger"
     UNLESS = "unless"
 

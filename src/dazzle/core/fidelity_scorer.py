@@ -555,8 +555,8 @@ def _match_stories_to_surfaces(
         trigger_name = s.trigger.value if hasattr(s.trigger, "value") else str(s.trigger)
         if is_create and trigger_name in _TRANSITION_STORY_TRIGGERS:
             continue
-        # Match by scope (preferred) or title fallback
-        if s.scope and entity_name in s.scope:
+        # Match by entities (preferred) or title fallback
+        if s.entities and entity_name in s.entities:
             relevant.append(s)
         elif entity_name.lower() in (s.title or "").lower():
             relevant.append(s)
@@ -1124,8 +1124,8 @@ def _compute_integration_fidelity(appspec: AppSpec, stories: list[StorySpec] | N
         title_words = set(story.title.lower().split())
         if title_words & _INTEGRATION_KEYWORDS:
             integration_stories += 1
-            # Check if any declared binding relates to the story's scope
-            scope_lower = {s.lower() for s in story.scope}
+            # Check if any declared binding relates to the story's entities
+            scope_lower = {s.lower() for s in story.entities}
             if declared_bindings:
                 has_binding = (
                     any(

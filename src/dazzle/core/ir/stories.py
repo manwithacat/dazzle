@@ -101,16 +101,16 @@ class StorySpec(BaseModel):
     Behavioural user story specification.
 
     A story describes a single coherent behavior from the perspective
-    of an actor (persona). Stories are:
-    - Defined in DSL syntax (v0.22.0)
+    of a persona. Stories are:
+    - Defined in DSL syntax (v0.22.0; persona/entities vocabulary #1559)
     - Reviewed and edited by humans
     - Used to generate ProcessSpec implementations
 
     DSL Syntax:
         story ST-001 "Staff sends invoice to client":
-          actor: StaffUser
+          persona: StaffUser
           trigger: status_changed
-          scope: [Invoice, Client]
+          entities: [Invoice, Client]
 
           given:
             - Invoice.status is 'draft'
@@ -131,9 +131,9 @@ class StorySpec(BaseModel):
         story_id: Stable identifier (e.g., ST-001)
         title: Short human-readable name
         description: Optional longer description
-        actor: Persona name from DSL (e.g., Admin, StaffUser)
+        persona: Persona name from DSL (e.g., Admin, StaffUser)
         trigger: Event that initiates this story
-        scope: List of entity names directly involved
+        entities: List of entity names directly involved
         given: Preconditions (Gherkin-style)
         when: Trigger conditions (Gherkin-style)
         then: Expected outcomes (Gherkin-style)
@@ -144,9 +144,9 @@ class StorySpec(BaseModel):
         StorySpec(
             story_id="ST-001",
             title="Staff sends an invoice to a client",
-            actor="StaffUser",
+            persona="StaffUser",
             trigger=StoryTrigger.STATUS_CHANGED,
-            scope=["Invoice", "Client"],
+            entities=["Invoice", "Client"],
             given=[StoryCondition(expression="Invoice.status is 'draft'")],
             when=[StoryCondition(expression="Invoice.status changes to 'sent'")],
             then=[StoryCondition(expression="Invoice email is sent to Client.email")],
@@ -160,9 +160,9 @@ class StorySpec(BaseModel):
     story_id: str = Field(..., description="Stable identifier (e.g., ST-001)")
     title: str = Field(..., description="Short human-readable name")
     description: str | None = Field(default=None, description="Longer description")
-    actor: str = Field(..., description="Persona name from DSL")
+    persona: str = Field(..., description="Persona name from DSL")
     trigger: StoryTrigger = Field(..., description="Event that initiates this story")
-    scope: list[str] = Field(default_factory=list, description="Entity names directly involved")
+    entities: list[str] = Field(default_factory=list, description="Entity names directly involved")
 
     # Gherkin-style conditions
     given: list[StoryCondition] = Field(default_factory=list, description="Preconditions (given)")

@@ -3,11 +3,11 @@ Story parser mixin for DAZZLE DSL.
 
 Parses story blocks with Gherkin-style given/when/then/unless conditions.
 
-DSL Syntax (v0.22.0):
+DSL Syntax (v0.22.0; persona/entities vocabulary #1559):
     story ST-001 "Staff sends invoice to client":
-      actor: StaffUser
+      persona: StaffUser
       trigger: status_changed
-      scope: [Invoice, Client]
+      entities: [Invoice, Client]
 
       given:
         - Invoice.status is 'draft'
@@ -70,17 +70,18 @@ class StoryParserMixin:
     def parse_story(self) -> ir.StorySpec:
         """Parse a ``story <ID> "Title":`` block.
 
-        Refactored to dispatch-table style (follow-on to #1098). 8
-        token-keyed `_s_kw_*` parsers (status/actor/trigger/scope/given/
-        when/then/unless) + a `_skip_unknown_story_field` on_unknown +
-        a `_build_story` builder enforcing the required actor + trigger.
+        Refactored to dispatch-table style (follow-on to #1098). 7
+        token-keyed `_s_kw_*` parsers (status/persona/trigger/given/
+        when/then/unless) + an `entities` ident-keyword + a
+        `_skip_unknown_story_field` on_unknown + a `_build_story`
+        builder enforcing the required persona + trigger.
 
         Grammar::
 
             story STORY_ID STRING COLON NEWLINE INDENT
-              [actor COLON IDENTIFIER NEWLINE]
+              [persona COLON IDENTIFIER NEWLINE]
               [trigger COLON IDENTIFIER NEWLINE]
-              [scope COLON LBRACKET identifier_list RBRACKET NEWLINE]
+              [entities COLON LBRACKET identifier_list RBRACKET NEWLINE]
               [given COLON NEWLINE INDENT condition_list DEDENT]
               [when COLON NEWLINE INDENT condition_list DEDENT]
               [then COLON NEWLINE INDENT condition_list DEDENT]
@@ -104,6 +105,7 @@ class StoryParserMixin:
         parse_block_with_dispatch(
             self,
             first_class_keywords=_STORY_KEYWORDS,
+            ident_keywords=_STORY_IDENT_KEYWORDS,
             state=state,
             on_unknown=_skip_unknown_story_field,
         )
@@ -356,9 +358,8 @@ class StoryParserMixin:
         """Skip tokens until we reach the next field or end of block."""
         while not self.match(
             TokenType.STATUS,
-            TokenType.ACTOR,
+            TokenType.PERSONA,
             TokenType.TRIGGER,
-            TokenType.SCOPE,
             TokenType.GIVEN,
             TokenType.WHEN,
             TokenType.THEN,
@@ -375,19 +376,20 @@ class StoryParserMixin:
 # ============================================================ #
 #
 # The 141-line monolith was replaced (v0.70.22) with the dispatch
-# pattern shipped in #1097. 8 token-keyed `_s_kw_*` + a custom
-# on-unknown that tolerates ``unknown: value`` patterns by skipping
-# to the next field + a `_build_story` builder enforcing the
-# required `actor` and `trigger` fields.
+# pattern shipped in #1097. 7 token-keyed `_s_kw_*` + an `entities`
+# ident-keyword + a custom on-unknown that tolerates ``unknown: value``
+# patterns by skipping to the next field (and raises a #1559
+# migration hint for the renamed `actor`/`scope`) + a `_build_story`
+# builder enforcing the required `persona` and `trigger` fields.
 
 
 @dataclass
 class _StoryState:
     """Accumulator for :meth:`StoryParserMixin.parse_story`."""
 
-    actor: str | None = None
+    persona: str | None = None
     trigger: ir.StoryTrigger | None = None
-    scope: list[str] = field(default_factory=list)
+    entities: list[str] = field(default_factory=list)
     status: ir.StoryStatus | None = None
     given: list[ir.StoryCondition] = field(default_factory=list)
     when: list[ir.StoryCondition] = field(default_factory=list)
@@ -406,10 +408,10 @@ def _s_kw_status(parser: Any, state: _StoryState) -> None:
     parser.skip_newlines()
 
 
-def _s_kw_actor(parser: Any, state: _StoryState) -> None:
+def _s_kw_persona(parser: Any, state: _StoryState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
-    state.actor = parser.expect_identifier_or_keyword().value
+    state.persona = parser.expect_identifier_or_keyword().value
     parser.skip_newlines()
 
 
@@ -421,10 +423,10 @@ def _s_kw_trigger(parser: Any, state: _StoryState) -> None:
     parser.skip_newlines()
 
 
-def _s_kw_scope(parser: Any, state: _StoryState) -> None:
+def _s_kw_entities(parser: Any, state: _StoryState) -> None:
     parser.advance()
     parser.expect(TokenType.COLON)
-    state.scope = parser._parse_identifier_list()
+    state.entities = parser._parse_identifier_list()
     parser.skip_newlines()
 
 
@@ -461,13 +463,19 @@ def _s_kw_unless(parser: Any, state: _StoryState) -> None:
 
 _STORY_KEYWORDS: dict[TokenType, KeywordParser[_StoryState]] = {
     TokenType.STATUS: _s_kw_status,
-    TokenType.ACTOR: _s_kw_actor,
+    TokenType.PERSONA: _s_kw_persona,
     TokenType.TRIGGER: _s_kw_trigger,
-    TokenType.SCOPE: _s_kw_scope,
     TokenType.GIVEN: _s_kw_given,
     TokenType.WHEN: _s_kw_when,
     TokenType.THEN: _s_kw_then,
     TokenType.UNLESS: _s_kw_unless,
+}
+
+# `entities` is dispatched as a plain IDENTIFIER (not a reserved token) so
+# the common word stays usable as a field/identifier elsewhere — e.g. the
+# `entities: json` field in fixtures/pra. (#1559 vocabulary unification.)
+_STORY_IDENT_KEYWORDS: dict[str, KeywordParser[_StoryState]] = {
+    "entities": _s_kw_entities,
 }
 
 
@@ -478,7 +486,24 @@ def _skip_unknown_story_field(parser: Any) -> None:
     delegates to the mixin's ``_skip_to_next_field`` helper to skip the
     value as well. Without this, the dispatch helper's default
     ``Unknown keyword`` raise would break forward-compat parsing.
+
+    #1559 footgun guard: the `actor` / `scope` keywords were renamed to
+    `persona` / `entities`. An unmigrated `actor:`/`scope:` would otherwise
+    be silently swallowed here (then surface as a misleading "missing
+    required 'persona' field" further on), so raise an actionable hint.
     """
+    tok = parser.current_token()
+    _RENAMED = {"actor": "persona", "scope": "entities"}
+    new_kw = _RENAMED.get(str(tok.value))
+    if new_kw is not None:
+        raise make_parse_error(
+            f"`{tok.value}` is not a valid story field. #1559 renamed "
+            f"`{tok.value}:` → `{new_kw}:` in story blocks. Run:\n"
+            f"  sed -i '' -E 's/^([[:space:]]+){tok.value}:/\\1{new_kw}:/' <dsl-file>",
+            parser.file,
+            tok.line,
+            tok.column,
+        )
     parser.advance()
     if parser.match(TokenType.COLON):
         parser.advance()
@@ -493,11 +518,11 @@ def _build_story(
     loc: SourceLocation,
     state: _StoryState,
 ) -> ir.StorySpec:
-    """Enforce required actor + trigger, then assemble the frozen IR."""
-    if state.actor is None:
+    """Enforce required persona + trigger, then assemble the frozen IR."""
+    if state.persona is None:
         tok = parser.current_token()
         raise make_parse_error(
-            "Story missing required 'actor' field",
+            "Story missing required 'persona' field",
             parser.file,
             tok.line,
             tok.column,
@@ -516,9 +541,9 @@ def _build_story(
         story_id=story_id,
         title=title,
         description=description,
-        actor=state.actor,
+        persona=state.persona,
         trigger=state.trigger,
-        scope=state.scope,
+        entities=state.entities,
         status=state.status or ir.StoryStatus.DRAFT,
         given=state.given,
         when=state.when,

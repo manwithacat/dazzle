@@ -79,10 +79,10 @@ def _make_story(
     return SimpleNamespace(
         story_id=story_id,
         id=story_id,
-        actor=actor,
+        persona=actor,
         title=title or story_id,
         description="",
-        scope=scope or [],
+        entities=scope or [],
         conditions=conditions or [],
     )
 

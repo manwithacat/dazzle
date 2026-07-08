@@ -68,7 +68,7 @@ def _persona(pid: str, label: str = "") -> MagicMock:
 def _story(story_id: str, actor: str) -> MagicMock:
     s = MagicMock()
     s.story_id = story_id
-    s.actor = actor
+    s.persona = actor
     return s
 
 

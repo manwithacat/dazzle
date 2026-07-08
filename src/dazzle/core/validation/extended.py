@@ -499,7 +499,7 @@ def _lint_integration_bindings(appspec: ir.AppSpec) -> list[str]:
                 f"services are declared in the DSL."
             )
         elif integration_hits:
-            scope_entities = {s.lower() for s in story.scope}
+            scope_entities = {s.lower() for s in story.entities}
             has_matching_binding = (
                 any(
                     any(entity in binding for entity in scope_entities)
@@ -512,8 +512,8 @@ def _lint_integration_bindings(appspec: ir.AppSpec) -> list[str]:
             if not has_matching_binding and scope_entities:
                 warnings.append(
                     f"Story '{story.story_id}' references integrations but no "
-                    f"service/integration binds to scope entities "
-                    f"({', '.join(story.scope)})."
+                    f"service/integration binds to its entities "
+                    f"({', '.join(story.entities)})."
                 )
     return warnings
 

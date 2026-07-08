@@ -203,13 +203,13 @@ class AuthAuthorizationAgent(DetectionAgent):
         title="Unused persona",
     )
     def unused_persona(self, appspec: AppSpec) -> list[Finding]:
-        """Flag personas that are defined but never referenced as a story actor."""
+        """Flag personas that are defined but never referenced as a story persona."""
         findings: list[Finding] = []
         if not appspec.personas:
             return findings
-        story_actors = {s.actor for s in appspec.stories}
+        story_personas = {s.persona for s in appspec.stories}
         for persona in appspec.personas:
-            if persona.id not in story_actors:
+            if persona.id not in story_personas:
                 findings.append(
                     Finding(
                         agent=AgentId.AA,
@@ -231,7 +231,7 @@ class AuthAuthorizationAgent(DetectionAgent):
                                 location=f"persona:{persona.id}",
                                 context=(
                                     f"Persona id '{persona.id}' not found in "
-                                    f"story actors: {sorted(story_actors) or '(none)'}"
+                                    f"story personas: {sorted(story_personas) or '(none)'}"
                                 ),
                             ),
                         ],

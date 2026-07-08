@@ -184,11 +184,13 @@ def pulse_persona_impl(
     coverage_data = _safe_result(fut_cov, "stories")
 
     all_stories: list[dict[str, Any]] = story_list_data.get("stories", [])
-    persona_stories = [s for s in all_stories if s.get("actor", "").lower() == persona_name.lower()]
+    persona_stories = [
+        s for s in all_stories if s.get("persona", "").lower() == persona_name.lower()
+    ]
 
     if not persona_stories and all_stories:
         persona_stories = [
-            s for s in all_stories if persona_name.lower() in s.get("actor", "").lower()
+            s for s in all_stories if persona_name.lower() in s.get("persona", "").lower()
         ]
 
     coverage_map: dict[str, str] = {}
@@ -480,11 +482,11 @@ def compute_wfs(
         workspace = workspace_map.get(ws_name)
 
         # Get stories for this persona
-        persona_stories = [s for s in stories if s.actor.lower() == pid.lower()]
+        persona_stories = [s for s in stories if s.persona.lower() == pid.lower()]
         if not persona_stories:
             # Try label match
             plabel = getattr(persona, "label", "") or pid
-            persona_stories = [s for s in stories if s.actor.lower() == plabel.lower()]
+            persona_stories = [s for s in stories if s.persona.lower() == plabel.lower()]
 
         story_scores: list[dict[str, Any]] = []
         for story in persona_stories:
@@ -533,7 +535,7 @@ def _score_story_friction(
 
     Returns dict with wfs score, factor breakdown, and explanation.
     """
-    scope_entities = set(story.scope or [])
+    scope_entities = set(story.entities or [])
 
     # --- Visibility (V): Is the story's entity on the dashboard? ---
     visibility = 2  # default: not linked anywhere

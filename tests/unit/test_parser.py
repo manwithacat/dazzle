@@ -546,9 +546,9 @@ entity Invoice "Invoice":
   status: enum[draft,sent,paid]
 
 story ST-001 "Staff sends invoice to client":
-  actor: StaffUser
+  persona: StaffUser
   trigger: status_changed
-  scope: [Invoice]
+  entities: [Invoice]
 """
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
@@ -556,9 +556,9 @@ story ST-001 "Staff sends invoice to client":
         story = fragment.stories[0]
         assert story.story_id == "ST-001"
         assert story.title == "Staff sends invoice to client"
-        assert story.actor == "StaffUser"
+        assert story.persona == "StaffUser"
         assert story.trigger.value == "status_changed"
-        assert story.scope == ["Invoice"]
+        assert story.entities == ["Invoice"]
 
     def test_story_with_given_when_then(self):
         """Test story with Gherkin-style conditions."""
@@ -571,9 +571,9 @@ entity Invoice "Invoice":
   status: enum[draft,sent]
 
 story ST-002 "Invoice status changes":
-  actor: Admin
+  persona: Admin
   trigger: form_submitted
-  scope: [Invoice]
+  entities: [Invoice]
 
   given:
     - "Invoice.status is draft"
@@ -608,9 +608,9 @@ entity FollowupTask "Followup":
   id: uuid pk
 
 story ST-003 "Send invoice with fallback":
-  actor: Staff
+  persona: Staff
   trigger: user_click
-  scope: [Invoice, FollowupTask]
+  entities: [Invoice, FollowupTask]
 
   then:
     - "Invoice is sent"
@@ -648,7 +648,7 @@ entity Task "Task":
   id: uuid pk
 
 story ST-TRIG "Test trigger":
-  actor: User
+  persona: User
   trigger: {trigger}
 """
             _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
@@ -665,11 +665,11 @@ entity Task "Task":
   id: uuid pk
 
 story ST-001 "First story":
-  actor: Admin
+  persona: Admin
   trigger: form_submitted
 
 story ST-002 "Second story":
-  actor: User
+  persona: User
   trigger: user_click
 """
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
@@ -1191,14 +1191,14 @@ entity Order "Order":
   id: uuid pk
 
 story ST-001 "Create order":
-  actor: Customer
+  persona: Customer
   trigger: form_submitted
-  scope: [Order]
+  entities: [Order]
 
 story ST-002 "Fulfill order":
-  actor: System
+  persona: System
   trigger: status_changed
-  scope: [Order]
+  entities: [Order]
 
 process OrderWorkflow "Order Workflow":
   trigger: entity Order created

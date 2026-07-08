@@ -1,8 +1,8 @@
 story ST-006 "Administrator creates a new Team Member":
   status: accepted
-  actor: admin
+  persona: admin
   trigger: form_submitted
-  scope: [User]
+  entities: [User]
   given:
     - "Administrator has permission to create User"
   then:
@@ -11,9 +11,9 @@ story ST-006 "Administrator creates a new Team Member":
 
 story ST-007 "Administrator creates a new Task":
   status: accepted
-  actor: admin
+  persona: admin
   trigger: form_submitted
-  scope: [Task]
+  entities: [Task]
   given:
     - "Administrator has permission to create Task"
   then:
@@ -22,9 +22,9 @@ story ST-007 "Administrator creates a new Task":
 
 story ST-008 "Administrator changes Task from todo to in_progress":
   status: accepted
-  actor: admin
+  persona: admin
   trigger: status_changed
-  scope: [Task]
+  entities: [Task]
   given:
     - "Task.status is 'todo'"
   then:
@@ -33,9 +33,9 @@ story ST-008 "Administrator changes Task from todo to in_progress":
 
 story ST-009 "Administrator changes Task from in_progress to review":
   status: accepted
-  actor: admin
+  persona: admin
   trigger: status_changed
-  scope: [Task]
+  entities: [Task]
   given:
     - "Task.status is 'in_progress'"
   then:
@@ -44,9 +44,9 @@ story ST-009 "Administrator changes Task from in_progress to review":
 
 story ST-010 "Administrator changes Task from in_progress to todo":
   status: accepted
-  actor: admin
+  persona: admin
   trigger: status_changed
-  scope: [Task]
+  entities: [Task]
   given:
     - "Task.status is 'in_progress'"
   then:
@@ -55,9 +55,9 @@ story ST-010 "Administrator changes Task from in_progress to todo":
 
 story ST-011 "Administrator creates a new Task Comment":
   status: accepted
-  actor: admin
+  persona: admin
   trigger: form_submitted
-  scope: [TaskComment]
+  entities: [TaskComment]
   given:
     - "Administrator has permission to create TaskComment"
   then:
@@ -65,9 +65,9 @@ story ST-011 "Administrator creates a new Task Comment":
     - "Administrator sees confirmation message"
 
 story ST-012 "Administrator views all tasks across organization":
-  actor: admin
+  persona: admin
   trigger: user_click
-  scope: [Task]
+  entities: [Task]
   given:
     - "Administrator has list permission on Task"
   then:
@@ -75,9 +75,9 @@ story ST-012 "Administrator views all tasks across organization":
     - "Task list is sortable by priority, status, due_date"
 
 story ST-013 "Administrator configures team settings":
-  actor: admin
+  persona: admin
   trigger: user_click
-  scope: [User]
+  entities: [User]
   given:
     - "Administrator has list+update permission on User"
   then:
@@ -85,9 +85,9 @@ story ST-013 "Administrator configures team settings":
     - "Administrator can change a Team Member's role or department"
 
 story ST-014 "Administrator views system-wide analytics":
-  actor: admin
+  persona: admin
   trigger: user_click
-  scope: [Task, User]
+  entities: [Task, User]
   given:
     - "Administrator is on the admin dashboard workspace"
   then:
@@ -95,9 +95,9 @@ story ST-014 "Administrator views system-wide analytics":
     - "Administrator sees team velocity metrics"
 
 story ST-015 "Team Manager views all tasks for team":
-  actor: manager
+  persona: manager
   trigger: user_click
-  scope: [Task]
+  entities: [Task]
   given:
     - "Team Manager has list permission on Task"
   then:
@@ -105,9 +105,9 @@ story ST-015 "Team Manager views all tasks for team":
     - "Task list is sortable by priority, status, due_date"
 
 story ST-016 "Team Manager views unassigned tasks":
-  actor: manager
+  persona: manager
   trigger: user_click
-  scope: [Task]
+  entities: [Task]
   given:
     - "Team Manager is on the team overview workspace"
   then:
@@ -115,9 +115,9 @@ story ST-016 "Team Manager views unassigned tasks":
     - "Team Manager can click a Task to assign it"
 
 story ST-017 "Team Manager assigns a task to a Team Member":
-  actor: manager
+  persona: manager
   trigger: form_submitted
-  scope: [Task, User]
+  entities: [Task, User]
   given:
     - "Task has no assignee"
     - "Team Manager has update permission on Task"
@@ -126,9 +126,9 @@ story ST-017 "Team Manager assigns a task to a Team Member":
     - "Team Member sees the new Task in their my_work view"
 
 story ST-018 "Team Manager reviews completed tasks":
-  actor: manager
+  persona: manager
   trigger: user_click
-  scope: [Task]
+  entities: [Task]
   given:
     - "Tasks exist with status review"
   then:
@@ -136,9 +136,9 @@ story ST-018 "Team Manager reviews completed tasks":
     - "Team Manager can approve a Task to done or send it back to in_progress"
 
 story ST-019 "Team Member updates own task status":
-  actor: member
+  persona: member
   trigger: status_changed
-  scope: [Task]
+  entities: [Task]
   given:
     - "Task.assigned_to = current Team Member"
     - "Team Member has update permission on Task"
@@ -147,9 +147,9 @@ story ST-019 "Team Member updates own task status":
     - "Updated timestamp is recorded"
 
 story ST-020 "Team Member views own tasks":
-  actor: member
+  persona: member
   trigger: user_click
-  scope: [Task]
+  entities: [Task]
   given:
     - "Team Member is on the my_work workspace"
   then:

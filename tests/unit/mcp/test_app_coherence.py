@@ -47,10 +47,10 @@ def _make_story(story_id: str, actor: str, scope: list[str] | None = None) -> Si
     return SimpleNamespace(
         story_id=story_id,
         id=story_id,
-        actor=actor,
+        persona=actor,
         title=story_id,
         description="",
-        scope=scope or [],
+        entities=scope or [],
         conditions=[],
     )
 

@@ -118,9 +118,9 @@ def propose_stories(
             StorySpec(
                 story_id=next_id(),
                 title=f"{actor} creates a new {entity.title or entity.name}",
-                actor=actor,
+                persona=actor,
                 trigger=StoryTrigger.FORM_SUBMITTED,
-                scope=[entity.name],
+                entities=[entity.name],
                 given=[
                     StoryCondition(expression=f"{actor} has permission to create {entity.name}"),
                 ],
@@ -149,9 +149,9 @@ def propose_stories(
                             f"{actor} changes {entity.name} "
                             f"from {transition.from_state} to {transition.to_state}"
                         ),
-                        actor=actor,
+                        persona=actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
-                        scope=[entity.name],
+                        entities=[entity.name],
                         given=[
                             StoryCondition(
                                 expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
@@ -204,9 +204,9 @@ def propose_stories(
             {
                 "story_id": s.story_id,
                 "title": s.title,
-                "actor": s.actor,
+                "persona": s.persona,
                 "trigger": s.trigger.value,
-                "scope": s.scope,
+                "entities": s.entities,
                 "given": [c.expression for c in s.given],
                 "when": [c.expression for c in s.when],
                 "then": [c.expression for c in s.then],
@@ -290,7 +290,7 @@ def list_stories(
         color = status_colors.get(story.status.value, typer.colors.WHITE)
         typer.echo(f"  {story.story_id}: {story.title}")
         typer.secho(f"    Status: {story.status.value}", fg=color)
-        typer.echo(f"    Scope: {', '.join(story.scope)}")
+        typer.echo(f"    Scope: {', '.join(story.entities)}")
 
 
 @story_app.command("generate-tests")
@@ -359,18 +359,18 @@ def generate_tests(
 
         steps: list[TestDesignStep] = []
 
-        # Step 1: Login as the actor
+        # Step 1: Login as the persona
         steps.append(
             TestDesignStep(
                 action=TestDesignAction.LOGIN_AS,
-                target=story.actor,
-                rationale=f"Test from {story.actor}'s perspective",
+                target=story.persona,
+                rationale=f"Test from {story.persona}'s perspective",
             )
         )
 
         # Step 2: Infer action from trigger
         if story.trigger == StoryTrigger.FORM_SUBMITTED:
-            entity = story.scope[0] if story.scope else "form"
+            entity = story.entities[0] if story.entities else "form"
             steps.append(
                 TestDesignStep(
                     action=TestDesignAction.NAVIGATE_TO,
@@ -394,7 +394,7 @@ def generate_tests(
                 )
             )
         elif story.trigger == StoryTrigger.STATUS_CHANGED:
-            entity = story.scope[0] if story.scope else "entity"
+            entity = story.entities[0] if story.entities else "entity"
             steps.append(
                 TestDesignStep(
                     action=TestDesignAction.TRIGGER_TRANSITION,
@@ -408,11 +408,11 @@ def generate_tests(
                 test_id=test_id,
                 title=f"Verify: {story.title}",
                 description=f"Test generated from story {story.story_id}",
-                persona=story.actor,
+                persona=story.persona,
                 trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
                 steps=steps,
                 expected_outcomes=[c.expression for c in story.then],
-                entities=story.scope.copy(),
+                entities=story.entities.copy(),
                 tags=[f"story:{story.story_id}", "auto-generated"],
                 status=TestDesignStatus.PROPOSED,
             )

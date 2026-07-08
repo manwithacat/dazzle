@@ -520,15 +520,15 @@ def _build_test_criteria(
 
     # From stories
     for story in stories:
-        if entities_filter and not any(e in entities_filter for e in story.scope):
+        if entities_filter and not any(e in entities_filter for e in story.entities):
             continue
 
         criteria: dict[str, Any] = {
             "source": "story",
             "id": story.story_id,
             "title": story.title,
-            "actor": story.actor,
-            "scope": list(story.scope),
+            "persona": story.persona,
+            "entities": list(story.entities),
         }
 
         # given/when/then
@@ -697,8 +697,6 @@ def _format_markdown(data: dict[str, Any], appspec: AppSpec) -> str:
         for tc in data["test_criteria"]:
             source_label = "Story" if tc["source"] == "story" else "Test Design"
             lines.append(f"### [{tc['id']}] {tc['title']} ({source_label})")
-            if tc.get("actor"):
-                lines.append(f"Actor: {tc['actor']}")
             if tc.get("persona"):
                 lines.append(f"Persona: {tc['persona']}")
             lines.append("")

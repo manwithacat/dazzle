@@ -154,9 +154,9 @@ def _make_story(
     return StorySpec(
         story_id=story_id,
         title=title,
-        actor=actor,
+        persona=actor,
         trigger=trigger,
-        scope=scope or [],
+        entities=scope or [],
         then=then_conditions,
         unless=unless or [],
     )

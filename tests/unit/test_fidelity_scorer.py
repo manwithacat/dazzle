@@ -73,9 +73,9 @@ def _make_story(
     return StorySpec(
         story_id=story_id,
         title=title,
-        actor="User",
+        persona="User",
         trigger=StoryTrigger.USER_CLICK,
-        scope=scope or ["Task"],
+        entities=scope or ["Task"],
         given=given or [],
         when=when or [],
         then=then or [],
@@ -1020,8 +1020,8 @@ class TestCreateModeStoryGapSuppression:
         return StorySpec(
             story_id=story_id,
             title=f"Story {story_id}",
-            actor="admin",
-            scope=["Task"],
+            persona="admin",
+            entities=["Task"],
             status=StoryStatus.ACCEPTED,
             trigger=StoryTrigger.USER_CLICK,
             given=[StoryCondition(expression=g, field_path="Task.status") for g in given],
@@ -1154,8 +1154,8 @@ class TestStatusChangedTriggerExclusion:
         return StorySpec(
             story_id=story_id,
             title=f"Story {story_id}",
-            actor="admin",
-            scope=scope or ["Task"],
+            persona="admin",
+            entities=scope or ["Task"],
             status=StoryStatus.ACCEPTED,
             trigger=trigger,
             given=[StoryCondition(expression="Task.status is 'todo'", field_path="Task.status")],

@@ -927,7 +927,7 @@ The built-in DSL relation types:
 | Type | Meaning |
 |------|---------|
 | `uses` | Surface or workspace uses an entity |
-| `acts_as` | Story actor is a persona |
+| `acts_as` | Story persona is a persona |
 | `scopes` | Story scopes to an entity |
 | `process_implements` | Process implements a story |
 | `invokes` | Process step invokes a service |

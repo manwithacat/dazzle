@@ -77,8 +77,8 @@ def _make_story(
     return _ns(
         story_id=story_id,
         title=title or story_id,
-        actor=actor,
-        scope=scope or [],
+        persona=actor,
+        entities=scope or [],
     )
 
 

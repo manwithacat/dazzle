@@ -189,9 +189,9 @@ def story_propose_impl(
             StorySpec(
                 story_id=next_id(),
                 title=f"{actor} creates a new {entity.title or entity.name}",
-                actor=actor,
+                persona=actor,
                 trigger=StoryTrigger.FORM_SUBMITTED,
-                scope=[entity.name],
+                entities=[entity.name],
                 given=[
                     StoryCondition(expression=f"{actor} has permission to create {entity.name}")
                 ],
@@ -215,9 +215,9 @@ def story_propose_impl(
                     StorySpec(
                         story_id=next_id(),
                         title=f"{actor} changes {entity.name} from {transition.from_state} to {transition.to_state}",
-                        actor=actor,
+                        persona=actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
-                        scope=[entity.name],
+                        entities=[entity.name],
                         given=[
                             StoryCondition(
                                 expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'"
@@ -256,9 +256,9 @@ def story_propose_impl(
                     StorySpec(
                         story_id=next_id(),
                         title=f"{actor} {action_desc}s on {scene.surface}",
-                        actor=actor,
+                        persona=actor,
                         trigger=StoryTrigger.USER_CLICK,
-                        scope=scope,
+                        entities=scope,
                         given=[StoryCondition(expression=f"{actor} is on {scene.surface} surface")],
                         then=[
                             StoryCondition(
@@ -335,9 +335,11 @@ def story_save_impl(
         story = StorySpec(
             story_id=s["story_id"],
             title=s["title"],
-            actor=s["actor"],
+            # #1559 renamed the keys actor→persona, scope→entities; tolerate
+            # the old spellings in in-flight proposal JSON written pre-rename.
+            persona=s.get("persona") or s["actor"],
             trigger=StoryTrigger(s["trigger"]),
-            scope=s.get("scope", []),
+            entities=s.get("entities") or s.get("scope") or [],
             given=story_given,
             when=story_when,
             then=story_then,
@@ -458,12 +460,12 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         stories = [
             s
             for s in stories
-            if s.actor.lower() == actor_filter_str.lower()
-            or actor_filter_str.lower() in s.actor.lower()
+            if s.persona.lower() == actor_filter_str.lower()
+            or actor_filter_str.lower() in s.persona.lower()
         ]
 
     # Collect unique personas for filter UI
-    personas = sorted({s.actor for s in stories if s.actor})
+    personas = sorted({s.persona for s in stories if s.persona})
 
     # Group by coverage status
     working: list[dict[str, Any]] = []
@@ -492,15 +494,15 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     md_lines.append(f"Working ({len(working)})")
     for s in working:
-        md_lines.append(f"  [ok] {s['title']}  ({s['actor']})")
+        md_lines.append(f"  [ok] {s['title']}  ({s['persona']})")
     md_lines.append("")
     md_lines.append(f"Needs polish ({len(needs_polish)})")
     for s in needs_polish:
-        md_lines.append(f"  [..] {s['title']}  ({s['actor']})")
+        md_lines.append(f"  [..] {s['title']}  ({s['persona']})")
     md_lines.append("")
     md_lines.append(f"Not started ({len(not_started)})")
     for s in not_started:
-        md_lines.append(f"  [  ] {s['title']}  ({s['actor']})")
+        md_lines.append(f"  [  ] {s['title']}  ({s['persona']})")
 
     return json.dumps(
         {
@@ -564,12 +566,12 @@ def story_generate_tests_impl(
         # Build steps from story structure
         steps: list[TestDesignStep] = []
 
-        # Step 1: Login as the actor
+        # Step 1: Login as the persona
         steps.append(
             TestDesignStep(
                 action=TestDesignAction.LOGIN_AS,
-                target=story.actor,
-                rationale=f"Test from {story.actor}'s perspective",
+                target=story.persona,
+                rationale=f"Test from {story.persona}'s perspective",
             )
         )
 
@@ -578,7 +580,7 @@ def story_generate_tests_impl(
             # Parse condition to determine appropriate action
             if "is set" in condition.lower() or "exists" in condition.lower():
                 # Existence check - create or navigate
-                entity = _extract_entity_from_condition(condition, story.scope)
+                entity = _extract_entity_from_condition(condition, story.entities)
                 steps.append(
                     TestDesignStep(
                         action=TestDesignAction.ASSERT_VISIBLE,
@@ -588,7 +590,7 @@ def story_generate_tests_impl(
                 )
             elif "is '" in condition or 'is "' in condition:
                 # State check - assert current state
-                entity = _extract_entity_from_condition(condition, story.scope)
+                entity = _extract_entity_from_condition(condition, story.entities)
                 steps.append(
                     TestDesignStep(
                         action=TestDesignAction.ASSERT_TEXT,
@@ -599,7 +601,7 @@ def story_generate_tests_impl(
                 )
             else:
                 # Generic precondition - navigate to entity
-                entity = _extract_entity_from_condition(condition, story.scope)
+                entity = _extract_entity_from_condition(condition, story.entities)
                 if entity:
                     steps.append(
                         TestDesignStep(
@@ -614,7 +616,7 @@ def story_generate_tests_impl(
         for condition in when_conditions:
             if "changes to" in condition.lower():
                 # State transition
-                entity = _extract_entity_from_condition(condition, story.scope)
+                entity = _extract_entity_from_condition(condition, story.entities)
                 steps.append(
                     TestDesignStep(
                         action=TestDesignAction.TRIGGER_TRANSITION,
@@ -644,7 +646,7 @@ def story_generate_tests_impl(
         if not when_conditions:
             if story.trigger == StoryTrigger.FORM_SUBMITTED:
                 # Navigate to create form and submit
-                entity = story.scope[0] if story.scope else "form"
+                entity = story.entities[0] if story.entities else "form"
                 steps.append(
                     TestDesignStep(
                         action=TestDesignAction.NAVIGATE_TO,
@@ -668,7 +670,7 @@ def story_generate_tests_impl(
                     )
                 )
             elif story.trigger == StoryTrigger.STATUS_CHANGED:
-                entity = story.scope[0] if story.scope else "entity"
+                entity = story.entities[0] if story.entities else "entity"
                 steps.append(
                     TestDesignStep(
                         action=TestDesignAction.TRIGGER_TRANSITION,
@@ -692,11 +694,11 @@ def story_generate_tests_impl(
             test_id=test_id,
             title=f"Verify: {story.title}",
             description=f"Test generated from story {story.story_id}",
-            persona=story.actor,
+            persona=story.persona,
             trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
             steps=steps,
             expected_outcomes=expected_outcomes,
-            entities=story.scope.copy(),
+            entities=story.entities.copy(),
             tags=[f"story:{story.story_id}"],
             status=TestDesignStatus.PROPOSED,
         )

@@ -331,9 +331,9 @@ class TestTestCriteria:
             StorySpec(
                 story_id="ST-001",
                 title="Create task",
-                actor="Admin",
+                persona="Admin",
                 trigger=StoryTrigger.FORM_SUBMITTED,
-                scope=["Task"],
+                entities=["Task"],
                 given=[StoryCondition(expression="Task list is empty")],
                 when=[StoryCondition(expression="Admin creates a task")],
                 then=[StoryCondition(expression="Task appears in list")],
@@ -365,9 +365,9 @@ class TestTestCriteria:
             StorySpec(
                 story_id="ST-001",
                 title="Create task",
-                actor="Admin",
+                persona="Admin",
                 trigger=StoryTrigger.FORM_SUBMITTED,
-                scope=["Task"],
+                entities=["Task"],
                 status=StoryStatus.ACCEPTED,
             )
         ]

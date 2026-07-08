@@ -335,11 +335,11 @@ class AppSpec(BaseModel):
 
         return _q(self, story_id)
 
-    def get_stories_by_actor(self, actor: str) -> list[StorySpec]:
-        """Get all stories for a given actor/persona."""
-        from .appspec_queries import get_stories_by_actor as _q
+    def get_stories_by_persona(self, persona: str) -> list[StorySpec]:
+        """Get all stories for a given persona."""
+        from .appspec_queries import get_stories_by_persona as _q
 
-        return _q(self, actor)
+        return _q(self, persona)
 
     def get_stories_by_entity(self, entity_name: str) -> list[StorySpec]:
         """Get all stories involving a specific entity."""

@@ -123,7 +123,7 @@ class BusinessLogicAgent(DetectionAgent):
 
             machines = [
                 e.state_machine
-                for e in _scoped_entities(story.scope)
+                for e in _scoped_entities(story.entities)
                 if e.state_machine is not None
             ]
             has_role_guarded_transition = any(

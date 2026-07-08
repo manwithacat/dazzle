@@ -496,7 +496,7 @@ def dsl_test_verify_story_impl(
     runner = UnifiedTestRunner(project_root, base_url=base_url)
 
     for story in requested:
-        scope_entities = story.scope or []
+        scope_entities = story.entities or []
         related_tests: list[dict[str, Any]] = []
         for entity in scope_entities:
             related_tests.extend(entity_to_tests.get(entity, []))

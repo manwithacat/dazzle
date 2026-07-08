@@ -52,7 +52,7 @@ def _story(
 ) -> MagicMock:
     s = MagicMock()
     s.story_id = story_id
-    s.actor = actor
+    s.persona = actor
     s.trigger = trigger
     s.title = title or story_id
     return s
@@ -402,10 +402,10 @@ class TestBL02Issue1356:
     def _scoped_story(self, scope: list[str]) -> MagicMock:
         s = MagicMock()
         s.story_id = "ST-001"
-        s.actor = "admin"
+        s.persona = "admin"
         s.trigger = StoryTrigger.STATUS_CHANGED
         s.title = "ST-001"
-        s.scope = scope
+        s.entities = scope
         return s
 
     def test_role_guarded_state_machine_suppresses(self, agent: BusinessLogicAgent) -> None:

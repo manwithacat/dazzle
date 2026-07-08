@@ -129,12 +129,12 @@ def _derive_description(persona: Any) -> str:
 
 
 def _derive_stories(appspec: Any, persona_id: str) -> list[str]:
-    """Return up to 2 story titles where this persona is the actor."""
+    """Return up to 2 story titles where this persona is the story's persona."""
     stories = getattr(appspec, "stories", None) or []
     relevant: list[str] = []
     for story in stories:
-        actor = getattr(story, "actor", None)
-        if actor != persona_id:
+        story_persona = getattr(story, "persona", None)
+        if story_persona != persona_id:
             continue
         title = getattr(story, "title", None) or getattr(story, "story_id", None)
         if title:

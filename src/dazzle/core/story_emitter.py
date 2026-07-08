@@ -37,16 +37,16 @@ def emit_story_dsl(story: StorySpec) -> str:
     if story.status and story.status != StoryStatus.DRAFT:
         lines.append(f"  status: {story.status.value}")
 
-    # Actor
-    lines.append(f"  actor: {story.actor}")
+    # Persona
+    lines.append(f"  persona: {story.persona}")
 
     # Trigger
     lines.append(f"  trigger: {story.trigger.value}")
 
-    # Scope
-    if story.scope:
-        scope_str = ", ".join(story.scope)
-        lines.append(f"  scope: [{scope_str}]")
+    # Entities
+    if story.entities:
+        entities_str = ", ".join(story.entities)
+        lines.append(f"  entities: [{entities_str}]")
 
     # Given
     if story.given:

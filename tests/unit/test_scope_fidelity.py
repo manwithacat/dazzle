@@ -168,9 +168,9 @@ def _make_story(
     return StorySpec(
         story_id=story_id,
         title=title,
-        actor="User",
+        persona="User",
         trigger=StoryTrigger.FORM_SUBMITTED,
-        scope=scope,
+        entities=scope,
         status=status,
     )
 
