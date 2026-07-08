@@ -30,6 +30,7 @@ from dazzle.render.filters import (
 )
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
+from dazzle.render.fragment.state_affordance import gated_row_transitions
 
 
 @dataclass(frozen=True, slots=True)
@@ -493,10 +494,32 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         f'class="dz-tr-action is-destructive">'
         f"{lucide_svg_html('trash-2', cls='dz-tr-action-icon')}</button>"
     )
+    # #1558 3c: state-gated transition affordances — only transitions valid from
+    # THIS row's current state (mirrors the queue's per-row transitions). Byte-
+    # identical when the entity has no state machine (empty state_transitions).
+    transition_buttons = ""
+    state_transitions = table.get("state_transitions") or ()
+    status_field = str(table.get("status_field") or "")
+    transition_endpoint = str(table.get("transition_endpoint") or "")
+    if state_transitions and status_field and transition_endpoint and item_id:
+        current_state = str(item.get(status_field, "") or "")
+        valid = gated_row_transitions(list(state_transitions), current_state)
+        if valid:
+            endpoint_attr = _html_mod.escape(transition_endpoint, quote=True)
+            status_field_attr = _html_mod.escape(status_field, quote=True)
+            transition_buttons = "".join(
+                f'<button type="button" class="dz-tr-action dz-tr-transition" '
+                f'hx-put="{endpoint_attr}/{item_id_attr}" '
+                f'hx-vals=\'{{"{status_field_attr}": '
+                f'"{_html_mod.escape(t.to_state, quote=True)}"}}\' '
+                f'aria-label="{_html_mod.escape(t.label, quote=True)}">'
+                f"{_html_mod.escape(t.label, quote=False)}</button>"
+                for t in valid
+            )
     actions_cell = (
         '<td class="dz-tr-actions-cell" onclick="event.stopPropagation()">'
-        f'<div class="dz-tr-actions">{peek_toggle_html}{detail_link_html}{edit_link_html}'
-        f"{delete_button}</div>"
+        f'<div class="dz-tr-actions">{transition_buttons}{peek_toggle_html}'
+        f"{detail_link_html}{edit_link_html}{delete_button}</div>"
         "</td>"
     )
 
@@ -548,6 +571,9 @@ def render_data_row(
     api_endpoint: str = "",
     detail_url_template: str = "",
     table_id: str = "dt-table",
+    state_transitions: tuple[Any, ...] = (),
+    status_field: str = "",
+    transition_endpoint: str = "",
 ) -> str:
     """Render one rich data-table `<tr>` from typed inputs (#1505).
 
@@ -570,6 +596,10 @@ def render_data_row(
         # surface (the chevron lives inside the `drill` block), so peek with no
         # detail URL is inert.
         "peek_mode": caps.peek,
+        # #1558 3c: state-gated transition affordances (per-row, gated to current state).
+        "state_transitions": state_transitions,
+        "status_field": status_field,
+        "transition_endpoint": transition_endpoint,
     }
     return _render_table_row(table, dict(item))
 
@@ -592,6 +622,9 @@ def render_data_table_rows(dt: DataTable) -> str:
             api_endpoint=dt.api_endpoint,
             detail_url_template=dt.detail_url_template,
             table_id=dt.table_id,
+            state_transitions=dt.state_transitions,
+            status_field=dt.status_field,
+            transition_endpoint=dt.transition_endpoint,
         )
         for item in dt.rows
     )

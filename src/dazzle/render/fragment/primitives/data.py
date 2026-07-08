@@ -128,6 +128,12 @@ class DataTable:
     detail_url_template: str = ""
     table_id: str = "dt-table"
     capabilities: RowCapabilities = field(default_factory=RowCapabilities)
+    # #1558 3c: state-gated transition affordances (TransitionContext tuple carrying
+    # from_state). Empty = no state machine = byte-identical. Rendered per-row in
+    # the actions cell, gated to the row's current state (status_field value).
+    state_transitions: tuple[Any, ...] = ()
+    status_field: str = ""
+    transition_endpoint: str = ""
     # No empty-columns guard: the rich row-core renders an actions-only row for a
     # column-less table exactly as the retired `_render_table_row` did, so the
     # #1505-P2 switch stays byte-identical even for a misconfigured (column-less)

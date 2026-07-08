@@ -32,7 +32,7 @@ from fastapi import Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from dazzle.core.access import AccessOperationKind
-from dazzle.core.strings import entity_slug
+from dazzle.core.strings import entity_slug, to_api_plural
 from dazzle.http.runtime.audit_wrap import _log_audit_decision
 from dazzle.http.runtime.auth import AuthContext
 from dazzle.http.runtime.htmx_render import (
@@ -52,6 +52,7 @@ from dazzle.http.runtime.route_support import (
 from dazzle.http.runtime.usage_signal import USAGE_KIND_FIELD, read_usage_counts_for_request
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy_by_usage
 from dazzle.render.access_messages import _forbidden_detail
+from dazzle.render.context import TransitionContext
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.renderer._data_row import render_data_table_rows
 
@@ -86,7 +87,40 @@ def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) ->
         detail_url_template=str(table_dict.get("detail_url_template") or ""),
         table_id=str(table_dict.get("table_id") or "dt-table"),
         capabilities=caps,
+        # #1558 3c: state-gated transition affordances, sourced upstream from the
+        # entity's state machine (empty when the entity has none).
+        state_transitions=tuple(table_dict.get("state_transitions") or ()),
+        status_field=str(table_dict.get("status_field") or ""),
+        transition_endpoint=str(table_dict.get("transition_endpoint") or ""),
     )
+
+
+def list_state_transitions(
+    entity_spec: Any, entity_name: str
+) -> tuple[tuple[TransitionContext, ...], str, str]:
+    """#1558 3c: ``(state_transitions, status_field, transition_endpoint)`` for a
+    list of a state-machine entity — preserving ``from_state`` so each row can be
+    gated to its current state. Empty triple when the entity has no state machine.
+    Endpoint mirrors the queue's ``/{plural}`` REST convention."""
+    sm = getattr(entity_spec, "state_machine", None) if entity_spec is not None else None
+    if not sm:
+        return (), "", ""
+    endpoint = f"/{to_api_plural(entity_name)}"
+    seen: set[tuple[str, str]] = set()
+    out: list[TransitionContext] = []
+    for t in sm.transitions:
+        key = (t.from_state, t.to_state)
+        if key not in seen:
+            seen.add(key)
+            out.append(
+                TransitionContext(
+                    from_state=t.from_state,
+                    to_state=t.to_state,
+                    label=t.to_state.replace("_", " ").title(),
+                    api_url=f"{endpoint}/{{id}}",
+                )
+            )
+    return tuple(out), sm.status_field, endpoint
 
 
 def create_list_handler(
@@ -571,6 +605,9 @@ async def _list_handler_body(
                 items = [item.model_dump() for item in items]
 
             total = result.get("total", 0) if isinstance(result, dict) else 0
+            _st_transitions, _st_field, _st_endpoint = list_state_transitions(
+                _entity_spec, getattr(request.state, "htmx_entity_name", "Item")
+            )
             table_dict = {
                 "rows": items,
                 "columns": request.state.htmx_columns
@@ -581,6 +618,10 @@ async def _list_handler_body(
                 "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
                 "api_endpoint": str(request.url.path),
                 "table_id": table_id,
+                # #1558 3c: per-row state-gated transition affordances.
+                "state_transitions": _st_transitions,
+                "status_field": _st_field,
+                "transition_endpoint": _st_endpoint,
                 "bulk_actions": getattr(request.state, "htmx_bulk_actions", False),
                 "inline_editable": getattr(request.state, "htmx_inline_editable", []),
                 "sort_field": sort or "",
