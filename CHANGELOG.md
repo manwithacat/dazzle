@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.9] - 2026-07-08
+
+### Changed
+- **HM-convergence (HMC-007c): workspace-shell chrome → new HM `workspace-shell` component.**
+  The workspace composition shell (outer padding + heading row + primary actions,
+  context selector, edit toolbar with the 5 saveState values) — 203 lines of
+  `.dz-workspace-*` — moved verbatim from Dazzle `dashboard.css` into a new
+  HaTchi-MaXchi `components/workspace-shell.css` (registered in `build.py`). Byte-faithful
+  (already HM-tokenised; each rule appears once in the served bundle, now from the HM
+  dist; the `dz-spin` keyframe it uses lives in HM base). `dashboard.css` 561→345;
+  reservoir 3708→3492. **First genuinely-visual migration verified through the visual
+  gate:** dashboard captures pixel-identical before/after (light + dark); the lone diff
+  in team_overview was proven a non-deterministic skeleton lazy-load band (reproduced
+  after-vs-after), not a regression. `dashboard.css` retains the card grid + card chrome
+  (the `.dz-card` family, dual-defined with HM fragment-primitives — deferred to a
+  build-order-careful slice) + add-card CTA + the `#dz-detail-drawer` width override.
+  HM package 0.1.62→0.1.63.
+
 ## [0.98.8] - 2026-07-08
 
 ### Changed
