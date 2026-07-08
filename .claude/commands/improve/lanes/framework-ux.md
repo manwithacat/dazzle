@@ -115,7 +115,7 @@ The fitness engine's Pass 1 parses the contract and calls `walk_contract` — on
 
 ### 6. EXPLORE (when no actionable rows in Step 1)
 
-Choose one of six sub-strategies based on accumulated state. Pick by judgment, not strict rotation.
+Choose one of seven sub-strategies based on accumulated state. Pick by judgment, not strict rotation.
 
 #### Sub-strategy: missing_contracts
 
@@ -188,6 +188,29 @@ Skip if:
 - ≥3 unresolved `API-NNN` rows already open (consolidate before adding more)
 
 Detailed playbook: `improve/strategies/api_surface_audit.md`. Counts against shared explore budget.
+
+#### Sub-strategy: quality_intelligence_sweep
+
+**No subagent — deterministic capability sweep.** Exercises the framework-ux-owned
+quality-intelligence capabilities the loop otherwise leaves idle (wired from
+`improve/capability-map.md`, Phase 4). Run against the fleet / a rotating sample:
+
+```bash
+dazzle qa taste-panel                 # blind fleet-vs-dialect aesthetic parity (baseline: dev_docs/taste/)
+dazzle fitness investigate --top 1    # highest-priority churn×complexity cluster → .dazzle/fitness-proposals/
+dazzle fitness vitality               # connectedness / dead-code signal
+dazzle sentinel scan                  # DSL sentinel findings (distinct from `sentinel mutate`)
+dazzle composition audit              # cross-surface composition/style coherence
+```
+
+File real findings as `EX-NNN`/`API-NNN` rows (or a GitHub issue if framework-level).
+`taste-panel` regressions vs the baseline are the highest-signal — the blind aesthetic
+gate that shipped v0.87→v0.98 and had no lane exercising it. Stamp `last-exercised` for
+each capability run in `improve/capability-map.md`.
+
+Use when: `dazzle-updated` fired since last sweep (new release → re-check aesthetic +
+vitality), OR the driver's capability-coverage rule picked framework-ux to exercise a
+`STALE`/`UNOWNED` capability, OR ≥7 cycles since last sweep. Counts against shared budget.
 
 ### Sub-strategy choosing
 

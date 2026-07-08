@@ -50,6 +50,10 @@ Apply the fix appropriate to the gap type:
 | `validation` | Edit DSL to satisfy parser/validator |
 | `conformance` | Add missing entity/surface/workspace per `mcp__dazzle__conformance` |
 | `fidelity` | Add missing IR-graph edges per `mcp__dazzle__dsl operation=fidelity` |
+| `rhythm_fidelity` | A rhythm scores `< 1.0` (a scene's surface/action/entity can't resolve) — add the missing surface/derive-binding, or fix the cited story's `entities`/`trigger`. **Only non-advisory `evaluate` failures are actionable** (advisory `surface_specialization` + orphan-story gaps are design nudges, not defects). |
+| `story_scope` | `dazzle story scope-fidelity` reports a story with `< full` process coverage (story⇄process axis) — add/point the implementing process. Distinct from `rhythm_fidelity` (story⇄rhythm axis). |
+| `test_design_coverage` | `dazzle test-design coverage-actions` / `runtime-gaps` flags an uncovered persona action — add the test-design coverage row. |
+| `discovery_coherence` | `mcp__dazzle__discovery operation=coherence` flags an incoherent spec edge — reconcile the DSL. |
 | `visual_quality` | Implement design-system fix per the Tier-2 visual scrape (`dazzle qa capture` + the visual_tier2 subagent) finding |
 
 For framework-related gaps (e.g. lint flagging an auto-generated entity), file a GitHub issue and mark `BLOCKED`.
@@ -82,16 +86,34 @@ Tiered to manage cost — start free, escalate only when the previous tier is ex
 
 #### Tier 1 (every cycle, free): Re-scan DSL gaps
 
-For each example app:
+For each example app (all deterministic, JSON, near-free — the same shape):
 ```bash
 cd examples/<app>
 dazzle validate 2>&1
 dazzle lint 2>&1
 mcp__dazzle__conformance operation=summary
 mcp__dazzle__dsl operation=fidelity
+# quality-intelligence sweep (wired from capability-map, Phase 4):
+dazzle story scope-fidelity --json                 # story⇄process axis → story_scope gaps
+dazzle test-design coverage-actions 2>&1           # → test_design_coverage gaps
+mcp__dazzle__discovery operation=coherence          # → discovery_coherence gaps
+# rhythm sweep — ONLY if the app declares a rhythm (grep '^rhythm ' dsl/):
+#   NB: every `dazzle rhythm …` invocation prints DEBUG lines before the payload — always --json | grep -v DEBUG
+for r in <rhythm-names>; do dazzle rhythm fidelity "$r" --json | grep -v DEBUG; done
+dazzle rhythm gaps --json | grep -v DEBUG           # project-wide, once per app
 ```
 
-Add new rows to backlog as `PENDING`. Increments shared budget by 1.
+**Actionability filter for the quality-intelligence rows:** treat only *hard* failures
+as gaps — a `rhythm evaluate` check with `pass:false AND advisory:false`, a rhythm
+`fidelity < 1.0`, a story below `full` process coverage. Advisory-severity output
+(`surface_specialization`, orphan-story `rhythm gaps`, coherence nudges) is a design
+hint, NOT a defect — prune it like `visual_quality` single-observations rather than
+inflating `actionable_count`. As of 2026-07-08 only `support_tickets` (`agent_daily`)
+and `fieldtest_hub` (3 rhythms) carry rhythms, all at fidelity 1.0.
+
+Add new rows to backlog as `PENDING`. Increments shared budget by 1. Stamp
+`last-exercised` for the capabilities run this cycle in `improve/capability-map.md`
+(driver Step 3).
 
 #### Tier 2 (when Tier 1 exhausted, medium cost): Visual quality
 

@@ -35,20 +35,20 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | — | OWNED-IDLE |
 | `dazzle qa trial` | CLI | trials | 187 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | — | OWNED-IDLE |
-| `dazzle qa taste-panel` | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE (wired P4/P5) |
+| `dazzle qa taste-panel` | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 188 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 188 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 186 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | — | OWNED-IDLE |
-| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1, wired P4) | — | OWNED-IDLE (wired P4) |
-| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1, wired P4) | — | OWNED-IDLE (wired P4) |
-| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps (wired P4) | — | OWNED-IDLE (wired P4) |
-| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux (wired P4) | — | OWNED-IDLE (wired P4) |
-| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux (wired P4) | — | OWNED-IDLE (wired P4) |
-| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux (wired P4) | — | OWNED-IDLE (wired P4) |
-| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps (wired P4) | — | OWNED-IDLE (wired P4) |
-| `dazzle composition` (audit/report) | CLI + MCP | framework-ux (wired P4) | — | OWNED-IDLE (wired P4) |
-| **Tailwind-reservoir metric** (emitter utils + Dazzle-native CSS not in HM) | script | **hm-convergence** | — | OWNED-IDLE (stood up P5) |
+| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | — | OWNED-IDLE |
+| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | — | OWNED-IDLE |
+| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | — | OWNED-IDLE |
+| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | — | OWNED-IDLE |
+| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | — | OWNED-IDLE |
+| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | — | OWNED-IDLE |
+| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | — | OWNED-IDLE |
+| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | — | OWNED-IDLE |
+| **Tailwind-reservoir metric** (emitter utils + Dazzle-native CSS not in HM) | script | **hm-convergence** | — | OWNED-IDLE |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | — | OWNED-IDLE |
