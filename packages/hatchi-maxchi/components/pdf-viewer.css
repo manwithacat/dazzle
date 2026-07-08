@@ -1,16 +1,14 @@
 /*
- * pdf-viewer.css — chrome for the PDF detail-view component (#942
- * cycle 1b). Used by ``templates/components/pdf_viewer.html``.
+ * pdf-viewer.css — PDF detail-view chrome (HaTchi-MaXchi).
  *
- * Layout: full-bleed grid with three rows — header, body, footer.
- * The body fills the viewport between the chrome bars; the embed
- * stretches to fill it.
- *
- * Tokens-only — all dimensions resolve through ``tokens.css``;
- * the only literal here is the embed iframe, which has no usable
- * token (full-bleed bodies are uncommon in the framework).
+ * The full PDF viewer surface: header (back / title / prev-next nav), body +
+ * embed, optional footer slot, right-side panels (checkbox-toggled), and the
+ * keyboard cheat-sheet <dialog>. Sits on top of the HM `pdf` embed primitive
+ * (pdf.css: .dz-pdf / .dz-pdf-stage / toolbar), which it references as
+ * descendants. Bespoke a11y/geometry values (1.75rem controls, 360px panel,
+ * visually-hidden clip, focus outlines) are intentionally non-token.
+ * Migrated from Dazzle into HM (HMC-015, aggressive-mode convergence 2026-07-08).
  */
-
 .dz-pdf-viewer {
   display: grid;
   grid-template-rows: auto 1fr auto;

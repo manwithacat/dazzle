@@ -88,6 +88,7 @@ CSS_SOURCES = [
     ("components", "components/profile-card.css"),
     ("components", "components/two-factor.css"),
     ("components", "components/pdf.css"),
+    ("components", "components/pdf-viewer.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
     # dashboard-card LAST (HMC-007d): its .dz-add-card-button must keep winning

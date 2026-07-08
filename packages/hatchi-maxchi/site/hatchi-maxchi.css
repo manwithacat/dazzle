@@ -9052,7 +9052,6 @@ onboarding-step {
   color: var(--colour-brand-contrast);
 }
 
-
 }
 /* ── components/tree.css ── */
 @layer components {
@@ -10429,6 +10428,451 @@ onboarding-step {
   justify-content: center;
   color: var(--colour-text-muted);
   font-size: var(--text-sm);
+}
+
+}
+/* ── components/pdf-viewer.css ── */
+@layer components {
+/*
+ * pdf-viewer.css — PDF detail-view chrome (HaTchi-MaXchi).
+ *
+ * The full PDF viewer surface: header (back / title / prev-next nav), body +
+ * embed, optional footer slot, right-side panels (checkbox-toggled), and the
+ * keyboard cheat-sheet <dialog>. Sits on top of the HM `pdf` embed primitive
+ * (pdf.css: .pdf / .pdf-stage / toolbar), which it references as
+ * descendants. Bespoke a11y/geometry values (1.75rem controls, 360px panel,
+ * visually-hidden clip, focus outlines) are intentionally non-token.
+ * Migrated from Dazzle into HM (HMC-015, aggressive-mode convergence 2026-07-08).
+ */
+.pdf-viewer {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+
+.pdf-viewer-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-md);
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-lg);
+  background: var(--colour-surface);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.pdf-viewer-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-base) var(--ease-out);
+}
+
+.pdf-viewer-back:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.pdf-viewer-back:focus-visible {
+  /* Framework focus-ring convention — same shape as
+   * `.workspace-context-select`, `.toggle-item`, etc. The
+   * brand-tinted box-shadow stays visible in both light and dark
+   * themes; a bare `outline: none` left keyboard users guessing
+   * where focus lived (#942 cycle 1f). */
+  background: var(--colour-bg);
+  color: var(--colour-text);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--colour-brand);
+}
+
+.pdf-viewer-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pdf-viewer-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.pdf-viewer-nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  color: var(--colour-text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-base) var(--ease-out);
+}
+
+.pdf-viewer-nav-link:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.pdf-viewer-nav-link:focus-visible {
+  /* Same framework focus-ring convention as the back button. */
+  background: var(--colour-bg);
+  color: var(--colour-text);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--colour-brand);
+}
+
+/* Forced-colors / Windows High Contrast mode: the box-shadow rings
+ * above are suppressed by the user agent, leaving keyboard users
+ * with no focus indicator. Re-introduce a real outline using the
+ * system ``Highlight`` colour so the chrome stays accessible.
+ * Same fallback applies to both interactive elements. */
+@media (forced-colors: active) {
+  .pdf-viewer-back:focus-visible,
+  .pdf-viewer-nav-link:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+.pdf-viewer-nav-link[aria-disabled="true"] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ── Body ────────────────────────────────────────────────────── */
+
+.pdf-viewer-body {
+  position: relative;
+  /* Semantic token, not a raw ramp value — flips correctly under
+   * `[data-theme="dark"]` (binding from #938). Earlier draft used
+   * `var(--neutral-100)` which is light-only and left a jarring
+   * pale panel inside an otherwise-dark viewer; #942 cycle 1d's
+   * dark-mode parity gates caught it. The body sits a step darker
+   * than the chrome surfaces in both themes so the content area
+   * reads as distinct from the header/footer. */
+  background: var(--colour-bg);
+  overflow: hidden;
+}
+
+.pdf-viewer-embed {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+}
+
+/* hx-pdf P3: the embed slot now hosts the HM pdf Hyperpart. Inside the
+ * full-page grid the SECTION becomes a grid (toolbar/status/stage) so
+ * the stage takes the remainder — a bare block-size:100% stage would
+ * overflow by the toolbar height and the section's overflow:hidden
+ * would clip the document's bottom band. Corners squared: the region
+ * is full-bleed here. */
+.pdf-viewer .pdf.pdf-viewer-embed {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  border-radius: 0;
+}
+
+.pdf-viewer .pdf-stage {
+  max-height: none;
+  block-size: auto;
+  min-block-size: 0;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+
+.pdf-viewer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-lg);
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  background: var(--colour-surface);
+  border-block-start: 1px solid var(--colour-border);
+}
+
+.pdf-viewer-kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding-block: 0;
+  padding-inline: var(--space-xs);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+}
+
+.pdf-viewer-kbd-label {
+  margin-inline-end: var(--space-md);
+}
+
+.pdf-viewer-kbd-sep {
+  color: var(--colour-border);
+}
+
+/* #944 cycle 6a — optional project-supplied footer slot.
+ * Renders before the keyboard legend in the same flex row. The
+ * slot's children are project-shaped (page counter, zoom buttons,
+ * pill toggles, etc); chrome stays minimal so projects don't have
+ * to compete with framework layout. */
+.pdf-viewer-footer-slot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* Hide the back-link label on narrow viewports to keep the header
+ * tidy — the icon alone communicates the action. */
+@media (max-width: 640px) {
+  .pdf-viewer-back-label {
+    display: none;
+  }
+}
+
+/* ── #942 cycle 2a — right-side panel ─────────────────────────
+ *
+ * Optional slide-in panel for related-entity content. Toggle is a
+ * hidden checkbox; CSS-only show/hide via the parent's :has(:checked).
+ * Keeps the wrapper free of x-data (preserves the widget contract
+ * from #940 — the bridge mounts the keyboard handler; Alpine doesn't
+ * touch this node).
+ *
+ * Drawer behaviour: panel `position: absolute`, slides in from the
+ * trailing edge; default `transform: translateX(100%)` hides it
+ * off-screen, `:has(:checked)` swaps to `translateX(0)`. CSS
+ * transition respects the global `prefers-reduced-motion` rule
+ * already in reset.css. Mobile (≤768px): panel goes full-width
+ * over the content (drawer pattern). */
+
+.pdf-viewer-panel-toggle {
+  /* Visually hidden but keyboard-accessible (the keyboard handler
+   * .click()s it). Don't use display:none — that removes the
+   * input from the DOM, breaking :has(:checked). */
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pdf-viewer-panel {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: 360px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--colour-surface);
+  border-inline-start: 1px solid var(--colour-border);
+  box-shadow: -4px 0 12px hsl(0 0% 0% / 0.06);
+  transform: translateX(100%);
+  transition: transform var(--duration-base) var(--ease-out);
+  z-index: 1;
+}
+
+/* #943 cycle 5a — multi-panel exclusivity uses the adjacent-sibling
+ * combinator so each toggle's checked state only affects its
+ * immediately-following <aside>. The cycle 2a `:has(:checked)`
+ * pattern can't disambiguate which checkbox is checked when N
+ * exist, so it would slide every panel in. Adjacent-sibling does
+ * the right thing for any N — including the cycle 2a single-panel
+ * case (the toggle is still right before its panel). */
+.pdf-viewer-panel-toggle:checked + .pdf-viewer-panel {
+  transform: translateX(0);
+}
+
+.pdf-viewer-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-lg);
+  background: var(--colour-bg);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.pdf-viewer-panel-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.pdf-viewer-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  color: var(--colour-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-base) var(--ease-out);
+}
+
+.pdf-viewer-panel-close {
+  /* `<button>`-styled like a borderless icon affordance. */
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.pdf-viewer-panel-close:hover {
+  background: var(--colour-surface);
+  color: var(--colour-text);
+}
+
+.pdf-viewer-panel-close:focus-visible {
+  /* Same framework focus-ring convention as the back/nav buttons
+   * (cycle 1f). The button is the actual focus target now (not a
+   * visually-hidden checkbox), so the ring lands directly on the
+   * affordance. */
+  outline: none;
+  box-shadow: 0 0 0 2px var(--colour-brand);
+}
+
+@media (forced-colors: active) {
+  .pdf-viewer-panel-close:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+.pdf-viewer-panel-body {
+  overflow-y: auto;
+  padding: var(--space-lg);
+}
+
+@media (max-width: 768px) {
+  .pdf-viewer-panel {
+    inline-size: 100%;
+  }
+}
+
+/* #943 cycle 5c — keyboard cheat-sheet overlay. Renders via the
+ * native <dialog> element so backdrop + focus trap come for free. */
+.pdf-viewer-help {
+  inline-size: min(420px, calc(100vw - var(--space-2xl)));
+  max-block-size: 80vh;
+  padding: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  box-shadow: 0 16px 48px hsl(0 0% 0% / 0.16);
+}
+
+.pdf-viewer-help::backdrop {
+  background: hsl(0 0% 0% / 0.32);
+}
+
+.pdf-viewer-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-lg);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.pdf-viewer-help-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.pdf-viewer-help-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  background: transparent;
+  border: 0;
+  color: var(--colour-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.pdf-viewer-help-close:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.pdf-viewer-help-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--colour-brand);
+}
+
+@media (forced-colors: active) {
+  .pdf-viewer-help-close:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+.pdf-viewer-help-list {
+  margin: 0;
+  padding-block: var(--space-sm);
+  padding-inline: 0;
+  font-size: var(--text-sm);
+}
+
+.pdf-viewer-help-row {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-lg);
+}
+
+.pdf-viewer-help-row dt {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.pdf-viewer-help-row dd {
+  margin: 0;
+  color: var(--colour-text-muted);
+}
+
+.pdf-viewer-help-row kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding-block: 0;
+  padding-inline: var(--space-xs);
+  background: var(--colour-bg);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
 }
 
 }

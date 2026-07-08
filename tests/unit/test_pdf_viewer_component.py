@@ -31,7 +31,9 @@ pytest.importorskip("dazzle.page.runtime.pdf_viewer_renderer")
 from dazzle.page.runtime.pdf_viewer_renderer import render_pdf_viewer_component  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CSS_PATH = REPO_ROOT / "src/dazzle/page/runtime/static/css/components/pdf-viewer.css"
+# pdf-viewer CSS migrated into HaTchi-MaXchi (HMC-015) — the detail-view chrome now
+# lives in the HM package and reaches the bundle via the HM dist.
+CSS_PATH = REPO_ROOT / "packages/hatchi-maxchi/components/pdf-viewer.css"
 JS_PATH = REPO_ROOT / "src/dazzle/page/runtime/static/js/pdf-viewer.js"
 
 
@@ -255,16 +257,15 @@ class TestBundleIntegration:
     @pytest.mark.parametrize(
         ("path", "needle"),
         [
-            ("scripts/build_dist.py", '"pdf-viewer.css"'),
-            ("src/dazzle/page/runtime/css_loader.py", "components/pdf-viewer.css"),
-            ("src/dazzle/page/runtime/static/css/dazzle.css", "components/pdf-viewer.css"),
+            # CSS migrated into HaTchi-MaXchi (HMC-015): registered in the HM
+            # package build and served to the bundle via the HM dist. (JS stays
+            # Dazzle-side.)
+            ("packages/hatchi-maxchi/build.py", "components/pdf-viewer.css"),
             ("scripts/build_dist.py", '"js" / "pdf-viewer.js"'),
             ("scripts/build_dist.py", '"pdf-viewer.js"'),
         ],
         ids=[
-            "test_css_listed_in_build_dist",
-            "test_css_listed_in_runtime_loader",
-            "test_css_imported_from_dazzle_entry",
+            "test_css_registered_in_hm_build",
             "test_js_listed_in_build_dist",
             "test_js_in_framework_set_for_comment_stripping",
         ],

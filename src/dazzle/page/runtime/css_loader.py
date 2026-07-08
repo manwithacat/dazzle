@@ -57,7 +57,9 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # now lives in packages/hatchi-maxchi/components/detail.css (already fully
     # HM-token-based). Dropped from the Dazzle bundle; served via the HM dist.
     ("components", "css/components/fragments.css"),
-    ("components", "css/components/pdf-viewer.css"),
+    # pdf-viewer.css migrated into HaTchi-MaXchi (HMC-015) -- PDF detail-view chrome
+    # now lives in packages/hatchi-maxchi/components/pdf-viewer.css (sits on the HM pdf
+    # embed primitive). Served via the HM dist.
     # regions.css removed from the bundle (HMC-007): it is now 130 lines of
     # pure tombstone comments (every region family promoted to HM) — zero CSS
     # rules, so shipping it to every browser was dead weight. File retained on

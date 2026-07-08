@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.19] - 2026-07-08
+
+### Changed
+- **HM-convergence (HMC-015): PDF detail-view chrome → HaTchi-MaXchi.** The whole
+  `pdf-viewer.css` family (~443 lines: viewer header/back/nav, body+embed, footer slot,
+  checkbox-toggled side panels, keyboard cheat-sheet `<dialog>`) moved into a new HM
+  component `packages/hatchi-maxchi/components/pdf-viewer.css`, registered after the HM
+  `pdf` embed primitive it sits on. It defines only `.dz-pdf-viewer*` (+ descendant refs
+  to HM's `.dz-pdf`/`.dz-pdf-stage`), so no conflict with HM `pdf.css`. Removed from
+  `css_loader.CSS_SOURCE_FILES`; served via the HM dist. Bespoke a11y/geometry values
+  (1.75rem controls, 360px panel, visually-hidden clip, focus outlines) retained.
+  Reservoir `css_lines_dazzle_native` 2336→1892 (−444). Repointed `test_pdf_viewer_component`
+  CSS path + bundle-integration assertions to the HM location.
+
 ## [0.98.18] - 2026-07-08
 
 ### Changed
