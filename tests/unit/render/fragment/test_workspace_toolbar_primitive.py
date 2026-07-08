@@ -29,7 +29,7 @@ _LEGACY_TOOLBAR_HTML = """<div class="dz-workspace-toolbar">
       <span x-cloak x-show="saveState === 'clean'">Saved</span>
       <span x-cloak x-show="saveState === 'dirty'">Save layout</span>
       <span x-cloak x-show="saveState === 'saving'" class="dz-workspace-save-busy">
-        <svg class="dz-workspace-save-busy-icon" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+        <svg class="dz-workspace-save-busy-icon" viewBox="0 0 24 24" fill="none"><circle class="dz-spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="dz-spinner-head" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
         Saving
       </span>
       <span x-cloak x-show="saveState === 'saved'" class="dz-workspace-save-busy">

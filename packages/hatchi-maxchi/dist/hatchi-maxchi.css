@@ -4441,6 +4441,22 @@ button.htmx-request,
   opacity: 0.7;
 }
 
+/* ── Inline loading-spinner two-tone ────────────────────────────── */
+/* The inline SVG spinners the Dazzle emitters render (search-select,
+ * table-loading, tab-loading, workspace-save-busy) are the classic
+ * two-tone loader: a dim background track ring + a brighter rotating
+ * head arc. These carry the canonical opacities HM owns, replacing the
+ * Tailwind `opacity-25` / `opacity-75` utilities the emitters used
+ * before Tailwind was unbundled (markup-reservoir drain, HMC-002). */
+
+.spinner-track {
+  opacity: 0.25;
+}
+
+.spinner-head {
+  opacity: 0.75;
+}
+
 /* ── Indicator visibility ───────────────────────────────────────── */
 /* Override HTMX's built-in opacity-based hiding with display:none —
  * hidden indicators must not occupy layout space (opacity:0 still
@@ -10167,6 +10183,5 @@ a.action-card:hover {
   border-color: var(--colour-brand);
   color: var(--colour-text);
 }
-
 
 }

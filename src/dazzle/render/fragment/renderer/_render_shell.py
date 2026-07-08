@@ -102,9 +102,9 @@ _WORKSPACE_TOOLBAR_HTML = (
     '<span data-dz-when="dirty">Save layout</span>'
     '<span data-dz-when="saving" class="dz-workspace-save-busy">'
     '<svg class="dz-workspace-save-busy-icon" viewBox="0 0 24 24" fill="none">'
-    '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" '
+    '<circle class="dz-spinner-track" cx="12" cy="12" r="10" stroke="currentColor" '
     'stroke-width="4"/>'
-    '<path class="opacity-75" fill="currentColor" '
+    '<path class="dz-spinner-head" fill="currentColor" '
     'd="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>'
     "</svg>"
     "Saving"

@@ -314,9 +314,9 @@ class _RenderTablesMixin:
             '<div aria-hidden="true" class="dz-table-loading">'
             '<svg class="dz-table-loading-spinner" viewBox="0 0 24 24" fill="none" '
             'xmlns="http://www.w3.org/2000/svg">'
-            '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" '
+            '<circle class="dz-spinner-track" cx="12" cy="12" r="10" stroke="currentColor" '
             'stroke-width="2"/>'
-            '<path class="opacity-75" fill="currentColor" '
+            '<path class="dz-spinner-head" fill="currentColor" '
             'd="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>'
             '<span class="visually-hidden">Loading…</span></div>'
         )

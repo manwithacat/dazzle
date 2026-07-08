@@ -304,9 +304,9 @@ class _RenderLayoutMixin:
             f'hx-swap="innerHTML">'
             f'<div class="dz-tabs__loading">'
             f'<svg fill="none" viewBox="0 0 24 24" aria-hidden="true">'
-            f'<circle class="opacity-25" cx="12" cy="12" r="10" '
+            f'<circle class="dz-spinner-track" cx="12" cy="12" r="10" '
             f'stroke="currentColor" stroke-width="4"></circle>'
-            f'<path class="opacity-75" fill="currentColor" '
+            f'<path class="dz-spinner-head" fill="currentColor" '
             f'd="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>'
             f"</svg>"
             f"</div>"

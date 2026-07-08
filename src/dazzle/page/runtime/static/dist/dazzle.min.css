@@ -1,4 +1,4 @@
-/* dazzle v0.98.10 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.98.12 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -3115,6 +3115,12 @@ button.htmx-request,
 .dz-button.htmx-request {
 pointer-events: none;
 opacity: 0.7;
+}
+.dz-spinner-track {
+opacity: 0.25;
+}
+.dz-spinner-head {
+opacity: 0.75;
 }
 .htmx-indicator {
 display: none;

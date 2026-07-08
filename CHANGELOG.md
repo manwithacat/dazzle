@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.12] - 2026-07-08
+
+### Changed
+- **HM-convergence (HMC-002 markup drain): residual Tailwind spinner opacities → HM.**
+  The four inline SVG loading spinners the emitters render (search-select, table-loading,
+  tab-loading, workspace-save-busy) used Tailwind `opacity-25` / `opacity-75` on their
+  track ring / head arc — dead classes since Tailwind was unbundled (both elements had
+  silently been rendering at full opacity). Replaced with HM-owned `dz-spinner-track` /
+  `dz-spinner-head` (canonical `0.25` / `0.75` opacities) in
+  `hatchi-maxchi/components/htmx-states.css`, restoring the intended two-tone loader under
+  HM ownership. The markup reservoir (`total_tailwind_tokens`) is now **0** — the Tailwind
+  utilities are fully drained from the render/page emitters.
+
+### Agent Guidance
+- **The markup reservoir hitting 0 does NOT license deleting the contract_checker legacy
+  Tailwind path** (`_has_card_chrome` path 2). The reservoir metric measures *emitters*
+  only; the legacy `rounded + full-border` heuristic is still the active card-chrome
+  vocabulary for `tests/unit/test_ux_contract_checker.py` (~15 nested-chrome cases) and
+  covers hand-authored / custom_renderer / project region-body markup the emitter metric
+  can't see. Deleting it is a behavior-scope change gated on migrating that corpus to
+  `dz-card` — tracked as HMC-002b, not a mechanical cleanup.
+
 ## [0.98.11] - 2026-07-08
 
 ### Changed
