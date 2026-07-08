@@ -76,7 +76,10 @@ def infer_landing_route(
     phase = _select_active_phase(rhythm)
     if phase is None or not phase.scenes:
         return None
-    return _target_route(phase.scenes[0].surface, workspaces, surfaces)
+    first_surface = phase.scenes[0].surface
+    if first_surface is None:
+        return None
+    return _target_route(first_surface, workspaces, surfaces)
 
 
 def check_landing_drift(

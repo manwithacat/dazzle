@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.0] - 2026-07-08
+
+### Added
+- **Published release of the #1559 arc** (rolls up 0.97.0–0.97.4). Story⇄rhythm
+  agent-cognition cleanup, delivered end to end: story vocabulary unified with
+  rhythms (`actor:`→`persona:`, `scope:`→`entities:`), the `story composition`
+  bidirectional coherence query, and story-derived "thin" rhythms (a scene
+  citing a `story:` derives its surface/action/entity) — plus the rhythm-tooling
+  fixes that authoring real rhythms surfaced (compound story-ID parsing;
+  structural fidelity scoring). See the 0.97.x entries below for detail. Minor
+  bump because #1559 slice 1 is a breaking DSL change (old `actor:`/`scope:`
+  story fields now error with a migration hint).
+
 ## [0.97.4] - 2026-07-08
 
 ### Added

@@ -197,6 +197,8 @@ def rhythm_evaluate_impl(
     surface_scenes: dict[str, list[dict[str, str | None]]] = {}
     for phase in rhythm.phases:
         for scene in phase.scenes:
+            if scene.surface is None:
+                continue
             surface_scenes.setdefault(scene.surface, []).append(
                 {"scene": scene.name, "phase": phase.name, "expects": scene.expects}
             )
@@ -343,6 +345,8 @@ def coverage_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
             if phase.kind and phase.kind.value == "ambient":
                 personas_with_ambient.add(r.persona)
             for scene in phase.scenes:
+                if scene.surface is None:
+                    continue
                 persona_targets[r.persona].add(scene.surface)
                 if scene.surface in all_workspace_names:
                     workspaces_exercised.add(scene.surface)
@@ -575,7 +579,7 @@ def rhythm_fidelity_impl(project_root: Path, name: str) -> dict[str, Any]:
 
     for phase in rhythm.phases:
         for scene in phase.scenes:
-            surface = surface_map.get(scene.surface)
+            surface = surface_map.get(scene.surface) if scene.surface is not None else None
             scene_result: dict[str, Any] = {
                 "scene": scene.name,
                 "phase": phase.name,
