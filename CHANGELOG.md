@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.16] - 2026-07-08
+
+### Removed
+- **HM-convergence (HMC-002b): retired the contract_checker legacy Tailwind card-chrome
+  heuristic.** `_has_card_chrome` now recognises only the exact semantic `dz-card` token;
+  the pre-substrate "rounded element + full border" heuristic (plus `_ROUNDED_CLASSES`,
+  `_is_rounded_class`, `_is_side_border_class`) is deleted. Every card surface the
+  framework emits is `dz-card` (ADR-0049) — verified 0 emitters produce Tailwind
+  rounded+border card chrome and no fixture/custom_renderer/example hand-authors it — so
+  the heuristic only matched markup that no longer renders. The structural Card-in-Card
+  invariant (`containers.py` `Card.__post_init__`) remains the primary gate; the scanner
+  stays as defence-in-depth for raw-HTML region bodies, now in the production vocabulary.
+  The `test_ux_contract_checker.py` / `test_htmx_workspace_composite.py` nesting +
+  duplicate-title corpora were migrated from Tailwind markup to `dz-card`; the
+  legacy-heuristic-nuance cases (rounded-without-border, bg-only, arbitrary-value-rounded,
+  side-border) were dropped as they tested removed behavior.
+
+### Agent Guidance
+- **Card-chrome detection is `dz-card`-only.** The UX contract scanners
+  (`find_nested_chromes`, `find_duplicate_titles_in_cards`) recognise card surfaces by the
+  exact `dz-card` token, not Tailwind `rounded`+`border`. New card/region tests must use
+  `dz-card` vocabulary.
+
 ## [0.98.15] - 2026-07-08
 
 ### Changed

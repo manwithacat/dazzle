@@ -46,7 +46,7 @@ class TestAssembleWorkspaceComposite:
     def test_substitutes_region_into_card_slot(self) -> None:
         # Initial HTML has a card body skeleton with id="region-<name>-<card_id>"
         initial = (
-            '<article class="rounded-md border bg-[hsl(var(--card))]">'
+            '<article class="dz-card">'
             "<h3>Grade Distribution</h3>"
             '<div class="px-4 pb-4" id="region-grade_distribution-card-0">'
             '<div class="animate-pulse">loading skeleton</div>'
@@ -92,7 +92,7 @@ class TestAssembleWorkspaceComposite:
 
         initial = (
             '<div data-card-id="card-0">'
-            '<article class="rounded-md border bg-[hsl(var(--card))]">'
+            '<article class="dz-card">'
             "<h3>Grade Distribution</h3>"
             '<div class="px-4 pb-4" id="region-grade_distribution-card-0">'
             '<div class="animate-pulse">loading</div>'
@@ -100,10 +100,7 @@ class TestAssembleWorkspaceComposite:
         )
         # This is the bad shape — region_card with its own chrome
         bad_region_html = (
-            '<div data-dz-region class="bg-[hsl(var(--card))] border '
-            'border-[hsl(var(--border))] rounded-[6px]">'
-            "<h3>Grade Distribution</h3><p>chart</p>"
-            "</div>"
+            '<div data-dz-region class="dz-card"><h3>Grade Distribution</h3><p>chart</p></div>'
         )
         composite = assemble_workspace_composite(
             initial, {("card-0", "grade_distribution"): bad_region_html}
@@ -120,7 +117,7 @@ class TestAssembleWorkspaceComposite:
 
         initial = (
             '<div data-card-id="card-0">'
-            '<article class="rounded-md border bg-[hsl(var(--card))]">'
+            '<article class="dz-card">'
             "<h3>Grade Distribution</h3>"
             '<div class="px-4 pb-4" id="region-grade_distribution-card-0">'
             '<div class="animate-pulse">loading</div>'

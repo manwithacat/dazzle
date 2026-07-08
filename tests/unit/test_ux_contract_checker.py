@@ -218,8 +218,8 @@ class TestNestedCardChrome:
     inside another chrome layer."""
 
     _NESTED_CARD_HTML = """
-    <div data-dz-region-name="tasks" class="rounded-md border bg-white">
-      <article class="rounded-md border bg-gray-50">
+    <div data-dz-region-name="tasks" class="dz-card">
+      <article class="dz-card">
         <h3>Card</h3>
       </article>
     </div>
@@ -227,7 +227,7 @@ class TestNestedCardChrome:
 
     _FLAT_CARD_HTML = """
     <div data-dz-region-name="tasks">
-      <article class="rounded-md border bg-white">
+      <article class="dz-card">
         <h3>Card</h3>
       </article>
     </div>
@@ -250,8 +250,7 @@ class TestNestedCardChrome:
         # scoped to Workspace/DetailView contracts.
         contract = ListPageContract(entity="Task", surface="task_list", fields=["title"])
         nested_list_html = (
-            SAMPLE_LIST_HTML
-            + '<div class="rounded-md border"><div class="rounded-md bg-white">nested</div></div>'
+            SAMPLE_LIST_HTML + '<div class="dz-card"><div class="dz-card">nested</div></div>'
         )
         result = check_contract(contract, nested_list_html)
         # List contract is still satisfied even with a stray nested-chrome
@@ -262,98 +261,22 @@ class TestNestedCardChrome:
 class TestFindNestedChromes:
     """Direct tests of the nested-chrome scanner helper."""
 
+    # Card chrome is the exact `dz-card` token (ADR-0049 substrate). The legacy
+    # Tailwind rounded+border heuristic was retired in HMC-002b (every card surface
+    # the framework emits is semantic `dz-card`; 0 emitters/fixtures produce Tailwind
+    # card chrome), so these cases use the production vocabulary. The primary
+    # Card-in-Card guarantee is structural (containers.py Card.__post_init__); this
+    # scanner is defence-in-depth for raw-HTML region bodies that bypass it.
     @pytest.mark.parametrize(
         ("html", "expected"),
         [
-            # Nested rounded+border elements → detected pair.
+            # Nested dz-card surfaces → detected pair.
             (
-                '<div class="rounded-md border"><article class="rounded-lg border bg-blue-50">inner</article></div>',
+                '<div class="dz-card"><article class="dz-card">inner</article></div>',
                 [("div", "article")],
             ),
-            # rounded-md alone is not chrome — must also have a full border.
-            (
-                '<div class="rounded-md"><article class="rounded-md border bg-white">x</article></div>',
-                [],
-            ),
-            # A rounded element with bg- but no border is not chrome — it's a progress-bar
-            # track, tile backdrop, or pill. Regression for #794 second-follow-up: without
-            # this, scanner flagged kanban column backdrops and bar-chart bar tracks.
-            (
-                '<article class="rounded-md border bg-[hsl(var(--card))]">'
-                '<div class="rounded-full bg-[hsl(var(--muted))] h-5">'
-                '<div class="rounded-full bg-[hsl(var(--primary))] h-5" style="width: 60%"></div>'
-                "</div></article>",
-                [],
-            ),
-            # Sibling chrome elements are not nested — not flagged.
-            (
-                '<section class="rounded-md border"><p>a</p></section>'
-                '<section class="rounded-md border"><p>b</p></section>',
-                [],
-            ),
-            # Regression for #794 follow-up: arbitrary-value rounded classes like
-            # rounded-[4px] / rounded-[6px] (region_card macro + grid.html) must match.
-            (
-                '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
-                '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[4px]">'
-                "item</div></div>",
-                [("div", "div")],
-            ),
-            # A left-side accent border (attention state stripe) is not a card edge —
-            # must not trigger nesting detection against an outer chrome.
-            (
-                '<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px]">'
-                '<div class="rounded-[4px] p-3 border-l-4 border-l-[hsl(var(--primary))]">'
-                "item</div></div>",
-                [],
-            ),
-            # Regression #794 followup: dashboard slot article + region_card inner wrapper
-            # before the bare-region fix — two card layers → detected.
-            (
-                '<div data-card-id="card-0" class="relative group outline-none">'
-                '<article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden">'
-                "<h3>Grade Distribution</h3>"
-                "<div>"
-                '<div data-dz-region class="bg-[hsl(var(--card))] border '
-                'border-[hsl(var(--border))] rounded-[6px]">'
-                '<div class="p-3"><h3>Grade Distribution</h3><p>chart</p></div>'
-                "</div></div></article></div>",
-                [("article", "div")],
-            ),
-            # Post #794-followup: dashboard slot owns chrome+title, region_card is a bare
-            # instrumentation hook — no card-in-card.
-            (
-                '<div data-card-id="card-0" class="relative group outline-none">'
-                '<article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden">'
-                '<h3 id="card-title-card-0">Grade Distribution</h3>'
-                '<div class="px-4 pb-4">'
-                '<div data-dz-region data-dz-region-name="grade_distribution" '
-                'id="region-grade_distribution">'
-                "<p>chart body goes here</p>"
-                "</div></div></article></div>",
-                [],
-            ),
-            # Grid region after #794-followup: bare data-dz-region hook, plain pad items,
-            # no chrome — dashboard slot (asserted separately) owns all chrome.
-            (
-                '<div data-dz-region data-dz-region-name="system_status" '
-                'id="region-system_status">'
-                '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'
-                '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
-                "<h4>api-gateway</h4></div>"
-                '<div class="rounded-[4px] p-3 cursor-pointer hover:bg-[hsl(var(--muted)/0.4)]">'
-                "<h4>auth-service</h4></div>"
-                "</div></div>",
-                [],
-            ),
-            # ── SEMANTIC substrate cases (ADR-0049 dz-card vocabulary) ──
-            # F4 fix: the scanner must inspect the REAL production shape, not just
-            # legacy Tailwind utilities. `dz-card` is the card surface; the primary
-            # Card-in-Card guarantee is structural (containers.py Card.__post_init__),
-            # this is defence-in-depth for raw-HTML region bodies that bypass it.
-            #
-            # Real dashboard shape: wrapper (positioner, NOT chrome) > article.dz-card
-            # (one surface) > bare region body. Single chrome layer → clean.
+            # dz-card-wrapper is the positioner, NOT a surface; sub-parts
+            # (dz-card-header/-body) are not surfaces either — single chrome layer.
             (
                 '<div data-card-id="c0" class="dz-card-wrapper is-animating" tabindex="0">'
                 '<article class="dz-card" role="article">'
@@ -361,6 +284,24 @@ class TestFindNestedChromes:
                 '<div class="dz-card-body" id="region-metrics-c0">'
                 '<div data-dz-region data-dz-region-name="metrics"><p>5</p></div>'
                 "</div></article></div>",
+                [],
+            ),
+            # Sibling dz-card surfaces are not nested — not flagged.
+            (
+                '<section class="dz-card"><p>a</p></section>'
+                '<section class="dz-card"><p>b</p></section>',
+                [],
+            ),
+            # Dashboard slot article.dz-card > bare region body — single chrome layer.
+            (
+                '<div data-card-id="card-0" class="dz-card-wrapper">'
+                '<article class="dz-card">'
+                '<h3 id="card-title-card-0">Grade Distribution</h3>'
+                '<div class="dz-card-body">'
+                '<div data-dz-region data-dz-region-name="grade_distribution" '
+                'id="region-grade_distribution">'
+                "<p>chart body goes here</p>"
+                "</div></div></article></div>",
                 [],
             ),
             # The #794 regression on the raw-HTML bypass path: a region body emits its
@@ -384,18 +325,12 @@ class TestFindNestedChromes:
             ),
         ],
         ids=[
-            "test_detects_rounded_plus_border_nested",
-            "test_ignores_rounded_without_surface",
-            "test_ignores_bg_only_rounded",
+            "test_detects_nested_dz_card",
+            "test_wrapper_and_subparts_are_not_chrome",
             "test_ignores_siblings",
-            "test_accepts_arbitrary_value_rounded",
-            "test_side_border_is_not_chrome",
-            "test_dashboard_slot_plus_region_card_is_card_in_card",
-            "test_dashboard_slot_with_bare_region_card_is_clean",
-            "test_fixed_grid_region_shape",
-            "test_semantic_dashboard_slot_bare_region_is_clean",
-            "test_semantic_region_emitting_own_dz_card_is_nested",
-            "test_semantic_standalone_card_bem_subparts_are_clean",
+            "test_dashboard_slot_with_bare_region_is_clean",
+            "test_region_emitting_own_dz_card_is_nested",
+            "test_standalone_card_bem_subparts_are_clean",
         ],
     )
     def test_find_nested_chromes(self, html: str, expected: list) -> None:
@@ -409,9 +344,9 @@ class TestFindNestedChromes:
         from dazzle.testing.ux.contract_checker import find_nested_chromes
 
         html = (
-            '<section class="rounded-md border">'
-            '<div class="rounded-md border">a</div>'
-            '<div class="rounded-md border">b</div>'
+            '<section class="dz-card">'
+            '<div class="dz-card">a</div>'
+            '<div class="dz-card">b</div>'
             "</section>"
         )
         result = find_nested_chromes(html)
@@ -434,9 +369,9 @@ class TestFindDuplicateTitlesInCards:
 
         html = (
             '<div data-card-id="card-0">'
-            '<article class="rounded-md border bg-white">'
+            '<article class="dz-card">'
             "<h3>Grade Distribution</h3>"
-            '<div class="rounded-md border bg-white">'
+            '<div class="dz-card">'
             "<h3>Grade Distribution</h3>"
             "</div></article></div>"
         )
@@ -449,7 +384,7 @@ class TestFindDuplicateTitlesInCards:
 
         html = (
             '<div data-card-id="card-0">'
-            '<article class="rounded-md border bg-white">'
+            '<article class="dz-card">'
             "<h3>Grade Distribution</h3>"
             "<p>content</p>"
             "</article></div>"
@@ -463,8 +398,8 @@ class TestFindDuplicateTitlesInCards:
         from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
 
         html = (
-            '<article class="rounded-md border bg-white"><h3>Alerts</h3></article>'
-            '<article class="rounded-md border bg-white"><h3>Alerts</h3></article>'
+            '<article class="dz-card"><h3>Alerts</h3></article>'
+            '<article class="dz-card"><h3>Alerts</h3></article>'
         )
         assert find_duplicate_titles_in_cards(html) == []
 
@@ -475,7 +410,7 @@ class TestFindDuplicateTitlesInCards:
         from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
 
         html = (
-            '<article class="rounded-md border bg-white">'
+            '<article class="dz-card">'
             "<h3>Grade Distribution</h3>"
             "<h3>\n  Grade Distribution  </h3>"
             "</article>"
@@ -488,13 +423,7 @@ class TestFindDuplicateTitlesInCards:
         # labels, sub-group names). Only *repeated* text should flag.
         from dazzle.testing.ux.contract_checker import find_duplicate_titles_in_cards
 
-        html = (
-            '<article class="rounded-md border bg-white">'
-            "<h3>Summary</h3>"
-            "<h4>Details</h4>"
-            "<h4>Metrics</h4>"
-            "</article>"
-        )
+        html = '<article class="dz-card"><h3>Summary</h3><h4>Details</h4><h4>Metrics</h4></article>'
         assert find_duplicate_titles_in_cards(html) == []
 
     def test_dashboard_slot_plus_region_with_duplicate_title(self) -> None:
@@ -505,11 +434,10 @@ class TestFindDuplicateTitlesInCards:
 
         before_fix_html = (
             '<div data-card-id="card-0">'
-            '<article class="rounded-md border bg-[hsl(var(--card))]">'
+            '<article class="dz-card">'
             '<h3 id="card-title-card-0">Grade Distribution</h3>'
             "<div>"
-            '<div data-dz-region class="bg-[hsl(var(--card))] border '
-            'border-[hsl(var(--border))] rounded-[6px]">'
+            '<div data-dz-region class="dz-card">'
             "<h3>Grade Distribution</h3><p>chart</p>"
             "</div></div></article></div>"
         )
@@ -524,7 +452,7 @@ class TestFindDuplicateTitlesInCards:
 
         after_fix_html = (
             '<div data-card-id="card-0">'
-            '<article class="rounded-md border bg-[hsl(var(--card))]">'
+            '<article class="dz-card">'
             '<h3 id="card-title-card-0">Grade Distribution</h3>'
             "<div>"
             '<div data-dz-region id="region-grade_distribution">'

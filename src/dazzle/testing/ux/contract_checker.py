@@ -47,77 +47,26 @@ from dazzle.testing.ux.htmx_client import _extract_workspace_layout, parse_html
 # `dz-card` token so the positioning wrapper and header/body never self-nest.
 _SEMANTIC_CARD_SURFACE = "dz-card"
 
-_ROUNDED_CLASSES = (
-    "rounded",
-    "rounded-sm",
-    "rounded-md",
-    "rounded-lg",
-    "rounded-xl",
-    "rounded-2xl",
-    "rounded-3xl",
-    "rounded-full",
-)
-
-
-def _is_rounded_class(cls: str) -> bool:
-    """Return True if a class represents a rounded-corner utility.
-
-    Accepts both fixed-scale forms (``rounded``, ``rounded-md``,
-    ``rounded-full``) and arbitrary-value forms (``rounded-[4px]``,
-    ``rounded-[12px]``) which Dazzle's own templates use via
-    ``rounded-[6px]`` in the ``region_card`` macro. Side-scoped rounded
-    classes (``rounded-t-md``, ``rounded-l-[4px]``) also count.
-    """
-    if cls in _ROUNDED_CLASSES:
-        return True
-    # rounded-[...] or rounded-t-[...] / rounded-t-md etc.
-    return cls.startswith("rounded-")
-
-
-def _is_side_border_class(cls: str) -> bool:
-    """Return True for side-scoped border classes (e.g. ``border-l-4``,
-    ``border-t-[hsl(var(--primary))]``). These are accent lines, not
-    a card edge, and should not count as card-chrome surface.
-    """
-    for side in ("border-l-", "border-r-", "border-t-", "border-b-", "border-x-", "border-y-"):
-        if cls.startswith(side):
-            return True
-    return False
-
 
 def _has_card_chrome(class_attr: str | None) -> bool:
     """Return True if a class string represents a visible card layer.
 
-    Two detection paths:
+    A card surface carries the exact ``dz-card`` token — the shape emitted by
+    both the dashboard slot and the standalone Card primitive since ADR-0049.
+    Matched exactly so the ``dz-card-wrapper`` positioner and
+    ``dz-card-header``/``-body``/``__header`` sub-parts never count as their own
+    surface (which would self-nest).
 
-    1. **Semantic (current substrate).** The class list carries the exact
-       ``dz-card`` token — the card surface emitted by both the dashboard slot
-       and the standalone Card primitive since ADR-0049. Matched exactly so the
-       ``dz-card-wrapper`` positioner and ``dz-card-header``/``-body``/``__header``
-       sub-parts never count as their own surface (which would self-nest).
-
-    2. **Legacy (pre-substrate).** A rounded element with a **full border**
-       (the defining edge of a card surface). A bg-only rounded element is not
-       chrome: it could be a progress-bar track (``rounded-full bg-muted``), a
-       kanban column backdrop (``rounded-[6px] bg-muted/0.4``), or a decorative
-       tile. A card reads as a card because of its edge, not its fill, so we
-       require a non-side border. Side-scoped borders (``border-l-4``,
-       ``border-t-red-500``) are accents, not a card edge, and excluded.
+    The legacy Tailwind-utility heuristic (a rounded element with a full border)
+    was retired in HMC-002b (2026-07-08): every card surface the framework emits
+    is now semantic ``dz-card`` (0 emitters produce Tailwind rounded+border card
+    chrome; no fixture/custom_renderer hand-authors it), so the heuristic only
+    detected markup that no longer renders. The structural ``dz-card`` invariant
+    is the primary gate.
     """
     if not class_attr:
         return False
-    classes = class_attr.split()
-    # (1) Semantic substrate card surface — the production shape since #1042.
-    if _SEMANTIC_CARD_SURFACE in classes:
-        return True
-    # (2) Legacy Tailwind-utility heuristic (hand-authored markup only).
-    has_rounded = any(_is_rounded_class(c) for c in classes)
-    if not has_rounded:
-        return False
-    has_full_border = any(
-        c == "border" or (c.startswith("border-") and not _is_side_border_class(c)) for c in classes
-    )
-    return has_full_border
+    return _SEMANTIC_CARD_SURFACE in class_attr.split()
 
 
 class _NestedChromeScanner(HTMLParser):
