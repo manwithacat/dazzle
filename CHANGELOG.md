@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.14] - 2026-07-08
+
+### Changed
+- **HM-convergence (HMC-003b): `dazzle-layer.css` removed from the served bundle.**
+  Its remaining rules are all dead for the main HaTchi-MaXchi runtime: `#app`/`.dz-app`
+  root layout (the main shell is `<body class="dz-page">` + `.dz-app-shell`, which owns
+  its own `min-height:100vh` in HM `app-shell.css`), `.dz-app__main` + `.dz-text-muted`
+  (used only by the legacy pre-HM `dnr-ui`/`build-ui` export — 0 references in any
+  render/page emitter), empty no-op hooks (`.dz-workspace`/`__header`/`__sidebar`/
+  `__footer`; HM `workspace-shell.css` owns the real `.dz-workspace`), and a
+  commented-out `[data-dazzle-entity]` rule. Removed from `css_loader.CSS_SOURCE_FILES`
+  (HMC-007 pattern); file retained on disk for the legacy dnr export. Provably-inert
+  removal — served-bundle inspection confirms the dazzle-layer classes are gone while
+  the HM-owned `.dz-app-shell`/`.dz-workspace`/`.dz-empty-state` remain. Reservoir
+  `css_lines_dazzle_native` 3156→3050 (−106).
+
+### Agent Guidance
+- **`dazzle-layer.css` is no longer bundled.** The main runtime's shell/layout is fully
+  HM-owned (`.dz-app-shell`, `.dz-workspace`, `.dz-empty-state`). The file survives only
+  for the legacy `dazzle build-ui`/`dnr-ui` export (pre-HM, no HM dist in its CSS, not on
+  the serve/build/test path; its generator is defunct). Don't add rules to it — author
+  shell/layout CSS in HaTchi-MaXchi.
+
 ## [0.98.13] - 2026-07-08
 
 ### Changed

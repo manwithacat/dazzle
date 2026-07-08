@@ -65,7 +65,18 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     ("components", "css/components/richtext.css"),
     # v0.71.x guided onboarding (overlay primitives for the eight step kinds).
     ("components", "css/components/onboarding.css"),
-    ("components", "css/dazzle-layer.css"),
+    # dazzle-layer.css removed from the bundle (HMC-003b, 2026-07-08): its
+    # remaining rules are all dead for the main HM runtime — `#app`/`.dz-app`
+    # (root layout; the main shell is `<body class="dz-page">` + `.dz-app-shell`,
+    # which owns its own min-height:100vh in HM app-shell.css), `.dz-app__main`
+    # + `.dz-text-muted` (used ONLY by the legacy pre-HM `dnr-ui`/`build-ui`
+    # export, never by render/page emitters), empty no-op hooks
+    # (`.dz-workspace`/`__header`/`__sidebar`/`__footer`; HM workspace-shell.css
+    # owns the real `.dz-workspace`), and a commented-out `[data-dazzle-entity]`
+    # rule. Empty-state styling was folded into HM in HMC-003c. Provably inert
+    # removal — no main-runtime emitter references any of these. File retained on
+    # disk for the legacy dnr export (its generator is defunct; committed dnr-ui
+    # snapshots bake their own CSS).
     ("components", "css/site-sections.css"),
 )
 
