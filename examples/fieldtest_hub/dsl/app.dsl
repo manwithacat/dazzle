@@ -1237,3 +1237,137 @@ transaction RecordRepair "Record Repair Cost":
     code: 1
 
   idempotency_key: event.id
+
+# =============================================================================
+# RHYTHMS — longitudinal persona journeys (#1559 follow-on)
+# Thin temporal ordering over existing stories: each scene cites an ST-xxx,
+# it does not re-describe the behaviour. Verify with `dazzle rhythm fidelity`.
+# =============================================================================
+
+rhythm engineer_lifecycle "Engineer — Device Lifecycle":
+  persona: engineer
+  cadence: "continuous"
+
+  # Setup — bring a new device online.
+  phase setup:
+    kind: onboarding
+    scene register_device "Register a new device":
+      on: device_create
+      action: submit
+      entity: Device
+      story: ST-019
+      expects: "A new device is recorded in prototype state"
+    scene activate_device "Promote the device to active":
+      on: device_detail
+      action: approve
+      entity: Device
+      story: ST-020
+      expects: "A validated prototype moves to active and is testable in the field"
+
+  # Operate — triage and drive issue reports to resolution.
+  phase operate:
+    kind: active
+    depends_on: setup
+    scene triage_issues "Triage incoming issue reports":
+      on: issue_report_list
+      action: review
+      entity: IssueReport
+      story: ST-037
+      expects: "Recent open issue reports are reviewed and prioritised"
+    scene advance_issue "Take a triaged issue into progress":
+      on: issue_report_detail
+      action: submit
+      entity: IssueReport
+      story: ST-026
+      expects: "A triaged issue is picked up and moves to in_progress"
+    scene fix_issue "Mark an issue fixed":
+      on: issue_report_detail
+      action: approve
+      entity: IssueReport
+      story: ST-027
+      expects: "An in_progress issue is confirmed fixed"
+
+  # Release — cut and ship firmware across a device batch.
+  phase release:
+    kind: periodic
+    cadence: "each firmware cycle"
+    depends_on: operate
+    scene cut_firmware "Draft a firmware release":
+      on: firmware_release_create
+      action: submit
+      entity: FirmwareRelease
+      story: ST-029
+      expects: "A new firmware release is drafted"
+    scene ship_firmware "Ship the firmware release":
+      on: firmware_release_detail
+      action: approve
+      entity: FirmwareRelease
+      story: ST-030
+      expects: "A drafted release moves to released and is available to devices"
+    scene link_batch "Link the release to a device batch":
+      on: firmware_release_detail
+      action: submit
+      entity: FirmwareRelease
+      story: ST-038
+      expects: "The release is associated with the devices it targets"
+
+  # Retire — recall or retire devices at end of life.
+  phase retire:
+    kind: offboarding
+    scene recall_device "Recall a device":
+      on: device_detail
+      action: approve
+      entity: Device
+      story: ST-039
+      expects: "A device with a field fault is pulled from service"
+    scene retire_device "Retire a device":
+      on: device_detail
+      action: approve
+      entity: Device
+      story: ST-022
+      expects: "An end-of-life device is moved to retired"
+
+rhythm tester_fieldwork "Field Tester — Test Visit":
+  persona: tester
+  cadence: "each field visit"
+
+  phase fieldwork:
+    kind: active
+    scene check_assignments "Check assigned devices":
+      on: device_list
+      action: browse
+      entity: Device
+      story: ST-044
+      expects: "The tester sees the devices assigned to them for this visit"
+    scene run_session "Log a test session":
+      on: test_session_create
+      action: submit
+      entity: TestSession
+      story: ST-043
+      expects: "A completed test session is recorded against a device"
+    scene report_issue "Report a device issue":
+      on: issue_report_create
+      action: submit
+      entity: IssueReport
+      story: ST-042
+      expects: "A field fault is reported and linked to the device"
+
+rhythm manager_oversight "Manager — Weekly Review":
+  persona: manager
+  cadence: "weekly"
+
+  phase review:
+    kind: periodic
+    cadence: "weekly"
+    scene check_workload "Review team workload":
+      on: engineering_dashboard
+      action: review
+      entity: Task
+      story: ST-040
+      expects: "Open task load across testers is visible at a glance"
+    scene track_releases "Track release progress":
+      on: firmware_release_list
+      action: review
+      entity: FirmwareRelease
+      story: ST-041
+      expects: "In-flight firmware releases and their states are visible"

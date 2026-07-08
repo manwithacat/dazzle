@@ -1764,12 +1764,14 @@ def _make_fidelity_spec(
     return spec
 
 
-# One scoring contract: fidelity = served / total scenes, where a scene
-# is served when its expects/actions match the target surface (or the
-# target is a workspace, or it carries no expects). Collapsed from seven
-# scenario tests (#1530); each row asserts exactly the fields the original
-# test asserted. The proxy-detail reporting contract stays named below
-# (test_fidelity_scene_proxied).
+# One scoring contract: fidelity = served / total scenes, where a scene is
+# served when it is STRUCTURALLY aligned with the target surface — the scene's
+# action(s) are supported and its entity matches (or the target is a workspace).
+# An `expects` string that shares no keyword with surface fields is a soft
+# ADVISORY, not a gap (#1559: `expects` is free-form intent, not a field echo,
+# so it must not gate served). Collapsed from seven scenario tests (#1530); each
+# row asserts exactly the fields the original test asserted. The proxy-detail
+# reporting contract stays named below (test_fidelity_scene_proxied).
 @pytest.mark.parametrize(
     ("spec", "expected"),
     [
@@ -1790,7 +1792,9 @@ def _make_fidelity_spec(
             {"rhythm_fidelity": 1.0, "scenes_served": 1, "scenes_proxied": 0},
             id="served-expects-match",
         ),
-        # Mix of served and proxied scenes gives correct fidelity score.
+        # Mix of served and proxied scenes gives correct fidelity score. s2 is
+        # proxied by a STRUCTURAL gap: it needs an `approve` action the surface
+        # doesn't support (an expects/field mismatch alone is only advisory).
         pytest.param(
             _make_fidelity_spec(
                 [
@@ -1798,12 +1802,12 @@ def _make_fidelity_spec(
                     SceneSpec(
                         name="s2",
                         surface="company_detail",
-                        expects="financial_summary_visible",
+                        actions=["approve"],
                     ),
                 ],
                 surfaces=[
                     _make_fidelity_surface("task_list", ["title", "status", "due_date"]),
-                    _make_fidelity_surface("company_detail", ["name", "address"]),
+                    _make_fidelity_surface("company_detail", ["name", "address"], ["export"]),
                 ],
             ),
             {"rhythm_fidelity": 0.5, "scenes_served": 1, "scenes_proxied": 1},
@@ -1908,7 +1912,13 @@ def test_fidelity_scoring(spec: MagicMock, expected: dict):
 
 
 def test_fidelity_scene_proxied():
-    """Scene with expects not matching surface fields is flagged as proxy."""
+    """Scene whose action the surface can't support is flagged as a proxy.
+
+    Proxy status is a STRUCTURAL judgement now (#1559): the scene needs an
+    `approve` action, but `company_detail` only exposes `export`, so the
+    surface can't serve the scene. (An expects/field mismatch alone would be a
+    soft advisory, not a proxy.)
+    """
     from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
 
     rhythm = RhythmSpec(
@@ -1922,7 +1932,7 @@ def test_fidelity_scene_proxied():
                     SceneSpec(
                         name="dividend_review",
                         surface="company_detail",
-                        expects="distributable_reserves_visible",
+                        actions=["approve"],
                     ),
                 ],
             ),
@@ -1934,7 +1944,9 @@ def test_fidelity_scene_proxied():
     persona.id = "user"
     spec.personas = [persona]
     spec.surfaces = [
-        _make_fidelity_surface("company_detail", ["name", "registration_number", "address"])
+        _make_fidelity_surface(
+            "company_detail", ["name", "registration_number", "address"], ["export"]
+        )
     ]
     spec.workspaces = []
     spec.domain.entities = []
@@ -1949,7 +1961,7 @@ def test_fidelity_scene_proxied():
     assert result["scenes_proxied"] == 1
     assert len(result["proxy_scenes"]) == 1
     assert result["proxy_scenes"][0]["scene"] == "dividend_review"
-    assert "distributable_reserves_visible" in result["proxy_scenes"][0]["gaps"][0]
+    assert "approve" in result["proxy_scenes"][0]["gaps"][0]
 
 
 def test_fidelity_not_found():

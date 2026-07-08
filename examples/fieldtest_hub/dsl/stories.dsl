@@ -185,6 +185,7 @@ story ST-036 "Engineer changes Task from in_progress to open":
     - "Task.status becomes 'open'"
 
 story ST-037 "Engineer triages recent issue reports":
+  status: accepted
   persona: engineer
   trigger: user_click
   entities: [IssueReport]
@@ -195,6 +196,7 @@ story ST-037 "Engineer triages recent issue reports":
     - "Engineer can transition a report from 'open' to 'triaged'"
 
 story ST-038 "Engineer links firmware release to a device batch":
+  status: accepted
   persona: engineer
   trigger: form_submitted
   entities: [FirmwareRelease, Device]
@@ -205,6 +207,7 @@ story ST-038 "Engineer links firmware release to a device batch":
     - "Devices matching the batch_number show the new firmware version"
 
 story ST-039 "Engineer marks a device as recalled":
+  status: accepted
   persona: engineer
   trigger: status_changed
   entities: [Device]
@@ -216,6 +219,7 @@ story ST-039 "Engineer marks a device as recalled":
     - "Associated testers are notified"
 
 story ST-040 "Manager reviews team workload":
+  status: accepted
   persona: manager
   trigger: user_click
   entities: [Task, Tester]
@@ -226,6 +230,7 @@ story ST-040 "Manager reviews team workload":
     - "Manager can reassign a Task from one Engineer to another"
 
 story ST-041 "Manager tracks release progress":
+  status: accepted
   persona: manager
   trigger: user_click
   entities: [FirmwareRelease]
@@ -236,6 +241,7 @@ story ST-041 "Manager tracks release progress":
     - "Manager can see counts of drafted vs released vs deprecated"
 
 story ST-042 "Field Tester reports a device issue":
+  status: accepted
   persona: tester
   trigger: form_submitted
   entities: [IssueReport, Device]
@@ -246,6 +252,7 @@ story ST-042 "Field Tester reports a device issue":
     - "IssueReport.status starts as 'open'"
 
 story ST-043 "Field Tester logs a test session":
+  status: accepted
   persona: tester
   trigger: form_submitted
   entities: [TestSession, Device]
@@ -256,6 +263,7 @@ story ST-043 "Field Tester logs a test session":
     - "Session appears in the tester's dashboard"
 
 story ST-044 "Field Tester views devices assigned to them":
+  status: accepted
   persona: tester
   trigger: user_click
   entities: [Device]

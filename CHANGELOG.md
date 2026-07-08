@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.97.2] - 2026-07-08
+
+### Changed
+- **`dazzle rhythm fidelity` now scores "served" structurally, not by prose
+  overlap (#1559 follow-on).** A scene was previously marked *not served* unless
+  its free-form `expects` string shared a keyword with the target surface's
+  field names — so `register_device` on `device_create` (the Device create
+  surface) scored 0 just because "recorded in prototype state" doesn't echo the
+  `status` field. But `expects` is deliberately free-form intent (#1559: not a
+  field echo), so that heuristic penalised idiomatic authoring. `served` now
+  means **structural alignment** — the scene's action(s) are supported by the
+  surface and its entity matches — and the `expects`↔field mismatch is demoted
+  to a per-scene **advisory** (reported via `advisories` + `scenes_with_advisories`,
+  never flipping `served`). Surfaced by authoring the first multi-app rhythms.
+
+### Added
+- **Story-linked rhythms for `fieldtest_hub`** (engineer_lifecycle,
+  tester_fieldwork, manager_oversight — #1559 follow-on). 15 scenes across 3
+  personas spanning all phase kinds (onboarding → active → periodic →
+  offboarding), each citing an existing story (thin temporal ordering, not
+  re-description); the 8 cited draft stories are ratified to `accepted`. All
+  three score `rhythm fidelity` = 1.0 under the structural model with zero
+  blocking gaps. Second data point proving the rhythm-tooling path ahead of
+  #1559 slices 2/3.
+
 ## [0.97.1] - 2026-07-08
 
 ### Fixed
