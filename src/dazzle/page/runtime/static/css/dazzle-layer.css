@@ -97,28 +97,9 @@
   /* outline: 1px dashed oklch(var(--p) / 0.3); */
 }
 
-/* =============================================================================
-   Empty State
-   ============================================================================= */
-
-/* Improved empty state */
-.dz-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 12rem;
-}
-
-.dz-empty-state h3 {
-  font-weight: 600;
-  /* was hsl(var(--foreground, …)) — a Tailwind-era fossil variable that
-     no longer exists, so the fallback rendered near-black on dark too. */
-  color: var(--colour-text);
-  margin-bottom: 0.25rem;
-}
-
-.dz-empty-state p {
-  color: var(--colour-text-muted);
-  font-size: 0.875rem;
-}
+/* Empty-state styling MIGRATED to HaTchi-MaXchi `components/fragment-primitives.css`
+   (HMC-003c, 2026-07-08). The base container's column-centred layout folded into
+   HM's `.dz-empty-state` (disjoint-property union → byte-identical); the legacy
+   element selectors `.dz-empty-state h3`/`p` became `.dz-empty-state__title`/
+   `__description` (every emitted title/description already carries the BEM class,
+   so the move is computed-identical). Nothing empty-state-related remains here. */

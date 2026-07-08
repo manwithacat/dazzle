@@ -667,11 +667,32 @@
   text-align: center;
   padding: 3rem 1.5rem;
   color: var(--colour-text-muted);
+  /* Column-centred layout folded in from the legacy Dazzle `dazzle-layer.css`
+   * `.dz-empty-state` (HMC-003c). Same selector, disjoint properties → the
+   * served computed style is the byte-identical union of the two former rules. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
 }
 
 /* Empty-state icon (TASTE-8): quiet registry glyph above the message. */
 .dz-empty-state__title {
   color: var(--colour-text); /* tranche-1 nit: was too dim on dark surfaces */
+  /* weight + spacing folded from legacy `.dz-empty-state h3` (HMC-003c). Every
+   * emitted title is `<h3 class="dz-empty-state__title">`, so the element→BEM
+   * move is computed-identical (the old 0,1,1 `h3` rule out-specified this 0,1,0
+   * rule only on `color`, which was the same value). */
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+/* Description line — folded from legacy `.dz-empty-state p` (HMC-003c). Every
+ * emitted description is `<p class="dz-empty-state__description">`. */
+.dz-empty-state__description {
+  color: var(--colour-text-muted);
+  font-size: 0.875rem;
 }
 
 .dz-empty-state__icon {

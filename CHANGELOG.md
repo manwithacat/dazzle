@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.13] - 2026-07-08
+
+### Changed
+- **HM-convergence (HMC-003c): empty-state styling → HaTchi-MaXchi.** The legacy
+  Dazzle `dazzle-layer.css` `.dz-empty-state` rules (column-centred flex layout +
+  `h3`/`p` element selectors) folded into HM's `components/fragment-primitives.css`,
+  which already owns the `.dz-empty-state` primitive. The container layout is a
+  disjoint-property union with HM's existing rule (byte-identical served output); the
+  legacy element selectors `.dz-empty-state h3`/`p` became `.dz-empty-state__title`/
+  `__description` — computed-identical because every emitted title/description already
+  carries its BEM class (verified: 0 bare `<h3>`/`<p>` in any emitted or fixture
+  empty-state). Reservoir `css_lines_dazzle_native` 3175→3156; `dazzle-layer.css`
+  125→105 lines. Verified by served-bundle rule inspection (Tier-A byte-faithful),
+  no capture required.
+
 ## [0.98.12] - 2026-07-08
 
 ### Changed

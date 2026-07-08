@@ -2697,9 +2697,20 @@ gap: var(--space-sm);
 text-align: center;
 padding: 3rem 1.5rem;
 color: var(--colour-text-muted);
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+min-height: 12rem;
 }
 .dz-empty-state__title {
 color: var(--colour-text);
+font-weight: 600;
+margin-bottom: 0.25rem;
+}
+.dz-empty-state__description {
+color: var(--colour-text-muted);
+font-size: 0.875rem;
 }
 .dz-empty-state__icon {
 display: inline-flex;
@@ -9108,22 +9119,6 @@ padding: 2.5rem 3rem;
 opacity: 0.7;
 }
 [data-dazzle-entity]:hover {
-}
-.dz-empty-state {
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-min-height: 12rem;
-}
-.dz-empty-state h3 {
-font-weight: 600;
-color: var(--colour-text);
-margin-bottom: 0.25rem;
-}
-.dz-empty-state p {
-color: var(--colour-text-muted);
-font-size: 0.875rem;
 }
 }
 @layer components {
