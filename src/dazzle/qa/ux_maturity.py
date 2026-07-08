@@ -417,10 +417,22 @@ def _probe_3c() -> ProbeResult:
     # From resolved: only the '*' wildcard reopen applies; resolved-self is absent.
     resolved_reopen = "open" in from_resolved and "resolved" not in from_resolved
     empty_ok = gated_row_transitions(ts, "") == []
-    ok = open_ok and resolved_reopen and empty_ok
+    # Negative-space rules: an explicit edge + a '*' wildcard to the same target
+    # render as ONE button (no dup); a transition into the current state is not
+    # offered (no self-loop). (The #1558 review class.)
+    dup = [
+        TransitionContext(from_state="critical", to_state="offline", label="Off"),
+        TransitionContext(from_state="*", to_state="offline", label="Off"),
+    ]
+    no_dup = [t.to_state for t in gated_row_transitions(dup, "critical")] == ["offline"]
+    no_self_loop = gated_row_transitions(dup, "offline") == []
+    ok = open_ok and resolved_reopen and empty_ok and no_dup and no_self_loop
     return ProbeResult(
         ok=ok,
-        note=f"from_open={from_open} from_resolved={from_resolved} empty_gated={empty_ok}",
+        note=(
+            f"from_open={from_open} from_resolved={from_resolved} "
+            f"empty={empty_ok} no_dup={no_dup} no_self_loop={no_self_loop}"
+        ),
     )
 
 
