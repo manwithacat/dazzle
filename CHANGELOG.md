@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.3] - 2026-07-08
+
+### Changed
+- **HM-convergence reservoir metric corrected (HMC-001 audit).** `scripts/hm_tailwind_reservoir.py`
+  now derives the served Dazzle-native CSS set from `css_loader`'s source-of-truth
+  lists (`CSS_SOURCE_FILES` + `CSS_UNLAYERED_FILES`) minus the HM dist, `vendor/*`,
+  `reset.css`, and site chrome — instead of a naive top-level glob. The v1 glob missed
+  the entire `css/components/` subdir and counted non-served reference files, reporting
+  **869**; the real reservoir is **4037 lines** across 13 served files (~4.6× larger).
+  Baseline re-anchored. The tiered drain order is recorded in the `hm-convergence` lane:
+  legacy/override cruft first (`dz-widgets` DaisyUI overrides, `dazzle-layer` dead
+  aliases, `dz-tones`→HM tokens, `dz.css`→HM htmx-states), then component CSS overlapping
+  existing HM components, `fragments.css` last.
+
 ## [0.98.2] - 2026-07-08
 
 ### Added

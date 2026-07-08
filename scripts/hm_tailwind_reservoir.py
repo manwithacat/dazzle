@@ -83,25 +83,44 @@ def is_tailwind_token(tok: str) -> bool:
     return any(r.match(tok) for r in _UTILITY_RES)
 
 
-# Dazzle-native design-system CSS — the LARGER reservoir. These files carry
-# tokens/layout/component styling that the HM package should own. Site-chrome
-# CSS (feedback-widget, reset, site-sections) is scaffolding, not app design
-# system, so it's excluded from the convergence target.
-_CSS_DIR = "src/dazzle/page/runtime/static/css"
-_CSS_EXCLUDE = {"reset.css", "feedback-widget.css", "site-sections.css"}
+# Dazzle-native design-system CSS — the LARGER reservoir. Derived from the
+# authoritative served-bundle list in `css_loader.py` (CSS_SOURCE_FILES +
+# CSS_UNLAYERED_FILES) rather than a naive glob — the v1 glob missed the whole
+# `css/components/` subdir (undercount ~4.6×) and counted non-served reference
+# files. Excluded from the convergence target: the HM dist (layer=None — already
+# HM-owned), `vendor/*` (third-party CSS), `reset.css` (reset layer, foundational),
+# and `site-sections.css` (marketing/docs site chrome, not app design system).
+_CSS_STATIC = "src/dazzle/page/runtime/static"
+_CSS_EXCLUDE_RELS = {"css/reset.css", "css/site-sections.css"}
+
+
+def _served_dazzle_native_rels() -> list[str]:
+    """The served Dazzle-native design-system CSS files, from css_loader's
+    source-of-truth lists (minus HM dist / vendor / reset / site chrome)."""
+    from dazzle.page.runtime.css_loader import CSS_SOURCE_FILES, CSS_UNLAYERED_FILES
+
+    rels: list[str] = []
+    for layer, rel in CSS_SOURCE_FILES:
+        if layer is None:  # HM dist artifact — already HM-owned
+            continue
+        if rel.startswith("vendor/") or rel in _CSS_EXCLUDE_RELS:
+            continue
+        rels.append(rel)
+    rels.extend(r for r in CSS_UNLAYERED_FILES if r not in _CSS_EXCLUDE_RELS)
+    return rels
 
 
 def _css_reservoir(repo_root: Path) -> dict:
-    base = repo_root / _CSS_DIR
+    static = repo_root / _CSS_STATIC
     files: list[tuple[str, int]] = []
     total = 0
-    if base.exists():
-        for css in sorted(base.glob("*.css")):
-            if css.name in _CSS_EXCLUDE:
-                continue
-            n = css.read_text(encoding="utf-8", errors="replace").count("\n") + 1
-            files.append((css.name, n))
-            total += n
+    for rel in _served_dazzle_native_rels():
+        p = static / rel
+        if not p.exists():
+            continue
+        n = p.read_text(encoding="utf-8", errors="replace").count("\n") + 1
+        files.append((rel, n))
+        total += n
     files.sort(key=lambda x: -x[1])
     return {"css_lines_dazzle_native": total, "css_files": files}
 

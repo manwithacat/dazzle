@@ -24,18 +24,26 @@ Two numbers, both must trend to **zero**:
   `class="…"` attributes (markup reservoir). Baseline 2026-07-08: **8** (4 files;
   `opacity-25/75` — a spinner). Nearly drained already.
 - **`css_lines_dazzle_native`** — lines of Dazzle-native design-system CSS not yet
-  owned by HM (the larger reservoir). Baseline 2026-07-08: **869** across 7 files
-  (`dz.css`, `dazzle-layer.css`, `dz-widgets.css`, `utilities.css`, `dazzle.css`,
-  `dz-tones.css`, `dazzle-framework.css`). Excludes site-chrome scaffolding
-  (`reset.css`, `feedback-widget.css`, `site-sections.css`).
+  owned by HM (the larger reservoir). Baseline (HMC-001 audit, 2026-07-08): **4037**
+  across the **13** served files, derived from `css_loader`'s source-of-truth list
+  (`CSS_SOURCE_FILES` + `CSS_UNLAYERED_FILES`) minus the HM dist, `vendor/*`,
+  `reset.css`, and site-chrome (`site-sections.css`). Biggest: `components/fragments.css`
+  (1214), `components/dashboard.css` (596), `components/onboarding.css` (497),
+  `components/pdf-viewer.css` (444); the unlayered override trio `dz.css` (234) /
+  `dz-widgets.css` (135) / `dz-tones.css` (69) exists specifically to win the cascade
+  over the HM dist — the clearest debt.
 
 Baseline snapshot: `.dazzle/hm-reservoir-baseline.json` (regenerate with
 `--write-baseline` only when intentionally re-anchoring).
 
-> **v1 caveat.** `css_lines_dazzle_native` is a coarse proxy — some of these files
-> carry HM-alignment references and a few rules may already be HM-dist-sourced. The
-> lane's first explore cycle (the reservoir audit) refines the HM-vs-Dazzle-native
-> classification file-by-file before large moves.
+> **HMC-001 correction (2026-07-08).** The v1 metric globbed only top-level `css/*.css`
+> and reported **869** — it missed the entire `css/components/` subdir (the bulk) and
+> counted non-served reference files. Corrected to derive from `css_loader`; real
+> reservoir is ~4.6× larger. Drain order (ratified: Tier-A-first, incremental): the
+> legacy/override cruft first — `dz-widgets` (dead DaisyUI overrides), `dazzle-layer`
+> (aliases referencing a deleted `design-system.css`, several rules already 0-ref),
+> `dz-tones` → HM `tokens/`, `dz.css` → HM `htmx-states.css` — then Tier-B component
+> CSS overlapping existing HM components, `fragments.css` last.
 
 ## Regression detector (every cycle, cheap)
 
