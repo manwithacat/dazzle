@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.1] - 2026-07-08
+
+### Fixed
+- **Card-safety scanners no longer no-op on substrate DOM (#1560).** The HTML
+  card-chrome scanners (`_has_card_chrome` → `find_nested_chromes` /
+  `find_duplicate_titles_in_cards`) keyed off Tailwind `rounded-*`/`border`
+  utilities the typed substrate stopped emitting (ADR-0049 → semantic `dz-card`
+  classes), so they returned `[]` on all real DOM — the defence-in-depth layer
+  for raw-HTML bypass paths (adapter `section.body` passthrough, `custom_renderer`,
+  project region bodies) was silently inactive. The scanner now also matches the
+  exact `dz-card` token (surface class in both the dashboard-slot and
+  standalone-Card idioms), sub-parts matched-exact-excluded. Verified no
+  false-positive on real dashboard/standalone-Card DOM and that it catches an
+  injected `dz-card`-in-`dz-card`. The primary Card-in-Card guarantee remains
+  structural (`containers.py` `Card.__post_init__`), unaffected.
+
+### Changed
+- **De-staled the `/improve` loop playbooks.** Fixed dead references the
+  v0.87→v0.98 velocity left behind: `dazzle qa visual` (removed CLI) → `qa capture`
+  + the visual_tier2 subagent; `dazzle inspect-api` → `dazzle inspect api`; and
+  the framework-ux REFACTOR step's dead `dz-alpine.js`/`design-system.css` paths +
+  the anti-idiom `htmx-alpine-tailwind` stack adapter → the real HM controllers/CSS
+  + `docs/reference/taste.md` + the ratified UI invariants.
+
+### Agent Guidance
+- **Card-safety is enforced structurally first.** The primary guarantee against
+  nested card chrome is the typed-substrate primitive invariants
+  (`render/fragment/primitives/containers.py`), not the HTML scanner. The scanner
+  is defence-in-depth for raw-HTML bypass paths and now inspects the `dz-card`
+  semantic vocabulary. See `docs/reference/card-safety-invariants.md`.
+- **HM-convergence is the direction for legacy Tailwind.** The retained
+  Tailwind-utility detection path is explicit migration debt; the house direction
+  is to delegate all frontend design into HaTchi-MaXchi. A tracked `hm-convergence`
+  improve lane (in progress) owns draining the Tailwind reservoir from the
+  emitters and retiring that path.
+
 ## [0.98.0] - 2026-07-08
 
 ### Added
