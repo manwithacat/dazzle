@@ -5,7 +5,7 @@ Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve tho
 ARGUMENTS: $ARGUMENTS
 
 If `$ARGUMENTS` is empty: driver picks the lane.
-If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite`): force that lane. (`self-audit` forces the driver-level self-audit strategy.)
+If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep.)
 If `$ARGUMENTS` is `<lane> <strategy>`: force that lane and that sub-strategy.
 If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (no cycle).
 If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count`, log the manual reset, and exit (no cycle). Operator escape hatch — use when the cap was reached but exploration should continue (e.g. after a large framework change that a release signal didn't capture).
@@ -19,6 +19,7 @@ If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count
 | trials | qualitative persona scenarios (trial.toml) | `## Lane: trials` | `improve/lanes/trials.md` |
 | ux-converge | example apps with nonzero UX contract failures | `## Lane: ux-converge` | `improve/lanes/ux-converge.md` |
 | test-suite | test-suite redundancy-cluster collapse (#1530) | `## Lane: test-suite` | `improve/lanes/test-suite.md` |
+| hm-convergence | drain Tailwind + legacy-layout CSS into HaTchi-MaXchi (2026-07-08 directive) | `## Lane: hm-convergence` | `improve/lanes/hm-convergence.md` |
 
 ## State files
 
