@@ -62,6 +62,7 @@ story ST-018 "User creates a new Comment":
     - "User sees confirmation message"
 
 story ST-019 "Support Agent views all open tickets in a filterable list":
+  status: accepted
   persona: agent
   trigger: user_click
   entities: [Ticket]
@@ -72,6 +73,7 @@ story ST-019 "Support Agent views all open tickets in a filterable list":
     - "Agent can filter by priority, category, and assigned_to"
 
 story ST-020 "Support Agent picks up a ticket":
+  status: accepted
   persona: agent
   trigger: form_submitted
   entities: [Ticket]
@@ -83,6 +85,7 @@ story ST-020 "Support Agent picks up a ticket":
     - "Ticket.status transitions to 'in_progress'"
 
 story ST-021 "Support Agent views full ticket detail with comment history":
+  status: accepted
   persona: agent
   trigger: user_click
   entities: [Ticket, Comment]
@@ -93,6 +96,7 @@ story ST-021 "Support Agent views full ticket detail with comment history":
     - "Internal comments are visually distinguished from customer-visible comments"
 
 story ST-022 "Support Agent adds an internal note":
+  status: accepted
   persona: agent
   trigger: form_submitted
   entities: [Comment]
@@ -103,6 +107,7 @@ story ST-022 "Support Agent adds an internal note":
     - "Comment is visible only to agents and managers"
 
 story ST-023 "Support Agent resolves a ticket":
+  status: accepted
   persona: agent
   trigger: status_changed
   entities: [Ticket]

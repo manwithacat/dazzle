@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.97.1] - 2026-07-08
+
+### Fixed
+- **Rhythm scene `story:` refs now parse compound story IDs (e.g. `ST-019`).**
+  The lexer splits `ST-019` into `IDENTIFIER '-' NUMBER`, and the scene parser
+  read only the leading identifier — so every unquoted `story: ST-nnn` silently
+  resolved to `ST` and failed link-time validation as an unknown story. Now
+  reads the full compound ID, matching how story blocks declare their own IDs.
+  Surfaced by authoring the fleet's first story-linked rhythm.
+
+### Added
+- **First story-linked rhythm in the example fleet** (`support_tickets`
+  `agent_daily`, #1559 follow-on). Five scenes across `triage` → `resolve`
+  phases, each citing an existing agent story (ST-019→023) — the "thin temporal
+  ordering over story references" pattern (author behavior once as a story, then
+  sequence it in a rhythm). `dazzle rhythm fidelity agent_daily` = 1.0; `rhythm
+  gaps` clean after ratifying the cited stories; the KG seeds all five
+  `scene_exercises_story` edges. Exercises the rhythm-tooling path end-to-end
+  ahead of #1559 slices 2 (coherence query) and 3 (rhythm derivation).
+
 ## [0.97.0] - 2026-07-08
 
 ### Changed

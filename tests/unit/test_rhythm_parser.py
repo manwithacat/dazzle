@@ -77,6 +77,32 @@ rhythm onboarding "Onboarding":
     assert scene.story == "enroll_story"
 
 
+def test_parse_scene_compound_story_id_unquoted():
+    """`story: ST-019` must capture the whole compound ID, not just `ST`.
+
+    Regression: the lexer splits `ST-019` into IDENTIFIER '-' NUMBER, and the
+    scene parser previously read only the leading identifier — so every
+    `story: ST-nnn` reference silently resolved to `ST` and then failed
+    link-time validation as an unknown story. Compound IDs are how stories
+    declare their own IDs, so an unquoted ref must parse the same shape.
+    """
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm daily "Daily":
+  persona: agent
+
+  phase work:
+    scene resolve "Resolve":
+      on: ticket_detail
+      story: ST-019
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    scene = fragment.rhythms[0].phases[0].scenes[0]
+    assert scene.story == "ST-019"
+
+
 def test_parse_multiple_phases():
     dsl = """\
 module test_app

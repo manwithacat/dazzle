@@ -238,7 +238,15 @@ class RhythmParserMixin:
                 if self.match(TokenType.STRING):
                     story = self.advance().value
                 else:
-                    story = self.expect_identifier_or_keyword().value
+                    # Story IDs are compound (e.g. ST-019): the lexer splits
+                    # them into IDENTIFIER '-' NUMBER, so concatenate until the
+                    # line ends — mirrors the story block's own _parse_compound_id.
+                    # Without this, `story: ST-019` silently captured only `ST`.
+                    parts: list[str] = []
+                    while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+                        parts.append(str(self.current_token().value))
+                        self.advance()
+                    story = "".join(parts)
                 self.skip_newlines()
 
             else:

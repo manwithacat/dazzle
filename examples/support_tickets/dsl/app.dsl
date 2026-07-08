@@ -710,14 +710,52 @@ webhook TicketNotify "Ticket Lifecycle Webhook":
 
 rhythm agent_daily "Agent Daily Triage":
   persona: agent
+  cadence: "daily"
 
-  phase morning:
-    scene review "Review Queue":
-      on: ticket_list
+  # Triage — start of shift: work the open queue, take ownership.
+  phase triage:
+    kind: active
+    cadence: "start of each shift"
 
-  phase midday:
-    scene resolve "Resolve Active":
+    scene scan_queue "Scan the open queue":
       on: ticket_queue
+      action: browse
+      entity: Ticket
+      story: ST-019
+      expects: "The unresolved queue is visible and filterable, critical work surfaced first"
+
+    scene pick_up "Pick up a ticket":
+      on: ticket_detail
+      action: submit
+      entity: Ticket
+      story: ST-020
+      expects: "Agent takes ownership of an open ticket and it moves to in_progress"
+
+  # Resolve — work a ticket to completion, then close it out.
+  phase resolve:
+    kind: active
+    depends_on: triage
+
+    scene review_detail "Read the ticket and its history":
+      on: ticket_detail
+      action: review
+      entity: Ticket
+      story: ST-021
+      expects: "Full ticket detail with the complete comment history is legible in one place"
+
+    scene add_note "Add an internal note":
+      on: comment_create
+      action: submit
+      entity: Comment
+      story: ST-022
+      expects: "Agent records an internal working note against the ticket"
+
+    scene resolve_ticket "Resolve the ticket":
+      on: ticket_detail
+      action: approve
+      entity: Ticket
+      story: ST-023
+      expects: "Agent moves an in_progress ticket to resolved once the fix is confirmed"
 
 # =============================================================================
 # ISLAND — lightweight interactive widget for ticket composer
