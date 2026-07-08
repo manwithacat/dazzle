@@ -177,3 +177,30 @@ graph is author-declared and is the single source of truth; the same
 a competent engineer traces any affordance to a declared `transitions:` edge.
 Detector is **live in the normal workflow** — every detail view and list of a
 state-machine entity exercises it (unlike a rarely-authored signal).
+
+---
+
+## Post-review fix (2026-07-08)
+
+An adversarial review of the built change found two defects, both from the
+`(from_state, to_state)` compile dedup and both fixed in `gated_row_transitions`:
+
+1. **SEV-2 — duplicate affordance.** An explicit edge (`critical -> offline`) and
+   a `* -> offline` wildcard both survive compile; for a record in `critical`
+   both match the gate, rendering **two identical "Offline" buttons** (live in
+   `examples/ops_dashboard` `System`). A regression from the old
+   dedup-by-`to_state`.
+2. **SEV-3 — self-loop button.** A `* -> X` wildcard offered a no-op button to a
+   record already in state X (the queue excludes `to_state == current`).
+
+Fix: `gated_row_transitions` now (a) excludes `to_state == current_state`
+(no self-loop) and (b) dedups the gated result by `to_state` (one button per
+reachable target — an explicit edge or a wildcard, first match wins). The
+compile build still preserves every `(from_state, to_state)` pair so gating can
+match the right source; the gate collapses the *result*. Covered by
+`test_state_affordance.py` (dedup + self-loop cases) and `_probe_3c`.
+
+Known non-blocking NIT: a list-row transition button has no `hx-target`/`hx-swap`,
+so it relies on the entity PUT's `HX-Redirect` to full-reload the page rather
+than doing the queue's targeted region swap — functionally correct, a perf-polish
+follow-up.

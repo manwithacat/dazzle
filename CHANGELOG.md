@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.96.7] - 2026-07-08
+
+### Added
+- **State-gated affordances (UX-maturity 3c → L4, #1558).** State-machine
+  transition affordances are now filtered to those valid from a record's
+  **current state** (`from_state == current` or the `*` wildcard) — on the
+  **detail view** and on **regular list rows** (previously only queue/kanban
+  gated; the detail view showed every transition regardless of state). The
+  compile build preserves `from_state` on `TransitionContext`; the shared
+  `gated_row_transitions` gate excludes self-loops and dedups by target (one
+  button per reachable state, queue parity). Guards remain enforced by HTTP
+  validation on click. Byte-identical for entities with no state machine. New
+  `render/fragment/state_affordance.py`. **UX-maturity index reaches 4.0 —
+  13/13 criteria at L4** (the rubric is maxed).
+
+### Agent Guidance
+- A state-machine entity's transition buttons are now **auto-gated by current
+  state** everywhere (detail + lists) — a `resolved` record no longer shows an
+  `in_progress` button. Nothing to declare; it's inferred from `state:` /
+  `transitions:`. The gate lives in `render/fragment/state_affordance.py`; the
+  queue's older `to_state != current` heuristic is a candidate to converge onto
+  it later (a noted follow-up, not done).
+- Known minor: a list-row transition currently triggers a full-page reload (via
+  the entity PUT's `HX-Redirect`), not a targeted region swap like the queue —
+  functionally correct, a perf-polish follow-up.
+
 ## [0.96.6] - 2026-07-08
 
 ### Fixed
