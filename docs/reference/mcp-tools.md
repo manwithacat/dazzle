@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 34 tools, 157 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 34 tools, 158 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -42,7 +42,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`sitespec`](#sitespec) | 14 | SiteSpec operations: get, validate, scaffold, coherence, review, advise |
 | [`spec_analyze`](#spec_analyze) | 6 | Analyze narrative specs before DSL generation |
 | [`status`](#status) | 5 | Status operations: mcp, logs, active_project, telemetry, activity |
-| [`story`](#story) | 3 | Story operations: get, wall, coverage, scope_fidelity |
+| [`story`](#story) | 4 | Story operations: get, composition, coverage, scope_fidelity |
 | [`test_design`](#test_design) | 2 | Test design operations: get, gaps |
 | [`test_intelligence`](#test_intelligence) | 6 | Query persisted test result history |
 | [`user_management`](#user_management) | 9 | User management operations: list, create, get, update, reset_password, deactivate, list_sessions, revoke_session, config |
@@ -507,14 +507,14 @@ Status operations: mcp, logs, active_project, telemetry, activity. Use 'activity
 
 ### `story`
 
-Story operations: get, wall, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). scope_fidelity checks that implementing processes exercise all entities in story scope.
+Story operations: get, composition, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). composition maps the story⇄rhythm graph — which phase composes a story (and whether it is active), and which stories are declared but composed into no journey. scope_fidelity checks that implementing processes exercise all entities in story scope.
 
-**Operations (3):** `get`, `coverage`, `scope_fidelity`
+**Operations (4):** `get`, `composition`, `coverage`, `scope_fidelity`
 
 **Parameters:**
 
 - `status_filter` *(string)* — Filter by status (for get)
-- `story_ids` *(array)* — Story IDs (for get: fetch full details)
+- `story_ids` *(array)* — Story IDs (for get: fetch full details; for composition: focus on these stories)
 - `view` *(string)* — View mode for get operation. 'wall' groups stories by implementation status (working/needs polish/not started)
 - `persona` *(string)* — Filter stories by persona/actor name (for get with view=wall)
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.

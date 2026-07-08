@@ -276,7 +276,7 @@ The table below is drift-gated against the live registry (`tests/unit/test_docs_
 | `sitespec` | get, validate, scaffold, get_copy, scaffold_copy, review_copy, coherence, review, get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts, advise |
 | `spec_analyze` | discover_entities, identify_lifecycles, extract_personas, surface_rules, generate_questions, refine_spec |
 | `status` | mcp, logs, active_project, telemetry, activity |
-| `story` | get, coverage, scope_fidelity |
+| `story` | get, composition, coverage, scope_fidelity |
 | `test_design` | get, gaps |
 | `test_intelligence` | summary, failures, regression, coverage, context, journey |
 | `user_management` | list, create, get, update, reset_password, deactivate, list_sessions, revoke_session, config |
@@ -413,4 +413,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.97.2 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.97.3 | **Python**: 3.12+ | **Status**: Production Ready

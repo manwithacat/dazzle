@@ -243,7 +243,7 @@ def _tool_story() -> Tool:
     """Stories (replaces 6 tools)."""
     return Tool(
         name="story",
-        description="Story operations: get, wall, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). scope_fidelity checks that implementing processes exercise all entities in story scope.",
+        description="Story operations: get, composition, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). composition maps the story⇄rhythm graph — which phase composes a story (and whether it is active), and which stories are declared but composed into no journey. scope_fidelity checks that implementing processes exercise all entities in story scope.",
         inputSchema={
             "type": "object",
             "properties": {
@@ -251,6 +251,7 @@ def _tool_story() -> Tool:
                     "type": "string",
                     "enum": [
                         "get",
+                        "composition",
                         "coverage",
                         "scope_fidelity",
                     ],
@@ -264,7 +265,7 @@ def _tool_story() -> Tool:
                 "story_ids": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Story IDs (for get: fetch full details)",
+                    "description": "Story IDs (for get: fetch full details; for composition: focus on these stories)",
                 },
                 "view": {
                     "type": "string",

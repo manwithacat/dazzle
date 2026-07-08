@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.97.3] - 2026-07-08
+
+### Added
+- **`story` MCP op `composition` — the story⇄rhythm coherence query (#1559
+  slice 2).** Reads the scene→story links rhythms declare (the edge the KG
+  already seeds as `scene_exercises_story` but that nothing read back) and
+  answers both directions in one stateless AppSpec read: *story → rhythms*
+  ("which phase composes story X, and is it active?" — pass `story_ids` to
+  focus) and *rhythm → stories* (the full `by_story` index plus the coherence
+  signals — `stories_uncomposed`: stories declared but composed into no
+  journey; `scenes_unlinked`: scenes citing no story). Purpose-built and
+  story-aware; no KG DB population required. `story` tool ops are now
+  get / composition / coverage / scope_fidelity (mcp-tools API surface bumped).
+
 ## [0.97.2] - 2026-07-08
 
 ### Changed

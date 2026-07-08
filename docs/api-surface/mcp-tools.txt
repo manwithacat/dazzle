@@ -1349,14 +1349,15 @@ tool: status
   }
 
 tool: story
-  description_hash: aef5fbb3e8fa
-  description_len: 265
+  description_hash: 962e48b73bb6
+  description_len: 432
   {
     "properties": {
       "operation": {
         "description": "Operation to perform",
         "enum": [
           "get",
+          "composition",
           "coverage",
           "scope_fidelity"
         ],
@@ -1381,7 +1382,7 @@ tool: story
         "type": "string"
       },
       "story_ids": {
-        "description": "Story IDs (for get: fetch full details)",
+        "description": "Story IDs (for get: fetch full details; for composition: focus on these stories)",
         "items": {
           "type": "string"
         },

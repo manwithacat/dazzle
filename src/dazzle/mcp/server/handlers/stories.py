@@ -421,6 +421,101 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
+def _composition_focus_view(
+    story_id: str,
+    story_by_id: dict[str, Any],
+    by_story: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    """Story-centric composition view: where a story is composed, and whether
+    any of those placements is an ``active`` phase (#1559 slice 2)."""
+    placements = by_story.get(story_id, [])
+    return {
+        "exists": story_id in story_by_id,
+        "composed_by": placements,
+        "active_phases": [p for p in placements if p["phase_kind"] == "active"],
+    }
+
+
+@wrap_handler_errors
+def story_composition_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Bidirectional story ⇄ rhythm composition map (#1559 slice 2).
+
+    Reads the scene→story links that rhythms declare (the edge the KG already
+    seeds as ``scene_exercises_story`` but that nothing read back). Answers both
+    directions in one stateless read:
+
+    - **story → rhythms** ("which phase composes story X, and is it active?") —
+      pass ``story_ids`` to focus on specific stories.
+    - **rhythm → stories** — the full ``by_story`` index plus the coherence
+      signals: stories declared but composed into no journey
+      (``stories_uncomposed``) and scenes that cite no story (``scenes_unlinked``).
+
+    Purely a read of the AppSpec (the source of truth for the edge); no KG DB
+    population required.
+    """
+    app_spec = load_project_appspec(project_root)
+    story_by_id = {s.story_id: s for s in app_spec.stories}
+    focus = set(args.get("story_ids") or [])
+
+    edges: list[dict[str, Any]] = []
+    by_story: dict[str, list[dict[str, Any]]] = {}
+    scenes_unlinked: list[dict[str, Any]] = []
+
+    for rhythm in app_spec.rhythms:
+        for phase in rhythm.phases:
+            phase_kind = phase.kind.value if phase.kind else None
+            for scene in phase.scenes:
+                if not scene.story:
+                    scenes_unlinked.append(
+                        {"rhythm": rhythm.name, "phase": phase.name, "scene": scene.name}
+                    )
+                    continue
+                story = story_by_id.get(scene.story)
+                placement = {
+                    "rhythm": rhythm.name,
+                    "phase": phase.name,
+                    "phase_kind": phase_kind,
+                    "scene": scene.name,
+                    "surface": scene.surface,
+                }
+                by_story.setdefault(scene.story, []).append(placement)
+                edges.append(
+                    {
+                        "story_id": scene.story,
+                        "story_title": story.title if story else None,
+                        "story_status": story.status.value if story else None,
+                        "story_exists": story is not None,
+                        **placement,
+                    }
+                )
+
+    composed = set(by_story)
+    uncomposed = sorted(sid for sid in story_by_id if sid not in composed)
+
+    if focus:
+        stories_view = {
+            sid: _composition_focus_view(sid, story_by_id, by_story) for sid in sorted(focus)
+        }
+        return json.dumps({"story_ids": sorted(focus), "stories": stories_view}, indent=2)
+
+    return json.dumps(
+        {
+            "edges": edges,
+            "by_story": by_story,
+            "stories_uncomposed": uncomposed,
+            "scenes_unlinked": scenes_unlinked,
+            "summary": {
+                "total_stories": len(story_by_id),
+                "composed": len(composed),
+                "uncomposed": len(uncomposed),
+                "linked_scenes": len(edges),
+                "unlinked_scenes": len(scenes_unlinked),
+            },
+        },
+        indent=2,
+    )
+
+
 @wrap_handler_errors
 def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Story Wall — founder-friendly board grouped by implementation status.

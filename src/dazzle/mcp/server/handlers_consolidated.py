@@ -320,6 +320,7 @@ _story_dispatch: Callable[[dict[str, Any]], str] = _make_project_handler(
     "story",
     {
         "get": f"{_MOD_STORY}:get_stories_handler",
+        "composition": f"{_MOD_STORY}:story_composition_handler",
         "coverage": f"{_MOD_STORY_PROC}:stories_coverage_handler",
         "scope_fidelity": f"{_MOD_STORY_PROC}:scope_fidelity_handler",
     },

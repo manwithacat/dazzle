@@ -2008,3 +2008,99 @@ def _make_json_story_data(story_id: str, title: str = "Test Story") -> dict:
         "when": [],
         "then": [{"expression": "it works"}],
     }
+
+
+# ---------------------------------------------------------------------------
+# story ⇄ rhythm composition query (#1559 slice 2)
+# ---------------------------------------------------------------------------
+
+
+def _composition_spec():
+    """Spec with two stories and one rhythm: ST-1 composed (active phase),
+    ST-2 declared but composed into no journey, plus one story-less scene."""
+    stories = [
+        StorySpec(
+            story_id="ST-1",
+            title="Submit report",
+            persona="agent",
+            trigger=StoryTrigger.FORM_SUBMITTED,
+            status=StoryStatus.ACCEPTED,
+        ),
+        StorySpec(
+            story_id="ST-2",
+            title="Archive report",
+            persona="agent",
+            trigger=StoryTrigger.STATUS_CHANGED,
+            status=StoryStatus.ACCEPTED,
+        ),
+    ]
+    rhythm = RhythmSpec(
+        name="agent_daily",
+        persona="agent",
+        phases=[
+            PhaseSpec(
+                name="work",
+                kind=PhaseKind.ACTIVE,
+                scenes=[
+                    SceneSpec(name="submit", surface="report_create", story="ST-1"),
+                    SceneSpec(name="idle_glance", surface="dashboard"),  # no story
+                ],
+            )
+        ],
+    )
+    spec = MagicMock()
+    spec.stories = stories
+    spec.rhythms = [rhythm]
+    return spec
+
+
+def test_story_composition_full_map():
+    from dazzle.mcp.server.handlers.stories import story_composition_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.stories.load_project_appspec",
+        return_value=_composition_spec(),
+    ):
+        result = json.loads(story_composition_handler(Path("/fake"), {}))
+
+    assert result["summary"] == {
+        "total_stories": 2,
+        "composed": 1,
+        "uncomposed": 1,
+        "linked_scenes": 1,
+        "unlinked_scenes": 1,
+    }
+    # ST-2 is declared but composed into no journey — the drift-trap signal.
+    assert result["stories_uncomposed"] == ["ST-2"]
+    # The story-less scene is surfaced for the reverse direction.
+    assert result["scenes_unlinked"] == [
+        {"rhythm": "agent_daily", "phase": "work", "scene": "idle_glance"}
+    ]
+    edge = result["edges"][0]
+    assert edge["story_id"] == "ST-1"
+    assert edge["phase_kind"] == "active"
+    assert edge["story_exists"] is True
+
+
+def test_story_composition_focus_active_phase():
+    """Answers 'which active phase composes story X'."""
+    from dazzle.mcp.server.handlers.stories import story_composition_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.stories.load_project_appspec",
+        return_value=_composition_spec(),
+    ):
+        result = json.loads(
+            story_composition_handler(Path("/fake"), {"story_ids": ["ST-1", "ST-404"]})
+        )
+
+    st1 = result["stories"]["ST-1"]
+    assert st1["exists"] is True
+    assert len(st1["active_phases"]) == 1
+    assert st1["active_phases"][0]["scene"] == "submit"
+    # Unknown story is reported as non-existent, not silently dropped.
+    assert result["stories"]["ST-404"] == {
+        "exists": False,
+        "composed_by": [],
+        "active_phases": [],
+    }
