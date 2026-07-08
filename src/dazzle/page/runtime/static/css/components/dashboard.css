@@ -553,43 +553,9 @@
    width is overridden here (the detail drawer is wider than the HM default).
    The manual `.dz-drawer-backdrop`, the `position:fixed` container and the
    `.is-open` transform were retired 2026-07-04 (native-dialog convergence). */
+/* App-specific instance override only: the detail drawer is wider than the HM
+   default. The generic drawer internal chrome (.dz-drawer-header/-button/-content)
+   MOVED to HM components/drawer.css (HMC-007b — travels with the component). */
 #dz-detail-drawer.dz-drawer {
   width: min(42rem, calc(100vw - 3rem));
-}
-
-.dz-drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-inline: var(--space-md);
-  padding-block: var(--space-sm);
-  border-block-end: 1px solid var(--colour-border);
-  flex-shrink: 0;
-}
-
-.dz-drawer-button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  height: 2rem;
-  padding-inline: var(--space-md);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--colour-text-muted);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background var(--duration-fast) var(--ease-out);
-}
-
-.dz-drawer-button:hover {
-  background: var(--colour-bg);
-}
-
-.dz-drawer-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-md);
 }

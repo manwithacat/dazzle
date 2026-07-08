@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.8] - 2026-07-08
+
+### Changed
+- **HM-convergence (HMC-007b): drawer internal chrome → HM `drawer.css`.** The
+  `.dz-drawer-header` / `.dz-drawer-button` (+`:hover`) / `.dz-drawer-content` rules
+  moved verbatim from Dazzle `dashboard.css` into HaTchi-MaXchi `components/drawer.css`
+  (which already owns the `dialog.dz-drawer` base) — the drawer's chrome now travels
+  with the drawer component. Byte-faithful: the rules were already HM-tokenised, appear
+  exactly once in the served bundle (now from the HM dist), same cascade layer. The
+  app-specific `#dz-detail-drawer` width override stays Dazzle-side. `dashboard.css`
+  596→561; reservoir 3742→3708. HM gallery baselines unchanged. HM package 0.1.61→0.1.62.
+
 ## [0.98.7] - 2026-07-08
 
 ### Removed

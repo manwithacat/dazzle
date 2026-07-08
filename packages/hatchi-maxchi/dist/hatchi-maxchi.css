@@ -2488,6 +2488,47 @@ dialog.drawer > form {
   border-block-start: 1px solid var(--colour-border);
 }
 
+/* Flat-named internal chrome (moved from Dazzle dashboard.css, HMC-007b —
+   the drawer's chrome travels with the drawer component). These are the class
+   names the detail-drawer emitter produces (distinct from the __header/__body
+   BEM parts above); kept verbatim, already tokenised. */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-block-end: 1px solid var(--colour-border);
+  flex-shrink: 0;
+}
+
+.drawer-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.drawer-button:hover {
+  background: var(--colour-bg);
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+}
+
 @media (prefers-reduced-motion: reduce) {
   dialog.drawer { transition: none; }
   dialog.drawer[open],
