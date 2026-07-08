@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.2] - 2026-07-08
+
+### Added
+- **`/improve` capability governance + HM-convergence lane.** The loop now polices
+  its own coverage of everything the project has built, so no capability rots
+  unexercised behind the framework's velocity:
+  - `improve/capability-map.md` — a registry mapping every `dazzle` CLI/MCP/skill/loop
+    capability to an owning lane + staleness status (`USED`/`OWNED-IDLE`/`UNOWNED`/`STALE`/`EXEMPT`).
+  - Driver rules (`improve.md`): a `capability-coverage`-directed explore rule (prefer
+    the lane owning the most-stale/`UNOWNED` capability and exercise it), a
+    `capability-sweep` cadence (≥20 cycles: re-derive inventory, flag `UNOWNED`), and a
+    Step-3 `last-exercised` maintenance stamp.
+  - Wired the previously-orphaned quality-intelligence surface into lanes: rhythm
+    fidelity/gaps + story scope-fidelity + test-design coverage + discovery coherence
+    → example-apps Tier-1; `qa taste-panel` + fitness investigate/vitality + sentinel
+    scan + composition audit → a framework-ux `quality_intelligence_sweep` explore
+    sub-strategy.
+  - New `hm-convergence` lane + `scripts/hm_tailwind_reservoir.py` metric — drives the
+    delegate-all-frontend-design-into-HaTchi-MaXchi directive (2026-07-08) with a
+    Tailwind-reservoir number (markup + Dazzle-native CSS) that must shrink, and a
+    regression detector for new Tailwind creeping into the emitters.
+
+### Changed
+- De-staled the `/improve` loop playbooks (see 0.98.1) — folded here for the batched
+  governance ship.
+
+### Agent Guidance
+- **The loop now tracks capability coverage.** When adding a new `dazzle` command, MCP
+  tool, or `.claude` skill, add a row to `improve/capability-map.md` naming its owning
+  lane — or the `capability-sweep` cadence will flag it `UNOWNED`. Lanes stamp
+  `last-exercised` when they run a capability (driver Step 3).
+- **Author frontend design in HaTchi-MaXchi, not Dazzle.** New design-system/token/layout
+  CSS goes into the HM package (consumed via dist), never a fresh rule in
+  `src/dazzle/.../css/`. The `hm-convergence` lane's reservoir metric treats a new
+  Dazzle-native CSS rule as a regression. Run `python scripts/hm_tailwind_reservoir.py`.
+
 ## [0.98.1] - 2026-07-08
 
 ### Fixed
