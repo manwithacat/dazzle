@@ -53,7 +53,9 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # <input type="color">, no vendor CSS required.
     ("utilities", "css/utilities.css"),
     ("components", "css/components/dashboard.css"),
-    ("components", "css/components/detail.css"),
+    # detail.css migrated into HaTchi-MaXchi (HMC-012) — the detail-view family
+    # now lives in packages/hatchi-maxchi/components/detail.css (already fully
+    # HM-token-based). Dropped from the Dazzle bundle; served via the HM dist.
     ("components", "css/components/fragments.css"),
     ("components", "css/components/pdf-viewer.css"),
     # regions.css removed from the bundle (HMC-007): it is now 130 lines of

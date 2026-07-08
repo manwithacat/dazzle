@@ -2488,6 +2488,47 @@ dialog.drawer > form {
   border-block-start: 1px solid var(--colour-border);
 }
 
+/* Flat-named internal chrome (moved from Dazzle dashboard.css, HMC-007b —
+   the drawer's chrome travels with the drawer component). These are the class
+   names the detail-drawer emitter produces (distinct from the __header/__body
+   BEM parts above); kept verbatim, already tokenised. */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  border-block-end: 1px solid var(--colour-border);
+  flex-shrink: 0;
+}
+
+.drawer-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.drawer-button:hover {
+  background: var(--colour-bg);
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+}
+
 @media (prefers-reduced-motion: reduce) {
   dialog.drawer { transition: none; }
   dialog.drawer[open],
@@ -3806,11 +3847,32 @@ input.switch:checked::before {
   text-align: center;
   padding: 3rem 1.5rem;
   color: var(--colour-text-muted);
+  /* Column-centred layout folded in from the legacy Dazzle `dazzle-layer.css`
+   * `.empty-state` (HMC-003c). Same selector, disjoint properties → the
+   * served computed style is the byte-identical union of the two former rules. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
 }
 
 /* Empty-state icon (TASTE-8): quiet registry glyph above the message. */
 .empty-state__title {
   color: var(--colour-text); /* tranche-1 nit: was too dim on dark surfaces */
+  /* weight + spacing folded from legacy `.empty-state h3` (HMC-003c). Every
+   * emitted title is `<h3 class="empty-state__title">`, so the element→BEM
+   * move is computed-identical (the old 0,1,1 `h3` rule out-specified this 0,1,0
+   * rule only on `color`, which was the same value). */
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+/* Description line — folded from legacy `.empty-state p` (HMC-003c). Every
+ * emitted description is `<p class="empty-state__description">`. */
+.empty-state__description {
+  color: var(--colour-text-muted);
+  font-size: 0.875rem;
 }
 
 .empty-state__icon {
@@ -4398,6 +4460,22 @@ button.htmx-request,
 .button.htmx-request {
   pointer-events: none;
   opacity: 0.7;
+}
+
+/* ── Inline loading-spinner two-tone ────────────────────────────── */
+/* The inline SVG spinners the Dazzle emitters render (search-select,
+ * table-loading, tab-loading, workspace-save-busy) are the classic
+ * two-tone loader: a dim background track ring + a brighter rotating
+ * head arc. These carry the canonical opacities HM owns, replacing the
+ * Tailwind `opacity-25` / `opacity-75` utilities the emitters used
+ * before Tailwind was unbundled (markup-reservoir drain, HMC-002). */
+
+.spinner-track {
+  opacity: 0.25;
+}
+
+.spinner-head {
+  opacity: 0.75;
 }
 
 /* ── Indicator visibility ───────────────────────────────────────── */
@@ -5942,6 +6020,219 @@ summary.table-col-menu-trigger::-webkit-details-marker {
 }
 
 }
+/* ── components/workspace-shell.css ── */
+@layer components {
+/* HYPERPART: workspace-shell */
+/* Moved from Dazzle dashboard.css (HMC-007c) — the workspace composition
+ * shell: outer padding + heading row + primary actions, context selector,
+ * and the edit toolbar (Reset/Save with the 5 saveState values). Byte-faithful,
+ * already HM-tokenised; the spin keyframe it uses lives in HM base. */
+
+/* ─────────────────────────── outer shell ────────────────────────
+ * Padded root for the workspace; no max-width constraint — caller
+ * provides the layout container. */
+
+.workspace {
+  padding: var(--space-md);
+}
+
+.workspace-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-block-end: var(--space-md);
+  /* Heading wraps when title + actions exceed the row — actions
+   * fall under the title rather than bleeding past <main>'s right
+   * edge (#985). */
+  flex-wrap: wrap;
+}
+
+.workspace-title {
+  /* #983 — canonical app page-title scale. Was hard-coded to
+   * `--text-lg`; promoting to the named token unifies workspace
+   * titles with list-page titles + leaves the visual size
+   * unchanged (token resolves to --text-lg). */
+  font-size: var(--dz-heading-app-page-title);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+.workspace-primary-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  /* #985: workspaces with many entities surface a long row of
+   * "New <Entity>" buttons. Without flex-wrap the row would bleed
+   * past <main>'s right edge (5 × 200px buttons + gaps overflows a
+   * 1024px content column). flex-shrink:0 is intentionally dropped:
+   * shrinking would squeeze button labels, wrapping is cleaner.
+   * justify-content:flex-end keeps wrapped rows right-aligned to
+   * match the heading's space-between layout. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Workspace-level primary action — same shape as .button-primary
+ * but slightly taller (h-2 instead of h-1.75) to match the heading. */
+.workspace-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  text-decoration: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.workspace-action:hover {
+  opacity: 0.9;
+}
+
+/* Suppress the default <summary> disclosure triangle cross-browser. */
+/* ─────────────────────────── context selector ───────────────────
+ * Workspace-level context filter. Just a label + select. */
+
+.workspace-context {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-md);
+}
+
+.workspace-context-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.workspace-context-select {
+  height: 2rem;
+  padding-inline: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+}
+
+.workspace-context-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+/* ─────────────────────────── edit toolbar ───────────────────────
+ * Right-aligned row above the grid: Reset + Save buttons. Save
+ * reflects saveState (clean/dirty/saving/saved/error) via a
+ * data-save-state attribute the template binds with x-bind. */
+
+.workspace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-md);
+}
+
+.workspace-toolbar-spacer {
+  flex: 1 1 0;
+}
+
+.workspace-reset {
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+.workspace-reset:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+.workspace-save {
+  height: 2rem;
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+}
+
+/* Save-state span visibility (Tier F4e: replaces the Alpine
+ * x-cloak/x-show pair) — the button's data-save-state selects
+ * exactly one label span. */
+.workspace-save [data-when] {
+  display: none;
+}
+
+.workspace-save[data-save-state="clean"] [data-when="clean"],
+.workspace-save[data-save-state="dirty"] [data-when="dirty"],
+.workspace-save[data-save-state="saving"] [data-when="saving"],
+.workspace-save[data-save-state="saved"] [data-when="saved"],
+.workspace-save[data-save-state="error"] [data-when="error"] {
+  display: inline-flex;
+}
+
+.workspace-save[data-save-state="clean"] {
+  color: var(--colour-text-muted);
+  cursor: default;
+}
+
+.workspace-save[data-save-state="dirty"] {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+}
+
+.workspace-save[data-save-state="saving"] {
+  background: var(--colour-brand);
+  color: var(--colour-brand-contrast);
+  opacity: 0.7;
+}
+
+.workspace-save[data-save-state="saved"] {
+  background: var(--success-600); /* fixed step — white text on fill */
+  color: white;
+}
+
+.workspace-save[data-save-state="error"] {
+  border-color: var(--colour-danger);
+  color: var(--colour-danger);
+}
+
+.workspace-save-busy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.workspace-save-busy-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  animation: spin 1s linear infinite;
+}
+
+}
 /* ── components/status-list.css ── */
 @layer components {
 /* HYPERPART: status-list */
@@ -7087,9 +7378,8 @@ a.action-card:hover {
  * Responsive 1/2/4-col grid of KPI tiles. Each tile is plain (no
  * border — the dashboard slot owns card chrome) with a soft
  * background tint, label / value, and optional delta row.
- * Per-tile tone tinting still routes through tones.css keyed
- * off data-tone (unchanged); same pattern for the delta-arrow
- * tone via data-delta-tone. */
+ * Per-tile tone tinting travels with the component (moved verbatim
+ * from Dazzle tones.css, keyed off data-tone). */
 
 .metrics-grid {
   display: grid;
@@ -7113,6 +7403,22 @@ a.action-card:hover {
   padding: var(--space-md);
   border-radius: var(--radius-sm);
   background: color-mix(in oklch, var(--colour-bg) 60%, transparent);
+}
+
+/* Tone tints (moved from Dazzle tones.css with the component, #894).
+ * Keyed off data-tone; the [attr] selector out-specifies the base
+ * rule above. neutral falls back to the base background. */
+.metric-tile[data-tone="positive"] {
+  background: color-mix(in oklab, var(--colour-success) 10%, transparent);
+}
+.metric-tile[data-tone="warning"] {
+  background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
+}
+.metric-tile[data-tone="destructive"] {
+  background: color-mix(in oklab, var(--colour-danger) 10%, transparent);
+}
+.metric-tile[data-tone="accent"] {
+  background: color-mix(in oklab, var(--colour-brand) 10%, transparent);
 }
 
 .metric-label {
@@ -8057,6 +8363,204 @@ a.action-card:hover {
   font-size: var(--text-xs);
   color: var(--colour-text-muted);
   margin-block-start: var(--space-sm);
+}
+
+}
+/* ── components/detail.css ── */
+@layer components {
+/*
+ * detail.css — entity detail-view component family (HaTchi-MaXchi).
+ *
+ * The record/detail view: an entity's fields as a definition list inside a
+ * card, header (back / title / actions), state-machine transition buttons, and
+ * related-entity groups beneath; plus the workspace `display: detail` region
+ * grid and the shared in-region empty placeholder. All values route through HM
+ * tokens. Migrated from Dazzle `page/runtime/static/css/components/detail.css`
+ * into HM (HMC-012, aggressive-mode convergence 2026-07-08).
+ */
+/* ─────────────────────────── outer wrapper ──────────────────────
+ * Width changes when related-groups are present (more horizontal
+ * room for the grouped tables). The component template branches on
+ * `detail.related_groups` to apply .detail-wide. */
+
+.detail {
+  max-width: 48rem;  /* ~max-w-3xl */
+  margin-inline: auto;
+}
+
+.detail-wide {
+  max-width: 64rem;  /* ~max-w-5xl — when related groups present */
+}
+
+/* ─────────────────────────── header row ─────────────────────────
+ * Back-button + title on the left, action buttons on the right. */
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: var(--space-xl);
+}
+
+.detail-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.detail-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+.detail-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* ─────────────────────────── transition / external rows ──────────
+ * State-machine transitions, integration actions, external link
+ * actions — all share the same horizontal-button-row shape with
+ * a small bottom margin. */
+
+.detail-toolbar {
+  display: flex;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-lg);
+}
+
+/* ─────────────────────────── detail card ────────────────────────
+ * The main field-list lives inside a card. */
+
+.detail-card {
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.detail-card-body {
+  padding: var(--space-lg);
+}
+
+/* ─────────────────────────── definition list ───────────────────
+ * Each row is a 3-column grid on wider viewports (label takes 1,
+ * value takes 2). On narrow viewports rows stack with a small gap.
+ * Uses container queries so the grid adapts to the container's
+ * width, not the viewport. */
+
+.detail-list {
+  container-type: inline-size;
+}
+
+.detail-list > * + * {
+  border-block-start: 1px solid var(--colour-border);
+}
+
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-block: var(--space-md);
+}
+
+@container (width > 32rem) {
+  .detail-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: var(--space-lg);
+  }
+}
+
+.detail-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text-muted);
+}
+
+.detail-value {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+/* ─────────────────────────── file value link ────────────────────
+ * `field.type == "file"` renders an icon + filename link. */
+
+.detail-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--colour-brand);
+  text-decoration: none;
+}
+
+.detail-file-link:hover {
+  text-decoration: underline;
+}
+
+.detail-file-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* ─────────────────────────── related groups ─────────────────────
+ * After the main field card, related entities (one-to-many or
+ * many-to-many) render as separate groups with their own labels
+ * and content (table / status_cards / file_list). */
+
+.detail-related-group {
+  margin-block-start: var(--space-xl);
+}
+
+.detail-related-label {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  margin-block-end: var(--space-md);
+}
+
+/* ─────────────────────────── workspace detail region ───────────
+ * The workspace `display: detail` region shape is different from
+ * the standalone detail_view component above — it renders inside
+ * a region card slot, so the chrome (border, shadow, padding) is
+ * provided by .region-card; here we only style the dl grid and
+ * the empty placeholder. Two-column label/value grid (label left,
+ * value right) — distinct from the row-stacked .detail-row above. */
+
+.detail-region-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-xs) var(--space-md);
+  margin: 0;
+}
+
+.detail-region-grid > dt.detail-label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.detail-region-grid > dd.detail-value {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  margin: 0;
+}
+
+/* ─────────────────────────── shared empty placeholder ──────────
+ * `.empty-dense` is the in-region "no data" line used by the
+ * detail region and ~20 other region templates. Centralised here
+ * during the detail migration; remains in this file until the
+ * region migrations proper move it to a shared location. */
+
+.empty-dense {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin: 0;
 }
 
 }
@@ -9574,6 +10078,329 @@ a.action-card:hover {
       min-height: var(--touch-target-min);
     }
   }
+}
+
+}
+/* ── components/dashboard-card.css ── */
+@layer components {
+/* HYPERPART: dashboard-card */
+/* Moved from Dazzle dashboard.css (HMC-007d) — the dashboard card grid +
+ * card chrome (wrapper/header/actions/titles/notice/body/skeleton/resize) +
+ * add-card CTA. Byte-faithful, HM-tokenised. The pulse keyframe used by the
+ * skeleton is HM's (tokens.css); .card base is unique to this file. */
+
+/* ─────────────────────────── card grid ──────────────────────────
+ * 1-col on mobile, 12-col on >=md. items-start to collapse to
+ * intrinsic content height (#844). */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+@media (min-width: 48rem) {
+  .dashboard-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+/* ─────────────────────────── card wrapper ───────────────────────
+ * Layout/positioning element only. Visible card chrome lives on
+ * the inner <article>. Wrapper stays square (no rounding) so the
+ * focus ring traces a clean rectangle (#794). */
+
+.card-wrapper {
+  position: relative;
+  outline: none;
+}
+
+.card-wrapper:focus {
+  box-shadow: 0 0 0 2px var(--colour-surface), 0 0 0 4px var(--colour-brand);
+}
+
+/* Smooth transitions on all reposition/resize except while dragging
+ * (the wrapper sets style.transform directly during drag). Toggled
+ * via .is-animating class (Alpine sets it when not dragging and not
+ * mid-drag). */
+.card-wrapper.is-animating {
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+/* ─────────────────────────── card chrome ────────────────────────
+ * The visible card surface. Default border + bg + clipping. When
+ * resizing, swap to a dashed brand-coloured border. */
+
+.card {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  /* TASTE-2: quiet stacked shadow at rest — elevation reads as a surface,
+     not decoration; hover transition already declared below. */
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.card.is-resizing {
+  border-style: dashed;
+  border-color: var(--colour-brand);
+}
+
+/* Card header — drag handle zone. */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  cursor: grab;
+  min-height: 2.25rem;
+}
+
+.card-header:active {
+  cursor: grabbing;
+}
+
+.card-header.is-dragging {
+  cursor: grabbing;
+}
+
+.card-titles {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-eyebrow {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--colour-text-muted);
+  line-height: 1;
+}
+
+.card-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  user-select: none;
+  margin: 0;
+}
+
+/* Header actions — fade in on hover/focus-within of the wrapper.
+ * Was opacity-0 + group-hover only; #799 set rest opacity to 0.6 so
+ * touch + keyboard users can still see them. */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.card-wrapper:hover .card-actions,
+.card-wrapper:focus-within .card-actions {
+  opacity: 1;
+}
+
+.card-action-button {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--colour-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.card-action-button:hover {
+  background: var(--colour-bg);
+  color: var(--colour-text);
+}
+
+/* Notice band — between header and body. Tone tint via
+ * data-notice-tone (existing notice-band class is the visual
+ * carrier; styling lives in tones layer). Layout shape lives here. */
+.card-notice {
+  margin-inline: var(--space-md);
+  margin-block-end: var(--space-sm);
+  padding-inline: var(--space-sm);
+  padding-block: var(--space-xs);
+  border-radius: var(--radius-sm);
+  border-inline-start-width: 2px;
+  border-inline-start-style: solid;
+}
+
+.card-notice-title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
+}
+
+.card-notice-body {
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+/* Card body — HTMX-loaded region content slot.
+ *
+ * #962 — `min-height` per display mode reserves space before the htmx
+ * region fetch lands so the page doesn't bounce as content arrives.
+ * Web Vitals classifies CLS > 0.1 as "needs improvement"; pre-fix
+ * surveyed surfaces hit 0.18–0.37. If content exceeds the
+ * reservation, only that card grows (one shift, bounded). If content
+ * fits, no shift.
+ *
+ * Selector values match `DisplayMode` (src/dazzle/core/ir/workspaces.py)
+ * — lowercased by the template's `| lower` filter. Adding a new
+ * display mode? Either add a rule here OR add the value to the
+ * fall-through allow-list in test_workspace_cls_reservation.py.
+ */
+.card-body {
+  padding-inline: var(--space-md);
+  padding-block-end: var(--space-md);
+  min-height: 280px; /* default — matches LIST / TABBED_LIST shape */
+}
+
+.card-body[data-display="summary"],
+.card-body[data-display="summary_row"] {
+  min-height: 96px;
+}
+
+.card-body[data-display="metrics"],
+.card-body[data-display="metric"] {
+  min-height: 140px;
+}
+
+.card-body[data-display="bar_chart"],
+.card-body[data-display="chart"],
+.card-body[data-display="line_chart"],
+.card-body[data-display="bar_track"],
+.card-body[data-display="bullet"],
+.card-body[data-display="funnel_chart"],
+.card-body[data-display="heatmap"],
+.card-body[data-display="radar"] {
+  min-height: 280px;
+}
+
+.card-body[data-display="kanban"] {
+  min-height: 480px;
+}
+
+.card-body[data-display="diagram"] {
+  min-height: 360px;
+}
+
+.card-body[data-display="profile_card"] {
+  min-height: 200px;
+}
+
+.card-body[data-display="action_grid"],
+.card-body[data-display="pipeline_steps"],
+.card-body[data-display="status_list"] {
+  min-height: 200px;
+}
+
+.card-body[data-display="pivot_table"],
+.card-body[data-display="timeline"] {
+  min-height: 320px;
+}
+
+/* Skeleton loader (shown until HTMX swap completes) */
+.card-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.card-skeleton-line {
+  height: 1rem;
+  background: var(--colour-bg);
+  border-radius: var(--radius-sm);
+}
+
+.card-skeleton-line.is-thin {
+  height: 0.75rem;
+}
+
+.card-skeleton-line.w-3-4 { width: 75%; }
+.card-skeleton-line.w-5-6 { width: 83.333%; }
+
+/* @keyframes pulse dropped — HM tokens.css owns it (identical). */
+
+/* Resize handle — right edge. Same fade-on-hover pattern as the
+ * action buttons. */
+.card-resize {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  width: 0.375rem;
+  height: 100%;
+  cursor: col-resize;
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+  border-end-end-radius: var(--radius-md);
+  border-start-end-radius: var(--radius-md);
+}
+
+.card-wrapper:hover .card-resize,
+.card-wrapper:focus-within .card-resize {
+  opacity: 1;
+}
+
+.card-resize:hover {
+  background: color-mix(in oklch, var(--colour-brand) 30%, transparent);
+}
+
+/* ─────────────────────────── add-card CTA ───────────────────────
+ * Centred dashed-border button below the grid. Picker pops up
+ * relative to it (positioning lives in the picker template). */
+
+.add-card-row {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-block-start: var(--space-md);
+}
+
+.add-card-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 2rem;
+  padding-inline: var(--space-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-md);
+  border: 2px dashed var(--colour-border);
+  color: var(--colour-text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.add-card-button:hover {
+  border-color: var(--colour-brand);
+  color: var(--colour-text);
 }
 
 }

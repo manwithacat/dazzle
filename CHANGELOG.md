@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.17] - 2026-07-08
+
+### Changed
+- **HM-convergence AGGRESSIVE MODE (James directive): detail-view family → HaTchi-MaXchi
+  (HMC-012).** First cycle of the accelerated convergence — bulk file-level migration
+  gated by the functional test suite, not pixel-diff. The entire `detail.css` family (the
+  record/detail view: wrapper, header, title, actions, toolbar, field card, definition
+  list, file-link, related-groups, workspace detail-region grid, shared empty placeholder)
+  moved from `page/runtime/static/css/components/detail.css` into a new HM component
+  `packages/hatchi-maxchi/components/detail.css`. It was already fully HM-token-based, so
+  the served output is unchanged (verified via `get_bundled_css()`); removed from
+  `css_loader.CSS_SOURCE_FILES` and deleted from the Dazzle tree. Reservoir
+  `css_lines_dazzle_native` 3033→2833 (−200 in one cycle vs the prior ~50/cycle).
+
+### Agent Guidance
+- **HM-convergence is in aggressive mode** (see `improve/lanes/hm-convergence.md`): the
+  end state is *all* presentation/design in HaTchi-MaXchi. Delete/rewrite Dazzle-native
+  design CSS to HM-token-only, one large file per cycle, gated by the functional suite
+  (breaking visual changes acceptable). Detail-view CSS now lives in HM `detail.css` —
+  author detail styling there.
+- Adding an HM component requires regenerating the gallery: `python
+  packages/hatchi-maxchi/build.py` then `python packages/hatchi-maxchi/site/build_site.py`
+  (the HM package `test_contract.py` gallery-drift gates fail otherwise).
+
 ## [0.98.16] - 2026-07-08
 
 ### Removed

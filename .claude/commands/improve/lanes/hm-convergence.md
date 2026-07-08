@@ -12,6 +12,35 @@ a manual push. It complements the HM-grid `PLAN.md` arc (LAYOUTS/BLUEPRINTS work
 
 **Backlog section:** `## Lane: hm-convergence` in `improve-backlog.md` (`HMC-NNN` rows).
 
+## AGGRESSIVE MODE (ratified 2026-07-08, James directive)
+
+The per-rule byte-faithful cadence was too slow. New mandate: **delete/rewrite to
+HM-tokens only, one LARGE file-batch per cycle, functional-gated. Breaking VISUAL
+changes are acceptable.** The end state is explicit: *all presentation and design
+defined in HaTchi-MaXchi* — Dazzle emits markup + consumes HM; no Dazzle-native
+design CSS remains in the bundle.
+
+Per-cycle unit = **one whole reservoir file** (or a tight group). For each rule in it:
+1. **HM already covers it** (duplicate/override) → **delete** it; let HM win.
+2. **Dazzle-unique but generic design** (a real reusable primitive) → port to a minimal
+   **HM component** that consumes HM tokens (`--space-*`/`--colour-*`/`--duration-*`/…),
+   never hardcoded values; register in `packages/hatchi-maxchi/build.py`.
+3. **Dazzle-unique feature chrome** (onboarding overlays, pdf-viewer) → rewrite to
+   consume HM tokens (drop bespoke hardcoded design values) as an HM component.
+4. When the file has no rules left → remove it from `css_loader.CSS_SOURCE_FILES` /
+   `CSS_UNLAYERED_FILES` (keep the file on disk only if a non-bundle consumer reads it).
+
+**Gate = the functional test suite, NOT pixel-diff.** `make test-ux-preflight` +
+`pytest -m gate` + fleet boot (no stderr) + `dazzle validate` must stay green. Card-safety,
+contract, and structural gates are the floor. Pixel-perfection is explicitly NOT required
+(James: breaking changes acceptable) — do not run the capture/pixel-diff loop for these.
+Still verify via `get_bundled_css()` that deleted rules are gone and HM's equivalents remain,
+and reason about FUNCTIONAL load-bearing CSS (display:none for hidden elements, z-index/
+overflow that affects clickability) — aesthetic breakage is fine, functional breakage is not.
+
+Ship each batch (bump + HM dist rebuild if HM changed + Dazzle dist rebuild + push). Log the
+reservoir delta; the number should now fall in big steps (hundreds of lines/cycle), not tens.
+
 ## Instrument — the reservoir metric
 
 ```bash
