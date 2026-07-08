@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.10] - 2026-07-08
+
+### Changed
+- **HM-convergence (HMC-007d): dashboard card composition → new HM `dashboard-card` component.**
+  The card grid + card chrome (wrapper/header/actions/titles/notice/body/skeleton/resize)
+  + add-card CTA — 314 lines — moved verbatim from Dazzle `dashboard.css` into HaTchi-MaXchi
+  `components/dashboard-card.css` (registered **last** in `build.py` so its `.dz-card` and
+  `.dz-add-card-button` keep winning source-order ties over `fragment-primitives.css` /
+  `touch-targets.css`, preserving the pre-move cascade). The duplicate `dz-pulse` keyframe
+  was dropped (HM `tokens.css` owns it identically). `dashboard.css` 345→28 (now just the
+  `#dz-detail-drawer` width override); reservoir 3708→3175 across HMC-007b/c/d. **Verified
+  through the visual gate:** dashboard (light + dark) and task_board captures pixel-identical
+  before/after. HM package 0.1.63→0.1.64.
+
 ## [0.98.9] - 2026-07-08
 
 ### Changed

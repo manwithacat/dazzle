@@ -88,6 +88,10 @@ CSS_SOURCES = [
     ("components", "components/pdf.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
+    # dashboard-card LAST (HMC-007d): its .dz-add-card-button must keep winning
+    # over touch-targets' coarse-pointer override (source-order parity with the
+    # pre-move state where Dazzle dashboard.css loaded after the whole HM dist).
+    ("components", "components/dashboard-card.css"),
 ]
 
 LAYER_ORDER = "@layer vendor, tokens, base, components;"
