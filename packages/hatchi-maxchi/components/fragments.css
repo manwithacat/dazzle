@@ -1,18 +1,14 @@
 /*
- * fragments.css — shared HTML fragments under templates/fragments/.
+ * fragments.css — shared HTML-fragment chrome (HaTchi-MaXchi).
  *
- * Each fragment is a small render primitive (empty state placeholder,
- * pagination row, breadcrumb trail, alert banner, etc.) referenced
- * from many regions and pages. v0.62 keeps the existing semantic
- * class names where they already existed (e.g. .dz-empty-state) and
- * moves the visuals from inline Tailwind into rules here.
- *
- * Tone tinting on alert banners keys off `data-dz-alert-level`
- * attribute selectors so the four semantic tones (info / success /
- * warning / error) live in one place rather than four template
- * branches.
- *
- * Wrapped in @layer components.
+ * Assorted fragment/region primitives: sentinel + loading spinners, command
+ * palette, toast/bulk/stepper/date-range/context-menu/slide-over/search-flow/
+ * 2FA/a11y/related/tooltip/inline-edit/ref-cell/search-input/search-select/
+ * app-shell/toast-stack/form-chrome/review-queue/modal/island/error-pages/
+ * card-picker/pipeline-steps/experience-shell families. Heavily HM-token-based
+ * (293 var(--…) refs). Migrated wholesale from Dazzle into HM (HMC-016,
+ * aggressive-mode convergence 2026-07-08); the redundant `.dz-empty-dense`
+ * (HM detail.css owns the canonical one) was dropped in the move.
  */
 
 /* ─────────────────────────── empty_state fragment ───────────────
@@ -1128,11 +1124,6 @@
   .dz-pipeline-connector-mobile {
     display: none;
   }
-}
-
-.dz-empty-dense {
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
 }
 
 /* ─────────────────────────── experience shell (UX-072) ──────────

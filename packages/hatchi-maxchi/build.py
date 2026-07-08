@@ -91,6 +91,10 @@ CSS_SOURCES = [
     ("components", "components/pdf-viewer.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
+    # fragments.css (HMC-016): shared fragment/region chrome families, migrated
+    # wholesale from Dazzle. Registered late to preserve source-order tie-winning
+    # it had when it loaded after the HM dist in the Dazzle bundle.
+    ("components", "components/fragments.css"),
     # dashboard-card LAST (HMC-007d): its .dz-add-card-button must keep winning
     # over touch-targets' coarse-pointer override (source-order parity with the
     # pre-move state where Dazzle dashboard.css loaded after the whole HM dist).

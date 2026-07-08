@@ -53,10 +53,10 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # <input type="color">, no vendor CSS required.
     ("utilities", "css/utilities.css"),
     ("components", "css/components/dashboard.css"),
-    # detail.css migrated into HaTchi-MaXchi (HMC-012) — the detail-view family
-    # now lives in packages/hatchi-maxchi/components/detail.css (already fully
+    # detail.css (HMC-012) + fragments.css (HMC-016) migrated into HaTchi-MaXchi —
+    # the detail-view family + the shared fragment/region chrome families now live
+    # in packages/hatchi-maxchi/components/{detail,fragments}.css (heavily
     # HM-token-based). Dropped from the Dazzle bundle; served via the HM dist.
-    ("components", "css/components/fragments.css"),
     # pdf-viewer.css migrated into HaTchi-MaXchi (HMC-015) -- PDF detail-view chrome
     # now lives in packages/hatchi-maxchi/components/pdf-viewer.css (sits on the HM pdf
     # embed primitive). Served via the HM dist.

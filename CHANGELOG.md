@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.20] - 2026-07-09
+
+### Changed
+- **HM-convergence (HMC-016): the fragments.css "elephant" → HaTchi-MaXchi.** The whole
+  1213-line `fragments.css` — shared fragment/region chrome families (sentinel + loading
+  spinners, command palette, toast/bulk/stepper/date-range/context-menu/slide-over/
+  search-flow/2FA/a11y/related/tooltip/inline-edit/ref-cell/search-input/search-select/
+  app-shell/toast-stack/form-chrome/review-queue/modal/island/error-pages/card-picker/
+  pipeline-steps/experience-shell) — moved wholesale into a new HM component
+  `packages/hatchi-maxchi/components/fragments.css` (registered late, preserving its
+  source-order tie-winning). Heavily HM-token-based (293 var refs). The single redundant
+  `.dz-empty-dense` (HM `detail.css` owns the canonical one) was dropped in the move; the
+  only other HM-overlap, `.dz-workspace[data-show-picker]`, is a distinct card-picker
+  variant (no conflict). Removed from `css_loader.CSS_SOURCE_FILES`; served via the HM
+  dist. Reservoir `css_lines_dazzle_native` 1892→678 (−1214 — the biggest single cut).
+
 ## [0.98.19] - 2026-07-08
 
 ### Changed
