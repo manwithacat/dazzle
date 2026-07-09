@@ -536,7 +536,7 @@ class TestRunner:
         # Start new server
         env = os.environ.copy()
         self._server_process = subprocess.Popen(
-            [sys.executable, "-m", "dazzle", "dazzle", "serve", "--local"],
+            [sys.executable, "-m", "dazzle", "dazzle", "serve"],
             cwd=self.project_path,
             env=env,
             stdout=subprocess.PIPE,

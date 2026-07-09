@@ -72,25 +72,8 @@ def doctor_command() -> None:
         except ImportError:
             _warn(f"{pkg} not installed ({purpose}) — install with extras")
 
-    # 4. Docker
+    # 4. Git
     typer.echo("\nTools:")
-    if shutil.which("docker"):
-        try:
-            result = subprocess.run(
-                ["docker", "info"],
-                capture_output=True,
-                timeout=10,
-            )
-            if result.returncode == 0:
-                _ok("Docker available and running")
-            else:
-                _warn("Docker installed but not running")
-        except (subprocess.TimeoutExpired, OSError):
-            _warn("Docker installed but not responding")
-    else:
-        _warn("Docker not found (needed for `dazzle serve` without --local)")
-
-    # 5. Git
     if shutil.which("git"):
         try:
             git_result = subprocess.run(

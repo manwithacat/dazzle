@@ -68,7 +68,7 @@ def create_tools() -> list[dict[str, Any]]:
                     "stacks": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "List of stacks to build. Options: express_micro, openapi, docker, terraform",
+                        "description": "List of stacks to build. Options: express_micro, openapi, terraform",
                     }
                 },
                 "required": [],

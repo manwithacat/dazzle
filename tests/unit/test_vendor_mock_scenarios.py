@@ -83,7 +83,7 @@ class TestScenarioListing:
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
 
         all_scenarios = engine.list_scenarios()
-        assert len(all_scenarios) >= 19
+        assert len(all_scenarios) >= 16
         assert "sumsub_kyc/kyc_approved" in all_scenarios
         assert "stripe_payments/payment_succeeded" in all_scenarios
 
@@ -378,11 +378,11 @@ class TestBuiltInScenarios:
 
     def test_built_in_scenarios_combined(self) -> None:
         """Combined: all scenarios loadable + per-vendor coverage
-        (sumsub, stripe, hmrc, xero, docuseal, companies_house)."""
+        (sumsub, stripe, hmrc, xero, companies_house)."""
         engine = ScenarioEngine(scenarios_dir=SCENARIOS_DIR)
 
         all_scenarios = engine.list_scenarios()
-        assert len(all_scenarios) >= 19
+        assert len(all_scenarios) >= 16
 
         for scenario_ref in all_scenarios:
             vendor, name = scenario_ref.split("/", 1)
@@ -405,8 +405,7 @@ class TestBuiltInScenarios:
         assert "payment_succeeded" in stripe_names
         assert "payment_failed_insufficient" in stripe_names
 
-        # HMRC, Xero, Docuseal, Companies House
+        # HMRC, Xero, Companies House
         assert len(engine.list_scenarios(vendor="hmrc_mtd_vat")) >= 3
         assert len(engine.list_scenarios(vendor="xero_accounting")) >= 3
-        assert len(engine.list_scenarios(vendor="docuseal_signatures")) >= 3
         assert len(engine.list_scenarios(vendor="companies_house_lookup")) >= 3

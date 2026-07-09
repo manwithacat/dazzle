@@ -189,12 +189,7 @@ class TestLoadManifestInfra:
             textwrap.dedent("""\
 
                 [infra]
-                backends = ["docker"]
-
-                [infra.docker]
-                variant = "compose"
-                image_name = "myapp"
-                port = 3000
+                backends = ["terraform"]
 
                 [infra.terraform]
                 cloud_provider = "gcp"
@@ -203,11 +198,9 @@ class TestLoadManifestInfra:
         )
         mf = load_manifest(toml_path)
         assert mf.infra is not None
-        assert mf.infra.docker.image_name == "myapp"
-        assert mf.infra.docker.port == 3000
         assert mf.infra.terraform.cloud_provider == "gcp"
         assert mf.infra.terraform.region == "us-east1"
-        assert mf.infra.backends == ["docker"]
+        assert mf.infra.backends == ["terraform"]
 
     def test_no_infra_section(self, tmp_path: Path) -> None:
         toml_path = _write_toml(tmp_path)

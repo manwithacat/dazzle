@@ -157,7 +157,7 @@ class ModeRunner:
             self._log_fh = self._log_path.open("wb")
             try:
                 self._proc = subprocess.Popen(
-                    [sys.executable, "-m", "dazzle", "serve", "--local"],
+                    [sys.executable, "-m", "dazzle", "serve"],
                     cwd=self.project_root,
                     env=env,
                     stdout=self._log_fh,

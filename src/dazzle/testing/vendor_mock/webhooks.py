@@ -2,7 +2,7 @@
 Webhook dispatcher for vendor mock servers.
 
 Simulates vendor-initiated webhook calls to a running Dazzle app. Supports
-vendor-appropriate HMAC signing (SumSub, Stripe, DocuSeal, Xero), automatic
+vendor-appropriate HMAC signing (SumSub, Stripe, Xero), automatic
 triggering from scenario steps, and delivery tracking.
 """
 
@@ -110,27 +110,6 @@ WEBHOOK_EVENTS: dict[str, dict[str, dict[str, Any]]] = {
             "created": 0,
         },
     },
-    "docuseal_signatures": {
-        "submission.completed": {
-            "event_type": "submission.completed",
-            "timestamp": "",
-            "data": {
-                "id": 0,
-                "status": "completed",
-                "completed_at": "",
-                "submitters": [],
-            },
-        },
-        "submission.created": {
-            "event_type": "submission.created",
-            "timestamp": "",
-            "data": {
-                "id": 0,
-                "status": "pending",
-                "submitters": [],
-            },
-        },
-    },
     "xero_accounting": {
         "invoice.updated": {
             "events": [
@@ -155,7 +134,6 @@ WEBHOOK_EVENTS: dict[str, dict[str, dict[str, Any]]] = {
 SIGNING_SCHEMES: dict[str, str] = {
     "sumsub_kyc": "sumsub_hmac",
     "stripe_payments": "stripe_hmac",
-    "docuseal_signatures": "hmac_sha256",
     "xero_accounting": "xero_hmac",
 }
 
@@ -163,7 +141,6 @@ SIGNING_SCHEMES: dict[str, str] = {
 DEFAULT_WEBHOOK_PATHS: dict[str, str] = {
     "sumsub_kyc": "/webhooks/sumsub",
     "stripe_payments": "/webhooks/stripe",
-    "docuseal_signatures": "/webhooks/docuseal",
     "xero_accounting": "/webhooks/xero",
 }
 

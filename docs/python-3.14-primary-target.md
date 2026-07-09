@@ -40,13 +40,13 @@ slightly. (Benchmark: `scripts/bench_interp.py`, run via `uv run --python 3.X --
 ### The caveat that shapes the rollout
 
 The tail-call speedup exists **only in uv / python-build-standalone interpreters** (Clang-19 built; confirmed by
-[Astral](https://astral.sh/blog/python-3.14) and our local `Py_TAIL_CALL_INTERP=1` probe). It is **not** in the
-GCC-built `python:3.14-slim` Docker images (opt-in `--with-tail-call-interp`, off by default). Therefore:
+[Astral](https://astral.sh/blog/python-3.14) and our local `Py_TAIL_CALL_INTERP=1` probe). It needs a
+Clang-19-built interpreter with the tail-call interpreter enabled; GCC-built stock interpreters ship it opt-in
+(`--with-tail-call-interp`, off by default). This is exactly what makes the house deploy target well-placed:
 
-- **Heroku via the uv path (slice 4b) captures the speedup.** ✅
-- **`dazzle serve` on the Docker default does not** — it gets 3.14 *correctness* with ~0% of the interpreter
-  speedup. To capture it in containers, base the image on a uv/pbs interpreter rather than `python:3.14-slim`.
-  (Tracked as a future option; not done here.)
+- **Heroku via the uv path (slice 4b) captures the speedup.** ✅ The uv buildpack installs a
+  python-build-standalone interpreter — Clang-19-built with the tail-call interpreter on — so the deploy target
+  gets both 3.14 *correctness* and the interpreter speedup.
 
 The gain is on **parse / validate / bootstrap / startup** (CPU), **not per-request serving** (I/O-bound on
 Postgres/HTTP). So the felt impact is CLI/agent loops and boot time, not request latency.
@@ -77,13 +77,10 @@ Both were non-Dazzle issues; both fixed portably with **no api-surface baseline 
   `include`/`continue-on-error` for 3.14 is gone). lint + type-check stay 3.12-pinned (floor-governed).
 - **Trove classifier:** added `Programming Language :: Python :: 3.14`.
 - **Primary deploy/runtime defaults → 3.14** (floor stays 3.12): repo `runtime.txt` + `.python-version`; the
-  Docker base images in `core/manifest.py`, `cli/runtime_impl/docker.py`, and the `dazzle deploy dockerfile`
-  generator; the `dazzle deploy heroku` `runtime.txt` (pip path) and `.python-version` (uv path). The generated
+  `dazzle deploy heroku` `runtime.txt` (pip path) and `.python-version` (uv path). The generated
   Heroku `pyproject.toml` keeps `requires-python = ">=3.12"` — apps still *support* 3.12, they *deploy* on 3.14.
 
 ## 6. Not done (deliberately)
 
 - **Floor move to `>=3.13`/`>=3.14`** — still a separate product decision (drops older support; unlocks PEP 695
   + `from __future__ import annotations` cleanup). See `docs/migration-findings.md` §8 slice 6.
-- **Rebasing the Docker default onto a uv/pbs interpreter** to capture the tail-call speedup in containers —
-  noted above as a future option.

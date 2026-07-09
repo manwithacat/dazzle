@@ -36,16 +36,11 @@ cd examples/<example_name>
 dazzle serve
 ```
 
-This starts:
+`dazzle serve` connects to the Postgres in your `DATABASE_URL` (and Redis in
+`REDIS_URL`, if set) and starts:
 
 - **UI**: http://localhost:3000
 - **API**: http://localhost:8000/docs
-
-### Running Without Docker
-
-```bash
-dazzle serve --local
-```
 
 ### Running with Hot Reload
 

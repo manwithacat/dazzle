@@ -99,9 +99,6 @@ def infrastructure(
             infra = svc.get("infrastructure")
             if infra:
                 typer.echo(f"    hosting: {infra.get('hosting', '?')}")
-                docker = infra.get("docker")
-                if docker:
-                    typer.echo(f"    docker:  {docker.get('image', '?')}")
             elif svc.get("hint"):
                 typer.echo(f"    {svc['hint']}")
 

@@ -52,7 +52,7 @@ def _resolve_runtime_urls(project_root: Path) -> tuple[str, str]:
             if site:
                 # the Dazzle runtime serves UI + API on the same port; api_url in
                 # runtime.json points at a separate port that only exists
-                # in Docker/split mode.  Use site_url for both.
+                # in split (separate frontend/backend) mode.  Use site_url for both.
                 return site.rstrip("/"), site.rstrip("/")
 
     return resolve_site_url(), resolve_api_url()

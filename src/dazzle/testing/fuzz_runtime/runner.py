@@ -68,7 +68,7 @@ def _booted_app(project_root: Path) -> Iterator[tuple[str, str]]:
     if runtime_path.exists():
         runtime_path.unlink()
     proc = subprocess.Popen(
-        ["dazzle", "serve", "--local", "--test-mode"],
+        ["dazzle", "serve", "--test-mode"],
         cwd=str(project_root),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

@@ -19,7 +19,6 @@ from ..detection import (
     DetectionResult,
     ProviderDetector,
     ProviderStatus,
-    check_docker_container,
     check_port,
     get_env_var,
 )
@@ -35,8 +34,7 @@ class MailpitDetector(ProviderDetector):
 
     Detection order:
     1. Explicit env var DAZZLE_EMAIL_PROVIDER=mailpit
-    2. Running Docker container with mailpit image
-    3. Port 8025 (API) responding with Mailpit API
+    2. Port 8025 (API) responding with Mailpit API
     """
 
     DEFAULT_SMTP_PORT = 1025
@@ -60,12 +58,7 @@ class MailpitDetector(ProviderDetector):
         if get_env_var("DAZZLE_EMAIL_PROVIDER") == "mailpit":
             return await self._detect_explicit()
 
-        # 2. Check for running Docker container
-        docker_result = await self._detect_docker()
-        if docker_result:
-            return docker_result
-
-        # 3. Check default ports
+        # 2. Check default ports
         port_result = await self._detect_ports()
         if port_result:
             return port_result
@@ -97,43 +90,6 @@ class MailpitDetector(ProviderDetector):
             result.status = ProviderStatus.UNAVAILABLE
             result.error = "Mailpit configured but not reachable"
 
-        return result
-
-    async def _detect_docker(self) -> DetectionResult | None:
-        """Check for running Mailpit container."""
-        container = await check_docker_container("mailpit")
-        if not container:
-            container = await check_docker_container("axllent/mailpit")
-
-        if not container:
-            return None
-
-        # Extract ports from container info
-        port_mappings = container.get("port_mappings", {})
-        smtp_port = port_mappings.get(1025, self.DEFAULT_SMTP_PORT)
-        api_port = port_mappings.get(8025, self.DEFAULT_API_PORT)
-
-        result = DetectionResult(
-            provider_name="mailpit",
-            status=ProviderStatus.AVAILABLE,
-            connection_url=f"smtp://localhost:{smtp_port}",
-            api_url=f"http://localhost:{api_port}/api",
-            management_url=f"http://localhost:{api_port}",
-            detection_method="docker",
-            metadata={
-                "container": container.get("name", "unknown"),
-                "image": container.get("image", "unknown"),
-            },
-        )
-
-        # Verify health
-        if await self.health_check(result):
-            # Try to get version info
-            await self._enrich_metadata(result)
-            return result
-
-        result.status = ProviderStatus.DEGRADED
-        result.error = "Mailpit container found but not responding"
         return result
 
     async def _detect_ports(self) -> DetectionResult | None:

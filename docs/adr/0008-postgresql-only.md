@@ -28,7 +28,7 @@ PostgreSQL is the sole supported production database. All code paths target Post
 - `LISTEN`/`NOTIFY` for real-time channel delivery
 - No SQLite imports, drivers, or conditional branches anywhere in `src/dazzle/http/`
 
-Local development uses PostgreSQL via the default `dazzle serve` Docker stack. No SQLite fallback is provided.
+Local development uses PostgreSQL (provided via `DATABASE_URL`; `dazzle serve` connects to it). No SQLite fallback is provided.
 
 ## Consequences
 
@@ -42,7 +42,7 @@ Local development uses PostgreSQL via the default `dazzle serve` Docker stack. N
 
 ### Negative
 
-- Docker required for local development (already the default)
+- A PostgreSQL instance required for local development (local install or managed service)
 - Contributors cannot run the test suite without a PostgreSQL instance
 - Slightly higher barrier to entry than SQLite-backed alternatives
 
@@ -69,11 +69,11 @@ Use an ORM abstraction layer with only portable SQL features, avoiding PG-specif
 
 Use SQLite locally and switch to PG in CI and production.
 
-**Rejected:** Parity failures are detected too late. Type semantics differ in ways that break scope predicate compilation. The Docker stack makes local PG trivial.
+**Rejected:** Parity failures are detected too late. Type semantics differ in ways that break scope predicate compilation. PostgreSQL is readily available on modern platforms and managed services.
 
 ## Implementation
 
 - `src/dazzle/http/` uses `psycopg3` directly (originally `asyncpg`; migrated in #1341, see the status note above); no SQLAlchemy dialect switching
 - All migrations in `alembic/` target PG dialect
-- `pytest` fixtures spin up a PG test database via the Docker Compose test profile
+- `pytest` fixtures connect to a PostgreSQL test database (provided via the test DATABASE_URL)
 - `dazzle db status|verify|reset` commands are PG-only

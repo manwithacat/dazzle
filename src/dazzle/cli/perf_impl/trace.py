@@ -223,15 +223,14 @@ def _execute_trace_run(
         "DAZZLE_PERF_RUN_ID": run_id,
     }
 
-    # Boot `dazzle serve --local` in a subprocess. Local mode skips
-    # Docker spin-up so the trace run starts in seconds.
+    # Boot `dazzle serve` in a subprocess against the caller-provided
+    # DATABASE_URL / REDIS_URL (see env above) so the trace run starts fast.
     proc = subprocess.Popen(
         [
             sys.executable,
             "-m",
             "dazzle.cli",
             "serve",
-            "--local",
             "--port",
             str(_TRACE_PORT),
             "--api-port",

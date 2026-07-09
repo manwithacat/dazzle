@@ -10,10 +10,6 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.parser import parse_modules
 from tests import _pg_worker_db
 
-# Exclude e2e/docker tests from regular collection
-# These tests require playwright which is only available in Docker containers
-collect_ignore = ["e2e/docker"]
-
 
 def _load_dotenv_for_tests() -> None:
     """Load `.env` from the repo root so test fixtures see the same

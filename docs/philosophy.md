@@ -103,7 +103,7 @@ The reason: Dazzle generates UI from the model. SPAs are a poor fit because they
 ### No SQLite
 Many frameworks ship SQLite as the development default. Dazzle is PostgreSQL-only ([ADR-0008](adr/0008-postgresql-only.md)).
 
-The reason: scope predicates use Postgres-specific subquery shapes; FTS uses `tsvector`; aggregate uses Postgres `GROUP BY` semantics. A SQLite path would require either a feature subset or a translation layer; either choice creates a class of bugs where dev passes and prod fails. The cost (Docker postgres on dev) is paid once; the avoided cost (silent dialect divergence) compounds.
+The reason: scope predicates use Postgres-specific subquery shapes; FTS uses `tsvector`; aggregate uses Postgres `GROUP BY` semantics. A SQLite path would require either a feature subset or a translation layer; either choice creates a class of bugs where dev passes and prod fails. The cost (running a local PostgreSQL in dev) is paid once; the avoided cost (silent dialect divergence) compounds.
 
 ### No singletons
 FastAPI codebases routinely grow module-level globals: a database session, a cache client, a settings object. Dazzle uses a `RuntimeServices` dataclass attached to `app.state` and passed via dependency injection ([ADR-0005](adr/0005-runtime-services.md)).

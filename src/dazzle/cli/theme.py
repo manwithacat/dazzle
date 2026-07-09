@@ -222,7 +222,7 @@ def preview_command(
     env = {**os.environ, "DAZZLE_OVERRIDE_THEME": name}
     # Resolve the dazzle entrypoint from sys.executable so we use the
     # same interpreter (don't trust PATH order — venv awareness).
-    cmd = [sys.executable, "-m", "dazzle", "serve", "--local"]
+    cmd = [sys.executable, "-m", "dazzle", "serve"]
     # execvpe replaces this process — we don't need to track the child
     # or proxy signals. Ctrl-C cleans up the server directly.
     os.execvpe(cmd[0], cmd, env)

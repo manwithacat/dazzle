@@ -227,7 +227,7 @@ pytest tests/e2e/test_simple_task_generated.py -v
 ```bash
 # Prerequisites
 cd examples/fieldtest_hub
-dazzle serve --local  # Start the app
+dazzle serve  # Start the app
 
 # Install test dependencies
 pip install playwright pytest httpx
@@ -389,9 +389,9 @@ pytest --cov=src/dazzle --cov-report=xml
 - typescript ^5.0.0
 - eslint ^9.0.0
 
-### System (for Docker E2E)
+### System
 
-- Docker + Docker Compose
+- PostgreSQL (local install or managed instance)
 - Playwright browsers (`playwright install chromium`)
 
 ---

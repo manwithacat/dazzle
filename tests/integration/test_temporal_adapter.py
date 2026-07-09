@@ -303,7 +303,7 @@ class TestTemporalAdapterIntegration:
     Integration tests requiring a running Temporal server.
 
     These tests are skipped if Temporal is not reachable.
-    Run Temporal locally: docker-compose -f docker-compose.temporal.yml up -d
+    Run Temporal locally: bring your own Temporal cluster and point TEMPORAL_ADDRESS at it.
     """
 
     @pytest.fixture(autouse=True)

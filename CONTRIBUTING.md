@@ -240,10 +240,8 @@ Help others learn DAZZLE:
 
 Make deployment easier:
 
-- **Docker Images**: Pre-built images for quick starts
 - **Terraform Modules**: Infrastructure as code
 - **GitHub Actions**: Ready-to-use CI/CD workflows
-- **Kubernetes Configs**: K8s deployment manifests
 - **Monitoring Stack**: Prometheus, Grafana dashboards
 
 ## 🏗️ Architecture Overview

@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.100.0] - 2026-07-09
+
+### Removed
+- **All Docker tooling and references (clean break, ADR-0003).** Dazzle concentrates on its
+  single well-optimised runtime process, which deploys cleanly to Heroku-style buildpack
+  platforms; developers who want Docker/k8s/other containerisation roll their own against the
+  documented core process. Removed:
+  - `dazzle serve`'s Docker dev-infra auto-start and the **`--local` flag**. `dazzle serve` now
+    always runs against a Postgres (and optional Redis) you provide via `DATABASE_URL` / `REDIS_URL`
+    (env or `--database-url`). Deleted `cli/runtime_impl/docker.py` and the `page/runtime/docker/`
+    module. The non-Docker `--production` mode is unchanged.
+  - `dazzle stop`, `dazzle logs`, `dazzle rebuild`, `dazzle status` (Docker container management)
+    and `dazzle e2e run|run-all|clean` (Docker-based E2E orchestration).
+  - `dazzle build --docker` (Dockerfile / docker-compose generation) — `dazzle build` still emits
+    the buildpack bundle (main.py, requirements.txt, .env template). `dazzle deploy dockerfile`
+    and `dazzle deploy compose`. **`dazzle deploy heroku` (uv buildpack) is kept and is the
+    supported deploy path.**
+  - Docker-container service auto-detection in the channel providers (email/queue/stream) — env-var
+    and port-scan detection remain. Manifest `[infra.docker]` (`DockerConfig`) and API-pack
+    `[infrastructure.docker]` metadata (`DockerSpec`). The Temporal-worker `docker-compose`/`Dockerfile`
+    templates.
+- **Deprecated `docuseal` API pack.** Removed `docuseal_signatures` (pack + vendor-mock scenarios +
+  webhook wiring) in favour of Dazzle's native document-signing infrastructure (`src/dazzle/signing/`).
+
+### Agent Guidance
+- **`dazzle serve` is always local now.** There is no `--local` flag and no Docker auto-start —
+  set `DATABASE_URL` / `REDIS_URL` (bring your own Postgres + Redis). Never pass `serve --local`
+  from scripts or subprocess launchers; it's an unknown option and will error.
+- **Deploy story = buildpack / Heroku.** Use `dazzle deploy heroku` (uv buildpack: Procfile +
+  pyproject + uv.lock + .python-version). There is no framework-generated Dockerfile/compose.
+- **QA magic-link gate:** `dazzle serve` sets `DAZZLE_QA_MODE=1` only for development runs
+  (`DAZZLE_ENV=development`, the default). Staging/prod servers must set `DAZZLE_ENV` accordingly.
+- **Native signing, not docuseal.** Document signing is the native `src/dazzle/signing/` subsystem;
+  the `docuseal` API pack no longer exists.
+
 ## [0.99.2] - 2026-07-09
 
 ### Added

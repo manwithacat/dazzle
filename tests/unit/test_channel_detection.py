@@ -39,7 +39,7 @@ class TestDetectionResult:
             connection_url="smtp://localhost:1025",
             api_url="http://localhost:8025/api",
             management_url="http://localhost:8025",
-            detection_method="docker",
+            detection_method="port",
             latency_ms=5.2,
             metadata={"version": "1.12.1"},
         )
@@ -47,7 +47,7 @@ class TestDetectionResult:
         assert result.provider_name == "mailpit"
         assert result.status == ProviderStatus.AVAILABLE
         assert result.connection_url == "smtp://localhost:1025"
-        assert result.detection_method == "docker"
+        assert result.detection_method == "port"
         assert result.latency_ms == 5.2
         assert result.metadata["version"] == "1.12.1"
 
@@ -90,49 +90,17 @@ class TestMailpitDetector:
         assert result.detection_method == "explicit"
 
     @pytest.mark.asyncio
-    async def test_mailpit_detect_via_docker(self):
-        """Test Mailpit detection via Docker."""
-        detector = MailpitDetector()
-
-        mock_container = {
-            "image": "axllent/mailpit:latest",
-            "name": "mailpit",
-            "ports": "0.0.0.0:1025->1025/tcp, 0.0.0.0:8025->8025/tcp",
-            "port_mappings": {1025: 1025, 8025: 8025},
-        }
-
-        with patch(
-            "dazzle.http.channels.providers.email.check_docker_container",
-            new_callable=AsyncMock,
-            return_value=mock_container,
-        ):
-            with patch.object(detector, "health_check", new_callable=AsyncMock, return_value=True):
-                result = await detector.detect()
-
-        assert result is not None
-        assert result.provider_name == "mailpit"
-        assert result.detection_method == "docker"
-        assert "container" in result.metadata
-
-    @pytest.mark.asyncio
     async def test_mailpit_detect_via_port(self):
         """Test Mailpit detection via port scan."""
         detector = MailpitDetector()
 
         with patch(
-            "dazzle.http.channels.providers.email.check_docker_container",
+            "dazzle.http.channels.providers.email.check_port",
             new_callable=AsyncMock,
-            return_value=None,
+            return_value=True,
         ):
-            with patch(
-                "dazzle.http.channels.providers.email.check_port",
-                new_callable=AsyncMock,
-                return_value=True,
-            ):
-                with patch.object(
-                    detector, "health_check", new_callable=AsyncMock, return_value=True
-                ):
-                    result = await detector.detect()
+            with patch.object(detector, "health_check", new_callable=AsyncMock, return_value=True):
+                result = await detector.detect()
 
         assert result is not None
         assert result.provider_name == "mailpit"
@@ -144,16 +112,11 @@ class TestMailpitDetector:
         detector = MailpitDetector()
 
         with patch(
-            "dazzle.http.channels.providers.email.check_docker_container",
+            "dazzle.http.channels.providers.email.check_port",
             new_callable=AsyncMock,
-            return_value=None,
+            return_value=False,
         ):
-            with patch(
-                "dazzle.http.channels.providers.email.check_port",
-                new_callable=AsyncMock,
-                return_value=False,
-            ):
-                result = await detector.detect()
+            result = await detector.detect()
 
         assert result is None
 

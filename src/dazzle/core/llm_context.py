@@ -46,12 +46,7 @@ This regenerates all code from the DSL. Generated artifacts live in `build/`.
 
 ### 3. Run the application
 ```bash
-# Recommended:
 dazzle serve
-
-# If using Docker stack:
-cd build/docker
-docker compose up
 ```
 
 ### 4. Test
@@ -81,7 +76,6 @@ pytest  # (if tests are generated or added)
 ├── dsl/                    # DSL source files (EDIT THESE)
 ├── dazzle.toml            # Project manifest (EDIT THIS)
 ├── build/                 # Generated artifacts (REGENERATE, DON'T EDIT)
-│   ├── docker/            # Docker Compose setup
 │   └── infra_*/           # Infrastructure configs
 ├── LLM_CONTEXT.md         # This file
 ├── .llm/                  # Extended LLM documentation
@@ -101,7 +95,7 @@ pytest  # (if tests are generated or added)
 
 **Error: "Backend 'xyz' not found"**
 - Your stack requires a backend that isn't available
-- **Solution**: Use explicit backends: `dazzle build --backends openapi,docker`
+- **Solution**: Use explicit backends: `dazzle build --backends openapi,terraform`
 - Or change the stack in `dazzle.toml` to a compatible one
 
 **Validation Errors**
@@ -116,7 +110,7 @@ pytest  # (if tests are generated or added)
 ### Common Questions
 
 **Q: Can I edit generated code?**
-A: Generally no. Always edit DSL and rebuild. Infrastructure configs (Docker, Terraform)
+A: Generally no. Always edit DSL and rebuild. Infrastructure configs (Terraform)
 can be customized.
 
 **Q: How do I add a new field?**
@@ -168,12 +162,11 @@ The Dazzle Runtime uses server-rendered HTMX templates (ADR-0011):
 ### 4. Backends
 Backends generate concrete artifacts from AppSpec:
 - `openapi` → OpenAPI 3.0 specification
-- `docker` → Docker Compose setup
 - `terraform` → Terraform infrastructure
 
 ### 5. Stacks
 Stacks are preset combinations of backends:
-- `api_only` → OpenAPI + Docker
+- `api_only` → OpenAPI
 - Custom stacks can be defined in `dazzle.toml`
 
 ### 6. Project Manifest (dazzle.toml)
@@ -205,7 +198,6 @@ Configuration file specifying:
 ### When to Edit dazzle.toml
 - Changing stack configuration
 - Selecting different backends
-- Configuring Docker settings
 - Adjusting infrastructure parameters
 
 ### When to Regenerate
@@ -265,7 +257,6 @@ Generates:
 - Includes schemas, paths, responses
 
 ### Infrastructure Backends
-- `docker` → Dockerfile, compose.yaml
 - `terraform` → Terraform modules for AWS
 
 ## Common Patterns
@@ -311,7 +302,7 @@ dazzle build --force             # Force full rebuild
 ### Viewing Generated Code
 ```bash
 ls build/
-cat build/docker/compose.yaml
+cat build/backend/appspec.json
 ```
 
 ## Best Practices
@@ -419,7 +410,6 @@ When helping with this project:
 
 ⚠️ Require confirmation:
 - `dazzle build --force` (overwrites everything)
-- `docker compose up -d` (starts services)
 - `terraform apply` (deploys infrastructure)
 
 ❌ Avoid:
@@ -442,8 +432,7 @@ dazzle build --force  # Full rebuild
 
 When testing:
 ```bash
-dazzle serve                                 # Recommended
-cd build/docker && docker compose up         # If Docker
+dazzle serve                                 # Run against your DATABASE_URL / REDIS_URL
 ```
 
 ## This Project's Specifics
@@ -470,9 +459,6 @@ def generate_claude_permissions() -> str:
     "Bash(python3 *)",
     "Bash(pip *)",
     "Bash(dazzle *)",
-    "Bash(docker ps *)",
-    "Bash(docker logs *)",
-    "Bash(docker images *)",
     "Bash(pytest *)",
     "Bash(tree *)",
     "Bash(curl *)",
@@ -483,9 +469,6 @@ def generate_claude_permissions() -> str:
     "Bash(terraform destroy *)"
   ],
   "requireApproval": [
-    "Bash(docker compose up *)",
-    "Bash(docker compose down *)",
-    "Bash(docker system prune *)",
     "Bash(terraform apply *)",
     "Bash(terraform init *)",
     "Bash(npm install *)",
@@ -534,7 +517,7 @@ When suggesting code:
 ### What This Repo Contains
 
 Business logic is in **DSL files**, not framework code. Generated code implements
-the DSL specification using selected backends (FastAPI, Docker, etc.).
+the DSL specification using selected backends (FastAPI, etc.).
 
 Don't suggest:
 - Duplicating entity definitions in code
@@ -563,7 +546,7 @@ Then run: dazzle build
 
 **Bad response**:
 ```
-Edit build/docker/app/models.py:
+Edit build/backend/app/models.py:
 
 class User(BaseModel):
     phone: str = Field(max_length=20)

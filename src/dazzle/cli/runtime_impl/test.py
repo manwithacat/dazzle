@@ -147,7 +147,6 @@ def check_command(
                 "-m",
                 "dazzle.cli",
                 "serve",
-                "--local",
                 "--port",
                 str(ui_port),  # Frontend port
                 "--api-port",
@@ -163,7 +162,6 @@ def check_command(
                 "-m",
                 "dazzle.cli",
                 "serve",
-                "--local",
                 "--backend-only",
                 "--port",
                 str(port),  # API port (used as main port in backend-only mode)

@@ -12,12 +12,8 @@ import typer
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.manifest import _DEFAULT_DATABASE_URL, load_manifest
 
-from .docker import (
-    generate_docker_compose,
-    generate_dockerfile,
+from .bundle import (
     generate_env_template,
-    generate_local_compose,
-    generate_local_run_script,
     generate_production_main,
     generate_requirements,
 )
@@ -291,7 +287,6 @@ def build_command(
         help="Build target: bundle (default), sql, openapi, asyncapi, all",
     ),
     check: bool = typer.Option(False, "--check", help="Validate only, do not write files"),
-    docker: bool = typer.Option(True, "--docker/--no-docker", help="Generate Dockerfile"),
     env_template: bool = typer.Option(True, "--env/--no-env", help="Generate environment template"),
     frontend: bool = typer.Option(True, "--frontend/--no-frontend", help="Include frontend"),
     _minify: bool = typer.Option(True, "--minify/--no-minify", help="Minify frontend assets"),
@@ -300,7 +295,7 @@ def build_command(
     Build production artifacts from DSL specifications.
 
     Targets:
-        bundle  — Full deployment package (Docker, main.py, requirements)
+        bundle  — Full deployment package (main.py, requirements, env template)
         sql     — SQL schema DDL (CREATE TABLE statements)
         openapi — OpenAPI 3.1 specification
         asyncapi — AsyncAPI 3.0 specification
@@ -314,11 +309,8 @@ def build_command(
         dazzle build --check                # Validate without writing
         dazzle build -o deploy              # Output to ./deploy
         dazzle build --no-frontend          # Backend bundle only
-        dazzle build --no-docker            # Skip Dockerfile
 
-    To deploy:
-        cd dist && docker build -t myapp . && docker run -p 8000:8000 myapp
-        # Or without Docker:
+    To deploy (buildpack / any Python host):
         cd dist && pip install -r requirements.txt && python main.py
     """
     from dazzle.cli.services.build_service import BuildService
@@ -381,7 +373,7 @@ def build_command(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Export AppSpec
-    typer.echo("\n[1/5] Exporting AppSpec...")
+    typer.echo("\n[1/4] Exporting AppSpec...")
     typer.echo(f"  • {len(appspec.domain.entities)} entities")
     typer.echo(f"  • {len(appspec.surfaces)} surfaces")
 
@@ -392,15 +384,15 @@ def build_command(
 
     # 2. Generate Frontend (optional)
     if frontend:
-        typer.echo("\n[2/5] Generating frontend...")
+        typer.echo("\n[2/4] Generating frontend...")
         frontend_dir = output_dir / "frontend"
         files = svc.generate_preview_files(appspec, str(frontend_dir))
         typer.echo(f"  • {len(files)} preview files generated")
     else:
-        typer.echo("\n[2/5] Skipping frontend (--no-frontend)")
+        typer.echo("\n[2/4] Skipping frontend (--no-frontend)")
 
     # 3. Generate main.py entry point
-    typer.echo("\n[3/5] Generating entry point...")
+    typer.echo("\n[3/4] Generating entry point...")
     main_content = generate_production_main(appspec.name, frontend)
     main_file = output_dir / "main.py"
     main_file.write_text(main_content, encoding="utf-8")
@@ -412,58 +404,22 @@ def build_command(
     req_file.write_text(requirements, encoding="utf-8")
     typer.echo(f"  ✓ {req_file.name}")
 
-    # 5. Generate Dockerfile (optional)
-    if docker:
-        typer.echo("\n[4/5] Generating Dockerfile...")
-        dockerfile = generate_dockerfile(appspec.name, frontend)
-        (output_dir / "Dockerfile").write_text(dockerfile, encoding="utf-8")
-        typer.echo("  ✓ Dockerfile")
-
-        # Docker-compose for development/local deployment
-        compose = generate_docker_compose(appspec.name)
-        (output_dir / "docker-compose.yml").write_text(compose, encoding="utf-8")
-        typer.echo("  ✓ docker-compose.yml")
-
-        # Local backing services (Postgres + Redis)
-        local_compose = generate_local_compose(appspec.name)
-        (output_dir / "docker-compose.local.yml").write_text(local_compose, encoding="utf-8")
-        typer.echo("  ✓ docker-compose.local.yml (Postgres + Redis)")
-
-        # Local dev run script
-        scripts_dir = output_dir / "scripts"
-        scripts_dir.mkdir(exist_ok=True)
-        run_script = generate_local_run_script(appspec.name)
-        run_script_path = scripts_dir / "run_local.sh"
-        run_script_path.write_text(run_script, encoding="utf-8")
-        run_script_path.chmod(0o755)
-        typer.echo("  ✓ scripts/run_local.sh")
-    else:
-        typer.echo("\n[4/5] Skipping Dockerfile (--no-docker)")
-
-    # 6. Generate environment template
+    # 5. Generate environment template
     if env_template:
-        typer.echo("\n[5/5] Generating environment template...")
+        typer.echo("\n[4/4] Generating environment template...")
         env = generate_env_template(appspec.name)
         (output_dir / ".env.example").write_text(env, encoding="utf-8")
         typer.echo("  ✓ .env.example")
     else:
-        typer.echo("\n[5/5] Skipping environment template (--no-env)")
+        typer.echo("\n[4/4] Skipping environment template (--no-env)")
 
     # Summary
     typer.echo("\n" + "=" * 50)
     typer.echo(f"Production bundle ready: {output_dir}")
     typer.echo("=" * 50)
-    if docker:
-        typer.echo("\nLocal development (production-grade):")
-        typer.echo(f"  cd {output_dir}")
-        typer.echo("  cp .env.example .env  # Edit configuration")
-        typer.echo("  docker compose -f docker-compose.local.yml up -d  # Start Postgres + Redis")
-        typer.echo("  ./scripts/run_local.sh --reload  # Start dev server")
-        typer.echo("\nTo deploy with Docker:")
-        typer.echo(f"  cd {output_dir}")
-        typer.echo("  docker compose up --build")
-    typer.echo("\nTo deploy without Docker:")
+    typer.echo("\nTo deploy (buildpack / any Python host):")
     typer.echo(f"  cd {output_dir}")
+    typer.echo("  cp .env.example .env  # Edit configuration")
     typer.echo("  pip install -r requirements.txt")
     if frontend:
         typer.echo("  cd frontend && npm install && npm run build && cd ..")

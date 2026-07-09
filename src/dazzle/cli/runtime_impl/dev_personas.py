@@ -1,8 +1,8 @@
 """Dev persona provisioning for QA mode (#768).
 
-Called from serve_command when --local is active. Creates a dev user
-for each DSL persona so testers can log in as any of them via magic
-links.
+Called from serve_command for development runs (DAZZLE_ENV=development).
+Creates a dev user for each DSL persona so testers can log in as any of
+them via magic links.
 
 Dev personas:
 - Email: {persona_id}@example.test (RFC2606 reserved TLD)

@@ -19,16 +19,6 @@ def _fragment_chrome_warned() -> bool:
     return already
 
 
-@dataclass
-class DockerConfig:
-    """Docker infrastructure configuration."""
-
-    variant: str = "compose"  # "compose" or "dockerfile"
-    image_name: str | None = None
-    base_image: str = "python:3.14-slim"
-    port: int = 8000
-
-
 # =============================================================================
 # Shell Configuration
 # =============================================================================
@@ -201,7 +191,6 @@ class InfraConfig:
     """Infrastructure configuration from manifest."""
 
     backends: list[str] = field(default_factory=list)
-    docker: DockerConfig = field(default_factory=DockerConfig)
     terraform: TerraformConfig = field(default_factory=TerraformConfig)
 
 
@@ -288,7 +277,7 @@ class DatabaseConfig:
         [database]
         url = "postgresql://localhost:5432/myapp"
 
-        # Docker (non-default port)
+        # Non-default port
         [database]
         url = "postgresql://localhost:5433/myapp"
 
@@ -850,15 +839,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     # Parse infra config if present
     infra_config = None
     if infra_data:
-        docker_data = infra_data.get("docker", {})
         terraform_data = infra_data.get("terraform", {})
-
-        docker_config = DockerConfig(
-            variant=docker_data.get("variant", "compose"),
-            image_name=docker_data.get("image_name"),
-            base_image=docker_data.get("base_image", "python:3.14-slim"),
-            port=docker_data.get("port", 8000),
-        )
 
         terraform_config = TerraformConfig(
             root_module=terraform_data.get("root_module", "./infra/terraform"),
@@ -869,7 +850,6 @@ def load_manifest(path: Path) -> ProjectManifest:
 
         infra_config = InfraConfig(
             backends=infra_data.get("backends", []),
-            docker=docker_config,
             terraform=terraform_config,
         )
 

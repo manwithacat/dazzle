@@ -63,8 +63,7 @@ perf-driven **3.14-primary-target** promotion was added beyond the original plan
   product decision, revisit when there's concrete reason to drop 3.12 — EOL Oct 2028).
 
 **Still deferred (intentionally):** the floor move (`>=3.13`/`>=3.14`) + the 669-file `__future__`-annotations
-cleanup (§4, ADR-0014-aware, needs a 3.14 floor); rebasing the Docker default onto a uv/pbs interpreter to
-capture the tail-call speedup in containers (per `docs/python-3.14-primary-target.md`).
+cleanup (§4, ADR-0014-aware, needs a 3.14 floor).
 
 **Process note (§7-adjacent):** a uv-specific footgun surfaced — CI lints with the `uv.lock`-pinned ruff, which
 can be newer than the local pyenv ruff and flag more sites; v0.82.7 shipped a red `lint` job for exactly this

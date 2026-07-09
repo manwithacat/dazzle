@@ -4,7 +4,7 @@ This module is imported and its router registered ONLY when both:
 - DAZZLE_ENV=development
 - DAZZLE_QA_MODE=1
 
-The serve command sets DAZZLE_QA_MODE=1 when --local is active.
+The serve command sets DAZZLE_QA_MODE=1 for development runs (DAZZLE_ENV=development).
 
 SECURITY: the /qa/magic-link endpoint creates a session for any
 provisioned persona without authentication. It is gated at both

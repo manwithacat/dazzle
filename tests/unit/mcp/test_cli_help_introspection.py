@@ -40,7 +40,7 @@ class TestIntrospectionCompleteness:
     TOP_LEVEL = [
         "serve", "init", "validate", "lint", "layout-plan",
         "analyze-spec", "example", "doctor", "grammar",
-        "build", "info", "stop", "rebuild", "logs", "status",
+        "build", "info",
     ]
     # fmt: on
 
@@ -79,9 +79,6 @@ class TestIntrospectionCompleteness:
         "deploy plan",
         "vocab init",
         "vocab list",
-        "e2e run",
-        "e2e run-all",
-        "e2e clean",
         "auth create-user",
         "auth list-users",
         "db revision",

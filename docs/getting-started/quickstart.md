@@ -17,7 +17,7 @@ entity Task "Task":
 ## Prerequisites
 
 - Dazzle installed ([Installation Guide](installation.md))
-- PostgreSQL running (local or Docker)
+- PostgreSQL running locally (or a managed instance)
 - A terminal
 
 ## Step 1: Create a Project
@@ -44,18 +44,11 @@ Fix any errors before proceeding.
 
 ## Step 3: Set Up PostgreSQL
 
-Dazzle requires PostgreSQL for data persistence.
+Dazzle requires PostgreSQL for data persistence. Bring your own — a local
+install or a managed instance — and point `DATABASE_URL` at it:
 
 ```bash
-# Start PostgreSQL via Docker (quick option)
-docker run -d --name dazzle-postgres \
-  -e POSTGRES_USER=dazzle \
-  -e POSTGRES_PASSWORD=dazzle \
-  -e POSTGRES_DB=dazzle \
-  -p 5432:5432 \
-  postgres:16
-
-# Set the database URL
+# Point at your Postgres
 export DATABASE_URL=postgresql://dazzle:dazzle@localhost:5432/dazzle
 ```
 
@@ -64,14 +57,11 @@ Tables are created automatically on first startup.
 ## Step 4: Run the Application
 
 ```bash
-# Docker mode (default — recommended)
 dazzle serve
-
-# Or run locally without Docker
-dazzle serve --local
 ```
 
-This starts:
+`dazzle serve` connects to the Postgres in your `DATABASE_URL` (and Redis in
+`REDIS_URL`, if set). This starts:
 
 - **UI** at `http://localhost:3000`
 - **API** at `http://localhost:8000/api/`
@@ -111,14 +101,14 @@ Validate and run:
 
 ```bash
 dazzle validate
-dazzle serve --local
+dazzle serve
 ```
 
 ## Development Workflow
 
 ```bash
 # Terminal 1: Serve with hot reload
-dazzle serve --local --watch
+dazzle serve --watch
 
 # Terminal 2: Edit your DSL files
 # Changes are picked up automatically
@@ -131,7 +121,7 @@ dazzle serve --local --watch
 | `dazzle validate` | Check DSL for errors |
 | `dazzle lint` | Extended validation with style checks |
 | `dazzle serve` | Start the full-stack app |
-| `dazzle serve --local --watch` | Local mode with hot reload |
+| `dazzle serve --watch` | Serve with hot reload |
 | `dazzle doctor` | Check environment health |
 | `dazzle inspect` | Inspect project structure |
 

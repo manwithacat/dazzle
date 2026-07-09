@@ -1,6 +1,6 @@
 """Server fixture for INTERACTION_WALK.
 
-Spawns ``python -m dazzle serve --local`` against a chosen example-app
+Spawns ``python -m dazzle serve`` against a chosen example-app
 directory, waits for it to write ``.dazzle/runtime.json``, and yields
 the :class:`dazzle.qa.server.AppConnection`. Tears down cleanly on
 session end.
@@ -140,13 +140,13 @@ def launch_interaction_server(
     timeout: float = _RUNTIME_POLL_TIMEOUT_SECONDS,
     extra_env: dict[str, str] | None = None,
 ) -> Iterator[AppConnection]:
-    """Start ``dazzle serve --local`` in ``project_root`` and yield a
+    """Start ``dazzle serve`` in ``project_root`` and yield a
     live :class:`AppConnection`. Tears down on context exit.
 
     Requires ``DATABASE_URL`` and ``REDIS_URL`` in the environment (or
-    passed via ``extra_env``) because ``--local`` skips the Docker
-    bring-up. For CI wiring, those come from the workflow's Postgres
-    + Redis service containers — see the design doc, step 6.
+    passed via ``extra_env``) — ``dazzle serve`` runs against a
+    caller-provided Postgres + Redis. For CI wiring, those come from the
+    workflow's Postgres + Redis service containers — see the design doc, step 6.
 
     Args:
         project_root: Directory containing ``dazzle.toml``.
@@ -221,7 +221,7 @@ def launch_interaction_server(
     _log_path = log_dir / f"managed-{_ts}.log"
     _log_fh = _log_path.open("wb")
     proc = subprocess.Popen(
-        [sys.executable, "-m", "dazzle", "serve", "--local"],
+        [sys.executable, "-m", "dazzle", "serve"],
         cwd=project_root,
         env=env,
         stdout=_log_fh,

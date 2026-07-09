@@ -310,7 +310,7 @@ class UnifiedTestRunner:
         env["PYTHONPATH"] = str(self.project_path.parent.parent / "src")
 
         self._server_process = subprocess.Popen(
-            [sys.executable, "-m", "dazzle", "dazzle", "serve", "--local"],
+            [sys.executable, "-m", "dazzle", "dazzle", "serve"],
             cwd=self.project_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,

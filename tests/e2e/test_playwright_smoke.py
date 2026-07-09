@@ -1,7 +1,7 @@
 """
 Playwright-based smoke tests for Dazzle examples.
 
-These tests run locally (no Docker required) and verify:
+These tests run locally (no containers required) and verify:
 1. Page loads without JavaScript errors
 2. Basic navigation works
 3. CRUD forms are accessible

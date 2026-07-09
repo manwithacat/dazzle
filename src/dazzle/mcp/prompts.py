@@ -37,7 +37,7 @@ def create_prompts() -> list[dict[str, Any]]:
             "arguments": [
                 {
                     "name": "stack",
-                    "description": "Stack to review (docker, base).",
+                    "description": "Stack to review (base).",
                     "required": True,
                 }
             ],

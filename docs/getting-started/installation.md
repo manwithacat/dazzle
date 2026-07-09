@@ -70,16 +70,6 @@ pipx install dazzle-dsl
 pipx install git+https://github.com/manwithacat/dazzle.git
 ```
 
-### Method 5: Docker (Coming Soon)
-
-Docker images will be available in a future release:
-
-```bash
-# Future command (not yet available)
-docker pull ghcr.io/manwithacat/dazzle:latest
-docker run -v $(pwd):/workspace ghcr.io/manwithacat/dazzle:latest validate
-```
-
 ## Verification
 
 After installation, verify DAZZLE is working:

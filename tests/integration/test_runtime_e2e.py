@@ -7,7 +7,7 @@ and verify that:
 2. CRUD operations function properly
 3. The frontend is served correctly
 
-Uses a local Python server (no Docker required).
+Uses a local Python server (no containers required).
 """
 
 from __future__ import annotations

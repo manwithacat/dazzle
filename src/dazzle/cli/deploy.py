@@ -614,23 +614,6 @@ def deploy_preflight(
 # ---------------------------------------------------------------------------
 
 
-def generate_production_dockerfile() -> str:
-    """Generate a production Dockerfile using dazzle serve --production."""
-    return """FROM python:3.14-slim
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \\
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"
-CMD ["dazzle", "serve", "--production"]
-"""
-
-
 def generate_deploy_requirements(version: str) -> str:
     """Generate requirements.txt pinned to the current dazzle-dsl version.
 
@@ -724,44 +707,6 @@ def _run_uv_lock(output_path: Path) -> bool:
     return result.returncode == 0
 
 
-def generate_compose_yaml() -> str:
-    """Generate a production docker-compose.yml."""
-    return """services:
-  app:
-    build: .
-    ports:
-      - "3000:8000"
-    environment:
-      - DATABASE_URL=postgresql://dazzle:dazzle@postgres:5432/dazzle
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: dazzle
-      POSTGRES_PASSWORD: dazzle
-      POSTGRES_DB: dazzle
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dazzle"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-
-volumes:
-  pgdata:
-"""
-
-
 def _get_dazzle_version() -> str:
     """Get the installed dazzle-dsl version."""
     try:
@@ -770,36 +715,6 @@ def _get_dazzle_version() -> str:
         return version("dazzle-dsl")
     except Exception:
         return "0.0.0"
-
-
-@deploy_app.command(name="dockerfile")
-def deploy_dockerfile_cmd(
-    output_dir: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Directory to write Dockerfile and requirements.txt"),
-    ] = Path("."),
-) -> None:
-    """Generate a production Dockerfile and requirements.txt.
-
-    Example:
-        dazzle deploy dockerfile
-        docker build -t myapp .
-        docker run -e DATABASE_URL=... myapp
-    """
-    version = _get_dazzle_version()
-    output_path = Path(output_dir).resolve()
-
-    (output_path / "Dockerfile").write_text(generate_production_dockerfile(), encoding="utf-8")
-    (output_path / "requirements.txt").write_text(
-        generate_deploy_requirements(version), encoding="utf-8"
-    )
-
-    console.print(f"Generated {output_path / 'Dockerfile'}")
-    console.print(f"Generated {output_path / 'requirements.txt'}")
-    console.print()
-    console.print("[bold]Next steps:[/bold]")
-    console.print("  docker build -t myapp .")
-    console.print("  docker run -e DATABASE_URL=... -p 8000:8000 myapp")
 
 
 @deploy_app.command(name="heroku")
@@ -881,35 +796,3 @@ def deploy_heroku_cmd(
     if not pip:
         console.print("  git add Procfile pyproject.toml uv.lock .python-version")
     console.print("  git push heroku main")
-
-
-@deploy_app.command(name="compose")
-def deploy_compose_cmd(
-    output_dir: Annotated[
-        Path,
-        typer.Option("--output", "-o", help="Directory to write docker-compose.yml"),
-    ] = Path("."),
-) -> None:
-    """Generate a production docker-compose.yml.
-
-    Requires a Dockerfile (run 'dazzle deploy dockerfile' first).
-
-    Example:
-        dazzle deploy dockerfile
-        dazzle deploy compose
-        docker compose up
-    """
-    output_path = Path(output_dir).resolve()
-    compose_path = output_path / "docker-compose.yml"
-
-    if not (output_path / "Dockerfile").exists():
-        console.print(
-            "[yellow]Warning: No Dockerfile found. Run 'dazzle deploy dockerfile' first.[/yellow]"
-        )
-
-    compose_path.write_text(generate_compose_yaml(), encoding="utf-8")
-
-    console.print(f"Generated {compose_path}")
-    console.print()
-    console.print("[bold]Next steps:[/bold]")
-    console.print("  docker compose up")

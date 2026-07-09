@@ -16,7 +16,6 @@ from ..detection import (
     DetectionResult,
     ProviderDetector,
     ProviderStatus,
-    check_docker_container,
     check_port,
     get_env_var,
 )
@@ -32,8 +31,7 @@ class RedisDetector(ProviderDetector):
 
     Detection order:
     1. REDIS_URL environment variable
-    2. Running Docker container with redis image
-    3. Port 6379 responding
+    2. Port 6379 responding
     """
 
     DEFAULT_PORT = 6379
@@ -64,12 +62,7 @@ class RedisDetector(ProviderDetector):
                 detection_method="env",
             )
 
-        # 2. Check for running Docker container
-        docker_result = await self._detect_docker()
-        if docker_result:
-            return docker_result
-
-        # 3. Check default port
+        # 2. Check default port
         if await check_port("localhost", self.DEFAULT_PORT):
             return DetectionResult(
                 provider_name="redis",
@@ -81,28 +74,6 @@ class RedisDetector(ProviderDetector):
             )
 
         return None
-
-    async def _detect_docker(self) -> DetectionResult | None:
-        """Check for running Redis container."""
-        container = await check_docker_container("redis")
-        if not container:
-            return None
-
-        port_mappings = container.get("port_mappings", {})
-        port = port_mappings.get(6379, self.DEFAULT_PORT)
-
-        return DetectionResult(
-            provider_name="redis",
-            status=ProviderStatus.AVAILABLE,
-            connection_url=f"redis://localhost:{port}",
-            api_url=None,
-            management_url=None,
-            detection_method="docker",
-            metadata={
-                "container": container.get("name", "unknown"),
-                "image": container.get("image", "unknown"),
-            },
-        )
 
     async def health_check(self, result: DetectionResult) -> bool:
         """Verify Redis is accessible."""
@@ -139,8 +110,7 @@ class KafkaDetector(ProviderDetector):
 
     Detection order:
     1. KAFKA_BOOTSTRAP_SERVERS environment variable
-    2. Running Docker container with kafka image
-    3. Port 9092 responding
+    2. Port 9092 responding
     """
 
     DEFAULT_PORT = 9092
@@ -172,12 +142,7 @@ class KafkaDetector(ProviderDetector):
                 metadata={"bootstrap_servers": servers},
             )
 
-        # 2. Check for running Docker container
-        docker_result = await self._detect_docker()
-        if docker_result:
-            return docker_result
-
-        # 3. Check default port
+        # 2. Check default port
         if await check_port("localhost", self.DEFAULT_PORT):
             return DetectionResult(
                 provider_name="kafka",
@@ -189,34 +154,6 @@ class KafkaDetector(ProviderDetector):
             )
 
         return None
-
-    async def _detect_docker(self) -> DetectionResult | None:
-        """Check for running Kafka container."""
-        container = await check_docker_container("kafka")
-        if not container:
-            # Try common image patterns
-            container = await check_docker_container("confluentinc/cp-kafka")
-        if not container:
-            container = await check_docker_container("bitnami/kafka")
-
-        if not container:
-            return None
-
-        port_mappings = container.get("port_mappings", {})
-        port = port_mappings.get(9092, self.DEFAULT_PORT)
-
-        return DetectionResult(
-            provider_name="kafka",
-            status=ProviderStatus.AVAILABLE,
-            connection_url=f"localhost:{port}",
-            api_url=None,
-            management_url=None,
-            detection_method="docker",
-            metadata={
-                "container": container.get("name", "unknown"),
-                "image": container.get("image", "unknown"),
-            },
-        )
 
     async def health_check(self, result: DetectionResult) -> bool:
         """Verify Kafka is accessible."""

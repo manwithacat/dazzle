@@ -160,7 +160,6 @@ class _ServeContext:
         "api_port",
         "database_url",
         "redis_url",
-        "local",
         "watch",
         "watch_source",
         "enable_dev_mode",
@@ -190,7 +189,6 @@ class _ServeContext:
         self.api_port: int = 8000
         self.database_url: str = ""
         self.redis_url: str = ""
-        self.local: bool = False
         self.watch: bool = False
         self.watch_source: bool = False
         self.enable_dev_mode: bool = False
@@ -268,7 +266,6 @@ def _configure_production_mode(ctx: _ServeContext) -> None:
     if ctx.redis_url:
         os.environ["REDIS_URL"] = ctx.redis_url
 
-    ctx.local = True
     ctx.watch = False
     ctx.watch_source = False
     ctx.enable_dev_mode = False
@@ -377,53 +374,6 @@ def _allocate_ports_and_runtime(ctx: _ServeContext) -> None:
         ctx.watch = True
 
 
-def _start_docker_infrastructure(ctx: _ServeContext) -> None:
-    """Start Postgres + Redis in Docker if available, mutating ctx URLs."""
-    if ctx.local or ctx.ui_only or ctx.backend_only:
-        return
-
-    try:
-        from dazzle.page.runtime.docker.utils import is_docker_available
-
-        if is_docker_available():
-            from dazzle.cli.runtime_impl.docker import (
-                start_dev_infrastructure,
-                stop_dev_infrastructure,
-            )
-
-            typer.echo("Starting dev infrastructure (Postgres + Redis) in Docker...")
-            try:
-                infra_db_url, infra_redis_url = start_dev_infrastructure(
-                    project_root=ctx.project_root,
-                    project_name=ctx.project_name,
-                )
-                os.environ["DATABASE_URL"] = infra_db_url
-                os.environ["REDIS_URL"] = infra_redis_url
-                ctx.database_url = infra_db_url
-                ctx.redis_url = infra_redis_url
-
-                typer.echo("  PostgreSQL: ready")
-                typer.echo("  Redis:      ready")
-                typer.echo()
-
-                def _stop_infra() -> None:
-                    typer.echo("Stopping dev infrastructure...")
-                    stop_dev_infrastructure(ctx.project_root)
-
-                atexit.register(_stop_infra)
-
-            except RuntimeError as exc:
-                typer.echo(f"Docker infrastructure failed: {exc}", err=True)
-                typer.echo("Falling back to local mode (ensure DATABASE_URL and REDIS_URL are set)")
-                typer.echo()
-        else:
-            typer.echo("Docker not available, falling back to local mode")
-            typer.echo("Install Docker for automatic Postgres + Redis setup")
-            typer.echo()
-    except ImportError:
-        pass
-
-
 def _validate_and_finalize_infra(ctx: _ServeContext) -> None:
     """Ensure DATABASE_URL env var is set and validate infrastructure."""
     if ctx.database_url:
@@ -463,8 +413,8 @@ def _load_appspec_and_subsystems(ctx: _ServeContext) -> None:
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)
 
-    # Auto-start vendor mocks (v0.32.0)
-    should_mock = ctx.auto_mock if ctx.auto_mock is not None else ctx.local
+    # Auto-start vendor mocks (v0.32.0). Default on for dev (non-production) runs.
+    should_mock = ctx.auto_mock if ctx.auto_mock is not None else (not ctx.production)
     if should_mock and not ctx.ui_only:
         _start_vendor_mocks(ctx)
 
@@ -694,8 +644,12 @@ def _serve_combined(ctx: _ServeContext) -> None:
     else:
         use_local_assets = ctx.local_assets
 
-    # QA mode for local non-production runs
-    if ctx.local and not ctx.production:
+    # QA mode for development runs only. Gated on enable_dev_mode (resolved from
+    # DAZZLE_ENV, which defaults to "development") rather than merely non-production,
+    # so a staging server (DAZZLE_ENV=staging, no --production) does NOT mount the
+    # QA magic-link endpoint. The old Docker-default path used to shield staging
+    # here; now that serve is always-local, this gate carries that protection.
+    if ctx.enable_dev_mode:
         os.environ["DAZZLE_QA_MODE"] = "1"
         os.environ.setdefault("DAZZLE_ENV", "development")
 
@@ -760,11 +714,6 @@ def serve_command(
         "-W",
         help="Also watch framework source files (Python, CSS, JS). Implies --watch.",
     ),
-    local: bool = typer.Option(
-        False,
-        "--local",
-        help="Skip Docker infrastructure; require DATABASE_URL and REDIS_URL to be set manually",
-    ),
     graphql: bool = typer.Option(
         False,
         "--graphql",
@@ -778,7 +727,7 @@ def serve_command(
     auto_mock: bool | None = typer.Option(
         None,
         "--mock/--no-mock",
-        help="Auto-start vendor mocks for API packs without credentials. Default: enabled in local mode.",
+        help="Auto-start vendor mocks for API packs without credentials. Default: enabled in dev (non-production).",
     ),
     workers: int | None = typer.Option(
         # #1397: default 1 (matching --help), NOT None. A None default forwarded
@@ -814,9 +763,9 @@ def serve_command(
     """
     Serve Dazzle app (backend API + UI with live data).
 
-    By default, starts Postgres + Redis in Docker and runs the app locally.
-    Use --local to skip Docker infrastructure (you must set DATABASE_URL
-    and REDIS_URL yourself).
+    Runs the app against a PostgreSQL (and optional Redis) instance you provide
+    via DATABASE_URL / REDIS_URL (env vars or --database-url). Bring your own
+    Postgres — install it locally or point at a managed instance.
 
     Runs:
     - FastAPI backend on api-port (default 8000) with PostgreSQL persistence
@@ -825,8 +774,7 @@ def serve_command(
     - Interactive API docs at http://host:api-port/docs
 
     Examples:
-        dazzle serve                    # Start infra in Docker, run app locally
-        dazzle serve --local            # No Docker; bring your own Postgres + Redis
+        dazzle serve                    # Run against $DATABASE_URL / $REDIS_URL
         dazzle serve --watch            # With hot reload (DSL file watching)
         dazzle serve --backend-only     # API server only (for separate frontend)
         dazzle serve --port 4000        # Frontend on 4000
@@ -837,10 +785,6 @@ def serve_command(
 
     Hot reload (--watch):
         Watch DSL files for changes and auto-refresh browser.
-
-    Related commands:
-        dazzle stop                     # Stop dev infrastructure
-        dazzle logs                     # View container logs
     """
     # Build context from CLI args
     ctx = _ServeContext()
@@ -849,7 +793,6 @@ def serve_command(
     ctx.port = port
     ctx.api_port = api_port
     ctx.database_url = database_url
-    ctx.local = local
     ctx.watch = watch
     ctx.watch_source = watch_source
     ctx.auto_mock = auto_mock
@@ -898,13 +841,10 @@ def serve_command(
     # Phase 3: Port allocation and runtime file
     _allocate_ports_and_runtime(ctx)
 
-    # Phase 4: Docker infrastructure (if applicable)
-    _start_docker_infrastructure(ctx)
-
-    # Phase 5: Validate infrastructure
+    # Phase 4: Validate infrastructure (DATABASE_URL / REDIS_URL from env)
     _validate_and_finalize_infra(ctx)
 
-    # Phase 6: Load AppSpec, mocks, SiteSpec
+    # Phase 5: Load AppSpec, mocks, SiteSpec
     _load_appspec_and_subsystems(ctx)
 
     # Phase 7: Dispatch to the appropriate server mode

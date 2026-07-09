@@ -412,7 +412,7 @@ if __name__ == "__main__":
         time.sleep(1)
 
         proc = subprocess.Popen(
-            [sys.executable, "-m", "dazzle", "dazzle", "serve", "--local"],
+            [sys.executable, "-m", "dazzle", "dazzle", "serve"],
             cwd=project_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,

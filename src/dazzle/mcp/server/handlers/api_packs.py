@@ -293,15 +293,6 @@ def _serialize_infrastructure(infra: Any) -> dict[str, Any] | None:
     if infra is None:
         return None
     result: dict[str, Any] = {"hosting": infra.hosting}
-    if infra.docker:
-        result["docker"] = {
-            "image": infra.docker.image,
-            "port": infra.docker.port,
-            "requires": infra.docker.requires,
-            "environment": infra.docker.environment,
-            "healthcheck_path": infra.docker.healthcheck_path,
-            "volumes": infra.docker.volumes,
-        }
     if infra.local_env_overrides:
         result["local_env_overrides"] = infra.local_env_overrides
     if infra.sandbox:

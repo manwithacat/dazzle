@@ -39,7 +39,7 @@ export DAZZLE_DB_POOL_MAX=10
 export WEB_CONCURRENCY=4
 
 # Or via CLI
-dazzle serve --local --workers 4
+dazzle serve --workers 4
 ```
 
 ### Stage 2: Smart Vertical Scaling
@@ -76,11 +76,10 @@ Dazzle apps are stateless at the process level. Horizontal scaling works by runn
 - Redis handles session affinity
 
 ```bash
-# Heroku
-heroku ps:scale web=2:standard-2x
+# Heroku — scale to N web dynos
+heroku ps:scale web=4:standard-2x
 
-# Docker Compose
-docker compose up --scale web=4
+# Or generically: run N processes behind a load balancer
 ```
 
 ## Monitoring What Matters

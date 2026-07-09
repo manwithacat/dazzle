@@ -11,8 +11,8 @@ Usage:
     # With environment variables
     TEMPORAL_ADDRESS=localhost:7233 python -m dazzle.process.worker
 
-    # Via Docker Compose (recommended)
-    docker-compose -f docker-compose.temporal.yml up temporal-worker
+Bring your own Temporal cluster (point TEMPORAL_ADDRESS at it) and run this
+worker as a plain process — supervise it however your platform prefers.
 """
 
 import asyncio

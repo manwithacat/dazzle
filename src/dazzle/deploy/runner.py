@@ -448,23 +448,6 @@ cdk deploy {app_name}-{env}-data
 cdk deploy {app_name}-{env}-compute
 ```
 
-## Push Docker Image
-
-After deployment, push your application image:
-
-```bash
-# Get ECR login
-aws ecr get-login-password --region {self.config.region.value} | docker login --username AWS --password-stdin <account>.dkr.ecr.{self.config.region.value}.amazonaws.com
-
-# Build and push
-docker build -t {app_name}:latest .
-docker tag {app_name}:latest <account>.dkr.ecr.{self.config.region.value}.amazonaws.com/{app_name}:latest
-docker push <account>.dkr.ecr.{self.config.region.value}.amazonaws.com/{app_name}:latest
-
-# Force new deployment
-aws ecs update-service --cluster {app_name}-{env} --service {app_name}-{env} --force-new-deployment
-```
-
 ## Destroy
 
 ```bash

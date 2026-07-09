@@ -33,12 +33,6 @@ class TestPayloadBuilding:
         assert payload["type"] == "payment_intent.succeeded"
         assert payload["data"]["object"]["status"] == "succeeded"
 
-    def test_build_docuseal_submission_completed(self) -> None:
-        dispatcher = WebhookDispatcher()
-        payload = dispatcher.build_payload("docuseal_signatures", "submission.completed")
-        assert payload["event_type"] == "submission.completed"
-        assert payload["data"]["status"] == "completed"
-
     def test_build_xero_invoice_updated(self) -> None:
         dispatcher = WebhookDispatcher()
         payload = dispatcher.build_payload("xero_accounting", "invoice.updated")
@@ -130,12 +124,6 @@ class TestWebhookSigning:
         expected = hmac_mod.new(b"xero-key", payload, hashlib.sha256).digest()
         assert headers["x-xero-signature"] == base64.b64encode(expected).decode()
 
-    def test_docuseal_generic_signing(self) -> None:
-        dispatcher = WebhookDispatcher(signing_secret="ds-secret")
-        payload = b'{"event_type": "submission.completed"}'
-        headers = dispatcher.sign_payload("docuseal_signatures", payload)
-        assert "X-Webhook-Signature" in headers
-
     def test_per_vendor_secrets(self) -> None:
         dispatcher = WebhookDispatcher(
             signing_secret="default",
@@ -149,7 +137,7 @@ class TestWebhookSigning:
         assert headers["X-Payload-Digest"] == expected
 
         # Other vendors use default
-        headers = dispatcher.sign_payload("docuseal_signatures", payload)
+        headers = dispatcher.sign_payload("custom_vendor", payload)
         expected = hmac_mod.new(b"default", payload, hashlib.sha256).hexdigest()
         assert headers["X-Webhook-Signature"] == expected
 
@@ -337,7 +325,6 @@ class TestWebhookRegistry:
         expected_vendors = {
             "sumsub_kyc",
             "stripe_payments",
-            "docuseal_signatures",
             "xero_accounting",
         }
         assert expected_vendors.issubset(set(WEBHOOK_EVENTS.keys()))
@@ -352,10 +339,6 @@ class TestWebhookRegistry:
         assert "payment_intent.succeeded" in events
         assert "payment_intent.payment_failed" in events
         assert "charge.refunded" in events
-
-    def test_docuseal_events(self) -> None:
-        events = set(WEBHOOK_EVENTS["docuseal_signatures"].keys())
-        assert "submission.completed" in events
 
     def test_xero_events(self) -> None:
         events = set(WEBHOOK_EVENTS["xero_accounting"].keys())

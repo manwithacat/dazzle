@@ -67,10 +67,6 @@ CATEGORY_MAP: dict[str, str] = {
     "build-api": "Code Generation",
     "build-css": "Compat",  # #1038: no-op shim, re-introduced in v0.67.21
     "info": "Runtime",
-    "stop": "Runtime",
-    "rebuild": "Runtime",
-    "logs": "Runtime",
-    "status": "Runtime",
     "migrate": "Runtime",
     "schema": "Runtime",
     "check": "Runtime",
@@ -108,8 +104,6 @@ MCP_TOOL_MAP: dict[str, str] = {
     "pitch validate": "pitch(operation='validate')",
     "kg export": "graph(operation='export')",
     "kg import": "graph(operation='import')",
-    "e2e run": "e2e_test(operation='run')",
-    "e2e run-all": "e2e_test(operation='run')",
 }
 
 ENRICHMENTS: dict[str, dict[str, Any]] = {
@@ -122,7 +116,7 @@ ENRICHMENTS: dict[str, dict[str, Any]] = {
         "notes": [
             "Dazzle is the recommended runtime - no code generation needed",
             "Use --test-mode for E2E testing with Playwright",
-            "Use --local for development without Docker",
+            "Set DATABASE_URL / REDIS_URL — dazzle serve runs against your own Postgres + Redis",
         ],
     },
     "init": {
@@ -361,13 +355,15 @@ Run commands from project root (directory containing dazzle.toml)
 
 ### Port already in use
 ```bash
-dazzle stop            # Stop existing container
-dazzle serve -p 4000   # Use different port
+dazzle serve -p 4000   # Use a different port
 ```
 
-### Docker issues
+### Database connection
 ```bash
-dazzle serve --local   # Run without Docker
+# dazzle serve needs a Postgres (and optional Redis) you provide:
+export DATABASE_URL=postgresql://localhost:5432/dazzle_dev
+export REDIS_URL=redis://localhost:6379/0
+dazzle serve
 ```
 """
 
@@ -1220,11 +1216,11 @@ entity Task "Task":
                 },
                 {
                     "problem": "Port already in use",
-                    "solution": "Run 'dazzle stop' or use -p flag for different port",
+                    "solution": "Use the -p flag for a different port",
                 },
                 {
-                    "problem": "Docker not running",
-                    "solution": "Start Docker or use 'dazzle serve --local'",
+                    "problem": "Database connection failed",
+                    "solution": "Set DATABASE_URL (and REDIS_URL) — dazzle serve uses your own Postgres + Redis",
                 },
                 {
                     "problem": "Validation errors",

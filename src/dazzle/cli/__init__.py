@@ -7,7 +7,7 @@ This package contains the main CLI application and modularized sub-commands:
 - project.py: Project commands (init, validate, lint, etc.)
 - vocab.py: Vocabulary management commands
 - testing.py: Test commands
-- e2e.py: Docker-based E2E testing
+- e2e.py: E2E testing (UX coverage, viewport)
 - mcp.py: MCP server commands
 - specs.py: Specification generation commands (OpenAPI, AsyncAPI)
 - deploy.py: Deploy commands
@@ -127,7 +127,7 @@ app.add_typer(_sweep_app, name="sweep")
 # Version command — mirrors `dazzle --version`. The subcommand form is
 # what `brew test dazzle` (in the homebrew-tap validate-formula
 # workflow) invokes, and what most CLI conventions (`npm version`,
-# `docker version`) use. Adding this as a proper subcommand also lets
+# `cargo version`) use. Adding this as a proper subcommand also lets
 # tab-completion discover it.
 @app.command(name="version")
 def version_command(
@@ -235,13 +235,9 @@ from dazzle.cli.runtime_impl import (  # noqa: E402
     build_ui_command,
     check_command,
     info_command,
-    logs_command,
     migrate_command,
-    rebuild_command,
     schema_command,
     serve_command,
-    status_command,
-    stop_command,
 )
 
 app.command(name="serve")(serve_command)
@@ -256,10 +252,6 @@ app.command(name="build-api")(build_api_command)
 # ergonomics, not backward-compat of the build behaviour itself.
 app.command(name="build-css")(build_css_command)
 app.command(name="info")(info_command)
-app.command(name="stop")(stop_command)
-app.command(name="rebuild")(rebuild_command)
-app.command(name="logs")(logs_command)
-app.command(name="status")(status_command)
 app.command(name="migrate")(migrate_command)
 app.command(name="schema")(schema_command)
 app.command(name="check")(check_command)

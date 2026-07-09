@@ -21,8 +21,8 @@ application — no sidecar or separate management port required.
 | Endpoint | Method | Purpose | Gating |
 |---|---|---|---|
 | `/_dazzle/health` | GET | DB connectivity + timestamp | None (all environments) |
-| `/_dazzle/live` | GET | Kubernetes liveness probe | None (all environments) |
-| `/_dazzle/ready` | GET | Kubernetes readiness probe | None (all environments) |
+| `/_dazzle/live` | GET | Liveness probe | None (all environments) |
+| `/_dazzle/ready` | GET | Readiness probe | None (all environments) |
 | `/_dazzle/stats` | GET | Per-entity row counts + uptime | None (all environments) |
 | `/_dazzle/spec` | GET | Loaded spec summary (entity/surface names, endpoint count) | None (all environments) |
 | `/_dazzle/entity/{name}` | GET | Entity schema + sample rows | None (all environments) |
@@ -107,7 +107,7 @@ respond is the only invariant tested.
 {"alive": true}
 ```
 
-**Use for:** Kubernetes liveness probe. A failed liveness probe triggers
+**Use for:** liveness probe. A failed liveness probe triggers
 a container restart. Point it at `/_dazzle/live`.
 
 ### `GET /_dazzle/ready` — readiness probe
@@ -125,7 +125,7 @@ succeeds.
 {"ready": false, "database": "error", "reason": "database unreachable"}
 ```
 
-**Use for:** Kubernetes readiness probe and load-balancer health checks.
+**Use for:** readiness probe and load-balancer health checks.
 A pod failing readiness is removed from rotation until its DB connection
 recovers. Point at `/_dazzle/ready`.
 

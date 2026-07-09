@@ -7,9 +7,8 @@ messaging providers (Mailpit, SendGrid, RabbitMQ, Kafka, etc.).
 Detection priority:
 1. Explicit DSL (provider: sendgrid)
 2. Environment variable (DAZZLE_CHANNEL_<NAME>_PROVIDER=sendgrid)
-3. Docker detection (running container with known image)
-4. Port scan (well-known ports responding)
-5. Fallback (development-safe default)
+3. Port scan (well-known ports responding)
+4. Fallback (development-safe default)
 """
 
 from __future__ import annotations
@@ -58,7 +57,7 @@ class DetectionResult:
     connection_url: str | None = None
     api_url: str | None = None
     management_url: str | None = None
-    detection_method: str = "unknown"  # "explicit", "env", "docker", "port", "fallback"
+    detection_method: str = "unknown"  # "explicit", "env", "port", "fallback"
     latency_ms: float | None = None
     error: str | None = None
     metadata: dict[str, str] = field(default_factory=dict)
@@ -95,7 +94,7 @@ class ProviderDetector(ABC):
                 return "email"
 
             async def detect(self) -> DetectionResult | None:
-                # Check docker, ports, etc.
+                # Check env vars, ports, etc.
                 ...
     """
 
@@ -171,75 +170,6 @@ async def check_port(host: str, port: int, timeout: float = 2.0) -> bool:
 
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, _check)
-
-
-async def check_docker_container(image_pattern: str) -> dict[str, Any] | None:
-    """Check if a Docker container matching the pattern is running.
-
-    Args:
-        image_pattern: Pattern to match against container images (case-insensitive)
-
-    Returns:
-        Dict with container info if found, None otherwise
-    """
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "docker",
-            "ps",
-            "--format",
-            "{{.Image}}\t{{.Ports}}\t{{.Names}}",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=5.0)
-
-        for line in stdout.decode(errors="replace").strip().split("\n"):
-            if not line:
-                continue
-            parts = line.split("\t")
-            if len(parts) >= 2:
-                image = parts[0]
-                ports = parts[1] if len(parts) > 1 else ""
-                name = parts[2] if len(parts) > 2 else ""
-
-                if image_pattern.lower() in image.lower():
-                    return {
-                        "image": image,
-                        "ports": ports,
-                        "name": name,
-                        "port_mappings": _parse_port_mappings(ports),
-                    }
-
-    except FileNotFoundError:
-        # Docker not installed
-        pass
-    except TimeoutError:
-        logger.debug("Docker check timed out")
-    except Exception as e:
-        logger.debug("Docker check failed: %s", e)
-
-    return None
-
-
-def _parse_port_mappings(ports_str: str) -> dict[int, int]:
-    """Parse Docker port mapping string.
-
-    Example: "0.0.0.0:1025->1025/tcp, 0.0.0.0:8025->8025/tcp"
-    Returns: {1025: 1025, 8025: 8025}
-    """
-    mappings = {}
-    for part in ports_str.split(","):
-        part = part.strip()
-        if "->" in part:
-            try:
-                # Format: 0.0.0.0:host_port->container_port/tcp
-                host_part, container_part = part.split("->")
-                host_port = int(host_part.split(":")[-1])
-                container_port = int(container_part.split("/")[0])
-                mappings[container_port] = host_port
-            except (ValueError, IndexError):
-                continue
-    return mappings
 
 
 def get_env_var(name: str, default: str | None = None) -> str | None:

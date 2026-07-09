@@ -30,7 +30,6 @@ from dazzle.core.validation.surfaces import register_pack_ops_provider as _regis
 
 from .loader import (
     ApiPack,
-    DockerSpec,
     EnvVarSpec,
     InfrastructureSpec,
     OperationSpec,
@@ -42,7 +41,6 @@ from .loader import (
 
 __all__ = [
     "ApiPack",
-    "DockerSpec",
     "EnvVarSpec",
     "InfrastructureSpec",
     "OperationSpec",
