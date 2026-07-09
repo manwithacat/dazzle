@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.99.0] - 2026-07-09
+
+Published release anchor rolling up **v0.98.1 – v0.98.33** (patch builds don't publish; only `vX.Y.0` triggers PyPI/Homebrew). Two arcs since v0.98.0:
+
+- **HM-convergence directive COMPLETE** (v0.98.12–v0.98.30): every Dazzle-native design CSS drained into HaTchi-MaXchi or deleted; the Tailwind reservoir sits at its intentional floor (the all-pages `dz.css .htmx-indicator` block); both vendored widget libraries removed (Flatpickr → native date inputs; TomSelect → HM-native `dz-combobox`/`dz-tags` Hyperparts).
+- **`/improve` capability-coverage paydown** (v0.98.31–v0.98.33): after a capability-sweep found that a 25-cycle single-lane run had left 8 `UNOWNED` and 6 `STALE` capabilities, the loop's directed-exploration exercised every one back to green (0 UNOWNED / 0 STALE), turning up and fixing two real defects along the way — `semantics(tenancy)` now detects the `tenant_host:` mechanism (v0.98.32), and the signing page now shows the intended signatory (v0.98.33, from a trials-lane persona finding). See those entries below for detail.
+
 ## [0.98.33] - 2026-07-09
 
 ### Added
