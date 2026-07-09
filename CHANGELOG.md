@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.7] - 2026-07-10
+
+### Fixed
+- **Closed the residual HM marketing-vision gap — CTA prominence + feature-card finish (#1565).** Delegated HM CSS lifting the two weak vision dimensions on the marketing fold: (A) **hero CTA prominence** — confident solid-fill primary with an accent glow + a clear ghost secondary (tokenized `--dz-cta-*`, family-flavored); (B) **feature-card finish** — hairline border, refined multi-stop shadow, hover-lift, ringed icon tile (`--dz-card-*`); (C) **reinforced CTA band** — `.dz-section-cta` is now a confident gradient band with a prominent button. Vision pilot (fold): `cta_prominence` 6→8, `finish_polish` 7→8, avg ~7.1 → ~7.7; hygiene floor stays 97.2. Also fixed a **latent dead-selector bug**: the `.dz-section-hero .btn-primary` overrides matched nothing since the HM button migration to `.dz-button[data-dz-variant]` — retargeted.
+- **Balanced marketing card grid — no more orphan rows.** `.dz-features-grid` / `.dz-testimonials-grid` / `.dz-card-grid` moved from `grid auto-fit` (which left ragged left-aligned trailing rows) to `flex-wrap` + `justify-content: center` with non-growing cards: ≤3 → one row, **4 → balanced 2×2** (`:has()` quantity query), 5 → 3+2 centred, 6 → 3×2, and any trailing partial row centres. Card count (a copy decision) no longer produces incomplete rows.
+
 ## [0.101.6] - 2026-07-09
 
 ### Added
