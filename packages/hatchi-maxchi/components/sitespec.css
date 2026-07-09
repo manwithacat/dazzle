@@ -123,7 +123,8 @@
 
 .dz-section-cta {
   padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
-  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+  background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
+  color: white;
   text-align: center;
 }
 
@@ -131,6 +132,25 @@
   font-size: var(--dz-font-size-cta-headline, 3rem);
   font-weight: 800;
   letter-spacing: -0.02em;
+  color: white;
+}
+
+.dz-section-cta .dz-button[data-dz-variant="primary"] {
+  background: var(--dz-cta-fill);
+  color: var(--dz-cta-text);
+  border: none;
+  font-weight: 700;
+  font-size: 1.0625rem;
+  padding: 0.875rem 1.75rem;
+  border-radius: var(--dz-radius-button, 0.5rem);
+  box-shadow: var(--dz-cta-shadow);
+  transition: transform var(--dz-transition-fast, 150ms), box-shadow var(--dz-transition-fast, 150ms);
+}
+
+.dz-section-cta .dz-button[data-dz-variant="primary"]:hover {
+  background: var(--dz-cta-fill-hover);
+  box-shadow: var(--dz-cta-shadow-hover);
+  transform: translateY(-1px);
 }
 
 /* =============================================================================
@@ -286,25 +306,38 @@
 }
 
 .dz-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1.5rem;
+}
+
+.dz-card-grid > * {
+  flex: 0 1 320px;   /* balanced: ~3-up, incomplete rows centre (#1565) */
+}
+
+.dz-card-grid:has(> :nth-child(4):last-child) > * {
+  flex-basis: calc(50% - 0.75rem);
+  max-width: 26rem;
 }
 
 .dz-card-item {
   background: var(--dz-surface-card);
   padding: var(--dz-spacing-card-padding, 1.5rem);
+  border: var(--dz-card-border);
   border-radius: var(--dz-radius-card, 0.75rem);
-  box-shadow: var(--dz-shadow-card, 0 1px 3px oklch(0 0 0 / 0.1));
+  box-shadow: var(--dz-shadow-card);
   display: flex;
   flex-direction: column;
   transition: transform var(--dz-transition-fast, 150ms),
-              box-shadow var(--dz-transition-fast, 150ms);
+              box-shadow var(--dz-transition-fast, 150ms),
+              border-color var(--dz-transition-fast, 150ms);
 }
 
 .dz-card-item:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--dz-shadow-lg, 0 10px 15px -3px oklch(0 0 0 / 0.1));
+  transform: translateY(-2px);
+  box-shadow: var(--dz-card-shadow-hover);
+  border-color: color-mix(in oklab, var(--dz-hero-bg-from) 35%, transparent);
 }
 
 .dz-card-item h3 {
@@ -324,7 +357,8 @@
   width: 3rem;
   height: 3rem;
   background: var(--dz-feature-icon-bg, oklch(0.92 0.03 260));
-  border-radius: 0.5rem;
+  border-radius: 0.625rem;
+  box-shadow: var(--dz-card-icon-ring);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -807,29 +841,46 @@
    These are kept for backwards compatibility and site-specific overrides.
    ============================================================================= */
 
-/* Hero section CTA buttons need special styling to stand out on gradient background */
-.dz-section-hero .btn-primary {
-  background: white;
-  color: var(--dz-hero-bg-from, oklch(0.50 0.18 270));
+/* Hero section CTA buttons need special styling to stand out on the gradient.
+   Buttons render as `.dz-button[data-dz-variant]` (HM button component); these
+   hero-context rules win on specificity to make the primary pop and the
+   secondary a legible ghost. */
+.dz-section-hero .dz-button[data-dz-variant="primary"] {
+  background: var(--dz-cta-fill);
+  color: var(--dz-cta-text);
   border: none;
+  font-weight: 700;
+  font-size: 1.0625rem;
+  padding: 0.875rem 1.75rem;
+  border-radius: var(--dz-radius-button, 0.5rem);
+  box-shadow: var(--dz-cta-shadow);
+  transition: transform var(--dz-transition-fast, 150ms), box-shadow var(--dz-transition-fast, 150ms),
+              background var(--dz-transition-fast, 150ms);
 }
 
-.dz-section-hero .btn-primary:hover {
-  background: var(--dz-hero-btn-hover);
-  transform: translateY(-2px);
+.dz-section-hero .dz-button[data-dz-variant="primary"]:hover {
+  background: var(--dz-cta-fill-hover);
+  box-shadow: var(--dz-cta-shadow-hover);
+  transform: translateY(-1px);
 }
 
-.dz-section-hero .btn-secondary,
-.dz-section-hero .btn-outline {
+.dz-section-hero .dz-button[data-dz-variant="outline"],
+.dz-section-hero .dz-button[data-dz-variant="secondary"] {
   background: transparent;
   color: white;
-  border-color: var(--dz-hero-border);
+  border: 1.5px solid var(--dz-hero-border, oklch(1 0 0 / 0.5));
+  font-weight: 600;
+  font-size: 1.0625rem;
+  padding: 0.875rem 1.75rem;
+  border-radius: var(--dz-radius-button, 0.5rem);
+  transition: background var(--dz-transition-fast, 150ms), border-color var(--dz-transition-fast, 150ms);
 }
 
-.dz-section-hero .btn-secondary:hover,
-.dz-section-hero .btn-outline:hover {
+.dz-section-hero .dz-button[data-dz-variant="outline"]:hover,
+.dz-section-hero .dz-button[data-dz-variant="secondary"]:hover {
   background: var(--dz-hero-overlay);
   border-color: var(--dz-hero-border-hover);
+  color: white;
 }
 
 /* =============================================================================
@@ -1007,11 +1058,27 @@
   flex-wrap: wrap;
 }
 
+/* Balanced feature/testimonial grid — flex-wrap + center so any card count reads
+   intentional: max ~3 per row (cards don't grow), and incomplete trailing rows
+   CENTER instead of left-orphaning (#1565 — a 5th card no longer hangs alone). */
 .dz-features-grid,
 .dz-testimonials-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1.5rem;
+}
+
+.dz-features-grid > *,
+.dz-testimonials-grid > * {
+  flex: 0 1 320px;   /* fixed basis, no grow → wraps at ~3-up, orphans centre */
+}
+
+/* Exactly 4 → a balanced 2×2 rather than a lone centred card. */
+.dz-features-grid:has(> :nth-child(4):last-child) > *,
+.dz-testimonials-grid:has(> :nth-child(4):last-child) > * {
+  flex-basis: calc(50% - 0.75rem);
+  max-width: 26rem;
 }
 
 .dz-pricing-grid {
@@ -1024,14 +1091,17 @@
 .dz-testimonial-item {
   background: var(--dz-surface-card);
   padding: var(--dz-spacing-card-padding, 1.5rem);
+  border: var(--dz-card-border);
   border-radius: var(--dz-radius-card, 0.75rem);
-  box-shadow: var(--dz-shadow-card, 0 1px 3px oklch(0 0 0 / 0.1));
-  transition: transform var(--dz-transition-fast, 150ms), box-shadow var(--dz-transition-fast, 150ms);
+  box-shadow: var(--dz-shadow-card);
+  transition: transform var(--dz-transition-fast, 150ms), box-shadow var(--dz-transition-fast, 150ms),
+              border-color var(--dz-transition-fast, 150ms);
 }
 
 .dz-feature-item:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--dz-shadow-lg, 0 10px 15px -3px oklch(0 0 0 / 0.1));
+  transform: translateY(-2px);
+  box-shadow: var(--dz-card-shadow-hover);
+  border-color: color-mix(in oklab, var(--dz-hero-bg-from) 35%, transparent);
 }
 
 .dz-feature-item h3 {
@@ -1050,7 +1120,8 @@
   width: 3rem;
   height: 3rem;
   background: var(--dz-feature-icon-bg, oklch(0.92 0.03 260));
-  border-radius: 0.5rem;
+  border-radius: 0.625rem;
+  box-shadow: var(--dz-card-icon-ring);
   display: flex;
   align-items: center;
   justify-content: center;

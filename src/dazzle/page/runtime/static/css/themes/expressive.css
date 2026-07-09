@@ -135,6 +135,17 @@
     --dz-pricing-highlight-bg: oklch(0.52 0.24 300);
     --dz-surface-card: white;
 
+    /* Crafted card finish — a violet-tinted hairline so cards read designed. */
+    --dz-card-border: 1px solid oklch(0.55 0.10 300 / 0.14);
+    --dz-card-icon-ring: inset 0 0 0 1px oklch(0.55 0.12 300 / 0.15);
+
+    /* Confident CTA — near-white surface with violet text + an accent glow that
+       lifts the button off the vivid hero gradient. */
+    --dz-cta-fill: oklch(0.99 0.01 300);
+    --dz-cta-text: oklch(0.42 0.20 300);
+    --dz-cta-shadow: 0 6px 22px -6px oklch(0.52 0.24 300 / 0.55);
+    --dz-cta-shadow-hover: 0 12px 32px -8px oklch(0.52 0.24 300 / 0.7);
+
     /* Rounder marketing surfaces to match the app radii. */
     --dz-radius-card: 1.25rem;
     --dz-radius-button: 0.75rem;

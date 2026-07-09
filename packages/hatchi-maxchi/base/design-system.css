@@ -73,7 +73,7 @@
 
   /* --- Legacy --dz-* tokens (backward compat) --- */
   --dz-shadow-sm: var(--shadow-sm);
-  --dz-shadow-card: var(--shadow-sm);
+  --dz-shadow-card: 0 1px 2px oklch(0 0 0 / 0.04), 0 8px 20px -10px oklch(0 0 0 / 0.14);
   --dz-shadow-md: var(--shadow-md);
   --dz-shadow-lg: var(--shadow-lg);
   --dz-transition-fast: var(--duration-fast);
@@ -99,6 +99,18 @@
   --dz-feature-icon-bg: oklch(0.92 0.03 260);
   --dz-section-alt-bg: oklch(0.97 0.01 260);
   --dz-pricing-highlight-bg: oklch(0.45 0.18 270);
+
+  /* Marketing card finish (features / cards / testimonials) — families reflavor */
+  --dz-card-shadow-hover: 0 2px 4px oklch(0 0 0 / 0.06), 0 20px 36px -14px oklch(0 0 0 / 0.22);
+  --dz-card-border: 1px solid oklch(0 0 0 / 0.06);
+  --dz-card-icon-ring: inset 0 0 0 1px oklch(0 0 0 / 0.06);
+
+  /* Marketing CTA buttons — families reflavor (glow) */
+  --dz-cta-fill: white;
+  --dz-cta-text: var(--dz-hero-bg-from);
+  --dz-cta-fill-hover: var(--dz-hero-btn-hover, oklch(0.98 0 0));
+  --dz-cta-shadow: 0 6px 20px -8px oklch(0 0 0 / 0.35);
+  --dz-cta-shadow-hover: 0 12px 28px -8px oklch(0 0 0 / 0.45);
 
   /* Borders (transparent black) */
   --dz-border-default: oklch(0 0 0 / 0.1);
