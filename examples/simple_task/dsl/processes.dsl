@@ -14,6 +14,8 @@ module simple_task.processes
 # =============================================================================
 
 process task_auto_assignment "Auto-Assign High Priority Tasks":
+  implements: [ST-017]
+
   trigger:
     when: entity Task created
 
