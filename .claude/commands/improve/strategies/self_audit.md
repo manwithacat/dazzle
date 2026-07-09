@@ -80,3 +80,18 @@ FAIL means at least one DISCREPANCY was found (the cycle itself still completed)
   check (a command + its output), same bar the lanes are held to.
 - **No fixing inline.** The audit files findings; the owning lane (or /issues)
   fixes them. One cycle = one job.
+- **Reviewer subagents must NEVER mutate the shared worktree.** (Learned the hard
+  way, cycle 231: a reviewer ran `git stash pop` to "get a clean tree at the target
+  commit" and accidentally popped an ancient WIP stash onto HEAD — 55 conflicts,
+  ~14k lines, a corrupted tree recovered only by `git reset --hard HEAD`.) The
+  subagents run in the SAME working directory as the driver and each other; any
+  `git stash`/`git checkout <ref>`/`git reset`/`git merge`/`git stash pop`/`git
+  cherry-pick` there corrupts every concurrent reviewer AND the driver. Verify
+  **against the current tree in place**: `git show <sha>` for the diff, `git log`/
+  `git diff <sha>..HEAD` for history, run tests/greps on the working tree AS-IS
+  (the audit asks whether the claim holds NOW — the current tree answers that). If
+  an at-commit checkout is truly required, use an ISOLATED `git worktree add
+  /tmp/audit-<sha> <sha>` and remove it after — never `checkout`/`stash` in the
+  shared tree. The subagent brief must state this explicitly, and the driver must
+  verify `git status` is clean after the fan-out returns, recovering with `git
+  reset --hard HEAD` if not (HEAD is safe — all audited work is committed).
