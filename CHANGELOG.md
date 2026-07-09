@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.32] - 2026-07-09
+
+### Fixed
+- **`semantics(tenancy)` inference now recognises the `tenant_host:` mechanism** (ADR-0036/0037 verified-domain-join). `infer_multi_tenancy` previously only detected an explicit `tenancy:` block, `tenant_id` fields, or Tenant/Org-named entities — so an app that is provably multi-tenant via a `tenant_host:` root kind + `current_tenant` scopes + `membership:` (e.g. `examples/domain_join_co`) was misreported as `single_tenant` with zero signals. It now returns `shared_schema` with a `tenant_host` signal and the host entity as `tenant_entity`. Found by the `/improve` capability-coverage directed-explore (cycle 225). Regression test added in `tests/unit/test_tenancy_inference.py`.
+
 ## [0.98.31] - 2026-07-09
 
 ### Fixed

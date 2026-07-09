@@ -122,6 +122,45 @@ class TestTenancyInference:
         assert len(result["signals"]) == 1
         assert result["signals"][0]["type"] == "tenant_entity"
 
+    def test_tenant_host_entity_infers_shared_schema(self) -> None:
+        """An entity with a `tenant_host:` block (ADR-0036/0037 verified-domain-join)
+        is a declared tenant root even without a top-level `tenancy:` config — the
+        inference must report shared_schema, not single_tenant. Regression for the
+        gap found in cycle 225 (examples/domain_join_co was misreported single_tenant
+        because infer_multi_tenancy predated the tenant_host mechanism)."""
+        appspec = ir.AppSpec(
+            name="test_app",
+            version="0.1.0",
+            domain=ir.DomainSpec(
+                entities=[
+                    ir.EntitySpec(
+                        name="Workspace",
+                        fields=[
+                            ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                            ir.FieldSpec(name="slug", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
+                        ],
+                        tenant_host=ir.TenantHostSpec(domain="example.com", slug_field="slug"),
+                    ),
+                    ir.EntitySpec(
+                        name="Announcement",
+                        fields=[
+                            ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                        ],
+                    ),
+                ]
+            ),
+        )
+
+        result = infer_multi_tenancy(appspec)
+
+        assert result["recommendation"] == "shared_schema"
+        assert result["mode"] == "shared_schema"
+        assert result["tenant_entity"] == "Workspace"
+        assert result["status"] == "configured"
+        assert len(result["signals"]) == 1
+        assert result["signals"][0]["type"] == "tenant_host"
+        assert result["signals"][0]["entity"] == "Workspace"
+
     def test_suggested_actions_include_dsl_snippets(self) -> None:
         """Test that suggested actions include DSL snippets."""
         appspec = ir.AppSpec(

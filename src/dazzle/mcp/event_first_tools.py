@@ -649,6 +649,32 @@ def infer_multi_tenancy(appspec: ir.AppSpec) -> dict[str, Any]:
             "suggested_actions": [],
         }
 
+    # Check for host-based tenancy (ADR-0036/0037 verified-domain-join).
+    # An entity carrying a `tenant_host:` block IS a declared tenant root
+    # even without a top-level `tenancy:` config: the host routes each
+    # request to a tenant and `current_tenant` scopes fence its data
+    # against one shared schema. Without this check the inference misses
+    # apps that are provably multi-tenant via tenant_host and wrongly
+    # reports single_tenant (e.g. examples/domain_join_co).
+    host_tenant_entities = [
+        entity.name
+        for entity in appspec.domain.entities
+        if getattr(entity, "tenant_host", None) is not None
+    ]
+    if host_tenant_entities:
+        return {
+            "mode": "shared_schema",
+            "signals": [
+                {"type": "tenant_host", "entity": name, "confidence": 1.0}
+                for name in host_tenant_entities
+            ],
+            "entities_with_tenant_id": [],
+            "recommendation": "shared_schema",
+            "status": "configured",
+            "tenant_entity": host_tenant_entities[0],
+            "suggested_actions": [],
+        }
+
     # Check for tenant_id fields
     entities_with_tenant: list[str] = []
     for entity in appspec.domain.entities:
