@@ -30,15 +30,15 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
-| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 188 | USED |
-| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 185 | USED |
+| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 188 | STALE |
+| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 185 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | — | OWNED-IDLE |
-| `dazzle qa trial` | CLI | trials | 187 | USED |
+| `dazzle qa trial` | CLI | trials | 187 | STALE |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | — | OWNED-IDLE |
 | `dazzle qa taste-panel` | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
-| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 188 | USED |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 188 | USED |
-| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 186 | USED |
+| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 188 | STALE |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 188 | STALE |
+| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 186 | STALE |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | — | OWNED-IDLE |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | — | OWNED-IDLE |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | — | OWNED-IDLE |
@@ -54,7 +54,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | — | OWNED-IDLE |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
-| `qa-trial` skill | skill | trials (downstream authoring) | 187 | OWNED-IDLE |
+| `qa-trial` skill | skill | trials (downstream authoring) | 187 | STALE |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
@@ -76,6 +76,28 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > cycles to exercise each, flipping UNOWNED → USED/OWNED-IDLE as they run.
 > STALE recompute (cycle 190, threshold last-exercised ≤170): no existing numeric
 > row (188/187/186/185) flips.
+
+> **Capability-sweep cycle 216 (2026-07-09).** Second sweep. Re-derived inventory
+> (`dazzle --help`, the 32-tool MCP table, `.claude/skills` + `.claude/commands` tree)
+> — **no newly-built capability** since cycle 190: cycles 191–215 were the HM-convergence
+> directive (CSS/JS migration + the dz-combobox/dz-tags Hyperparts), which added zero new
+> CLI/MCP/skill surface. But the sweep's real finding is the **cost of that 25-cycle
+> hm-convergence monomania**: with the loop parked in one lane for ~25 cycles, every other
+> lane went unexercised, so 7 previously-`USED`/`OWNED-IDLE` rows now cross the STALE
+> threshold (last-exercised ≤196 for cycle 216): `dazzle validate`/`lint` (188), `ux verify`
+> (185), `qa trial` (187), MCP `conformance` (188), MCP `dsl` (188), fitness engine (186),
+> `qa-trial` skill (187) → all flipped to **STALE**. The Tailwind-reservoir metric (214)
+> is the only recently-exercised capability. The 8 cycle-190 `UNOWNED` rows (`rbac`,
+> `coverage`, `fragment-audit`, `process`, `compliance`, MCP `policy`/`test_intelligence`/
+> `semantics`) **remain UNOWNED** — their *proposed* owning lanes never got a directed-explore
+> cycle because the loop never left hm-convergence. **Consequence for the driver:** now that
+> hm-convergence is drained (0 actionable, directive complete), rule-6 directed exploration
+> has a rich STALE+UNOWNED backlog and should rotate the loop back through the starved lanes,
+> prioritising the UNOWNED gaps (strongest) then the freshly-STALE core capabilities. This is
+> the capability-coverage governance mechanism catching a monomania exactly as designed.
+> Operator/dev commands considered and classified out-of-scope (not quality-coverage gaps):
+> `/issues`, `/cimonitor`, `/docs-update`, `/check`, `/bump`, `/ship` — human/operator-invoked
+> workflow tooling, EXEMPT-class like `/fuzz`/`/smells`/`/xproject`.
 
 ---
 
