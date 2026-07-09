@@ -84,9 +84,9 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # (`.dz-workspace`/`__header`/`__sidebar`/`__footer`; HM workspace-shell.css
     # owns the real `.dz-workspace`), and a commented-out `[data-dazzle-entity]`
     # rule. Empty-state styling was folded into HM in HMC-003c. Provably inert
-    # removal — no main-runtime emitter references any of these. File retained on
-    # disk for the legacy dnr export (its generator is defunct; committed dnr-ui
-    # snapshots bake their own CSS).
+    # removal — no main-runtime emitter references any of these. File deleted from
+    # disk (HM-sitespec 1C, 2026-07-09); the legacy dnr export generator is defunct
+    # and committed dnr-ui snapshots bake their own CSS.
     # site-sections.css ported into HM components/sitespec.css (HM-sitespec 1B, 2026-07-09) — served via the HM dist now.
 )
 

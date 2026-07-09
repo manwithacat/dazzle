@@ -64,7 +64,9 @@
  * Found broken in production by aegismark on the v0.62 merge — base.html
  * had been left pointing at the old `dazzle-framework.css` entry which
  * imported only the legacy stack and skipped every component family. */
-@import url("dazzle-layer.css") layer(components);
+/* dazzle-layer.css deleted (HM-sitespec 1C, 2026-07-09) — its rules were already
+   dead for the HM runtime (removed from the bundle HMC-003b) and the legacy dnr
+   export is defunct; file removed, no successor. */
 /* site-sections.css ported into HM components/sitespec.css (1B) — served via the HM dist. */
 @import url("dz.css");
 /* dz-widgets.css deleted (HMC-018 slice 3) — held only .ts-* TomSelect

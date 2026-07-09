@@ -322,22 +322,15 @@ def test_renderer_escapes_drill_urls_and_region_name() -> None:
 
 
 def _regions_css() -> str:
-    """The task-inbox styles moved to HM (Tier C-b fleet convergence) —
-    the pin reads the union of the remaining Dazzle regions.css and the
-    HM component file."""
+    """The task-inbox styles moved to HM (Tier C-b fleet convergence); the
+    Dazzle-side regions.css was retired (HM-sitespec 1C, 2026-07-09) so the
+    pin now reads the HM component file, which owns the whole family."""
     from pathlib import Path
 
-    import dazzle.page as dazzle_page
-
-    css_dir = Path(dazzle_page.__file__).parent / "runtime" / "static" / "css"
     hm_css = (
         Path(__file__).resolve().parents[2] / "packages/hatchi-maxchi/components/task-inbox.css"
     )
-    return (
-        (css_dir / "components" / "regions.css").read_text(encoding="utf-8")
-        + "\n"
-        + hm_css.read_text(encoding="utf-8")
-    )
+    return hm_css.read_text(encoding="utf-8")
 
 
 def test_task_inbox_chip_has_count_label_separator_css() -> None:

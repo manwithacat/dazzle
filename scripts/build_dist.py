@@ -68,13 +68,11 @@ CSS_SOURCES: list[tuple[str | None, Path]] = [
     ("components", STATIC / "css" / "components" / "detail.css"),
     ("components", STATIC / "css" / "components" / "fragments.css"),
     ("components", STATIC / "css" / "components" / "pdf-viewer.css"),
-    # regions.css removed from the bundle (HMC-007) — rules-free tombstone index.
     ("components", STATIC / "css" / "components" / "mobile-scroll.css"),
     # #977 cycle 1 — Dazzle-native rich-text editor.
     ("components", STATIC / "css" / "components" / "richtext.css"),
     # v0.71.x guided onboarding (overlay primitives for the eight step kinds).
     ("components", STATIC / "css" / "components" / "onboarding.css"),
-    ("components", STATIC / "css" / "dazzle-layer.css"),
 ]
 
 # Unlayered files appended after every @layer block — cascade override.

@@ -39,7 +39,7 @@ _STATIC = _REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static"
 
 # Peripheral Dazzle-native design CSS served outside the css_loader main bundle
 # (kept in sync with scripts/hm_tailwind_reservoir.py::_CSS_PERIPHERAL_GLOBS).
-_PERIPHERAL_GLOBS = ("css/feedback-widget.css", "css/themes/*.css")
+_PERIPHERAL_GLOBS = ("css/themes/*.css",)
 
 # The single source of truth for Goal 1. Every Dazzle-native CSS file the browser
 # receives must appear here. `custom.css` (project escape hatch) is not served by
@@ -49,8 +49,9 @@ DELEGATION_ALLOWLIST: dict[str, str] = {
     "css/reset.css": "KEEP",  # foundational reset layer; dedup vs HM vendor reset tracked in 1C
     "css/dz.css": "KEEP",  # all-pages `.htmx-indicator` HTMX chrome — documented floor
     # css/site-sections.css DELEGATED → HM components/sitespec.css (phase 1B, 2026-07-09).
+    # css/feedback-widget.css DELEGATED → HM components/feedback-widget.css (phase 1C,
+    # 2026-07-09) — was orphaned (unlinked) on the Dazzle side; now served via the HM dist.
     # --- peripheral (served outside the main bundle) ---
-    "css/feedback-widget.css": "MIGRATING",  # → HM (phase 1C)
     "css/themes/stripe.css": "MIGRATING",  # → HM aesthetic-family token set (phase 2C)
     "css/themes/paper.css": "MIGRATING",  # → HM aesthetic-family token set (phase 2C)
     "css/themes/linear-dark.css": "MIGRATING",  # → HM aesthetic-family token set (phase 2C)

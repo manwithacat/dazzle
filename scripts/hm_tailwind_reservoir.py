@@ -95,14 +95,15 @@ def is_tailwind_token(tok: str) -> bool:
 # TIER-2 WIDENING (2026-07-09, sitespec directive): `site-sections.css` is NO
 # LONGER excluded — the marketing/sitespec section CSS is now an in-scope
 # migration target (port → HM `components/sections/*`). The metric also counts a
-# PERIPHERAL bucket — `feedback-widget.css` + `themes/*.css` — Dazzle-native
-# design CSS the browser receives outside the main bundle. `custom.css` is a
+# PERIPHERAL bucket — `themes/*.css` — Dazzle-native design CSS the browser
+# receives outside the main bundle (feedback-widget.css drained → HM in phase 1C).
+# `custom.css` is a
 # project escape hatch (out of scope). The delegation PROOF is the hard gate
 # `tests/unit/test_hm_delegation_proof.py`; this metric is the drain signal.
 _CSS_STATIC = "src/dazzle/page/runtime/static"
 _CSS_EXCLUDE_RELS = {"css/reset.css"}
 # Peripheral Dazzle-native design CSS served outside the css_loader main bundle.
-_CSS_PERIPHERAL_GLOBS = ("css/feedback-widget.css", "css/themes/*.css")
+_CSS_PERIPHERAL_GLOBS = ("css/themes/*.css",)
 
 
 def _served_dazzle_native_rels() -> list[str]:

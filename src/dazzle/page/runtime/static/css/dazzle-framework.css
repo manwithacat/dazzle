@@ -1,7 +1,7 @@
 /* Dazzle framework semantic layer — load order is authoritative.
    This is the single source of truth for framework CSS ordering.
    build_dist.py and css_loader.py must use the same order. */
-@import "dazzle-layer.css" layer(framework);
+/* dazzle-layer.css deleted (HM-sitespec 1C, 2026-07-09) — dead rules, no successor. */
 /* design-system.css moved to packages/hatchi-maxchi/base/ (Stage 2b);
    css_loader/build_dist read it via the @hm: sentinel. */
 /* site-sections.css ported into HM components/sitespec.css (1B) — no longer a Dazzle file. */

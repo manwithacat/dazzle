@@ -57,8 +57,9 @@ class TestHeatmapRowClick:
         v0.62 CSS refactor: the visual delta lives on the .is-clickable
         modifier toggled by the template's `{% if action_url %}` branch,
         and styled by `.dz-heatmap-grid > tbody > tr.is-clickable` in
-        components/regions.css. Pin both the template gating and the
-        CSS rule existence."""
+        HM components/heatmap.css (the heatmap region family drained into
+        HaTchi-MaXchi; regions.css was retired HM-sitespec 1C). Pin both
+        the template gating and the CSS rule existence."""
         content = HEATMAP.read_text()
         # Template applies .is-clickable inside the action_url branch
         tr_match = re.search(
@@ -72,8 +73,7 @@ class TestHeatmapRowClick:
         from pathlib import Path
 
         css = (
-            Path(__file__).resolve().parents[2]
-            / "src/dazzle/page/runtime/static/css/components/regions.css"
+            Path(__file__).resolve().parents[2] / "packages/hatchi-maxchi/components/heatmap.css"
         ).read_text()
         assert ".dz-heatmap-grid > tbody > tr.is-clickable" in css
         assert "cursor: pointer" in css

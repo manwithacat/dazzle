@@ -105,6 +105,7 @@ CSS_SOURCES = [
     # pre-move state where Dazzle dashboard.css loaded after the whole HM dist).
     ("components", "components/dashboard-card.css"),
     ("components", "components/sitespec.css"),
+    ("components", "components/feedback-widget.css"),
 ]
 
 LAYER_ORDER = "@layer vendor, tokens, base, components;"

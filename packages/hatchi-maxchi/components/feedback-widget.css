@@ -1,6 +1,5 @@
 @layer framework {
-/* Feedback Widget — framework-level in-app feedback collection.
- * Uses DaisyUI HSL colour tokens for theme consistency. */
+/* HaTchi-MaXchi — Feedback widget (floating feedback FAB + panel: categories, severities, form). Ported from Dazzle feedback-widget.css (HM-sitespec 1C, 2026-07-09) — was orphaned (unlinked) on the Dazzle side; now served via the HM dist. Authored with dz- prefix. */
 
 /* Floating button */
 .dz-feedback-btn {
