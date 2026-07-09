@@ -45,44 +45,69 @@ from .ports import (
 from .production import configure_production_logging, validate_production_env
 
 
+def _redis_extra_available() -> bool:
+    """True if the ``redis`` extra is importable.
+
+    Lazy import: ``redis_bus`` pulls in ``dazzle.http.events``, which must stay
+    out of the CLI startup path (#1438), so we import it only when a Redis URL
+    is actually configured.
+    """
+    from dazzle.http.events.redis_bus import REDIS_AVAILABLE
+
+    return REDIS_AVAILABLE
+
+
 def _validate_infrastructure() -> tuple[str, str]:
-    """Validate that required infrastructure env vars are set.
+    """Validate infrastructure env vars.
+
+    PostgreSQL (``DATABASE_URL``) is required. Redis (``REDIS_URL``) is OPTIONAL:
+    when unset, the Postgres-backed event bus is used. When ``REDIS_URL`` *is*
+    set, the ``redis`` extra must be installed — otherwise we fail loud rather
+    than boot with a silently-dead Redis bus while the banner claims Redis
+    Streams (#1561).
 
     Returns:
         (database_url, redis_url) tuple.
 
     Raises:
-        SystemExit: If required env vars are missing and
-            DAZZLE_SKIP_INFRA_CHECK is not set.
+        SystemExit: If DATABASE_URL is missing, or REDIS_URL is set without the
+            ``redis`` extra installed, and DAZZLE_SKIP_INFRA_CHECK is not set.
     """
     if os.environ.get("DAZZLE_SKIP_INFRA_CHECK") == "1":
         return os.environ.get("DATABASE_URL", ""), os.environ.get("REDIS_URL", "")
 
-    missing: list[str] = []
     database_url = os.environ.get("DATABASE_URL", "")
     redis_url = os.environ.get("REDIS_URL", "")
 
     if not database_url:
-        missing.append("DATABASE_URL")
-    if not redis_url:
-        missing.append("REDIS_URL")
-
-    if missing:
-        typer.echo("Dazzle requires PostgreSQL + Redis infrastructure.", err=True)
-        typer.echo(f"Missing environment variables: {', '.join(missing)}", err=True)
+        typer.echo("Dazzle requires a PostgreSQL database.", err=True)
+        typer.echo("Missing environment variable: DATABASE_URL", err=True)
         typer.echo("", err=True)
-        typer.echo("Set them in .env (loaded automatically) or export before running:", err=True)
+        typer.echo("Set it in .env (loaded automatically) or export before running:", err=True)
         typer.echo(
             "  export DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/dazzle_dev",
             err=True,
         )
-        typer.echo("  export REDIS_URL=redis://localhost:6379/0", err=True)
         typer.echo("", err=True)
         typer.echo(
-            "Skip this check with DAZZLE_SKIP_INFRA_CHECK=1 (tests only).",
+            "Redis is optional (REDIS_URL) — without it the Postgres event bus is used.",
             err=True,
         )
+        typer.echo("Skip this check with DAZZLE_SKIP_INFRA_CHECK=1 (tests only).", err=True)
         raise typer.Exit(code=1)
+
+    # Fail loud if Redis was explicitly requested but the extra isn't installed
+    # (#1561). Otherwise _create_redis_bus raises ImportError, the resilient
+    # lifespan-hook runner swallows it, and the app boots with a dead event bus.
+    if redis_url:
+        if not _redis_extra_available():
+            typer.echo("REDIS_URL is set, but the 'redis' extra is not installed.", err=True)
+            typer.echo("Install it:  pip install 'dazzle-dsl[redis]'", err=True)
+            typer.echo(
+                "Or unset REDIS_URL to use the Postgres-backed event bus instead.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
 
     # Normalize postgres:// → postgresql://
     database_url = normalise_postgres_scheme(database_url)
@@ -585,8 +610,12 @@ def _serve_combined(ctx: _ServeContext) -> None:
     if ctx.watch:
         typer.echo("  • Hot reload: ENABLED (watching DSL files)")
 
-    # Infrastructure banner
-    if ctx.redis_url:
+    # Infrastructure banner — reflect the ACTUAL event bus, not just intent.
+    # (The preflight already refuses to boot if REDIS_URL is set without the
+    # redis extra, but DAZZLE_SKIP_INFRA_CHECK bypasses that, so re-check here
+    # so the banner never claims Redis Streams over a dead bus — #1561.)
+    redis_active = bool(ctx.redis_url) and _redis_extra_available()
+    if redis_active:
         event_tier = "Redis Streams"
         process_backend = "EventBus"
     elif ctx.database_url:

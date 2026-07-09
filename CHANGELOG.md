@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.2] - 2026-07-09
+
+### Fixed
+- **`serve` no longer mandates `REDIS_URL`, and fails loud when Redis is requested without the extra (#1561).** `_validate_infrastructure` previously required both `DATABASE_URL` *and* `REDIS_URL`; setting `REDIS_URL` forced the Redis event tier, but if the `redis` extra wasn't installed the bus raised `ImportError` — swallowed by the resilient lifespan-hook runner — and the app booted with a silently-dead bus while the banner still claimed "Redis Streams". Now: `DATABASE_URL` is the only required var (Redis is optional; the Postgres event bus is the fallback), and if `REDIS_URL` *is* set while the `redis` extra is missing, serve refuses to boot with an actionable message (`pip install 'dazzle-dsl[redis]'`, or unset `REDIS_URL`). The infra banner reflects the *actual* bus (checks `REDIS_AVAILABLE`), not just intent. Chosen behaviour: fail-loud (the user asked for Redis, so don't silently run without it). Regression tests in `tests/unit/test_serve_infra_validation.py`.
+
+### Changed
+- **Missing-infra help + `.env.example` now show a credentialed `DATABASE_URL`** (`postgresql://USER:PASSWORD@127.0.0.1:5432/…`) rather than the Homebrew-only credential-less form (continues #1564).
+
 ## [0.101.1] - 2026-07-09
 
 ### Fixed
