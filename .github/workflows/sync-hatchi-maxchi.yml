@@ -47,5 +47,26 @@ jobs:
           printf '%s\n' "$HM_SYNC_DEPLOY_KEY" > ~/.ssh/hm_sync
           chmod 600 ~/.ssh/hm_sync
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/hm_sync -o IdentitiesOnly=yes" \
-            git push git@github.com:manwithacat/hatchi-maxchi.git "$BRANCH_SHA:refs/heads/main"
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/hm_sync -o IdentitiesOnly=yes"
+          HM_URL=git@github.com:manwithacat/hatchi-maxchi.git
+
+          # Fast-forward is the common case (HM main unchanged since the last sync).
+          if git push "$HM_URL" "$BRANCH_SHA:refs/heads/main"; then
+            echo "sync: fast-forward push ok"
+          else
+            # HM main diverged — a trusted party committed directly to the standalone
+            # repo (e.g. a README edit). Instead of failing (or force-pushing, which
+            # would clobber their work), merge the monorepo split INTO HM's current
+            # main, PRESERVING those trusted edits on conflict (`-X ours` = HM's side
+            # wins conflicts). Monorepo changes to files HM did not touch still flow
+            # through; only files edited on BOTH sides keep HM's version. Never fails
+            # on divergence, never clobbers trusted local edits. (Policy: only trusted
+            # parties commit directly to HM, and for minor/meta changes — code flows
+            # from the monorepo. Confirmed 2026-07-09.)
+            echo "sync: HM main diverged — merging (trusted local edits preserved)"
+            git fetch "$HM_URL" main
+            git checkout -B hm-sync FETCH_HEAD
+            git merge --no-edit -X ours "$BRANCH_SHA" \
+              -m "sync: merge monorepo packages/hatchi-maxchi (preserve trusted HM edits)"
+            git push "$HM_URL" hm-sync:refs/heads/main
+          fi
