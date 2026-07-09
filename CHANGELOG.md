@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.24] - 2026-07-09
+
+### Changed
+- **HM-convergence (HMC-022): touch scroll-containment → HaTchi-MaXchi.** `mobile-scroll.css`
+  (the `-webkit-overflow-scrolling: touch` + `overscroll-behavior: contain` rules on the
+  scroll viewports + `.dz-scroll`/`.dz-scroll-x`/`.dz-table-wrap` utilities) moved into a
+  new HM component `components/mobile-scroll.css` (distinct concern from HM touch-targets —
+  no overlap). Removed from `css_loader.CSS_SOURCE_FILES`; served via the HM dist. This was
+  the last clean, decision-free reservoir file. Reservoir `css_lines_dazzle_native` 471→416.
+
 ## [0.98.23] - 2026-07-09
 
 ### Fixed

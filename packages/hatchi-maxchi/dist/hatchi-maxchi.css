@@ -11029,6 +11029,43 @@ onboarding-step {
 }
 
 }
+/* ── components/mobile-scroll.css ── */
+@layer components {
+/*
+ * mobile-scroll.css — touch-friendly scroll containment (HaTchi-MaXchi).
+ *
+ * Two properties make scrollable regions feel native on touch:
+ * `-webkit-overflow-scrolling: touch` (iOS momentum) and
+ * `overscroll-behavior: contain` (no scroll-chain / browser-back swipe).
+ * Applied to the scroll viewports (card/detail/drawer/app/form bodies,
+ * pdf-viewer panel) + the `.scroll`/`.scroll-x`/`.table-wrap`
+ * utilities. Migrated from Dazzle into HM (HMC-022, aggressive-mode
+ * convergence 2026-07-09). NOTE: no `@layer components {` wrapper — HM build adds it.
+ */
+  .card-body,
+  .drawer-content,
+  .detail-card-body,
+  .app-content,
+  .app-body,
+  .drawer__body,
+  .pdf-viewer-panel,
+  .scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Horizontal-scroll containers (tables, charts, region grids).
+   * `overscroll-behavior-x: contain` prevents the browser-back
+   * "swipe-from-edge" from firing when the user pans inside a
+   * wide table — common iOS frustration where horizontal scroll
+   * navigates history instead. */
+  .table-wrap,
+  .scroll-x {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+}
 /* ── components/fragments.css ── */
 @layer components {
 /*

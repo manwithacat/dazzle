@@ -65,7 +65,8 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # pure tombstone comments (every region family promoted to HM) — zero CSS
     # rules, so shipping it to every browser was dead weight. File retained on
     # disk as the provenance index (+ read by a few content-union tests).
-    ("components", "css/components/mobile-scroll.css"),
+    # mobile-scroll.css migrated into HaTchi-MaXchi (HMC-022): touch scroll-containment
+    # rules now live in packages/hatchi-maxchi/components/mobile-scroll.css. Served via HM dist.
     # richtext.css migrated into HaTchi-MaXchi (HMC-021): the rich-text editor
     # internals now live in packages/hatchi-maxchi/components/richtext.css
     # (complements the .dz-form-richtext field base in HM form.css). Served via HM dist.

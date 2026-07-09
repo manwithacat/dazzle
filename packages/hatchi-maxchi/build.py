@@ -92,6 +92,7 @@ CSS_SOURCES = [
     ("components", "components/pdf-viewer.css"),
     ("components", "components/tabs.css"),
     ("components", "components/touch-targets.css"),
+    ("components", "components/mobile-scroll.css"),
     # fragments.css (HMC-016): shared fragment/region chrome families, migrated
     # wholesale from Dazzle. Registered late to preserve source-order tie-winning
     # it had when it loaded after the HM dist in the Dazzle bundle.

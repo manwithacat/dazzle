@@ -1,4 +1,4 @@
-/* dazzle v0.98.22 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.98.23 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -7793,6 +7793,24 @@ min-height: var(--dz-touch-target-min);
 }
 }
 @layer components {
+.dz-card-body,
+.dz-drawer-content,
+.dz-detail-card-body,
+.dz-app-content,
+.dz-app-body,
+.dz-drawer__body,
+.dz-pdf-viewer-panel,
+.dz-scroll {
+-webkit-overflow-scrolling: touch;
+overscroll-behavior: contain;
+}
+.dz-table-wrap,
+.dz-scroll-x {
+-webkit-overflow-scrolling: touch;
+overscroll-behavior-x: contain;
+}
+}
+@layer components {
 .dz-toast {
 pointer-events: auto;
 max-width: 24rem;
@@ -8928,26 +8946,6 @@ overflow: hidden;
 clip: rect(0, 0, 0, 0);
 white-space: nowrap;
 border: 0;
-}
-}
-@layer components {
-@layer components {
-.dz-card-body,
-.dz-drawer-content,
-.dz-detail-card-body,
-.dz-app-content,
-.dz-app-body,
-.dz-drawer__body,
-.dz-pdf-viewer-panel,
-.dz-scroll {
--webkit-overflow-scrolling: touch;
-overscroll-behavior: contain;
-}
-.dz-table-wrap,
-.dz-scroll-x {
--webkit-overflow-scrolling: touch;
-overscroll-behavior-x: contain;
-}
 }
 }
 @layer components {
