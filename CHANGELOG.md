@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.8] - 2026-07-10
+
+### Fixed
+- Regenerated `docs/assets/dazzle-catalogue.css` after the #1565 sitespec CSS changes (the ux-catalogue globs HM component CSS; drift-gated by `test_ux_catalogue`).
+
 ## [0.101.7] - 2026-07-10
 
 ### Fixed
