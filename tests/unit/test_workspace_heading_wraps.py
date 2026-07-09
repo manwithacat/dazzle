@@ -25,16 +25,15 @@ from __future__ import annotations
 import pathlib
 import re
 
+# The workspace-heading wrap rules migrated from the (now-deleted) Dazzle
+# static `components/dashboard.css` into HaTchi-MaXchi `workspace-shell.css`
+# (HMC-007c/020). Pin against the HM source where the selectors now live.
 CSS_PATH = (
     pathlib.Path(__file__).resolve().parents[2]
-    / "src"
-    / "dazzle"
-    / "page"
-    / "runtime"
-    / "static"
-    / "css"
+    / "packages"
+    / "hatchi-maxchi"
     / "components"
-    / "dashboard.css"
+    / "workspace-shell.css"
 )
 
 

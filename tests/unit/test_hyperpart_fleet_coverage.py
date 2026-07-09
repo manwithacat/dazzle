@@ -56,6 +56,11 @@ SIGNALS: dict[str, object] = {
     # _wizard_covered), not by corpus grep.
     "wizard": "structural:wizard",
     "money": r":\s*money",
+    # HMC-018 HM-native widgets (replaced TomSelect): opt-in via `widget=`
+    # on a create/edit field. Corpus: 12 combobox + 6 tags across
+    # project_tracker/design_studio/component_showcase.
+    "combobox": r"widget\s*[:=]\s*combobox",
+    "tags": r"widget\s*[:=]\s*tags",
     "pdf": r"display:\s*pdf_viewer",
     "two-factor": "always",  # gated on sitespec presence — 7/12 examples mount /2fa/*
     # field-level DOTTED source refs only (source=pack.operation; the
