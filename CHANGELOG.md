@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.6] - 2026-07-09
+
+### Added
+- **Actionable Postgres connection-error guidance (#1570).** When `dazzle serve` (or any boot-time DB connect) fails with the common local-Postgres traps — role missing (`role "x" does not exist`), password auth failed / no password, or database missing — the runtime now appends a short actionable hint (`createuser -P` / credentialed `127.0.0.1` URL / `createdb`, pointing at `docs/reference/databases.md`) to the error. Implemented as `_connection_error_hint` + `_connect_with_guidance` in `http/runtime/pg_backend.py`, wired into both direct `psycopg.connect` sites + the eager pool open. Narrow substring matching — any unrecognised `OperationalError` passes through unchanged, re-raised as the same type with the original chained (traceback preserved, now that #1562 makes it visible). Completes the runtime half of #1564.
+
 ## [0.101.5] - 2026-07-09
 
 ### Fixed

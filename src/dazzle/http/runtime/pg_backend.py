@@ -52,6 +52,54 @@ assert _USER_GUC_PREFIX == USER_GUC_PREFIX == "dazzle.user_", (
 )
 
 
+def _connection_error_hint(message: str) -> str | None:
+    """Actionable hint for the common local-Postgres connection failures — role
+    missing / password auth / database missing (#1570). Returns None for anything
+    unrecognised so an unrelated OperationalError is never masked.
+
+    Narrow substring matches on the libpq FATAL text (case-insensitive).
+    """
+    m = message.lower()
+    if "does not exist" in m and "role" in m:
+        return (
+            "The Postgres role in DATABASE_URL doesn't exist. Create it (Debian/Ubuntu):\n"
+            "  sudo -u postgres createuser -P <user>\n"
+            "  sudo -u postgres createdb -O <user> <db>\n"
+            "then set DATABASE_URL=postgresql://<user>:<password>@127.0.0.1:5432/<db>\n"
+            "See docs/reference/databases.md for per-OS setup."
+        )
+    if "password authentication failed" in m or "no password supplied" in m:
+        return (
+            "Postgres requires a password over TCP. Put user:password in DATABASE_URL "
+            "and connect via 127.0.0.1 (not the Unix socket):\n"
+            "  DATABASE_URL=postgresql://<user>:<password>@127.0.0.1:5432/<db>\n"
+            "See docs/reference/databases.md."
+        )
+    if "database" in m and "does not exist" in m:
+        return (
+            "The database in DATABASE_URL doesn't exist. Create it:\n"
+            "  createdb <db>   (Debian/Ubuntu: sudo -u postgres createdb -O <user> <db>)"
+        )
+    return None
+
+
+def _connect_with_guidance(url: str, **kwargs: Any) -> Any:
+    """``psycopg.connect`` that appends actionable guidance to the common
+    local-Postgres connection failures (#1570), preserving the original
+    exception type + chain so callers catching ``OperationalError`` still work
+    and the traceback survives.
+    """
+    import psycopg
+
+    try:
+        return psycopg.connect(url, **kwargs)
+    except psycopg.OperationalError as exc:
+        hint = _connection_error_hint(str(exc))
+        if hint is None:
+            raise
+        raise psycopg.OperationalError(f"{exc}\n\n{hint}") from exc
+
+
 def _set_search_path(conn: Any, schema: str) -> None:
     """Set search_path on a connection using safe SQL composition.
 
@@ -342,14 +390,24 @@ class PostgresBackend:
             """Rollback any aborted transaction before returning to pool."""
             conn.rollback()
 
-        self._pool = ConnectionPool(
-            self.database_url,
-            min_size=min_size,
-            max_size=max_size,
-            kwargs={"row_factory": dict_row},
-            reset=_reset_connection,
-            open=True,
-        )
+        import psycopg
+
+        try:
+            self._pool = ConnectionPool(
+                self.database_url,
+                min_size=min_size,
+                max_size=max_size,
+                kwargs={"row_factory": dict_row},
+                reset=_reset_connection,
+                open=True,
+            )
+        except psycopg.OperationalError as exc:
+            # Eager open (open=True) can surface the connection failure here;
+            # augment the common local-Postgres traps with guidance (#1570).
+            hint = _connection_error_hint(str(exc))
+            if hint is None:
+                raise
+            raise psycopg.OperationalError(f"{exc}\n\n{hint}") from exc
         logger.info("Connection pool opened (min=%d, max=%d)", min_size, max_size)
 
     def close_pool(self) -> None:
@@ -414,10 +472,9 @@ class PostgresBackend:
             return
 
         # Direct-connect fallback (pre-pool: migrations, build-time)
-        import psycopg
         from psycopg.rows import dict_row
 
-        conn = psycopg.connect(self.database_url, row_factory=dict_row)
+        conn = _connect_with_guidance(self.database_url, row_factory=dict_row)
         try:
             if effective_search_path:
                 _set_search_path(conn, effective_search_path)
@@ -443,11 +500,10 @@ class PostgresBackend:
         fail-closed (no rows / rejected writes) because the GUC is unset. Prefer
         :meth:`connection` for any tenant-scoped access (see #1331).
         """
-        import psycopg
         from psycopg.rows import dict_row
 
         if self._connection is None or self._connection.closed:
-            raw = psycopg.connect(self.database_url, row_factory=dict_row)
+            raw = _connect_with_guidance(self.database_url, row_factory=dict_row)
             if self.search_path:
                 _set_search_path(raw, self.search_path)
             self._connection = PgConnectionWrapper(raw)
