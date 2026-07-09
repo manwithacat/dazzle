@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.4] - 2026-07-09
+
+### Fixed
+- **`tigerbeetle.yml` workflow referenced the retired AWS-CDK deploy path + deleted tests.** After the deploy-subsystem retirement (v0.101.0), the TigerBeetle CI workflow still had a `tigerbeetle-unit` job running the deleted `test_deploy_tigerbeetle.py`/`test_preflight_tigerbeetle.py` and a `tigerbeetle-deploy-validation` job invoking the removed `dazzle deploy generate`/`deploy preflight` + `cdk synth`. Both jobs removed. Kept the still-valid integration + performance jobs (which test the real `dazzle.http.pra.tigerbeetle_*` runtime — the `ledger`/TigerBeetle construct is unaffected, ADR-0015). Also fixed stale trigger paths (`src/dazzle_http/…` → `src/dazzle/http/…`) and a stale `dazzle_http.pra` import in the client-wrapper smoke test.
+
 ## [0.101.3] - 2026-07-09
 
 ### Fixed
