@@ -32,6 +32,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 ROOTS = ("src/dazzle/render", "src/dazzle/page")
 
@@ -87,16 +88,26 @@ def is_tailwind_token(tok: str) -> bool:
 # authoritative served-bundle list in `css_loader.py` (CSS_SOURCE_FILES +
 # CSS_UNLAYERED_FILES) rather than a naive glob — the v1 glob missed the whole
 # `css/components/` subdir (undercount ~4.6×) and counted non-served reference
-# files. Excluded from the convergence target: the HM dist (layer=None — already
-# HM-owned), `vendor/*` (third-party CSS), `reset.css` (reset layer, foundational),
-# and `site-sections.css` (marketing/docs site chrome, not app design system).
+# files. Excluded from the *main-bundle* convergence target: the HM dist
+# (layer=None — already HM-owned), `vendor/*` (third-party CSS), and `reset.css`
+# (reset layer, foundational — tracked separately, deduped vs HM in Tier-2 1C).
+#
+# TIER-2 WIDENING (2026-07-09, sitespec directive): `site-sections.css` is NO
+# LONGER excluded — the marketing/sitespec section CSS is now an in-scope
+# migration target (port → HM `components/sections/*`). The metric also counts a
+# PERIPHERAL bucket — `feedback-widget.css` + `themes/*.css` — Dazzle-native
+# design CSS the browser receives outside the main bundle. `custom.css` is a
+# project escape hatch (out of scope). The delegation PROOF is the hard gate
+# `tests/unit/test_hm_delegation_proof.py`; this metric is the drain signal.
 _CSS_STATIC = "src/dazzle/page/runtime/static"
-_CSS_EXCLUDE_RELS = {"css/reset.css", "css/site-sections.css"}
+_CSS_EXCLUDE_RELS = {"css/reset.css"}
+# Peripheral Dazzle-native design CSS served outside the css_loader main bundle.
+_CSS_PERIPHERAL_GLOBS = ("css/feedback-widget.css", "css/themes/*.css")
 
 
 def _served_dazzle_native_rels() -> list[str]:
     """The served Dazzle-native design-system CSS files, from css_loader's
-    source-of-truth lists (minus HM dist / vendor / reset / site chrome)."""
+    source-of-truth lists (minus HM dist / vendor / reset)."""
     from dazzle.page.runtime.css_loader import CSS_SOURCE_FILES, CSS_UNLAYERED_FILES
 
     rels: list[str] = []
@@ -110,7 +121,24 @@ def _served_dazzle_native_rels() -> list[str]:
     return rels
 
 
-def _css_reservoir(repo_root: Path) -> dict:
+def _peripheral_rels(static: Path) -> list[str]:
+    """Dazzle-native design CSS served outside the main bundle (feedback widget,
+    aesthetic-family theme presets) — Tier-2 migration targets."""
+    rels: list[str] = []
+    for pattern in _CSS_PERIPHERAL_GLOBS:
+        if "*" in pattern:
+            parent = static / Path(pattern).parent
+            rels.extend(str(p.relative_to(static)) for p in sorted(parent.glob(Path(pattern).name)))
+        elif (static / pattern).exists():
+            rels.append(pattern)
+    return rels
+
+
+def _lines(p: Path) -> int:
+    return p.read_text(encoding="utf-8", errors="replace").count("\n") + 1
+
+
+def _css_reservoir(repo_root: Path) -> dict[str, Any]:
     static = repo_root / _CSS_STATIC
     files: list[tuple[str, int]] = []
     total = 0
@@ -118,14 +146,29 @@ def _css_reservoir(repo_root: Path) -> dict:
         p = static / rel
         if not p.exists():
             continue
-        n = p.read_text(encoding="utf-8", errors="replace").count("\n") + 1
+        n = _lines(p)
         files.append((rel, n))
         total += n
     files.sort(key=lambda x: -x[1])
-    return {"css_lines_dazzle_native": total, "css_files": files}
+
+    peripheral: list[tuple[str, int]] = []
+    peripheral_total = 0
+    for rel in _peripheral_rels(static):
+        n = _lines(static / rel)
+        peripheral.append((rel, n))
+        peripheral_total += n
+    peripheral.sort(key=lambda x: -x[1])
+
+    return {
+        "css_lines_dazzle_native": total,
+        "css_files": files,
+        "css_lines_peripheral": peripheral_total,
+        "css_peripheral_files": peripheral,
+        "css_lines_grand_total": total + peripheral_total,
+    }
 
 
-def scan(repo_root: Path) -> dict:
+def scan(repo_root: Path) -> dict[str, Any]:
     per_file: Counter[str] = Counter()
     token_counts: Counter[str] = Counter()
     for root in ROOTS:
@@ -174,6 +217,8 @@ def main() -> int:
                     "total_tailwind_tokens": result["total_tailwind_tokens"],
                     "files_with_tailwind": result["files_with_tailwind"],
                     "css_lines_dazzle_native": result["css_lines_dazzle_native"],
+                    "css_lines_peripheral": result["css_lines_peripheral"],
+                    "css_lines_grand_total": result["css_lines_grand_total"],
                 },
                 indent=2,
             )
@@ -192,10 +237,18 @@ def main() -> int:
     )
     if result["top_tokens"]:
         print("    top tokens: " + ", ".join(f"{t}×{n}" for t, n in result["top_tokens"][:12]))
-    print("  [css] Dazzle-native design-system CSS not yet owned by HM (the larger reservoir):")
-    print(f"    total lines: {result['css_lines_dazzle_native']}")
+    print("  [css] Dazzle-native design-system CSS not yet owned by HM (main bundle):")
+    print(f"    main-bundle lines: {result['css_lines_dazzle_native']}")
     for name, n in result["css_files"][:10]:
         print(f"    {n:5d}  {name}")
+    print("  [css/peripheral] sitespec/family CSS served outside the main bundle (Tier-2 targets):")
+    print(f"    peripheral lines: {result['css_lines_peripheral']}")
+    for name, n in result["css_peripheral_files"][:10]:
+        print(f"    {n:5d}  {name}")
+    print(
+        f"  [css/GRAND TOTAL] Dazzle-native design CSS to delegate into HM: "
+        f"{result['css_lines_grand_total']}"
+    )
     return 0
 
 
