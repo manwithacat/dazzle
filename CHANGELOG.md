@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.23] - 2026-07-09
+
+### Fixed
+- **HM-package cohesion suite green again (HMC-013).** Two pre-existing failures in the
+  HaTchi-MaXchi package's own tests (surfaced during the cycle-198 aggressive convergence,
+  git-stash-confirmed as pre-existing): (1) `test_no_orphan_markers` flagged
+  `dashboard-card`/`workspace-shell` — internal chrome migrated from Dazzle in HMC-007c/d
+  that erroneously carried a `HYPERPART:` marker without a gallery-registry entry; removed
+  the stray markers so they match the other migrated chrome (detail/fragments/etc. carry
+  none). (2) `test_semantic_only_list_is_not_stale` flagged `dz-empty-state__description`,
+  which gained a style rule when the detail-view empty-state folded into HM (HMC-003c);
+  removed it from the test's `SEMANTIC_ONLY` set. HM `test_hyperpart_cohesion` +
+  `test_contract` suites now fully green (24 passed).
+
 ## [0.98.22] - 2026-07-09
 
 ### Changed

@@ -6035,7 +6035,8 @@ summary.table-col-menu-trigger::-webkit-details-marker {
 }
 /* ── components/workspace-shell.css ── */
 @layer components {
-/* HYPERPART: workspace-shell */
+/* Internal workspace chrome (not a standalone gallery Hyperpart — no HYPERPART
+ * marker, matching the other migrated chrome components detail/fragments/etc.). */
 /* Moved from Dazzle dashboard.css (HMC-007c) — the workspace composition
  * shell: outer padding + heading row + primary actions, context selector,
  * and the edit toolbar (Reset/Save with the 5 saveState values). Byte-faithful,
@@ -12238,7 +12239,8 @@ onboarding-step {
 }
 /* ── components/dashboard-card.css ── */
 @layer components {
-/* HYPERPART: dashboard-card */
+/* Internal dashboard chrome (not a standalone gallery Hyperpart — no HYPERPART
+ * marker, matching the other migrated chrome components detail/fragments/etc.). */
 /* Moved from Dazzle dashboard.css (HMC-007d) — the dashboard card grid +
  * card chrome (wrapper/header/actions/titles/notice/body/skeleton/resize) +
  * add-card CTA. Byte-faithful, HM-tokenised. The pulse keyframe used by the

@@ -1,4 +1,5 @@
-/* HYPERPART: dashboard-card */
+/* Internal dashboard chrome (not a standalone gallery Hyperpart — no HYPERPART
+ * marker, matching the other migrated chrome components detail/fragments/etc.). */
 /* Moved from Dazzle dashboard.css (HMC-007d) — the dashboard card grid +
  * card chrome (wrapper/header/actions/titles/notice/body/skeleton/resize) +
  * add-card CTA. Byte-faithful, HM-tokenised. The dz-pulse keyframe used by the

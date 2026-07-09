@@ -48,7 +48,9 @@ def _methods_in_markup(partial: str) -> set[str]:
 # comment in the component's CSS explaining why.
 SEMANTIC_ONLY = {
     "dz-alert__body",
-    "dz-empty-state__description",
+    # dz-empty-state__description removed 2026-07-09: it gained a style rule
+    # (color + font-size) when the detail-view empty-state was folded into HM
+    # (HMC-003c), so it is no longer semantic-only.
     # tab panel container: identity for the controller + a swap target; its
     # visibility rides the native `hidden` attribute, so it carries no rule.
     "dz-tabs__panel",

@@ -1,4 +1,5 @@
-/* HYPERPART: workspace-shell */
+/* Internal workspace chrome (not a standalone gallery Hyperpart — no HYPERPART
+ * marker, matching the other migrated chrome components detail/fragments/etc.). */
 /* Moved from Dazzle dashboard.css (HMC-007c) — the workspace composition
  * shell: outer padding + heading row + primary actions, context selector,
  * and the edit toolbar (Reset/Save with the 5 saveState values). Byte-faithful,
