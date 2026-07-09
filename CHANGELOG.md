@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.27] - 2026-07-09
+
+### Removed
+- **HM-convergence (HMC-023): deleted the redundant `utilities.css`.** Its unprefixed
+  layout utilities (`.stack`/`.stack-sm`/`.stack-lg`/`.row`/`.cluster`/`.between`/`.centre`/
+  `.grid-auto`/`.flow`) were dead — 0 standalone emitter uses framework-wide; HM `layout.css`
+  provides the `dz-`prefixed equivalents (`.dz-stack`/`.dz-cluster`/`.dz-center`/
+  `.dz-auto-grid`) the emitters actually use. The only live class, `.visually-hidden` (10
+  emitter uses), is a byte-identical duplicate of HM `base.css`'s — so it keeps rendering
+  from HM. Removed from `css_loader.CSS_SOURCE_FILES` and deleted. Reservoir
+  `css_lines_dazzle_native` 246→113.
+
 ## [0.98.26] - 2026-07-09
 
 ### Changed

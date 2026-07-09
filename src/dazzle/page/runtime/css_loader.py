@@ -50,7 +50,10 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # dz-richtext (Dazzle-native, bundled).
     # vendor/pickr.css removed in #976 — `widget=color` uses native
     # <input type="color">, no vendor CSS required.
-    ("utilities", "css/utilities.css"),
+    # utilities.css deleted (HMC-023, 2026-07-09): its layout utils
+    # (.stack/.row/.cluster/.between/.centre/.grid-auto/.flow) were dead (0 emitter
+    # uses; HM layout.css provides the dz-prefixed equivalents), and .visually-hidden
+    # is byte-identical to HM base.css's — so the whole file was redundant.
     # dashboard.css migrated into HaTchi-MaXchi (HMC-020): its only remaining rule
     # (the #dz-detail-drawer width instance) now lives in HM drawer.css (travels
     # with the drawer component). Card grid/shell/chrome already moved in 007b/c/d.
