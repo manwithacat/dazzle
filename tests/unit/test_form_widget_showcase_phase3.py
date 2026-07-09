@@ -2,10 +2,10 @@
 (combobox / tags / color / slider / rich_text), widgets 3-7/9.
 
 These are exercised by the `component_showcase` gallery fixture and ~12-20 fleet
-DSL files each. Each emits the `data-dz-widget` + `data-dz-options` mount
-contract the client controllers (TomSelect, dzRichText, dzRangeTooltip) read —
-so this pins the substrate primitives to the legacy `form_renderer` markup that
-keeps those controllers working after the 3b flip.
+DSL files each. combobox/tags are HM-native progressive-enhancement controllers
+(dz-combobox / dz-tags) since HMC-018 slices 1-2; the remaining `data-dz-widget`
++ `data-dz-options` mount contract is read by dzRichText / dzRangeTooltip — so
+this pins the substrate primitives to the markup those controllers expect.
 
 `multi_select`, `range`/date_range, and the flatpickr `picker` datepicker are
 NOT ported (zero fleet usage); date/datetime fields render as native

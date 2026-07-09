@@ -44,7 +44,8 @@ _BRIDGE_MOUNTED_WIDGET_KINDS = frozenset(
         # `tags` removed in HMC-018 slice 2 — `widget=tags` is now HM-native
         # (a progressively-enhanced native <input data-dz-tags> driven by
         # controllers/dz-tags.js), not a bridge/vendor mount.
-        "multiselect",
+        # `multiselect` removed in HMC-018 slice 3 — the last TomSelect-backed
+        # widget; 0 fleet usage, no emitter. Vendored TomSelect runtime deleted.
         # `datepicker`/`daterange` removed — the flatpickr datepicker form
         # widget was retired (zero fleet usage); date fields render as native
         # `<input type=date>`.

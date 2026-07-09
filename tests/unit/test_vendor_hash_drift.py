@@ -7,7 +7,7 @@ the SHA-256 and assert it matches the value pinned in
 What this catches:
 
   - Tampering with vendored files between scheduled auto-update PRs.
-    Most vendored files (Alpine.js, tom-select, etc.) are
+    Most vendored files (lucide, flatpickr, etc.) are
     not auto-updated — without this gate, a malicious change to them
     would only surface in a code review of a vendor-update PR, and
     only for the few files the auto-updater touches.

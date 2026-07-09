@@ -11,7 +11,7 @@ This script handles lucide (auto-update) and the manually-pinned htmx 4 set —
 the core (``update_htmx``, a no-op report) plus the three vendored htmx-4
 extensions (``update_htmx_extensions``: ``hx-preload`` / ``hx-optimistic`` /
 ``hx-upsert``), all pinned to ``HTMX_PINNED_VERSION`` and bumped together at GA
-(#1409). Other vendored files (Alpine, flatpickr, tom-select, etc.) are vendored
+(#1409). Other vendored files (flatpickr, pdfjs, etc.) are vendored
 manually — use ``scripts/update_vendor_hashes.py`` after replacing them by hand.
 """
 

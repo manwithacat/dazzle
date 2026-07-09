@@ -54,7 +54,7 @@ def _hm_build():  # type: ignore[no-untyped-def]
 # its own @layer blocks using the same layer names as ours).
 CSS_SOURCES: list[tuple[str | None, Path]] = [
     ("reset", STATIC / "css" / "reset.css"),
-    ("vendor", STATIC / "vendor" / "tom-select.css"),
+    # tom-select.css removed in HMC-018 slice 3 (TomSelect retired).
     ("vendor", STATIC / "vendor" / "flatpickr.css"),
     # HaTchi-MaXchi — built at ingest with prefix="dz-" (see _hm_build /
     # HM_DIST_CSS). After editing package CSS, rebuild the package
@@ -81,7 +81,8 @@ CSS_SOURCES: list[tuple[str | None, Path]] = [
 # Unlayered files appended after every @layer block — cascade override.
 CSS_UNLAYERED: list[Path] = [
     STATIC / "css" / "dz.css",
-    STATIC / "css" / "dz-widgets.css",
+    # dz-widgets.css deleted in HMC-018 slice 3 (held only .ts-* TomSelect
+    # overrides). dz-tones.css deleted earlier (HMC-005); skipped if absent.
     STATIC / "css" / "dz-tones.css",
 ]
 

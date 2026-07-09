@@ -241,8 +241,10 @@ class WidgetCombobox:
 
 @dataclass(frozen=True, slots=True)
 class TagsField:
-    """Free-form tag entry (`widget=tags`) — TomSelect with create + remove
-    plugins. Parity with the legacy `_render_tags`."""
+    """Free-form tag entry (`widget=tags`) — HM-native progressive-enhancement
+    over a native `<input data-dz-tags>` carrying a comma-joined value, driven
+    by controllers/dz-tags.js (HMC-018 slice 2). Usable with JS off (the server
+    splits on comma)."""
 
     name: str
     label: str

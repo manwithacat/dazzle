@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.30] - 2026-07-09
+
+### Removed
+- **HM-convergence (HMC-018 slice 3/3): dropped the vendored TomSelect entirely — the
+  "all design in HaTchi-MaXchi" directive is complete.** With `combobox` (slice 1) and
+  `tags` (slice 2) now HM-native and `multiselect` retired (0 fleet usage, no emitter),
+  TomSelect was dead. Removed: `vendor/tom-select.{css,min.js}`, the `dz-widgets.css`
+  `.ts-*` theme block (the file held only those rules → deleted + dropped from the bundle),
+  the HM `base/design-system.css` TomSelect override block, the `mountTomSelect`/
+  `multiselect` registry code, the `app_chrome` vendor-JS include, and the css_loader/
+  `dazzle.css`/`build_dist` wiring (~530 vendor+CSS lines). No vendored widget library
+  ships anymore. The Dazzle-native design-CSS reservoir is now at its floor — the only
+  remaining Dazzle-side rule is the deliberate all-pages `dz.css .htmx-indicator`
+  visibility block (HTMX chrome, not design debt).
+
+### Agent Guidance
+- **No vendored widget library remains.** Searchable-enum (`combobox`) and tag entry
+  (`tags`) are HM-native Hyperparts (`dz-combobox`/`dz-tags`); date fields are native
+  inputs (Flatpickr dropped, HMC-017); colour is native `<input type=color>`. All
+  presentation/design is defined in HaTchi-MaXchi + consumed via its dist (2026-07-08
+  directive). Author UI CSS/behaviour in the HM package, never in `src/dazzle/.../css`.
+
 ## [0.98.29] - 2026-07-09
 
 ### Changed

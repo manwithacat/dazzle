@@ -1,7 +1,7 @@
 """Rebuild the vendor hash manifest from on-disk files.
 
 Use this when you've deliberately replaced a vendored file by hand
-(Alpine.js, flatpickr, tom-select, etc.) and need the drift gate to
+(flatpickr, pdfjs, etc.) and need the drift gate to
 accept the new state. Auto-updated files (htmx core + 4 extensions,
 idiomorph, lucide) get their manifest entries refreshed by
 ``scripts/update_vendors.py`` and don't need this.

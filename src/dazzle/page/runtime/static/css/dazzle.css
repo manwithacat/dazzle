@@ -8,7 +8,7 @@
  *
  * Layer order (DO NOT REORDER):
  *   reset      — modern element reset (Andy Bell + Open Props normalise)
- *   vendor     — vendored widget CSS (Tom Select)
+ *   vendor     — vendored widget CSS (currently empty; TomSelect retired HMC-018)
  *   tokens     — custom property declarations (the design system)
  *   base       — element defaults (typography, links, form controls)
  *   utilities  — small semantic utility layer (.row, .stack, etc.)
@@ -25,7 +25,6 @@
  * only the Dazzle-app-orchestration CSS now. */
 
 @import url("reset.css") layer(reset);
-@import url("../vendor/tom-select.css") layer(vendor);
 /* Geist @font-face + ALL design-system CSS (tokens/base/components) come
  * from the HaTchi-MaXchi dist artifact (packages/hatchi-maxchi/dist/
  * hatchi-maxchi.css, pre-layered) — consumed by css_loader/build_dist as
@@ -54,7 +53,6 @@
  *   - site-sections.css: marketing-page section grammar
  *   - dz.css           : micro-runtime CSS-only transitions
  *   - dz-tones.css     : tone-tinting attribute selectors (#906)
- *   - dz-widgets.css   : vendored widget theme overrides
  * Until each is decomposed into the new layer system, they load here
  * so their rules continue to apply.
  *
@@ -69,7 +67,8 @@
 @import url("dazzle-layer.css") layer(components);
 @import url("site-sections.css") layer(components);
 @import url("dz.css");
-@import url("dz-widgets.css");
+/* dz-widgets.css deleted (HMC-018 slice 3) — held only .ts-* TomSelect
+   overrides; combobox/tags are HM-native, multiselect retired. */
 @import url("dz-tones.css");
 
 /* Additional component imports land here as families migrate.

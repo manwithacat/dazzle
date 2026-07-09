@@ -86,11 +86,3 @@ def test_no_ql_class_rules_in_design_system_css() -> None:
                 "Quill removed in #977 cycle 4. See #1001 / .dz-richtext-* "
                 "rules in components/richtext.css are the replacement."
             )
-
-
-def test_no_ql_classes_in_widget_overrides_css() -> None:
-    """dz-widgets.css already had Quill rules cleaned in cycle 4 —
-    this gate prevents reintroduction."""
-    css = (CSS_DIR / "dz-widgets.css").read_text()
-    live = "\n".join(_live_lines(css))
-    assert ".ql-" not in live, "dz-widgets.css contains a Quill class rule (#1001)"

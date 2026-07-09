@@ -63,16 +63,13 @@ class AppChrome:
     # Jinja head included this script via a CDN link; the typed substrate
     # had silently dropped it, leaving every data-lucide icon invisible on
     # marketing/site pages.
-    # #1336: the vendor widget JS (TomSelect) must load on every app page,
-    # mirroring css_loader.py's unconditional vendor *CSS* entries. Without
-    # it, `data-dz-widget=combobox` fields render an inert empty <select>
-    # (the mount bails on `window.TomSelect` being undefined) and required-FK
-    # create/edit forms can't be submitted. defer preserves document order,
-    # so vendor globals exist before the bundle's DOMContentLoaded
+    # #1336: vendored widget JS formerly loaded here (TomSelect) — retired in
+    # HMC-018 slice 3. combobox/tags are now HM-native progressive-enhancement
+    # controllers bundled inside dazzle.min.js, so there is no separate vendor
+    # widget runtime to preload before the bundle's DOMContentLoaded
     # mountWidgets() pass.
     js_scripts: tuple[str, ...] = (
         "/static/dist/dazzle-icons.min.js",
-        "/static/vendor/tom-select.min.js",
         "/static/dist/dazzle.min.js",
     )
     theme: str | None = None
@@ -89,12 +86,9 @@ _FRAMEWORK_BUNDLE_JS = "/static/dist/dazzle.min.js"
 # Must load before the framework bundle so `window.lucide.createIcons()`
 # resolves on first page render.
 _LUCIDE_UMD_JS = "/static/dist/dazzle-icons.min.js"
-# #1336: vendor widget runtimes. Loaded on every app page (mirrors the
-# always-on vendor CSS in css_loader.py) so combobox/FK-ref widgets actually
-# enhance instead of silently no-op'ing. Placed before the framework bundle;
-# defer ordering guarantees the globals exist when the bundle's
-# mountWidgets() runs on DOMContentLoaded.
-_VENDOR_TOM_SELECT_JS = "/static/vendor/tom-select.min.js"
+# #1336: a vendored widget runtime (TomSelect) was preloaded here until
+# HMC-018 slice 3. combobox/tags are now HM-native controllers inside the
+# framework bundle, so no separate vendor widget JS is needed.
 _DEFAULT_FAVICON = "/static/assets/dazzle-favicon.svg"
 
 
@@ -175,7 +169,6 @@ def resolve_app_chrome(
     css_links: list[str] = [_FRAMEWORK_BUNDLE_CSS]
     js_scripts: list[str] = [
         _LUCIDE_UMD_JS,
-        _VENDOR_TOM_SELECT_JS,
         _FRAMEWORK_BUNDLE_JS,
     ]
     font_preconnect: list[str] = []

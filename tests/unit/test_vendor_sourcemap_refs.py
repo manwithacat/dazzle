@@ -30,8 +30,7 @@ VENDOR_DIR = (
 # Every vendored file whose map we know is not shipped. Add to this list
 # when pulling in a new vendor that strip_sourcemap would have touched.
 _FILES_WITHOUT_SHIPPED_MAPS = [
-    "tom-select.min.js",
-    "tom-select.css",
+    # tom-select.min.js / tom-select.css removed in HMC-018 slice 3.
     # quill.min.js / quill.snow.css removed in #977 cycle 4.
     "pickr.min.js",
 ]

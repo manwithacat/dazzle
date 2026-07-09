@@ -208,11 +208,12 @@ def field_dict_to_primitive(
 
     # WIDGET overrides (ADR-0049 Phase 3a): a `widget=` clause selects a
     # client-controller widget (combobox/tags/color/slider/rich_text).
-    # Routed before the plain enum/select branch — `widget=combobox` is a
-    # TomSelect-enhanced select, not the vanilla Combobox. `multi_select`,
-    # `range`/date_range, and the JS `picker` date-widget are unported
-    # (zero fleet usage); a date/datetime field renders as a native
-    # `<input type=date>`/`datetime-local` via the plain Field branch below.
+    # Routed before the plain enum/select branch — `widget=combobox` is the
+    # HM-native progressively-enhanced `<select data-dz-combobox>`, not the
+    # vanilla Combobox. `multi_select`, `range`/date_range, and the JS `picker`
+    # date-widget are unported (zero fleet usage); a date/datetime field
+    # renders as a native `<input type=date>`/`datetime-local` via the plain
+    # Field branch below.
     widget = str(field_dict.get("widget", "") or "").strip()
     extra = field_dict.get("extra") or {}
     default = str(field_dict.get("default", "") or "")

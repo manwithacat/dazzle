@@ -12,7 +12,7 @@ file under ``src/dazzle/page/runtime/static/vendor/``. It is consulted by:
     in the same commit as the vendored file.
 
   - ``scripts/update_vendor_hashes.py`` — manual rebuild for files
-    outside the auto-update set (Alpine, flatpickr, tom-select, etc.).
+    outside the auto-update set (flatpickr, pdfjs, etc.).
     Run after replacing a vendored file by hand.
 
 Design choices:

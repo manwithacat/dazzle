@@ -38,7 +38,6 @@ CSS_LAYER_ORDER = "@layer reset, vendor, tokens, base, utilities, components, ov
 # ``static/css/dazzle.css`` (#920).
 CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     ("reset", "css/reset.css"),
-    ("vendor", "vendor/tom-select.css"),
     # HaTchi-MaXchi — consumed as its PUBLISHED dist artifact (boundary
     # Phase 2), not per-source files. The bundle is pre-layered by the
     # package's build.py (vendor fonts, tokens, base, components — the
@@ -96,7 +95,10 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
 # always lose to unlayered styles in the CSS cascade.
 CSS_UNLAYERED_FILES: tuple[str, ...] = (
     "css/dz.css",
-    "css/dz-widgets.css",
+    # dz-widgets.css deleted (HMC-018 slice 3): it held only the .ts-* TomSelect
+    # theme overrides; combobox/tags are now HM-native and multiselect was
+    # retired (0 fleet usage), so the whole file was dead. TomSelect vendor
+    # bytes (css + min.js) removed in the same change.
     # dz-tones.css fully drained (HMC-005/005b): metric-tile → HM metrics.css,
     # action-grid/status-list → their HM components, and the last family
     # (notice-band tone tints) → HM dashboard-card.css (tinting travels with the
