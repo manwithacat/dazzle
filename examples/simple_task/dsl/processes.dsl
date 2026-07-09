@@ -14,6 +14,12 @@ module simple_task.processes
 # =============================================================================
 
 process task_auto_assignment "Auto-Assign High Priority Tasks":
+  # `implements` is an acceptance-criteria link (core/ir/process.py: "Link to
+  # acceptance criteria"), NOT a flow/trigger match: this system automation
+  # satisfies ST-017's then-conditions (Task.assigned_to set + member notified)
+  # automatically, in place of the manager's manual form assignment. A process
+  # legitimately implements the OUTCOME a user story specifies even when it
+  # reaches it by a different trigger. (Clarified cycle 232, closes #241.)
   implements: [ST-017]
 
   trigger:
