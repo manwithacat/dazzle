@@ -75,7 +75,6 @@ class TestIntrospectionCompleteness:
         "mcp setup",
         "specs openapi",
         "specs asyncapi",
-        "deploy generate",
         "deploy plan",
         "vocab init",
         "vocab list",

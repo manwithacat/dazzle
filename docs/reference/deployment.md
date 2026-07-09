@@ -1,87 +1,92 @@
-# AWS Deployment
+# Deployment
 
-Dazzle generates AWS CDK infrastructure from your DSL specifications. This guide covers the deployment system, configuration options, and TigerBeetle support.
-
-## Overview
-
-The deployment pipeline transforms your DSL into production-ready AWS infrastructure:
+Dazzle apps deploy as a single, well-optimised **core process**. You run that
+process on a buildpack platform (Heroku or similar) or any Python host, provision
+the backing services the app needs yourself, and pass their connection details in
+via environment variables. Dazzle does not generate cloud infrastructure — it
+tells you *what* the app requires and generates the buildpack files to run it.
 
 ```
-DSL Files → AppSpec IR → InfraRequirements → AWSRequirements → CDK Stacks
+DSL Files → AppSpec IR → infrastructure requirements (deploy plan)
+                       → buildpack deploy files (deploy heroku)
 ```
 
-### Generated Stacks
+## Discovering an app's infrastructure — `dazzle deploy plan`
 
-| Stack | Purpose | AWS Resources |
-|-------|---------|---------------|
-| Network | VPC and networking | VPC, Subnets, NAT Gateway, Security Groups |
-| TigerBeetle | Financial ledger cluster | EC2 ASG, EBS gp3, SSM Parameters |
-| Data | Persistence layer | RDS Aurora, S3 Buckets |
-| Messaging | Async communication | SQS Queues, EventBridge |
-| Compute | Application runtime | ECS Fargate, ECR, ALB |
-| Observability | Monitoring | CloudWatch Dashboards, Alarms |
-
-## Quick Start
+`dazzle deploy plan` is **target-agnostic**: it infers from your DSL what backing
+services the app needs (database, cache, queue, workers, object storage, ledger
+cluster) and which environment variables the host must supply. It does **not**
+generate code or target any specific cloud.
 
 ```bash
-# Generate infrastructure plan
-dazzle deploy plan
-
-# Generate CDK code
-dazzle deploy generate
-
-# Deploy to AWS (requires AWS credentials)
-cd infra && cdk deploy --all
+dazzle deploy plan [--project DIR] [--format text|json]
 ```
 
-## Configuration
+| Option | Description |
+|--------|-------------|
+| `--project` | Project directory to analyse (defaults to the current directory) |
+| `--format` | `text` (human-readable, default) or `json` (machine-readable) |
 
-Configure deployment in `dazzle.toml`:
+For a simple app the plan lists a **database — Postgres** component, the
+environment variables the host must provide (`DATABASE_URL`, …), and notes
+reminding you to provision the services yourself and deploy the app as a core
+process via a buildpack. Richer apps add components for cache, queues, workers,
+object storage, and ledger clusters as the DSL warrants.
 
-```toml
-[deploy]
-enabled = true
-environment = "staging"  # dev, staging, prod
-region = "us-east-1"
+Use the plan as the checklist of services to provision and env vars to set before
+you deploy.
 
-[deploy.compute]
-cpu = 512
-memory = 1024
-desired_count = 2
+## Generating buildpack deploy files — `dazzle deploy heroku`
 
-[deploy.database]
-instance_class = "db.t3.medium"
-storage_gb = 100
+`dazzle deploy heroku` generates the files needed to deploy on Heroku (or any
+uv-buildpack-compatible platform). This is the **supported deploy path**.
 
-[deploy.tigerbeetle]
-enabled = true
-size = "r6i.large"      # t3.medium, r6i.large, r6i.xlarge
-node_count = 3          # Must be odd (1, 3, 5) for Raft consensus
-volume_size_gb = 100
-volume_iops = 10000
+```bash
+dazzle deploy heroku [--pip]
 ```
 
-## Host-App Lifecycle Hooks
+| Mode | Files generated |
+|------|-----------------|
+| default (uv buildpack) | `Procfile`, `pyproject.toml`, `uv.lock`, `.python-version` |
+| `--pip` (legacy) | `requirements.txt`, `runtime.txt` (plus `Procfile`) |
 
-When your own code needs startup/shutdown work on the Dazzle app (connection pools, auth caches, background clients), use the supported hook API:
+See the [Heroku deployment guide](../guides/heroku.md) for the full walkthrough
+(provisioning add-ons, setting config vars, running migrations, and pushing).
 
-```python
-import dazzle
+### The process entrypoint — `dazzle serve --production`
 
-dazzle.register_lifespan_hook(app, startup=init_pool, shutdown=close_pool)
+However you host the app, the production entrypoint is:
+
+```bash
+dazzle serve --production
 ```
 
-Hooks may be sync or async, run inside the framework's lifespan (after the DB pool opens, so they can use the database), and shutdown hooks run in reverse order.
+This binds `0.0.0.0`, requires `DATABASE_URL` to be set, and emits structured
+JSON logging suitable for a platform log drain. The generated `Procfile` invokes
+this for you.
 
-**Do not use `@app.on_event`.** Dazzle constructs the app with a custom `lifespan=`, which makes Starlette skip the default lifespan — the only thing that ever read the `on_event` lists. (Starlette 1.x removed the draining machinery entirely; FastAPI keeps `on_event` only as a deprecated write-only shim.) As of v0.82.24 (#1366) Dazzle drains those legacy handlers itself with original semantics — a failed startup handler aborts boot — and logs a deprecation warning per handler, so existing code works loudly rather than failing silently. Migrate to `register_lifespan_hook`.
+## Provisioning backing services
 
-## TigerBeetle Support
+Provisioning is the operator's concern — use managed services or your own infra.
+The app needs whatever `dazzle deploy plan` reports, typically:
 
-TigerBeetle is a high-performance financial ledger database. Since AWS has no managed TigerBeetle service, Dazzle deploys a self-hosted cluster on EC2.
+| Service | When needed | Env var(s) |
+|---------|-------------|-----------|
+| PostgreSQL | Always, for any app with entities | `DATABASE_URL` |
+| Redis / cache | When the app declares caching | as reported by `deploy plan` |
+| Queue / workers | When the app declares async jobs or processes | as reported by `deploy plan` |
+| Object storage | When the app stores files/assets | as reported by `deploy plan` |
+| Ledger cluster | When the app declares `ledger` constructs | as reported by `deploy plan` |
 
-### When TigerBeetle is Deployed
+Set every env var `deploy plan` lists; an app that boots without its required
+connection details fails fast (`dazzle serve --production` requires
+`DATABASE_URL`, for example).
 
-TigerBeetle is automatically deployed when your DSL includes `ledger` constructs:
+## Ledgers (TigerBeetle)
+
+The `ledger` construct and TigerBeetle as a backing store remain **first-class**
+domain concepts (ADR-0015). An app that declares `ledger` constructs needs a
+running **TigerBeetle cluster**:
 
 ```dsl
 ledger CustomerWallet:
@@ -90,226 +95,82 @@ ledger CustomerWallet:
   currency: GBP
 ```
 
-### Architecture
+Provision the cluster yourself and point the app at it. For production, run an
+**odd node count** (1, 3, or 5) so the Raft consensus can achieve quorum — 3 nodes
+tolerates 1 failure, 5 nodes tolerates 2. Dazzle no longer generates the cluster
+infrastructure; `dazzle deploy plan` simply reports that the app requires a
+TigerBeetle ledger cluster and which env vars carry its addresses.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    TigerBeetle Cluster                       │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
-│  │   Node 0    │  │   Node 1    │  │   Node 2    │          │
-│  │  (Primary)  │←→│  (Replica)  │←→│  (Replica)  │          │
-│  │             │  │             │  │             │          │
-│  │ EBS gp3     │  │ EBS gp3     │  │ EBS gp3     │          │
-│  │ 10K IOPS    │  │ 10K IOPS    │  │ 10K IOPS    │          │
-│  └─────────────┘  └─────────────┘  └─────────────┘          │
-│         ↑               ↑               ↑                    │
-│         └───────────────┴───────────────┘                    │
-│                    Port 3001 (Replication)                   │
-│                                                              │
-│  ECS Services ──────────► Port 3000 (Client)                │
-└─────────────────────────────────────────────────────────────┘
-```
+## Containers / Kubernetes
 
-### Node Count Requirements
+The framework does not provide container images or Kubernetes manifests — roll
+your own against the documented core process (`dazzle serve --production`) and the
+requirements that `dazzle deploy plan` reports.
 
-| Nodes | Environment | Fault Tolerance |
-|-------|-------------|-----------------|
-| 1 | Development | None |
-| 3 | Production | 1 node failure |
-| 5 | High Availability | 2 node failures |
+## Host-app lifecycle hooks
 
-Node count must be **odd** for Raft consensus to achieve quorum.
-
-### Instance Sizing
-
-| Size | Instance Type | Use Case |
-|------|---------------|----------|
-| `t3.medium` | 2 vCPU, 4GB | Development/testing |
-| `r6i.large` | 2 vCPU, 16GB | Small production |
-| `r6i.xlarge` | 4 vCPU, 32GB | Medium production |
-| `r6i.2xlarge` | 8 vCPU, 64GB | Large production |
-
-### Storage Configuration
-
-TigerBeetle requires high-IOPS storage for its write-ahead log (WAL):
-
-```toml
-[deploy.tigerbeetle]
-volume_size_gb = 100    # 50-1000 GB
-volume_iops = 10000     # 3000-64000 IOPS
-```
-
-Recommended IOPS:
-- Development: 3,000 (gp3 baseline)
-- Production: 10,000+
-- High-throughput: 20,000+
-
-### Node Discovery
-
-Nodes discover each other via SSM Parameter Store:
-
-```
-/{app-name}/{environment}/tigerbeetle/nodes/{instance-id} = {private-ip}:3000
-/{app-name}/{environment}/tigerbeetle/cluster_id = 0
-/{app-name}/{environment}/tigerbeetle/replica_count = 3
-```
-
-### Connecting from ECS
-
-The generated Compute stack includes the TigerBeetle connection configuration:
+When your own code needs startup/shutdown work on the Dazzle app (connection
+pools, auth caches, background clients), use the supported hook API:
 
 ```python
-# Environment variables injected into ECS tasks
-TIGERBEETLE_ADDRESSES = "10.0.1.10:3000,10.0.1.11:3000,10.0.1.12:3000"
-TIGERBEETLE_CLUSTER_ID = "0"
+import dazzle
+
+dazzle.register_lifespan_hook(app, startup=init_pool, shutdown=close_pool)
 ```
 
-## Preflight Validation
+Hooks may be sync or async, run inside the framework's lifespan (after the DB pool
+opens, so they can use the database), and shutdown hooks run in reverse order.
 
-Before deployment, run preflight checks:
+**Do not use `@app.on_event`.** Dazzle constructs the app with a custom
+`lifespan=`, which makes Starlette skip the default lifespan — the only thing that
+ever read the `on_event` lists. (Starlette 1.x removed the draining machinery
+entirely; FastAPI keeps `on_event` only as a deprecated write-only shim.) As of
+v0.82.24 (#1366) Dazzle drains those legacy handlers itself with original
+semantics — a failed startup handler aborts boot — and logs a deprecation warning
+per handler, so existing code works loudly rather than failing silently. Migrate
+to `register_lifespan_hook`.
 
-```bash
-dazzle deploy preflight
-```
+## Row-tenancy RLS roles (`tenancy: mode: shared_schema`)
 
-### TigerBeetle Validations
+When an app uses shared-schema row tenancy, the tenant boundary is enforced by
+PostgreSQL Row-Level Security. **Enforcement only applies when the app connects as
+a non-superuser, non-owner role** — superusers always bypass RLS, and the table
+owner bypasses unless `FORCE ROW LEVEL SECURITY` (which Dazzle sets). So:
 
-| Check | Severity | Description |
-|-------|----------|-------------|
-| `TB_EVEN_NODE_COUNT` | Critical | Node count must be odd for Raft |
-| `TB_INSUFFICIENT_NODES_PROD` | High | Production needs 3+ nodes |
-| `TB_LOW_IOPS` | High | IOPS below 5,000 minimum |
-| `TB_SUBOPTIMAL_IOPS` | Warn | IOPS below 10,000 recommended |
-| `TB_PUBLIC_ACCESS` | Critical | TigerBeetle ports publicly accessible |
-
-## Infrastructure Versioning
-
-Dazzle tracks infrastructure changes via `.dazzle-infra-version.json`:
-
-```json
-{
-  "version": "a1b2c3d4e5f6",
-  "dazzle_version": "0.5.0",
-  "generated_at": "2024-01-15T10:30:00Z",
-  "environment": "staging",
-  "stacks": [
-    {"name": "Network", "checksum": "abc123..."},
-    {"name": "TigerBeetle", "checksum": "def456..."}
-  ]
-}
-```
-
-Check for changes before regenerating:
-
-```bash
-# Shows added/modified/removed stacks
-dazzle deploy diff
-```
-
-## CI/CD Integration
-
-### GitHub Actions Example
-
-```yaml
-name: Deploy Infrastructure
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'dsl/**'
-      - 'dazzle.toml'
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install Dazzle
-        run: pip install dazzle-dsl
-
-      - name: Generate Infrastructure
-        run: dazzle deploy generate
-
-      - name: Run Preflight Checks
-        run: dazzle deploy preflight
-
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: CDK Deploy
-        run: |
-          cd infra
-          npm install
-          npx cdk deploy --all --require-approval never
-```
-
-## Security Considerations
-
-### TigerBeetle Security
-
-- **Network Isolation**: TigerBeetle runs in private subnets only
-- **No Public Access**: Security groups block all public ingress
-- **Encryption**: EBS volumes encrypted at rest
-- **IAM**: Minimal permissions via instance role
-
-### Secrets Management
-
-Sensitive values should use AWS Secrets Manager or SSM SecureString:
-
-```toml
-[deploy.secrets]
-database_password = "ssm:/myapp/prod/db-password"
-api_key = "secretsmanager:myapp/api-key"
-```
-
-### Row-tenancy RLS roles (`tenancy: mode: shared_schema`)
-
-When an app uses shared-schema row tenancy, the tenant boundary is enforced by PostgreSQL Row-Level Security. **Enforcement only applies when the app connects as a non-superuser, non-owner role** — superusers always bypass RLS, and the table owner bypasses unless `FORCE ROW LEVEL SECURITY` (which Dazzle sets). So:
-
-- **Provision three roles** (DDL generated by `dazzle.http.runtime.rls_schema.build_rls_role_ddl()`):
+- **Provision three roles** (DDL generated by
+  `dazzle.http.runtime.rls_schema.build_rls_role_ddl()`):
   - `dazzle_owner` — owns the schema, runs migrations (DDL is unaffected by RLS).
-  - `dazzle_app` — the **runtime role** the app connects as. `LOGIN`, **no `BYPASSRLS`**. Subject to every policy.
-  - `dazzle_bypass` — `BYPASSRLS`, for excision / cross-tenant ops only (never the app's request path).
-- **Point the app's `DATABASE_URL` at `dazzle_app`** in production. If it connects as a superuser/owner, RLS is silently bypassed (data still isolated by the app-layer scope filters, but the DB-level guarantee is lost).
-- The runtime sets `dazzle.tenant_id` per transaction from the authenticated user's tenant; an unset context **fails closed** (no rows; writes rejected). Tenant-scoped DB access therefore runs inside a transaction.
-- **Local dev** typically connects as a superuser → RLS present but bypassed; app-layer scope filters enforce there. This is expected; production gets the DB-enforced fence via `dazzle_app`.
-- **Applying the policies in production (Phase D):** `dazzle db upgrade` now **applies the RLS policies automatically after running migrations** (in `shared_schema` mode), using the same owner-capable role that ran the DDL — so a standard deploy (`dazzle db upgrade`) enforces RLS. You can also apply them explicitly with **`dazzle db apply-rls`** (run with an owner DATABASE_URL). Both are idempotent. **The apply must run as a role that OWNS the tables (`dazzle_owner` / your migration role) — not the runtime `dazzle_app`** (which lacks the privilege to create policies). Pass `--no-rls` to `dazzle db upgrade` to skip (e.g. if you apply RLS in a separate step); a failed apply after a successful migration exits non-zero with a "schema migrated but RLS NOT enforced — re-run `dazzle db apply-rls`" message.
-- **Verifying RLS in CI/ops:** `dazzle db verify` now gates **RLS policy drift** (a tenant-scoped table with RLS disabled, or a missing/extra policy) and exits non-zero on drift. `dazzle inspect rls` shows the generated policy set per table (add `--runtime` to cross-reference live `pg_policies`).
+  - `dazzle_app` — the **runtime role** the app connects as. `LOGIN`, **no
+    `BYPASSRLS`**. Subject to every policy.
+  - `dazzle_bypass` — `BYPASSRLS`, for excision / cross-tenant ops only (never the
+    app's request path).
+- **Point the app's `DATABASE_URL` at `dazzle_app`** in production. If it connects
+  as a superuser/owner, RLS is silently bypassed (data still isolated by the
+  app-layer scope filters, but the DB-level guarantee is lost).
+- The runtime sets `dazzle.tenant_id` per transaction from the authenticated
+  user's tenant; an unset context **fails closed** (no rows; writes rejected).
+  Tenant-scoped DB access therefore runs inside a transaction.
+- **Local dev** typically connects as a superuser → RLS present but bypassed;
+  app-layer scope filters enforce there. This is expected; production gets the
+  DB-enforced fence via `dazzle_app`.
+- **Applying the policies in production (Phase D):** `dazzle db upgrade` now
+  **applies the RLS policies automatically after running migrations** (in
+  `shared_schema` mode), using the same owner-capable role that ran the DDL — so a
+  standard deploy (`dazzle db upgrade`) enforces RLS. You can also apply them
+  explicitly with **`dazzle db apply-rls`** (run with an owner DATABASE_URL). Both
+  are idempotent. **The apply must run as a role that OWNS the tables
+  (`dazzle_owner` / your migration role) — not the runtime `dazzle_app`** (which
+  lacks the privilege to create policies). Pass `--no-rls` to `dazzle db upgrade`
+  to skip (e.g. if you apply RLS in a separate step); a failed apply after a
+  successful migration exits non-zero with a "schema migrated but RLS NOT enforced
+  — re-run `dazzle db apply-rls`" message.
+- **Verifying RLS in CI/ops:** `dazzle db verify` now gates **RLS policy drift** (a
+  tenant-scoped table with RLS disabled, or a missing/extra policy) and exits
+  non-zero on drift. `dazzle inspect rls` shows the generated policy set per table
+  (add `--runtime` to cross-reference live `pg_policies`).
 
-## Troubleshooting
+## Secrets
 
-### TigerBeetle Cluster Issues
-
-**Nodes not forming cluster:**
-```bash
-# Check SSM parameters
-aws ssm get-parameters-by-path --path "/{app}/{env}/tigerbeetle/nodes"
-
-# Check instance logs
-aws logs get-log-events --log-group-name "/{app}/{env}/tigerbeetle"
-```
-
-**High latency:**
-- Verify IOPS configuration meets requirements
-- Check network latency between nodes
-- Review CloudWatch metrics for CPU/memory pressure
-
-### Common Errors
-
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `even node count` | 2 or 4 nodes configured | Use 1, 3, or 5 nodes |
-| `IOPS below minimum` | Volume IOPS < 5000 | Increase `volume_iops` setting |
-| `public access` | 0.0.0.0/0 in security group | Remove public CIDR rules |
+Keep secrets (database passwords, API keys) out of the DSL and out of source
+control — set them as environment variables / platform config vars on the host,
+alongside the connection strings `dazzle deploy plan` reports.

@@ -75,7 +75,7 @@ Complete reference for the `dazzle` command-line interface.
 
 | Command | Description |
 |---------|-------------|
-| `dazzle deploy` | Generate and manage AWS CDK infrastructure |
+| `dazzle deploy` | Plan infrastructure + generate buildpack (Heroku) deploy files |
 | `dazzle pitch` | Generate investor pitch materials from DSL |
 
 ### Vocabulary & Stubs
@@ -122,7 +122,7 @@ there requires a row here.
 | `dazzle contribution` | Community contribution packaging — create, validate, share |
 | `dazzle db` | Database migration commands (Alembic) |
 | `dazzle demo` | Demo data management commands |
-| `dazzle deploy` | Generate and manage AWS CDK infrastructure |
+| `dazzle deploy` | Plan infrastructure + generate buildpack (Heroku) deploy files |
 | `dazzle discovery` | App discovery and coherence analysis |
 | `dazzle dlq` | Dead letter queue commands |
 | `dazzle docs` | Documentation generation, validation, and maintenance |
@@ -343,7 +343,7 @@ dazzle auth list-users
 
 ### dazzle deploy
 
-Generate and manage AWS infrastructure.
+Plan an app's infrastructure and generate buildpack deploy files.
 
 ```bash
 dazzle deploy COMMAND [OPTIONS]
@@ -351,11 +351,10 @@ dazzle deploy COMMAND [OPTIONS]
 
 | Subcommand | Description |
 |------------|-------------|
-| `generate` | Generate AWS CDK code from DSL |
-| `plan` | Preview infrastructure requirements |
-| `status` | Check deployment configuration |
-| `validate` | Validate generated CDK code |
-| `preflight` | Pre-flight validation |
+| `plan` | Show the infrastructure an app needs (target-agnostic) |
+| `heroku` | Generate Heroku/uv-buildpack deploy files |
+
+See [Deployment](deployment.md) for the full guide.
 
 ---
 
@@ -487,8 +486,7 @@ steps:
 ### Deployment
 
 ```bash
-# Generate AWS infrastructure
+# Discover the app's infrastructure requirements, then generate buildpack files
 dazzle deploy plan
-dazzle deploy generate
-dazzle deploy validate
+dazzle deploy heroku
 ```

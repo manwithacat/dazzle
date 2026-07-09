@@ -181,7 +181,7 @@ def create_bus(config: TierConfig | None = None) -> EventBus:
     if tier == EventTier.EVENTBRIDGE:
         raise NotImplementedError(
             "EventBridge tier is not yet implemented. "
-            "Use AWS SQS/EventBridge via dazzle deploy stacks."
+            "Provision your own AWS SQS/EventBridge and wire it via configuration."
         )
 
     raise ValueError(f"Unknown tier: {tier}")

@@ -423,7 +423,6 @@
       "ApiPack.generate_service_dsl": 3,
       "AuthSpec": 12,
       "AuthSpec.to_dsl_auth_profile": 11,
-      "DockerSpec": 1,
       "EnvVarSpec": 5,
       "EnvVarSpec.to_env_example_line": 4,
       "ForeignModelSpec": 1,
@@ -434,7 +433,7 @@
       "_collect_packs_from_dir": 8,
       "_discover_packs": 2,
       "_get_packs_dir": 1,
-      "_load_pack_from_toml": 14,
+      "_load_pack_from_toml": 13,
       "generate_env_example": 6,
       "get_all_env_vars": 4,
       "list_packs": 1,
@@ -573,7 +572,7 @@
     "functions": {
       "env_vars": 4,
       "generate_dsl": 6,
-      "infrastructure": 7,
+      "infrastructure": 6,
       "scaffold": 6
     },
     "mi_rank": "A"
@@ -792,19 +791,11 @@
       "_heroku_app_name": 3,
       "_load_spec": 2,
       "_run_uv_lock": 3,
-      "deploy_compose_cmd": 2,
-      "deploy_dockerfile_cmd": 1,
-      "deploy_generate": 14,
       "deploy_heroku_cmd": 7,
-      "deploy_plan": 10,
-      "deploy_preflight": 24,
-      "deploy_status": 6,
-      "deploy_validate": 5,
-      "generate_compose_yaml": 1,
+      "deploy_plan": 9,
       "generate_deploy_requirements": 1,
       "generate_heroku_files": 1,
       "generate_heroku_pyproject": 1,
-      "generate_production_dockerfile": 1,
       "generate_python_version_file": 1
     },
     "mi_rank": "A"
@@ -833,7 +824,7 @@
   },
   "dazzle/cli/doctor.py": {
     "functions": {
-      "doctor_command": 26
+      "doctor_command": 23
     },
     "mi_rank": "A"
   },
@@ -850,12 +841,9 @@
       "_journey_preflight": 4,
       "_run_journey": 23,
       "e2e_check_infra": 1,
-      "e2e_clean": 8,
       "e2e_coverage": 1,
       "e2e_list_flows": 1,
       "e2e_list_viewport_specs": 1,
-      "e2e_run": 18,
-      "e2e_run_all": 18,
       "e2e_run_viewport": 5,
       "e2e_save_viewport_specs": 4,
       "e2e_tier_guidance": 1,
@@ -1176,7 +1164,7 @@
       "_minimal_fields_for": 16,
       "_missing_signing_server_deps": 3,
       "_placeholder_for_field_type": 13,
-      "_plan_qa_capture": 7,
+      "_plan_qa_capture": 10,
       "_provision_signing_env": 7,
       "_pyhanko_validator": 3,
       "_reset_db_for_trial": 1,
@@ -1213,6 +1201,7 @@
       "_login": 3,
       "access_review_cmd": 10,
       "analyze_scope_targets": 7,
+      "byte_routes_cmd": 4,
       "format_scope_report": 8,
       "matrix": 4,
       "prove_cmd": 9,
@@ -1226,8 +1215,9 @@
   },
   "dazzle/cli/rhythm.py": {
     "functions": {
+      "landing_drift_lines": 3,
       "rhythm_evaluate": 2,
-      "rhythm_fidelity": 2,
+      "rhythm_fidelity": 4,
       "rhythm_gaps": 2,
       "rhythm_lifecycle": 2,
       "rhythm_propose": 2
@@ -1245,10 +1235,18 @@
       "_generate_sql_target": 9,
       "_run_codegen_targets": 6,
       "build_api_command": 7,
-      "build_command": 14,
+      "build_command": 12,
       "build_css_command": 1,
       "build_ui_command": 7,
       "migrate_command": 10
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/cli/runtime_impl/bundle.py": {
+    "functions": {
+      "generate_env_template": 1,
+      "generate_production_main": 1,
+      "generate_requirements": 1
     },
     "mi_rank": "A"
   },
@@ -1260,27 +1258,6 @@
       "_persona_display_name": 2,
       "_provision_one": 3,
       "provision_dev_personas": 6
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/runtime_impl/docker.py": {
-    "functions": {
-      "dev_compose_path": 1,
-      "dev_database_url": 1,
-      "dev_redis_url": 1,
-      "generate_dev_compose": 1,
-      "generate_docker_compose": 1,
-      "generate_dockerfile": 2,
-      "generate_env_template": 1,
-      "generate_local_compose": 1,
-      "generate_local_run_script": 1,
-      "generate_production_main": 1,
-      "generate_requirements": 1,
-      "get_container_name": 2,
-      "is_container_running": 2,
-      "start_dev_infrastructure": 12,
-      "stop_dev_infrastructure": 3,
-      "write_dev_compose": 1
     },
     "mi_rank": "A"
   },
@@ -1301,15 +1278,6 @@
       "_inspect_surface": 10,
       "_inspect_workspace": 10,
       "schema_command": 31
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/cli/runtime_impl/lifecycle.py": {
-    "functions": {
-      "logs_command": 6,
-      "rebuild_command": 1,
-      "status_command": 10,
-      "stop_command": 8
     },
     "mi_rank": "A"
   },
@@ -1348,9 +1316,8 @@
       "_load_manifest_and_dotenv": 6,
       "_print_infra_banner": 1,
       "_serve_backend_only": 5,
-      "_serve_combined": 32,
+      "_serve_combined": 31,
       "_serve_ui_only": 3,
-      "_start_docker_infrastructure": 7,
       "_start_vendor_mocks": 4,
       "_validate_and_finalize_infra": 6,
       "_validate_infrastructure": 5,
@@ -1898,8 +1865,7 @@
   "dazzle/compliance/analytics/registry.py": {
     "functions": {
       "get_framework_subprocessor": 1,
-      "list_framework_subprocessors": 1,
-      "merge_app_subprocessors": 4
+      "list_framework_subprocessors": 1
     },
     "mi_rank": "A"
   },
@@ -2209,7 +2175,6 @@
       "_framework_supplied_names": 4,
       "_is_injected_entity": 1,
       "_is_injected_surface": 1,
-      "_is_injected_workspace": 1,
       "_is_profile_included": 3,
       "_looks_like_timestamp": 2,
       "_parse_field_type": 17,
@@ -2218,7 +2183,8 @@
       "build_admin_infrastructure": 11,
       "format_injected_as_dsl": 24,
       "get_region_actions": 1,
-      "get_row_actions": 1
+      "get_row_actions": 1,
+      "is_injected_workspace": 1
     },
     "mi_rank": "A"
   },
@@ -3453,7 +3419,7 @@
       "RhythmParserMixin": 8,
       "RhythmParserMixin._parse_rhythm_identifier_list": 2,
       "RhythmParserMixin._parse_rhythm_phase": 9,
-      "RhythmParserMixin._parse_rhythm_scene": 12,
+      "RhythmParserMixin._parse_rhythm_scene": 14,
       "RhythmParserMixin._skip_rhythm_field": 2,
       "RhythmParserMixin.parse_rhythm": 9
     },
@@ -3564,15 +3530,15 @@
       "StoryParserMixin.parse_story": 2,
       "_StoryState": 1,
       "_build_story": 4,
-      "_s_kw_actor": 1,
+      "_s_kw_entities": 1,
       "_s_kw_given": 1,
-      "_s_kw_scope": 1,
+      "_s_kw_persona": 1,
       "_s_kw_status": 1,
       "_s_kw_then": 1,
       "_s_kw_trigger": 1,
       "_s_kw_unless": 1,
       "_s_kw_when": 1,
-      "_skip_unknown_story_field": 2
+      "_skip_unknown_story_field": 3
     },
     "mi_rank": "A"
   },
@@ -4101,7 +4067,7 @@
       "_filter_entities": 4,
       "_find_workspace_for_entity": 4,
       "_format_json": 1,
-      "_format_markdown": 55,
+      "_format_markdown": 54,
       "_resolve_ts_type": 4,
       "export_frontend_spec": 10
     },
@@ -4327,8 +4293,8 @@
       "AppSpec.get_schedule": 1,
       "AppSpec.get_schedules_by_story": 1,
       "AppSpec.get_sla": 1,
-      "AppSpec.get_stories_by_persona": 1,
       "AppSpec.get_stories_by_entity": 1,
+      "AppSpec.get_stories_by_persona": 1,
       "AppSpec.get_story": 1,
       "AppSpec.get_stream": 1,
       "AppSpec.get_surface": 1,
@@ -4385,8 +4351,8 @@
       "get_schedule": 3,
       "get_schedules_by_story": 3,
       "get_sla": 3,
-      "get_stories_by_persona": 3,
       "get_stories_by_entity": 3,
+      "get_stories_by_persona": 3,
       "get_story": 3,
       "get_stream": 3,
       "get_surface": 3,
@@ -5107,7 +5073,8 @@
       "_convert_binding": 1,
       "_expand_current_tenant_hierarchy": 13,
       "_resolve_value_ref": 7,
-      "build_scope_predicate": 25
+      "_tenant_subtree_predicate": 12,
+      "build_scope_predicate": 27
     },
     "mi_rank": "A"
   },
@@ -5689,7 +5656,7 @@
       "merge_fragments": 7,
       "resolve_dependencies": 16,
       "validate_module_access": 39,
-      "validate_references": 119
+      "validate_references": 121
     },
     "mi_rank": "C"
   },
@@ -5719,7 +5686,6 @@
       "CapabilitiesConfig": 1,
       "DatabaseConfig": 1,
       "DevConfig": 1,
-      "DockerConfig": 1,
       "EnvironmentProfile": 1,
       "ExtensionsConfig": 1,
       "I18nConfig": 1,
@@ -6183,6 +6149,14 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/core/rhythm_binding.py": {
+    "functions": {
+      "_derive_scene": 12,
+      "_derive_surface": 5,
+      "resolve_rhythm": 7
+    },
+    "mi_rank": "A"
+  },
   "dazzle/core/site_coherence.py": {
     "functions": {
       "CoherenceIssue": 4,
@@ -6262,6 +6236,12 @@
       "validate_sitespec": 30
     },
     "mi_rank": "B"
+  },
+  "dazzle/core/sitespec_vision_rubric.py": {
+    "functions": {
+      "build_sitespec_judge_prompt": 1
+    },
+    "mi_rank": "A"
   },
   "dazzle/core/spec_loader.py": {
     "functions": {
@@ -6848,359 +6828,14 @@
     "functions": {},
     "mi_rank": "A"
   },
-  "dazzle/deploy/analyzer.py": {
+  "dazzle/deploy/plan.py": {
     "functions": {
-      "AWSRequirements": 2,
-      "AWSRequirements.summary": 1,
-      "EventBridgeBusSpec": 1,
-      "EventBridgeRuleSpec": 1,
-      "IAMPolicySpec": 1,
-      "S3BucketSpec": 1,
-      "SESConfigSpec": 1,
-      "SQSQueueSpec": 1,
-      "TigerBeetleClusterSpec": 1,
-      "_analyze_channel": 10,
-      "_analyze_process": 5,
-      "_infer_secrets": 5,
-      "analyze_aws_requirements": 14
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/config.py": {
-    "functions": {
-      "AWSRegion": 1,
-      "ComputeConfig": 2,
-      "ComputeConfig.cpu": 1,
-      "ComputeConfig.memory": 1,
-      "ComputeSize": 1,
-      "DNSConfig": 3,
-      "DNSConfig.is_configured": 2,
-      "DatabaseConfig": 2,
-      "DatabaseConfig.is_serverless": 1,
-      "DatabaseSize": 1,
-      "DeploymentConfig": 3,
-      "DeploymentConfig.get_stack_name": 2,
-      "MessagingConfig": 1,
-      "NetworkConfig": 1,
-      "ObservabilityConfig": 1,
-      "OutputConfig": 2,
-      "OutputConfig.get_output_path": 1,
-      "StorageConfig": 1,
-      "TigerBeetleConfig": 3,
-      "TigerBeetleConfig.instance_type": 1,
-      "TigerBeetleConfig.model_post_init": 3,
-      "TigerBeetleSize": 1,
-      "_parse_config": 5,
-      "load_deployment_config": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/generator.py": {
-    "functions": {
-      "CDKGenerator": 2,
-      "CDKGenerator.__init__": 1,
-      "CDKGenerator._ensure_dir": 1,
-      "CDKGenerator._get_app_name": 4,
-      "CDKGenerator._get_stack_prefix": 2,
-      "CDKGenerator._write_file": 1,
-      "CDKGenerator.generate": 1,
-      "CDKGeneratorResult": 2,
-      "CDKGeneratorResult.add_artifact": 1,
-      "CDKGeneratorResult.add_error": 1,
-      "CDKGeneratorResult.add_file": 1,
-      "CDKGeneratorResult.add_stack": 1,
-      "CDKGeneratorResult.add_warning": 1,
-      "CDKGeneratorResult.merge": 1,
-      "CDKGeneratorResult.success": 1,
-      "CompositeGenerator": 3,
-      "CompositeGenerator.generate": 3,
-      "CompositeGenerator.get_generators": 1,
-      "StackGenerator": 2,
-      "StackGenerator._generate_header": 1,
-      "StackGenerator._generate_stack_code": 1,
-      "StackGenerator._indent": 3,
-      "StackGenerator.generate": 3,
-      "StackGenerator.should_generate": 1,
-      "StackGenerator.stack_class_name": 1,
-      "StackGenerator.stack_file_name": 1,
-      "StackGenerator.stack_name": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/models.py": {
-    "functions": {
-      "Finding": 2,
-      "Finding.to_dict": 1,
-      "FindingSeverity": 1,
-      "PreflightConfig": 3,
-      "PreflightConfig.get_artifacts_dir": 1,
-      "PreflightConfig.get_output_dir": 2,
-      "PreflightMode": 1,
-      "PreflightReport": 11,
-      "PreflightReport.compute_summary": 15,
-      "PreflightReport.to_dict": 4,
-      "PreflightSummary": 3,
-      "PreflightSummary.can_proceed": 2,
-      "PreflightSummary.to_dict": 1,
-      "StageResult": 2,
-      "StageResult.add_artifact": 1,
-      "StageResult.add_finding": 1,
-      "StageResult.failed": 1,
-      "StageResult.passed": 1,
-      "StageResult.to_dict": 2,
-      "StageStatus": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/report.py": {
-    "functions": {
-      "ReportGenerator": 11,
-      "ReportGenerator.__init__": 1,
-      "ReportGenerator.generate_json": 2,
-      "ReportGenerator.generate_markdown": 26,
-      "generate_report": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/runner.py": {
-    "functions": {
-      "PreflightRunner": 4,
-      "PreflightRunner.__init__": 3,
-      "PreflightRunner._get_env_name": 5,
-      "PreflightRunner._get_stages": 3,
-      "PreflightRunner._should_run_after_failure": 1,
-      "PreflightRunner._update_context_from_stage": 1,
-      "PreflightRunner.run": 9,
-      "run_preflight": 2
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/stages/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/stages/assertions.py": {
-    "functions": {
-      "AssertionsStage": 6,
-      "AssertionsStage._check_ecs_task": 11,
-      "AssertionsStage._check_iam_policy": 1,
-      "AssertionsStage._check_iam_role": 4,
-      "AssertionsStage._check_lambda_function": 3,
-      "AssertionsStage._check_policy_document": 11,
-      "AssertionsStage._check_rds_cluster": 3,
-      "AssertionsStage._check_rds_instance": 5,
-      "AssertionsStage._check_s3_bucket": 6,
-      "AssertionsStage._check_security_group": 8,
-      "AssertionsStage._check_sqs_queue": 4,
-      "AssertionsStage._check_template": 11,
-      "AssertionsStage._execute": 2,
-      "AssertionsStage.name": 1,
-      "AssertionsStage.should_skip": 3
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/stages/base.py": {
-    "functions": {
-      "PreflightStage": 3,
-      "PreflightStage.__init__": 1,
-      "PreflightStage._execute": 1,
-      "PreflightStage.add_artifact": 1,
-      "PreflightStage.add_finding": 1,
-      "PreflightStage.name": 1,
-      "PreflightStage.result": 2,
-      "PreflightStage.run": 8,
-      "PreflightStage.should_skip": 2,
-      "StageContext": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/stages/bootstrap.py": {
-    "functions": {
-      "BootstrapStage": 5,
-      "BootstrapStage._check_aws_cli": 5,
-      "BootstrapStage._check_cdk_cli": 7,
-      "BootstrapStage._check_node_version": 5,
-      "BootstrapStage._check_python_version": 3,
-      "BootstrapStage._execute": 1,
-      "BootstrapStage._load_project_context": 7,
-      "BootstrapStage._validate_infra_directory": 5,
-      "BootstrapStage._version_satisfies": 6,
-      "BootstrapStage.name": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/stages/guardrails.py": {
-    "functions": {
-      "GuardrailsStage": 6,
-      "GuardrailsStage._execute": 7,
-      "GuardrailsStage._get_builtin_policies": 2,
-      "GuardrailsStage._get_policy_paths": 4,
-      "GuardrailsStage._parse_guard_output": 9,
-      "GuardrailsStage._parse_guard_text_output": 5,
-      "GuardrailsStage._validate_template": 4,
-      "GuardrailsStage.name": 1,
-      "GuardrailsStage.should_skip": 7
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/stages/lint.py": {
-    "functions": {
-      "LintStage": 4,
-      "LintStage._execute": 4,
-      "LintStage._format_path": 3,
-      "LintStage._lint_template": 5,
-      "LintStage._map_severity": 1,
-      "LintStage._parse_cfn_lint_output": 4,
-      "LintStage.name": 1,
-      "LintStage.should_skip": 5
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/stages/synth.py": {
-    "functions": {
-      "SynthStage": 5,
-      "SynthStage._execute": 5,
-      "SynthStage._extract_error_message": 6,
-      "SynthStage._handle_synth_error": 3,
-      "SynthStage._load_templates": 6,
-      "SynthStage._validate_template_structure": 4,
-      "SynthStage.name": 1,
-      "SynthStage.should_skip": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/preflight/stages/tigerbeetle.py": {
-    "functions": {
-      "TigerBeetleStage": 8,
-      "TigerBeetleStage._check_network_isolation": 9,
-      "TigerBeetleStage._check_node_count": 11,
-      "TigerBeetleStage._check_security_groups": 12,
-      "TigerBeetleStage._check_volume_iops": 10,
-      "TigerBeetleStage._execute": 3,
-      "TigerBeetleStage._has_tigerbeetle_template": 8,
-      "TigerBeetleStage._is_production_environment": 6,
-      "TigerBeetleStage._load_tigerbeetle_template": 4,
-      "TigerBeetleStage.name": 1,
-      "TigerBeetleStage.should_skip": 5
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/runner.py": {
-    "functions": {
-      "DeploymentResult": 2,
-      "DeploymentResult.add_error": 1,
-      "DeploymentResult.add_warning": 1,
-      "DeploymentResult.merge_generator_result": 3,
-      "DeploymentResult.success": 1,
-      "DeploymentResult.summary": 1,
-      "DeploymentRunner": 5,
-      "DeploymentRunner.__init__": 2,
-      "DeploymentRunner._dry_run": 4,
-      "DeploymentRunner._generate_cdk_app": 12,
-      "DeploymentRunner._generate_supporting_files": 1,
-      "DeploymentRunner._get_app_name": 4,
-      "DeploymentRunner._get_generators": 1,
-      "DeploymentRunner._verify_output": 4,
-      "DeploymentRunner.plan": 8,
-      "DeploymentRunner.run": 4
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/stacks/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/stacks/compute.py": {
-    "functions": {
-      "ComputeStackGenerator": 4,
-      "ComputeStackGenerator._generate_environment_vars": 4,
-      "ComputeStackGenerator._generate_secrets_code": 4,
-      "ComputeStackGenerator._generate_stack_code": 4,
-      "ComputeStackGenerator.generate": 2,
-      "ComputeStackGenerator.stack_name": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/stacks/data.py": {
-    "functions": {
-      "DataStackGenerator": 4,
-      "DataStackGenerator._generate_aurora_serverless_code": 2,
-      "DataStackGenerator._generate_outputs_code": 5,
-      "DataStackGenerator._generate_rds_code": 2,
-      "DataStackGenerator._generate_rds_instance_code": 2,
-      "DataStackGenerator._generate_s3_code": 2,
-      "DataStackGenerator._generate_stack_code": 9,
-      "DataStackGenerator.generate": 5,
-      "DataStackGenerator.should_generate": 2,
-      "DataStackGenerator.stack_name": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/stacks/messaging.py": {
-    "functions": {
-      "MessagingStackGenerator": 5,
-      "MessagingStackGenerator._generate_eventbridge_code": 7,
-      "MessagingStackGenerator._generate_outputs_code": 4,
-      "MessagingStackGenerator._generate_sqs_code": 2,
-      "MessagingStackGenerator._generate_stack_code": 8,
-      "MessagingStackGenerator.generate": 3,
-      "MessagingStackGenerator.should_generate": 3,
-      "MessagingStackGenerator.stack_name": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/stacks/network.py": {
-    "functions": {
-      "NetworkStackGenerator": 2,
-      "NetworkStackGenerator._generate_stack_code": 1,
-      "NetworkStackGenerator.generate": 2,
-      "NetworkStackGenerator.stack_name": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/stacks/observability.py": {
-    "functions": {
-      "ObservabilityStackGenerator": 3,
-      "ObservabilityStackGenerator._generate_alarms_code": 2,
-      "ObservabilityStackGenerator._generate_dashboard_widgets": 3,
-      "ObservabilityStackGenerator._generate_stack_code": 3,
-      "ObservabilityStackGenerator.generate": 3,
-      "ObservabilityStackGenerator.should_generate": 1,
-      "ObservabilityStackGenerator.stack_name": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/stacks/tigerbeetle.py": {
-    "functions": {
-      "TigerBeetleStackGenerator": 4,
-      "TigerBeetleStackGenerator._generate_stack_code": 6,
-      "TigerBeetleStackGenerator.generate": 3,
-      "TigerBeetleStackGenerator.should_generate": 1,
-      "TigerBeetleStackGenerator.stack_name": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/deploy/versioning.py": {
-    "functions": {
-      "InfraVersion": 3,
-      "InfraVersion.from_dict": 2,
-      "InfraVersion.to_dict": 2,
-      "StackVersion": 1,
-      "VersionDiff": 5,
-      "VersionDiff.has_changes": 3,
-      "VersionDiff.summary": 5,
-      "check_for_changes": 1,
-      "compare_versions": 10,
-      "compute_content_checksum": 1,
-      "compute_file_checksum": 2,
-      "create_infra_version": 6,
-      "generate_version_id": 2,
-      "load_version_file": 2,
-      "save_version_file": 1
+      "InfraComponent": 2,
+      "InfraComponent.to_dict": 1,
+      "InfraPlan": 3,
+      "InfraPlan.is_stateless": 1,
+      "InfraPlan.to_dict": 2,
+      "build_infra_plan": 18
     },
     "mi_rank": "A"
   },
@@ -8133,8 +7768,6 @@
       "ProviderDetector.priority": 1,
       "ProviderDetector.provider_name": 1,
       "ProviderStatus": 1,
-      "_parse_port_mappings": 4,
-      "check_docker_container": 10,
       "check_port": 1,
       "get_channel_env_var": 1,
       "get_env_var": 1
@@ -8200,14 +7833,13 @@
       "FileEmailDetector.health_check": 1,
       "FileEmailDetector.priority": 1,
       "FileEmailDetector.provider_name": 1,
-      "MailpitDetector": 4,
-      "MailpitDetector._detect_docker": 4,
+      "MailpitDetector": 3,
       "MailpitDetector._detect_explicit": 5,
       "MailpitDetector._detect_ports": 5,
       "MailpitDetector._enrich_metadata": 3,
       "MailpitDetector._health_check_urllib": 1,
       "MailpitDetector.channel_kind": 1,
-      "MailpitDetector.detect": 4,
+      "MailpitDetector.detect": 3,
       "MailpitDetector.health_check": 4,
       "MailpitDetector.priority": 1,
       "MailpitDetector.provider_name": 1,
@@ -8235,10 +7867,9 @@
       "InMemoryQueueDetector.health_check": 1,
       "InMemoryQueueDetector.priority": 1,
       "InMemoryQueueDetector.provider_name": 1,
-      "RabbitMQDetector": 4,
-      "RabbitMQDetector._detect_docker": 4,
+      "RabbitMQDetector": 3,
       "RabbitMQDetector.channel_kind": 1,
-      "RabbitMQDetector.detect": 5,
+      "RabbitMQDetector.detect": 4,
       "RabbitMQDetector.health_check": 6,
       "RabbitMQDetector.priority": 1,
       "RabbitMQDetector.provider_name": 1
@@ -8254,16 +7885,14 @@
       "InMemoryStreamDetector.priority": 1,
       "InMemoryStreamDetector.provider_name": 1,
       "KafkaDetector": 3,
-      "KafkaDetector._detect_docker": 4,
       "KafkaDetector.channel_kind": 1,
-      "KafkaDetector.detect": 4,
+      "KafkaDetector.detect": 3,
       "KafkaDetector.health_check": 4,
       "KafkaDetector.priority": 1,
       "KafkaDetector.provider_name": 1,
       "RedisDetector": 3,
-      "RedisDetector._detect_docker": 2,
       "RedisDetector.channel_kind": 1,
-      "RedisDetector.detect": 4,
+      "RedisDetector.detect": 3,
       "RedisDetector.health_check": 6,
       "RedisDetector.priority": 1,
       "RedisDetector.provider_name": 1
@@ -9820,7 +9449,7 @@
       "_resolve_project_page_auth_context": 4,
       "_resolve_template_or_default": 2,
       "_stash_tenant_state_marker": 6,
-      "assemble_post_build_routes": 44,
+      "assemble_post_build_routes": 45,
       "build_entity_filter_fields": 6,
       "build_entity_list_projections": 32,
       "build_entity_search_fields": 12,
@@ -10936,12 +10565,35 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/http/runtime/bulk_payload.py": {
+    "functions": {
+      "BulkQueryError": 1,
+      "BulkSelection": 1,
+      "_echo_to_query": 15,
+      "parse_bulk_selection": 13,
+      "resolve_all_matching_ids": 10
+    },
+    "mi_rank": "A"
+  },
   "dazzle/http/runtime/bulk_routes.py": {
     "functions": {
       "_build_entity_bulk_actions": 8,
       "_no_auth": 1,
       "_register_bulk_route": 3,
-      "create_bulk_routes": 7
+      "create_bulk_routes": 11
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/http/runtime/byte_serving.py": {
+    "functions": {
+      "AccessDecision": 1,
+      "ByteAudit": 5,
+      "ByteAudit.__init__": 2,
+      "ByteAudit.record": 5,
+      "_Unsatisfiable": 1,
+      "_headers": 5,
+      "parse_range": 10,
+      "serve_bytes": 8
     },
     "mi_rank": "A"
   },
@@ -11077,6 +10729,16 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/http/runtime/document_routes.py": {
+    "functions": {
+      "_extract_file_id": 5,
+      "_no_auth": 1,
+      "_pending_upload_ttl": 2,
+      "create_document_routes": 3,
+      "verify_file_triple": 15
+    },
+    "mi_rank": "A"
+  },
   "dazzle/http/runtime/error_views.py": {
     "functions": {
       "build_site_403_view": 3,
@@ -11193,15 +10855,15 @@
     "functions": {
       "_FileDeps": 1,
       "_delete_file": 4,
-      "_download_file": 3,
       "_effective_max_size": 4,
       "_get_entity_files": 3,
       "_get_file_info": 4,
-      "_get_thumbnail": 6,
-      "_stream_file": 6,
+      "_no_auth": 1,
+      "_require_posture": 4,
       "_upload_file": 15,
-      "create_file_routes": 3,
-      "create_static_file_routes": 1
+      "content_disposition": 4,
+      "create_file_routes": 5,
+      "create_static_file_routes": 2
     },
     "mi_rank": "A"
   },
@@ -11225,8 +10887,9 @@
       "FileService.download": 2,
       "FileService.get_entity_files": 1,
       "FileService.get_metadata": 1,
+      "FileService.read_range": 5,
       "FileService.stream": 2,
-      "FileService.upload": 7,
+      "FileService.upload": 4,
       "FileValidationError": 2,
       "FileValidationError.__init__": 1,
       "FileValidator": 6,
@@ -11240,6 +10903,7 @@
       "LocalStorageBackend.delete": 2,
       "LocalStorageBackend.get_url": 1,
       "LocalStorageBackend.name": 1,
+      "LocalStorageBackend.read_range": 8,
       "LocalStorageBackend.retrieve": 2,
       "LocalStorageBackend.store": 2,
       "LocalStorageBackend.stream": 4,
@@ -11250,6 +10914,7 @@
       "S3StorageBackend.get_presigned_url": 2,
       "S3StorageBackend.get_url": 3,
       "S3StorageBackend.name": 1,
+      "S3StorageBackend.read_range": 4,
       "S3StorageBackend.retrieve": 2,
       "S3StorageBackend.store": 3,
       "S3StorageBackend.stream": 3,
@@ -11257,6 +10922,7 @@
       "StorageBackend.delete": 1,
       "StorageBackend.get_url": 1,
       "StorageBackend.name": 1,
+      "StorageBackend.read_range": 1,
       "StorageBackend.retrieve": 1,
       "StorageBackend.store": 1,
       "StorageBackend.stream": 1,
@@ -11410,8 +11076,9 @@
   "dazzle/http/runtime/handlers/list_handlers.py": {
     "functions": {
       "_list_handler_body": 81,
-      "build_data_table": 8,
-      "create_list_handler": 3
+      "build_data_table": 11,
+      "create_list_handler": 3,
+      "list_state_transitions": 5
     },
     "mi_rank": "A"
   },
@@ -11472,7 +11139,7 @@
       "_build_table_url_params": 6,
       "_render_detail_html": 16,
       "_render_table_empty": 19,
-      "_render_table_pagination": 13,
+      "_render_table_pagination": 11,
       "_render_table_sentinel": 9,
       "_with_htmx_triggers": 5
     },
@@ -11978,16 +11645,18 @@
       "_check_surface_access": 10,
       "_collect_request_params": 7,
       "_dedupe_nav_items_against_groups": 7,
+      "_dispatch_custom_mode": 2,
       "_filter_nav_by_entity_access": 18,
       "_handle_create_form": 3,
-      "_handle_detail": 36,
+      "_handle_detail": 38,
       "_handle_edit_form": 5,
       "_handle_table": 41,
       "_inject_auth_context": 26,
       "_inject_integration_actions": 10,
       "_inject_onboarding_step": 18,
       "_is_field_cond": 6,
-      "_list_entity_in_process": 7,
+      "_list_entity_in_process": 8,
+      "_make_command_handler": 1,
       "_make_page_handler": 1,
       "_make_root_redirect_handler": 1,
       "_make_workspace_handler": 1,
@@ -12008,7 +11677,8 @@
       "_user_can_mutate": 19,
       "_workspace_handler": 40,
       "build_app_page_context": 12,
-      "create_page_routes": 84
+      "create_page_routes": 85,
+      "gate_detail_transitions": 2
     },
     "mi_rank": "C"
   },
@@ -12259,7 +11929,7 @@
       "_normalize_rate_string": 6,
       "_resolve_trusted_proxies": 3,
       "_valid_rate_string": 1,
-      "apply_rate_limiting": 8,
+      "apply_rate_limiting": 9,
       "configure_rate_limits_for_profile": 3,
       "make_rate_limit_key": 1,
       "safe_limit": 1
@@ -12553,6 +12223,7 @@
       "_enable_force_fence": 1,
       "_guarded_create_role": 1,
       "_login_options": 2,
+      "_physical_first_resolver": 1,
       "_scope_policy_create": 3,
       "build_all_rls_ddl": 10,
       "build_rls_policy_ddl": 2,
@@ -12565,11 +12236,11 @@
   },
   "dazzle/http/runtime/route_generator.py": {
     "functions": {
-      "RouteGenerator": 23,
-      "RouteGenerator.__init__": 17,
+      "RouteGenerator": 25,
+      "RouteGenerator.__init__": 18,
       "RouteGenerator._add_route": 10,
       "RouteGenerator.generate_all_routes": 7,
-      "RouteGenerator.generate_route": 78,
+      "RouteGenerator.generate_route": 85,
       "RouteGenerator.router": 1,
       "generate_crud_routes": 3
     },
@@ -12728,7 +12399,7 @@
   },
   "dazzle/http/runtime/server.py": {
     "functions": {
-      "DazzleBackendApp": 6,
+      "DazzleBackendApp": 7,
       "DazzleBackendApp.__init__": 19,
       "DazzleBackendApp._apply_rls_policies": 4,
       "DazzleBackendApp._apply_search_indexes": 7,
@@ -12742,9 +12413,10 @@
       "DazzleBackendApp._mount_atomic_flow_routes": 11,
       "DazzleBackendApp._mount_audit_history_routes": 4,
       "DazzleBackendApp._mount_audit_query_routes": 3,
-      "DazzleBackendApp._mount_bulk_routes": 5,
+      "DazzleBackendApp._mount_bulk_routes": 8,
       "DazzleBackendApp._mount_dev_routes": 5,
-      "DazzleBackendApp._mount_file_routes": 8,
+      "DazzleBackendApp._mount_document_routes": 4,
+      "DazzleBackendApp._mount_file_routes": 10,
       "DazzleBackendApp._mount_fts_routes": 6,
       "DazzleBackendApp._mount_grant_routes": 5,
       "DazzleBackendApp._mount_locale_routes": 8,
@@ -12760,12 +12432,13 @@
       "DazzleBackendApp._setup_auth": 7,
       "DazzleBackendApp._setup_database": 12,
       "DazzleBackendApp._setup_models": 5,
-      "DazzleBackendApp._setup_routes": 72,
+      "DazzleBackendApp._setup_routes": 86,
       "DazzleBackendApp._setup_services": 8,
       "DazzleBackendApp._should_create_schema_on_startup": 1,
       "DazzleBackendApp._user_ir_entity": 4,
       "DazzleBackendApp._verify_scope_predicates": 6,
       "DazzleBackendApp._warn_unregistered_renderers": 10,
+      "DazzleBackendApp._wire_byte_audit": 6,
       "DazzleBackendApp._wire_service_hooks": 23,
       "DazzleBackendApp._wire_sse_live_push": 6,
       "DazzleBackendApp._wire_storage_routes": 12,
@@ -15023,7 +14696,7 @@
       "handle_validate_events": 2,
       "infer_analytics_intent": 20,
       "infer_compliance_requirements": 24,
-      "infer_multi_tenancy": 20,
+      "infer_multi_tenancy": 24,
       "validate_event_first": 8,
       "validate_event_naming": 5
     },
@@ -15472,7 +15145,7 @@
   },
   "dazzle/mcp/server/handlers/api_packs.py": {
     "functions": {
-      "_serialize_infrastructure": 5,
+      "_serialize_infrastructure": 4,
       "api_pack_env_vars_impl": 2,
       "api_pack_generate_dsl_impl": 5,
       "api_pack_infrastructure_impl": 18,
@@ -16026,7 +15699,7 @@
       "_seed_gap_relations": 6,
       "_submit_scores": 3,
       "_surfaces_accessible_by_persona": 8,
-      "coverage_rhythms_handler": 13,
+      "coverage_rhythms_handler": 14,
       "evaluate_rhythm_handler": 2,
       "fidelity_rhythm_handler": 2,
       "gaps_rhythm_handler": 1,
@@ -16034,8 +15707,8 @@
       "lifecycle_rhythm_handler": 1,
       "list_rhythms_handler": 6,
       "propose_rhythm_handler": 2,
-      "rhythm_evaluate_impl": 36,
-      "rhythm_fidelity_impl": 25,
+      "rhythm_evaluate_impl": 37,
+      "rhythm_fidelity_impl": 31,
       "rhythm_gaps_impl": 16,
       "rhythm_lifecycle_impl": 44,
       "rhythm_propose_impl": 16
@@ -16120,6 +15793,7 @@
   },
   "dazzle/mcp/server/handlers/stories.py": {
     "functions": {
+      "_composition_focus_view": 3,
       "_extract_entity_from_condition": 5,
       "_extract_target_from_condition": 3,
       "_get_trigger_map": 1,
@@ -16128,9 +15802,10 @@
       "get_stories_handler": 9,
       "propose_stories_from_dsl_handler": 1,
       "save_stories_handler": 2,
+      "story_composition_handler": 14,
       "story_generate_tests_impl": 12,
       "story_propose_impl": 30,
-      "story_save_impl": 12,
+      "story_save_impl": 15,
       "wall_stories_handler": 18
     },
     "mi_rank": "A"
@@ -16395,7 +16070,7 @@
       "lookup_concept_handler": 2,
       "lookup_inference_handler": 4,
       "propose_stories_from_dsl_handler": 22,
-      "save_stories_handler": 8,
+      "save_stories_handler": 11,
       "search_api_packs_handler": 2,
       "select_project": 8,
       "validate_all_projects": 8,
@@ -16521,6 +16196,25 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/page/command_index.py": {
+    "functions": {
+      "CommandEntry": 1,
+      "_norm_roles": 3,
+      "_record_entries": 9,
+      "_workspace_entries": 10,
+      "build_command_index": 1,
+      "filter_command_index": 6,
+      "nav_model_entries": 6,
+      "spec_display_persona_ids": 3
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/page/command_render.py": {
+    "functions": {
+      "render_command_results": 4
+    },
+    "mi_rank": "A"
+  },
   "dazzle/page/converters/__init__.py": {
     "functions": {
       "convert_appspec_to_ui": 4,
@@ -16593,14 +16287,14 @@
       "_build_currency_options": 3,
       "_build_entity_columns": 11,
       "_build_enum_field_options": 6,
-      "_build_form_fields": 44,
-      "_build_form_sections": 42,
+      "_build_form_fields": 40,
+      "_build_form_sections": 38,
       "_build_money_field": 5,
       "_build_state_machine_field_options": 7,
       "_compile_custom_surface": 2,
       "_compile_form_surface": 11,
       "_compile_list_surface": 33,
-      "_compile_view_surface": 46,
+      "_compile_view_surface": 49,
       "_enum_semantic_map": 2,
       "_extract_surface_purpose": 6,
       "_field_type_to_column_type": 4,
@@ -16624,12 +16318,12 @@
       "_generate_routes_from_surfaces": 38,
       "_get_default_list_component": 4,
       "_infer_layout_from_workspace": 10,
-      "_resolve_persona_route": 12,
+      "_resolve_persona_route": 13,
       "_workspace_root_route": 1,
       "compute_persona_default_routes": 3,
       "convert_workspace": 4,
       "convert_workspaces": 2,
-      "resolve_persona_workspace_route": 11
+      "resolve_persona_workspace_route": 12
     },
     "mi_rank": "A"
   },
@@ -16700,8 +16394,9 @@
   },
   "dazzle/page/runtime/css_loader.py": {
     "functions": {
-      "_load_css_file": 2,
-      "get_bundled_css": 5
+      "_hm_build": 2,
+      "_load_css_file": 5,
+      "get_bundled_css": 6
     },
     "mi_rank": "A"
   },
@@ -16724,17 +16419,6 @@
       "run_dev_server": 1,
       "run_dev_server_from_dict": 1,
       "run_dev_server_from_json": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/page/runtime/docker/__init__.py": {
-    "functions": {},
-    "mi_rank": "A"
-  },
-  "dazzle/page/runtime/docker/utils.py": {
-    "functions": {
-      "get_docker_version": 3,
-      "is_docker_available": 2
     },
     "mi_rank": "A"
   },
@@ -16813,6 +16497,15 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/page/runtime/landing_resolver.py": {
+    "functions": {
+      "_select_active_phase": 5,
+      "_target_route": 7,
+      "check_landing_drift": 4,
+      "infer_landing_route": 7
+    },
+    "mi_rank": "A"
+  },
   "dazzle/page/runtime/mock_data.py": {
     "functions": {
       "_generate_field_value": 1,
@@ -16822,7 +16515,7 @@
   },
   "dazzle/page/runtime/pdf_viewer_renderer.py": {
     "functions": {
-      "render_pdf_viewer": 7,
+      "render_pdf_viewer": 11,
       "render_pdf_viewer_component": 22
     },
     "mi_rank": "A"
@@ -17401,8 +17094,9 @@
     "functions": {
       "CaptureTarget": 1,
       "_capture_one": 3,
+      "_surface_fallback_targets": 8,
       "_workspace_access_map": 5,
-      "build_capture_plan": 12,
+      "build_capture_plan": 15,
       "capture_screenshots": 4,
       "write_manifest": 5
     },
@@ -17535,12 +17229,13 @@
       "_probe_1b": 6,
       "_probe_1c": 4,
       "_probe_1d": 6,
+      "_probe_2a": 5,
       "_probe_2b": 3,
       "_probe_2c": 2,
       "_probe_2d": 11,
       "_probe_3a": 6,
       "_probe_3b": 1,
-      "_probe_3c": 1,
+      "_probe_3c": 10,
       "_probe_3d": 2,
       "_probe_3e": 1,
       "_rag": 3,
@@ -17605,6 +17300,14 @@
       "NullAuditSink.emit": 1,
       "get_audit_sink": 1,
       "set_audit_sink": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/rbac/byte_route_proof.py": {
+    "functions": {
+      "_enclosing_func": 4,
+      "_is_stream_construct": 5,
+      "find_byte_route_violations": 8
     },
     "mi_rank": "A"
   },
@@ -17847,7 +17550,7 @@
       "_build_sidebar_from_ctx": 22,
       "_safe_url": 3,
       "_sidebar_from_nav_model": 20,
-      "build_app_chrome_page": 8,
+      "build_app_chrome_page": 10,
       "build_page": 4,
       "dispatch_render": 4,
       "dispatch_render_page": 2
@@ -17944,7 +17647,7 @@
   "dazzle/render/fragment/form_field.py": {
     "functions": {
       "field_context_to_dict": 34,
-      "field_dict_to_primitive": 52,
+      "field_dict_to_primitive": 51,
       "render_field_context": 1
     },
     "mi_rank": "A"
@@ -17983,8 +17686,9 @@
   },
   "dazzle/render/fragment/icon_html.py": {
     "functions": {
+      "_a11y_attrs": 2,
       "lucide_icon_html": 2,
-      "lucide_svg_html": 2
+      "lucide_svg_html": 3
     },
     "mi_rank": "A"
   },
@@ -18226,8 +17930,6 @@
       "ColorField.__post_init__": 2,
       "Combobox": 3,
       "Combobox.__post_init__": 2,
-      "DatePickerField": 3,
-      "DatePickerField.__post_init__": 2,
       "Field": 3,
       "Field.__post_init__": 2,
       "FileUpload": 5,
@@ -18450,10 +18152,9 @@
     "functions": {
       "_RowArchetype": 1,
       "_json_summary": 8,
-      "_render_cell_display": 28,
-      "_render_inline_edit": 10,
-      "_render_table_row": 29,
-      "assemble_list_row": 6,
+      "_render_cell_display": 33,
+      "_render_table_row": 44,
+      "assemble_list_row": 7,
       "drill_row_attrs": 2,
       "render_data_row": 2,
       "render_data_table_rows": 2,
@@ -18465,7 +18166,7 @@
   "dazzle/render/fragment/renderer/_emit.py": {
     "functions": {
       "FragmentRenderer": 33,
-      "FragmentRenderer._emit": 112,
+      "FragmentRenderer._emit": 111,
       "FragmentRenderer._emit_script": 10,
       "FragmentRenderer._emit_stylesheet": 5,
       "FragmentRenderer.render": 2
@@ -18526,20 +18227,19 @@
       "_RenderFormsMixin._emit_card_picker": 4,
       "_RenderFormsMixin._emit_color_field": 2,
       "_RenderFormsMixin._emit_combobox": 6,
-      "_RenderFormsMixin._emit_date_picker": 5,
       "_RenderFormsMixin._emit_field": 7,
       "_RenderFormsMixin._emit_file_upload": 5,
       "_RenderFormsMixin._emit_form_section": 3,
       "_RenderFormsMixin._emit_form_stack": 11,
-      "_RenderFormsMixin._emit_form_stepper": 4,
-      "_RenderFormsMixin._emit_money": 5,
+      "_RenderFormsMixin._emit_form_stepper": 7,
+      "_RenderFormsMixin._emit_money": 7,
       "_RenderFormsMixin._emit_ref_picker": 4,
       "_RenderFormsMixin._emit_rich_text": 4,
-      "_RenderFormsMixin._emit_search_select": 5,
+      "_RenderFormsMixin._emit_search_select": 6,
       "_RenderFormsMixin._emit_slider_field": 2,
       "_RenderFormsMixin._emit_submit": 1,
       "_RenderFormsMixin._emit_tags_field": 3,
-      "_RenderFormsMixin._emit_widget_combobox": 6,
+      "_RenderFormsMixin._emit_widget_combobox": 5,
       "_RenderFormsMixin._form_field_a11y": 3,
       "_RenderFormsMixin._form_hint": 2,
       "_RenderFormsMixin._form_label_block": 1,
@@ -18553,8 +18253,9 @@
       "_RenderInteractiveMixin": 4,
       "_RenderInteractiveMixin._action_attrs": 3,
       "_RenderInteractiveMixin._emit": 1,
-      "_RenderInteractiveMixin._emit_button": 4,
-      "_RenderInteractiveMixin._emit_confirm_gate": 16,
+      "_RenderInteractiveMixin._emit_bulk_action_toolbar": 1,
+      "_RenderInteractiveMixin._emit_button": 6,
+      "_RenderInteractiveMixin._emit_confirm_gate": 17,
       "_RenderInteractiveMixin._emit_create_button": 3,
       "_RenderInteractiveMixin._emit_csv_export_button": 1,
       "_RenderInteractiveMixin._emit_date_range_picker": 1,
@@ -18562,9 +18263,9 @@
       "_RenderInteractiveMixin._emit_inline_edit": 1,
       "_RenderInteractiveMixin._emit_interactive": 2,
       "_RenderInteractiveMixin._emit_link": 2,
-      "_RenderInteractiveMixin._emit_list_filter_bar": 3,
+      "_RenderInteractiveMixin._emit_list_filter_bar": 2,
       "_RenderInteractiveMixin._emit_pagination": 8,
-      "_RenderInteractiveMixin._emit_search_box": 2,
+      "_RenderInteractiveMixin._emit_search_box": 3,
       "_RenderInteractiveMixin._emit_sort_header": 5,
       "_RenderInteractiveMixin._emit_toolbar": 2
     },
@@ -18584,13 +18285,13 @@
       "_RenderLayoutMixin._emit_icon": 1,
       "_RenderLayoutMixin._emit_lazy_tab_panel": 7,
       "_RenderLayoutMixin._emit_modal": 1,
-      "_RenderLayoutMixin._emit_region": 6,
-      "_RenderLayoutMixin._emit_row": 2,
+      "_RenderLayoutMixin._emit_region": 5,
+      "_RenderLayoutMixin._emit_row": 3,
       "_RenderLayoutMixin._emit_skeleton": 2,
       "_RenderLayoutMixin._emit_split": 1,
       "_RenderLayoutMixin._emit_stack": 2,
       "_RenderLayoutMixin._emit_surface": 3,
-      "_RenderLayoutMixin._emit_tabs": 3,
+      "_RenderLayoutMixin._emit_tabs": 5,
       "_RenderLayoutMixin._emit_text": 1
     },
     "mi_rank": "A"
@@ -18599,7 +18300,7 @@
     "functions": {
       "_RenderShellMixin": 4,
       "_RenderShellMixin._emit": 1,
-      "_RenderShellMixin._emit_app_shell": 10,
+      "_RenderShellMixin._emit_app_shell": 11,
       "_RenderShellMixin._emit_error_page": 2,
       "_RenderShellMixin._emit_nav_group": 4,
       "_RenderShellMixin._emit_nav_item": 3,
@@ -18640,13 +18341,19 @@
       "_RenderTablesMixin._emit_related_cards": 8,
       "_RenderTablesMixin._emit_related_files": 8,
       "_RenderTablesMixin._emit_related_group": 3,
-      "_RenderTablesMixin._emit_related_table": 12,
+      "_RenderTablesMixin._emit_related_table": 13,
       "_RenderTablesMixin._emit_slide_over": 1,
       "_RenderTablesMixin._emit_stage_bar": 6,
       "_RenderTablesMixin._emit_status_list": 6,
-      "_RenderTablesMixin._emit_table": 25,
+      "_RenderTablesMixin._emit_table": 32,
       "_RenderTablesMixin._related_create_row": 2,
       "_RenderTablesMixin._related_drill_attrs": 2
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/render/fragment/state_affordance.py": {
+    "functions": {
+      "gated_row_transitions": 7
     },
     "mi_rank": "A"
   },
@@ -19132,7 +18839,7 @@
       "_resolve_document_body": 6,
       "_resolve_dotted_callable": 3,
       "_row_get": 2,
-      "_signing_page": 1,
+      "_signing_page": 2,
       "_stub_document_body": 1,
       "_support_line": 5,
       "_terminal_page": 2,
@@ -19212,6 +18919,7 @@
       "has_ai_assist": 1,
       "has_approvals": 1,
       "has_background_work": 2,
+      "has_byte_access_boundary": 3,
       "has_compliance_evidence": 2,
       "has_database_rls": 2,
       "has_events": 2,
@@ -19803,6 +19511,20 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/testing/sitespec_hygiene.py": {
+    "functions": {
+      "HygieneDimension": 1,
+      "_score_container": 1,
+      "_score_fluid_type": 6,
+      "_score_motion": 1,
+      "_score_responsive": 1,
+      "_score_section_rhythm": 1,
+      "_score_type_system": 5,
+      "hm_sitespec_css": 1,
+      "score_sitespec_css": 2
+    },
+    "mi_rank": "A"
+  },
   "dazzle/testing/step_executor.py": {
     "functions": {
       "StepExecutor": 5,
@@ -20103,7 +19825,7 @@
       "_NestedChromeScanner.__init__": 1,
       "_NestedChromeScanner.handle_endtag": 4,
       "_NestedChromeScanner.handle_starttag": 6,
-      "_check_create_form": 11,
+      "_check_create_form": 12,
       "_check_detail_view": 16,
       "_check_edit_form": 7,
       "_check_list_page": 4,
@@ -20111,11 +19833,9 @@
       "_check_workspace": 12,
       "_classify_opacity_visibility": 6,
       "_has_attr_containing": 4,
-      "_has_card_chrome": 7,
+      "_has_card_chrome": 2,
       "_has_tag_with_attr": 4,
       "_href_targets_entity_op": 5,
-      "_is_rounded_class": 2,
-      "_is_side_border_class": 3,
       "check_contract": 11,
       "find_duplicate_titles_in_cards": 1,
       "find_hidden_primary_actions": 1,
@@ -20352,7 +20072,7 @@
       "_FakeRequest.__init__": 1,
       "_auto_columns": 4,
       "_dsl_snippet": 10,
-      "generate_catalogue_css": 2,
+      "generate_catalogue_css": 4,
       "generate_catalogue_markdown": 4,
       "iter_catalogue_regions": 3,
       "load_showcase_appspec": 1,

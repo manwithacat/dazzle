@@ -429,22 +429,6 @@
     ]
   },
   {
-    "signature": "f90d844700ca45fe3c03f0a23fa43dd7",
-    "count": 2,
-    "names": [
-      "dazzle/deploy/generator.py::_get_app_name",
-      "dazzle/deploy/runner.py::_get_app_name"
-    ]
-  },
-  {
-    "signature": "4718c1a8f247dbbbf9f6dc37305509b3",
-    "count": 2,
-    "names": [
-      "dazzle/deploy/stacks/compute.py::generate",
-      "dazzle/deploy/stacks/network.py::generate"
-    ]
-  },
-  {
     "signature": "690b3090fc2628ca3db75340fa94653b",
     "count": 2,
     "names": [

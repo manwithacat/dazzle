@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.0] - 2026-07-09
+
+### Removed
+- **Retired the AWS-CDK deploy generator (`dazzle deploy generate|status|validate|preflight`).** The subsystem generated standalone AWS CDK code targeting **ECS Fargate + ECR** — i.e. a container-first deploy that pushed a Docker image — which directly contradicts the framework's core-process/buildpack direction (Docker tooling was removed in v0.100.0). Deleted `deploy/{analyzer,generator,runner,versioning,config}.py`, `deploy/stacks/*` (VPC/RDS/ECS/SQS/EventBridge/observability/TigerBeetle CDK), and the CloudFormation preflight (`deploy/preflight/*`: cdk-synth/cfn-lint/cfn-guard stages + the guard policy). See #1568.
+
+### Added
+- **`dazzle deploy plan` — target-agnostic infrastructure planning.** Salvaged the crown jewel of the retired subsystem (the AppSpec → infra-requirements inference, which already lived cloud-neutrally in `core/infra_analyzer.py`) as `deploy/plan.py` + a rewritten `dazzle deploy plan [--format text|json]`. It reports, from the DSL alone, what backing services an app needs (database, cache, queue, workers, storage, ledger cluster) and which environment variables the host must provide — independent of *how* you provision them. `dazzle deploy heroku` (uv buildpack) remains the supported deploy path.
+
+### Changed
+- **The `deploy` command group is now `plan` + `heroku` only.** `dazzle deploy --help` reflects the two-command surface; `docs/reference/deployment.md` rewritten from an AWS-CDK guide to a target-agnostic deployment reference.
+
+### Agent Guidance
+- **No AWS-CDK generation.** `dazzle deploy` no longer emits infrastructure code. Use `dazzle deploy plan` to discover an app's infra requirements + required env vars (target-agnostic), and `dazzle deploy heroku` to generate buildpack deploy files. Provisioning backing services (and any containerisation) is the operator's concern.
+- **`ledger`/TigerBeetle stays first-class.** Only the *AWS-CDK generation* of a TigerBeetle cluster was removed (ADR-0015 unchanged). `deploy plan` still reports that a ledger app needs a TigerBeetle cluster; you provision it yourself.
+- A no-local-Docker **managed-AWS** deploy target (App Runner / Lightsail / ECS-from-CI-image) is tracked as a future goal (see the follow-up issue), reusing `build_infra_plan`'s inference.
+
 ## [0.100.0] - 2026-07-09
 
 ### Removed
