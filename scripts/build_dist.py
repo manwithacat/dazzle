@@ -218,10 +218,39 @@ def fmt_size(n: int) -> str:
     return f"{n / 1024:.1f} KB"
 
 
+HM_FAMILIES = HM / "families"
+THEMES_OUT = STATIC / "css" / "themes"
+# First line of a generated family file — lets the delegation gate + reservoir
+# recognise the served theme as HM-owned (not Dazzle-native), same way the HM
+# dist is recognised. Keep in sync with hm_tailwind_reservoir.py + test_hm_delegation_proof.py.
+HM_GENERATED_MARKER = "AUTO-GENERATED from packages/hatchi-maxchi/families/"
+
+
+def _generate_families() -> list[str]:
+    """Generate the served theme files from their HM family sources. The aesthetic
+    families are HM-owned design (HM is the source of truth); Dazzle plumbs them to
+    the on-demand ``/static/css/themes/<name>.css`` serve path — the same delegation
+    shape as the HM dist (HM builds, Dazzle serves). The marker header lets the
+    delegation gate recognise the served copy as HM-owned, not Dazzle-native."""
+    THEMES_OUT.mkdir(parents=True, exist_ok=True)
+    written: list[str] = []
+    for src in sorted(HM_FAMILIES.glob("*.css")):
+        marker = f"/* {HM_GENERATED_MARKER}{src.name} — do not edit. HM-owned aesthetic-family tokens. */\n"
+        (THEMES_OUT / src.name).write_text(
+            marker + src.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        written.append(src.name)
+    return written
+
+
 def build() -> None:
     version = read_version()
     DIST_DIR.mkdir(exist_ok=True)
     hdr = banner(version)
+
+    families = _generate_families()
+    if families:
+        print(f"  generated {len(families)} HM aesthetic-family theme(s): {', '.join(families)}")
 
     results: list[tuple[str, int, int]] = []
 

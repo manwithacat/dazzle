@@ -41,6 +41,20 @@ _STATIC = _REPO_ROOT / "src" / "dazzle" / "page" / "runtime" / "static"
 # (kept in sync with scripts/hm_tailwind_reservoir.py::_CSS_PERIPHERAL_GLOBS).
 _PERIPHERAL_GLOBS = ("css/themes/*.css",)
 
+# First-line marker on served CSS GENERATED from an HM source (HM-owned = delegated).
+# The aesthetic-family theme files are HM-owned (packages/hatchi-maxchi/families/) and
+# plumbed to /static/css/themes/ by scripts/build_dist.py — same shape as the HM dist.
+_HM_GENERATED_MARKER = "AUTO-GENERATED from packages/hatchi-maxchi/"
+
+
+def _is_hm_generated(path: Path) -> bool:
+    try:
+        with path.open(encoding="utf-8", errors="replace") as fh:
+            return _HM_GENERATED_MARKER in fh.readline()
+    except OSError:
+        return False
+
+
 # The single source of truth for Goal 1. Every Dazzle-native CSS file the browser
 # receives must appear here. `custom.css` (project escape hatch) is not served by
 # the framework bundle and is intentionally out of scope.
@@ -51,10 +65,10 @@ DELEGATION_ALLOWLIST: dict[str, str] = {
     # css/site-sections.css DELEGATED → HM components/sitespec.css (phase 1B, 2026-07-09).
     # css/feedback-widget.css DELEGATED → HM components/feedback-widget.css (phase 1C,
     # 2026-07-09) — was orphaned (unlinked) on the Dazzle side; now served via the HM dist.
+    # css/themes/{stripe,paper,linear-dark}.css DELEGATED → HM families/*.css (phase 2C-a,
+    # 2026-07-09) — HM-owned aesthetic-family sources, generated to /static/css/themes/ by
+    # build_dist.py (carry the AUTO-GENERATED-from-HM marker → recognised as delegated).
     # --- peripheral (served outside the main bundle) ---
-    "css/themes/stripe.css": "MIGRATING",  # → HM aesthetic-family token set (phase 2C)
-    "css/themes/paper.css": "MIGRATING",  # → HM aesthetic-family token set (phase 2C)
-    "css/themes/linear-dark.css": "MIGRATING",  # → HM aesthetic-family token set (phase 2C)
 }
 
 
@@ -74,8 +88,12 @@ def _served_dazzle_native_rels() -> set[str]:
     for pattern in _PERIPHERAL_GLOBS:
         if "*" in pattern:
             parent = _STATIC / Path(pattern).parent
-            rels.update(str(p.relative_to(_STATIC)) for p in parent.glob(Path(pattern).name))
-        elif (_STATIC / pattern).exists():
+            rels.update(
+                str(p.relative_to(_STATIC))
+                for p in parent.glob(Path(pattern).name)
+                if not _is_hm_generated(p)
+            )
+        elif (_STATIC / pattern).exists() and not _is_hm_generated(_STATIC / pattern):
             rels.add(pattern)
     return rels
 
@@ -101,14 +119,10 @@ def test_served_css_matches_allowlist() -> None:
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Tier-2 sitespec convergence in progress — MIGRATING entries remain. "
-    "When the last one drains this XPASSes; strict-xfail then fails CI to force "
-    "removing this marker and standing up the green Goal-1 proof.",
-)
 def test_goal1_fully_delegated() -> None:
-    """Goal 1 is proven when zero MIGRATING entries remain — every design rule the
-    browser receives originates in HaTchi-MaXchi (or a documented KEEP)."""
+    """GOAL 1 PROVEN (phase 2C-a, 2026-07-09): zero MIGRATING entries remain — every
+    design rule the browser receives originates in HaTchi-MaXchi (or a documented
+    KEEP: reset.css normalization + dz.css .htmx-indicator chrome). Standing green
+    proof; the allowlist-match ratchet keeps it honest going forward."""
     migrating = sorted(f for f, status in DELEGATION_ALLOWLIST.items() if status == "MIGRATING")
     assert not migrating, f"Still Dazzle-native (not yet delegated to HM): {migrating}"

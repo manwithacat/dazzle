@@ -122,15 +122,34 @@ def _served_dazzle_native_rels() -> list[str]:
     return rels
 
 
+# First-line marker on served CSS that is GENERATED from an HM source (so it is
+# HM-owned design, not Dazzle-native). Kept in sync with scripts/build_dist.py.
+_HM_GENERATED_MARKER = "AUTO-GENERATED from packages/hatchi-maxchi/"
+
+
+def _is_hm_generated(path: Path) -> bool:
+    """True if the served CSS is generated from an HM source (HM-owned, delegated)."""
+    try:
+        with path.open(encoding="utf-8", errors="replace") as fh:
+            return _HM_GENERATED_MARKER in fh.readline()
+    except OSError:
+        return False
+
+
 def _peripheral_rels(static: Path) -> list[str]:
     """Dazzle-native design CSS served outside the main bundle (feedback widget,
-    aesthetic-family theme presets) — Tier-2 migration targets."""
+    aesthetic-family theme presets) — Tier-2 migration targets. Files GENERATED
+    from an HM source are HM-owned (delegated) and excluded."""
     rels: list[str] = []
     for pattern in _CSS_PERIPHERAL_GLOBS:
         if "*" in pattern:
             parent = static / Path(pattern).parent
-            rels.extend(str(p.relative_to(static)) for p in sorted(parent.glob(Path(pattern).name)))
-        elif (static / pattern).exists():
+            rels.extend(
+                str(p.relative_to(static))
+                for p in sorted(parent.glob(Path(pattern).name))
+                if not _is_hm_generated(p)
+            )
+        elif (static / pattern).exists() and not _is_hm_generated(static / pattern):
             rels.append(pattern)
     return rels
 
