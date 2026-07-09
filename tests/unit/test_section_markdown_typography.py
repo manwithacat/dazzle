@@ -35,12 +35,14 @@ class TestSectionMarkdownTypography:
         assert "text-align: start" in block or "text-align: left" in block
 
     def test_markdown_h2_smaller_than_section_headline(self):
-        """Article H2s should be ~1.5rem, not the 2.25rem of section headlines."""
+        """Article H2s use the --text-xl scale step — smaller than section
+        headlines (--text-2xl / ~2.25rem). Since 2B the sizes are scale tokens,
+        not hardcoded rem; the hierarchy (article h2 < section headline) holds."""
         css = self._read_css()
         marker = "/* --- Article body / markdown typography ---"
         block_start = css.index(marker)
         block = css[block_start : block_start + 2500]
-        assert "font-size: 1.5rem" in block
+        assert "font-size: var(--text-xl)" in block
 
     def test_all_article_levels_overridden(self):
         """h1, h2, h3, h4, p should all have markdown overrides."""
@@ -70,8 +72,9 @@ class TestSectionMarkdownTypography:
         block and assert the markdown override sits right alongside it.
         """
         css = self._read_css()
-        # Find the .dz-section h2 rule inside a 768px @media block
-        anchor = "  .dz-section h2 {\n    font-size: 1.75rem;\n  }"
+        # Find the .dz-section h2 rule inside a 768px @media block. Since 2B the
+        # mobile size is the fluid --text-2xl scale token, not a hardcoded 1.75rem.
+        anchor = "  .dz-section h2 {\n    font-size: var(--text-2xl);\n  }"
         assert anchor in css, "responsive .dz-section h2 rule not found"
         idx = css.index(anchor)
         # Inspect the surrounding 1500 chars (after the anchor)

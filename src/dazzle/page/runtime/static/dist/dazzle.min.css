@@ -9191,7 +9191,7 @@ border-bottom: 1px solid var(--dz-border-subtle);
 }
 .dz-comparison-table thead th {
 font-weight: 600;
-font-size: 1rem;
+font-size: var(--text-base);
 padding-bottom: 1rem;
 }
 .dz-comparison-feature {
@@ -9215,7 +9215,7 @@ letter-spacing: var(--dz-letter-spacing-hero-headline, -0.02em);
 .dz-value-body {
 max-width: 40rem;
 margin: 0 auto 2rem;
-font-size: 1.125rem;
+font-size: var(--text-base);
 line-height: 1.6;
 color: var(--dz-text-body);
 }
@@ -9287,7 +9287,7 @@ transform: translateY(-4px);
 box-shadow: var(--dz-shadow-lg, 0 10px 15px -3px oklch(0 0 0 / 0.1));
 }
 .dz-card-item h3 {
-font-size: 1.125rem;
+font-size: var(--text-base);
 font-weight: 600;
 margin: 0.5rem 0;
 }
@@ -9329,7 +9329,7 @@ align-items: center;
 display: flex;
 align-items: center;
 gap: 0.5rem;
-font-size: 0.875rem;
+font-size: var(--text-sm);
 font-weight: 500;
 color: var(--dz-text-body);
 }
@@ -9369,24 +9369,24 @@ height: 100%;
 object-fit: cover;
 }
 .dz-team-initials {
-font-size: 1.5rem;
+font-size: var(--text-xl);
 font-weight: 600;
 color: white;
 letter-spacing: 0.05em;
 }
 .dz-team-name {
-font-size: 1.125rem;
+font-size: var(--text-base);
 font-weight: 600;
 margin: 0 0 0.25rem;
 }
 .dz-team-role {
-font-size: 0.875rem;
+font-size: var(--text-sm);
 font-weight: 500;
 color: var(--dz-hero-bg-from);
 margin: 0 0 0.75rem;
 }
 .dz-team-bio {
-font-size: 0.875rem;
+font-size: var(--text-sm);
 line-height: 1.6;
 color: var(--dz-text-body);
 margin: 0 0 1rem;
@@ -9527,21 +9527,21 @@ background: oklch(1 0 0 / 0.1);
 }
 @media (max-width: 768px) {
 .dz-section h1 {
-font-size: 2.5rem;
+font-size: var(--text-3xl);
 }
 .dz-section h2 {
-font-size: 1.75rem;
+font-size: var(--text-2xl);
 }
 .dz-section-markdown h2,
 .dz-section .prose h2 {
-font-size: 1.375rem;
+font-size: var(--text-lg);
 }
 .dz-section-markdown h1,
 .dz-section .prose h1 {
-font-size: 1.75rem;
+font-size: var(--text-2xl);
 }
 .dz-section-cta h2 {
-font-size: 2.25rem;
+font-size: var(--text-2xl);
 }
 .dz-cta-group {
 flex-direction: column;
@@ -9551,7 +9551,7 @@ align-items: center;
 transform: none;
 }
 .dz-stat-value {
-font-size: 2.25rem;
+font-size: var(--text-2xl);
 }
 }
 .dz-site {
@@ -9580,7 +9580,7 @@ justify-content: space-between;
 gap: 2rem;
 }
 .dz-site-logo {
-font-size: 1.25rem;
+font-size: var(--text-lg);
 font-weight: 700;
 color: var(--dz-logo-color);
 text-decoration: none;
@@ -9591,7 +9591,7 @@ align-items: center;
 gap: 1.5rem;
 }
 .dz-nav-link {
-font-size: 0.875rem;
+font-size: var(--text-sm);
 font-weight: 500;
 color: var(--dz-text-body);
 text-decoration: none;
@@ -9601,7 +9601,7 @@ transition: color var(--dz-transition-fast, 150ms);
 color: var(--dz-text-foreground);
 }
 .dz-nav-cta {
-font-size: 0.875rem;
+font-size: var(--text-sm);
 font-weight: 600;
 color: white;
 background: var(--dz-hero-bg-from, oklch(0.50 0.18 270));
@@ -9628,7 +9628,7 @@ gap: 2rem;
 margin-bottom: 2rem;
 }
 .dz-footer-col h4 {
-font-size: 0.875rem;
+font-size: var(--text-sm);
 font-weight: 600;
 color: var(--dz-footer-heading);
 margin: 0 0 1rem;
@@ -9642,7 +9642,7 @@ margin: 0;
 margin-bottom: 0.5rem;
 }
 .dz-footer-col a {
-font-size: 0.875rem;
+font-size: var(--text-sm);
 color: var(--dz-footer-link);
 text-decoration: none;
 transition: color var(--dz-transition-fast, 150ms);
@@ -9658,7 +9658,7 @@ border-top: 1px solid var(--dz-footer-border);
 text-align: center;
 }
 .dz-footer-bottom p {
-font-size: 0.75rem;
+font-size: var(--text-xs);
 margin: 0;
 }
 .dz-section-hero .btn-primary {
@@ -9720,7 +9720,7 @@ margin: 0 0 2rem;
 text-align: center;
 }
 .dz-section h3 {
-font-size: 1.125rem;
+font-size: var(--text-base);
 font-weight: 600;
 margin: 0.5rem 0;
 }
@@ -9743,28 +9743,28 @@ letter-spacing: normal;
 }
 .dz-section-markdown h1,
 .dz-section .prose h1 {
-font-size: 2rem;
+font-size: var(--text-2xl);
 font-weight: 700;
 line-height: 1.25;
 margin: 2.5rem 0 1rem;
 }
 .dz-section-markdown h2,
 .dz-section .prose h2 {
-font-size: 1.5rem;
+font-size: var(--text-xl);
 font-weight: 600;
 line-height: 1.3;
 margin: 2rem 0 0.75rem;
 }
 .dz-section-markdown h3,
 .dz-section .prose h3 {
-font-size: 1.25rem;
+font-size: var(--text-lg);
 font-weight: 600;
 line-height: 1.4;
 margin: 1.5rem 0 0.5rem;
 }
 .dz-section-markdown h4,
 .dz-section .prose h4 {
-font-size: 1.05rem;
+font-size: var(--text-base);
 font-weight: 600;
 line-height: 1.4;
 margin: 1.25rem 0 0.5rem;
@@ -9805,7 +9805,7 @@ margin: 3rem auto;
 max-width: 200px;
 }
 .dz-subhead {
-font-size: 1.25rem;
+font-size: var(--text-lg);
 line-height: 1.6;
 opacity: 0.9;
 margin: 0 0 2rem;
@@ -9840,7 +9840,7 @@ transform: translateY(-4px);
 box-shadow: var(--dz-shadow-lg, 0 10px 15px -3px oklch(0 0 0 / 0.1));
 }
 .dz-feature-item h3 {
-font-size: 1.125rem;
+font-size: var(--text-base);
 font-weight: 600;
 margin: 0.5rem 0;
 }
@@ -9967,11 +9967,11 @@ display: flex;
 align-items: center;
 justify-content: center;
 font-weight: 700;
-font-size: 1.125rem;
+font-size: var(--text-base);
 flex-shrink: 0;
 }
 .dz-step-content h3 {
-font-size: 1.125rem;
+font-size: var(--text-base);
 font-weight: 600;
 margin: 0 0 0.25rem;
 }
@@ -9979,7 +9979,7 @@ margin: 0 0 0.25rem;
 color: var(--dz-text-body);
 margin: 0;
 line-height: var(--dz-line-height-body, 1.6);
-font-size: 0.925rem;
+font-size: var(--text-sm);
 }
 @media (min-width: 1024px) {
 .dz-step-item {
@@ -9991,14 +9991,14 @@ gap: 0.75rem;
 .dz-step-number {
 width: 3rem;
 height: 3rem;
-font-size: 1.25rem;
+font-size: var(--text-lg);
 }
 .dz-step-content h3 {
-font-size: 1.25rem;
+font-size: var(--text-lg);
 margin: 0 0 0.5rem;
 }
 .dz-step-content p {
-font-size: 0.95rem;
+font-size: var(--text-sm);
 }
 }
 .dz-logos-grid {
@@ -10031,7 +10031,7 @@ transition: transform var(--dz-transition-fast, 150ms);
 transform: translateY(-4px);
 }
 .dz-pricing-tier h3 {
-font-size: 1.25rem;
+font-size: var(--text-lg);
 font-weight: 600;
 margin: 0 0 0.5rem;
 }
@@ -10039,11 +10039,11 @@ margin: 0 0 0.5rem;
 margin: 0 0 1.5rem;
 }
 .dz-price {
-font-size: 2.5rem;
+font-size: var(--text-3xl);
 font-weight: 700;
 }
 .dz-period {
-font-size: 0.875rem;
+font-size: var(--text-sm);
 color: var(--dz-text-muted);
 }
 .dz-pricing-features {
@@ -10084,11 +10084,11 @@ gap: 0.75rem;
 }
 .dz-testimonial-author strong {
 display: block;
-font-size: 0.875rem;
+font-size: var(--text-sm);
 }
 .dz-testimonial-author span {
 display: block;
-font-size: 0.75rem;
+font-size: var(--text-xs);
 color: var(--dz-text-muted);
 }
 .dz-prose {
@@ -10115,13 +10115,13 @@ line-height: 1.7;
 .dz-page-legal .dz-section-markdown .prose h2 {
 margin-top: 2em;
 margin-bottom: 0.75em;
-font-size: 1.25rem;
+font-size: var(--text-lg);
 font-weight: 600;
 }
 .dz-page-legal .dz-section-markdown .prose h3 {
 margin-top: 1.5em;
 margin-bottom: 0.5em;
-font-size: 1.1rem;
+font-size: var(--text-base);
 font-weight: 600;
 }
 .dz-task-surface-container {
@@ -10152,18 +10152,18 @@ box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
 max-width: 64rem;
 margin: 0 auto;
 color: var(--dz-text-primary, var(--colour-text));
-font-size: 0.9375rem;
+font-size: var(--text-sm);
 line-height: 1.5;
 }
 .dz-consent-title {
 margin: 0 0 0.5rem 0;
-font-size: 1.0625rem;
+font-size: var(--text-base);
 font-weight: 600;
 }
 .dz-consent-description {
 margin: 0 0 1rem 0;
 color: var(--dz-text-muted, var(--colour-text-muted));
-font-size: 0.875rem;
+font-size: var(--text-sm);
 }
 .dz-consent-actions {
 display: flex;
@@ -10179,7 +10179,7 @@ background: transparent;
 color: inherit;
 padding: 0.5rem 1rem;
 font: inherit;
-font-size: 0.875rem;
+font-size: var(--text-sm);
 font-weight: 500;
 cursor: pointer;
 border-radius: 0.375rem;
@@ -10241,11 +10241,11 @@ cursor: not-allowed;
 .dz-consent-category-hint {
 margin: 0.25rem 0 0 1.5rem;
 color: var(--dz-text-muted, var(--colour-text-muted));
-font-size: 0.8125rem;
+font-size: var(--text-xs);
 }
 .dz-consent-links {
 margin: 0.75rem 0 0 0;
-font-size: 0.8125rem;
+font-size: var(--text-xs);
 }
 .dz-consent-links a {
 color: var(--dz-text-link, var(--colour-brand));

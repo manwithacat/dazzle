@@ -75,11 +75,17 @@ def _score_type_system(css: str) -> tuple[float, str]:
 
 
 def _score_fluid_type(css: str) -> tuple[float, str]:
-    """Modern display/hero type scales fluidly with the viewport via `clamp()`
-    (no hard jumps at breakpoints). Full marks at >=2 `clamp()` type uses
-    (e.g. hero headline + section titles)."""
-    n = len(re.findall(r"font-size\s*:\s*clamp\(", css))
-    return (min(n / 2.0, 1.0), f"{n} clamp() fluid-type declarations (>=2 = full)")
+    """Modern display/hero type scales fluidly with the viewport — no hard jumps at
+    breakpoints. That's true whether the fluidity is inline (`font-size: clamp(...)`)
+    OR carried by a reference to HM's fluid `--text-*` scale, whose every step is
+    clamp-defined. We measure the actual property (does the type scale fluidly),
+    not a specific syntax: score = fraction of font-size declarations that are fluid."""
+    sizes = [v.strip() for v in _FONT_SIZE_RE.findall(css)]
+    if not sizes:
+        return (0.0, "no font-size declarations found")
+    fluid = sum(1 for v in sizes if "clamp(" in v or "var(--text-" in v)
+    frac = fluid / len(sizes)
+    return (frac, f"{fluid}/{len(sizes)} font-sizes fluid (inline clamp or --text-* scale)")
 
 
 def _score_motion(css: str) -> tuple[float, str]:

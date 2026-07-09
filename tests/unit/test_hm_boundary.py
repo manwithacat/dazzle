@@ -38,6 +38,9 @@ SANCTIONED = {
     "src/dazzle/render/fragment/icon_html.py",
     # UX catalogue reads token/badge CSS to document them.
     "src/dazzle/testing/ux_catalogue.py",
+    # Sitespec-hygiene rubric reads the HM sitespec component CSS to *measure*
+    # its modern-landing structural properties (Goal-2 deterministic floor).
+    "src/dazzle/testing/sitespec_hygiene.py",
 }
 
 
