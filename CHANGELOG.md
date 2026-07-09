@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.25] - 2026-07-09
+
+### Changed
+- **HM-convergence (HMC-006b pt2 + HMC-011): dz.css transitions/overlays → HaTchi-MaXchi,
+  keyframe collision fixed.** The remaining Dazzle-unique `dz.css` families — toast
+  enter/leave, cross-document view-transitions, native-`<dialog>` backdrop + open
+  animation, and resize-drag body helpers — moved into a new HM component
+  `components/transitions.css`, with easing/duration routed through HM tokens
+  (`--ease-in/out`, `--duration-base`). **HMC-011 latent bug fixed:** the view-transition
+  fade keyframes were renamed `dz-view-fade-*` so they no longer collide with HM's own
+  fade-only `@keyframes dz-fade-in/out` — previously dz.css's *unlayered* slide+fade
+  `dz-fade-*` shadowed HM's, so every `--animation-fade-*` consumer rendered the wrong
+  (slide) animation; they now get HM's intended fade-only. Moving the bare
+  `dialog::backdrop` from unlayered→layered also lets HM's designed `dialog.dz-dialog`
+  backdrop correctly win for dz-dialog/dz-alert-dialog (was shadowed). Only the deliberate
+  all-pages `.htmx-indicator` visibility rules remain in `dz.css`. Reservoir
+  `css_lines_dazzle_native` 416→303.
+
+### Agent Guidance
+- **Page transitions/overlays are HM-owned** (`components/transitions.css`): toast,
+  view-transitions, dialog backdrop, resize-drag helpers. View-transition fade keyframes
+  are `dz-view-fade-*`; HM's generic fade is `dz-fade-*` (fade-only) — don't reintroduce a
+  slide-variant `dz-fade-*` or you re-open the HMC-011 collision.
+
 ## [0.98.24] - 2026-07-09
 
 ### Changed

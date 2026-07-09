@@ -1,0 +1,105 @@
+/*
+ * transitions.css — page-level transitions & overlays (HaTchi-MaXchi).
+ *
+ * Migrated from Dazzle dz.css (HMC-006b part 2, 2026-07-09): toast enter/leave,
+ * cross-document view-transitions for fragment navigation, the native <dialog>
+ * backdrop + open animation, and the resize-drag body helpers. Values route
+ * through HM tokens where one exists (--ease-*, --duration-*); a few remain
+ * literal (specific durations / the scrim / the translate offset).
+ *
+ * HMC-011 FIX: the view-transition fade keyframes are named `dz-view-fade-*`
+ * (NOT `dz-fade-*`) so they no longer collide with HM's own fade-only
+ * `@keyframes dz-fade-in/out` in tokens.css — before this, dz.css's unlayered
+ * slide+fade `dz-fade-*` shadowed HM's, so `--animation-fade-*` consumers
+ * rendered the wrong (slide) animation. View-transitions keep their slide+fade.
+ */
+
+/* ── Toast notifications ─────────────────────────────────────────────── */
+.dz-toast-enter {
+  opacity: 0;
+  transform: translateX(1rem);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+
+.dz-toast-leave {
+  opacity: 0;
+  transform: translateX(1rem);
+  transition:
+    opacity var(--duration-base) var(--ease-in),
+    transform var(--duration-base) var(--ease-in);
+}
+
+#dz-toast .alert {
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+
+/* ── View transitions for fragment navigation ────────────────────────── */
+@view-transition {
+  navigation: auto;
+}
+
+#main-content {
+  view-transition-name: main-content;
+}
+
+::view-transition-old(main-content) {
+  animation: dz-view-fade-out var(--duration-base) var(--ease-in) forwards;
+}
+
+::view-transition-new(main-content) {
+  animation: dz-view-fade-in 200ms var(--ease-out);
+}
+
+@keyframes dz-view-fade-out {
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes dz-view-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* ── Native dialog backdrop + open animation ─────────────────────────── */
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+dialog[open] {
+  animation: dz-dialog-in 200ms var(--ease-out);
+}
+
+@keyframes dz-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Resize-drag body helpers ────────────────────────────────────────── */
+body.select-none {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body.cursor-col-resize,
+body.cursor-col-resize * {
+  cursor: col-resize !important;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(main-content),
+  ::view-transition-new(main-content) {
+    animation: none;
+  }
+}

@@ -1,143 +1,30 @@
 /*
- * dz.css — Transition and state classes for the Dazzle micro-runtime.
- * Replaces Alpine.js x-transition with CSS-only animations.
- * ~40 lines. Works with Tailwind/DaisyUI.
+ * dz.css — HTMX indicator visibility (unlayered, all-pages).
+ *
+ * Everything else that used to live here has converged into HaTchi-MaXchi:
+ *   - row swap/highlight + submit-button feedback → HM htmx-states.css (HMC-006b pt1)
+ *   - toast, view-transitions, native-dialog backdrop, resize-drag helpers
+ *     → HM transitions.css (HMC-006b pt2, 2026-07-09; the view-transition fade
+ *       keyframes were renamed dz-view-fade-* to end the dz-fade collision, HMC-011)
+ *   - skeletons → HM skeleton Hyperpart; toggle/dropdown/slide-over/bulk-bar +
+ *     the DaisyUI drawer block were pruned as dead (HMC-006)
+ *
+ * Only the HTMX indicator-visibility rules remain here, deliberately UNLAYERED
+ * so they win on every page — including any served outside the HM-dist bundle.
+ * They carry no token debt (display values only) and are byte-identical to HM's
+ * htmx-states copy.
  */
 
-/* Toggle / dropdown / slide-over / bulk-bar animation blocks PRUNED (HMC-006):
- * their `data-dz-show` / `-toggleable` / `-slide-over` / `-bulk-bar` attributes
- * are emitted by nothing (0 references) — those toggle systems were replaced by
- * HM delegated controllers. Provably inert (selectors never matched live DOM). */
-
-/* ── Toast notifications ────────────────────────────────────────────── */
-
-.dz-toast-enter {
-  opacity: 0;
-  transform: translateX(1rem);
-  transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
-
-.dz-toast-leave {
-  opacity: 0;
-  transform: translateX(1rem);
-  transition: opacity 150ms ease-in, transform 150ms ease-in;
-}
-
-#dz-toast .alert {
-  transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
-
-/* Desktop-sidebar block PRUNED (HMC-006): it targeted DaisyUI's `.drawer` /
- * `.drawer-side` / `.drawer-overlay` classes (removed with DaisyUI in v0.56.0).
- * The live sidebar is `.dz-app-shell[data-dz-sidebar]` + HM `.dz-drawer`; this
- * DaisyUI-class block never matched the rendered DOM. */
-
-/* ── Optimistic UI feedback ─────────────────────────────────────────── */
-/* Row swap/highlight animations + submit-button feedback MIGRATED to HM
-   `components/htmx-states.css` (HMC-006b, 2026-07-08). These were unlayered
-   overrides that shadowed HM's own tokenised versions with hardcoded values —
-   the exact "override HM = debt" signal this lane drains. Removing them lets HM's
-   canonical rules apply: row-swap easing → `--ease-out`, and the row-highlight
-   keyframe → scheme-aware `--colour-success-soft` (a dark-mode fix; the old fixed
-   `oklch(0.85 0.1 145 / 0.3)` green was wrong on dark surfaces). Transient
-   animations aren't in static captures → value-reasoning per the lane gate; the
-   HM token values are the canonical design-system values. `.btn.htmx-request` was
-   a dead selector (0 emitters use bare `.btn`; HM covers `button`/`.dz-button`). */
-
-/* ── HTMX indicator visibility ─────────────────────────────────────── */
-/* Kept here (not deleted with the animations) because these must apply on every
-   page including ones outside the HM-dist bundle; they carry no token debt
-   (display values only) and are byte-identical to HM's copy. */
-/* Override htmx built-in opacity with display:none so hidden indicators
+/* Override htmx's built-in opacity hiding with display:none so hidden indicators
    don't occupy layout space (opacity:0 still reserves vertical space). */
 .htmx-indicator {
   display: none;
 }
-/* Descendant case: indicator is a child of the requesting element */
+/* Descendant case: indicator is a child of the requesting element. */
 .htmx-request .htmx-indicator {
   display: inline-block;
 }
-/* Same-element case: hx-indicator="#id" adds htmx-request to the indicator itself */
+/* Same-element case: hx-indicator="#id" adds htmx-request to the indicator itself. */
 .htmx-request.htmx-indicator {
   display: inline-block;
-}
-
-/* Skeleton placeholders moved to the HM `skeleton` Hyperpart (canonical
-   `.dz-skeleton` + data-dz-shape; packages/hatchi-maxchi). The dead
-   `.dz-skeleton*` family + dz-shimmer keyframe were retired 2026-07-04. */
-
-/* ── View transitions for fragment navigation ──────────────────────── */
-
-@view-transition {
-  navigation: auto;
-}
-
-#main-content {
-  view-transition-name: main-content;
-}
-
-::view-transition-old(main-content) {
-  animation: dz-fade-out 150ms ease-in forwards;
-}
-
-::view-transition-new(main-content) {
-  animation: dz-fade-in 200ms ease-out;
-}
-
-@keyframes dz-fade-out {
-  to {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-}
-
-@keyframes dz-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-}
-
-/* Reduce motion for accessibility */
-/* Respect reduced motion for all Dazzle animations */
-@media (prefers-reduced-motion: reduce) {
-  /* View-transition reduced-motion stays here (view-transitions live in dz.css,
-     part 2 of HMC-006b). The tr.htmx-* reduced-motion overrides moved to HM
-     htmx-states.css with the animations they guard (HMC-006b). */
-  ::view-transition-old(main-content),
-  ::view-transition-new(main-content) {
-    animation: none;
-  }
-}
-
-/* ── Native dialog backdrop ─────────────────────────────────────────── */
-
-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-}
-
-dialog[open] {
-  animation: dz-dialog-in 200ms ease-out;
-}
-
-@keyframes dz-dialog-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Prevent text selection during resize drag */
-body.select-none {
-  user-select: none;
-  -webkit-user-select: none;
-}
-body.cursor-col-resize,
-body.cursor-col-resize * {
-  cursor: col-resize !important;
 }
