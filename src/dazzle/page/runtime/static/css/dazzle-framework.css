@@ -4,7 +4,7 @@
 @import "dazzle-layer.css" layer(framework);
 /* design-system.css moved to packages/hatchi-maxchi/base/ (Stage 2b);
    css_loader/build_dist read it via the @hm: sentinel. */
-@import "site-sections.css" layer(framework);
+/* site-sections.css ported into HM components/sitespec.css (1B) — no longer a Dazzle file. */
 /* dz.css must be unlayered so its sidebar overrides beat the
    drawer base styles in dazzle-bundle.css.
    Layered styles always lose to unlayered styles in the CSS cascade. */

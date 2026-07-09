@@ -1,4 +1,4 @@
-"""Regression tests for site-sections.css article-body typography (issue #921).
+"""Regression tests for HM components/sitespec.css article-body typography (issue #921).
 
 The `.dz-section h1/h2/h3/p` rules style marketing section *headlines* —
 centred, large, heavy. Without scoped overrides, those rules bleed into
@@ -10,7 +10,7 @@ H2s render left-aligned at body sizes.
 
 from pathlib import Path
 
-CSS_PATH = Path("src/dazzle/page/runtime/static/css/site-sections.css")
+CSS_PATH = Path("packages/hatchi-maxchi/components/sitespec.css")
 
 
 class TestSectionMarkdownTypography:

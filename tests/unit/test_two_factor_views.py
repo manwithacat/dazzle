@@ -345,12 +345,12 @@ def test_2fa_js_toggles_hidden_property_not_class() -> None:
 
 
 def test_site_sections_css_carries_no_auth_rules() -> None:
-    """#1549 — site-sections.css's fossil auth block collided with the
+    """#1549 — HM components/sitespec.css's fossil auth block collided with the
     HM two-factor Hyperpart (input-code font, card centering, gradient
     over centering). HM two-factor.css is the sole owner of dz-auth-*."""
     from pathlib import Path
 
     css = (
-        Path(__file__).resolve().parents[2] / "src/dazzle/page/runtime/static/css/site-sections.css"
+        Path(__file__).resolve().parents[2] / "packages/hatchi-maxchi/components/sitespec.css"
     ).read_text(encoding="utf-8")
     assert ".dz-auth-" not in css

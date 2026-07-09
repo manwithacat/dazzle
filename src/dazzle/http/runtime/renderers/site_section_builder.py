@@ -437,7 +437,7 @@ def _build_stats_section(section: dict[str, Any]) -> str:
     """Typed builder for `type: stats` — vertical/horizontal stat row.
 
     Emits Dazzle-native `.dz-stats-grid` / `.dz-stat` / `.dz-stat-value`
-    / `.dz-stat-title` classes (defined in `site-sections.css`). Pre-#1113
+    / `.dz-stat-title` classes (defined in `HM components/sitespec.css`). Pre-#1113
     this used DaisyUI's `stats` / `stat` / `stat-value` / `stat-title`
     classes which required the third-party CDN bundle loaded via
     `site_renderer.get_shared_head_html`."""
@@ -467,7 +467,7 @@ def _build_steps_section(section: dict[str, Any]) -> str:
     """Typed builder for `type: steps` — numbered step list with
     connector lines between steps. Uses
     `.dz-step-item` / `.dz-step-number` / `.dz-step-content` /
-    `.dz-step-connector` (site-sections.css)."""
+    `.dz-step-connector` (HM components/sitespec.css)."""
     parts: list[str] = []
     parts.append(f'<section{_section_id_attr(section)} class="dz-section dz-section-steps">')
     inner: list[str] = [_section_header(section)]

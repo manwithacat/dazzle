@@ -25,7 +25,7 @@ def get_shared_head_html(
     legacy classes (`bg-base-100`, `stat-value`, `stat-title`, `alert
     alert-*`) emitted by `site_section_builder` / `site_renderer` /
     `response_helpers` — all of those emitters now produce Dazzle-native
-    classes defined in `static/css/site-sections.css`, so the CDN load
+    classes defined in `HM components/sitespec.css`, so the CDN load
     is no longer needed.
 
     Args:

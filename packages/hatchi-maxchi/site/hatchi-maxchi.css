@@ -12908,3 +12908,1631 @@ onboarding-step {
 }
 
 }
+/* ── components/sitespec.css ── */
+@layer components {
+/* HaTchi-MaXchi — Sitespec / marketing page sections (hero, features, pricing, FAQ, testimonials, stats, CTA, steps, logos, comparison, cards, trust-bar, team, backgrounds). Ported from Dazzle site-sections.css (HM-sitespec 1B, 2026-07-09) — theme-agnostic structure; aesthetic families reflavor via tokens. Authored with  prefix (build keeps it for Dazzle, strips for standalone). */
+
+/* =============================================================================
+   Hero Section
+   ============================================================================= */
+
+.section-hero {
+  background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
+  color: white;
+  padding: var(--dz-spacing-hero-y, 6rem) 1.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.section-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 30% 70%, oklch(1 0 0 / 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Hero with Media Image — flex on the section to create two columns */
+.hero-with-media {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+}
+
+.hero-with-media .section-content {
+  flex: 1;
+  text-align: left;
+}
+
+.hero-with-media .cta-group {
+  justify-content: flex-start;
+}
+
+.hero-media {
+  flex: 1;
+  max-width: 50%;
+}
+
+.hero-image {
+  width: 100%;
+  height: auto;
+  border-radius: var(--dz-radius-lg, 1rem);
+  box-shadow: var(--dz-shadow-xl, 0 20px 50px -12px oklch(0 0 0 / 0.3));
+}
+
+@media (max-width: 768px) {
+  .hero-with-media {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .hero-with-media .section-content {
+    text-align: center;
+  }
+
+  .hero-with-media .cta-group {
+    justify-content: center;
+  }
+
+  .hero-media {
+    max-width: 100%;
+    order: -1;
+  }
+}
+
+/* =============================================================================
+   Features Section
+   ============================================================================= */
+
+.section-features {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+  background: var(--p, oklch(0.99 0 0));
+}
+
+/* =============================================================================
+   Pricing Section
+   ============================================================================= */
+
+.section-pricing {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+}
+
+/* =============================================================================
+   FAQ Section
+   ============================================================================= */
+
+.section-faq {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+
+/* =============================================================================
+   Testimonials Section
+   ============================================================================= */
+
+.section-testimonials {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+}
+
+/* =============================================================================
+   Stats Section
+   ============================================================================= */
+
+.section-stats {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+  background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
+  color: white;
+}
+
+/* =============================================================================
+   CTA Section
+   ============================================================================= */
+
+.section-cta {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+  text-align: center;
+}
+
+.section-cta h2 {
+  font-size: var(--dz-font-size-cta-headline, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* =============================================================================
+   Steps Section
+   ============================================================================= */
+
+.section-steps {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+
+/* =============================================================================
+   Logo Cloud Section
+   ============================================================================= */
+
+.section-logo-cloud {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+  text-align: center;
+}
+
+/* =============================================================================
+   Comparison Section
+   ============================================================================= */
+
+.section-comparison {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+
+.comparison-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--dz-border-subtle);
+}
+
+.comparison-table thead th {
+  font-weight: 600;
+  font-size: 1rem;
+  padding-bottom: 1rem;
+}
+
+.comparison-feature {
+  text-align: left;
+  font-weight: 500;
+}
+
+.comparison-highlighted {
+  background: var(--dz-feature-icon-bg, oklch(0.92 0.03 260));
+}
+
+/* =============================================================================
+   Value Highlight Section
+   ============================================================================= */
+
+.section-value-highlight {
+  padding: var(--dz-spacing-hero-y, 6rem) 1.5rem;
+  text-align: center;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+}
+
+.value-headline {
+  font-size: var(--dz-font-size-hero-headline, 3.5rem);
+  font-weight: var(--dz-font-weight-hero-headline, 800);
+  line-height: var(--dz-line-height-hero-headline, 1.1);
+  letter-spacing: var(--dz-letter-spacing-hero-headline, -0.02em);
+}
+
+.value-body {
+  max-width: 40rem;
+  margin: 0 auto 2rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--dz-text-body);
+}
+
+/* =============================================================================
+   Split Content Section
+   ============================================================================= */
+
+.section-split-content {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+
+.split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+.split--reversed .split-grid {
+  direction: rtl;
+}
+
+.split--reversed .split-grid > * {
+  direction: ltr;
+}
+
+.split-text h2 {
+  text-align: left;
+}
+
+.split-text p {
+  color: var(--dz-text-body);
+}
+
+.cta-group--left {
+  justify-content: flex-start;
+}
+
+.split-media img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--dz-radius-lg, 1rem);
+  box-shadow: var(--dz-shadow-card, 0 1px 3px oklch(0 0 0 / 0.1));
+}
+
+@media (max-width: 768px) {
+  .split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .split--reversed .split-grid {
+    direction: ltr;
+  }
+
+  .split-text h2 {
+    text-align: center;
+  }
+
+  .cta-group--left {
+    justify-content: center;
+  }
+}
+
+/* =============================================================================
+   Card Grid Section
+   ============================================================================= */
+
+.section-card-grid {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.card-item {
+  background: var(--dz-surface-card);
+  padding: var(--dz-spacing-card-padding, 1.5rem);
+  border-radius: var(--dz-radius-card, 0.75rem);
+  box-shadow: var(--dz-shadow-card, 0 1px 3px oklch(0 0 0 / 0.1));
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--dz-transition-fast, 150ms),
+              box-shadow var(--dz-transition-fast, 150ms);
+}
+
+.card-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--dz-shadow-lg, 0 10px 15px -3px oklch(0 0 0 / 0.1));
+}
+
+.card-item h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.card-item p {
+  color: var(--dz-text-body);
+  margin: 0 0 1rem;
+  line-height: var(--dz-line-height-body, 1.6);
+  flex: 1;
+}
+
+.card-icon {
+  width: 3rem;
+  height: 3rem;
+  background: var(--dz-feature-icon-bg, oklch(0.92 0.03 260));
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  color: var(--dz-hero-bg-from);
+}
+
+.card-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* =============================================================================
+   Trust Bar Section
+   ============================================================================= */
+
+.section-trust-bar {
+  padding: 2rem 1.5rem;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+  border-top: 1px solid var(--dz-border-subtle);
+  border-bottom: 1px solid var(--dz-border-subtle);
+}
+
+.trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  align-items: center;
+}
+
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dz-text-body);
+}
+
+.trust-item svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--dz-hero-bg-from);
+}
+
+/* =============================================================================
+   Team Section
+   ============================================================================= */
+
+.section-team {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2rem;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.team-card {
+  text-align: center;
+  padding: 2rem 1.5rem;
+}
+
+.team-avatar {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.team-initials {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+  letter-spacing: 0.05em;
+}
+
+.team-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.team-role {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dz-hero-bg-from);
+  margin: 0 0 0.75rem;
+}
+
+.team-bio {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--dz-text-body);
+  margin: 0 0 1rem;
+}
+
+.team-links {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.team-link {
+  color: var(--dz-text-body);
+  transition: color var(--dz-transition-fast, 150ms);
+}
+
+.team-link:hover {
+  color: var(--dz-hero-bg-from);
+}
+
+.team-link svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* =============================================================================
+   Dark Mode Adjustments
+   ============================================================================= */
+
+/* Site Header — dark mode handled by token overrides in design-system.css */
+
+/* Theme Toggle Button */
+.theme-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  color: var(--dz-text-body);
+  transition: color var(--dz-transition-fast, 150ms), background var(--dz-transition-fast, 150ms);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover {
+  color: var(--dz-text-foreground);
+  background: var(--dz-border-subtle);
+}
+
+/* Theme toggle dark mode handled by token overrides in design-system.css */
+
+.theme-toggle__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Show sun icon by default (for dark mode), hide moon */
+.theme-toggle__sun { display: none; }
+.theme-toggle__moon { display: block; }
+
+/* In dark mode, show sun, hide moon */
+[data-theme="dark"] .theme-toggle__sun { display: block; }
+[data-theme="dark"] .theme-toggle__moon { display: none; }
+
+/* =============================================================================
+   Section Background Utilities
+   Applied via sitespec background: alt | primary | dark
+   ============================================================================= */
+
+.bg-alt {
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+}
+
+.bg-primary {
+  background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
+  color: white;
+}
+
+.bg-primary .section-header h2,
+.bg-primary .section-header p {
+  color: white;
+}
+
+.bg-dark {
+  background: oklch(0.15 0.01 260);
+  color: oklch(0.9 0 0);
+}
+
+.bg-dark .section-header h2,
+.bg-dark .section-header p {
+  color: oklch(0.9 0 0);
+}
+
+[data-theme="dark"] .bg-alt {
+  background: oklch(0.12 0.01 260);
+}
+
+/* Section backgrounds */
+[data-theme="dark"] .section-features,
+[data-theme="dark"] .section-faq,
+[data-theme="dark"] .section-steps {
+  background: oklch(0.12 0.01 260);
+}
+
+[data-theme="dark"] .section-pricing,
+[data-theme="dark"] .section-testimonials,
+[data-theme="dark"] .section-logo-cloud,
+[data-theme="dark"] .section-cta,
+[data-theme="dark"] .section-value-highlight,
+[data-theme="dark"] .section-card-grid,
+[data-theme="dark"] .section-trust-bar {
+  background: oklch(0.08 0.01 260);
+}
+
+[data-theme="dark"] .section-comparison,
+[data-theme="dark"] .section-split-content {
+  background: oklch(0.12 0.01 260);
+}
+
+/* Cards and items */
+[data-theme="dark"] .feature-item,
+[data-theme="dark"] .testimonial-item,
+[data-theme="dark"] .card-item,
+[data-theme="dark"] .pricing-tier:not(.pricing-highlighted) {
+  background: oklch(0.18 0.01 260);
+}
+
+/* Comparison table */
+[data-theme="dark"] .comparison-table th,
+[data-theme="dark"] .comparison-table td {
+  border-color: oklch(1 0 0 / 0.1);
+}
+
+[data-theme="dark"] .comparison-highlighted {
+  background: oklch(0.18 0.03 260);
+}
+
+/* Headings */
+[data-theme="dark"] .section h2,
+[data-theme="dark"] .feature-item h3,
+[data-theme="dark"] .step-item h3,
+[data-theme="dark"] .faq-item summary,
+[data-theme="dark"] .pricing-tier h3 {
+  color: oklch(0.95 0 0);
+}
+
+/* Body text */
+[data-theme="dark"] .feature-item p,
+[data-theme="dark"] .step-item p,
+[data-theme="dark"] .testimonial-item blockquote,
+[data-theme="dark"] .faq-item p {
+  color: oklch(0.65 0 0);
+}
+
+/* FAQ borders */
+[data-theme="dark"] .faq-item {
+  border-color: oklch(1 0 0 / 0.1);
+}
+
+/* Prose/markdown content */
+[data-theme="dark"] .prose {
+  color: oklch(0.85 0 0);
+}
+
+[data-theme="dark"] .prose h1,
+[data-theme="dark"] .prose h2,
+[data-theme="dark"] .prose h3 {
+  color: oklch(0.95 0 0);
+}
+
+/* Logo cloud */
+[data-theme="dark"] .logo-item img {
+  filter: grayscale(100%) invert(1);
+  opacity: 0.5;
+}
+
+[data-theme="dark"] .logo-item:hover img {
+  filter: grayscale(0%) invert(1);
+  opacity: 0.8;
+}
+
+/* Buttons - works with both DaisyUI btn and legacy btn classes */
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .btn-outline {
+  color: oklch(0.85 0 0);
+  border-color: oklch(0.85 0 0);
+}
+
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .btn-outline:hover {
+  background: oklch(1 0 0 / 0.1);
+}
+
+/* =============================================================================
+   Responsive Adjustments
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .section h1 {
+    font-size: 2.5rem;
+  }
+
+  .section h2 {
+    font-size: 1.75rem;
+  }
+
+  .section-markdown h2,
+  .section .prose h2 {
+    font-size: 1.375rem;
+  }
+
+  .section-markdown h1,
+  .section .prose h1 {
+    font-size: 1.75rem;
+  }
+
+  .section-cta h2 {
+    font-size: 2.25rem;
+  }
+
+  .cta-group {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .pricing-highlighted {
+    transform: none;
+  }
+
+  .stat-value {
+    font-size: 2.25rem;
+  }
+}
+
+/* =============================================================================
+   Site Layout - Header, Footer, Nav
+   ============================================================================= */
+
+.site {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Default body background — overridden per page via {% block body_class %}.
+ * Was inline `bg-[hsl(var(--card))]` Tailwind on <body> in site_base.html;
+ * v0.62 moves to a semantic class rule. */
+.site-bg {
+  background: var(--dz-surface-card, var(--colour-surface));
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--dz-header-bg);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--dz-border-subtle);
+}
+
+.site-nav {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.site-logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dz-logo-color);
+  text-decoration: none;
+}
+
+.nav-items {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-link {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dz-text-body);
+  text-decoration: none;
+  transition: color var(--dz-transition-fast, 150ms);
+}
+
+.nav-link:hover {
+  color: var(--dz-text-foreground);
+}
+
+.nav-cta {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  background: var(--dz-hero-bg-from, oklch(0.50 0.18 270));
+  padding: 0.5rem 1rem;
+  border-radius: var(--dz-radius-button, 0.375rem);
+  text-decoration: none;
+  transition: background var(--dz-transition-fast, 150ms);
+}
+
+.nav-cta:hover {
+  background: var(--dz-hero-bg-to, oklch(0.45 0.18 270));
+}
+
+.site-footer {
+  margin-top: auto;
+  background: var(--dz-footer-bg);
+  color: var(--dz-footer-text);
+  padding: 3rem 1.5rem 1.5rem;
+}
+
+.footer-content {
+  max-width: 72rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.footer-col h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--dz-footer-heading);
+  margin: 0 0 1rem;
+}
+
+.footer-col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-col li {
+  margin-bottom: 0.5rem;
+}
+
+.footer-col a {
+  font-size: 0.875rem;
+  color: var(--dz-footer-link);
+  text-decoration: none;
+  transition: color var(--dz-transition-fast, 150ms);
+}
+
+.footer-col a:hover {
+  color: var(--dz-footer-heading);
+}
+
+.footer-bottom {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--dz-footer-border);
+  text-align: center;
+}
+
+.footer-bottom p {
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+/* =============================================================================
+   Button Styles for Site Pages
+
+   NOTE: Most button styling is now handled by DaisyUI btn classes (btn, btn-primary, etc.)
+   These are kept for backwards compatibility and site-specific overrides.
+   ============================================================================= */
+
+/* Hero section CTA buttons need special styling to stand out on gradient background */
+.section-hero .btn-primary {
+  background: white;
+  color: var(--dz-hero-bg-from, oklch(0.50 0.18 270));
+  border: none;
+}
+
+.section-hero .btn-primary:hover {
+  background: var(--dz-hero-btn-hover);
+  transform: translateY(-2px);
+}
+
+.section-hero .btn-secondary,
+.section-hero .btn-outline {
+  background: transparent;
+  color: white;
+  border-color: var(--dz-hero-border);
+}
+
+.section-hero .btn-secondary:hover,
+.section-hero .btn-outline:hover {
+  background: var(--dz-hero-overlay);
+  border-color: var(--dz-hero-border-hover);
+}
+
+/* =============================================================================
+   Site Page Sections (JS-rendered)
+
+   These rules target the HTML structure generated by get_site_js().
+   They use design-system tokens so themes propagate correctly.
+   ============================================================================= */
+
+.section {
+  width: 100%;
+}
+
+.section-content {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* --- Section header (renderSectionHeader helper) --- */
+.section-header {
+  text-align: center;
+  max-width: 40rem;
+  margin: 0 auto 3rem;
+}
+
+.section-media {
+  text-align: center;
+  margin: 0 auto 2rem;
+  max-width: 48rem;
+}
+
+.section-media img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+/* --- Generic section typography --- */
+.section h1 {
+  font-size: var(--dz-font-size-hero-headline, 3.5rem);
+  font-weight: var(--dz-font-weight-hero-headline, 800);
+  line-height: var(--dz-line-height-hero-headline, 1.1);
+  letter-spacing: var(--dz-letter-spacing-hero-headline, -0.02em);
+  margin: 0 0 1.5rem;
+}
+
+.section h2 {
+  font-size: var(--dz-font-size-section-headline, 2.25rem);
+  font-weight: var(--dz-font-weight-section-headline, 700);
+  line-height: var(--dz-line-height-section-headline, 1.2);
+  letter-spacing: var(--dz-letter-spacing-section-headline, -0.01em);
+  margin: 0 0 2rem;
+  text-align: center;
+}
+
+.section h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.section p {
+  font-size: var(--dz-font-size-body, 1rem);
+  line-height: var(--dz-line-height-body, 1.6);
+}
+
+/* --- Article body / markdown typography ---
+   .section h1/h2/h3/p above target marketing *section headlines*
+   (centred, large). Markdown bodies and any .prose content inside a
+   section are article copy and must opt out of the headline treatment
+   — otherwise blog-post H2s render centred and oversized (issue #921). */
+.section-markdown h1,
+.section-markdown h2,
+.section-markdown h3,
+.section-markdown h4,
+.section-markdown p,
+.section .prose h1,
+.section .prose h2,
+.section .prose h3,
+.section .prose h4,
+.section .prose p {
+  text-align: start;
+  letter-spacing: normal;
+}
+
+.section-markdown h1,
+.section .prose h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 2.5rem 0 1rem;
+}
+
+.section-markdown h2,
+.section .prose h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 2rem 0 0.75rem;
+}
+
+.section-markdown h3,
+.section .prose h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.section-markdown h4,
+.section .prose h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.section-markdown p,
+.section .prose p {
+  font-size: var(--dz-font-size-body, 1rem);
+  line-height: 1.7;
+  margin: 0 0 1em;
+}
+
+/* --- 404 page --- */
+.404-section {
+  text-align: center;
+  padding: var(--dz-spacing-hero-y, 6rem) 1.5rem;
+}
+
+.404-headline {
+  font-size: var(--dz-font-size-hero-headline, 3.5rem);
+  font-weight: var(--dz-font-weight-hero-headline, 800);
+  line-height: var(--dz-line-height-hero-headline, 1.1);
+  margin-bottom: 1rem;
+}
+
+.404-cta {
+  margin-top: 2rem;
+}
+
+/* --- Pricing tier description --- */
+.pricing-description {
+  color: var(--dz-text-muted);
+  margin: 0 0 1.5rem;
+  font-size: var(--dz-font-size-body, 1rem);
+  line-height: var(--dz-line-height-body, 1.6);
+}
+
+/* --- Markdown page section --- */
+.section-markdown {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+
+.section-markdown .prose hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--dz-border-subtle), transparent);
+  margin: 3rem auto;
+  max-width: 200px;
+}
+
+.subhead {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  opacity: 0.9;
+  margin: 0 0 2rem;
+}
+
+.cta-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.features-grid,
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+.feature-item,
+.testimonial-item {
+  background: var(--dz-surface-card);
+  padding: var(--dz-spacing-card-padding, 1.5rem);
+  border-radius: var(--dz-radius-card, 0.75rem);
+  box-shadow: var(--dz-shadow-card, 0 1px 3px oklch(0 0 0 / 0.1));
+  transition: transform var(--dz-transition-fast, 150ms), box-shadow var(--dz-transition-fast, 150ms);
+}
+
+.feature-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--dz-shadow-lg, 0 10px 15px -3px oklch(0 0 0 / 0.1));
+}
+
+.feature-item h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.feature-item p {
+  color: var(--dz-text-body);
+  margin: 0;
+  line-height: var(--dz-line-height-body, 1.6);
+}
+
+.feature-icon {
+  width: 3rem;
+  height: 3rem;
+  background: var(--dz-feature-icon-bg, oklch(0.92 0.03 260));
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  color: var(--dz-hero-bg-from);
+}
+
+.feature-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.faq-list {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--dz-border-default);
+  padding: 1rem 0;
+}
+
+.faq-item summary {
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item p {
+  margin: 0.75rem 0 0;
+  color: var(--dz-text-body);
+  line-height: var(--dz-line-height-body, 1.6);
+}
+
+/* #1113 — replaces DaisyUI's `stats stats-vertical lg:stats-horizontal
+ * shadow` grid emitted by `site_section_builder._build_stats_section`.
+ * Vertical stack on narrow viewports, horizontal row from --breakpoint-lg
+ * upward. Tokens-only, no hardcoded values. */
+.stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+}
+
+@media (min-width: 64rem) {
+  .stats-grid {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: var(--space-lg);
+  }
+}
+
+.stat-item {
+  padding: var(--space-md);
+}
+
+.stat-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+/* List wrapper for the marketing steps section. Mobile stacks
+ * vertically; desktop becomes a horizontal flex row. Distinct from
+ * the framework's `.steps` rule (in components/fragments.css)
+ * which is used by the in-app step indicator. */
+.section-steps-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .section-steps-list {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+  }
+}
+
+/* Connector line between marketing-steps cards on desktop. */
+.step-connector {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .step-connector {
+    display: block;
+    flex: 1;
+    margin: 0 0.75rem;
+    height: 1px;
+    background: var(--dz-border-default, var(--colour-border));
+  }
+}
+
+/* Mobile: vertical steps — number beside text in a row */
+.step-item {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.step-item.is-not-last {
+  flex: 1;
+}
+
+.step-number {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: var(--dz-hero-bg-from);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.step-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.step-content p {
+  color: var(--dz-text-body);
+  margin: 0;
+  line-height: var(--dz-line-height-body, 1.6);
+  font-size: 0.925rem;
+}
+
+/* Desktop: horizontal steps — stack number above text in a column */
+@media (min-width: 1024px) {
+  .step-item {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  .step-number {
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.25rem;
+  }
+
+  .step-content h3 {
+    font-size: 1.25rem;
+    margin: 0 0 0.5rem;
+  }
+
+  .step-content p {
+    font-size: 0.95rem;
+  }
+}
+
+.logos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3rem;
+  align-items: center;
+}
+
+.logo-item img {
+  height: 2rem;
+  opacity: 0.6;
+  filter: grayscale(100%);
+  transition: all var(--duration-fast, 150ms);
+}
+
+.logo-item:hover img {
+  opacity: 1;
+  filter: grayscale(0%);
+}
+
+.pricing-tier {
+  background: var(--dz-surface-card);
+  padding: 2rem;
+  border-radius: var(--dz-radius-card, 0.75rem);
+  box-shadow: var(--dz-shadow-card, 0 1px 3px oklch(0 0 0 / 0.1));
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--dz-transition-fast, 150ms);
+}
+
+.pricing-tier:hover:not(.pricing-highlighted) {
+  transform: translateY(-4px);
+}
+
+.pricing-tier h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.pricing-price {
+  margin: 0 0 1.5rem;
+}
+
+.price {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.period {
+  font-size: 0.875rem;
+  color: var(--dz-text-muted);
+}
+
+.pricing-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  flex: 1;
+}
+
+.pricing-features li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--dz-border-subtle);
+}
+
+.pricing-highlighted {
+  background: var(--dz-pricing-highlight-bg, var(--dz-hero-bg-from));
+  color: white;
+  transform: scale(1.05);
+  box-shadow: var(--dz-shadow-lg);
+}
+
+.pricing-highlighted .period,
+.pricing-highlighted li {
+  color: var(--dz-hero-text-dimmed);
+  border-color: var(--dz-hero-border-dim);
+}
+
+.testimonial-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--dz-shadow-lg, 0 10px 15px -3px oklch(0 0 0 / 0.1));
+}
+
+.testimonial-item blockquote {
+  font-style: italic;
+  color: var(--dz-text-emphasis);
+  margin: 0 0 1rem;
+  line-height: var(--dz-line-height-body, 1.6);
+}
+
+.testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.testimonial-author strong {
+  display: block;
+  font-size: 0.875rem;
+}
+
+.testimonial-author span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--dz-text-muted);
+}
+
+.prose {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.prose h1, .prose h2, .prose h3 {
+  text-align: left;
+}
+
+/* --- Legal page styling (terms, privacy) --- */
+.page-legal .section-markdown .prose {
+  max-width: 45rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.page-legal .section-markdown .prose h1,
+.page-legal .section-markdown .prose h2,
+.page-legal .section-markdown .prose h3 {
+  text-align: left;
+}
+
+.page-legal .section-markdown .prose p {
+  line-height: 1.7;
+}
+
+.page-legal .section-markdown .prose h2 {
+  margin-top: 2em;
+  margin-bottom: 0.75em;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.page-legal .section-markdown .prose h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* --- Task surface container (human task workflow pages) --- */
+.task-surface-container {
+  max-width: 75rem;
+  margin: 0 auto;
+  padding: var(--dz-spacing-card-padding, 1.5rem);
+}
+
+.loading {
+  text-align: center;
+  padding: 4rem;
+  color: var(--dz-text-muted);
+}
+
+.error {
+  text-align: center;
+  padding: 2rem;
+  color: var(--dz-error-text);
+}
+
+/* ============================================================= */
+/* Consent banner (v0.61.0 Phase 2 — Analytics, Consent & Privacy) */
+/* ============================================================= */
+
+.consent-banner {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 1000;
+  padding: 1.25rem 1rem;
+  background: var(--dz-bg-card, var(--colour-surface));
+  border-top: 1px solid var(--dz-border, var(--colour-border));
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.consent-panel {
+  max-width: 64rem;
+  margin: 0 auto;
+  color: var(--dz-text-primary, var(--colour-text));
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.consent-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.consent-description {
+  margin: 0 0 1rem 0;
+  color: var(--dz-text-muted, var(--colour-text-muted));
+  font-size: 0.875rem;
+}
+
+.consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.consent-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 0.375rem;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.consent-btn:focus-visible {
+  outline: 2px solid var(--dz-focus-ring, var(--colour-brand));
+  outline-offset: 2px;
+}
+
+.consent-btn-primary {
+  background: var(--dz-primary, var(--colour-brand));
+  color: var(--dz-primary-foreground, var(--colour-brand-contrast));
+}
+
+.consent-btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.consent-btn-secondary {
+  border-color: var(--dz-border, var(--colour-border));
+  background: var(--dz-bg-card, var(--colour-surface));
+}
+
+.consent-btn-secondary:hover {
+  background: var(--dz-bg-hover, var(--colour-surface-muted));
+}
+
+.consent-btn-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0.5rem 0;
+  color: var(--dz-text-link, var(--colour-brand));
+}
+
+.consent-btn-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.consent-customize {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--dz-border, var(--colour-border));
+}
+
+.consent-category {
+  border: 0;
+  padding: 0.5rem 0;
+  margin: 0;
+}
+
+.consent-category + .consent-category {
+  border-top: 1px solid var(--dz-border, var(--colour-border));
+}
+
+.consent-category label {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.consent-category input[type="checkbox"]:disabled + .consent-category-label {
+  color: var(--dz-text-muted, var(--colour-text-muted));
+  cursor: not-allowed;
+}
+
+.consent-category-hint {
+  margin: 0.25rem 0 0 1.5rem;
+  color: var(--dz-text-muted, var(--colour-text-muted));
+  font-size: 0.8125rem;
+}
+
+.consent-links {
+  margin: 0.75rem 0 0 0;
+  font-size: 0.8125rem;
+}
+
+.consent-links a {
+  color: var(--dz-text-link, var(--colour-brand));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .consent-banner {
+    padding: 1rem 0.75rem;
+  }
+  .consent-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .consent-btn {
+    width: 100%;
+  }
+  .consent-btn-link {
+    width: auto;
+    align-self: center;
+  }
+}
+
+/* =============================================================================
+   #1113 — Per-stat wrapper + native toast. The `.stats-grid` /
+   `.stat-value` / `.stat-label` rules above (modernised in the
+   same release) cover the section-level layout; `.stat` here is the
+   per-item flex column the section-builder emits. `.stat-title` is
+   the per-item label kept distinct from `.stat-label` (the latter is
+   used by the legacy `stat-item` shape in templated marketing pages).
+   Tokens-only — no literal hsl/hex.
+   ============================================================================= */
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.stat-title {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+/* Toast — replaces `alert alert-{level}` emitted by
+ * `response_helpers.append_toast`. Tone keyed off `data-toast-level`,
+ * mirroring the `.alert-banner[data-alert-level=…]` pattern in
+ * fragments.css. Slide-in/out animation inherited from the existing
+ * `.toast-enter` / `.toast-leave` rules in dz.css. */
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border: 1px solid var(--colour-border);
+  border-left-width: 4px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  max-width: min(28rem, calc(100vw - var(--space-xl) * 2));
+}
+
+.toast[data-toast-level="info"] {
+  border-left-color: var(--colour-brand);
+  background: color-mix(in oklch, var(--colour-brand) 6%, var(--colour-surface));
+}
+
+.toast[data-toast-level="success"] {
+  border-left-color: var(--colour-success);
+  background: color-mix(in oklch, var(--colour-success) 6%, var(--colour-surface));
+}
+
+.toast[data-toast-level="warning"] {
+  border-left-color: var(--colour-warning);
+  background: color-mix(in oklch, var(--colour-warning) 6%, var(--colour-surface));
+}
+
+.toast[data-toast-level="error"] {
+  border-left-color: var(--colour-danger);
+  background: color-mix(in oklch, var(--colour-danger) 6%, var(--colour-surface));
+}
+
+}

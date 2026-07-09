@@ -1,9 +1,4 @@
-/* =============================================================================
-   DAZZLE Site Sections
-
-   Styles for SiteSpec page sections (hero, features, pricing, FAQ, etc.)
-   Uses CSS custom properties from the theme system.
-   ============================================================================= */
+/* HaTchi-MaXchi — Sitespec / marketing page sections (hero, features, pricing, FAQ, testimonials, stats, CTA, steps, logos, comparison, cards, trust-bar, team, backgrounds). Ported from Dazzle site-sections.css (HM-sitespec 1B, 2026-07-09) — theme-agnostic structure; aesthetic families reflavor via tokens. Authored with dz- prefix (build keeps it for Dazzle, strips for standalone). */
 
 /* =============================================================================
    Hero Section

@@ -4,7 +4,7 @@ The DaisyUI + Tailwind CDN tags that used to style `stat-value`,
 `stat-title`, `alert alert-{level}`, `bg-base-100` were removed; the
 emitters now produce native `.dz-stats-grid` / `.dz-stat` /
 `.dz-stat-value` / `.dz-stat-title` and `.dz-toast[data-dz-toast-level]`
-classes defined in `static/css/site-sections.css`. This test renders
+classes defined in `HM components/sitespec.css`. This test renders
 each primitive into a standalone HTML page that loads the bundled
 Dazzle CSS, captures one PNG per primitive for human review, and
 asserts:

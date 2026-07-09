@@ -75,7 +75,6 @@ CSS_SOURCES: list[tuple[str | None, Path]] = [
     # v0.71.x guided onboarding (overlay primitives for the eight step kinds).
     ("components", STATIC / "css" / "components" / "onboarding.css"),
     ("components", STATIC / "css" / "dazzle-layer.css"),
-    ("components", STATIC / "css" / "site-sections.css"),
 ]
 
 # Unlayered files appended after every @layer block — cascade override.

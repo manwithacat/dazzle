@@ -1,4 +1,4 @@
-/* dazzle v0.98.29 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.99.1 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -9078,44 +9078,6 @@ color: var(--colour-text);
 }
 }
 @layer components {
-#app,
-.dz-app {
-min-height: 100vh;
-display: flex;
-flex-direction: column;
-}
-.dz-app__header {
-}
-.dz-app__main {
-flex: 1;
-padding: 1.5rem;
-max-width: 80rem;
-margin: 0 auto;
-width: 100%;
-}
-@media (min-width: 640px) {
-.dz-app__main {
-padding: 2rem;
-}
-}
-@media (min-width: 1024px) {
-.dz-app__main {
-padding: 2.5rem 3rem;
-}
-}
-.dz-app__sidebar {
-}
-.dz-app__footer {
-}
-.dz-workspace {
-}
-.dz-text-muted {
-opacity: 0.7;
-}
-[data-dazzle-entity]:hover {
-}
-}
-@layer components {
 .dz-section-hero {
 background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
 color: white;
@@ -10349,6 +10311,44 @@ background: color-mix(in oklch, var(--colour-warning) 6%, var(--colour-surface))
 .dz-toast[data-dz-toast-level="error"] {
 border-left-color: var(--colour-danger);
 background: color-mix(in oklch, var(--colour-danger) 6%, var(--colour-surface));
+}
+}
+@layer components {
+#app,
+.dz-app {
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+}
+.dz-app__header {
+}
+.dz-app__main {
+flex: 1;
+padding: 1.5rem;
+max-width: 80rem;
+margin: 0 auto;
+width: 100%;
+}
+@media (min-width: 640px) {
+.dz-app__main {
+padding: 2rem;
+}
+}
+@media (min-width: 1024px) {
+.dz-app__main {
+padding: 2.5rem 3rem;
+}
+}
+.dz-app__sidebar {
+}
+.dz-app__footer {
+}
+.dz-workspace {
+}
+.dz-text-muted {
+opacity: 0.7;
+}
+[data-dazzle-entity]:hover {
 }
 }
 .htmx-indicator {

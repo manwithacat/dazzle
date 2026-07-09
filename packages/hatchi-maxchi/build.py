@@ -104,6 +104,7 @@ CSS_SOURCES = [
     # over touch-targets' coarse-pointer override (source-order parity with the
     # pre-move state where Dazzle dashboard.css loaded after the whole HM dist).
     ("components", "components/dashboard-card.css"),
+    ("components", "components/sitespec.css"),
 ]
 
 LAYER_ORDER = "@layer vendor, tokens, base, components;"

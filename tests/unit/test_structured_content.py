@@ -365,7 +365,7 @@ class TestDarkModeNewSectionTypes:
         from pathlib import Path
 
         css_path = Path(
-            "src/dazzle/page/runtime/static/css/site-sections.css",
+            "packages/hatchi-maxchi/components/sitespec.css",
         )
         css = css_path.read_text()
 

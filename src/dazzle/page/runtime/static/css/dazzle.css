@@ -65,7 +65,7 @@
  * had been left pointing at the old `dazzle-framework.css` entry which
  * imported only the legacy stack and skipped every component family. */
 @import url("dazzle-layer.css") layer(components);
-@import url("site-sections.css") layer(components);
+/* site-sections.css ported into HM components/sitespec.css (1B) — served via the HM dist. */
 @import url("dz.css");
 /* dz-widgets.css deleted (HMC-018 slice 3) — held only .ts-* TomSelect
    overrides; combobox/tags are HM-native, multiselect retired. */

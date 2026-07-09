@@ -10,13 +10,13 @@ import pytest
 
 
 class TestDarkModeCSSClasses:
-    """Tests for dark mode CSS classes in site-sections.css."""
+    """Tests for dark mode CSS classes in the sitespec CSS (HM components/sitespec.css)."""
 
     def test_dark_mode_toggle_button_styles(self):
         """Test that toggle button CSS classes are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
+        css_path = Path("packages/hatchi-maxchi/components/sitespec.css")
         css_content = css_path.read_text()
 
         # Check toggle button styles exist
@@ -40,7 +40,7 @@ class TestDarkModeCSSClasses:
         assert "--dz-text-body:" in ds_content
 
         # Base rules in site-sections.css consume these tokens
-        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
+        css_path = Path("packages/hatchi-maxchi/components/sitespec.css")
         css_content = css_path.read_text()
 
         assert "var(--dz-header-bg)" in css_content
@@ -51,7 +51,7 @@ class TestDarkModeCSSClasses:
         """Test that dark mode section styles are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
+        css_path = Path("packages/hatchi-maxchi/components/sitespec.css")
         css_content = css_path.read_text()
 
         # Check dark mode section styles
@@ -64,7 +64,7 @@ class TestDarkModeCSSClasses:
         """Test that dark mode card styles are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle/page/runtime/static/css/site-sections.css")
+        css_path = Path("packages/hatchi-maxchi/components/sitespec.css")
         css_content = css_path.read_text()
 
         # Check dark mode card styles (flat classes, not BEM)

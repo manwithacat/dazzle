@@ -30,7 +30,7 @@ def with_toast(
         message: Toast message text (HTML-escaped automatically).
         level: Toast severity — ``success``, ``error``, ``warning``, ``info``.
             Set on the rendered toast as ``data-dz-toast-level``; the
-            ``site-sections.css`` rules tone-tint per level.
+            ``HM components/sitespec.css`` rules tone-tint per level.
         duration: Auto-dismiss delay (e.g., ``"5s"``).
     """
     safe_message = escape(message)

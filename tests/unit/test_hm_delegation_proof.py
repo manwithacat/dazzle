@@ -48,7 +48,7 @@ DELEGATION_ALLOWLIST: dict[str, str] = {
     # --- main bundle (css_loader.py) ---
     "css/reset.css": "KEEP",  # foundational reset layer; dedup vs HM vendor reset tracked in 1C
     "css/dz.css": "KEEP",  # all-pages `.htmx-indicator` HTMX chrome — documented floor
-    "css/site-sections.css": "MIGRATING",  # → HM components/sections/* (phase 1B)
+    # css/site-sections.css DELEGATED → HM components/sitespec.css (phase 1B, 2026-07-09).
     # --- peripheral (served outside the main bundle) ---
     "css/feedback-widget.css": "MIGRATING",  # → HM (phase 1C)
     "css/themes/stripe.css": "MIGRATING",  # → HM aesthetic-family token set (phase 2C)

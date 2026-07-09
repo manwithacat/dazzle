@@ -87,7 +87,7 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
     # removal — no main-runtime emitter references any of these. File retained on
     # disk for the legacy dnr export (its generator is defunct; committed dnr-ui
     # snapshots bake their own CSS).
-    ("components", "css/site-sections.css"),
+    # site-sections.css ported into HM components/sitespec.css (HM-sitespec 1B, 2026-07-09) — served via the HM dist now.
 )
 
 # Files loaded unlayered (after every @layer block) so they can

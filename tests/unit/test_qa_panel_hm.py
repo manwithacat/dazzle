@@ -1,7 +1,7 @@
 """#1553 — the QA persona panel is an HM-native composition.
 
 The deprecated panel carried 19 bespoke ``dz-qa-*`` classes (frozen in
-site-sections.css) and an inline ``<script>`` (CSP-hostile). The
+HM components/sitespec.css) and an inline ``<script>`` (CSP-hostile). The
 reimplementation composes existing HM primitives — card, badge, button,
 auto-grid, stack, cluster — and moves the magic-link wiring into the
 delegated ``dz-qa.js`` controller. The ``data-qa-login-persona``
@@ -104,7 +104,5 @@ class TestDelegatedController:
 
 class TestLegacyCssRetired:
     def test_site_sections_has_no_qa_rules(self) -> None:
-        css = (_REPO / "src/dazzle/page/runtime/static/css/site-sections.css").read_text(
-            encoding="utf-8"
-        )
+        css = (_REPO / "packages/hatchi-maxchi/components/sitespec.css").read_text(encoding="utf-8")
         assert ".dz-qa-" not in css
