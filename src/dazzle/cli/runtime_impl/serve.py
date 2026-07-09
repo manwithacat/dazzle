@@ -72,7 +72,10 @@ def _validate_infrastructure() -> tuple[str, str]:
         typer.echo(f"Missing environment variables: {', '.join(missing)}", err=True)
         typer.echo("", err=True)
         typer.echo("Set them in .env (loaded automatically) or export before running:", err=True)
-        typer.echo("  export DATABASE_URL=postgresql://localhost:5432/dazzle_dev", err=True)
+        typer.echo(
+            "  export DATABASE_URL=postgresql://USER:PASSWORD@127.0.0.1:5432/dazzle_dev",
+            err=True,
+        )
         typer.echo("  export REDIS_URL=redis://localhost:6379/0", err=True)
         typer.echo("", err=True)
         typer.echo(

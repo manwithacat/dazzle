@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.1] - 2026-07-09
+
+### Fixed
+- **Channel resolution log emitted a literal `%s` on every boot (#1563).** `ChannelResolver._log_resolution` passed a 3-placeholder format string to `logger.info` with no positional args (the values sat only in `extra["context"]`). Added the `channel_name, provider, method` positional args so `%`-interpolation works.
+- **Tracebacks never reached the console; JSONL logs kept no traceback (#1562).** `ConsoleFormatter.format()` hand-built its line and dropped `record.exc_info`; `JSONLFormatter` recorded only exception type+message. Both now append/include the full traceback (and `ConsoleFormatter` renders `stack_info`). Purely additive — records without exceptions are unchanged.
+- **Documented `DATABASE_URL` only worked on Homebrew Postgres (#1564).** The credential-less `postgresql://localhost:5432/…` form assumes a `$USER` superuser + trust auth, which stock Debian/Ubuntu (`postgres`-only role + scram-sha-256) doesn't provide. `docs/reference/databases.md` now has a "Using apt (Debian/Ubuntu)" path (`createuser -P` + `createdb -O` + credentialed `127.0.0.1` URL + the psql-socket-vs-TCP gotcha); `serve`'s missing-env hint and `.env.example` now show the `USER:PASSWORD@127.0.0.1` form. Also dropped stale `dazzle serve --local` from the DB setup docs. A runtime follow-up (translate the connection `OperationalError` into actionable guidance) is tracked in #1570.
+
 ## [0.101.0] - 2026-07-09
 
 ### Removed

@@ -98,11 +98,12 @@ class JSONLFormatter(logging.Formatter):
             if source_info:
                 entry["source"] = source_info
 
-        # Add exception info if present
+        # Add exception info if present, including the full traceback (#1562).
         if record.exc_info and record.exc_info[0]:
             entry["exception"] = {
                 "type": record.exc_info[0].__name__,
                 "message": str(record.exc_info[1]),
+                "traceback": self.formatException(record.exc_info),
             }
 
         return json.dumps(entry, default=str)
@@ -146,7 +147,18 @@ class ConsoleFormatter(logging.Formatter):
                 level_name = f"{level_color}{level_name}{Colors.RESET}"
             prefix = f"{prefix} {level_name}:"
 
-        return f"{prefix} {record.getMessage()}"
+        out = f"{prefix} {record.getMessage()}"
+
+        # Append traceback / stack so exceptions reach the console (#1562).
+        # `logging.Formatter` caches the formatted traceback on `record.exc_text`.
+        if record.exc_info:
+            if not record.exc_text:
+                record.exc_text = self.formatException(record.exc_info)
+            out = f"{out}\n{record.exc_text}"
+        if record.stack_info:
+            out = f"{out}\n{self.formatStack(record.stack_info)}"
+
+        return out
 
 
 # =============================================================================

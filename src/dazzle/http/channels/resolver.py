@@ -277,6 +277,9 @@ class ChannelResolver:
         """
         logger.info(
             "Channel '%s' resolved to %s via %s",
+            channel_name,
+            result.provider_name,
+            method,
             extra={
                 "component": "Channels",
                 "context": {

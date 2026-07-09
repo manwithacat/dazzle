@@ -46,7 +46,13 @@ DATABASE_URL=postgresql://user:password@db:5432/myapp
 
 ## Local PostgreSQL Setup
 
-### Using Docker (Quickest)
+`dazzle serve` connects to whatever `DATABASE_URL` points at. Pick one of the
+options below (or a managed instance) — the connection string differs by
+platform, so use the one for your OS.
+
+### Using a container (any OS)
+
+Run Postgres in a container you manage (Dazzle no longer starts one for you):
 
 ```bash
 docker run -d --name dazzle-postgres \
@@ -57,10 +63,13 @@ docker run -d --name dazzle-postgres \
   postgres:16
 
 export DATABASE_URL=postgresql://dazzle:dazzle@localhost:5432/dazzle
-dazzle serve --local
+dazzle serve
 ```
 
 ### Using Homebrew (macOS)
+
+Homebrew's Postgres creates a superuser role named after your macOS user and
+trusts local connections, so a credential-less URL works:
 
 ```bash
 brew install postgresql@16
@@ -68,8 +77,30 @@ brew services start postgresql@16
 createdb dazzle
 
 export DATABASE_URL=postgresql://localhost:5432/dazzle
-dazzle serve --local
+dazzle serve
 ```
+
+### Using apt (Debian / Ubuntu)
+
+Stock Debian/Ubuntu is different: `initdb` creates only the `postgres`
+superuser and uses `scram-sha-256` (password) auth over TCP — there is **no**
+role named after your Linux user, and the credential-less URL above will fail
+with `role "<you>" does not exist` or a password error. Create a role + database
+explicitly and put the credentials in the URL:
+
+```bash
+sudo apt install postgresql
+sudo -u postgres createuser -P dazzle     # prompts for a password, e.g. "dazzle"
+sudo -u postgres createdb -O dazzle dazzle
+
+export DATABASE_URL=postgresql://dazzle:dazzle@127.0.0.1:5432/dazzle
+dazzle serve
+```
+
+> **Gotcha:** `psql dazzle` may succeed (peer auth over the Unix socket) while
+> `dazzle serve` fails — the app connects over **TCP**, which uses password auth.
+> Always include the user + password in `DATABASE_URL` on Linux, and connect via
+> `127.0.0.1` rather than the socket.
 
 ## Installing PostgreSQL Drivers
 
