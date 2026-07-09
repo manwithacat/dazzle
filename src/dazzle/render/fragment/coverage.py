@@ -219,14 +219,20 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
     }
 )
 
-# Display modes that are intentionally NOT in `_SUPPORTED_DISPLAYS` —
-# the audit will continue to flag them so the gap stays visible. These
-# are deferred for design reasons rather than time, and adding them
-# without resolving the listed concerns will lock the framework into
-# a decision that's harder to undo than to delay.
+# Display modes that are intentionally NOT in `_SUPPORTED_DISPLAYS`, for
+# either of two reasons — the audit will continue to flag them so the fact
+# stays visible (and `--fail-on-blocked` correctly exits 1 for any app that
+# uses one). This constant is documentation-only (it records intent; the
+# is_ready logic keys purely off `_SUPPORTED_DISPLAYS`). Two categories:
 #
-# `map`: vendor-neutral geographic rendering is genuinely hard. Three
-#   options, each with a real cost:
+#   (a) DEFERRED — not built anywhere yet, held for a design reason.
+#   (b) CUSTOM-RENDERED — shipped and working, but via a dedicated render
+#       path outside the typed Fragment substrate; the audit's "can the
+#       substrate render this?" question is legitimately answered "no", and
+#       that's by design, not an accidental omission.
+#
+# `map` (a — DEFERRED): vendor-neutral geographic rendering is genuinely
+#   hard. Three options, each with a real cost:
 #     1. Static SVG basemap — vendor-free but zero-zoom (granularity
 #        is fixed at the embedded SVG asset).
 #     2. Bring-your-own-tile-URL via Leaflet (BSD-licensed) — keeps the
@@ -235,8 +241,15 @@ _SUPPORTED_DISPLAYS: frozenset[str] = frozenset(
 #   The granularity question (street pin vs. region choropleth vs.
 #   density heatmap) is more painful than the vendor question — each
 #   wants a different IR shape and committing prematurely is worse
-#   than the visible gap.
-_DEFERRED_DISPLAYS: frozenset[str] = frozenset({"map"})
+#   than the visible gap. (fieldtest_hub `engineering_dashboard.device_map`.)
+#
+# `pdf_viewer` (b — CUSTOM-RENDERED): shipped and working, but it renders
+#   through a dedicated path — the scope-gated `/_dazzle/documents` range
+#   proxy (#162) + the HM pdf-viewer component (hx-pdf), NOT a Fragment
+#   primitive. So the substrate genuinely does not render it and the audit
+#   correctly reports it as unsupported; listed here so that persistent
+#   blocked-count (project_tracker `attachment_view`) reads as intentional.
+_DEFERRED_DISPLAYS: frozenset[str] = frozenset({"map", "pdf_viewer"})
 
 
 def _resolve_field_kind(appspec: object, entity_name: str, field_name: str) -> str | None:
