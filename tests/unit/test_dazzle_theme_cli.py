@@ -22,14 +22,15 @@ runner = CliRunner()
 
 
 class TestListDefault:
-    def test_lists_all_three_shipped_themes(self) -> None:
+    def test_lists_all_shipped_themes(self) -> None:
         result = runner.invoke(theme_app, ["list", "--project-root", "/tmp"])
         assert result.exit_code == 0, result.output
         assert "linear-dark" in result.output
         assert "paper" in result.output
         assert "stripe" in result.output
+        assert "expressive" in result.output  # HM aesthetic family (sitespec convergence)
         # Footer reports the count
-        assert "3 theme(s)" in result.output
+        assert "4 theme(s)" in result.output
 
     def test_table_header_present(self) -> None:
         result = runner.invoke(theme_app, ["list", "--project-root", "/tmp"])
@@ -58,7 +59,8 @@ class TestFilters:
         assert "linear-dark" not in result.output
         assert "paper" in result.output
         assert "stripe" in result.output
-        assert "2 theme(s)" in result.output
+        assert "expressive" in result.output  # light-default HM family
+        assert "3 theme(s)" in result.output
 
     def test_filter_by_dark_scheme(self) -> None:
         result = runner.invoke(theme_app, ["list", "--scheme", "dark", "--project-root", "/tmp"])
@@ -104,7 +106,7 @@ class TestProjectLocalDiscovery:
         assert "project" in result.output
         # Framework themes still listed alongside
         assert "linear-dark" in result.output
-        assert "4 theme(s)" in result.output
+        assert "5 theme(s)" in result.output  # 4 shipped + 1 project
 
     def test_project_overrides_framework_in_listing(self, tmp_path: Path) -> None:
         """When a project ships its own `paper`, the listing shows the
@@ -119,8 +121,8 @@ class TestProjectLocalDiscovery:
         # paper line should now show source=project
         paper_line = next(line for line in result.output.splitlines() if line.startswith("paper"))
         assert "project" in paper_line
-        # Still 3 themes total (project paper REPLACES framework paper)
-        assert "3 theme(s)" in result.output
+        # Still 4 themes total (project paper REPLACES framework paper)
+        assert "4 theme(s)" in result.output
 
 
 # ────────────────────── help / discovery ────────────────────────

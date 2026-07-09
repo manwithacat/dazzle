@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.99.2] - 2026-07-09
+
+### Added
+- **HM sitespec convergence (2C): the `expressive` aesthetic family + families reflavor marketing pages.** Adds a fourth HM-owned aesthetic family — `expressive` (`packages/hatchi-maxchi/families/expressive.css`, generated to `src/dazzle/page/runtime/static/css/themes/expressive.css` with the HM-owned marker): art-directed violet+fuchsia, oversized display type, motion-forward (Framer/Superlist/Arc register), dark-first-capable. Selectable via `[ui] theme = "expressive"` (or `DAZZLE_OVERRIDE_THEME`). All four families (`stripe`/`paper`/`linear-dark`/`expressive`) now carry a **marketing-reflavor token block** — they override the sitespec `--dz-hero-*`/`--dz-section-alt-bg`/`--dz-feature-icon-bg`/`--dz-pricing-highlight-bg` levers, so a family reflavors BOTH the app shell AND the marketing/sitespec page (the "shared families" requirement), not just the app internals. Previously the families set only app-shell tokens while the marketing hero read neutral defaults, so applying a family left the landing page unflavored.
+- **Marketing vision-score pilot validated on-subscription.** The `sitespec_vision_rubric` (8 dimensions) + `capture_sitespec_references.py` exemplar harness were exercised end-to-end via the Claude-Code subscription (no metered API): exemplars calibrate at the top of the scale (Stripe ~8.6, Linear ~8.3), our baseline marketing page scores ~5.1, and applying `expressive` lifts it to ~7.1 — with the gains landing on exactly the dimensions the rubric diagnosed (`colour_confidence` +4, `hero_impact` +3). The measurement is deterministic-floor (`test_sitespec_hygiene`, score 97.2) plus reference-anchored vision score, and now demonstrably actionable.
+
+### Agent Guidance
+- **Aesthetic families reflavor marketing too.** When authoring or editing an HM family (`packages/hatchi-maxchi/families/*.css`), include a marketing-reflavor block (the `--dz-hero-*`/`--dz-section-*`/`--dz-feature-icon-bg`/`--dz-pricing-highlight-bg` levers) alongside the app-shell tokens — a family that sets only `--primary`/`--background` leaves the sitespec hero on neutral defaults. Rebuild with `python scripts/build_dist.py` (regenerates the served `themes/*.css` from the HM sources with the delegation marker). Adding a family also bumps the shipped-theme count asserted in `tests/unit/test_dazzle_theme_cli.py`.
+
 ## [0.99.1] - 2026-07-09
 
 ### Fixed

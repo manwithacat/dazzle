@@ -1,0 +1,200 @@
+/* =============================================================================
+   Expressive — art-directed, motion-forward theme (Framer / Superlist / Arc)
+
+   The bold end of the family spectrum. Where stripe is calm-professional and
+   paper is warm-neutral, expressive leans into confident colour, oversized
+   display type, and generous drama — the vernacular of modern product-launch
+   and design-tool marketing sites. Suits creative tools, launch pages, and any
+   property that wants to read as "designed by a studio", not "shipped by ops".
+
+   Dual-use (per the sitespec-convergence north star): the same tokens reflavor
+   BOTH the app shell AND the marketing/sitespec pages — the marketing block
+   below overrides the site-section `--dz-*` levers so the hero, feature icons,
+   and pricing highlight carry the family identity, not the neutral defaults.
+
+   Loaded via [ui] theme = "expressive" in dazzle.toml.
+   Layer: overrides — wins over base/framework/app.
+
+   Vivid in both schemes: light is a confident violet on near-white; dark is a
+   deep near-black with a neon-lifted accent (the Superlist/Arc register).
+   ============================================================================= */
+
+@layer overrides {
+  /* ---------------------------------------------------------------------------
+     Default (light-first) — confident violet on a cool near-white
+     --------------------------------------------------------------------------- */
+  :root,
+  [data-theme="light"] {
+    /* Cool near-white with a faint violet tint — sets an art-directed base
+       rather than clinical white. */
+    --background: 270 30% 99%;
+    --foreground: 265 40% 12%;          /* deep ink with a violet cast */
+
+    --card: 0 0% 100%;
+    --card-foreground: 265 40% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 265 40% 12%;
+
+    /* Vivid violet accent — the family signature. Saturated but AA on white.
+       This is what makes CTAs and links read as confident, not corporate. */
+    --primary: 268 85% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 270 30% 96%;
+    --secondary-foreground: 265 40% 12%;
+
+    --muted: 270 24% 96%;
+    --muted-foreground: 265 14% 42%;
+
+    --accent: 292 80% 60%;              /* fuchsia secondary accent — for depth */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 350 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 270 20% 90%;
+    --input: 270 20% 90%;
+    --ring: 268 85% 58%;
+
+    --success: 155 65% 42%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 30 95% 55%;
+    --warning-foreground: 265 40% 12%;
+
+    --info: 268 85% 58%;
+    --info-foreground: 0 0% 100%;
+
+    /* Display-forward type. A tighter grotesque for the sans; the marketing
+       block below pushes the hero to oversized editorial sizes. */
+    --font-sans: 'Clash Display', 'Cabinet Grotesk', 'General Sans',
+      'Inter Tight', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular,
+      'JetBrains Mono', 'Cascadia Code', monospace;
+
+    /* Generous spacing — expressive pages breathe dramatically. */
+    --space-3: 0.875rem;
+    --space-4: 1.25rem;                 /* 20px */
+    --space-6: 1.75rem;                 /* 28px */
+    --space-8: 2.5rem;                  /* 40px */
+
+    /* Rounder radii — soft, friendly, product-launch feel. */
+    --radius-sm: 0.375rem;              /* 6px */
+    --radius: 0.5rem;                   /* 8px */
+    --radius-md: 0.75rem;               /* 12px */
+    --radius-lg: 1rem;                  /* 16px — cards */
+    --radius-xl: 1.25rem;               /* 20px */
+    --radius-2xl: 1.75rem;              /* 28px */
+
+    /* Coloured, lifted shadows — the accent bleeds into the ambient shadow so
+       surfaces feel like they glow, not just float. */
+    --shadow-xs: 0 1px 2px 0 hsl(268 85% 58% / 0.06);
+    --shadow-sm: 0 2px 6px -1px hsl(268 60% 45% / 0.12), 0 1px 2px -1px hsl(268 60% 45% / 0.08);
+    --shadow-md: 0 8px 20px -4px hsl(268 60% 45% / 0.16), 0 3px 8px -3px hsl(268 60% 45% / 0.1);
+    --shadow-lg: 0 16px 36px -8px hsl(268 60% 45% / 0.2), 0 6px 14px -6px hsl(268 60% 45% / 0.12);
+    --shadow-xl: 0 28px 60px -12px hsl(268 60% 45% / 0.26), 0 12px 24px -10px hsl(268 60% 45% / 0.16);
+
+    /* Snappy, spring-ish motion — the "designed" register. */
+    --duration-fast: 120ms;
+    --duration-normal: 220ms;
+    --duration-slow: 340ms;
+    --ease-default: cubic-bezier(0.22, 1, 0.36, 1);  /* ease-out-expo — springy snap */
+
+    /* --- Marketing / sitespec reflavor (dual-use) --------------------------
+       Overrides the neutral site-section defaults so the marketing page wears
+       the expressive identity: a bold violet→fuchsia hero gradient, oversized
+       display headline, tinted feature icons, and a saturated pricing block. */
+
+    /* Confident two-stop hero gradient — deep violet into vivid fuchsia. This
+       is the colour_confidence lever the neutral default (muddy indigo) leaves
+       flat. */
+    --dz-hero-bg-from: oklch(0.52 0.24 300);   /* vivid violet */
+    --dz-hero-bg-to: oklch(0.58 0.26 340);     /* fuchsia */
+    --dz-shadow-hero: 0 30px 80px -16px oklch(0.52 0.24 300 / 0.4);
+
+    /* Oversized editorial hero — pushes the top of the fluid clamp well past
+       the neutral 3.5rem so the first fold lands with impact. */
+    --dz-font-size-hero-headline: clamp(2.75rem, 1.6rem + 5.5vw, 4.75rem);
+    --dz-font-weight-hero-headline: 820;
+    --dz-line-height-hero-headline: 1.04;
+    --dz-letter-spacing-hero-headline: -0.035em;
+    --dz-font-size-section-headline: clamp(2rem, 1.4rem + 2.6vw, 3rem);
+    --dz-font-weight-section-headline: 760;
+    --dz-letter-spacing-section-headline: -0.025em;
+
+    /* More vertical drama between sections. */
+    --dz-spacing-hero-y: 8rem;
+    --dz-spacing-section-y: 6.5rem;
+
+    /* Tinted surfaces — the alt-section + feature icons carry a faint violet
+       wash instead of neutral grey, so the palette reads intentional. */
+    --dz-section-alt-bg: oklch(0.97 0.02 300);
+    --dz-feature-icon-bg: oklch(0.93 0.05 300);
+    --dz-pricing-highlight-bg: oklch(0.52 0.24 300);
+    --dz-surface-card: white;
+
+    /* Rounder marketing surfaces to match the app radii. */
+    --dz-radius-card: 1.25rem;
+    --dz-radius-button: 0.75rem;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Dark variant — deep near-black with a neon-lifted violet (Superlist / Arc).
+     The accent brightens for AA on the dark surface; the hero gradient stays
+     saturated but sits on an inky base.
+     --------------------------------------------------------------------------- */
+  [data-theme="dark"] {
+    --background: 270 30% 7%;           /* inky violet-black */
+    --foreground: 270 20% 96%;
+
+    --card: 270 24% 11%;
+    --card-foreground: 270 20% 96%;
+
+    --popover: 270 24% 13%;
+    --popover-foreground: 270 20% 96%;
+
+    --primary: 270 95% 72%;            /* neon-lifted violet for AA on dark */
+    --primary-foreground: 270 30% 7%;
+
+    --secondary: 270 20% 18%;
+    --secondary-foreground: 270 20% 96%;
+
+    --muted: 270 20% 16%;
+    --muted-foreground: 270 12% 62%;
+
+    --accent: 292 90% 72%;             /* neon fuchsia */
+    --accent-foreground: 270 30% 7%;
+
+    --destructive: 350 80% 64%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 270 20% 20%;
+    --input: 270 20% 20%;
+    --ring: 270 95% 72%;
+
+    --success: 155 65% 52%;
+    --success-foreground: 270 30% 7%;
+
+    --warning: 30 95% 62%;
+    --warning-foreground: 270 30% 7%;
+
+    --info: 270 95% 72%;
+    --info-foreground: 270 30% 7%;
+
+    /* Shadows go deeper + keep the accent bleed on the inky base. */
+    --shadow-md: 0 8px 20px -4px oklch(0 0 0 / 0.5), 0 3px 8px -3px hsl(270 95% 55% / 0.2);
+    --shadow-lg: 0 16px 36px -8px oklch(0 0 0 / 0.55), 0 6px 14px -6px hsl(270 95% 55% / 0.24);
+    --shadow-xl: 0 28px 60px -12px oklch(0 0 0 / 0.6), 0 12px 24px -10px hsl(270 95% 55% / 0.3);
+
+    /* Marketing reflavor for dark — the hero gradient lifts brighter so it
+       still reads vivid against an inky page; surfaces go deep-violet. */
+    --dz-hero-bg-from: oklch(0.48 0.24 300);
+    --dz-hero-bg-to: oklch(0.54 0.26 340);
+    --dz-shadow-hero: 0 30px 80px -16px oklch(0 0 0 / 0.6);
+    --dz-section-alt-bg: oklch(0.11 0.03 300);
+    --dz-feature-icon-bg: oklch(0.22 0.06 300);
+    --dz-pricing-highlight-bg: oklch(0.48 0.24 300);
+    --dz-surface-card: oklch(0.13 0.02 300);
+  }
+}

@@ -1,0 +1,23 @@
+# App-shell theme manifest — sibling of expressive.css.
+# The .css is HM-owned (generated from packages/hatchi-maxchi/families/expressive.css);
+# this manifest is the Dazzle-side plumbing (fonts, tags, default scheme).
+
+name = "expressive"
+description = "Art-directed violet + fuchsia, oversized display type, motion-forward — for launch pages and creative tools"
+inspired_by = "Framer / Superlist / Arc"
+
+default_color_scheme = "light"
+
+# expressive.css references a display-grotesque stack (Clash Display / Cabinet
+# Grotesk / General Sans) with Inter Tight as the practical fallback, and Geist
+# Mono for code. Inter (regular) is always preconnected by base.html as the
+# universal fallback; only the theme-specific extras are added here. The display
+# faces are foundry fonts (Fontshare) — projects that want the full identity
+# self-host or add the Fontshare link; the Inter Tight fallback keeps it clean
+# out of the box.
+font_preconnect = [
+  "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&display=swap",
+  "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap",
+]
+
+tags = ["expressive", "art-directed", "launch", "creative", "motion", "bold"]

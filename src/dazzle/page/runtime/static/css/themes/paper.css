@@ -100,6 +100,20 @@
     --duration-normal: 250ms;
     --duration-slow: 350ms;
     --ease-default: cubic-bezier(0.32, 0.72, 0, 1);  /* gentle ease-out */
+
+    /* --- Marketing / sitespec reflavor (dual-use) --------------------------
+       Warm, timeless marketing surfaces — a soft clay hero (not a saturated
+       tech gradient) on warm cream. Notion/Things register: quiet confidence,
+       editorial type, generous air rather than loud colour. */
+    --dz-hero-bg-from: oklch(0.58 0.11 45);    /* warm clay */
+    --dz-hero-bg-to: oklch(0.50 0.12 35);      /* deeper terracotta */
+    --dz-shadow-hero: 0 20px 60px -12px oklch(0.50 0.12 35 / 0.22);
+    --dz-section-alt-bg: oklch(0.97 0.015 70);  /* warm paper wash */
+    --dz-feature-icon-bg: oklch(0.93 0.03 55);
+    --dz-pricing-highlight-bg: oklch(0.58 0.11 45);
+    --dz-surface-card: oklch(0.99 0.008 70);    /* warm off-white card */
+    --dz-radius-card: 0.75rem;
+    --dz-radius-button: 0.5rem;
   }
 
   /* ---------------------------------------------------------------------------

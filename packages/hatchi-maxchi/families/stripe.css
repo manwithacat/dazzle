@@ -99,6 +99,20 @@
     --duration-normal: 200ms;
     --duration-slow: 280ms;
     --ease-default: cubic-bezier(0.4, 0, 0.2, 1);  /* standard material ease */
+
+    /* --- Marketing / sitespec reflavor (dual-use) --------------------------
+       Same indigo identity on the marketing page: a confident (not muddy)
+       indigo hero gradient and cool-slate surfaces. Calm and professional —
+       stripe does NOT oversize the hero; it wins on restraint + crisp colour. */
+    --dz-hero-bg-from: oklch(0.50 0.19 268);   /* confident indigo */
+    --dz-hero-bg-to: oklch(0.44 0.20 282);     /* deeper indigo-violet */
+    --dz-shadow-hero: 0 20px 60px -12px oklch(0.44 0.20 282 / 0.28);
+    --dz-section-alt-bg: oklch(0.97 0.012 262);
+    --dz-feature-icon-bg: oklch(0.93 0.035 262);
+    --dz-pricing-highlight-bg: oklch(0.50 0.19 268);
+    --dz-surface-card: white;
+    --dz-radius-card: 0.625rem;
+    --dz-radius-button: 0.375rem;
   }
 
   /* ---------------------------------------------------------------------------

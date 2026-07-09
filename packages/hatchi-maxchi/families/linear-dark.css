@@ -98,6 +98,20 @@
     --duration-normal: 150ms;
     --duration-slow: 200ms;
     --ease-default: cubic-bezier(0.2, 0, 0, 1);  /* sharper ease than cubic-default */
+
+    /* --- Marketing / sitespec reflavor (dual-use) --------------------------
+       Crisp dark-tech marketing (Linear/Vercel register): a deep near-black
+       hero with a cool electric-blue lift, inky alt-sections, restrained but
+       confident. Dark-first — this block is the [data-theme="dark"] default. */
+    --dz-hero-bg-from: oklch(0.30 0.06 250);   /* deep slate-blue */
+    --dz-hero-bg-to: oklch(0.20 0.04 255);     /* near-black */
+    --dz-shadow-hero: 0 30px 80px -16px oklch(0 0 0 / 0.6);
+    --dz-section-alt-bg: oklch(0.12 0.012 250);
+    --dz-feature-icon-bg: oklch(0.22 0.03 250);
+    --dz-pricing-highlight-bg: oklch(0.42 0.14 235);
+    --dz-surface-card: oklch(0.14 0.01 250);
+    --dz-radius-card: 0.625rem;
+    --dz-radius-button: 0.375rem;
   }
 
   /* ---------------------------------------------------------------------------
@@ -142,5 +156,16 @@
 
     --info: 205 90% 48%;
     --info-foreground: 0 0% 98%;
+
+    /* Marketing reflavor for the light variant — keeps the electric-blue
+       identity but on a bright base (hero stays a deep tech gradient so the
+       first fold still reads dark-tech even in light mode). */
+    --dz-hero-bg-from: oklch(0.34 0.08 245);
+    --dz-hero-bg-to: oklch(0.22 0.05 255);
+    --dz-shadow-hero: 0 20px 60px -12px oklch(0.22 0.05 255 / 0.3);
+    --dz-section-alt-bg: oklch(0.97 0.008 245);
+    --dz-feature-icon-bg: oklch(0.93 0.02 235);
+    --dz-pricing-highlight-bg: oklch(0.42 0.14 235);
+    --dz-surface-card: white;
   }
 }
