@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.29] - 2026-07-09
+
+### Changed
+- **HM-convergence (HMC-018 slice 2/3): `widget=tags` is now HM-native (no TomSelect).**
+  New HM `dz-tags` Hyperpart — a delegated, state-in-DOM, progressively-enhancing chips
+  input (`controllers/dz-tags.js` + `components/tags.css`, mirroring `dz-combobox`).
+  `_emit_tags_field` now renders a plain native `<input type=text data-dz-tags>` carrying
+  the **comma-joined** value — the exact submit contract TomSelect used, so nothing
+  server-side changes and the no-JS path (type `a, b, c`) still works. The controller
+  presents chips over the authoritative native input: Enter/comma creates (trim/dedup),
+  paste splits on comma/newline, ×/Backspace removes, add/remove announced via an
+  aria-live region; every change rewrites the native value + fires `change`. The `tags`
+  TomSelect mount was removed from `dz-widget-registry.js`. After this slice TomSelect
+  serves only `multiselect` (0 fleet usage) — i.e. it's dead; slice 3 removes it.
+
+### Agent Guidance
+- **`widget=tags` no longer uses TomSelect** — it's the HM `dz-tags` Hyperpart over a
+  native `<input data-dz-tags>` whose value is the comma-joined tag list (unchanged submit
+  shape). `required`/no-JS handling matches `dz-combobox` (slice 1).
+
 ## [0.98.28] - 2026-07-09
 
 ### Changed

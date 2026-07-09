@@ -933,7 +933,7 @@ wheels = [
 
 [[package]]
 name = "dazzle-dsl"
-version = "0.98.28"
+version = "0.98.29"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },

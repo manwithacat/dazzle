@@ -1,4 +1,4 @@
-/* dazzle v0.98.27 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.98.28 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -7167,6 +7167,93 @@ color: var(--colour-text-muted);
 }
 .dz-combobox:not([data-dz-open="true"]) .dz-combobox-listbox {
 display: none;
+}
+}
+@layer components {
+.dz-tags {
+display: flex;
+flex-wrap: wrap;
+align-items: center;
+gap: var(--space-xs);
+width: 100%;
+min-height: 2rem;
+padding-block: var(--space-xs);
+padding-inline: var(--space-sm);
+border-radius: var(--radius-sm);
+background: var(--colour-surface);
+border: 1px solid var(--colour-border);
+cursor: text;
+transition:
+box-shadow var(--duration-base) var(--ease-out),
+border-color var(--duration-base) var(--ease-out);
+}
+.dz-tags:focus-within {
+box-shadow: 0 0 0 1px var(--colour-brand);
+border-color: var(--colour-brand);
+}
+.dz-tags[aria-invalid="true"] {
+border-color: var(--colour-danger);
+}
+.dz-tags[aria-invalid="true"]:focus-within {
+box-shadow: 0 0 0 1px var(--colour-danger);
+}
+.dz-tags[data-dz-enhanced] > input[data-dz-tags] {
+display: none;
+}
+.dz-tags-list {
+display: contents;
+}
+.dz-tags-chip {
+display: inline-flex;
+align-items: center;
+gap: var(--space-xs);
+padding-block: 0.125rem;
+padding-inline: var(--space-sm);
+border-radius: var(--radius-sm);
+background: var(--colour-surface-muted);
+color: var(--colour-text);
+font-size: var(--text-sm);
+line-height: 1.4;
+}
+.dz-tags-chip-label {
+white-space: nowrap;
+}
+.dz-tags-remove {
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 1rem;
+height: 1rem;
+padding: 0;
+border: none;
+border-radius: var(--radius-sm);
+background: transparent;
+color: var(--colour-text-muted);
+font-size: 1rem;
+line-height: 1;
+cursor: pointer;
+transition: color var(--duration-base) var(--ease-out);
+}
+.dz-tags-remove:hover {
+color: var(--colour-text);
+}
+.dz-tags-remove:focus-visible {
+outline: none;
+box-shadow: 0 0 0 1px var(--colour-brand);
+}
+.dz-tags-entry {
+flex: 1 1 6rem;
+min-width: 6rem;
+height: 1.5rem;
+padding: 0;
+border: none;
+outline: none;
+background: transparent;
+font-size: var(--text-sm);
+color: var(--colour-text);
+}
+.dz-tags-entry::placeholder {
+color: var(--colour-text-muted);
 }
 }
 @layer components {

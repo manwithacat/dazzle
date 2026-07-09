@@ -41,8 +41,10 @@ _BRIDGE_MOUNTED_WIDGET_KINDS = frozenset(
         # `combobox` removed in HMC-018 slice 1 — `widget=combobox` is now
         # HM-native (a progressively-enhanced native <select data-dz-combobox>
         # driven by controllers/dz-combobox.js), not a bridge/vendor mount.
+        # `tags` removed in HMC-018 slice 2 — `widget=tags` is now HM-native
+        # (a progressively-enhanced native <input data-dz-tags> driven by
+        # controllers/dz-tags.js), not a bridge/vendor mount.
         "multiselect",
-        "tags",
         # `datepicker`/`daterange` removed — the flatpickr datepicker form
         # widget was retired (zero fleet usage); date fields render as native
         # `<input type=date>`.

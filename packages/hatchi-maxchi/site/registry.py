@@ -1257,6 +1257,37 @@ HYPERPARTS: list[Hyperpart] = [
         controller="controllers/dz-combobox.js",
     ),
     Hyperpart(
+        "tags",
+        "Tags",
+        "Forms",
+        "Multi-value chips + free create — a native text input carrying a "
+        "comma-joined value, progressively enhanced into a chips UI. JS off: "
+        "a usable comma-separated text field. JS on: type + Enter/comma "
+        "creates a chip, × removes; the native input stays as the submitted "
+        "value.",
+        '<label class="dz-field hm-measure" for="hm-tags-field">'
+        '<span class="dz-field__label">Labels</span>'
+        '<input id="hm-tags-field" name="labels" type="text" '
+        'data-dz-tags class="dz-form-input" value="urgent,backend" '
+        'placeholder="Add a label…"></label>',
+        notes="Progressive enhancement: the server renders a plain "
+        "<code>&lt;input type=&quot;text&quot; data-dz-tags&gt;</code> whose "
+        "value is a COMMA-JOINED tag string — usable and submittable with no "
+        "JS (type <code>a, b, c</code>; the server splits on comma), native "
+        "<code>required</code> intact. On first interaction "
+        "<code>dz-tags.js</code> wraps it in a <code>.dz-tags</code> root — a "
+        "<code>role=&quot;list&quot;</code> of removable chips + a borderless "
+        "entry — and hides the native input (kept in the DOM as the submitted "
+        "value). Every add/remove rewrites the native input to the "
+        "comma-joined chip list and fires <code>change</code>, so the submit "
+        "shape never changes. Type + Enter or comma creates a chip "
+        "(trim/dedup/skip-empty); paste splits on comma/newline; × or "
+        "Backspace-on-empty removes a chip; add/remove is announced via a "
+        "visually-hidden <code>aria-live</code> region.",
+        tags=("forms",),
+        controller="controllers/dz-tags.js",
+    ),
+    Hyperpart(
         "date-range",
         "Date range",
         "Forms",

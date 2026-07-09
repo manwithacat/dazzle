@@ -1,0 +1,119 @@
+/* HYPERPART: tags */
+/* dz-tags — HM-native multi-value chips input (HMC-018 slice 2).
+ *
+ * Progressive enhancement over a real `<input type="text" data-dz-tags>`
+ * carrying a comma-joined value: with JS off the native input is fully
+ * usable (the user types "a, b, c"; the server splits on comma). On first
+ * interaction controllers/dz-tags.js wraps it in a `.dz-tags` root — a
+ * role=list of removable chips + a borderless entry input — and hides the
+ * native input (kept in the DOM as the submit value + no-JS fallback). The
+ * `.dz-tags` box carries the input chrome + focus-within ring + aria-invalid;
+ * the entry is borderless inside it. Chrome mirrors the combobox /
+ * search-select family. */
+
+.dz-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  min-height: 2rem;
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  cursor: text;
+  transition:
+    box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-tags:focus-within {
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+.dz-tags[aria-invalid="true"] {
+  border-color: var(--colour-danger);
+}
+
+.dz-tags[aria-invalid="true"]:focus-within {
+  box-shadow: 0 0 0 1px var(--colour-danger);
+}
+
+/* Native <input data-dz-tags> is the no-JS control + the submitted value;
+ * once the controller wraps it and marks the root `data-dz-enhanced`, the
+ * chips UI takes over and the native input leaves the visual layer (it stays
+ * in the DOM — display:none still submits — to carry the comma value). */
+.dz-tags[data-dz-enhanced] > input[data-dz-tags] {
+  display: none;
+}
+
+/* The chips list participates directly in the box's flex flow (role=list
+ * kept for AT via display:contents), so chips and the entry share one line
+ * and wrap together. */
+.dz-tags-list {
+  display: contents;
+}
+
+/* A chip: a small rounded token with a remove control. */
+.dz-tags-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-block: 0.125rem;
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.dz-tags-chip-label {
+  white-space: nowrap;
+}
+
+.dz-tags-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--colour-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--duration-base) var(--ease-out);
+}
+
+.dz-tags-remove:hover {
+  color: var(--colour-text);
+}
+
+.dz-tags-remove:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--colour-brand);
+}
+
+/* Borderless entry inside the box — the box owns the chrome + focus ring. */
+.dz-tags-entry {
+  flex: 1 1 6rem;
+  min-width: 6rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-tags-entry::placeholder {
+  color: var(--colour-text-muted);
+}

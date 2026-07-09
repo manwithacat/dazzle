@@ -56,10 +56,15 @@ def test_tags_widget() -> None:
     fd = {"name": "labels", "label": "Labels", "widget": "tags"}
     assert isinstance(_field_to_primitive(fd), TagsField)
     html = _render(fd)
-    assert 'data-dz-widget="tags"' in html
-    assert '"create":true' in html
-    assert '"plugins":["remove_button"]' in html
+    # HMC-018 slice 2: HM-native progressive enhancement over a real native
+    # <input data-dz-tags> carrying a comma-joined value — no TomSelect
+    # data-dz-widget mount anymore.
+    assert "data-dz-tags" in html
+    assert 'data-dz-widget="tags"' not in html
+    assert "data-dz-options=" not in html
     assert 'id="field-labels"' in html
+    assert 'data-dazzle-field="labels"' in html
+    assert 'type="text"' in html
 
 
 def test_color_widget_state_in_dom() -> None:

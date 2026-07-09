@@ -478,6 +478,13 @@ class _RenderFormsMixin:
         return self._widget_label(ctx.escape(c.label), name, inner)
 
     def _emit_tags_field(self, t: TagsField, ctx: RenderContext) -> str:
+        # HM-native multi-value chips (HMC-018 slice 2): emit a plain native
+        # <input type="text" data-dz-tags> carrying a COMMA-JOINED value. With
+        # JS off it is a usable comma-separated text field (the server splits
+        # on comma); controllers/dz-tags.js progressively enhances it into a
+        # chips UI on first interaction, keeping the native input as the
+        # submitted value. No data-dz-widget hook — that was the retired
+        # TomSelect mount.
         name = ctx.escape_attr(t.name)
         placeholder_attr = (
             f' placeholder="{ctx.escape_attr(t.placeholder)}"' if t.placeholder else ""
@@ -485,8 +492,7 @@ class _RenderFormsMixin:
         required_attr = ' required aria-required="true"' if t.required else ""
         inner = (
             f'<input id="field-{name}" name="{name}" type="text" '
-            'data-dz-widget="tags" '
-            'data-dz-options=\'{"create":true,"plugins":["remove_button"]}\' '
+            f'data-dazzle-field="{name}" data-dz-tags '
             f'class="dz-form-input" value="{ctx.escape_attr(t.initial_value)}"'
             f"{placeholder_attr}{required_attr}>"
         )

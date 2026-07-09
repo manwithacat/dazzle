@@ -5,8 +5,10 @@
  * Each registration maps a data-dz-widget type to a { mount, unmount } pair.
  * The bridge calls mount() on htmx:after:settle and unmount() on htmx:before:swap.
  *
- * Widget types: combobox, multiselect, tags, range-tooltip.
- * (Note: colorpicker dropped in #976 — `widget=color`
+ * Widget types: multiselect, range-tooltip.
+ * (Note: combobox is now HM-native — controllers/dz-combobox.js (HMC-018
+ * slice 1); tags is now HM-native — controllers/dz-tags.js (HMC-018
+ * slice 2). colorpicker dropped in #976 — `widget=color`
  * uses native input. richtext moved to dz-richtext.js in #977 cycle 4
  * — Dazzle-native editor, no vendor dependency.)
  */
@@ -58,22 +60,10 @@
     unmount: unmountTomSelect,
   });
 
-  bridge.registerWidget("tags", {
-    mount: function (el, options) {
-      return mountTomSelect(
-        el,
-        Object.assign(
-          {
-            plugins: ["remove_button"],
-            create: true,
-            createFilter: options.createFilter || null,
-          },
-          options,
-        ),
-      );
-    },
-    unmount: unmountTomSelect,
-  });
+  // tags (widget=tags) is now HM-native — a progressively-enhanced native
+  // <input data-dz-tags> carrying a comma-joined value, driven by the
+  // delegated controllers/dz-tags.js (HMC-018 slice 2). No TomSelect mount
+  // here. TomSelect still backs multiselect above until slice 3.
 
   // ── Color picker — native <input type="color"> (#976 — dropped Pickr).
   // No bridge registration needed: the form_field.html macro emits a
