@@ -7,6 +7,12 @@ from dazzle.testing.ux_catalogue import (
     render_catalogue_region,
 )
 
+# Gate-marked so the "generated catalogue is stale" drift check runs in the fast
+# local -m gate pre-flight — it globs the HM component CSS, so it goes stale when
+# any HM component changes; it had been caught only by the full CI suite (the
+# gate≠full-suite gap that reddened the badge more than once this arc).
+pytestmark = pytest.mark.gate
+
 
 def _render(name: str) -> str:
     appspec = load_showcase_appspec()
