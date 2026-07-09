@@ -22,7 +22,7 @@ The fuzz pattern that surfaced them: scrape **boot stderr** for known-bug signat
 ls -d examples/*/ fixtures/*/ 2>/dev/null
 ```
 
-Skip `examples/README.md` (not an app). Each app has `dsl/app.dsl` (or similar) and boots via `dazzle serve --local` from its own dir.
+Skip `examples/README.md` (not an app). Each app has `dsl/app.dsl` (or similar) and boots via `dazzle serve` from its own dir.
 
 ### Step 2: Run the sweep workflow
 
@@ -54,7 +54,7 @@ Fuzz sweep (vX.Y.Z) found <symptom> in <apps affected>:
 **Repro:**
 ```bash
 cd <affected app>
-timeout 8 dazzle serve --local 2>&1 | grep <signature>
+timeout 8 dazzle serve 2>&1 | grep <signature>
 ```
 
 **Likely root cause:** <best hypothesis>

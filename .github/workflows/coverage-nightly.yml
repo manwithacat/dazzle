@@ -85,7 +85,7 @@ jobs:
       continue-on-error: true
       run: |
         cd examples/simple_task
-        python -m dazzle serve --test-mode --local --port 3000 > /tmp/dazzle-server.log 2>&1 &
+        python -m dazzle serve --test-mode --port 3000 > /tmp/dazzle-server.log 2>&1 &
         SERVER_PID=$!
         for i in {1..45}; do
           if curl -s http://localhost:3000/health > /dev/null 2>&1; then

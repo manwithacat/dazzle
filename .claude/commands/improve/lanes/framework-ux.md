@@ -132,7 +132,7 @@ Same subagent substrate as `missing_contracts`. Findings go to lane backlog as `
 #### Sub-strategy: contract_audit
 
 **No browser, no subagent.** Pick a known-templated-but-ungoverned component and formalise it in one cycle:
-1. HTTP-reproduce current rendering via `dazzle serve --local`
+1. HTTP-reproduce current rendering via `dazzle serve`
 2. Grep every call site
 3. Build contract at `~/.claude/skills/ux-architect/components/<name>.md` with quality gates mirroring canonical shape
 4. Fix any drift across every call site in one commit (design-token migration, DaisyUI removal, canonical class markers, ARIA hooks)

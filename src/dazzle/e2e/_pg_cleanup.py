@@ -1,6 +1,6 @@
 """Postgres-session cleanup for managed-mode subprocess lifecycle.
 
-#1072 Bug A: when a previous `dazzle serve --local` subprocess is killed
+#1072 Bug A: when a previous `dazzle serve` subprocess is killed
 (SIGTERM from CI timeout, Ctrl+C from operator, OOM kill, etc.), its
 SQLAlchemy session pool can leak `idle in transaction` sessions that
 hold table locks on the project's database. The next managed-mode

@@ -32,7 +32,7 @@ Three canonical v1 interactions:
 
 ### 1. Server fixture
 
-**Question**: Does the harness spin up `dazzle serve --local` per run,
+**Question**: Does the harness spin up `dazzle serve` per run,
 or assume a server is already running?
 
 **Proposal**: Session-scoped pytest fixture that spins up the example

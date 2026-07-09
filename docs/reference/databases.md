@@ -28,13 +28,13 @@ url = "postgresql://user:password@localhost:5432/myapp"
 # url = "env:DATABASE_URL"
 ```
 
-### Docker Compose
+### `.env` file
 
-When using `dazzle serve` (Docker mode), set the variable in your shell or a `.env` file:
+`dazzle serve` auto-loads a `.env` file from the project root:
 
 ```bash
 # .env
-DATABASE_URL=postgresql://user:password@db:5432/myapp
+DATABASE_URL=postgresql://user:password@localhost:5432/myapp
 ```
 
 ## URL Formats
@@ -124,7 +124,7 @@ Dazzle's authentication system can use a separate database via `AUTH_DATABASE_UR
 ```bash
 export DATABASE_URL=postgresql://localhost:5432/myapp
 export AUTH_DATABASE_URL=postgresql://localhost:5432/myapp_auth
-dazzle serve --local
+dazzle serve
 ```
 
 ## Connection Pool

@@ -153,7 +153,7 @@ class RedisBus(BaseEventBus):
         fails loudly instead of hanging the FastAPI ``lifespan`` startup
         indefinitely. Without these, ``ping()`` could block forever on
         a stuck socket — observed during local agent-driven harness
-        runs where the whole ``dazzle serve --local`` boot appeared to
+        runs where the whole ``dazzle serve`` boot appeared to
         freeze at "Waiting for application startup".
         """
         # socket_timeout MUST be strictly greater than block_ms (default

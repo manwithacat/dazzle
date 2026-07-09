@@ -14,7 +14,7 @@ Example apps with nonzero `dazzle ux verify --contracts` failures. **Not** frame
 
 ## Prerequisites
 
-- Running Dazzle server (`dazzle serve --local` from example dir) — or `ModeRunner` substrate
+- Running Dazzle server (`dazzle serve` from example dir) — or `ModeRunner` substrate
 - PostgreSQL + Redis running
 - `DAZZLE_SITE_URL` and `DAZZLE_API_URL` set (or `runtime.json` exists)
 

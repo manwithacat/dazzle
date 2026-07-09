@@ -76,7 +76,7 @@ const fuzzPrompt = (path) => {
 
 1. cd ${path} && dazzle validate 2>&1 | tail -5 — must pass.
 2. cd ${path} && dazzle lint 2>&1 | grep -iE "ERROR|FAILED" | head -10 — flag errors only, ignore soft suggestions.
-3. Boot-stderr scrape (high-yield): cd ${path} && timeout 8 dazzle serve --local 2>&1 | grep -iE "registered twice|duplicate|not a text-shaped|TypeError|Traceback|ImportError|ValueError|AttributeError|jinja2\\.exceptions|unresolved|UndefinedError" | head -15 — each matching line IS a bug.
+3. Boot-stderr scrape (high-yield): cd ${path} && timeout 8 dazzle serve 2>&1 | grep -iE "registered twice|duplicate|not a text-shaped|TypeError|Traceback|ImportError|ValueError|AttributeError|jinja2\\.exceptions|unresolved|UndefinedError" | head -15 — each matching line IS a bug.
 4. Grep the DSL for uses of recently-shipped primitives (rich_text, x-optimistic, x-pull-to-refresh, x-swipe, x-flip, notification, search on, i18n.) and flag any broken-looking USAGE.
 
 ${SOFT_ALLOWLIST}

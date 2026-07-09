@@ -193,7 +193,7 @@ def preview_command(
     """Boot the project with a theme override, no commit needed.
 
     Sets ``DAZZLE_OVERRIDE_THEME=<name>`` in the environment and execs
-    ``dazzle serve --local``. The override wins over both DSL
+    ``dazzle serve``. The override wins over both DSL
     ``theme:`` and ``[ui] theme`` in dazzle.toml — restoring the
     original theme is just exiting the preview (no toml mutation, no
     DSL edit).
@@ -218,7 +218,7 @@ def preview_command(
     typer.echo("Press Ctrl-C to exit; no project files will be modified.")
     typer.echo()
 
-    # Hand off to `dazzle serve --local` with the override env var set.
+    # Hand off to `dazzle serve` with the override env var set.
     env = {**os.environ, "DAZZLE_OVERRIDE_THEME": name}
     # Resolve the dazzle entrypoint from sys.executable so we use the
     # same interpreter (don't trust PATH order — venv awareness).

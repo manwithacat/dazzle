@@ -18,7 +18,7 @@ Use **API Packs** — TOML-based vendor API descriptions that drive code generat
    - Save to `.dazzle/api_packs/<vendor>/<name>.toml`
 3. `dazzle api-pack generate-dsl` (CLI) — generate `service` + `foreign_model` DSL blocks
 4. Write integration + mapping DSL blocks
-5. `dazzle serve --local` — mocks auto-start for all pack references
+5. `dazzle serve` — mocks auto-start for all pack references
 6. `dazzle mock fire-webhook` (CLI) — test webhook handling
 7. `mock request_log` (MCP) — verify integration calls
 8. `dazzle mock scenarios` (CLI) — test edge cases

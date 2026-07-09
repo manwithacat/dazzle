@@ -46,7 +46,7 @@ with a terse onboarding guide in `dsl/onboarding.dsl`.
 
 ```bash
 cp .env.example .env          # edit DATABASE_URL / REDIS_URL
-dazzle serve --local          # UI http://localhost:3000 · API http://localhost:8000/docs
+dazzle serve          # UI http://localhost:3000 · API http://localhost:8000/docs
 ```
 
 Then follow **[the runbook](../../docs/reference/verified-domain-join.md)** to

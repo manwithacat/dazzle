@@ -254,7 +254,7 @@ dazzle serve [OPTIONS]
 dazzle serve
 
 # Local mode with hot reload
-dazzle serve --local --watch
+dazzle serve --watch
 
 # API server only
 dazzle serve --backend-only
@@ -263,7 +263,7 @@ dazzle serve --backend-only
 dazzle serve --port 4000 --api-port 9000
 
 # With GraphQL
-dazzle serve --local --graphql
+dazzle serve --graphql
 ```
 
 **Endpoints:**
@@ -452,14 +452,14 @@ dazzle story COMMAND [OPTIONS]
 
 ```bash
 # Validate, then serve with hot reload
-dazzle validate && dazzle serve --local --watch
+dazzle validate && dazzle serve --watch
 ```
 
 ### Testing
 
 ```bash
 # Run API tests against a running server
-dazzle serve --local &
+dazzle serve &
 dazzle test dsl-run
 
 # Run full test suite
@@ -478,7 +478,7 @@ steps:
 
   - name: Run API tests
     run: |
-      dazzle serve --local --test-mode &
+      dazzle serve --test-mode &
       sleep 5
       dazzle test dsl-run --base-url http://localhost:8000
 ```

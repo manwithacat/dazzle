@@ -157,7 +157,7 @@ Without `TEST_DATABASE_URL` set the suite is skipped (`pytest.mark.postgres` gua
 ```bash
 cd examples/acme_billing
 dazzle serve         # with Docker
-dazzle serve --local # without Docker
+dazzle serve # without Docker
 ```
 
 - UI: http://localhost:3000

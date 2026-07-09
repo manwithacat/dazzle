@@ -29,7 +29,7 @@ The tilde (`~`) allows patch updates within the minor version. The server refuse
 1. Update `dazzle.toml` with the new constraint
 2. `pip install 'dazzle-dsl~=0.39.0'`
 3. `dazzle validate` to check DSL compatibility
-4. `dazzle serve --local` to test locally
+4. `dazzle serve` to test locally
 5. Deploy
 
 ## Database Migrations
@@ -99,7 +99,7 @@ dazzle backup restore --from backup.tar.gz --dry-run    # preview
 Use `--workers` for local multi-worker mode:
 
 ```bash
-dazzle serve --local --workers 4
+dazzle serve --workers 4
 ```
 
 For production, use the Procfile with `WEB_CONCURRENCY`:

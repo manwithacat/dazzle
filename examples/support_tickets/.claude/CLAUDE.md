@@ -48,7 +48,7 @@ If the user has requirements in SPEC.md or describes them to you:
 ### Running the Application
 ```bash
 dazzle serve              # Run with Docker (default)
-dazzle serve --local      # Run without Docker
+dazzle serve      # Run without Docker
 ```
 - UI: http://localhost:3000
 - API: http://localhost:8000/docs
@@ -180,7 +180,7 @@ Triage: check messages → categorize (bug/feature/UX) → investigate DSL → s
 ### Running
 
 ```bash
-dazzle serve --local    # UI: localhost:3000 | API: localhost:8000/docs | Mailpit: localhost:8025
+dazzle serve    # UI: localhost:3000 | API: localhost:8000/docs | Mailpit: localhost:8025
 ```
 
 Enable feedback emails by setting `DAZZLE_FEEDBACK_EMAIL=dev@dazzle.local` in `.env.local`.

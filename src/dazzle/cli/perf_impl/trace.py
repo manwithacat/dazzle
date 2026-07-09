@@ -6,7 +6,7 @@ that the runtime reads (``DAZZLE_PERF_ENABLED=1``,
 runner that:
 
 1. Configures the global tracer in the *child* uvicorn process.
-2. Boots ``dazzle serve --local`` on a free port.
+2. Boots ``dazzle serve`` on a free port.
 3. Hits each ``--url`` (synchronously) once.
 4. Sleeps for ``--duration`` seconds so additional traffic can land.
 5. Shuts the server down cleanly.

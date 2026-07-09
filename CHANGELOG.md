@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.5] - 2026-07-09
+
+### Fixed
+- **The actual red-CI culprit: `serve --local` inlined in the workflow YAML.** v0.101.3 fixed the Python test launchers, but the "E2E Runtime" + "INTERACTION_WALK" jobs run `python -m dazzle serve --test-mode --local …` **directly in `.github/workflows/ci.yml`** (and `coverage-nightly.yml`) — `--local` (after `--test-mode`) escaped both prior greps. Those jobs set `DAZZLE_SKIP_INFRA_CHECK=1`, so the removed flag was the only failure: `No such option: --local` → server never booted → health-check timeout. Removed `--local` from all three workflow serve calls. Then swept the **whole repo** (the definitive grep this time): purged the stale `dazzle serve --local` from every remaining doc, `.claude/commands/*` playbook (agents execute those), example README/`.clinerules`, and `src/` docstring — 40 files. Historical CHANGELOG + `docs/superpowers/plans` left as records.
+
 ## [0.101.4] - 2026-07-09
 
 ### Fixed

@@ -9,7 +9,7 @@ On enter:
     2. Apply DB policy (preserve no-op; fresh reset+upgrade+demo;
        restore uses BaselineManager).
     3. Prep subprocess env (QA flags auto-set if personas non-empty).
-    4. Popen `python -m dazzle serve --local` in a new process group.
+    4. Popen `python -m dazzle serve` in a new process group.
     5. Register atexit + SIGINT/SIGTERM cleanup.
     6. Poll .dazzle/runtime.json for up to RUNTIME_POLL_BUDGET_SECONDS.
     7. Parse runtime.json -> AppConnection.

@@ -10,7 +10,7 @@
 
 ```bash
 cd examples/invoice_ops
-dazzle serve --local   # without Docker
+dazzle serve   # without Docker
 ```
 
 - UI: http://localhost:3000

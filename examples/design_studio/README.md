@@ -22,7 +22,7 @@ A brand and design asset management app demonstrating Dazzle's UX component expa
 
 ```bash
 cd examples/design_studio
-dazzle serve --local
+dazzle serve
 ```
 
 - UI: http://localhost:3000

@@ -89,7 +89,7 @@ dazzle/
 
 ```bash
 cd examples/simple_task
-dazzle serve --local
+dazzle serve
 ```
 
 ### Making Changes

@@ -141,7 +141,7 @@ dazzle serve --no-bundle   # force individual regardless of manifest
 **Smoke-test bundled mode locally before deploying** so you catch any project-side custom JS/CSS that doesn't survive bundling:
 
 ```bash
-DAZZLE_ENV=production dazzle serve --local
+DAZZLE_ENV=production dazzle serve
 # Then load the app in a browser, open DevTools → Network, verify
 # /static/dist/dazzle.min.js and /static/dist/dazzle.min.css both
 # return 200 with the framework banner at the top.

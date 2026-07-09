@@ -121,7 +121,7 @@ python /path/to/dazzle/scripts/flip_to_fragment.py dsl/app.dsl
 ```
 
 **Smoke test:**
-- Boot the app: `dazzle serve --local` (or your normal dev flow).
+- Boot the app: `dazzle serve` (or your normal dev flow).
 - Click through CRUD on each flipped surface.
 - Compare to the pre-flip Jinja-rendered version.
 

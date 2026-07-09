@@ -60,7 +60,7 @@ non-trivial.
 
 ```bash
 dazzle validate          # parse + validate the DSL, no server
-dazzle serve --local     # boot the app  →  UI :3000, API docs :8000/docs
+dazzle serve     # boot the app  →  UI :3000, API docs :8000/docs
 ```
 
 **Expected:** `dazzle validate` parses every `.dsl` file, resolves the merged

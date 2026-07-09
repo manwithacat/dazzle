@@ -59,7 +59,7 @@ def mock_scenarios_impl(
         }
 
     if orch is None:
-        return {"error": "No mock servers running. Start with 'dazzle serve --local'."}
+        return {"error": "No mock servers running. Start with 'dazzle serve'."}
 
     if not vendor:
         return {"error": "vendor parameter required for activate/deactivate"}
@@ -225,7 +225,7 @@ def mock_status_handler(project_path: Path, args: dict[str, Any]) -> str:
         return json.dumps(
             {
                 "running": False,
-                "message": "No mock servers running. Start with 'dazzle serve --local' on a project that uses API packs.",
+                "message": "No mock servers running. Start with 'dazzle serve' on a project that uses API packs.",
                 "hint": 'Declare a service with spec: inline "pack:<name>" in your DSL to enable auto-mocking.',
             },
             indent=2,

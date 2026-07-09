@@ -7,7 +7,7 @@ Replaces the API-bound screenshot-scrape CLI (`qa visual`, removed in the same c
 ## Prerequisites
 
 - Claude Code host running this very session (`Task` tool reachable)
-- Each example app boots cleanly via `dazzle serve --local` (or via the per-cycle runner pattern from `explore-subagent.md`)
+- Each example app boots cleanly via `dazzle serve` (or via the per-cycle runner pattern from `explore-subagent.md`)
 - No `ANTHROPIC_API_KEY` needed — cognition runs through subscription
 
 ## Numbered playbook

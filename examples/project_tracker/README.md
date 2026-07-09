@@ -23,7 +23,7 @@ A project management app demonstrating Dazzle's UX component expansion (Phases 1
 
 ```bash
 cd examples/project_tracker
-dazzle serve --local
+dazzle serve
 ```
 
 - UI: http://localhost:3000

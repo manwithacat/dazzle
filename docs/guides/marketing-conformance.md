@@ -142,7 +142,7 @@ Any project-side runtime code writing `dazzle_session` or `dazzle_csrf` is a bug
 
 ## Step 6 — Verify in dev
 
-Boot your project locally with `dazzle serve --local`, then run this trace:
+Boot your project locally with `dazzle serve`, then run this trace:
 
 ```bash
 JAR=/tmp/conformance_test.txt

@@ -642,7 +642,7 @@ def verify_command(
         False,
         "--managed",
         help=(
-            "Self-manage the local server: spawn `dazzle serve --local`, wait "
+            "Self-manage the local server: spawn `dazzle serve`, wait "
             "for readiness, run the check, then tear down. Use when calling "
             "from an agent/CI where no server is already running. Only "
             "applies to --contracts (the --interactions path already manages "
@@ -663,7 +663,7 @@ def verify_command(
     Derives an interaction inventory from the DSL, boots the app against
     a test database, and verifies every framework-generated interaction.
 
-    Assumes the app is already running via ``dazzle serve --local``.
+    Assumes the app is already running via ``dazzle serve``.
     The command reads ``.dazzle/runtime.json`` to discover the server URL.
 
     Examples:

@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2026-06-16
-**Current Version**: v0.101.4
+**Current Version**: v0.101.5
 
 For past releases, see [CHANGELOG.md](CHANGELOG.md).
 
@@ -134,7 +134,7 @@ The best way to contribute to Dazzle is to **build something with it** and tell 
 
 1. Pick a domain you know well
 2. Write the DSL (start with entities + surfaces)
-3. Run `dazzle serve --local` and `dazzle compliance compile`
+3. Run `dazzle serve` and `dazzle compliance compile`
 4. File issues for anything that doesn't work or can't be expressed
 5. Submit your example as a PR to `examples/`
 

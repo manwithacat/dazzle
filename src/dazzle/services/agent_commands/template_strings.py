@@ -328,7 +328,7 @@ assistant's host subscription, not the metered SDK path.
 Start the app so the subagent has a target:
 
 ```
-dazzle serve --local &
+dazzle serve &
 # or
 dazzle serve &
 ```

@@ -290,7 +290,7 @@ Two PROPs remain in the marketing-scan backlog: PROP-057 island (hydration proto
 
 Local reproduction with `env -u DAZZLE_TEST_SECRET`: confirmed `auth failed` across all personas. With `DAZZLE_TEST_SECRET` present: 34 passed / 0 failed / 30 pending (the CI baseline).
 
-Root cause: `dazzle serve --local` in managed mode generates a random `DAZZLE_TEST_SECRET` when none is pre-set (see `src/dazzle/cli/runtime_impl/serve.py:310-317`), sets it in the **subprocess's own** `os.environ`, and writes it into `.dazzle/runtime.json`. But the parent process running `ux verify --contracts --managed` never picks it up — `HtmxClient.authenticate()` reads `DAZZLE_TEST_SECRET` from `os.environ` only. So the parent sends `POST /__test__/authenticate` with no `X-Test-Secret` header; the subprocess enforces the header because it has the secret set; result is 401 → `HtmxClient.authenticate()` returns `False` → the outer contracts loop prints `auth failed for <persona>` and every persona's contracts fail.
+Root cause: `dazzle serve` in managed mode generates a random `DAZZLE_TEST_SECRET` when none is pre-set (see `src/dazzle/cli/runtime_impl/serve.py:310-317`), sets it in the **subprocess's own** `os.environ`, and writes it into `.dazzle/runtime.json`. But the parent process running `ux verify --contracts --managed` never picks it up — `HtmxClient.authenticate()` reads `DAZZLE_TEST_SECRET` from `os.environ` only. So the parent sends `POST /__test__/authenticate` with no `X-Test-Secret` header; the subprocess enforces the header because it has the secret set; result is 401 → `HtmxClient.authenticate()` returns `False` → the outer contracts loop prints `auth failed for <persona>` and every persona's contracts fail.
 
 Why this shipped: my local dev shell has `DAZZLE_TEST_SECRET` pre-exported, so the parent inherits it and everything works. On CI the env is clean.
 
@@ -1333,7 +1333,7 @@ Not armed. This cycle delivers an artefact for the user to react to; proceeding 
 
 ### Heuristic 1 (MANDATORY) — raw-layer reproduction before any code change
 
-Spun up simple_task via `dazzle serve --local`, authenticated as admin via `/__test__/authenticate`, fetched `/app/task/create`:
+Spun up simple_task via `dazzle serve`, authenticated as admin via `/__test__/authenticate`, fetched `/app/task/create`:
 
 - `field-assigned_to` (ref User) → `<input type="text">` — **defect confirmed**
 - `field-due_date` (date) → `<input data-dz-widget="datepicker">` — **cycle 232 fix intact** (no regression)
@@ -1758,7 +1758,7 @@ Textbook partial-success cycle. Closed half of a concerning row with a small, we
 
 **Method (applying Heuristic 1 — "try the real thing")**: instead of dispatching a subagent, drive the verification at the raw HTTP layer. For each of the 5 example apps:
 
-1. Boot `dazzle serve --local`
+1. Boot `dazzle serve`
 2. Log in as any persona via the existing `playwright_helper login` command (captures cookies to state dir)
 3. Extract cookies, fire a `curl` with `Accept: text/html` at a deliberately-fake `/app/<entity>/<fake-id>` path
 4. Grep the response body for in-app shell markers ("Access Denied" / "Page Not Found" + "Go to Dashboard") vs marketing chrome markers ("Sign In" / "Get Started")
@@ -2553,7 +2553,7 @@ Subagent made 18 Playwright helper calls across ~7 minutes and filed **6 observa
 
 ## 2026-04-15T19:10Z — Cycle 220 — **UX-004 form aggregate closed; 6 unrelated Phase A fails filed as EX-025/EX-026**
 
-**Outcome:** Picked UX-004 (`form`) — the aggregate row left over from cycles 6–9 in `READY_FOR_QA` state with no standalone contract. Phase A ran against `simple_task` with a booted `dazzle serve --local` process, and produced `23 passed / 6 failed / 22 pending` across 51 generated contracts. **None of the 6 failures is a `form:*` contract.** The sub-rows UX-016/017/018/019 are all DONE/PASS in their own cycles, so UX-004 moved to DONE on the basis that the form sub-contracts are individually verified and nothing form-related regressed.
+**Outcome:** Picked UX-004 (`form`) — the aggregate row left over from cycles 6–9 in `READY_FOR_QA` state with no standalone contract. Phase A ran against `simple_task` with a booted `dazzle serve` process, and produced `23 passed / 6 failed / 22 pending` across 51 generated contracts. **None of the 6 failures is a `form:*` contract.** The sub-rows UX-016/017/018/019 are all DONE/PASS in their own cycles, so UX-004 moved to DONE on the basis that the form sub-contracts are individually verified and nothing form-related regressed.
 
 The 6 Phase A failures split into two independent framework gaps and were filed as separate EX rows:
 
@@ -4598,7 +4598,7 @@ Adjusted: 15 unique component rows + 1 aggregate (UX-004) = 16 originally tracke
 
 **Outcome:** UX-014 contract + refactor done; status NEEDS_HARNESS (not READY_FOR_QA because there's no URL that renders the component in isolation).
 
-**Pattern observation (harness need):** Three components are now NEEDS_HARNESS (UX-005 modal, UX-013 toast, UX-014 confirm-dialog). These are all event-triggered widgets that don't appear on any landing page until something dispatches the trigger. The harness pattern from `test-dashboard.html` / `test-data-table.html` would work — a simple HTML file per component that includes the fragment, sets up some buttons to dispatch the events, and can be loaded via `dazzle serve --local`. This could be a separate UX-cycle task (e.g., UX-020 NEEDS_HARNESS harness-set) rather than per-component.
+**Pattern observation (harness need):** Three components are now NEEDS_HARNESS (UX-005 modal, UX-013 toast, UX-014 confirm-dialog). These are all event-triggered widgets that don't appear on any landing page until something dispatches the trigger. The harness pattern from `test-dashboard.html` / `test-data-table.html` would work — a simple HTML file per component that includes the fragment, sets up some buttons to dispatch the events, and can be loaded via `dazzle serve`. This could be a separate UX-cycle task (e.g., UX-020 NEEDS_HARNESS harness-set) rather than per-component.
 
 ---
 
@@ -6816,7 +6816,7 @@ The 6 tests were written against DaisyUI class output but the templates had sinc
 ### What ran
 - Target contract: `form-field.md` (5 quality gates) against `support_tickets` (canonical)
 - personas=None (anonymous) after the admin persona run was blocked by a pre-existing bcrypt bug (see below)
-- Mode A launched `dazzle serve --local` in a subprocess bound to `http://localhost:3969`, health-checked `/docs`, yielded AppConnection, torn down cleanly after
+- Mode A launched `dazzle serve` in a subprocess bound to `http://localhost:3969`, health-checked `/docs`, yielded AppConnection, torn down cleanly after
 - 49 fitness findings written to `examples/support_tickets/dev_docs/fitness-backlog.md` — all Pass 2a story_drift / coverage / medium severity / "No matching story found"
 
 ### Bugs discovered + fixed this cycle
@@ -6833,7 +6833,7 @@ The 6 tests were written against DaisyUI class output but the templates had sinc
 ### Infrastructure set up this cycle
 - `createdb dazzle_support_tickets` — new Postgres database for support_tickets example
 - `examples/support_tickets/.env` — `DATABASE_URL=postgresql://localhost:5432/dazzle_support_tickets` + `REDIS_URL=redis://localhost:6379/0`. Gitignored per `examples/*/.env` pattern.
-- `dazzle serve --local` auto-created 14 tables in the new DB (Ticket, User, Comment, DeployHistory, framework tables) via DSL entity metadata — no explicit migration was needed
+- `dazzle serve` auto-created 14 tables in the new DB (Ticket, User, Comment, DeployHistory, framework tables) via DSL entity metadata — no explicit migration was needed
 
 ### Utility evaluation
 The e2e environment strategy works architecturally. Mode A launches real subprocesses, reads the correct runtime.json, health-checks successfully, and tears down cleanly. The fitness strategy refactor (Tasks 7+8) correctly decoupled subprocess lifecycle from engine execution. Phase B produced structured findings from a real running app for the first time.

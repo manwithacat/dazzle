@@ -15,7 +15,7 @@ They are **not run in CI** — use them for local development and manual verific
 pip install playwright && playwright install chromium
 
 # Start a server
-cd examples/simple_task && dazzle serve --local &
+cd examples/simple_task && dazzle serve &
 
 # Run tests
 pytest tests/e2e/ -v -m e2e

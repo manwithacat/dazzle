@@ -25,7 +25,7 @@ Safe type casts (e.g. `VARCHAR(50)` → `VARCHAR(200)`) are applied automaticall
 
 | Mode | Trigger | Behaviour |
 |------|---------|-----------|
-| `dev` | `dazzle serve --local` | Auto-migrate on startup, no confirmation |
+| `dev` | `dazzle serve` | Auto-migrate on startup, no confirmation |
 | `explicit` | `dazzle db migrate` | Generate and apply migration files |
 | `production` | `DAZZLE_ENV=production` | Guard mode — refuse to start if schema is out of date |
 

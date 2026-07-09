@@ -518,7 +518,7 @@ jobs:
     - name: Start server for DSL tests
       run: |
         cd examples/simple_task
-        python -m dazzle serve --test-mode --local --port 3000 > /tmp/dazzle-server.log 2>&1 &
+        python -m dazzle serve --test-mode --port 3000 > /tmp/dazzle-server.log 2>&1 &
         SERVER_PID=$!
         echo "Server PID: $SERVER_PID"
         for i in {1..45}; do
@@ -691,7 +691,7 @@ jobs:
     - name: Run viewport assertions (orthogonal geometry gate, #1295)
       run: |
         cd examples/support_tickets
-        python -m dazzle serve --test-mode --local --port 3000 > /tmp/viewport-server.log 2>&1 &
+        python -m dazzle serve --test-mode --port 3000 > /tmp/viewport-server.log 2>&1 &
         for i in $(seq 1 30); do
           if curl -fsS -o /dev/null "http://localhost:3000/health" 2>/dev/null; then
             echo "server ready after ${i}s"; break

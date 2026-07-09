@@ -2,7 +2,7 @@
 
 Runs the v1 INTERACTION_WALK harness against the current project:
 
-1. Spawn ``dazzle serve --local`` via
+1. Spawn ``dazzle serve`` via
    :func:`dazzle.testing.ux.interactions.server_fixture.launch_interaction_server`.
 2. Open a sync Playwright browser.
 3. Navigate to the workspace landing page.
@@ -497,7 +497,7 @@ def _authenticate_persona_on_context(
     The test endpoint (``/__test__/authenticate``) is what
     ``HtmxClient.authenticate`` already uses for contract tests —
     reuse its protocol. Requires ``test_mode`` enabled on the server,
-    which ``dazzle serve --local`` does by default.
+    which ``dazzle serve`` does by default.
 
     The endpoint also requires an ``X-Test-Secret`` header matching
     the server's generated per-run secret (#790). We read the value
