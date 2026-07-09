@@ -242,6 +242,21 @@ class TestRenderSigningPage:
         assert patch["viewed_at"] is not None
         assert patch["signer_user_agent"] is not None
 
+    def test_get_page_shows_intended_signatory_email(self) -> None:
+        """TR-15 transparency banner: the GET signing page surfaces the token's
+        bound signatory email so a mis-delivered link (wrong inbox) is visible
+        to the reader before they sign. Bearer links can't hard-gate identity;
+        showing the intended recipient is the transparency safeguard."""
+        record_id = str(uuid4())
+        app, _repo = _app_with_routes({record_id: {"status": "sent"}})
+        client = TestClient(app)
+        token = mint_token(record_id, "devon.park@retailco.example")
+        resp = client.get(f"/sign/Contract/{record_id}?token={token}")
+        assert resp.status_code == 200
+        assert "devon.park@retailco.example" in resp.text
+        assert "intended for" in resp.text.lower()
+        assert 'class="signing-intended-for"' in resp.text
+
     def test_viewed_status_no_redundant_transition(self) -> None:
         record_id = str(uuid4())
         app, repo = _app_with_routes({record_id: {"status": "viewed"}})

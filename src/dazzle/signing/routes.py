@@ -247,7 +247,7 @@ async def _handle_get(
         return HTMLResponse(body, status_code=400)  # nosemgrep
 
     try:
-        verified_id, _email = verify_token(token)
+        verified_id, signer_email = verify_token(token)
     except InvalidTokenError as exc:
         log.info("Signing link validation failed for %s/%s: %s", entity_name, record_id, exc)
         # Distinguish an *expired-but-genuine* link from a tampered one
@@ -299,6 +299,7 @@ async def _handle_get(
         record_id=str(record_id),
         token=token,
         document_body=document_body,
+        intended_email=signer_email,
     )
     return HTMLResponse(body)  # nosemgrep
 
@@ -717,11 +718,35 @@ def _stub_document_body(*, entity_name: str, record_id: UUID) -> str:
     )
 
 
-def _signing_page(*, entity_name: str, record_id: str, token: str, document_body: str) -> str:
+def _signing_page(
+    *,
+    entity_name: str,
+    record_id: str,
+    token: str,
+    document_body: str,
+    intended_email: str | None = None,
+) -> str:
     import json
 
     safe_entity = html.escape(entity_name)
     safe_id = html.escape(record_id)
+    # Transparency banner (TR-15): a signing link is an unauthenticated
+    # bearer credential delivered to the named signatory's email, so the
+    # subsystem can't hard-gate on the opener's identity. It CAN, however,
+    # show WHO the document is for — a mis-delivered link (wrong inbox) is
+    # then visible to the reader before they sign. The token cryptographically
+    # binds this email; we surface it verbatim.
+    intended_banner = ""
+    if intended_email:
+        safe_email = html.escape(intended_email)
+        intended_banner = (
+            '<p class="signing-intended-for" role="note" '
+            'style="padding:.75rem 1rem;border:1px solid #d0d7de;border-radius:6px;'
+            'background:#f6f8fa;margin:0 0 1rem;">'
+            f"This document is intended for <strong>{safe_email}</strong>. "
+            "Only sign if this is you — if you received it in error, do not sign."
+            "</p>"
+        )
     # The Island reads props from data-island-props; encode as JSON and
     # then HTML-escape so the JSON itself can't break out of the
     # attribute quotes. Tokens are HMAC-signed base64-url payloads
@@ -751,6 +776,7 @@ def _signing_page(*, entity_name: str, record_id: str, token: str, document_body
         '<body style="font-family: system-ui; max-width: 720px; margin: 2rem auto;">'
         f"<h1>Sign {safe_entity}</h1>"
         f"<p>Document identifier: <code>{safe_id}</code></p>"
+        f"{intended_banner}"
         '<section class="signing-document">'
         f"{document_body}"
         "</section>"

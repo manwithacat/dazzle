@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.33] - 2026-07-09
+
+### Added
+- **Signing page shows the intended signatory** (`src/dazzle/signing/routes.py`). The GET signing page now renders a transparency banner — "This document is intended for `<email>` — only sign if this is you" — surfacing the signatory email that the HMAC token cryptographically binds. Native document signing is an *unauthenticated bearer-link* flow (the one-shot email link IS the credential), so the subsystem cannot hard-gate on the opener's identity; showing who the document is for makes a mis-delivered link (wrong inbox) visible to the reader before they sign. Surfaced by the `/improve` trials lane (cycle 229, TR-15): an LLM persona playing a non-signatory recipient flagged the absence of any mismatch warning. The bearer model itself is by design and unchanged. Regression test in `tests/unit/test_signing/test_routes.py`.
+
 ## [0.98.32] - 2026-07-09
 
 ### Fixed
