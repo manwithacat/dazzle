@@ -43,56 +43,10 @@
     }
   }
 
-  bridge.registerWidget("combobox", {
-    mount: function (el, options) {
-      // #927: when the combobox is bound to an FK (data-dz-ref-api set
-      // on the <select>), wire TomSelect's remote-load callback so it
-      // fetches options from the target entity's list endpoint at first
-      // open + on every type-to-search query. Without this branch the
-      // <select> stays empty (it has no static <option>s — the form
-      // template intentionally leaves them out so this code path
-      // populates them) and TomSelect renders a useless empty dropdown.
-      var refApi = el.getAttribute("data-dz-ref-api");
-      if (refApi) {
-        var fkOptions = Object.assign(
-          {
-            maxItems: 1,
-            valueField: "id",
-            labelField: "__display__",
-            searchField: ["__display__"],
-            load: function (query, callback) {
-              var url =
-                refApi +
-                (refApi.indexOf("?") >= 0 ? "&" : "?") +
-                "page_size=100";
-              fetch(url, { headers: { Accept: "application/json" } })
-                .then(function (r) {
-                  return r.json();
-                })
-                .then(function (data) {
-                  var items = (data && data.items) || [];
-                  // Defensive fallback for entities without display_field —
-                  // TomSelect would render `undefined` otherwise.
-                  items.forEach(function (it) {
-                    if (it.__display__ == null)
-                      it.__display__ = it.name || it.id || "";
-                  });
-                  callback(items);
-                })
-                .catch(function () {
-                  callback();
-                });
-            },
-            preload: "focus",
-          },
-          options,
-        );
-        return mountTomSelect(el, fkOptions);
-      }
-      return mountTomSelect(el, Object.assign({ maxItems: 1 }, options));
-    },
-    unmount: unmountTomSelect,
-  });
+  // combobox (widget=combobox) is now HM-native — a progressively-enhanced
+  // native <select data-dz-combobox> driven by the delegated
+  // controllers/dz-combobox.js (HMC-018 slice 1). No TomSelect mount here.
+  // TomSelect still backs multiselect + tags below until later slices.
 
   bridge.registerWidget("multiselect", {
     mount: function (el, options) {

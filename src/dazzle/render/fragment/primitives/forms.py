@@ -220,10 +220,12 @@ class MoneyField:
 
 @dataclass(frozen=True, slots=True)
 class WidgetCombobox:
-    """TomSelect enum picker (`widget=combobox`) — at parity with the legacy
-    `_render_combobox`. Distinct from the plain `Combobox` (a vanilla
-    `<select>`): this emits `data-dz-widget="combobox"` so the client TomSelect
-    controller mounts. A leading empty/placeholder option is always rendered."""
+    """HM-native searchable enum single-select (`widget=combobox`, HMC-018
+    slice 1). Emits a real native `<select data-dz-combobox>` — fully usable
+    with JS off (submits, native required) — that controllers/dz-combobox.js
+    progressively enhances into a searchable role=combobox overlay. Distinct
+    from the plain `Combobox` (a vanilla `<select>`) by the `data-dz-combobox`
+    enhancement hook. A leading empty/placeholder option is always rendered."""
 
     name: str
     label: str

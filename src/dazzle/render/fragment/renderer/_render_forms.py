@@ -455,11 +455,14 @@ class _RenderFormsMixin:
         )
 
     def _emit_widget_combobox(self, c: WidgetCombobox, ctx: RenderContext) -> str:
+        # HM-native searchable single-select (HMC-018 slice 1): emit a real
+        # native <select data-dz-combobox> carrying the placeholder + all enum
+        # options. With JS off it is a fully usable select (submits, native
+        # required); controllers/dz-combobox.js progressively enhances it into
+        # a searchable role=combobox overlay on first interaction. No
+        # data-dz-widget hook — that was the retired TomSelect mount.
         name = ctx.escape_attr(c.name)
         placeholder_html = ctx.escape(c.placeholder or "Select...")
-        placeholder_attr = (
-            f' placeholder="{ctx.escape_attr(c.placeholder)}"' if c.placeholder else ""
-        )
         required_attr = ' required aria-required="true"' if c.required else ""
         opts = [f'<option value="">{placeholder_html}</option>']
         for value, label in c.options:
@@ -468,9 +471,8 @@ class _RenderFormsMixin:
                 f'<option value="{ctx.escape_attr(value)}"{sel}>{ctx.escape(label)}</option>'
             )
         inner = (
-            f'<select id="field-{name}" name="{name}" '
-            "data-dz-widget=\"combobox\" data-dz-options='{}' "
-            f'class="dz-form-input"{placeholder_attr}{required_attr}>'
+            f'<select id="field-{name}" name="{name}" data-dazzle-field="{name}" '
+            f'data-dz-combobox class="dz-form-input"{required_attr}>'
             f"{''.join(opts)}</select>"
         )
         return self._widget_label(ctx.escape(c.label), name, inner)

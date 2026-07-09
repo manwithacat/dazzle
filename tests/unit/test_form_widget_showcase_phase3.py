@@ -40,12 +40,16 @@ def test_combobox_widget_maps_and_renders() -> None:
     }
     assert isinstance(_field_to_primitive(fd), WidgetCombobox)
     html = _render(fd)
-    assert 'data-dz-widget="combobox"' in html
-    assert "data-dz-options='{}'" in html
+    # HMC-018 slice 1: HM-native progressive enhancement over a real native
+    # <select data-dz-combobox> — no TomSelect data-dz-widget mount anymore.
+    assert "data-dz-combobox" in html
+    assert 'data-dz-widget="combobox"' not in html
+    assert "data-dz-options=" not in html
     assert 'id="field-status"' in html
+    assert 'data-dazzle-field="status"' in html
     assert '<option value="open"' in html
-    # Distinct from the plain Combobox (vanilla select, no TomSelect mount).
-    assert "dz-combobox__select" not in html
+    # A leading placeholder option is always rendered.
+    assert '<option value="">' in html
 
 
 def test_tags_widget() -> None:

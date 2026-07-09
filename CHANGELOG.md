@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.28] - 2026-07-09
+
+### Changed
+- **HM-convergence (HMC-018 slice 1/3): `widget=combobox` is now HM-native (no TomSelect).**
+  New HM `dz-combobox` Hyperpart — a delegated, state-in-DOM, progressively-enhancing
+  searchable single-select (`controllers/dz-combobox.js` + `components/combobox.css`,
+  mirroring the `dz-search-select` idiom). `_emit_widget_combobox` now renders a plain
+  native `<select data-dz-combobox>` (all enum options, placeholder, `required`) — fully
+  usable with JS off — which the controller enhances into a `role=combobox` input + ARIA
+  `listbox` (keyboard nav: type-filter, ↑/↓ active-descendant, Enter/click select, Esc;
+  writes the native select's value + fires `change`). The `combobox` TomSelect mount was
+  removed from `dz-widget-registry.js`; TomSelect remains only for `tags` (slice 2) until
+  slice 3 drops it. Progressive-enhancement means a controller failure degrades to a
+  working native select.
+
+### Agent Guidance
+- **`widget=combobox` no longer uses TomSelect** — it's the HM `dz-combobox` Hyperpart over
+  a native `<select data-dz-combobox>`. `required` on an *enhanced* combobox is enforced
+  server-side + `aria-required` (the hidden native select drops `required` to avoid the
+  `display:none` validation footgun); the no-JS path keeps hard native `required`.
+
 ## [0.98.27] - 2026-07-09
 
 ### Removed

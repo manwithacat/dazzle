@@ -1,0 +1,115 @@
+/* HYPERPART: combobox */
+/* dz-combobox — HM-native searchable enum single-select (HMC-018 slice 1).
+ *
+ * Progressive enhancement over a real <select data-dz-combobox>: with JS
+ * off the native select is fully usable (submits, native required). On
+ * first interaction controllers/dz-combobox.js wraps it in a `.dz-combobox`
+ * root — a role=combobox text input + a role=listbox <ul> of options — and
+ * hides the native select (kept in the DOM as the submit value + no-JS
+ * fallback). State lives in the DOM as `data-dz-open` on the ROOT; the
+ * sibling rule below hides the listbox off the attribute (same idiom as
+ * search-select.css). Chrome mirrors the search-select family. */
+
+.dz-combobox {
+  position: relative;
+  width: 100%;
+}
+
+/* Native select is the no-JS control; once the controller wraps it and
+ * marks the root `data-dz-enhanced`, the visible combobox input takes
+ * over and the native select is removed from the visual layer (it stays
+ * in the DOM to carry the submitted value). */
+.dz-combobox[data-dz-enhanced] > select[data-dz-combobox] {
+  display: none;
+}
+
+.dz-combobox-input {
+  width: 100%;
+  height: 2rem;
+  padding-inline-start: var(--space-md);
+  padding-inline-end: 2rem;
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  outline: none;
+  transition:
+    box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.dz-combobox-input::placeholder {
+  color: var(--colour-text-muted);
+}
+
+.dz-combobox-input:focus-visible {
+  box-shadow: 0 0 0 1px var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+.dz-combobox-input[aria-invalid="true"] {
+  border-color: var(--colour-danger);
+}
+
+.dz-combobox-input[aria-invalid="true"]:focus-visible {
+  box-shadow: 0 0 0 1px var(--colour-danger);
+}
+
+.dz-combobox-listbox {
+  position: absolute;
+  z-index: 50;
+  inset-inline: 0;
+  margin-block-start: 0.25rem;
+  padding: 0;
+  max-height: 15rem;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.dz-combobox-option {
+  display: block;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+  cursor: pointer;
+}
+
+/* A filtered-out option is removed from flow (the `hidden` attribute the
+ * controller toggles) — restated because the row's own `display` would
+ * otherwise win over the UA `[hidden]` rule. */
+.dz-combobox-option[hidden] {
+  display: none;
+}
+
+/* Hover + keyboard active-descendant highlight share one wash; the chosen
+ * option carries aria-selected for the persistent tick of state. */
+.dz-combobox-option:hover,
+.dz-combobox-option[data-dz-active="true"] {
+  background: var(--colour-surface-muted);
+}
+
+.dz-combobox-option[aria-selected="true"] {
+  color: var(--colour-brand);
+  font-weight: 500;
+}
+
+.dz-combobox-empty {
+  padding-inline: var(--space-md);
+  padding-block: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
+/* Listbox visibility rides `data-dz-open` on the ROOT (set by
+ * dz-combobox.js) — closed until focus/typing opens it, closed 200ms
+ * after focus leaves the widget. aria-expanded on the input is the a11y
+ * mirror. */
+.dz-combobox:not([data-dz-open="true"]) .dz-combobox-listbox {
+  display: none;
+}

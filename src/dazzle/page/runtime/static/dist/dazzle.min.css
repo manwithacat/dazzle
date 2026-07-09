@@ -1,4 +1,4 @@
-/* dazzle v0.98.26 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.98.27 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -7087,6 +7087,85 @@ font-size: var(--text-sm);
 color: var(--colour-text-muted);
 }
 .dz-search-select:not([data-dz-open="true"]) .dz-search-select-results {
+display: none;
+}
+}
+@layer components {
+.dz-combobox {
+position: relative;
+width: 100%;
+}
+.dz-combobox[data-dz-enhanced] > select[data-dz-combobox] {
+display: none;
+}
+.dz-combobox-input {
+width: 100%;
+height: 2rem;
+padding-inline-start: var(--space-md);
+padding-inline-end: 2rem;
+border-radius: var(--radius-sm);
+background: var(--colour-surface);
+border: 1px solid var(--colour-border);
+font-size: var(--text-sm);
+color: var(--colour-text);
+outline: none;
+transition:
+box-shadow var(--duration-base) var(--ease-out),
+border-color var(--duration-base) var(--ease-out);
+}
+.dz-combobox-input::placeholder {
+color: var(--colour-text-muted);
+}
+.dz-combobox-input:focus-visible {
+box-shadow: 0 0 0 1px var(--colour-brand);
+border-color: var(--colour-brand);
+}
+.dz-combobox-input[aria-invalid="true"] {
+border-color: var(--colour-danger);
+}
+.dz-combobox-input[aria-invalid="true"]:focus-visible {
+box-shadow: 0 0 0 1px var(--colour-danger);
+}
+.dz-combobox-listbox {
+position: absolute;
+z-index: 50;
+inset-inline: 0;
+margin-block-start: 0.25rem;
+padding: 0;
+max-height: 15rem;
+overflow-y: auto;
+list-style: none;
+background: var(--colour-surface);
+border: 1px solid var(--colour-border);
+border-radius: var(--radius-md);
+box-shadow: var(--shadow-md);
+}
+.dz-combobox-option {
+display: block;
+padding-inline: var(--space-md);
+padding-block: var(--space-sm);
+font-size: var(--text-sm);
+color: var(--colour-text);
+cursor: pointer;
+}
+.dz-combobox-option[hidden] {
+display: none;
+}
+.dz-combobox-option:hover,
+.dz-combobox-option[data-dz-active="true"] {
+background: var(--colour-surface-muted);
+}
+.dz-combobox-option[aria-selected="true"] {
+color: var(--colour-brand);
+font-weight: 500;
+}
+.dz-combobox-empty {
+padding-inline: var(--space-md);
+padding-block: var(--space-md);
+font-size: var(--text-sm);
+color: var(--colour-text-muted);
+}
+.dz-combobox:not([data-dz-open="true"]) .dz-combobox-listbox {
 display: none;
 }
 }

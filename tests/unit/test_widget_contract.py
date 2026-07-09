@@ -38,7 +38,9 @@ TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "src/dazzle/page/templates
 # markers (no ``registerWidget(...)`` call) stay out of the set.
 _BRIDGE_MOUNTED_WIDGET_KINDS = frozenset(
     {
-        "combobox",
+        # `combobox` removed in HMC-018 slice 1 — `widget=combobox` is now
+        # HM-native (a progressively-enhanced native <select data-dz-combobox>
+        # driven by controllers/dz-combobox.js), not a bridge/vendor mount.
         "multiselect",
         "tags",
         # `datepicker`/`daterange` removed — the flatpickr datepicker form
