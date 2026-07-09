@@ -36,8 +36,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa trial` | CLI | trials | 187 | STALE |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | — | OWNED-IDLE |
 | `dazzle qa taste-panel` | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
-| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 188 | STALE |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 188 | STALE |
+| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 226 | USED |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 226 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 186 | STALE |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | — | OWNED-IDLE |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | — | OWNED-IDLE |
