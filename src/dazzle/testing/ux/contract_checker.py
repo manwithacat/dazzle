@@ -429,6 +429,16 @@ def _check_create_form(contract: CreateFormContract, tags: Tags) -> list[str]:
             name = attrs.get("name")
             if name:
                 input_names.add(name)
+            # A widget whose submit carrier is a differently-named input still
+            # marks the LOGICAL field on its visible control via
+            # `data-dazzle-field`. The `money` type is the canonical case: its
+            # visible major-unit input has no `name` (the value rides on the
+            # hidden `{field}_minor` + `{field}_currency` carriers), but it
+            # carries `data-dazzle-field="{field}"`. Recognise that marker so a
+            # required money/composite field isn't falsely reported missing.
+            field_marker = attrs.get("data-dazzle-field")
+            if field_marker:
+                input_names.add(field_marker)
 
     for field_name in contract.required_fields:
         if field_name not in input_names:

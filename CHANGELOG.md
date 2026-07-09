@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.99.1] - 2026-07-09
+
+### Fixed
+- **UX contract checker recognises `money` (and composite-carrier) fields on create forms.** `_check_create_form` in `src/dazzle/testing/ux/contract_checker.py` collected only input `name` attributes, so a required `money` field was falsely reported "Missing required field input" — its visible major-unit input carries `data-dazzle-field="{field}"` but no `name` (the value rides on the hidden `{field}_minor`/`{field}_currency` carriers). The checker now also honours the `data-dazzle-field` marker. Surfaced by the `/improve` ux-converge lane (cycle 233) as the last remaining fleet contract failure (`create_form:Salary — Missing required field input: amount` in examples/hr_records); the fleet is now contract-clean.
+
 ## [0.99.0] - 2026-07-09
 
 Published release anchor rolling up **v0.98.1 – v0.98.33** (patch builds don't publish; only `vX.Y.0` triggers PyPI/Homebrew). Two arcs since v0.98.0:
