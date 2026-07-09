@@ -96,7 +96,10 @@ def _match_rules(
     if kind == FieldTypeKind.REF and "source" not in options:
         return _make(name, kind, surface_name, "widget=combobox", "widget_combobox")
 
-    # date / datetime → picker
+    # date / datetime → picker. Since HMC-017 (Flatpickr dropped, 2026-07-09)
+    # `widget=picker` on a date field resolves to the native browser date picker
+    # (`<input type=date>`/`datetime-local`) — still a valid "date picker" widget,
+    # just native-backed rather than a JS library. Recommendation stays valid.
     if kind in (FieldTypeKind.DATE, FieldTypeKind.DATETIME):
         return _make(name, kind, surface_name, "widget=picker", "widget_picker")
 

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.31] - 2026-07-09
+
+### Fixed
+- **HM-convergence (HMC-019): clarified the `widget=picker` discovery recommendation
+  post-Flatpickr.** Investigated the leftover from HMC-017 (Flatpickr drop): the discovery
+  recommender still suggests `widget=picker` for date/datetime fields. Confirmed this is
+  benign — `widget=picker` now resolves to the native browser date picker
+  (`<input type=date>`/`datetime-local`), which is still a valid "date picker", just
+  native-backed. No churn: added a clarifying comment to `widget_rules.py`; the
+  recommendation + KG/example-index entries stay valid. (Rejected removing it — it would
+  churn 5 test files to delete a correct, harmless recommendation.)
+
 ## [0.98.30] - 2026-07-09
 
 ### Removed
