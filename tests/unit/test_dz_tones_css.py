@@ -32,34 +32,23 @@ _HM_COMPONENTS = _REPO_ROOT / "packages/hatchi-maxchi/components"
 
 
 def _tones_text() -> str:
-    """The tone vocabulary is split across dz-tones.css and the HM
-    component files that took their families with them (W1/W2 fleet
-    convergence: action-grid/status-list tints, the attn macro in
-    timeline.css). The contract is the union."""
-    parts = [(_CSS_DIR / "dz-tones.css").read_text()]
-    for name in ("action-grid.css", "status-list.css", "timeline.css"):
-        f = _HM_COMPONENTS / name
-        if f.is_file():
-            parts.append(f.read_text())
-    return "\n".join(parts)
+    """The tone vocabulary fully converged into HaTchi-MaXchi (dz-tones.css was
+    drained + deleted 2026-07-09, HMC-005/005b): metric-tile → metrics.css,
+    action-grid/status-list → their components, notice-band → dashboard-card.css,
+    the attn macro → timeline.css. The #906 contract is now "these static tint
+    rules SHIP in the served bundle", so assert against the real bundle."""
+    from dazzle.page.runtime.css_loader import get_bundled_css
+
+    return get_bundled_css()
 
 
 _TPL_DIR = _REPO_ROOT / "src/dazzle/page/templates"
 
 
-# ───────────────────────── dz-tones.css presence ──────────────────────────
-
-
-class TestDzTonesCssExists:
-    def test_file_exists(self) -> None:
-        assert (_CSS_DIR / "dz-tones.css").is_file(), (
-            "dz-tones.css missing — #906 fix required this file to ship "
-            "static tint rules instead of dynamic Tailwind classes"
-        )
-
-    def test_file_is_not_empty(self) -> None:
-        text = (_CSS_DIR / "dz-tones.css").read_text()
-        assert len(text) > 200, "dz-tones.css suspiciously short"
+# ───────────────────────── tone-tint rules ship ──────────────────────────
+# (dz-tones.css presence + load-order tests retired 2026-07-09: the file was
+# drained into HM and deleted; the #906 guard is now "rules present in the
+# served bundle", asserted below via get_bundled_css().)
 
 
 class TestDzTonesCssRulesPresent:
@@ -106,28 +95,9 @@ class TestDzTonesCssRulesPresent:
 # ───────────────────────── load order ──────────────────────────
 
 
-class TestDzTonesCssLoadOrder:
-    """`dz-tones.css` must be wired into all three load paths:
-    the @import bundle, the css_loader runtime concatenation, and
-    the build_dist concat for the dist/ bundle. Forgetting any one
-    means some deployment shape ships without the rules — which is
-    exactly the failure mode #906 surfaced."""
-
-    def test_imported_in_dazzle_framework_css(self) -> None:
-        text = (_CSS_DIR / "dazzle-framework.css").read_text()
-        assert '@import "dz-tones.css"' in text
-
-    def test_in_css_loader_unlayered_files(self) -> None:
-        text = (_REPO_ROOT / "src/dazzle/page/runtime/css_loader.py").read_text()
-        assert "dz-tones.css" in text, (
-            "css_loader.py must include dz-tones.css in CSS_UNLAYERED_FILES"
-        )
-
-    def test_in_build_dist_sources(self) -> None:
-        text = (_REPO_ROOT / "scripts/build_dist.py").read_text()
-        assert "dz-tones.css" in text, (
-            "build_dist.py must include dz-tones.css so the dist/ bundle ships with the rules"
-        )
+# TestDzTonesCssLoadOrder retired 2026-07-09 (HMC-005b): dz-tones.css is gone —
+# its rules ship from their HM component homes now, guarded by
+# TestDzTonesCssRulesPresent against the served bundle above.
 
 
 # ───────────────────────── templates lost dynamic classes ──────────────────────────

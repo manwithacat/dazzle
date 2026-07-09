@@ -144,9 +144,10 @@
   color: var(--colour-text);
 }
 
-/* Notice band — between header and body. Tone tint via
- * data-dz-notice-tone (existing dz-notice-band class is the visual
- * carrier; styling lives in tones layer). Layout shape lives here. */
+/* Notice band — between header and body. Layout shape here; the tone tints
+ * (below) travel with the component (migrated from Dazzle dz-tones.css, HMC-005b
+ * 2026-07-09 — the last of the dz-tones tint families). `.dz-notice-band` is the
+ * visual carrier the emitter co-emits with `.dz-card-notice`. */
 .dz-card-notice {
   margin-inline: var(--space-md);
   margin-block-end: var(--space-sm);
@@ -155,6 +156,31 @@
   border-radius: var(--radius-sm);
   border-inline-start-width: 2px;
   border-inline-start-style: solid;
+}
+
+/* Notice-band tone tints — background + left-rail colour per data-dz-notice-tone.
+ * Static rules (not Tailwind JIT) so IR-render-time tone class strings still
+ * paint; tokens follow any project theme override. */
+.dz-notice-band[data-dz-notice-tone="positive"] {
+  background: color-mix(in oklab, var(--colour-success) 8%, transparent);
+  border-left-color: var(--colour-success);
+}
+.dz-notice-band[data-dz-notice-tone="warning"] {
+  background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
+  border-left-color: var(--colour-warning);
+}
+.dz-notice-band[data-dz-notice-tone="destructive"] {
+  background: color-mix(in oklab, var(--colour-danger) 8%, transparent);
+  border-left-color: var(--colour-danger);
+}
+.dz-notice-band[data-dz-notice-tone="accent"] {
+  background: color-mix(in oklab, var(--colour-brand) 8%, transparent);
+  border-left-color: var(--colour-brand);
+}
+.dz-notice-band[data-dz-notice-tone="neutral"],
+.dz-notice-band:not([data-dz-notice-tone]) {
+  background: color-mix(in oklab, var(--colour-surface-muted) 40%, transparent);
+  border-left-color: var(--colour-border);
 }
 
 .dz-card-notice-title {

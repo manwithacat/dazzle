@@ -94,7 +94,10 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
 CSS_UNLAYERED_FILES: tuple[str, ...] = (
     "css/dz.css",
     "css/dz-widgets.css",
-    "css/dz-tones.css",
+    # dz-tones.css fully drained (HMC-005/005b): metric-tile → HM metrics.css,
+    # action-grid/status-list → their HM components, and the last family
+    # (notice-band tone tints) → HM dashboard-card.css (tinting travels with the
+    # component). File deleted; nothing left to bundle.
 )
 
 

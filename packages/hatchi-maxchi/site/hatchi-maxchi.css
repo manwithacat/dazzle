@@ -12531,9 +12531,10 @@ onboarding-step {
   color: var(--colour-text);
 }
 
-/* Notice band — between header and body. Tone tint via
- * data-notice-tone (existing notice-band class is the visual
- * carrier; styling lives in tones layer). Layout shape lives here. */
+/* Notice band — between header and body. Layout shape here; the tone tints
+ * (below) travel with the component (migrated from Dazzle tones.css, HMC-005b
+ * 2026-07-09 — the last of the tones tint families). `.notice-band` is the
+ * visual carrier the emitter co-emits with `.card-notice`. */
 .card-notice {
   margin-inline: var(--space-md);
   margin-block-end: var(--space-sm);
@@ -12542,6 +12543,31 @@ onboarding-step {
   border-radius: var(--radius-sm);
   border-inline-start-width: 2px;
   border-inline-start-style: solid;
+}
+
+/* Notice-band tone tints — background + left-rail colour per data-notice-tone.
+ * Static rules (not Tailwind JIT) so IR-render-time tone class strings still
+ * paint; tokens follow any project theme override. */
+.notice-band[data-notice-tone="positive"] {
+  background: color-mix(in oklab, var(--colour-success) 8%, transparent);
+  border-left-color: var(--colour-success);
+}
+.notice-band[data-notice-tone="warning"] {
+  background: color-mix(in oklab, var(--colour-warning) 10%, transparent);
+  border-left-color: var(--colour-warning);
+}
+.notice-band[data-notice-tone="destructive"] {
+  background: color-mix(in oklab, var(--colour-danger) 8%, transparent);
+  border-left-color: var(--colour-danger);
+}
+.notice-band[data-notice-tone="accent"] {
+  background: color-mix(in oklab, var(--colour-brand) 8%, transparent);
+  border-left-color: var(--colour-brand);
+}
+.notice-band[data-notice-tone="neutral"],
+.notice-band:not([data-notice-tone]) {
+  background: color-mix(in oklab, var(--colour-surface-muted) 40%, transparent);
+  border-left-color: var(--colour-border);
 }
 
 .card-notice-title {

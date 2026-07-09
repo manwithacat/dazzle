@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.98.26] - 2026-07-09
+
+### Changed
+- **HM-convergence (HMC-005b): dz-tones.css fully drained → deleted.** The last remaining
+  family — the notice-band tone tints (`.dz-notice-band[data-dz-notice-tone=…]`) — moved
+  into HM `components/dashboard-card.css` next to the `.dz-card-notice` base (tinting
+  travels with its component; earlier families went to metrics/action-grid/status-list in
+  HMC-005/W1). `dz-tones.css` removed from `css_loader.CSS_UNLAYERED_FILES` and deleted.
+  The #906 regression guard (`test_dz_tones_css.py`) was repointed from the deleted file to
+  the served bundle (`get_bundled_css()`), so it still enforces "tone tints ship" wherever
+  they live; the obsolete file-existence + load-order tests were retired. Reservoir
+  `css_lines_dazzle_native` 303→246.
+
 ## [0.98.25] - 2026-07-09
 
 ### Changed
