@@ -139,7 +139,6 @@ def running_contact_manager(tmp_path: Path) -> Any:
             "-m",
             "dazzle",
             "serve",
-            "--local",
             "--port",
             str(port),
             "--host",

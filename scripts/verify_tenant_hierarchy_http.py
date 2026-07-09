@@ -8,7 +8,7 @@ at the ROOT tenant (Region), seeds a two-trust tenant tree, then drives the scop
 Report region endpoint with the real session cookie at different host subdomains —
 asserting aggregate-at-ancestor / single-at-leaf / no-cross-trust-bleed / deny.
 
-This is the harness that closes the gap the `verify` run hit: `dazzle serve --local`
+This is the harness that closes the gap the `verify` run hit: `dazzle serve`
 does not initialise the auth tables, and `/__test__/authenticate` yields a superuser
 (which bypasses scope). Here we mint a real non-superuser, membership-scoped session.
 
@@ -66,7 +66,7 @@ def main() -> int:
         # subsystem (router + middleware) — /me 404s there — so scope is never
         # enforced. Full serve mounts auth on the backend; --ui-only off.
         server = subprocess.Popen(
-            ["dazzle", "serve", "--local", "--no-test-mode", "--port", str(PORT)],
+            ["dazzle", "serve", "--no-test-mode", "--port", str(PORT)],
             cwd=str(FIXTURE),
             env=env,
             stdout=log,

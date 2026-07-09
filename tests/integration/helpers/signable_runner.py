@@ -170,7 +170,7 @@ def boot_fixture_app(
     Boot sequence
     -------------
     1. Mint ephemeral cert + token-secret env vars.
-    2. Start ``dazzle serve --local --port <port> --test-mode`` in a subprocess
+    2. Start ``dazzle serve --port <port> --test-mode`` in a subprocess
        with those vars merged into the environment.
     3. Wait for ``/health`` (via the runtime.json port or the requested port).
     4. POST one seed row to ``/api/TestDoc`` to get the row_id.
@@ -230,7 +230,6 @@ def boot_fixture_app(
                 "-m",
                 "dazzle",
                 "serve",
-                "--local",
                 "--port",
                 str(port),
                 "--host",

@@ -50,7 +50,7 @@ If the user has requirements in SPEC.md or describes them to you:
 ### Running the Application
 ```bash
 dazzle serve              # Run with Docker (default)
-dazzle serve --local      # Run without Docker
+dazzle serve               # Run against $DATABASE_URL / $REDIS_URL
 ```
 - UI: http://localhost:3000
 - API: http://localhost:8000/docs

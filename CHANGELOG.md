@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.3] - 2026-07-09
+
+### Fixed
+- **CI red: E2E/integration harnesses still passed the removed `serve --local` flag.** The v0.100.0 Docker removal dropped `serve --local` but its cleanup grep only covered `src/` — **eight test/script subprocess launchers** (`tests/integration/{test_runtime_e2e,test_graphql_integration,test_qa_trial_signing_cedar,helpers/signable_runner}.py`, `tests/e2e/{test_fieldtest_hub_screenshots,test_grid_convergence_e2e,test_playwright_smoke}.py`, `scripts/verify_tenant_hierarchy_http.py`) still spawned `dazzle serve --local`, which now errors with "No such option" so the server never booted → "E2E Runtime (PostgreSQL)" and "INTERACTION_WALK" jobs timed out. Removed `--local` from every caller (and stale docstrings + the `examples/simple_task` scaffolding docs). `serve` is always-local now, so no flag is needed. **Agent guidance:** when removing a CLI flag, grep the whole repo (`tests/`, `scripts/`, `examples/`, `.github/`), not just `src/` — subprocess launchers in the test harness aren't caught by unit gates and only surface in the full CI E2E jobs.
+
 ## [0.101.2] - 2026-07-09
 
 ### Fixed

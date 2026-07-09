@@ -141,7 +141,6 @@ class DazzleLocalServer:
                 "-m",
                 "dazzle",
                 "serve",
-                "--local",
                 "--host",
                 "127.0.0.1",
                 "--test-mode",

@@ -53,7 +53,7 @@ pytestmark = pytest.mark.xdist_group("acme_billing")
 
 
 class _AppServer:
-    """Boot an example app with ``dazzle serve --local --test-mode``."""
+    """Boot an example app with ``dazzle serve --test-mode``."""
 
     def __init__(self, example_dir: Path) -> None:
         self.example_dir = example_dir
@@ -79,7 +79,6 @@ class _AppServer:
                 "-m",
                 "dazzle",
                 "serve",
-                "--local",
                 "--host",
                 "127.0.0.1",
                 "--test-mode",

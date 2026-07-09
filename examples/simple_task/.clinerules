@@ -53,7 +53,7 @@ git pull
 
 # Development server operations
 dazzle serve
-dazzle serve --local
+dazzle serve
 cd build/* && docker-compose up
 
 # Testing commands
@@ -330,7 +330,7 @@ swagger-cli validate openapi.yaml
 
 # Hot reload for development
 nodemon server.js
-watchmedo auto-restart --patterns="*.py" dazzle serve --local
+watchmedo auto-restart --patterns="*.py" dazzle serve
 
 # END OF RULES
 # These rules provide Claude with appropriate permissions for Dazzle development

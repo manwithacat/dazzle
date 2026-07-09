@@ -251,7 +251,7 @@ class TestThemeInit:
 
 class TestThemePreview:
     """``dazzle theme preview <name>`` validates the theme exists then
-    execs ``dazzle serve --local`` with DAZZLE_OVERRIDE_THEME set.
+    execs ``dazzle serve`` with DAZZLE_OVERRIDE_THEME set.
     Tests cover the validation path (the actual exec is not testable
     without a real dev server)."""
 

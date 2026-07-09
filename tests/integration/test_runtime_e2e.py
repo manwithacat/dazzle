@@ -156,7 +156,6 @@ class DazzleLocalServerManager:
                 "-m",
                 "dazzle",
                 "serve",
-                "--local",  # Explicitly use local mode
                 "--port",
                 str(self.port),
                 "--host",

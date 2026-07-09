@@ -34,7 +34,6 @@ def graphql_server():
         "-m",
         "dazzle.cli",
         "serve",
-        "--local",
         "--backend-only",
         "--graphql",
         "--api-port",

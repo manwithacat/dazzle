@@ -1,6 +1,6 @@
 """Unit tests for the INTERACTION_WALK server fixture.
 
-The fixture spawns ``python -m dazzle serve --local`` as a subprocess.
+The fixture spawns ``python -m dazzle serve`` as a subprocess.
 Running a real server in unit tests is out of scope (it requires
 Postgres + Redis); these tests patch ``subprocess.Popen`` and the
 filesystem to exercise the lifecycle logic — "does it wait for
