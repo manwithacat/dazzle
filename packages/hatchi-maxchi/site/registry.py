@@ -97,6 +97,11 @@ class Hyperpart:
     # without column-resize; resize needs the grid). Bundled like controllers.
     extensions: tuple[str, ...] = field(default_factory=tuple)
     mock: str | None = None  # the gallery mock endpoint (interactive Hyperparts)
+    # Contract modules (contracts/<part>.py): typed ingestion model + DOM
+    # contract + executable exemplar. One Hyperpart may carry several (the
+    # base part + each data-bearing extension). Cohesion-gated: every
+    # controller-bearing entry needs contracts or a PENDING_CONTRACTS entry.
+    contracts: tuple[str, ...] = field(default_factory=tuple)
 
 
 # Groups order the gallery nav.
@@ -534,6 +539,7 @@ HYPERPARTS: list[Hyperpart] = [
             "controllers/dz-grid-edit.js",
         ),
         mock="/mock/grid",
+        contracts=("contracts/grid.py", "contracts/grid_edit.py"),
     ),
     # ── Overlays (interactive — need the mock htmx / dialog) ─────────
     Hyperpart(

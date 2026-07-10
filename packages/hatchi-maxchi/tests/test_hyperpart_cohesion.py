@@ -66,6 +66,64 @@ def test_declared_mock_endpoints_are_wired() -> None:
         )
 
 
+# Controller/extension files whose Hyperpart does not yet declare a contract
+# module. SHRINK-ONLY: remove entries as contracts land; never add to it.
+PENDING_CONTRACTS = frozenset(
+    {
+        "controllers/dz-app-shell.js",
+        "controllers/dz-color.js",
+        "controllers/dz-combobox.js",
+        "controllers/dz-command.js",
+        "controllers/dz-confirm-gate.js",
+        "controllers/dz-confirm.js",
+        "controllers/dz-dialog.js",
+        "controllers/dz-grid-cols.js",
+        "controllers/dz-grid-resize.js",
+        "controllers/dz-master-detail.js",
+        "controllers/dz-money.js",
+        "controllers/dz-pdf.js",
+        "controllers/dz-search-select.js",
+        "controllers/dz-slider.js",
+        "controllers/dz-tabs.js",
+        "controllers/dz-tags.js",
+        "controllers/dz-wizard.js",
+    }
+)
+
+
+def test_declared_contracts_exist() -> None:
+    for h in HYPERPARTS:
+        for ref in h.contracts:
+            assert (PKG / ref).is_file(), f"{h.id}: declared contract {ref} does not exist"
+
+
+def test_controller_bearing_hyperparts_have_contracts_or_pending() -> None:
+    """The rollout ratchet: every controller/extension file is either covered
+    by its Hyperpart's contract modules or explicitly PENDING. New controllers
+    without contracts fail here (spec: allowlist only shrinks)."""
+    for h in HYPERPARTS:
+        files = ((h.controller,) if h.controller else ()) + tuple(h.extensions)
+        for ref in files:
+            if ref in PENDING_CONTRACTS:
+                continue
+            assert h.contracts, (
+                f"{h.id}: controller {ref} has no contract module and is not in "
+                f"PENDING_CONTRACTS — write contracts/<part>.py (see contracts/AUTHORING.md)"
+            )
+
+
+def test_pending_contracts_entries_are_real() -> None:
+    """Stale-allowlist guard: every PENDING entry must name a controller file
+    that is actually declared by some Hyperpart."""
+    known = {
+        ref
+        for h in HYPERPARTS
+        for ref in ((h.controller,) if h.controller else ()) + tuple(h.extensions)
+    }
+    ghosts = sorted(PENDING_CONTRACTS - known)
+    assert not ghosts, f"PENDING_CONTRACTS names unknown controllers: {ghosts}"
+
+
 def test_no_orphan_markers() -> None:
     """Every HYPERPART marker in the tree must name a real Hyperpart."""
     orphans = sorted(mid for mid in marker_sites() if mid not in _IDS)
