@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.10] - 2026-07-10
+
+### Added
+- **HM Hyperpart taste-gate (#1567, slice 1)** — `core/component_hygiene.py`, a
+  deterministic per-component token-discipline rubric (colour/namespace/motion/sizing
+  from HM tokens), registered as the 4th rubric in `core/design_context.py` — filling
+  the `app_internals × deterministic` matrix cell #1566 flagged empty. A per-component
+  floor gate (`tests/unit/test_component_hygiene.py`, FLOOR=70) holds every component to
+  the standard and auto-covers new ones; page-level chrome (`transitions.css`) is a
+  documented exemption. New advisory command `dazzle qa component-vision <region>` gives
+  an on-demand judged read of a rendered showcase region.
+
+### Agent Guidance
+- Authoring a new HM Hyperpart? Use `var(--dz-…)` tokens, the `.dz-` namespace, and
+  `--dz-transition*` — the component-discipline floor enforces it on every commit. See
+  the "Authoring a new Hyperpart" section in `docs/reference/hm-design-context.md`.
+
 ## [0.101.9] - 2026-07-10
 
 ### Added
