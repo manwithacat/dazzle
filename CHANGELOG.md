@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.32] - 2026-07-10
+
+### Fixed
+- **Kanban board keyboard access (WCAG)** — after the gallery main-track width
+  constraint, `.kanban-board`'s intentional `overflow-x: auto` became a real
+  scroll region and axe flagged `scrollable-region-focusable`. The demo board
+  now carries `role="region" aria-label="Kanban board" tabindex="0"`. HM **0.1.70**.
+
 ## [0.101.31] - 2026-07-10
 
 ### Fixed

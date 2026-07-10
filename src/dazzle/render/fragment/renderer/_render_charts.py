@@ -771,7 +771,14 @@ class _RenderChartsMixin:
                 f"</div>"
             )
 
-        return f'<div class="dz-kanban-board">{"".join(column_html)}</div>{overflow_html}'
+        # role=region + tabindex=0: overflow-x:auto is intentional; axe
+        # scrollable-region-focusable requires keyboard access when the board
+        # actually scrolls (common once the container is width-constrained).
+        return (
+            f'<div class="dz-kanban-board" role="region" '
+            f'aria-label="Kanban board" tabindex="0">'
+            f"{''.join(column_html)}</div>{overflow_html}"
+        )
 
     def _emit_funnel(self, f: Funnel, ctx: RenderContext) -> str:
         """Render a Funnel matching legacy

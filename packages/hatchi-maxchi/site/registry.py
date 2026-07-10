@@ -2146,7 +2146,12 @@ HYPERPARTS: list[Hyperpart] = [
         "Data",
         "Status columns of cards — the flow view. Columns show a count; "
         "overflowing boards offer a server-rendered Load-all.",
-        '<div class="dz-kanban-board">'
+        # tabindex=0 + role=region: overflow-x:auto is intentional (columns
+        # scroll horizontally). After the gallery main track was constrained
+        # (minmax(0,1fr)), the board actually scrolls and axe requires keyboard
+        # access to the scrollable region (scrollable-region-focusable).
+        '<div class="dz-kanban-board" role="region" aria-label="Kanban board" '
+        'tabindex="0">'
         '<div class="dz-kanban-column">'
         '<div class="dz-kanban-column-head">'
         '<span class="dz-badge" data-dz-tone="neutral">Open</span>'

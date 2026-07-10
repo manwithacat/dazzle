@@ -6,7 +6,7 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
-<div class="kanban-board">
+<div class="kanban-board" role="region" aria-label="Kanban board" tabindex="0">
   <div class="kanban-column">
     <div class="kanban-column-head"><span class="badge" data-tone="neutral">Open</span><span class="kanban-column-count">2</span></div>
     <div class="kanban-stack">
