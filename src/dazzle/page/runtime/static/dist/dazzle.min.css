@@ -1,4 +1,4 @@
-/* dazzle v0.101.10 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.101.11 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -10583,13 +10583,4 @@ opacity: 1;
 pointer-events: auto;
 }
 }
-}
-.htmx-indicator {
-display: none;
-}
-.htmx-request .htmx-indicator {
-display: inline-block;
-}
-.htmx-request.htmx-indicator {
-display: inline-block;
 }

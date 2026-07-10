@@ -61,7 +61,10 @@ def _is_hm_generated(path: Path) -> bool:
 DELEGATION_ALLOWLIST: dict[str, str] = {
     # --- main bundle (css_loader.py) ---
     "css/reset.css": "KEEP",  # foundational reset layer; dedup vs HM vendor reset tracked in 1C
-    "css/dz.css": "KEEP",  # all-pages `.htmx-indicator` HTMX chrome — documented floor
+    # css/dz.css DELETED (improve cycle 250, 2026-07-10) — its final 3 rules
+    # (.htmx-indicator lifecycle chrome) were byte-identical duplicates of HM
+    # components/htmx-states.css:73-86; the unlayered copy just shadowed them.
+    # Main-bundle reservoir floor: 31 -> 0.
     # css/site-sections.css DELEGATED → HM components/sitespec.css (phase 1B, 2026-07-09).
     # css/feedback-widget.css DELEGATED → HM components/feedback-widget.css (phase 1C,
     # 2026-07-09) — was orphaned (unlinked) on the Dazzle side; now served via the HM dist.
@@ -122,7 +125,8 @@ def test_served_css_matches_allowlist() -> None:
 def test_goal1_fully_delegated() -> None:
     """GOAL 1 PROVEN (phase 2C-a, 2026-07-09): zero MIGRATING entries remain — every
     design rule the browser receives originates in HaTchi-MaXchi (or a documented
-    KEEP: reset.css normalization + dz.css .htmx-indicator chrome). Standing green
+    KEEP: reset.css normalization; dz.css deleted cycle 250 — its htmx chrome
+    was an HM duplicate). Standing green
     proof; the allowlist-match ratchet keeps it honest going forward."""
     migrating = sorted(f for f, status in DELEGATION_ALLOWLIST.items() if status == "MIGRATING")
     assert not migrating, f"Still Dazzle-native (not yet delegated to HM): {migrating}"

@@ -94,7 +94,10 @@ CSS_SOURCE_FILES: tuple[tuple[str | None, str], ...] = (
 # override earlier rules regardless of layer position. Layered styles
 # always lose to unlayered styles in the CSS cascade.
 CSS_UNLAYERED_FILES: tuple[str, ...] = (
-    "css/dz.css",
+    # dz.css deleted (improve cycle 250, 2026-07-10): its last 3 rules
+    # (.htmx-indicator / .htmx-request lifecycle chrome) were byte-identical
+    # duplicates of HM components/htmx-states.css:73-86, which the unlayered
+    # copy silently shadowed. Reservoir main-bundle floor 31 -> 0.
     # dz-widgets.css deleted (HMC-018 slice 3): it held only the .ts-* TomSelect
     # theme overrides; combobox/tags are now HM-native and multiselect was
     # retired (0 fleet usage), so the whole file was dead. TomSelect vendor

@@ -64,7 +64,9 @@ _HM_MOVED = {"tokens.css": "tokens/tokens.css"}
 # metrics.css / dashboard-card.css); dropped from the catalogue sources.
 _CSS_SOURCES = (
     "tokens.css",
-    "dz.css",
+    # dz.css deleted (improve cycle 250, 2026-07-10) — its htmx-indicator rules
+    # were duplicates of HM components/htmx-states.css, which is already
+    # concatenated below via the HM components glob.
     # components/regions.css deleted (HM-sitespec 1C, 2026-07-09) — it was a
     # rules-free tombstone index; every region family lives in the HM dist.
 )

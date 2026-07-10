@@ -77,9 +77,10 @@ CSS_SOURCES: list[tuple[str | None, Path]] = [
 
 # Unlayered files appended after every @layer block — cascade override.
 CSS_UNLAYERED: list[Path] = [
-    STATIC / "css" / "dz.css",
-    # dz-widgets.css deleted in HMC-018 slice 3 (held only .ts-* TomSelect
-    # overrides). dz-tones.css deleted earlier (HMC-005); skipped if absent.
+    # dz.css deleted (improve cycle 250, 2026-07-10) — last 3 rules were
+    # duplicates of HM components/htmx-states.css. dz-widgets.css deleted in
+    # HMC-018 slice 3 (held only .ts-* TomSelect overrides). dz-tones.css
+    # deleted earlier (HMC-005); skipped if absent.
     STATIC / "css" / "dz-tones.css",
 ]
 

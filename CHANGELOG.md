@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.12] - 2026-07-10
+
+### Removed
+- **`css/dz.css` deleted — HM-convergence reservoir fully drained (main-bundle 0, grand
+  total 0).** Its final 3 rules (`.htmx-indicator`/`.htmx-request` lifecycle chrome) were
+  byte-identical duplicates of HM `components/htmx-states.css`, which the unlayered copy
+  silently shadowed. Removed from `css_loader.CSS_UNLAYERED_FILES`, `build_dist.py`,
+  the ux-catalogue sources, and the delegation-proof allowlist; dist + catalogue
+  regenerated. Zero pixel change (identical declarations now served from the HM layer).
+
 ## [0.101.11] - 2026-07-10
 
 ### Added
