@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.19] - 2026-07-10
+
+### Changed
+- **Operator playbooks speak capability language** (multi-agent consistency migration,
+  phase 3 of 4). AGENTS.md gains the Capability Mapping table (ask-user-choice /
+  task-list / subagent-dispatch / parallel-investigation / scheduled-loop / web-search /
+  model-tiering × Claude Code / Codex CLI / Grok Build — the only vendor-name zone) and
+  the generalised model policy; improve/issues/fuzz/xproject playbooks renamed their
+  actuators to capability terms (semantics, thresholds, and lock rules unchanged);
+  concrete model pins remain only in `.claude/CLAUDE.md`.
+
+### Agent Guidance
+- Playbooks name capabilities, not tools — resolve them via the AGENTS.md Capability
+  Mapping table for your harness. Cells marked *degrade* mean run sequentially and note
+  the degradation in your report.
+
 ## [0.101.18] - 2026-07-10
 
 ### Changed
