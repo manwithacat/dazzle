@@ -132,6 +132,10 @@ A server-rendered data table on a real <table>, all HTML over the wire: search, 
 | `label` | `string` | yes |
 | `options` | `array | null` | no |
 
+### `contracts/grid_cols.py`
+
+### `contracts/grid_resize.py`
+
 ## Guidance (structured)
 
 ### Seams

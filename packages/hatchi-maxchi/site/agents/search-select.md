@@ -21,6 +21,10 @@ The FK typeahead: a debounced combobox whose results panel opens on focus and cl
 | `GET /app/fragments/search?source={source}&q=` | keyup on the combobox, debounced (`delay:{n}ms`) | result rows — each a `dz-search-result-row` div carrying its own hx-get to the select endpoint — or the `dz-search-result-empty` prompt | innerHTML | — |
 | `GET /app/fragments/select?source={source}&id={id}` | a click on a result row | the `dz-select-result-confirm` line replacing the panel contents (the hidden FK input is set alongside) | innerHTML | — |
 
+## Contract modules (typed source of truth)
+
+### `contracts/search_select.py`
+
 ## Guidance (structured)
 
 ### Seams

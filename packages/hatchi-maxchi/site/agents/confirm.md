@@ -14,6 +14,10 @@ Designed replacement for window.confirm — every hx-confirm upgrades automatica
 |---|---|---|---|---|
 | `DELETE /app/invoices/{id}` | the button, after the user approves the designed confirm dialog | the server deletes the resource and returns the replacement markup for the affected region (e.g. the row's removal, or an empty-state) | per the button's `hx-target`/`hx-swap` (row removal by default) | — |
 
+## Contract modules (typed source of truth)
+
+### `contracts/confirm.py`
+
 ## Guidance (structured)
 
 ### Seams

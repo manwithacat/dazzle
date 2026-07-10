@@ -30,6 +30,10 @@ The hx-pdf viewing shell: server-authorized bytes, lazy PDF.js rendering, toolba
 |---|---|---|---|---|
 | `GET /_dazzle/documents/{entity}/{id}/{field}/file` | PDF.js fetching document bytes (initial + Range requests as the user pages) | the file field's bytes — 200 whole-body or 206 partial with Content-Range; opaque 404 when the record is out of scope; 416 for unsatisfiable ranges | none (bytes consumed by the rendering engine) | — |
 
+## Contract modules (typed source of truth)
+
+### `contracts/pdf.py`
+
 ## Guidance (structured)
 
 ### Seams

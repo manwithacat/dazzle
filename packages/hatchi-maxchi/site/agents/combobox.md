@@ -17,6 +17,15 @@ Searchable enum single-select — a native <select> progressively enhanced into 
 </label>
 ```
 
+## Contract modules (typed source of truth)
+
+### `contracts/combobox.py`
+
+| Field | Type | Required |
+|---|---|---|
+| `value` | `string` | yes |
+| `label` | `string` | yes |
+
 ## Guidance (structured)
 
 ### Seams

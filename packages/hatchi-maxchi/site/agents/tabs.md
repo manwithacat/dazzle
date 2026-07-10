@@ -6,7 +6,7 @@ A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept rol
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
-<div class="tabs">
+<div class="tabs" data-tabs>
   <div class="tabs__list"><button class="tabs__tab" aria-current="true" data-tab-target="hm-tab-overview">Overview</button><button class="tabs__tab" data-tab-target="hm-tab-activity">Activity</button><button class="tabs__tab" data-tab-target="hm-tab-settings">Settings</button></div>
   <div id="hm-tab-overview" class="tabs__panel">
     <p class="hm-demo-muted">Active on the Pro plan, renewing 1 August.</p>
@@ -25,6 +25,10 @@ A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept rol
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `GET /app/{region}/{tab}` | a panel, the first time it is revealed (`intersect once`); an eager panel on `load` | the panel's content fragment (rows, a form, a chart — whatever the tab shows) | innerHTML of the panel itself (no hx-target) | loading populated error |
+
+## Contract modules (typed source of truth)
+
+### `contracts/tabs.py`
 
 ## Guidance (structured)
 

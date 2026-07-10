@@ -12,6 +12,19 @@ Major-unit decimal input over a hidden minor-unit carrier — the form posts int
 </div>
 ```
 
+## Contract modules (typed source of truth)
+
+### `contracts/money.py`
+
+| Field | Type | Required |
+|---|---|---|
+| `name` | `string` | yes |
+| `currency` | `string` | no |
+| `scale` | `integer` | no |
+| `major_display` | `string` | no |
+| `minor_value` | `integer` | no |
+| `field_id` | `string` | no |
+
 ## Guidance (structured)
 
 ### Seams

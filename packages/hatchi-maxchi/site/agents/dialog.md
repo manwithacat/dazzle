@@ -21,6 +21,10 @@ Modal on the native <dialog> — one line of JS to open, close for free (Esc / b
 </dialog>
 ```
 
+## Contract modules (typed source of truth)
+
+### `contracts/dialog.py`
+
 ## Guidance (structured)
 
 ### Seams

@@ -557,7 +557,12 @@ HYPERPARTS: list[Hyperpart] = [
             "controllers/dz-grid-edit.js",
         ),
         mock="/mock/grid",
-        contracts=("contracts/grid.py", "contracts/grid_edit.py"),
+        contracts=(
+            "contracts/grid.py",
+            "contracts/grid_edit.py",
+            "contracts/grid_cols.py",
+            "contracts/grid_resize.py",
+        ),
         guidance=Guidance(
             seams=(
                 "column visibility: dz-grid-cols.js projects the hidden set onto "
@@ -606,7 +611,7 @@ HYPERPARTS: list[Hyperpart] = [
         # supported (recent Chromium); dz-command.js provides the cross-browser
         # floor. The close button is the always-visible dismiss affordance —
         # essential on touch, where there is no Esc key.
-        '<dialog class="dz-command" aria-label="Command palette" closedby="any">'
+        '<dialog class="dz-command" data-dz-command aria-label="Command palette" closedby="any">'
         # input + close share a flex bar; results follow. `next
         # .dz-command__results` resolves by DOM order (forward scan), so the
         # wrapper is fine. Flex layout (not absolute positioning) keeps the
@@ -641,6 +646,7 @@ HYPERPARTS: list[Hyperpart] = [
             ),
         ),
         controller="controllers/dz-command.js",
+        contracts=("contracts/command.py",),
         guidance=Guidance(
             seams=(
                 "hx-get on the search input returns persona-scoped result fragments",
@@ -687,6 +693,7 @@ HYPERPARTS: list[Hyperpart] = [
             ),
         ),
         controller="controllers/dz-confirm.js",
+        contracts=("contracts/confirm.py",),
         guidance=Guidance(
             seams=(
                 "any element with hx-confirm gets the designed dialog via htmx:confirm",
@@ -769,6 +776,7 @@ HYPERPARTS: list[Hyperpart] = [
         tags=("interactive",),
         composes=("button",),
         controller="controllers/dz-dialog.js",
+        contracts=("contracts/dialog.py",),
         guidance=Guidance(
             seams=(
                 "data-dz-dialog-open triggers showModal() — opening is the only scripted behaviour",
@@ -884,15 +892,24 @@ HYPERPARTS: list[Hyperpart] = [
         '<input class="dz-form-input" id="hm-field-slug" value="Acme Corp" '
         'aria-invalid="true" aria-describedby="hm-field-slug-error">'
         '<p class="dz-form-error" id="hm-field-slug-error">Use lowercase letters, numbers and hyphens only.</p>'
-        "</div></div>",
+        "</div>"
+        '<div class="dz-form-field">'
+        '<label class="dz-form-label" for="hm-field-color">Brand colour</label>'
+        '<div class="dz-form-color-group" data-dz-color-group>'
+        '<input class="dz-form-color-input" id="hm-field-color" type="color" value="#3b82f6">'
+        '<span class="dz-form-color-hex">#3b82f6</span>'
+        "</div></div></div>",
         notes="Reuses the <code>dz-form-*</code> family (label / hint / input / error). The "
         "invalid field needs no modifier class — the red border keys off "
-        "<code>aria-invalid=&quot;true&quot;</code>, the same attribute assistive tech reads.",
+        "<code>aria-invalid=&quot;true&quot;</code>, the same attribute assistive tech reads. "
+        "The colour group uses <code>data-dz-color-group</code> so <code>dz-color.js</code> "
+        "can mirror the swatch into the hex readout (contract: contracts/color.py).",
         tags=("forms",),
         # The colour widget's hex-readout mirror rides the field family
         # (delegated input listener on .dz-form-color-input; Tier F4e —
         # replaced the last inline Alpine x-data straggler).
         extensions=("controllers/dz-color.js",),
+        contracts=("contracts/color.py",),
     ),
     Hyperpart(
         "slider",
@@ -914,6 +931,7 @@ HYPERPARTS: list[Hyperpart] = [
         "many coexist.",
         tags=("forms",),
         controller="controllers/dz-slider.js",
+        contracts=("contracts/slider.py",),
         guidance=Guidance(
             seams=(
                 "native <input type=range> is the value source; [data-dz-range-value] is the readout",
@@ -1000,6 +1018,7 @@ HYPERPARTS: list[Hyperpart] = [
         "<code>data-dz-confirm-tone=&quot;success|muted&quot;</code>.",
         tags=("forms",),
         controller="controllers/dz-confirm-gate.js",
+        contracts=("contracts/confirm_panel.py",),
         guidance=Guidance(
             seams=(
                 "data-dz-confirm-gate root + data-dz-required=true checkboxes + data-dz-required-count",
@@ -1179,6 +1198,7 @@ HYPERPARTS: list[Hyperpart] = [
         "stage one with numbered steps (the form still posts whole).",
         tags=("forms",),
         controller="controllers/dz-wizard.js",
+        contracts=("contracts/wizard.py",),
         guidance=Guidance(
             seams=(
                 "root data-dz-step is the current stage; stages use native hidden",
@@ -1230,6 +1250,7 @@ HYPERPARTS: list[Hyperpart] = [
         "carrier, so there is no client init pass.",
         tags=("forms",),
         controller="controllers/dz-money.js",
+        contracts=("contracts/money.py",),
         guidance=Guidance(
             seams=(
                 "root data-dz-scale is the conversion factor; hidden *_minor carrier is the submit value",
@@ -1305,6 +1326,7 @@ HYPERPARTS: list[Hyperpart] = [
         "carry SRI; the gallery's CDN pin is demo-only.",
         tags=("data", "htmx"),
         controller="controllers/dz-pdf.js",
+        contracts=("contracts/pdf.py",),
         guidance=Guidance(
             seams=(
                 "data-dz-pdf-src points at the document bytes (or range proxy)",
@@ -1431,6 +1453,7 @@ HYPERPARTS: list[Hyperpart] = [
         "never the visible text.",
         tags=("forms", "htmx"),
         controller="controllers/dz-search-select.js",
+        contracts=("contracts/search_select.py",),
         guidance=Guidance(
             seams=(
                 "visible typeahead text is NOT the submit value — a hidden FK input is",
@@ -1506,6 +1529,7 @@ HYPERPARTS: list[Hyperpart] = [
         "leaving the widget closes after a 200ms grace.",
         tags=("forms",),
         controller="controllers/dz-combobox.js",
+        contracts=("contracts/combobox.py",),
         guidance=Guidance(
             seams=(
                 "server renders a real <select data-dz-combobox> — progressive enhancement",
@@ -1558,6 +1582,7 @@ HYPERPARTS: list[Hyperpart] = [
         "visually-hidden <code>aria-live</code> region.",
         tags=("forms",),
         controller="controllers/dz-tags.js",
+        contracts=("contracts/tags.py",),
         guidance=Guidance(
             seams=(
                 "native input value is a comma-joined tag string — the permanent submit shape",
@@ -1664,7 +1689,7 @@ HYPERPARTS: list[Hyperpart] = [
         "A lazy tab strip — an honest link-strip (buttons + aria-current, no "
         "unkept role=tablist). Each panel hx-gets its content the first time it "
         "is shown.",
-        '<div class="dz-tabs">'
+        '<div class="dz-tabs" data-dz-tabs>'
         '<div class="dz-tabs__list">'
         '<button class="dz-tabs__tab" aria-current="true" data-dz-tab-target="hm-tab-overview">Overview</button>'
         '<button class="dz-tabs__tab" data-dz-tab-target="hm-tab-activity">Activity</button>'
@@ -1696,6 +1721,7 @@ HYPERPARTS: list[Hyperpart] = [
             ),
         ),
         controller="controllers/dz-tabs.js",
+        contracts=("contracts/tabs.py",),
         guidance=Guidance(
             seams=(
                 "tabs are buttons with aria-current; panels toggle visibility scoped to .dz-tabs",
@@ -1796,7 +1822,7 @@ HYPERPARTS: list[Hyperpart] = [
         "Composites",
         "Exchange composition — a list item hx-gets its detail card into the "
         "detail pane. The canonical htmx composite; two can coexist on a page.",
-        '<div class="dz-master-detail">'
+        '<div class="dz-master-detail" data-dz-master-detail>'
         '<ul class="dz-master-detail__list" aria-label="Invoices">'
         '<li><a class="dz-master-detail__item" href="#" aria-current="true" '
         'hx-get="/mock/master-detail/inv-001" hx-target="next .dz-master-detail__detail">'
@@ -1825,6 +1851,7 @@ HYPERPARTS: list[Hyperpart] = [
             ),
         ),
         controller="controllers/dz-master-detail.js",
+        contracts=("contracts/master_detail.py",),
         guidance=Guidance(
             seams=(
                 "detail pane loads a card fragment via hx-get from the selected item",
@@ -2018,6 +2045,7 @@ HYPERPARTS: list[Hyperpart] = [
         '<a href="blueprints/saas-shell.html">saas-shell Blueprint</a>.',
         tags=("composite", "shell"),
         controller="controllers/dz-app-shell.js",
+        contracts=("contracts/app_shell.py",),
         guidance=Guidance(
             seams=(
                 "root data-dz-sidebar=open|closed is SERVER-rendered from the dz_sidebar cookie",

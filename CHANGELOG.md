@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.34] - 2026-07-11
+
+### Added
+- **HM contract modules for every controller** — drained `PENDING_CONTRACTS`
+  (17 controllers/extensions). New modules under `packages/hatchi-maxchi/contracts/`:
+  app_shell, command, confirm, confirm_panel, dialog, color, combobox, tags,
+  tabs, master_detail, money, pdf, search_select, slider, wizard, grid_cols,
+  grid_resize. Combobox/tags/money ship ingestion models + exemplars +
+  `render()`; others are DOM_CONTRACT-first (root/node attr contracts matching
+  controller headers). Registry `contracts=` wired; field demo gains a colour
+  group fixture for `dz-color`. HM package **0.1.71**.
+
+### Agent Guidance
+- `PENDING_CONTRACTS` is empty: new controller-bearing Hyperparts need
+  `contracts/…` modules before ship (see `contracts/AUTHORING.md`). Root-only
+  `DOM_CONTRACT` is enough for pure UI controllers; data-bearing parts should
+  add Pydantic models + EXEMPLARS + `render()`.
+
 ## [0.101.33] - 2026-07-10
 
 ### Fixed

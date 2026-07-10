@@ -29,6 +29,10 @@ Multi-stage form navigation: the stepper drives stage reveal — back freely, fo
 </div>
 ```
 
+## Contract modules (typed source of truth)
+
+### `contracts/wizard.py`
+
 ## Guidance (structured)
 
 ### Seams

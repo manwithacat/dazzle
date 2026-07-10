@@ -5,7 +5,7 @@ Exchange composition — a list item hx-gets its detail card into the detail pan
 ## Partial (copy-paste; the live demo renders this exact string)
 
 ```html
-<div class="master-detail">
+<div class="master-detail" data-master-detail>
   <ul class="master-detail__list" aria-label="Invoices">
     <li><a class="master-detail__item" href="#" aria-current="true" hx-get="/mock/master-detail/inv-001" hx-target="next .master-detail__detail">INV-001 · Acme</a></li>
     <li><a class="master-detail__item" href="#" hx-get="/mock/master-detail/inv-002" hx-target="next .master-detail__detail">INV-002 · Globex</a></li>
@@ -26,6 +26,10 @@ Exchange composition — a list item hx-gets its detail card into the detail pan
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `GET /app/master-detail/{id}` | a list item, on click | a detail card fragment — `<div class="dz-card dz-card-body">…` | innerHTML of the sibling `.dz-master-detail__detail` pane | loading populated error |
+
+## Contract modules (typed source of truth)
+
+### `contracts/master_detail.py`
 
 ## Guidance (structured)
 

@@ -34,6 +34,10 @@ The irreversible-action consent gate: a checklist of obligations that must be ti
 </div>
 ```
 
+## Contract modules (typed source of truth)
+
+### `contracts/confirm_panel.py`
+
 ## Guidance (structured)
 
 ### Seams

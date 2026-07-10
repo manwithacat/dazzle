@@ -11,6 +11,10 @@ Native <input type=range> — styled track + thumb, both themes, with a live val
 </div>
 ```
 
+## Contract modules (typed source of truth)
+
+### `contracts/slider.py`
+
 ## Guidance (structured)
 
 ### Seams

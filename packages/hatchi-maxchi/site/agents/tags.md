@@ -8,6 +8,18 @@ Multi-value chips + free create — a native text input carrying a comma-joined 
 <label class="field hm-measure" for="hm-tags-field"><span class="field__label">Labels</span><input id="hm-tags-field" name="labels" type="text" data-tags class="form-input" value="urgent,backend" placeholder="Add a label…"></label>
 ```
 
+## Contract modules (typed source of truth)
+
+### `contracts/tags.py`
+
+| Field | Type | Required |
+|---|---|---|
+| `name` | `string` | yes |
+| `field_id` | `string` | yes |
+| `label` | `string` | yes |
+| `tags` | `array` | no |
+| `placeholder` | `string` | no |
+
 ## Guidance (structured)
 
 ### Seams

@@ -68,27 +68,9 @@ def test_declared_mock_endpoints_are_wired() -> None:
 
 # Controller/extension files whose Hyperpart does not yet declare a contract
 # module. SHRINK-ONLY: remove entries as contracts land; never add to it.
-PENDING_CONTRACTS = frozenset(
-    {
-        "controllers/dz-app-shell.js",
-        "controllers/dz-color.js",
-        "controllers/dz-combobox.js",
-        "controllers/dz-command.js",
-        "controllers/dz-confirm-gate.js",
-        "controllers/dz-confirm.js",
-        "controllers/dz-dialog.js",
-        "controllers/dz-grid-cols.js",
-        "controllers/dz-grid-resize.js",
-        "controllers/dz-master-detail.js",
-        "controllers/dz-money.js",
-        "controllers/dz-pdf.js",
-        "controllers/dz-search-select.js",
-        "controllers/dz-slider.js",
-        "controllers/dz-tabs.js",
-        "controllers/dz-tags.js",
-        "controllers/dz-wizard.js",
-    }
-)
+# SHRINK-ONLY — empty means every controller/extension has a contract module
+# (or rides a Hyperpart that declares contracts= covering it).
+PENDING_CONTRACTS = frozenset()
 
 
 def test_declared_contracts_exist() -> None:

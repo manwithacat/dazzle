@@ -33,6 +33,10 @@ The SaaS/admin application frame: persistent left navigation, an optional sticky
 </div>
 ```
 
+## Contract modules (typed source of truth)
+
+### `contracts/app_shell.py`
+
 ## Guidance (structured)
 
 ### Seams
