@@ -1,7 +1,7 @@
 """Sitespec marketing vision rubric — the judged dimensions of a modern landing page.
 
 The reference-anchored half of Goal 2's measurement (James: "rubric floor + reference
-score"). Where `testing/sitespec_hygiene.py` scores the CSS *structure* deterministically,
+score"). Where `core/sitespec_hygiene.py` scores the CSS *structure* deterministically,
 this rubric is what a blind LLM-vision judge scores a *rendered* marketing page on —
 holistic "does an experienced web developer read this as modern / industry-norm."
 

@@ -1315,8 +1315,9 @@
       "_load_appspec_and_subsystems": 10,
       "_load_manifest_and_dotenv": 6,
       "_print_infra_banner": 1,
+      "_redis_extra_available": 1,
       "_serve_backend_only": 5,
-      "_serve_combined": 31,
+      "_serve_combined": 32,
       "_serve_ui_only": 3,
       "_start_vendor_mocks": 4,
       "_validate_and_finalize_infra": 6,
@@ -6189,6 +6190,20 @@
       "_is_asset_href": 2,
       "detect_placeholders": 2,
       "validate_site_coherence": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/core/sitespec_hygiene.py": {
+    "functions": {
+      "HygieneDimension": 1,
+      "_score_container": 1,
+      "_score_fluid_type": 6,
+      "_score_motion": 1,
+      "_score_responsive": 1,
+      "_score_section_rhythm": 1,
+      "_score_type_system": 5,
+      "hm_sitespec_css": 1,
+      "score_sitespec_css": 2
     },
     "mi_rank": "A"
   },
@@ -11451,8 +11466,8 @@
   "dazzle/http/runtime/logging.py": {
     "functions": {
       "Colors": 12,
-      "ConsoleFormatter": 5,
-      "ConsoleFormatter.format": 4,
+      "ConsoleFormatter": 8,
+      "ConsoleFormatter.format": 7,
       "JSONLFormatter": 11,
       "JSONLFormatter.format": 10,
       "clear_logs": 4,
@@ -11715,9 +11730,11 @@
       "PostgresBackend.get_persistent_connection": 4,
       "PostgresBackend.get_table_columns": 2,
       "PostgresBackend.get_table_indexes": 2,
-      "PostgresBackend.open_pool": 1,
+      "PostgresBackend.open_pool": 3,
       "PostgresBackend.placeholder": 1,
       "PostgresBackend.table_exists": 1,
+      "_connect_with_guidance": 3,
+      "_connection_error_hint": 7,
       "_create_index_sql": 1,
       "_create_table_sql": 1,
       "_create_temporal_unique_index_sql": 1,
@@ -19508,20 +19525,6 @@
       "SessionManifest": 4,
       "SessionManifest.is_stale": 4,
       "SessionManifest.persona_ids": 1
-    },
-    "mi_rank": "A"
-  },
-  "dazzle/testing/sitespec_hygiene.py": {
-    "functions": {
-      "HygieneDimension": 1,
-      "_score_container": 1,
-      "_score_fluid_type": 6,
-      "_score_motion": 1,
-      "_score_responsive": 1,
-      "_score_section_rhythm": 1,
-      "_score_type_system": 5,
-      "hm_sitespec_css": 1,
-      "score_sitespec_css": 2
     },
     "mi_rank": "A"
   },

@@ -1,7 +1,7 @@
 """Sitespec aesthetic-hygiene gate (Goal 2, deterministic floor).
 
 Scores the HM sitespec CSS design system against the modern-landing-page hygiene
-rubric (`dazzle.testing.sitespec_hygiene`). Two guarantees, mirroring the
+rubric (`dazzle.core.sitespec_hygiene`). Two guarantees, mirroring the
 delegation-proof ratchet:
 
 1. ``test_sitespec_hygiene_floor`` — the score never regresses below the ratchet
@@ -20,7 +20,7 @@ modernity failures deterministically.
 
 import pytest
 
-from dazzle.testing.sitespec_hygiene import hm_sitespec_css, score_sitespec_css
+from dazzle.core.sitespec_hygiene import hm_sitespec_css, score_sitespec_css
 
 pytestmark = pytest.mark.gate
 

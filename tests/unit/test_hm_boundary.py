@@ -40,7 +40,8 @@ SANCTIONED = {
     "src/dazzle/testing/ux_catalogue.py",
     # Sitespec-hygiene rubric reads the HM sitespec component CSS to *measure*
     # its modern-landing structural properties (Goal-2 deterministic floor).
-    "src/dazzle/testing/sitespec_hygiene.py",
+    # Lives in core/ (moved from testing/ in #1566 so design_context can import it).
+    "src/dazzle/core/sitespec_hygiene.py",
     # Reservoir metric names the HM package to measure the delegation drain +
     # recognise HM-generated served files (the marker). Governance, not consumption.
     "scripts/hm_tailwind_reservoir.py",
