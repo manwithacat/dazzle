@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.20] - 2026-07-10
+
+### Added
+- **Vendor-name lint** (multi-agent consistency migration, phase 4 of 4 — migration
+  complete). `tests/unit/test_agent_asset_gates.py::test_no_vendor_names_outside_capability_mapping`:
+  vendor names are forbidden in AGENTS.md outside the Capability Mapping section and in
+  `.agents/skills/**` entirely; the allowlist ships empty (the corpus generalised fully).
+  Closeout validation: cold-read check confirmed a non-Claude agent can answer
+  test/ship/extend/lock questions from portable files alone; stale canonical-claim
+  references in docs/README repointed. Product-template adoption deferred to #1575.
+
+### Agent Guidance
+- Writing portable instruction content? No vendor names — use the capability terms from
+  AGENTS.md's Capability Mapping. The lint gate enforces this; the allowlist requires a
+  justification comment per entry and is expected to stay empty.
+
 ## [0.101.19] - 2026-07-10
 
 ### Changed
