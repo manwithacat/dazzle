@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.9] - 2026-07-10
+
+### Added
+- **HM design-context (#1566)** — `core/design_context.py` unifies the three HM
+  design-quality rubrics (deterministic sitespec-hygiene, judged sitespec-vision,
+  judged app-internals taste) behind one facade: a 9-concept vocabulary, a concept
+  map claiming every rubric dimension exactly once, and a surface × method matrix.
+  Generated `docs/reference/hm-design-context.md` is the agent entry-point; a hard
+  claim-integrity + doc-drift gate (`tests/unit/test_design_context.py`) keeps it honest.
+
+### Changed
+- Moved `sitespec_hygiene` from `dazzle.testing` to `dazzle.core` (clean break) so the
+  design-context facade can import all three rubrics without a `core → testing` layer
+  violation. Importers updated in the same change.
+
+### Agent Guidance
+- When customising HM for a new property, read `docs/reference/hm-design-context.md`
+  first — it is the measurement standard across marketing + app-internals. To add or
+  reassign a design concept, edit `src/dazzle/core/design_context.py`; every rubric
+  dimension must be claimed by exactly one concept or CI fails.
+
 ## [0.101.8] - 2026-07-10
 
 ### Fixed
