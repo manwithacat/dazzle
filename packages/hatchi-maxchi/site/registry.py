@@ -641,6 +641,28 @@ HYPERPARTS: list[Hyperpart] = [
             ),
         ),
         controller="controllers/dz-command.js",
+        guidance=Guidance(
+            seams=(
+                "hx-get on the search input returns persona-scoped result fragments",
+                "open triggers: data-hm-open-command / ⌘K; close: data-hm-close-command + closedby=any",
+            ),
+            pitfalls=(
+                "type=search swallows Esc to clear the value — the controller must close on first Esc",
+                "do not absolute-position the close button against a modal dialog (Safari/iPadOS collapse)",
+            ),
+            do_dont=(
+                (
+                    "return result-list fragments from /app/command (or mock)",
+                    "hydrate a client-side result model the palette must re-render",
+                ),
+            ),
+            a11y_keys=(
+                "Esc closes the palette on first press even mid-query",
+                "Arrow keys move aria-activedescendant through results; Enter activates",
+                "close button is the touch dismiss affordance (no Esc key on tablets)",
+            ),
+            composes_with=("button",),
+        ),
         mock="/mock/command",
     ),
     Hyperpart(
@@ -665,6 +687,27 @@ HYPERPARTS: list[Hyperpart] = [
             ),
         ),
         controller="controllers/dz-confirm.js",
+        guidance=Guidance(
+            seams=(
+                "any element with hx-confirm gets the designed dialog via htmx:confirm",
+                "on approval the controller issues the underlying request — no per-button wiring",
+            ),
+            pitfalls=(
+                "hx-confirm is a client affordance — it needs no Exchange of its own",
+                "do not re-implement confirm with window.confirm (loses the designed dialog)",
+            ),
+            do_dont=(
+                (
+                    "put hx-confirm on the destructive action element",
+                    "wire a bespoke dialog open/close for every delete button",
+                ),
+            ),
+            a11y_keys=(
+                "dialog traps focus; Esc / cancel dismisses without issuing the request",
+                "confirm control is keyboard-activatable (Enter/Space)",
+            ),
+            composes_with=("button", "dialog"),
+        ),
     ),
     Hyperpart(
         "menu",
@@ -726,6 +769,27 @@ HYPERPARTS: list[Hyperpart] = [
         tags=("interactive",),
         composes=("button",),
         controller="controllers/dz-dialog.js",
+        guidance=Guidance(
+            seams=(
+                "data-dz-dialog-open triggers showModal() — opening is the only scripted behaviour",
+                "confirm button may carry hx-delete / form submit; closing is native",
+            ),
+            pitfalls=(
+                "do not re-implement close with custom overlays — use <dialog> + showModal",
+                "returnValue on the confirm button is the hand-off for form-less actions",
+            ),
+            do_dont=(
+                (
+                    "use native <dialog> with data-dz-dialog-open triggers",
+                    "build a div[role=dialog] + manual focus trap",
+                ),
+            ),
+            a11y_keys=(
+                "Esc dismisses natively; focus is restored to the open trigger",
+                "confirm / cancel are real buttons inside the dialog",
+            ),
+            composes_with=("button",),
+        ),
     ),
     Hyperpart(
         "drawer",
@@ -850,6 +914,27 @@ HYPERPARTS: list[Hyperpart] = [
         "many coexist.",
         tags=("forms",),
         controller="controllers/dz-slider.js",
+        guidance=Guidance(
+            seams=(
+                "native <input type=range> is the value source; [data-dz-range-value] is the readout",
+                "each slider group is scoped so many coexist on one page",
+            ),
+            pitfalls=(
+                "the visible readout is aria-hidden — the range already announces to AT",
+                "do not invent a custom thumb/track in JS; style the native control",
+            ),
+            do_dont=(
+                (
+                    "write the live value into [data-dz-range-value] on input",
+                    "replace the native range with a div-based slider",
+                ),
+            ),
+            a11y_keys=(
+                "Arrow keys adjust the native range (browser default)",
+                "focus ring is theme-aware on the track/thumb",
+            ),
+            composes_with=("field",),
+        ),
     ),
     Hyperpart(
         "confirm-panel",
@@ -915,6 +1000,27 @@ HYPERPARTS: list[Hyperpart] = [
         "<code>data-dz-confirm-tone=&quot;success|muted&quot;</code>.",
         tags=("forms",),
         controller="controllers/dz-confirm-gate.js",
+        guidance=Guidance(
+            seams=(
+                "data-dz-confirm-gate root + data-dz-required=true checkboxes + data-dz-required-count",
+                "primary anchor parks destination in data-dz-confirm-href until armed",
+            ),
+            pitfalls=(
+                "optional boxes never gate — only data-dz-required=true count",
+                "zero required boxes means the gate is always armed",
+            ),
+            do_dont=(
+                (
+                    "keep armed state in the DOM (aria-disabled + href promotion)",
+                    "mirror checked counts into a JS boolean a swap would orphan",
+                ),
+            ),
+            a11y_keys=(
+                "primary stays aria-disabled until required count is met",
+                "live/revoked branches use data-dz-confirm-tone for tone, not colour alone",
+            ),
+            composes_with=("button", "field"),
+        ),
     ),
     Hyperpart(
         "search-box",
@@ -1073,6 +1179,27 @@ HYPERPARTS: list[Hyperpart] = [
         "stage one with numbered steps (the form still posts whole).",
         tags=("forms",),
         controller="controllers/dz-wizard.js",
+        guidance=Guidance(
+            seams=(
+                "root data-dz-step is the current stage; stages use native hidden",
+                "stepper items carry data-dz-state=complete|current|pending (CSS checkmark)",
+            ),
+            pitfalls=(
+                "forward only after reportValidity() on the current stage's required inputs",
+                "no-JS still posts the whole form — stage one is the visible path",
+            ),
+            do_dont=(
+                (
+                    "keep stage index in data-dz-step on the wizard root",
+                    "store step in a JS variable a morph would discard",
+                ),
+            ),
+            a11y_keys=(
+                "Back is always free; Forward is one step and validity-gated",
+                "invalid inputs receive focus so the browser validity bubble appears",
+            ),
+            composes_with=("field", "button", "progress"),
+        ),
         composes=("form-chrome", "field"),
     ),
     Hyperpart(
@@ -1103,6 +1230,27 @@ HYPERPARTS: list[Hyperpart] = [
         "carrier, so there is no client init pass.",
         tags=("forms",),
         controller="controllers/dz-money.js",
+        guidance=Guidance(
+            seams=(
+                "root data-dz-scale is the conversion factor; hidden *_minor carrier is the submit value",
+                "selector mode reads currency <select> data-scale / data-symbol options",
+            ),
+            pitfalls=(
+                "display value is SERVER-computed from the minor carrier — no client init pass",
+                "empty blur clears the carrier; never invent a client-side float source of truth",
+            ),
+            do_dont=(
+                (
+                    "keep the minor integer in a hidden input the form posts",
+                    "post the formatted display string as the money value",
+                ),
+            ),
+            a11y_keys=(
+                "display input is a normal text field; AT reads the typed amount",
+                "currency select changes retune scale and prefix without remounting",
+            ),
+            composes_with=("field",),
+        ),
         composes=("field",),
     ),
     Hyperpart(
@@ -1157,6 +1305,28 @@ HYPERPARTS: list[Hyperpart] = [
         "carry SRI; the gallery's CDN pin is demo-only.",
         tags=("data", "htmx"),
         controller="controllers/dz-pdf.js",
+        guidance=Guidance(
+            seams=(
+                "data-dz-pdf-src points at the document bytes (or range proxy)",
+                "data-dz-pdf-lib lazy-loads PDF.js as an ES module on first intersect",
+                "data-dz-pdf-state=url enables ?dzpdf-page / ?dzpdf-zoom deep-links",
+            ),
+            pitfalls=(
+                "application controls ACCESS; PDF.js only renders — do not embed bytes in the bundle",
+                "without JS the noscript download link IS the experience",
+            ),
+            do_dont=(
+                (
+                    "lazy-load the engine from data-dz-pdf-lib when the viewer enters view",
+                    "eager-import PDF.js on every page that might show a document",
+                ),
+            ),
+            a11y_keys=(
+                "toolbar page/zoom controls remain keyboard-operable",
+                "noscript download is the progressive-enhancement floor",
+            ),
+            composes_with=("button",),
+        ),
         composes=("button",),
         exchanges=(
             Exchange(
@@ -1261,6 +1431,27 @@ HYPERPARTS: list[Hyperpart] = [
         "never the visible text.",
         tags=("forms", "htmx"),
         controller="controllers/dz-search-select.js",
+        guidance=Guidance(
+            seams=(
+                "visible typeahead text is NOT the submit value — a hidden FK input is",
+                "each result row carries its own hx-get to a select endpoint",
+            ),
+            pitfalls=(
+                "200ms blur grace — result rows are htmx affordances; the click must land first",
+                "form posts the hidden input, never the visible text",
+            ),
+            do_dont=(
+                (
+                    "swap the panel with a confirmation fragment that fills the hidden FK server-side",
+                    "copy the visible label into a hidden field from client JS",
+                ),
+            ),
+            a11y_keys=(
+                "aria-expanded flips on focusin/focusout for the results panel",
+                "result rows are activatable links/buttons inside the panel",
+            ),
+            composes_with=("field", "search-box"),
+        ),
         exchanges=(
             Exchange(
                 method="GET",
@@ -1315,6 +1506,27 @@ HYPERPARTS: list[Hyperpart] = [
         "leaving the widget closes after a 200ms grace.",
         tags=("forms",),
         controller="controllers/dz-combobox.js",
+        guidance=Guidance(
+            seams=(
+                "server renders a real <select data-dz-combobox> — progressive enhancement",
+                "native select stays as the submitted value after the overlay mounts",
+            ),
+            pitfalls=(
+                "pointerdown on the bare select must enhance first and swallow the native menu",
+                "state is data-dz-open on the root — not a JS open flag a morph would drop",
+            ),
+            do_dont=(
+                (
+                    "filter options client-side from the server-rendered <option> list",
+                    "replace the select with a div and invent a new submit contract",
+                ),
+            ),
+            a11y_keys=(
+                "input is role=combobox with aria-expanded / aria-activedescendant",
+                "ArrowUp/Down move highlight; Enter selects; Esc closes",
+            ),
+            composes_with=("field",),
+        ),
     ),
     Hyperpart(
         "tags",
@@ -1346,6 +1558,27 @@ HYPERPARTS: list[Hyperpart] = [
         "visually-hidden <code>aria-live</code> region.",
         tags=("forms",),
         controller="controllers/dz-tags.js",
+        guidance=Guidance(
+            seams=(
+                "native input value is a comma-joined tag string — the permanent submit shape",
+                "chips UI rewrites the native input on every add/remove and fires change",
+            ),
+            pitfalls=(
+                "JS off: type a, b, c — server splits on comma; do not require the chips UI",
+                "dedupe/trim/skip-empty on add; paste splits on comma and newline",
+            ),
+            do_dont=(
+                (
+                    "keep the native input as the form value under the chips root",
+                    "post a JSON array the server has never seen from a plain field",
+                ),
+            ),
+            a11y_keys=(
+                "chips are role=list of listitem; each × is labelled Remove {tag}",
+                "Enter or comma creates a chip; Backspace on empty entry removes the last",
+            ),
+            composes_with=("field",),
+        ),
     ),
     Hyperpart(
         "date-range",
@@ -1463,6 +1696,27 @@ HYPERPARTS: list[Hyperpart] = [
             ),
         ),
         controller="controllers/dz-tabs.js",
+        guidance=Guidance(
+            seams=(
+                "tabs are buttons with aria-current; panels toggle visibility scoped to .dz-tabs",
+                "hidden panels may carry intersect once lazy-load; first panel is eager",
+            ),
+            pitfalls=(
+                "no role=tablist without the roving-tabindex/arrow-key contract — honest buttons",
+                "panel reveal is scoped to THIS root so multiple tab sets coexist",
+            ),
+            do_dont=(
+                (
+                    "mark the active tab with aria-current and show its panel",
+                    "fake tabs with links that reload the whole page for every panel",
+                ),
+            ),
+            a11y_keys=(
+                "Tab reaches each tab button; activation is Enter/Space (button default)",
+                "lazy panels load on first reveal via intersect once",
+            ),
+            composes_with=("button",),
+        ),
         mock="/mock/tabs",
     ),
     Hyperpart(
@@ -1571,6 +1825,27 @@ HYPERPARTS: list[Hyperpart] = [
             ),
         ),
         controller="controllers/dz-master-detail.js",
+        guidance=Guidance(
+            seams=(
+                "detail pane loads a card fragment via hx-get from the selected item",
+                "aria-current marks the chosen list item, scoped to THIS root",
+            ),
+            pitfalls=(
+                "two master-detail roots must not share aria-current — controller is per-root",
+                "detail content is a server fragment, not a client template",
+            ),
+            do_dont=(
+                (
+                    "hx-get the detail card into the detail pane on item activate",
+                    "stash all detail payloads in data-* attributes on every list row",
+                ),
+            ),
+            a11y_keys=(
+                "aria-current=true on the active list item",
+                "list items remain keyboard-activatable links/buttons",
+            ),
+            composes_with=("card", "list-region"),
+        ),
         mock="/mock/master-detail",
         composes=("card",),
     ),
@@ -1743,6 +2018,27 @@ HYPERPARTS: list[Hyperpart] = [
         '<a href="blueprints/saas-shell.html">saas-shell Blueprint</a>.',
         tags=("composite", "shell"),
         controller="controllers/dz-app-shell.js",
+        guidance=Guidance(
+            seams=(
+                "root data-dz-sidebar=open|closed is SERVER-rendered from the dz_sidebar cookie",
+                "[data-dz-sidebar-toggle] flips state and rewrites the cookie (1y, SameSite=Lax)",
+            ),
+            pitfalls=(
+                "cookie not localStorage — the server must paint the correct first state",
+                "the component owns the ≥64rem media query (viewport policy); layout primitives stay MQ-free",
+            ),
+            do_dont=(
+                (
+                    "SSR data-dz-sidebar from the cookie so first paint has no flash",
+                    "default open in HTML and fix it client-side after load",
+                ),
+            ),
+            a11y_keys=(
+                "toggle mirrors aria-expanded to the open/closed state",
+                "narrow viewports: sidebar overlays; desktop: persistent rail",
+            ),
+            composes_with=("button", "sidebar-layout"),
+        ),
         framed=True,
     ),
     Hyperpart(

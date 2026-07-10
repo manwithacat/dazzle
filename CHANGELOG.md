@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.30] - 2026-07-10
+
+### Fixed
+- **HM gallery horizontal overflow on GitHub Pages** — `.hm-wrap` used
+  `15rem 1fr` without `minmax(0,…)`, so long unwrapped snippet `<code>` lines
+  expanded the main track past the viewport (~1328px at 1280). Main column is
+  now `minmax(0, 1fr)` with `min-width: 0` on `.hm-main` / `.hm-code`; snippets
+  scroll inside `pre` instead of widening the page.
+
+### Changed
+- **HM `PENDING_GUIDANCE` drained to empty** — all 14 remaining controller-bearing
+  Hyperparts carry structured `Guidance` (seams / pitfalls / do-don't / a11y /
+  composes_with), rendered on part pages and serialised into `agents/<id>.md`.
+  Visual baselines refreshed (darwin + linux to follow sync). HM package **0.1.68**.
+
+### Agent Guidance
+- `PENDING_GUIDANCE` is empty: new controller-bearing Hyperparts need
+  `guidance=Guidance(seams=…, pitfalls=…)` before they ship (cohesion meta-gate).
+- Prefer part pages + `agents/<id>.md` over index for implementation depth —
+  the simple gallery stays demo + snippet + link.
+
 ## [0.101.29] - 2026-07-10
 
 ### Changed

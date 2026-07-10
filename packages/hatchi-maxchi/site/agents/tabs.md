@@ -26,6 +26,33 @@ A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept rol
 |---|---|---|---|---|
 | `GET /app/{region}/{tab}` | a panel, the first time it is revealed (`intersect once`); an eager panel on `load` | the panel's content fragment (rows, a form, a chart — whatever the tab shows) | innerHTML of the panel itself (no hx-target) | loading populated error |
 
+## Guidance (structured)
+
+### Seams
+
+- tabs are buttons with aria-current; panels toggle visibility scoped to .dz-tabs
+- hidden panels may carry intersect once lazy-load; first panel is eager
+
+### Pitfalls
+
+- no role=tablist without the roving-tabindex/arrow-key contract — honest buttons
+- panel reveal is scoped to THIS root so multiple tab sets coexist
+
+### Keyboard / AT
+
+- Tab reaches each tab button; activation is Enter/Space (button default)
+- lazy panels load on first reveal via intersect once
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| mark the active tab with aria-current and show its panel | fake tabs with links that reload the whole page for every panel |
+
+### Composes with
+
+- `button` (agents/button.md)
+
 ## Guidance (prose; HTML from the registry notes field)
 
 The tabs are <code>&lt;button&gt;</code>s with <code>aria-current</code> — no <code>role=tablist</code> without the roving-tabindex/arrow-key contract to back it (honest, like the menu). <code>dz-tabs.js</code> reveals the chosen panel scoped to its <code>.dz-tabs</code> root; showing a hidden panel triggers its <code>intersect once</code> lazy load. The first panel is eager (content inline).

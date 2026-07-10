@@ -12,6 +12,33 @@ Major-unit decimal input over a hidden minor-unit carrier — the form posts int
 </div>
 ```
 
+## Guidance (structured)
+
+### Seams
+
+- root data-dz-scale is the conversion factor; hidden *_minor carrier is the submit value
+- selector mode reads currency <select> data-scale / data-symbol options
+
+### Pitfalls
+
+- display value is SERVER-computed from the minor carrier — no client init pass
+- empty blur clears the carrier; never invent a client-side float source of truth
+
+### Keyboard / AT
+
+- display input is a normal text field; AT reads the typed amount
+- currency select changes retune scale and prefix without remounting
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| keep the minor integer in a hidden input the form posts | post the formatted display string as the money value |
+
+### Composes with
+
+- `field` (agents/field.md)
+
 ## Guidance (prose; HTML from the registry notes field)
 
 State-in-DOM: the root's <code>data-dz-scale</code> is the conversion factor; <code>dz-money.js</code> keeps the hidden <code>*_minor</code> carrier in sync on input, normalizes the display to <code>toFixed(scale)</code> on blur (empty clears the carrier), and — in selector mode — reads a currency <code>&lt;select&gt;</code>'s <code>data-scale</code>/<code>data-symbol</code> options to retune scale and prefix. The edit-mode display value is SERVER-computed from the minor carrier, so there is no client init pass.

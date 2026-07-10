@@ -12,7 +12,9 @@
    document order, and kill the theme toggle. */
 body { background: var(--colour-bg); color: var(--colour-text);
   font-family: var(--font-sans); margin: 0; }
-.hm-wrap { display: grid; grid-template-columns: 15rem 1fr; min-height: 100vh; }
+/* minmax(0,1fr) — long unwrapped <code> lines must scroll inside .hm-code pre,
+   not force the main track wider than the viewport (Pages overflow at 1280). */
+.hm-wrap { display: grid; grid-template-columns: 15rem minmax(0, 1fr); min-height: 100vh; }
 .hm-wrap.hm-single { display: block; max-width: 72rem; margin-inline: auto; }
 .hm-nav { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
   border-inline-end: 1px solid var(--colour-border); padding: 1.5rem 1rem; }
@@ -24,7 +26,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-nav a { display:block; padding: .25rem .5rem; border-radius: var(--radius-sm);
   color: var(--colour-text); text-decoration: none; font-size: var(--text-sm); }
 .hm-nav a:hover { background: var(--colour-bg); color: var(--colour-brand); }
-.hm-main { padding: 3rem 4rem; max-width: 60rem; }
+.hm-main { padding: 3rem 4rem; max-width: 60rem; min-width: 0; }
 .hm-hero h1 { font-size: 2.75rem; letter-spacing: -.02em; margin: 0 0 .25rem; }
 .hm-hero p { color: var(--colour-text-muted); margin: 0 0 1rem; max-width: 40rem; }
 .hm-theme-toggle { margin-left: auto; }
@@ -40,10 +42,11 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-pag-row { padding: .6rem .9rem; font-size: var(--text-sm); }
 .hm-pag-row + .hm-pag-row { border-block-start: 1px solid var(--colour-border); }
 .hm-inline { display:inline-flex; align-items:center; gap: .5rem; font-size: var(--text-sm); }
-.hm-code { position: relative; }
+.hm-code { position: relative; min-width: 0; max-width: 100%; }
 .hm-code pre { margin: 0; padding: 1rem 4rem 1rem 1.25rem; overflow-x: auto;
-  background: var(--neutral-900); color: var(--neutral-100); border-radius: var(--radius-md);
-  font-family: var(--font-mono); font-size: .75rem; line-height: 1.6; }
+  max-width: 100%; background: var(--neutral-900); color: var(--neutral-100);
+  border-radius: var(--radius-md); font-family: var(--font-mono); font-size: .75rem;
+  line-height: 1.6; }
 .hm-copy { position: absolute; top: .5rem; right: .5rem; display: inline-flex; align-items: center;
   background: var(--neutral-800); color: var(--neutral-100); border: 1px solid var(--neutral-700);
   border-radius: var(--radius-sm); padding: .3rem .65rem; font-size: .75rem;
@@ -156,7 +159,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
       &lt;div class=&quot;card-delta&quot;&gt;Paid · 2 days ago&lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
-&lt;/div&gt;</code></pre></div><details class="hm-contract"><summary>Endpoint contract</summary><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/master-detail/{id}</code></td><td>a list item, on click</td><td>a detail card fragment — `&lt;div class=&quot;card card-body&quot;&gt;…`</td><td>innerHTML of the sibling `.master-detail__detail` pane</td><td><code>loading</code> <code>populated</code> <code>error</code></td></tr></tbody></table><p>The partial above is only half the Hyperpart; the server must satisfy this contract for it to work. In Dazzle the response is rendered automatically — for any other htmx app, return matching markup from your endpoint.</p></details><p class="hm-composed"><strong>Composed of:</strong> <a href="#card">Card</a></p><p class="hm-anatomy"><strong>One Hyperpart, 5 code items:</strong> <code>site/registry.py</code> · <code>components/hm-core.css:443</code> · <code>controllers/dz-master-detail.js</code> · mock <code>/mock/master-detail</code>. Distributed by the build (CSS layered, JS bundled) but bound by <code>HYPERPART: master-detail</code> markers — <code>python tools/hyperpart.py master-detail</code> lists them.</p><details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">The detail pane loads a card fragment via hx-get; master-detail.js sets aria-current on the chosen item, scoped to THIS root so two coexist.</div></details></section>
+&lt;/div&gt;</code></pre></div><details class="hm-contract"><summary>Endpoint contract</summary><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/master-detail/{id}</code></td><td>a list item, on click</td><td>a detail card fragment — `&lt;div class=&quot;card card-body&quot;&gt;…`</td><td>innerHTML of the sibling `.master-detail__detail` pane</td><td><code>loading</code> <code>populated</code> <code>error</code></td></tr></tbody></table><p>The partial above is only half the Hyperpart; the server must satisfy this contract for it to work. In Dazzle the response is rendered automatically — for any other htmx app, return matching markup from your endpoint.</p></details><p class="hm-composed"><strong>Composed of:</strong> <a href="#card">Card</a></p><p class="hm-anatomy"><strong>One Hyperpart, 5 code items:</strong> <code>site/registry.py</code> · <code>components/hm-core.css:443</code> · <code>controllers/dz-master-detail.js</code> · mock <code>/mock/master-detail</code>. Distributed by the build (CSS layered, JS bundled) but bound by <code>HYPERPART: master-detail</code> markers — <code>python tools/hyperpart.py master-detail</code> lists them.</p><details class="hm-guidance" open><summary>Structured guidance</summary><div class="hm-notes"><h4>Seams</h4><ul><li>detail pane loads a card fragment via hx-get from the selected item</li><li>aria-current marks the chosen list item, scoped to THIS root</li></ul><h4>Pitfalls</h4><ul><li>two master-detail roots must not share aria-current — controller is per-root</li><li>detail content is a server fragment, not a client template</li></ul><h4>Do / Don't</h4><table class="hm-contract-table"><thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody><tr><td>hx-get the detail card into the detail pane on item activate</td><td>stash all detail payloads in data-* attributes on every list row</td></tr></tbody></table><h4>Keyboard / AT</h4><ul><li>aria-current=true on the active list item</li><li>list items remain keyboard-activatable links/buttons</li></ul><h4>Composes with</h4><p><a href="card.html"><code>card</code></a> <a href="list-region.html"><code>list-region</code></a></p></div></details><details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">The detail pane loads a card fragment via hx-get; master-detail.js sets aria-current on the chosen item, scoped to THIS root so two coexist.</div></details></section>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
 The demo above renders the exact snippet — copy it into any htmx4 app.

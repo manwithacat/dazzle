@@ -29,6 +29,35 @@ Multi-stage form navigation: the stepper drives stage reveal — back freely, fo
 </div>
 ```
 
+## Guidance (structured)
+
+### Seams
+
+- root data-dz-step is the current stage; stages use native hidden
+- stepper items carry data-dz-state=complete|current|pending (CSS checkmark)
+
+### Pitfalls
+
+- forward only after reportValidity() on the current stage's required inputs
+- no-JS still posts the whole form — stage one is the visible path
+
+### Keyboard / AT
+
+- Back is always free; Forward is one step and validity-gated
+- invalid inputs receive focus so the browser validity bubble appears
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| keep stage index in data-dz-step on the wizard root | store step in a JS variable a morph would discard |
+
+### Composes with
+
+- `field` (agents/field.md)
+- `button` (agents/button.md)
+- `progress` (agents/progress.md)
+
 ## Guidance (prose; HTML from the registry notes field)
 
 State-in-DOM: the root's <code>data-dz-step</code> is the current stage; stages toggle via the native <code>hidden</code> attribute; stepper items carry <code>data-dz-state=&quot;complete|current|pending&quot;</code> (the checkmark is pure CSS off the state). <code>dz-wizard.js</code> allows going BACK freely and FORWARD one step at a time — only after every required input in the current stage passes <code>reportValidity()</code>. No-JS renders stage one with numbered steps (the form still posts whole).

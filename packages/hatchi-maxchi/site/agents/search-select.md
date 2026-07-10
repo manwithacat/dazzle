@@ -21,6 +21,34 @@ The FK typeahead: a debounced combobox whose results panel opens on focus and cl
 | `GET /app/fragments/search?source={source}&q=` | keyup on the combobox, debounced (`delay:{n}ms`) | result rows — each a `dz-search-result-row` div carrying its own hx-get to the select endpoint — or the `dz-search-result-empty` prompt | innerHTML | — |
 | `GET /app/fragments/select?source={source}&id={id}` | a click on a result row | the `dz-select-result-confirm` line replacing the panel contents (the hidden FK input is set alongside) | innerHTML | — |
 
+## Guidance (structured)
+
+### Seams
+
+- visible typeahead text is NOT the submit value — a hidden FK input is
+- each result row carries its own hx-get to a select endpoint
+
+### Pitfalls
+
+- 200ms blur grace — result rows are htmx affordances; the click must land first
+- form posts the hidden input, never the visible text
+
+### Keyboard / AT
+
+- aria-expanded flips on focusin/focusout for the results panel
+- result rows are activatable links/buttons inside the panel
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| swap the panel with a confirmation fragment that fills the hidden FK server-side | copy the visible label into a hidden field from client JS |
+
+### Composes with
+
+- `field` (agents/field.md)
+- `search-box` (agents/search-box.md)
+
 ## Guidance (prose; HTML from the registry notes field)
 
 State-in-DOM: <code>dz-search-select.js</code> flips <code>aria-expanded</code> on focusin/focusout (200ms blur grace — result rows are htmx affordances, so the click must land before the panel hides) and CSS hides the panel off the attribute. Each result row carries its own <code>hx-get</code> to a select endpoint that swaps the panel with a confirmation and fills the hidden FK input server-side. The form posts the hidden input, never the visible text.

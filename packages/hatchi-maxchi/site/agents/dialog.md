@@ -21,6 +21,33 @@ Modal on the native <dialog> — one line of JS to open, close for free (Esc / b
 </dialog>
 ```
 
+## Guidance (structured)
+
+### Seams
+
+- data-dz-dialog-open triggers showModal() — opening is the only scripted behaviour
+- confirm button may carry hx-delete / form submit; closing is native
+
+### Pitfalls
+
+- do not re-implement close with custom overlays — use <dialog> + showModal
+- returnValue on the confirm button is the hand-off for form-less actions
+
+### Keyboard / AT
+
+- Esc dismisses natively; focus is restored to the open trigger
+- confirm / cancel are real buttons inside the dialog
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| use native <dialog> with data-dz-dialog-open triggers | build a div[role=dialog] + manual focus trap |
+
+### Composes with
+
+- `button` (agents/button.md)
+
 ## Guidance (prose; HTML from the registry notes field)
 
 Opening is the only scripted behaviour (<code>dz-dialog.js</code> calls <code>showModal()</code> for a <code>[data-dz-dialog-open]</code> trigger); closing is native. The confirm button closes the dialog and sets <code>returnValue</code> — in a real app, carry the action on it (<code>hx-delete</code> …) or submit a form to the server.

@@ -125,25 +125,8 @@ def test_pending_contracts_entries_are_real() -> None:
 
 
 # Controller-bearing Hyperparts not yet migrated to structured Guidance.
-# SHRINK-ONLY — remove entries as guidance blocks land; never add.
-PENDING_GUIDANCE = frozenset(
-    {
-        "command",
-        "confirm",
-        "dialog",
-        "slider",
-        "confirm-panel",
-        "wizard",
-        "money",
-        "pdf",
-        "search-select",
-        "combobox",
-        "tags",
-        "tabs",
-        "master-detail",
-        "app-shell",
-    }
-)
+# SHRINK-ONLY — empty means every controller-bearing part has Guidance.
+PENDING_GUIDANCE = frozenset()
 
 
 def test_controller_parts_have_guidance_or_pending() -> None:

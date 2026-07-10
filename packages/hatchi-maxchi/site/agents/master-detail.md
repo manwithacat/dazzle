@@ -27,6 +27,34 @@ Exchange composition — a list item hx-gets its detail card into the detail pan
 |---|---|---|---|---|
 | `GET /app/master-detail/{id}` | a list item, on click | a detail card fragment — `<div class="dz-card dz-card-body">…` | innerHTML of the sibling `.dz-master-detail__detail` pane | loading populated error |
 
+## Guidance (structured)
+
+### Seams
+
+- detail pane loads a card fragment via hx-get from the selected item
+- aria-current marks the chosen list item, scoped to THIS root
+
+### Pitfalls
+
+- two master-detail roots must not share aria-current — controller is per-root
+- detail content is a server fragment, not a client template
+
+### Keyboard / AT
+
+- aria-current=true on the active list item
+- list items remain keyboard-activatable links/buttons
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| hx-get the detail card into the detail pane on item activate | stash all detail payloads in data-* attributes on every list row |
+
+### Composes with
+
+- `card` (agents/card.md)
+- `list-region` (agents/list-region.md)
+
 ## Guidance (prose; HTML from the registry notes field)
 
 The detail pane loads a card fragment via hx-get; dz-master-detail.js sets aria-current on the chosen item, scoped to THIS root so two coexist.

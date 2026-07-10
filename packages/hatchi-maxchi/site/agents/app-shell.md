@@ -33,6 +33,34 @@ The SaaS/admin application frame: persistent left navigation, an optional sticky
 </div>
 ```
 
+## Guidance (structured)
+
+### Seams
+
+- root data-dz-sidebar=open|closed is SERVER-rendered from the dz_sidebar cookie
+- [data-dz-sidebar-toggle] flips state and rewrites the cookie (1y, SameSite=Lax)
+
+### Pitfalls
+
+- cookie not localStorage — the server must paint the correct first state
+- the component owns the ≥64rem media query (viewport policy); layout primitives stay MQ-free
+
+### Keyboard / AT
+
+- toggle mirrors aria-expanded to the open/closed state
+- narrow viewports: sidebar overlays; desktop: persistent rail
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| SSR data-dz-sidebar from the cookie so first paint has no flash | default open in HTML and fix it client-side after load |
+
+### Composes with
+
+- `button` (agents/button.md)
+- `sidebar-layout` (agents/sidebar-layout.md)
+
 ## Guidance (prose; HTML from the registry notes field)
 
 The shell root carries <code>data-dz-sidebar=&quot;open|closed&quot;</code> — SERVER-rendered from the <code>dz_sidebar</code> cookie, so first paint is correct with no flash; <code>dz-app-shell.js</code> flips the attribute and re-writes the cookie when <code>[data-dz-sidebar-toggle]</code> is clicked (and mirrors <code>aria-expanded</code>). Desktop (≥64rem): the sidebar is persistent and the content pane pads around it; narrow: it slides off-canvas and overlays (this component owns that media query deliberately — viewport policy, not intrinsic wrapping — the layout primitives inside stay media-query-free). The demo above is a standalone page embedded via iframe (its own browsing context, so the fixed sidebar behaves exactly as shipped) — the snippet below is the pure, copyable shell markup, with one embedding concession: the workspace slot is a <code>&lt;div&gt;</code> here because this demo lives inside the gallery's own <code>&lt;main&gt;</code>; in your app it is <code>&lt;main id=&quot;main-content&quot;&gt;</code> (one visible main per document — the Blueprint shows the true form). The full motif — routed navigation swapping the main slot — is the <a href="blueprints/saas-shell.html">saas-shell Blueprint</a>.

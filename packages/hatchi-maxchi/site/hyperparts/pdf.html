@@ -12,7 +12,9 @@
    document order, and kill the theme toggle. */
 body { background: var(--colour-bg); color: var(--colour-text);
   font-family: var(--font-sans); margin: 0; }
-.hm-wrap { display: grid; grid-template-columns: 15rem 1fr; min-height: 100vh; }
+/* minmax(0,1fr) — long unwrapped <code> lines must scroll inside .hm-code pre,
+   not force the main track wider than the viewport (Pages overflow at 1280). */
+.hm-wrap { display: grid; grid-template-columns: 15rem minmax(0, 1fr); min-height: 100vh; }
 .hm-wrap.hm-single { display: block; max-width: 72rem; margin-inline: auto; }
 .hm-nav { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
   border-inline-end: 1px solid var(--colour-border); padding: 1.5rem 1rem; }
@@ -24,7 +26,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-nav a { display:block; padding: .25rem .5rem; border-radius: var(--radius-sm);
   color: var(--colour-text); text-decoration: none; font-size: var(--text-sm); }
 .hm-nav a:hover { background: var(--colour-bg); color: var(--colour-brand); }
-.hm-main { padding: 3rem 4rem; max-width: 60rem; }
+.hm-main { padding: 3rem 4rem; max-width: 60rem; min-width: 0; }
 .hm-hero h1 { font-size: 2.75rem; letter-spacing: -.02em; margin: 0 0 .25rem; }
 .hm-hero p { color: var(--colour-text-muted); margin: 0 0 1rem; max-width: 40rem; }
 .hm-theme-toggle { margin-left: auto; }
@@ -40,10 +42,11 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-pag-row { padding: .6rem .9rem; font-size: var(--text-sm); }
 .hm-pag-row + .hm-pag-row { border-block-start: 1px solid var(--colour-border); }
 .hm-inline { display:inline-flex; align-items:center; gap: .5rem; font-size: var(--text-sm); }
-.hm-code { position: relative; }
+.hm-code { position: relative; min-width: 0; max-width: 100%; }
 .hm-code pre { margin: 0; padding: 1rem 4rem 1rem 1.25rem; overflow-x: auto;
-  background: var(--neutral-900); color: var(--neutral-100); border-radius: var(--radius-md);
-  font-family: var(--font-mono); font-size: .75rem; line-height: 1.6; }
+  max-width: 100%; background: var(--neutral-900); color: var(--neutral-100);
+  border-radius: var(--radius-md); font-family: var(--font-mono); font-size: .75rem;
+  line-height: 1.6; }
 .hm-copy { position: absolute; top: .5rem; right: .5rem; display: inline-flex; align-items: center;
   background: var(--neutral-800); color: var(--neutral-100); border: 1px solid var(--neutral-700);
   border-radius: var(--radius-sm); padding: .3rem .65rem; font-size: .75rem;
@@ -159,7 +162,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   &lt;div class=&quot;pdf-stage&quot; data-pdf-viewer tabindex=&quot;0&quot;&gt;
     &lt;noscript&gt;&lt;a href=&quot;sample.pdf&quot; download&gt;Download PDF&lt;/a&gt;&lt;/noscript&gt;
   &lt;/div&gt;
-&lt;/section&gt;</code></pre></div><details class="hm-contract"><summary>Endpoint contract</summary><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/_dazzle/documents/{entity}/{id}/{field}/file</code></td><td>PDF.js fetching document bytes (initial + Range requests as the user pages)</td><td>the file field&#x27;s bytes — 200 whole-body or 206 partial with Content-Range; opaque 404 when the record is out of scope; 416 for unsatisfiable ranges</td><td>none (bytes consumed by the rendering engine)</td><td>—</td></tr></tbody></table><p>The partial above is only half the Hyperpart; the server must satisfy this contract for it to work. In Dazzle the response is rendered automatically — for any other htmx app, return matching markup from your endpoint.</p></details><p class="hm-composed"><strong>Composed of:</strong> <a href="#button">Button</a></p><p class="hm-anatomy"><strong>One Hyperpart, 4 code items:</strong> <code>site/registry.py</code> · <code>components/pdf.css:1</code> · <code>controllers/dz-pdf.js</code>. Distributed by the build (CSS layered, JS bundled) but bound by <code>HYPERPART: pdf</code> markers — <code>python tools/hyperpart.py pdf</code> lists them.</p><details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">The application renders the shell and CONTROLS ACCESS; PDF.js renders the document. <code>pdf.js</code> lazy-loads the library as an ES module from <code>data-pdf-lib</code> only when the viewer scrolls into view — no PDF bytes or engine in the bundle. In Dazzle, <code>data-pdf-src</code> points at the scope-gated range proxy (<code>/_dazzle/documents/{entity}/{id}/{field}/file</code> — document access IS entity access), and PDF.js range-requests pages on demand. <code>data-pdf-state=&quot;url&quot;</code> opts a viewer into <code>?dzpdf-page/?dzpdf-zoom</code> deep-links (replaceState — Back stays page navigation). Without JS the noscript download link is the whole experience. In production, VENDOR the PDF.js module — dynamic import() cannot carry SRI; the gallery's CDN pin is demo-only.</div></details></section>
+&lt;/section&gt;</code></pre></div><details class="hm-contract"><summary>Endpoint contract</summary><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/_dazzle/documents/{entity}/{id}/{field}/file</code></td><td>PDF.js fetching document bytes (initial + Range requests as the user pages)</td><td>the file field&#x27;s bytes — 200 whole-body or 206 partial with Content-Range; opaque 404 when the record is out of scope; 416 for unsatisfiable ranges</td><td>none (bytes consumed by the rendering engine)</td><td>—</td></tr></tbody></table><p>The partial above is only half the Hyperpart; the server must satisfy this contract for it to work. In Dazzle the response is rendered automatically — for any other htmx app, return matching markup from your endpoint.</p></details><p class="hm-composed"><strong>Composed of:</strong> <a href="#button">Button</a></p><p class="hm-anatomy"><strong>One Hyperpart, 4 code items:</strong> <code>site/registry.py</code> · <code>components/pdf.css:1</code> · <code>controllers/dz-pdf.js</code>. Distributed by the build (CSS layered, JS bundled) but bound by <code>HYPERPART: pdf</code> markers — <code>python tools/hyperpart.py pdf</code> lists them.</p><details class="hm-guidance" open><summary>Structured guidance</summary><div class="hm-notes"><h4>Seams</h4><ul><li>data-pdf-src points at the document bytes (or range proxy)</li><li>data-pdf-lib lazy-loads PDF.js as an ES module on first intersect</li><li>data-pdf-state=url enables ?dzpdf-page / ?dzpdf-zoom deep-links</li></ul><h4>Pitfalls</h4><ul><li>application controls ACCESS; PDF.js only renders — do not embed bytes in the bundle</li><li>without JS the noscript download link IS the experience</li></ul><h4>Do / Don't</h4><table class="hm-contract-table"><thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody><tr><td>lazy-load the engine from data-pdf-lib when the viewer enters view</td><td>eager-import PDF.js on every page that might show a document</td></tr></tbody></table><h4>Keyboard / AT</h4><ul><li>toolbar page/zoom controls remain keyboard-operable</li><li>noscript download is the progressive-enhancement floor</li></ul><h4>Composes with</h4><p><a href="button.html"><code>button</code></a></p></div></details><details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">The application renders the shell and CONTROLS ACCESS; PDF.js renders the document. <code>pdf.js</code> lazy-loads the library as an ES module from <code>data-pdf-lib</code> only when the viewer scrolls into view — no PDF bytes or engine in the bundle. In Dazzle, <code>data-pdf-src</code> points at the scope-gated range proxy (<code>/_dazzle/documents/{entity}/{id}/{field}/file</code> — document access IS entity access), and PDF.js range-requests pages on demand. <code>data-pdf-state=&quot;url&quot;</code> opts a viewer into <code>?dzpdf-page/?dzpdf-zoom</code> deep-links (replaceState — Back stays page navigation). Without JS the noscript download link is the whole experience. In production, VENDOR the PDF.js module — dynamic import() cannot carry SRI; the gallery's CDN pin is demo-only.</div></details></section>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
 The demo above renders the exact snippet — copy it into any htmx4 app.
