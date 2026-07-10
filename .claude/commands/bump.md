@@ -22,8 +22,8 @@ Bump the project's semantic version. The user may specify a bump level as an arg
    # pyproject.toml + core.toml — `version = "X.Y.Z"`
    sed -i.bak "s/^version = \"${OLD}\"$/version = \"${NEW}\"/" pyproject.toml src/dazzle/mcp/semantics_kb/core.toml
 
-   # .claude/CLAUDE.md — `**Version**: X.Y.Z`
-   sed -i.bak "s/\\*\\*Version\\*\\*: ${OLD}/**Version**: ${NEW}/" .claude/CLAUDE.md
+   # AGENTS.md — `**Version**: X.Y.Z`
+   sed -i.bak "s/\\*\\*Version\\*\\*: ${OLD}/**Version**: ${NEW}/" AGENTS.md
 
    # ROADMAP.md — `**Current Version**: vX.Y.Z`
    sed -i.bak "s/\\*\\*Current Version\\*\\*: v${OLD}/**Current Version**: v${NEW}/" ROADMAP.md
@@ -40,10 +40,10 @@ Bump the project's semantic version. The user may specify a bump level as an arg
    find . -maxdepth 6 -name "*.bak" -delete
 
    # Verify all six version lines moved exactly. Expected: 6 matching lines.
-   # Note: \*\*Version\*\* on CLAUDE.md has trailing text on the same line
+   # Note: \*\*Version\*\* on AGENTS.md has trailing text on the same line
    # (`| **Python**: 3.12+ | ...`) so don't anchor with `$`.
    grep -E "^version = \"${NEW}\"$|^\\*\\*Version\\*\\*: ${NEW} |^\\*\\*Current Version\\*\\*: v${NEW}$|^  version \"${NEW}\"$|tags/v${NEW}\\.tar\\.gz" \
-     pyproject.toml src/dazzle/mcp/semantics_kb/core.toml .claude/CLAUDE.md ROADMAP.md homebrew/dazzle.rb
+     pyproject.toml src/dazzle/mcp/semantics_kb/core.toml AGENTS.md ROADMAP.md homebrew/dazzle.rb
    ```
 
    If the final `grep` prints fewer than 6 lines, **stop and investigate** — one of the canonical locations didn't match the expected shape and needs manual attention.
