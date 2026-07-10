@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.22] - 2026-07-10
+
+### Changed
+- **Grid inline-edit emission goes through the typed `GridEditCell` ingestion boundary**
+  (`dazzle/render/fragment/ingest.py`) — the #1573 3-branch normalisation comprehension
+  in `_data_row.py` is deleted; producer-shape normalisation (dict/tuple/bare-string
+  options) happens once, in the model validator. Two cross-boundary locks land:
+  `test_hm_contract_schema_parity` (Dazzle's runtime model == the HM contract module,
+  field for field) and `test_hm_contract_dom_conformance` (the real pipeline's hydrated
+  DOM satisfies `contracts/grid_edit.py`'s DOM contract; plus a sole-emitter gate on
+  `data-dz-edit-*`). Behaviour note: a select-kind editable column with zero
+  filter_options now degrades to a text editor (previously emitted an unusable
+  empty-options select; production never hits this — C2.3 excludes optionless badges).
+
+### Agent Guidance
+- Never assemble `data-dz-edit-*` attributes by hand — construct `GridEditCell` and use
+  `edit_span_attrs()` (sole-emitter gated). New Hyperpart contracts follow
+  `packages/hatchi-maxchi/contracts/AUTHORING.md`.
+
 ## [0.101.21] - 2026-07-10
 
 ### Added
