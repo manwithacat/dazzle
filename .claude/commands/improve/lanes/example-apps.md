@@ -117,7 +117,7 @@ Add new rows to backlog as `PENDING`. Increments shared budget by 1. Stamp
 
 #### Tier 2 (when Tier 1 exhausted, medium cost): Visual quality
 
-Runs as a Claude Code Task subagent — no Anthropic API call, no API token spend. Cognitive work bills to the Claude Code subscription. See `improve/strategies/visual_tier2_subagent.md` for the full numbered playbook.
+Runs as a host-harness subagent (subagent-dispatch) — no direct API call, no API token spend; cognitive work bills to the harness subscription. See `improve/strategies/visual_tier2_subagent.md` for the full numbered playbook.
 
 In short: `dazzle qa capture --manifest <path>` writes a fleet-wide JSON manifest of screenshots; `dazzle.qa.evaluate.build_subagent_prompt(...)` builds a multi-screen mission; the subagent Reads each PNG, evaluates against `dazzle.qa.categories.CATEGORIES`, and writes findings JSON; `dazzle.cli.runtime_impl.ux_cycle_impl.visual_tier2_ingest.ingest_visual_findings(...)` writes new `visual_quality` rows into this lane's section of the backlog (dedup by `(app, category, location)`, severity-sorted, `seen=K` reinforced on re-runs).
 

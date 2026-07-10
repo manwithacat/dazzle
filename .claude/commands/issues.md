@@ -18,10 +18,10 @@ Every issue is classified into one tier during investigation (Step 2). The class
 | Tier | When | Loop behaviour |
 |------|------|----------------|
 | **Tier 1 — Autonomous** | Clear root cause; one correct approach, or the codebase convention dictates the choice. Reversible (code + tests, locally verifiable). Does **not** change a public claim, a default behaviour, a dependency, or architecture. *Bug fixes, metadata alignment, added tests, internal refactors with one obvious shape.* | Implement → ship → close → next. No pause. |
-| **Tier 2 — Design decision** | 2-4 nameable options with real trade-offs the codebase does not settle; **or** the change touches a user-visible contract, a default, a public/marketing claim, a dependency, or anything not cheaply reversible (data migrations, etc.). The decision is bounded — once made, implementation is clear. *"Implement X vs defer X", "strict default vs opt-in flag".* | Pause: `AskUserQuestion` with the options. Implement per the answer → ship → close → next. |
-| **Tier 3 — Needs brainstorming** | The *shape* of the solution is unclear — the issue is a goal, not a spec; a new subsystem / new example app / cross-cutting design; you cannot crisply enumerate the options. | Invoke the `brainstorming` skill (`superpowers:brainstorming`) with the user. Outcome: a written spec/plan. If the resulting work is small/medium → implement it in-loop → ship → close. If large → save the plan (issue comment or `dev_docs/`), comment on the issue, leave it **open**, → next. |
+| **Tier 2 — Design decision** | 2-4 nameable options with real trade-offs the codebase does not settle; **or** the change touches a user-visible contract, a default, a public/marketing claim, a dependency, or anything not cheaply reversible (data migrations, etc.). The decision is bounded — once made, implementation is clear. *"Implement X vs defer X", "strict default vs opt-in flag".* | Pause: ask the user to choose among the options (ask-user-choice). Implement per the answer → ship → close → next. |
+| **Tier 3 — Needs brainstorming** | The *shape* of the solution is unclear — the issue is a goal, not a spec; a new subsystem / new example app / cross-cutting design; you cannot crisply enumerate the options. | Run a structured brainstorming dialogue with the user (use your harness's brainstorming workflow if it has one). Outcome: a written spec/plan. If the resulting work is small/medium → implement it in-loop → ship → close. If large → save the plan (issue comment or `dev_docs/`), comment on the issue, leave it **open**, → next. |
 
-**Front-loading (auto mode):** after Step 2 classifies all issues, you MAY batch every Tier-2 question into a single `AskUserQuestion` round (up to 4 questions) *before* implementing anything — so design decisions are answered once and the implementation phase then runs uninterrupted. Tier-3 brainstorms are still handled one at a time, when their issue comes up in priority order.
+**Front-loading (auto mode):** after Step 2 classifies all issues, you MAY batch every Tier-2 question into a single ask-user-choice round (up to 4 questions) *before* implementing anything — so design decisions are answered once and the implementation phase then runs uninterrupted. Tier-3 brainstorms are still handled one at a time, when their issue comes up in priority order.
 
 **When torn:** Tier 1 vs 2 — lean Tier 1 if the change is reversible and internal; lean Tier 2 if it touches a public contract or claim. Tier 2 vs 3 — lean Tier 2 (a focused question is cheap, and the user can always answer "let's brainstorm this").
 
@@ -75,7 +75,7 @@ Issues are handled differently based on who filed them:
 
 ### Step 2: Parallel investigation (when 2+ issues open)
 
-When there are **2 or more open `manwithacat` issues**, dispatch investigation subagents **in parallel** (one per issue, all in a single message). Use `run_in_background: true` for each; omit the `model` override so each inherits the session model — root-cause investigation is judgment work (see the Subagent Model Policy in CLAUDE.md).
+When there are **2 or more open `manwithacat` issues**, dispatch investigation subagents **in parallel** (one per issue, all in a single message). Run them concurrently where the harness supports it (parallel-investigation, else sequential); root-cause investigation is judgment work — run it at the session tier (model-tiering, AGENTS.md Capability Mapping).
 
 Each investigation subagent prompt:
 
@@ -128,7 +128,7 @@ When there is only **1 issue**, skip parallel dispatch and investigate directly 
 - **Default mode:** if the issue has genuine ambiguity — multiple valid approaches with real trade-offs, unclear requirements, or would benefit from user input — ask the user before proceeding. Otherwise pick the most sensible approach following existing codebase patterns and continue.
 - **Auto mode:** act on the tier from Step 2:
   - **Tier 1** → go straight to Step 4.
-  - **Tier 2** → `AskUserQuestion` with the `OPTIONS` from investigation (one question per issue; or a batched front-loaded round per the front-loading note above). Record the answer, then Step 4 implementing that choice.
+  - **Tier 2** → ask-user-choice with the `OPTIONS` from investigation (one question per issue; or a batched front-loaded round per the front-loading note above). Record the answer, then Step 4 implementing that choice.
   - **Tier 3** → invoke the `brainstorming` skill with the user to produce a written spec. If the spec's work is small/medium, proceed to Step 4. If large, post the spec as an issue comment (or save to `dev_docs/`), leave the issue open, and loop back to Step 3 for the next issue.
 
 ### Step 4: Implement

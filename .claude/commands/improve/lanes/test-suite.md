@@ -3,7 +3,7 @@
 Collapses test-suite redundancy clusters (#1530) — one cluster family per cycle.
 The suite accretes parametrisable repetition (1,030 same-file clusters ≈ 22% of the
 suite at the 2026-07-02 audit); this lane is the retrospective half of the
-distillation feedback loop (the authoring-side half lives in CLAUDE.md
+distillation feedback loop (the authoring-side half lives in AGENTS.md
 "Test Authoring — Distillation Feedback Loop").
 
 **This is NOT a runtime play.** At ~7 ms/test the CPU cost is trivial. The payoff

@@ -36,8 +36,8 @@ git log --oneline --grep '^improve: cycle' <last-audit-sha>..HEAD
 
 ### 3. Adversarial review (one subagent per commit)
 
-Dispatch a reviewer subagent per sampled commit — **no `model` override**
-(judgment work inherits the session model per CLAUDE.md). Give it: the commit
+Dispatch a reviewer subagent per sampled commit — judgment work runs at the
+session tier (model-tiering). Give it: the commit
 diff, the matching `improve-log.md` cycle entry, and the backlog row(s) that
 cycle touched (grep the archive too — the row may have been compacted since).
 Its brief is to **refute**, not summarise:

@@ -1,10 +1,10 @@
 # Strategy: explore-subagent (substrate)
 
-Detailed playbook for `framework-ux` lane's `missing_contracts` and `edge_cases` sub-strategies. Runs as a Claude Code Task-tool subagent (NOT a `DazzleAgent` on the direct Anthropic SDK). Cognitive work bills to the Claude Code subscription; browser work happens via stateless Playwright helper subprocess.
+Detailed playbook for `framework-ux` lane's `missing_contracts` and `edge_cases` sub-strategies. Runs as a host-harness subagent (subagent-dispatch — on Claude Code, the Task tool; NOT a `DazzleAgent` on the direct SDK). Cognitive work bills to the harness subscription; browser work happens via stateless Playwright helper subprocess.
 
 ## Prerequisites
 
-- Claude Code host running this very session (`Task` tool reachable)
+- A host harness running this very session with subagent-dispatch available (on Claude Code: the Task tool)
 - `examples/<canonical>/.env` with `DATABASE_URL` + `REDIS_URL`
 - Postgres + Redis reachable on local dev box
 - No `ANTHROPIC_API_KEY` needed — cognition runs through subscription
@@ -92,11 +92,11 @@ print(prompt)
 "
 ```
 
-### 6. Invoke Task tool
+### 6. Dispatch the subagent
 
 `Agent` / `Task` tool call:
 - `subagent_type`: `general-purpose`
-- `model`: omit — inherit the session model (contract/edge-case discovery is judgment work; CLAUDE.md Subagent Model Policy)
+- model: run at the session tier (model-tiering — contract/edge-case discovery is judgment work)
 - `description`: `Cycle N /improve framework-ux explore: <example> <persona>`
 - `prompt`: string from step 5
 

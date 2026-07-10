@@ -1,12 +1,12 @@
 # Strategy: visual_tier2_subagent (example-apps Tier 2)
 
-Detailed playbook for `example-apps` lane's **Tier 2** visual-QA explore. Runs as a Claude Code Task-tool subagent (NOT a Claude API call). Cognitive work bills to the Claude Code subscription; browser work (screenshot capture) happens via `dazzle qa capture` per app.
+Detailed playbook for `example-apps` lane's **Tier 2** visual-QA explore. Runs as a host-harness subagent (subagent-dispatch — NOT a direct API call). Cognitive work bills to the harness subscription; browser work (screenshot capture) happens via `dazzle qa capture` per app.
 
 Replaces the API-bound screenshot-scrape CLI (`qa visual`, removed in the same commit that introduced this strategy) — capture is now `dazzle qa capture` + this subagent.
 
 ## Prerequisites
 
-- Claude Code host running this very session (`Task` tool reachable)
+- A host harness running this very session with subagent-dispatch available (on Claude Code: the Task tool)
 - Each example app boots cleanly via `dazzle serve` (or via the per-cycle runner pattern from `explore-subagent.md`)
 - No `ANTHROPIC_API_KEY` needed — cognition runs through subscription
 
@@ -73,12 +73,12 @@ print(prompt)
 
 The prompt instructs the subagent to Read each screenshot, evaluate against `dazzle.qa.categories.CATEGORIES`, and Write a JSON findings array to `${FINDINGS}`.
 
-### 4. Invoke the Task tool
+### 4. Dispatch the subagent
 
 Single dispatch, one subagent for the whole fleet (~25-50 screenshots):
 
 - `subagent_type`: `general-purpose`
-- `model`: omit — inherit the session model (visual perception + evaluation is judgment work; CLAUDE.md Subagent Model Policy)
+- model: run at the session tier (model-tiering — visual perception + evaluation is judgment work)
 - `description`: `Cycle N /improve example-apps visual Tier 2 — fleet sweep`
 - `prompt`: contents of `${STATE_DIR}/prompt.txt`
 

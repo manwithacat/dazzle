@@ -26,7 +26,7 @@ Skip `examples/README.md` (not an app). Each app has `dsl/app.dsl` (or similar) 
 
 ### Step 2: Run the sweep workflow
 
-Invoke the **Workflow** tool with `name: "fuzz"` and `args:` set to the JSON array of app paths from step 1 (actual array, not a stringified one). Each agent is an `Explore` subagent inheriting the session model (signature-scrape + false-positive judgment — see the Subagent Model Policy in CLAUDE.md), and applies the soft-finding allowlist below before reporting.
+Invoke the **Workflow** tool with `name: "fuzz"` and `args:` set to the JSON array of app paths from step 1 (actual array, not a stringified one). Each agent is an `Explore` subagent inheriting the session model (signature-scrape + false-positive judgment — model-tiering, AGENTS.md Capability Mapping), and applies the soft-finding allowlist below before reporting.
 
 It returns `{apps: [{app, status, bugs:[{severity, signature, detail, evidence}], soft:[...]}]}`.
 

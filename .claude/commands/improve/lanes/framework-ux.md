@@ -45,7 +45,7 @@ Mark selected row `IN_PROGRESS`, update `last_cycle`, increment `attempts`. If `
 
 ### 2. SPECIFY (only if contract is MISSING or DRAFT)
 
-Invoke the `ux-architect` skill via Skill tool. Save contract to `~/.claude/skills/ux-architect/components/<component>.md` per the contract template at `~/.claude/skills/ux-architect/templates/component-contract.md`. Update row's `contract` to `DONE`.
+Invoke the `ux-architect` skill. Save contract to `~/.claude/skills/ux-architect/components/<component>.md` per the contract template at `~/.claude/skills/ux-architect/templates/component-contract.md`. Update row's `contract` to `DONE`.
 
 Skip if contract is already `DONE`.
 
@@ -57,7 +57,7 @@ Apply contract to Dazzle code. Typical files:
 - Backend endpoints for new server APIs
 - `src/dazzle/page/converters/template_compiler.py` — new context fields
 
-Follow the ratified UI invariants (CLAUDE.md "UI Invariants" + `docs/reference/taste.md`): the HM Hyperpart idiom — delegated document-level vanilla controllers, state in the DOM (attributes/`.checked`/`aria-*`), server-owned rendering; semantic `dz-*` classes; `[data-dz-variant]`/`[data-dz-size]` for buttons. Never author `x-data`/`@click`/`x-show` (the morph path strips Alpine-applied classes).
+Follow the ratified UI invariants (AGENTS.md "UI Invariants" + `docs/reference/taste.md`): the HM Hyperpart idiom — delegated document-level vanilla controllers, state in the DOM (attributes/`.checked`/`aria-*`), server-owned rendering; semantic `dz-*` classes; `[data-dz-variant]`/`[data-dz-size]` for buttons. Never author `x-data`/`@click`/`x-show` (the morph path strips Alpine-applied classes).
 
 Update row's `impl` to `DONE`.
 
@@ -121,7 +121,7 @@ Choose one of seven sub-strategies based on accumulated state. Pick by judgment,
 
 Scan for recurring UX patterns lacking a contract. Proposal-heavy. Use when (a) recently-touched template family may contain uncontracted components, or (b) >3 cycles since last `missing_contracts`.
 
-Substrate: dispatches a Claude Code Task-tool subagent (no `model` override — judgment work inherits the session model per CLAUDE.md; type `general-purpose`) using the playbook in `improve/strategies/explore-subagent.md`. Findings go to per-run findings.json then ingested into the lane backlog as `PROP-NNN` proposals.
+Substrate: dispatches a subagent (subagent-dispatch; judgment work runs at the session tier per model-tiering; on Claude Code: a `general-purpose` Task-tool agent with no `model` override) using the playbook in `improve/strategies/explore-subagent.md`. Findings go to per-run findings.json then ingested into the lane backlog as `PROP-NNN` proposals.
 
 #### Sub-strategy: edge_cases
 
@@ -230,6 +230,6 @@ Prefer diverse cycles over mechanical rotation. Three `edge_cases` runs in a row
 
 ## Subagent substrate (for missing_contracts and edge_cases)
 
-EXPLORE runs as a Claude Code Task-tool subagent, NOT as a `DazzleAgent` on the direct Anthropic SDK. Cognitive work bills to Claude Code subscription; browser work happens via stateless Playwright helper subprocess.
+EXPLORE runs as a host-harness subagent (subagent-dispatch), NOT as a `DazzleAgent` on the direct SDK. Cognitive work bills to the harness subscription; browser work happens via stateless Playwright helper subprocess.
 
-Detailed playbook: `improve/strategies/explore-subagent.md`. Numbered steps for: init run state directory, boot example app via runner script, poll for readiness, log in as persona, build mission prompt, invoke Task tool, read findings, tear down runner, ingest results.
+Detailed playbook: `improve/strategies/explore-subagent.md`. Numbered steps for: init run state directory, boot example app via runner script, poll for readiness, log in as persona, build mission prompt, dispatch the subagent, read findings, tear down runner, ingest results.

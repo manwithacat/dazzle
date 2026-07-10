@@ -16,7 +16,7 @@ If `$ARGUMENTS` is provided, filter to only that project name. If it doesn't exi
 
 ## 2. Run the workflow
 
-Invoke the **Workflow** tool with `name: "xproject"` and `args:` set to the JSON array of project root paths from step 1 (actual array, not a stringified one). Each per-project agent runs `dazzle validate` / `dazzle lint` + the dazzle MCP `sentinel` / `pulse` / `discovery` ops, read-only, and inherits the session model (judgment to interpret results — see CLAUDE.md model policy).
+Invoke the **Workflow** tool with `name: "xproject"` and `args:` set to the JSON array of project root paths from step 1 (actual array, not a stringified one). Each per-project agent runs `dazzle validate` / `dazzle lint` + the dazzle MCP `sentinel` / `pulse` / `discovery` ops, read-only, and inherits the session model (judgment to interpret results — model-tiering, AGENTS.md Capability Mapping).
 
 > Requires the **dazzle MCP** to be connected in this session (the agents call `mcp__dazzle__*`). If it isn't, run `/xproject` from a session where it is.
 
