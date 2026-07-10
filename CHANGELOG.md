@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.18] - 2026-07-10
+
+### Changed
+- **Contributor workflows moved to `.agents/skills/`** (multi-agent consistency
+  migration, phase 2 of 4). ship / check / bump / cimonitor / docs-update / smells /
+  dsl-authoring / qa-trial / spec-narrate now live at `.agents/skills/<name>/SKILL.md`
+  in the open-standard SKILL.md format; `.claude/commands/` and `.claude/skills/` keep
+  pointer shims so Claude Code slash-commands and skill discovery are unchanged.
+  AGENTS.md gains a Workflows index; new shim↔skill↔index lockstep gate in
+  `tests/unit/test_agent_asset_gates.py`. Ship's hardcoded attribution trailer is now
+  harness-neutral.
+
+### Agent Guidance
+- New reusable workflows go in `.agents/skills/<name>/SKILL.md` (portable, any harness)
+  with a `.claude/` pointer shim and a Workflows-index bullet in AGENTS.md — the gate
+  enforces all three together. Claude-runtime-specific playbooks (improve/issues/fuzz/
+  phase-contract) stay in `.claude/`.
+
 ## [0.101.17] - 2026-07-10
 
 ### Changed
