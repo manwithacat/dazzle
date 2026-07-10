@@ -15,12 +15,13 @@ import json
 import logging
 import random
 import statistics
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
-from dazzle.core.taste_rubric import build_judge_prompt, dimensions_for_theme
+from dazzle.core.taste_rubric import TasteDimension, build_judge_prompt, dimensions_for_theme
 
 logger = logging.getLogger(__name__)
 
@@ -257,16 +258,20 @@ def score_image(
     repeat: int = 0,
     model: str = DEFAULT_JUDGMENT_MODEL,
     client: Any | None = None,
+    dimensions: Sequence[TasteDimension] | None = None,
 ) -> list[JudgeScore]:
     """Score one image across its applicable dimensions with one judge pass.
 
     Sends ONLY pixels + rubric — no filename, label, or source hint (the
     blindness contract). Retries JSON parsing twice, then raises.
+
+    ``dimensions`` overrides the rubric (e.g. SITESPEC_VISION_DIMENSIONS for
+    property-vision, #1567); ``None`` keeps the taste rubric for the panel.
     """
     if client is None:
         client = _make_client()
 
-    dims = dimensions_for_theme(image.theme)
+    dims = list(dimensions) if dimensions is not None else dimensions_for_theme(image.theme)
     prompt = build_judge_prompt(dims)
     b64 = base64.standard_b64encode(image.path.read_bytes()).decode("ascii")
 

@@ -1152,6 +1152,43 @@ def qa_component_vision(
     typer.echo(f"Advisory score for {name} — report: {out / (name + '.json')}")
 
 
+@qa_app.command("property-vision")
+def qa_property_vision(
+    url: str = typer.Argument(
+        ..., help="URL of the rendered property page (e.g. http://localhost:3000/)"
+    ),
+    family: str = typer.Option(
+        ..., "--family", help="Aesthetic family: stripe|paper|linear-dark|expressive"
+    ),
+    judges: int = typer.Option(3, "--judges", help="Independent judge passes"),
+    model: str | None = typer.Option(None, "--model", help="Override judge model"),
+    out: Path = typer.Option(Path(".dazzle/qa/property-vision"), "--out", help="Report output dir"),
+) -> None:
+    """On-demand advisory vision score for a property page vs its family exemplars.
+
+    Subscription/API-billed. Advisory only — exits 0 on a successful score.
+    family_fidelity is prompt-anchored (exemplars listed in the report), not
+    side-by-side, in this version.
+    """
+    import json
+
+    from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+    from dazzle.qa.property_vision import score_property
+
+    try:
+        result = score_property(
+            url, family, judges=judges, model=model or DEFAULT_JUDGMENT_MODEL, out_dir=out
+        )
+    except (FileNotFoundError, KeyError) as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(code=2) from None
+
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "property-vision.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    typer.echo(json.dumps(result["scores"], indent=2))
+    typer.echo(f"Advisory score for {url} [{family}] — report: {out / 'property-vision.json'}")
+
+
 @qa_app.command("trial")
 def qa_trial(
     app: str | None = typer.Option(None, "--app", "-a", help="Example app name (defaults to cwd)"),
