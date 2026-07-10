@@ -42,6 +42,11 @@ SANCTIONED = {
     # its modern-landing structural properties (Goal-2 deterministic floor).
     # Lives in core/ (moved from testing/ in #1566 so design_context can import it).
     "src/dazzle/core/sitespec_hygiene.py",
+    # Typed ingestion boundary: runtime copies of HM contract models, locked
+    # to packages/hatchi-maxchi/contracts/ by the schema-parity + DOM-
+    # conformance gates. The docstring pointer to the contract source of
+    # truth is load-bearing (spec 2026-07-10-hyperpart-contract-modules).
+    "src/dazzle/render/fragment/ingest.py",
     # Reservoir metric names the HM package to measure the delegation drain +
     # recognise HM-generated served files (the marker). Governance, not consumption.
     "scripts/hm_tailwind_reservoir.py",
