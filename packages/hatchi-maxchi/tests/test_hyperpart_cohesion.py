@@ -172,7 +172,8 @@ def test_every_part_has_a_committed_page() -> None:
 
 
 # Controller-bearing parts with no atomic behaviour scenario yet. SHRINK-ONLY.
-PENDING_BEHAVIOUR = frozenset({"combobox", "tags", "app-shell"})
+# SHRINK-ONLY — empty means every controller-bearing part has an atomic scenario.
+PENDING_BEHAVIOUR = frozenset()
 
 
 def test_controller_parts_have_behaviour_coverage_or_pending() -> None:

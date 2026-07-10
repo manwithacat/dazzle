@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.29] - 2026-07-10
+
+### Changed
+- **HM `PENDING_BEHAVIOUR` drained to empty** — atomic scenarios for `combobox`,
+  `tags`, and `app-shell` (enhance + select/filter/chip-add/remove/sidebar
+  toggle). Every controller-bearing Hyperpart now has a real-browser scenario
+  targeting its part page. HM package **0.1.67**.
+
+### Agent Guidance
+- `PENDING_BEHAVIOUR` is empty: new controller-bearing Hyperparts need a
+  `goto_part(page, "<id>")` scenario in `test_behaviour.py` before they can
+  ship (the coverage meta-gate enforces it).
+
 ## [0.101.28] - 2026-07-10
 
 ### Added
