@@ -235,13 +235,37 @@ def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore
     import build_site
 
     build_site.build(tmp_path)
-    for name in ("index.html", "hatchi-maxchi.css", "hatchi-maxchi.js"):
-        fresh = (tmp_path / name).read_text(encoding="utf-8")
-        committed = (PKG / "site" / name).read_text(encoding="utf-8")
-        assert fresh == committed, (
-            f"site/{name} is stale or the build is nondeterministic — "
+    fresh_files = {
+        q.relative_to(tmp_path).as_posix(): q for q in tmp_path.rglob("*") if q.is_file()
+    }
+    committed_root = PKG / "site"
+    # Committed-side files that are SOURCES (not build outputs): python
+    # modules, caches. Everything else under site/ must be exactly what a
+    # fresh build emits — the tree-compare version of the old 3-file check.
+    committed_files = {
+        q.relative_to(committed_root).as_posix(): q
+        for q in committed_root.rglob("*")
+        if q.is_file()
+        and "__pycache__" not in q.parts
+        and q.suffix != ".py"
+        # Hand-placed static assets the build does not emit (demo fixtures):
+        and q.relative_to(committed_root).as_posix() not in {"sample.pdf"}
+    }
+    missing = sorted(set(fresh_files) - set(committed_files))
+    stale_extra = sorted(set(committed_files) - set(fresh_files))
+    assert not missing, (
+        f"built artifacts not committed: {missing} — run site/build_site.py and commit"
+    )
+    assert not stale_extra, (
+        f"committed artifacts the build no longer emits: {stale_extra} — delete them"
+    )
+    for rel, fq in fresh_files.items():
+        assert fq.read_bytes() == committed_files[rel].read_bytes(), (
+            f"site/{rel} is stale or the build is nondeterministic — "
             "re-run python site/build_site.py and commit"
         )
+    assert any(r.startswith("hyperparts/") for r in fresh_files), "no per-part pages built"
+    assert any(r.startswith("agents/") for r in fresh_files), "no agent files built"
     # Blueprint sub-pages regenerate byte-identically too — stale committed
     # HTML would make test_blueprints.py exercise outdated markup while green.
     for bp_html in sorted((tmp_path / "blueprints").glob("*.html")):

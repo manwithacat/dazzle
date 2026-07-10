@@ -1,0 +1,39 @@
+# Pivot table (`pivot`)
+
+Two group-bys crossed into a matrix — row labels × column buckets, empty intersections rendered as explicit nulls.
+
+## Partial (copy-paste; the live demo renders this exact string)
+
+```html
+<!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
+<div class="pivot-region hm-measure-lg">
+  <div class="pivot-scroll">
+    <table class="pivot-grid">
+      <thead>
+        <tr>
+          <th>System</th>
+          <th>Severity</th>
+          <th class="is-measure">Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>API</td>
+          <td><span class="badge badge-sm" data-tone="destructive" role="status" aria-label="Status: Critical"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-circle-x"/></svg></span>Critical</span></td>
+          <td class="is-measure">3</td>
+        </tr>
+        <tr>
+          <td>Dashboard</td>
+          <td><span class="pivot-null">—</span></td>
+          <td class="is-measure">9</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="pivot-summary">2 rows</p>
+</div>
+```
+
+## Guidance (prose; HTML from the registry notes field)
+
+One scope-aware two-dimensional <code>GROUP BY</code> fills the whole matrix: dimension columns lead (status values render as badges, FK values as their label text), then measure columns — <code>class=&quot;is-measure&quot;</code> on the measure th/td pair drives the mono right-aligned numeric treatment. Empty intersections render <code>dz-pivot-null</code> em-dashes rather than blanks (absence is data). The scroll wrapper keeps wide matrices inside their card.

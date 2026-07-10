@@ -141,6 +141,80 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-def]
+    """agents/<id>.md — the agent-optimised chunk: partial + exchanges +
+    contract schema + guidance in ONE fetchable file per part. Everything
+    here derives from drift-gated sources (registry + contract modules)."""
+    lines = [
+        f"# {hyperpart.title} (`{hyperpart.id}`)",
+        "",
+        hyperpart.blurb,
+        "",
+        "## Partial (copy-paste; the live demo renders this exact string)",
+        "",
+        "```html",
+        snippet_src.rstrip("\n"),
+        "```",
+        "",
+    ]
+    if hyperpart.exchanges:
+        lines += [
+            "## Exchanges (the endpoint contract your server must satisfy)",
+            "",
+            "| Request | Trigger | Response fragment | Swap | States |",
+            "|---|---|---|---|---|",
+        ]
+        for e in hyperpart.exchanges:
+            states = " ".join(e.states) if e.states else "—"
+            row = (
+                f"| `{e.method} {e.endpoint}` | {e.trigger} | {e.response} | {e.swap} | {states} |"
+            )
+            lines.append(row.replace("\n", " "))
+        lines.append("")
+    if hyperpart.contracts:
+        import importlib
+
+        lines += ["## Contract modules (typed source of truth)", ""]
+        for ref in hyperpart.contracts:
+            lines.append(f"### `{ref}`")
+            mod = importlib.import_module(ref.removesuffix(".py").replace("/", "."))
+            model = next(
+                (
+                    v
+                    for v in vars(mod).values()
+                    if isinstance(v, type)
+                    and hasattr(v, "model_json_schema")
+                    and v.__module__ == mod.__name__
+                ),
+                None,
+            )
+            if model is not None:
+                schema = model.model_json_schema()
+                req = set(schema.get("required", ()))
+                lines += ["", "| Field | Type | Required |", "|---|---|---|"]
+                for name, prop in schema.get("properties", {}).items():
+                    typ = (
+                        prop.get("type")
+                        or " | ".join(a.get("type", "?") for a in prop.get("anyOf", ()))
+                        or "object"
+                    )
+                    if prop.get("enum"):
+                        typ += f" in {prop['enum']}"
+                    lines.append(f"| `{name}` | `{typ}` | {'yes' if name in req else 'no'} |")
+            lines.append("")
+    if hyperpart.notes:
+        lines += [
+            "## Guidance (prose; HTML from the registry notes field)",
+            "",
+            hyperpart.notes,
+            "",
+        ]
+    if hyperpart.controller:
+        refs = [hyperpart.controller, *hyperpart.extensions]
+        lines += ["## Controller files", ""] + [f"- `{r}`" for r in refs] + [""]
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
 def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     """A one-line 'this Hyperpart is one unit spread across N files' note,
     for the interactive Hyperparts where the code is genuinely scattered."""
@@ -885,6 +959,8 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         "if(r)r.checked=true;});}})();"
     )
 
+    part_sections: list = []  # (hyperpart, full-depth section html) — emitted as hyperparts/<id>.html
+    agent_docs: list = []  # (id, markdown) — emitted as agents/<id>.md
     for c in HYPERPARTS:
         # Expand icon placeholders ONCE and use the SAME string for the
         # live demo and the snippet — so copied markup carries real
@@ -954,19 +1030,42 @@ window.addEventListener('storage', function (e) {{
             if c.notes
             else ""
         )
+        # Full-depth section → the part page (hyperparts/<id>.html). The iframe
+        # src is index-relative; the part page lives inside hyperparts/, so
+        # strip the directory for the standalone copy.
+        framed_live_part = framed_live.replace('src="hyperparts/', 'src="')
+        part_sections.append(
+            (
+                c,
+                (
+                    f'<section class="hm-comp" id="{c.id}">'
+                    f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
+                    f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
+                    f'<div class="hm-preview">{framed_live_part}</div>'
+                    f'<div class="hm-code">{copy_button}'
+                    f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
+                    f"<code>{snippet}</code></pre></div>"
+                    f"{apply_prefix(_exchanges_html(c), prefix)}"
+                    f"{apply_prefix(_contracts_html(c), prefix)}"
+                    f"{_composed_of_html(c)}"
+                    f"{_anatomy_html(c)}"
+                    f"{notes}</section>"
+                ),
+            )
+        )
+        agent_docs.append((c.id, _agent_md(c, snippet_src)))
+        # SIMPLE gallery section (spec decision 5): demo + snippet + link.
+        # No exchanges/contract/guidance/anatomy disclosures on the index.
         body_parts.append(
             f'<section class="hm-comp" id="{c.id}">'
-            f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
+            f"<h2>{_html.escape(c.title)}{tag}</h2>"
             f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
             f'<div class="hm-preview">{framed_live}</div>'
             f'<div class="hm-code">{copy_button}'
             f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
             f"<code>{snippet}</code></pre></div>"
-            f"{apply_prefix(_exchanges_html(c), prefix)}"
-            f"{apply_prefix(_contracts_html(c), prefix)}"
-            f"{_composed_of_html(c)}"
-            f"{_anatomy_html(c)}"
-            f"{notes}</section>"
+            f'<p class="hm-more"><a href="hyperparts/{c.id}.html">Full reference: '
+            f"contracts, guidance, anatomy →</a></p></section>"
         )
 
     # opener references the published selectors (dialog.dz-command,
@@ -1056,6 +1155,59 @@ Every snippet is the live example — copy it into any htmx4 app.
 </body>
 </html>"""
     (out_dir / "index.html").write_text(doc + "\n", encoding="utf-8")
+
+    # ── Per-part pages: the canonical deep reference AND the atomic test
+    #    fixture (spec 2026-07-10-hm-docs-pedagogy-atomic-testing). Same
+    #    bundle/sheet/theme chrome as the index, one part per page.
+    hp_dir = out_dir / "hyperparts"
+    hp_dir.mkdir(exist_ok=True)
+    theme_toggle = (
+        '<div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup">'
+        '<label><input type="radio" name="hm-theme" data-hm-theme="light" '
+        "onclick=\"hmTheme('light')\"><span>Light</span></label>"
+        '<label><input type="radio" name="hm-theme" data-hm-theme="dark" '
+        "onclick=\"hmTheme('dark')\"><span>Dark</span></label></div></div>"
+    )
+    for c, section in part_sections:
+        part_doc = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{_html.escape(c.title)} — HaTchi-MaXchi</title>
+<link rel="stylesheet" href="../hatchi-maxchi.css">
+<style>{PAGE_CSS}</style>
+<script>{theme_js}</script>
+</head>
+<body>
+{sheet}
+<div class="hm-wrap">
+<main class="hm-main">
+<div class="hm-topbar">
+  <div class="hm-hero">
+    <p class="hm-more"><a href="../index.html#{c.id}">← All Hyperparts</a></p>
+    <h1>{_html.escape(c.title)}</h1>
+  </div>
+  {theme_toggle}
+</div>
+{section}
+<footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
+Generated from the design-system sources by <code>site/build_site.py</code>.
+The demo above renders the exact snippet — copy it into any htmx4 app.
+</footer>
+</main>
+</div>
+<script src="../hatchi-maxchi.js" defer></script>
+<script>{opener_js}</script>
+</body>
+</html>"""
+        (hp_dir / f"{c.id}.html").write_text(part_doc + "\n", encoding="utf-8")
+
+    # ── Per-part agent files: one fetchable chunk per part (llms.txt lists them).
+    ag_dir = out_dir / "agents"
+    ag_dir.mkdir(exist_ok=True)
+    for part_id, md in agent_docs:
+        (ag_dir / f"{part_id}.md").write_text(md, encoding="utf-8")
 
     # ── Blueprint sub-pages ──
     # Each Blueprint renders to blueprints/<id>.html: the SAME bundle/sheet/
@@ -1175,6 +1327,13 @@ document.addEventListener('click', function (e) {{
         "- [README]"
         "(https://github.com/manwithacat/hatchi-maxchi#readme):"
         " setup, theming, prefixing, releases\n"
+        "## Per-part agent files (one chunk per Hyperpart)\n\n"
+        + "".join(
+            f"- [{h.title}](https://manwithacat.github.io/hatchi-maxchi/"
+            f"agents/{h.id}.md): {h.blurb}\n"
+            for h in HYPERPARTS
+        )
+        + "\n"
         "## Blueprints (full-page layout motifs)\n\n"
         + "".join(
             f"- [{bp.title}](https://manwithacat.github.io/hatchi-maxchi/"
