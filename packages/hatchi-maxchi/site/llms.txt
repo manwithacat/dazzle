@@ -10,6 +10,8 @@
 - [Contract modules (typed)](https://github.com/manwithacat/hatchi-maxchi/tree/main/contracts): per-part typed ingestion model + DOM contract + executable exemplar; authoring path in contracts/AUTHORING.md
 - [AGENTS.md](https://github.com/manwithacat/hatchi-maxchi/blob/main/AGENTS.md): consuming + contributing with a coding agent
 - [README](https://github.com/manwithacat/hatchi-maxchi#readme): setup, theming, prefixing, releases
+- [Guide](https://manwithacat.github.io/hatchi-maxchi/guide.html): the theory track — hypermedia model, tokens, Hyperpart anatomy, exchanges & contracts, Blueprints
+
 ## Per-part agent files (one chunk per Hyperpart)
 
 - [Button](https://manwithacat.github.io/hatchi-maxchi/agents/button.md): Primary, outline, ghost, destructive — chromatic accent CTAs.

@@ -176,6 +176,77 @@ def _guidance_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+def _guide_body() -> str:
+    """guide.html body — the ONE theory track (spec decision 3). Prose is
+    theory only; every code/markup/contract block is EMBEDDED from a
+    drift-gated source (registry partials via the normal renderers, contract
+    modules via _contracts_html) so the gates see everything the guide shows."""
+    grid = _BY_ID["grid"]
+    sections = []
+    sections.append(
+        '<section class="hm-comp" id="why"><h2>1 · Why hypermedia</h2>'
+        "<p>HaTchi-MaXchi is an htmx4-native design system: the server renders "
+        "markup, the browser swaps fragments, and there is no client state "
+        "graph. State lives in two places only — on the server, and in the DOM "
+        "itself (attributes, <code>.checked</code>, <code>aria-*</code>). A "
+        "component here is a <strong>Hyperpart</strong>: a partial plus its "
+        "exchange contracts plus, only where the platform lacks a primitive, a "
+        "small delegated vanilla-JS controller. If you arrive with React "
+        "priors, the renaming is deliberate: there is nothing to hydrate, no "
+        "composition tree, and morphing swaps will discard any state a JS "
+        "object tries to hold.</p></section>"
+    )
+    sections.append(
+        '<section class="hm-comp" id="tokens"><h2>2 · Tokens &amp; theming</h2>'
+        "<p>All variation flows through design tokens. Components reference "
+        "semantic custom properties; schemes (light/dark) and aesthetic "
+        "families override tokens, never rules. The theme toggle on every page "
+        "of this site flips <code>data-theme</code> on the root — no component "
+        "opts in, because no component names a raw colour. When styling looks "
+        "wrong, the first question is always <em>which token should this be "
+        "reading?</em>, not <em>which rule should I add?</em></p></section>"
+    )
+    sections.append(
+        '<section class="hm-comp" id="anatomy"><h2>3 · Anatomy of a Hyperpart '
+        "— the grid, worked</h2>"
+        "<p>One Hyperpart is one logical unit distributed across files by build "
+        "necessity: the partial and exchange contracts in the registry, CSS in "
+        "layer order, an optional controller, and — for data-bearing parts — a "
+        "typed contract module. The grid family shows every piece at once; its "
+        "inline-edit extension is the canonical example of the morph-survival "
+        "idiom (the typed edit buffer lives on the grid root, out of the swap "
+        "path).</p>" + _anatomy_html(grid) + "</section>"
+    )
+    sections.append(
+        '<section class="hm-comp" id="contracts"><h2>4 · Exchanges &amp; '
+        "contracts</h2>"
+        "<p>A Hyperpart is only half markup. The other half is the contract the "
+        "server must satisfy: the <em>exchange</em> (request/response round-trip "
+        "each affordance initiates) and, for data-bearing seams, the <em>typed "
+        "contract module</em> — ingestion model, DOM contract, and an executable "
+        "exemplar that CI renders and validates. Both halves for the grid:</p>"
+        + _exchanges_html(grid)
+        + _contracts_html(grid)
+        + "</section>"
+    )
+    bp_links = " · ".join(
+        f'<a href="blueprints/{bp.id}.html">{_html.escape(bp.title)}</a>' for bp in BLUEPRINTS
+    )
+    sections.append(
+        '<section class="hm-comp" id="blueprints"><h2>5 · Composing '
+        "Blueprints</h2>"
+        "<p>Whole pages compose from published Hyperparts and Layout primitives "
+        "only — a <strong>Blueprint</strong> is the thing you copy when starting "
+        "a page. Layout responsiveness is intrinsic (primitives wrap on their "
+        "own minimums; no media queries), which is what makes a Blueprint "
+        "testable at any viewport. Study them live: " + bp_links + ".</p>"
+        "<p>Building a NEW part instead? Follow the contract-first path in "
+        "<code>contracts/AUTHORING.md</code> — decision test, contract module, "
+        "controller, registry, consumer emitter.</p></section>"
+    )
+    return "".join(sections)
+
+
 def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-def]
     """agents/<id>.md — the agent-optimised chunk: partial + exchanges +
     contract schema + guidance in ONE fetchable file per part. Everything
@@ -983,6 +1054,8 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
 
     # Blueprints: full-page motifs on their own sub-pages (the Blocks
     # analogue) — nav links out rather than anchoring.
+    nav_parts.append('<div class="hm-nav-group">Learn</div>')
+    nav_parts.append('<a href="guide.html">Guide</a>')
     nav_parts.append('<div class="hm-nav-group">Blueprints</div>')
     for bp in BLUEPRINTS:
         nav_parts.append(f'<a href="blueprints/{bp.id}.html">{_html.escape(bp.title)}</a>')
@@ -1261,6 +1334,42 @@ The demo above renders the exact snippet — copy it into any htmx4 app.
     for part_id, md in agent_docs:
         (ag_dir / f"{part_id}.md").write_text(md, encoding="utf-8")
 
+    # ── guide.html: the one theory track. Same chrome as a part page.
+    guide_doc = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide — HaTchi-MaXchi</title>
+<link rel="stylesheet" href="hatchi-maxchi.css">
+<style>{PAGE_CSS}</style>
+<script>{theme_js}</script>
+</head>
+<body>
+{sheet}
+<div class="hm-wrap">
+<main class="hm-main">
+<div class="hm-topbar">
+  <div class="hm-hero">
+    <p class="hm-more"><a href="index.html">← Gallery</a></p>
+    <h1>The HaTchi-MaXchi Guide</h1>
+    <p>Theory in five short sections — everything embedded below is a live,
+    drift-gated artifact, not hand-typed documentation.</p>
+  </div>
+  {theme_toggle}
+</div>
+{apply_prefix(_guide_body(), prefix)}
+<footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
+Generated from the design-system sources by <code>site/build_site.py</code>.
+</footer>
+</main>
+</div>
+<script src="hatchi-maxchi.js" defer></script>
+<script>{opener_js}</script>
+</body>
+</html>"""
+    (out_dir / "guide.html").write_text(guide_doc + "\n", encoding="utf-8")
+
     # ── Blueprint sub-pages ──
     # Each Blueprint renders to blueprints/<id>.html: the SAME bundle/sheet/
     # theme chrome, the composed page live, and a view-source disclosure of
@@ -1379,6 +1488,9 @@ document.addEventListener('click', function (e) {{
         "- [README]"
         "(https://github.com/manwithacat/hatchi-maxchi#readme):"
         " setup, theming, prefixing, releases\n"
+        "- [Guide](https://manwithacat.github.io/hatchi-maxchi/guide.html):"
+        " the theory track — hypermedia model, tokens, Hyperpart anatomy,"
+        " exchanges & contracts, Blueprints\n\n"
         "## Per-part agent files (one chunk per Hyperpart)\n\n"
         + "".join(
             f"- [{h.title}](https://manwithacat.github.io/hatchi-maxchi/"
