@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-02-15
+**Implementation status (2026-07-10):** ALPHA — the DSL constructs parse/validate/link, but TigerBeetle execution has no CI strategy and no example exercises it end-to-end. Parked; promotion criteria in [#1576](https://github.com/manwithacat/dazzle/issues/1576).
 
 ## Context
 

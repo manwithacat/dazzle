@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.25] - 2026-07-10
+
+### Changed
+- **TigerBeetle ledger execution parked as ALPHA** (#1576). The `ledger`/`transaction`
+  DSL constructs remain fully supported (parse/validate/link, ADR-0015, fieldtest_hub
+  declares them), but TigerBeetle-backed execution has no CI strategy and no example
+  exercises it end-to-end — so it is now marked honestly: alpha banner on
+  `docs/reference/ledgers.md` (semantics-KB source), implementation-status note on
+  ADR-0015, and the `ledger_integrity` spec-narrative claim rescoped to what
+  validation actually proves (model-level balance, not runtime execution). Promotion
+  criteria — single-binary TB in CI, an example exercising transfers/constraints/
+  `sync_to`, claim unscoped in the same commit the CI job goes green — live in #1576.
+
+### Agent Guidance
+- Do not present TigerBeetle ledger EXECUTION as production-ready — the constructs are
+  supported, the execution engine is alpha (#1576). The `ledger_integrity` claim text
+  and its proof move together at promotion time; never unscope one without the other.
+
 ## [0.101.24] - 2026-07-10
 
 ### Added

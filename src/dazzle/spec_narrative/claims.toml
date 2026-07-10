@@ -107,9 +107,11 @@ evidence = "dazzle compliance summary"
 detector = "has_ledger"
 group = "data"
 audience = "investor"
-claim = """Money movement is recorded as balanced, double-entry transactions
-against declared ledger accounts: every movement has an equal and opposite
-entry, so the books cannot silently drift out of balance."""
+claim = """The application's money movement is MODELLED as balanced,
+double-entry transactions against declared ledger accounts, and validation
+enforces that every declared movement has an equal and opposite entry.
+(The TigerBeetle-backed execution engine for these declarations is in
+alpha and not yet independently verified in CI.)"""
 evidence = "dazzle validate"
 
 [background_execution]

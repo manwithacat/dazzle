@@ -15,7 +15,7 @@
 | [Processes](processes.md) | Processes orchestrate durable, multi-step workflows across entities and services. |
 | [Stories](stories.md) | Stories capture expected user-visible outcomes in a structured format tied to personas and entities. |
 | [Rhythms](rhythms.md) | Rhythms capture longitudinal persona journeys through the app, organized into temporal phases containing scenes — evaluable actions on specific surfaces. |
-| [Ledgers & Transactions](ledgers.md) | Ledgers and transactions provide TigerBeetle-backed double-entry accounting. |
+| [Ledgers & Transactions](ledgers.md) | > **Status: ALPHA** — the `ledger`/`transaction` constructs parse, validate, and link, but TigerBeetle-backed execution is not yet CI-verified and no example exercises it end-to-end. |
 | [LLM Models & Intents](llm.md) | DAZZLE supports declarative LLM job definitions for AI-powered tasks such as classification, extraction, and generation. |
 | [Testing](testing.md) | DAZZLE provides a comprehensive testing toolkit including E2E testing with Playwright, FlowSpec test generation, semantic DOM conventions, capability discovery, CRUD completeness analysis, workflow coherence checks, and RBAC validation. |
 | [MCP Tool Inventory](mcp-tools.md) | Live inventory of the MCP tools exposed by `dazzle mcp run`. |

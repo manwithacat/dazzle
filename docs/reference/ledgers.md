@@ -3,6 +3,8 @@
 > **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
 > Do not edit manually; run `dazzle docs generate` to regenerate.
 
+> **Status: ALPHA** — the `ledger`/`transaction` constructs parse, validate, and link, but TigerBeetle-backed execution is not yet CI-verified and no example exercises it end-to-end. Parked 2026-07-10; promotion tracked in [#1576](https://github.com/manwithacat/dazzle/issues/1576). Do not present ledger execution as production-ready.
+
 Ledgers and transactions provide TigerBeetle-backed double-entry accounting. Ledger accounts define account codes, types, and constraints, while transactions declare transfers between accounts with linked operations and idempotency support.
 
 ---
