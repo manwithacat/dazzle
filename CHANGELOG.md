@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.28] - 2026-07-10
+
+### Added
+- **HM pedagogy arc phase 3 closed** (atomic per-Hyperpart testing + monorepo
+  gate). Behaviour scenarios navigate isolated `hyperparts/<id>.html` fixtures
+  (`goto_part`); visual baselines are per-part (`part-<id>-{light,dark}`) plus
+  gallery; axe sweeps part pages + guide; coverage meta-gate requires every
+  registry part's committed page and every controller-bearing part a behaviour
+  scenario or shrink-only `PENDING_BEHAVIOUR` entry (`combobox` / `tags` /
+  `app-shell` remain). Dazzle `-m gate` now runs the HM non-browser suite
+  (`tests/unit/test_hm_package_suite_gate.py`) so stale dist/site cannot ship
+  unnoticed. Linux visual baselines regenerated (gallery + 140 part captures)
+  after the simple-gallery / nav-less layout fix — standalone HM CI should
+  return green. HM package **0.1.66**.
+
+### Agent Guidance
+- New controller-bearing Hyperparts need an atomic behaviour scenario
+  (`goto_part(page, "<id>")`) — `PENDING_BEHAVIOUR` shrinks only.
+- HM non-browser tests run in the Dazzle gate sweep — a red HM structural test
+  blocks every ship. Browser suites stay on standalone HM CI.
+
 ## [0.101.27] - 2026-07-10
 
 ### Changed
