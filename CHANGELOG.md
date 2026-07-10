@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.23] - 2026-07-10
+
+### Added
+- **HM docs split into three layers** (pedagogy + atomic-testing arc, phase 1 of 3 —
+  spec `docs/superpowers/specs/2026-07-10-hm-docs-pedagogy-atomic-testing-design.md`):
+  `index.html` is now the SIMPLE gallery (demo + copy snippet + link per part);
+  `hyperparts/<id>.html` (×70) carries the full depth (exchanges, contract section,
+  guidance, anatomy) and doubles as the atomic test fixture for phase 3;
+  `agents/<id>.md` (×70) is the agent-optimised one-fetch chunk (partial + exchange
+  table + contract schema + guidance), indexed from `llms.txt`. The site drift gate is
+  now a full tree compare — no layer can lag the registry.
+
+### Agent Guidance
+- Consuming an HM part? Fetch `agents/<id>.md` from the gallery — one chunk with
+  partial + exchanges + contract + guidance. The registry stays the parse-me source;
+  the agent files are the fetch-me rendering.
+
 ## [0.101.22] - 2026-07-10
 
 ### Changed
