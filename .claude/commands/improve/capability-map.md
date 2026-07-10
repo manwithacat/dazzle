@@ -36,6 +36,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa trial` | CLI | trials | 229 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | — | OWNED-IDLE |
 | `dazzle qa taste-panel` | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
+| `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
+| `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI | **hm-convergence** | — | OWNED-IDLE |
+| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | — | OWNED-IDLE |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 226 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 226 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 227 | USED |
@@ -116,3 +119,14 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > human-invoked, not loop gaps. The three standalone loops (`/fuzz`, `/smells`, `/xproject`)
 > have their own entrypoints and are not driver-dispatched, but are listed here so the
 > capability-sweep counts them as covered.
+
+> **Capability-sweep cycle 236 (2026-07-10).** Re-derived inventory post the #1566/#1567/
+> #1568 arc (v0.99.3–v0.101.11). THREE new capabilities flagged UNOWNED and wired in the
+> same pass: `qa component-vision` → hm-convergence+framework-ux, `qa property-vision` →
+> hm-convergence, `deploy plan` → example-apps (Tier-1 manifest check). NOT added (self-
+> exercising via `pytest -m gate` in CI every commit): design-context claim-integrity +
+> doc-drift gates (#1566), component-hygiene floor (#1567 s1), family-contrast gate +
+> themespec contrast-in-validate (#1567 s2). Retired capabilities (deploy generate/
+> preflight/dockerfile/compose, docuseal pack — removed v0.100.0/v0.101.0) had no map rows,
+> nothing to prune. STALE recompute (threshold ≤216): none — oldest numeric is rbac@217,
+> which crosses next cycle if unexercised.
