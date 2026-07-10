@@ -75,6 +75,72 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    """Contract-module section: ingestion model schema table + exemplar
+    source (inspect.getsource — the page IS the snippet) + live output.
+    Contract modules are the typed source of truth for a part's ingestion
+    shape and DOM contract (contracts/AUTHORING.md)."""
+    if not hyperpart.contracts:
+        return ""
+    import importlib
+    import inspect
+
+    blocks: list[str] = []
+    for ref in hyperpart.contracts:
+        mod = importlib.import_module(ref.removesuffix(".py").replace("/", "."))
+        rows = ""
+        model = next(
+            (
+                v
+                for v in vars(mod).values()
+                if isinstance(v, type)
+                and hasattr(v, "model_json_schema")
+                and v.__module__ == mod.__name__
+            ),
+            None,
+        )
+        if model is not None:
+            schema = model.model_json_schema()
+            req = set(schema.get("required", ()))
+            for name, prop in schema.get("properties", {}).items():
+                typ = (
+                    prop.get("type")
+                    or " | ".join(a.get("type", "?") for a in prop.get("anyOf", ()))
+                    or "object"
+                )
+                enum = prop.get("enum")
+                if enum:
+                    typ += f" ∈ {enum}"
+                rows += (
+                    f"<tr><td><code>{_html.escape(name)}</code></td>"
+                    f"<td><code>{_html.escape(str(typ))}</code></td>"
+                    f"<td>{'required' if name in req else 'optional'}</td></tr>"
+                )
+        exemplar_html = ""
+        render_fn = getattr(mod, "render", None)
+        exemplars = getattr(mod, "EXEMPLARS", ())
+        if render_fn and exemplars:
+            src = _html.escape(inspect.getsource(render_fn))
+            live = render_fn(exemplars[0])
+            exemplar_html = (
+                '<details class="hm-contract"><summary>Exemplar (executable — '
+                "runs in CI)</summary><pre><code>" + src + "</code></pre>"
+                '<div class="hm-contract-live">' + live + "</div></details>"
+            )
+        blocks.append(
+            f"<h4><code>{_html.escape(ref)}</code></h4>"
+            + (f'<table class="hm-contract-table">{rows}</table>' if rows else "")
+            + exemplar_html
+        )
+    return (
+        '<details class="hm-contract"><summary>Contract module (typed)</summary>'
+        + "".join(blocks)
+        + "<p>The typed source of truth: ingestion model + DOM contract + "
+        "executable exemplar, validated in CI (<code>tests/test_contracts.py</code>). "
+        "See <code>contracts/AUTHORING.md</code>.</p></details>"
+    )
+
+
 def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     """A one-line 'this Hyperpart is one unit spread across N files' note,
     for the interactive Hyperparts where the code is genuinely scattered."""
@@ -897,6 +963,7 @@ window.addEventListener('storage', function (e) {{
             f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
             f"<code>{snippet}</code></pre></div>"
             f"{apply_prefix(_exchanges_html(c), prefix)}"
+            f"{apply_prefix(_contracts_html(c), prefix)}"
             f"{_composed_of_html(c)}"
             f"{_anatomy_html(c)}"
             f"{notes}</section>"
@@ -1098,6 +1165,10 @@ document.addEventListener('click', function (e) {{
         "(https://github.com/manwithacat/hatchi-maxchi/blob/main/site/registry.py):"
         " canonical markup + exchange contracts per component — parse this,"
         " don't scrape the gallery\n"
+        "- [Contract modules (typed)]"
+        "(https://github.com/manwithacat/hatchi-maxchi/tree/main/contracts):"
+        " per-part typed ingestion model + DOM contract + executable exemplar;"
+        " authoring path in contracts/AUTHORING.md\n"
         "- [AGENTS.md]"
         "(https://github.com/manwithacat/hatchi-maxchi/blob/main/AGENTS.md):"
         " consuming + contributing with a coding agent\n"
