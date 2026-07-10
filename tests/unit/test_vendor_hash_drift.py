@@ -25,7 +25,7 @@ Recovering when this fails:
   - **You didn't expect any change**: someone (or something) altered
     a vendored file. Investigate before regenerating.
 
-Listed in ``.claude/commands/ship.md`` so /ship runs it pre-push.
+Listed in ``.agents/skills/ship/SKILL.md`` so the ship workflow runs it pre-push.
 """
 
 from __future__ import annotations

@@ -169,7 +169,7 @@ the best next issue based on priority × complexity × momentum.
 Commands that execute once and stop.
 
 #### `/check`
-**Source:** `.claude/commands/check.md`
+**Source:** `.agents/skills/check/SKILL.md`
 
 Quality gate. Looks at `git diff --name-only HEAD`, then dispatches
 parallel haiku subagents: lint+format, mypy (core + backend), unit
@@ -177,7 +177,7 @@ tests, DSL validation, parser corpus, MCP verification — only the ones
 relevant to what changed. Read-only: never commits or pushes.
 
 #### `/bump [level]`
-**Source:** `.claude/commands/bump.md`
+**Source:** `.agents/skills/bump/SKILL.md`
 
 Semantic-version bumper. Updates `pyproject.toml`, `.claude/CLAUDE.md`,
 `ROADMAP.md`, `src/dazzle/mcp/semantics_kb/core.toml`, and
@@ -186,7 +186,7 @@ entries under a new `[X.Y.Z]` heading. Does not commit or tag — that
 is `/ship`'s job.
 
 #### `/ship`
-**Source:** `.claude/commands/ship.md`
+**Source:** `.agents/skills/ship/SKILL.md`
 
 Commit + push gate. Runs ruff/format, runs mypy, then stages named files
 (never `git add -A`), writes a HEREDOC commit message, tags if
@@ -194,7 +194,7 @@ Commit + push gate. Runs ruff/format, runs mypy, then stages named files
 This is the only way productive local commits reach origin.
 
 #### `/cimonitor`
-**Source:** `.claude/commands/cimonitor.md`
+**Source:** `.agents/skills/cimonitor/SKILL.md`
 
 CI-badge watchdog. Reports whether the main-branch `CI` workflow is
 green or red, shows the job-level breakdown, fetches logs for failed
@@ -203,7 +203,7 @@ security / flaky. Explicitly requires fixing pre-existing CI failures
 too, not just those caused by the current branch.
 
 #### `/smells`
-**Source:** `.claude/commands/smells.md`
+**Source:** `.agents/skills/smells/SKILL.md`
 
 Read-only code-smell analysis. Four parallel sonnet subagents covering
 regression checks, error-handling/coupling patterns, duplication/type
@@ -225,7 +225,7 @@ shared patterns (which usually indicate framework issues in Dazzle
 itself).
 
 #### `/docs-update [since]`
-**Source:** `.claude/commands/docs-update.md`
+**Source:** `.agents/skills/docs-update/SKILL.md`
 
 Scans recently-closed GitHub issues and proposes surgical edits to
 CHANGELOG, README, and MkDocs pages. Dry-runs by default; asks for
