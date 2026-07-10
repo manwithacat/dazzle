@@ -124,6 +124,46 @@ def test_pending_contracts_entries_are_real() -> None:
     assert not ghosts, f"PENDING_CONTRACTS names unknown controllers: {ghosts}"
 
 
+# Controller-bearing Hyperparts not yet migrated to structured Guidance.
+# SHRINK-ONLY — remove entries as guidance blocks land; never add.
+PENDING_GUIDANCE = frozenset(
+    {
+        "command",
+        "confirm",
+        "dialog",
+        "slider",
+        "confirm-panel",
+        "wizard",
+        "money",
+        "pdf",
+        "search-select",
+        "combobox",
+        "tags",
+        "tabs",
+        "master-detail",
+        "app-shell",
+    }
+)
+
+
+def test_controller_parts_have_guidance_or_pending() -> None:
+    for h in HYPERPARTS:
+        if not h.controller or h.id in PENDING_GUIDANCE:
+            continue
+        g = h.guidance
+        assert g is not None and g.seams and g.pitfalls, (
+            f"{h.id}: controller-bearing part needs Guidance with seams + pitfalls "
+            f"(or a PENDING_GUIDANCE entry — which only shrinks)"
+        )
+
+
+def test_guidance_composes_with_ids_are_real() -> None:
+    for h in HYPERPARTS:
+        if h.guidance:
+            ghosts = sorted(set(h.guidance.composes_with) - _IDS)
+            assert not ghosts, f"{h.id}: guidance.composes_with names unknown parts {ghosts}"
+
+
 def test_no_orphan_markers() -> None:
     """Every HYPERPART marker in the tree must name a real Hyperpart."""
     orphans = sorted(mid for mid in marker_sites() if mid not in _IDS)

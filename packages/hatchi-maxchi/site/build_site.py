@@ -141,6 +141,41 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+def _guidance_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    """Structured Guidance block → part-page section. Prose notes render
+    separately (narrative); this is the typed, agent-parallel rendering."""
+    g = hyperpart.guidance
+    if g is None:
+        return ""
+
+    def _ul(items) -> str:  # type: ignore[no-untyped-def]
+        return "<ul>" + "".join(f"<li>{_html.escape(i)}</li>" for i in items) + "</ul>"
+
+    blocks = []
+    if g.seams:
+        blocks.append(f"<h4>Seams</h4>{_ul(g.seams)}")
+    if g.pitfalls:
+        blocks.append(f"<h4>Pitfalls</h4>{_ul(g.pitfalls)}")
+    if g.do_dont:
+        rows = "".join(
+            f"<tr><td>{_html.escape(do)}</td><td>{_html.escape(dont)}</td></tr>"
+            for do, dont in g.do_dont
+        )
+        blocks.append(
+            '<h4>Do / Don\'t</h4><table class="hm-contract-table">'
+            f"<thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody>{rows}</tbody></table>"
+        )
+    if g.a11y_keys:
+        blocks.append(f"<h4>Keyboard / AT</h4>{_ul(g.a11y_keys)}")
+    if g.composes_with:
+        links = " ".join(f'<a href="{pid}.html"><code>{pid}</code></a>' for pid in g.composes_with)
+        blocks.append(f"<h4>Composes with</h4><p>{links}</p>")
+    return (
+        '<details class="hm-guidance" open><summary>Structured guidance</summary>'
+        f'<div class="hm-notes">{"".join(blocks)}</div></details>'
+    )
+
+
 def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-def]
     """agents/<id>.md — the agent-optimised chunk: partial + exchanges +
     contract schema + guidance in ONE fetchable file per part. Everything
@@ -202,6 +237,22 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
                         typ += f" in {prop['enum']}"
                     lines.append(f"| `{name}` | `{typ}` | {'yes' if name in req else 'no'} |")
             lines.append("")
+    g = hyperpart.guidance
+    if g is not None:
+        lines += ["## Guidance (structured)", ""]
+        for heading, items in (
+            ("Seams", g.seams),
+            ("Pitfalls", g.pitfalls),
+            ("Keyboard / AT", g.a11y_keys),
+        ):
+            if items:
+                lines += [f"### {heading}", ""] + [f"- {i}" for i in items] + [""]
+        if g.do_dont:
+            lines += ["### Do / Don't", "", "| Do | Don't |", "|---|---|"]
+            lines += [f"| {do} | {dont} |" for do, dont in g.do_dont] + [""]
+        if g.composes_with:
+            lines += ["### Composes with", ""]
+            lines += [f"- `{pid}` (agents/{pid}.md)" for pid in g.composes_with] + [""]
     if hyperpart.notes:
         lines += [
             "## Guidance (prose; HTML from the registry notes field)",
@@ -1049,6 +1100,7 @@ window.addEventListener('storage', function (e) {{
                     f"{apply_prefix(_contracts_html(c), prefix)}"
                     f"{_composed_of_html(c)}"
                     f"{_anatomy_html(c)}"
+                    f"{apply_prefix(_guidance_html(c), prefix)}"
                     f"{notes}</section>"
                 ),
             )

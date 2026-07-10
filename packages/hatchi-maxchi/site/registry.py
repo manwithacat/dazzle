@@ -55,6 +55,22 @@ class Exchange:
 
 
 @dataclass(frozen=True)
+class Guidance:
+    """Structured, agent-optimised implementation guidance — replaces
+    guidance-like prose in `notes` (narrative remarks stay in notes).
+    Rendered on the part page for humans and serialised verbatim into
+    agents/<id>.md for agents. Controller-bearing parts must carry at
+    least seams + pitfalls (tests/test_hyperpart_cohesion.py, with a
+    shrink-only PENDING_GUIDANCE allowlist during migration)."""
+
+    seams: tuple[str, ...] = ()  # extension/composition points, by name
+    pitfalls: tuple[str, ...] = ()  # mistakes the design already rejected
+    do_dont: tuple[tuple[str, str], ...] = ()  # (do, don't) pairs
+    a11y_keys: tuple[str, ...] = ()  # keyboard/AT behaviours to preserve
+    composes_with: tuple[str, ...] = ()  # Hyperpart ids (cross-checked)
+
+
+@dataclass(frozen=True)
 class Hyperpart:
     id: str
     title: str
@@ -102,6 +118,8 @@ class Hyperpart:
     # base part + each data-bearing extension). Cohesion-gated: every
     # controller-bearing entry needs contracts or a PENDING_CONTRACTS entry.
     contracts: tuple[str, ...] = field(default_factory=tuple)
+    # Structured agent guidance (see Guidance). None = not yet migrated.
+    guidance: Guidance | None = None
 
 
 # Groups order the gallery nav.
@@ -540,6 +558,42 @@ HYPERPARTS: list[Hyperpart] = [
         ),
         mock="/mock/grid",
         contracts=("contracts/grid.py", "contracts/grid_edit.py"),
+        guidance=Guidance(
+            seams=(
+                "column visibility: dz-grid-cols.js projects the hidden set onto "
+                "[data-dz-col] cells after every swap — no per-cell bindings",
+                "column resize: dz-grid-resize.js rides the header cells",
+                "inline edit: dz-grid-edit.js reads the [data-dz-grid-edit] display "
+                "span (kind/value/label/options) — contract in contracts/grid_edit.py",
+                "row identity: a row's id IS the idiomorph morph key and encodes "
+                "data-dz-row-id (the bulk payload anchor)",
+            ),
+            pitfalls=(
+                "edit state in JS objects dies on morph — the typed buffer lives on "
+                "the grid root (root._dzEdit) with before/after-swap hooks",
+                "select options must be JSON [[value,label],…] — producers with "
+                "dicts/tuples/bare strings normalise at ONE boundary (#1573)",
+                "never patch committed values client-side — commit fires "
+                "dz-grid:refresh so the server re-renders badges/dates",
+            ),
+            do_dont=(
+                (
+                    "keep selection state in the DOM (.checked on the row checkbox)",
+                    "mirror selection into a JS array a tbody swap would orphan",
+                ),
+                (
+                    "return full row fragments from the grid endpoint",
+                    "return cell deltas the client must splice in",
+                ),
+            ),
+            a11y_keys=(
+                "Enter commits (text/date), Escape cancels an open editor",
+                "Tab / Shift-Tab commit then advance to the next/previous editable "
+                "cell, wrapping to the adjacent row",
+                "row checkboxes carry aria-label 'Select {row}'",
+            ),
+            composes_with=("button", "badge"),
+        ),
     ),
     # ── Overlays (interactive — need the mock htmx / dialog) ─────────
     Hyperpart(
