@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.17] - 2026-07-10
+
+### Changed
+- **Canonical agent instructions flipped to `AGENTS.md`** (multi-agent consistency
+  migration, phase 1 of 4 — spec `docs/superpowers/specs/2026-07-10-multi-agent-instruction-consistency-design.md`).
+  `AGENTS.md` now carries the portable repository policy verbatim (extracted from
+  `.claude/CLAUDE.md`) including the drift-gated Constructs line, MCP tools table,
+  examples/fixtures lists, and the version-stamp footer (`/bump` retargeted).
+  `.claude/CLAUDE.md` is a thin Claude Code adapter (`@../AGENTS.md` import + subagent
+  model pins + slash-command idioms). `.github/copilot-instructions.md` — which had
+  rotted to referencing modules deleted long ago (`src/dazzle/stacks/`, `core/ir.py`) —
+  is now a pointer stub. New structural gates in `tests/unit/test_agent_asset_gates.py`
+  (thin-adapter shape, copilot stub shape, AGENTS.md-version == pyproject); the
+  pre-#1367 AGENTS-stub gate is retired as superseded.
+
+### Agent Guidance
+- Project facts go in `AGENTS.md` ONLY — every harness (Codex, Cursor, Copilot, Grok
+  Build) reads it natively and Claude Code imports it. Adding facts to
+  `.claude/CLAUDE.md` or the copilot stub fails `tests/unit/test_agent_asset_gates.py`.
+- `/bump`'s `**Version**:` sed target is now `AGENTS.md` (was `.claude/CLAUDE.md`).
+
 ## [0.101.16] - 2026-07-10
 
 ### Added
