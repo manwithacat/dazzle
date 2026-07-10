@@ -363,8 +363,11 @@ def test_render_agents_md() -> None:
     commands = [(cmd, True, None)]
     ctx = _make_project_context()
     output = render_agents_md(commands, ctx)
-    assert "# Agent Commands" in output
+    assert "# AGENTS.md" in output
+    assert "## Workflows" in output
+    assert "**improve**" in output
     assert "/improve" in output
+    assert ".agents/skills/improve/SKILL.md" in output
 
 
 def test_render_claude_md_section() -> None:
@@ -383,4 +386,4 @@ def test_render_claude_md_section() -> None:
     ctx = _make_project_context()
     output = render_claude_md_section(commands, ctx)
     assert "## Autonomous Development Commands" in output
-    assert "Agent Tool Convention" in output
+    assert ".agents/skills/improve/SKILL.md" in output

@@ -234,7 +234,7 @@ def init_project(
                 project_name=project_name,
                 stack_name=stack_name,
             )
-            log("  Created LLM_CONTEXT.md, .llm/, .claude/, .copilot/")
+            log("  Created LLM_CONTEXT.md, AGENTS.md, .llm/, .claude/, .github/, .copilot/")
         except Exception as e:
             # Don't fail the entire init if LLM instrumentation fails
             # Just warn the user

@@ -8,6 +8,7 @@ The migration drops one of the last `jinja2` users blocking #1042.
 import configparser
 import json
 import logging
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -22,13 +23,26 @@ from dazzle.core.parser import parse_modules
 from .loader import load_all_commands
 from .models import CommandDefinition, CommandStatus, MaturityGate, SyncManifest
 from .template_strings import (
+    AGENTS_SYNC_BEGIN,
+    AGENTS_SYNC_END,
+)
+from .template_strings import (
     render_agents_md as _render_agents_md_impl,
+)
+from .template_strings import (
+    render_agents_sync_block as _render_agents_sync_block_impl,
 )
 from .template_strings import (
     render_claude_md_section as _render_claude_md_section_impl,
 )
 from .template_strings import (
+    render_command_shim as _render_command_shim_impl,
+)
+from .template_strings import (
     render_skill as _render_skill_impl,
+)
+from .template_strings import (
+    render_skill_document as _render_skill_document_impl,
 )
 
 logger = logging.getLogger(__name__)
@@ -199,23 +213,110 @@ def render_skill(cmd: CommandDefinition, ctx: dict[str, Any]) -> str:
 def render_agents_md(
     commands: list[tuple[CommandDefinition, bool, str | None]], ctx: dict[str, Any]
 ) -> str:
-    """Render AGENTS.md from all commands via the Python port."""
+    """Render canonical AGENTS.md from all commands via the Python port."""
     return _render_agents_md_impl(commands, ctx)
 
 
 def render_claude_md_section(
     commands: list[tuple[CommandDefinition, bool, str | None]], ctx: dict[str, Any]
 ) -> str:
-    """Render the section to append to .claude/CLAUDE.md via the Python port."""
+    """Render the managed section of the thin CLAUDE.md adapter."""
     return _render_claude_md_section_impl(commands, ctx)
+
+
+_DAZZLE_AGENT_MARKER = "<!-- dazzle-agent-commands -->"
+_CLAUDE_ADAPTER_INTRO = (
+    "@../AGENTS.md\n"
+    "\n"
+    "# CLAUDE.md — adapter\n"
+    "\n"
+    "Canonical project policy is AGENTS.md (imported above). This file carries\n"
+    "only Claude-Code-runtime specifics; project facts belong in AGENTS.md.\n"
+)
+
+
+def _write_agents_md(
+    agents_path: Path,
+    evaluated: list[tuple[CommandDefinition, bool, str | None]],
+    ctx: dict[str, Any],
+) -> None:
+    """Write or refresh AGENTS.md without clobbering non-generated policy."""
+    block = _render_agents_sync_block_impl(evaluated, ctx)
+    if not agents_path.exists():
+        agents_path.write_text(render_agents_md(evaluated, ctx), encoding="utf-8")
+        return
+
+    existing = agents_path.read_text(encoding="utf-8")
+    if AGENTS_SYNC_BEGIN in existing and AGENTS_SYNC_END in existing:
+        pattern = re.compile(
+            re.escape(AGENTS_SYNC_BEGIN) + r".*?" + re.escape(AGENTS_SYNC_END),
+            re.DOTALL,
+        )
+        updated = pattern.sub(block.rstrip("\n"), existing, count=1)
+        agents_path.write_text(
+            updated if updated.endswith("\n") else updated + "\n", encoding="utf-8"
+        )
+        return
+
+    agents_path.write_text(existing.rstrip() + "\n\n" + block + "\n", encoding="utf-8")
+
+
+def _write_claude_md_adapter(claude_md_path: Path, section: str) -> None:
+    """Ensure `.claude/CLAUDE.md` is a thin adapter that imports AGENTS.md.
+
+    Preserves any pre-existing user content above the dazzle-managed marker,
+    but always keeps `@../AGENTS.md` as the first content line and refreshes
+    the managed section on every sync.
+    """
+    marker = _DAZZLE_AGENT_MARKER
+    claude_md_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if not claude_md_path.exists():
+        claude_md_path.write_text(
+            _CLAUDE_ADAPTER_INTRO + "\n" + marker + "\n" + section,
+            encoding="utf-8",
+        )
+        return
+
+    existing = claude_md_path.read_text(encoding="utf-8")
+    if marker in existing:
+        before = existing.split(marker, 1)[0]
+    else:
+        before = existing
+
+    # Keep user content, but guarantee the AGENTS.md import is first.
+    lines = before.splitlines()
+    content_idx = next((i for i, ln in enumerate(lines) if ln.strip()), None)
+    if content_idx is None:
+        before = _CLAUDE_ADAPTER_INTRO
+    else:
+        first = lines[content_idx].strip()
+        if not re.fullmatch(r"@(\.\./)?AGENTS\.md", first):
+            remainder = "\n".join(lines).lstrip()
+            before = _CLAUDE_ADAPTER_INTRO + "\n" + remainder
+        else:
+            # Normalise to @../AGENTS.md (same form as the in-repo adapter).
+            lines[content_idx] = "@../AGENTS.md"
+            before = "\n".join(lines)
+
+    claude_md_path.write_text(
+        before.rstrip() + "\n\n" + marker + "\n" + section,
+        encoding="utf-8",
+    )
 
 
 def sync_to_project(project_root: Path) -> SyncManifest:
     """Sync agent commands to a Dazzle project directory.
 
-    1. Build project context
-    2. Load and evaluate all commands
-    3. Write command files, AGENTS.md, CLAUDE.md section, and manifest
+    Layout (harness-neutral, mirrors the framework repo):
+
+    1. Build project context and evaluate maturity gates
+    2. Write portable skill bodies to ``.agents/skills/<name>/SKILL.md``
+    3. Write discovery shims to ``.claude/commands/<name>.md``
+    4. Seed ``agent/`` backlog/log files for loop commands
+    5. Write canonical ``AGENTS.md`` (workflows index + command catalogue)
+    6. Ensure thin ``.claude/CLAUDE.md`` adapter importing AGENTS.md
+    7. Write ``.claude/commands/.manifest.json``
     """
     from dazzle import __version__ as dazzle_version
 
@@ -230,24 +331,29 @@ def sync_to_project(project_root: Path) -> SyncManifest:
         evaluated.append((cmd, available, reason))
         statuses[cmd.name] = CommandStatus(version=cmd.version, available=available, reason=reason)
 
-    # 3. Create .claude/commands/ directory
+    # Portable skills home + Claude discovery shims
+    skills_root = project_root / ".agents" / "skills"
     commands_dir = project_root / ".claude" / "commands"
+    skills_root.mkdir(parents=True, exist_ok=True)
     commands_dir.mkdir(parents=True, exist_ok=True)
 
-    # 4. Write command files for available commands
     for cmd, available, _reason in evaluated:
         if not available:
             continue
-        content = render_skill(cmd, ctx)
-        header = f"<!-- dazzle-agent-command:{cmd.name}:v{cmd.version} -->\n"
-        cmd_path = commands_dir / f"{cmd.name}.md"
-        cmd_path.write_text(header + content, encoding="utf-8")
+        skill_dir = skills_root / cmd.name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text(
+            _render_skill_document_impl(cmd, ctx),
+            encoding="utf-8",
+        )
+        (commands_dir / f"{cmd.name}.md").write_text(
+            _render_command_shim_impl(cmd),
+            encoding="utf-8",
+        )
 
-    # 5. Create agent/ directory
+    # Seed empty backlog/log files for loop commands (don't overwrite)
     agent_dir = project_root / "agent"
     agent_dir.mkdir(parents=True, exist_ok=True)
-
-    # 6. Seed empty backlog/log files for loop commands (don't overwrite)
     for cmd, _available, _reason in evaluated:
         if cmd.loop is None:
             continue
@@ -263,32 +369,21 @@ def sync_to_project(project_root: Path) -> SyncManifest:
                     encoding="utf-8",
                 )
 
-    # 7. Write AGENTS.md at project root
-    agents_md = render_agents_md(evaluated, ctx)
-    (project_root / "AGENTS.md").write_text(agents_md, encoding="utf-8")
+    # Canonical AGENTS.md — preserve blank-template / user policy outside the
+    # managed sync block so init-time guidance is not wiped on first sync.
+    _write_agents_md(project_root / "AGENTS.md", evaluated, ctx)
 
-    # 8. Append section to .claude/CLAUDE.md (idempotent)
-    claude_md_path = project_root / ".claude" / "CLAUDE.md"
-    marker = "<!-- dazzle-agent-commands -->"
+    # Thin CLAUDE.md adapter
     section = render_claude_md_section(evaluated, ctx)
+    _write_claude_md_adapter(project_root / ".claude" / "CLAUDE.md", section)
 
-    if claude_md_path.exists():
-        existing = claude_md_path.read_text(encoding="utf-8")
-        if marker not in existing:
-            claude_md_path.write_text(
-                existing.rstrip() + "\n\n" + marker + "\n" + section,
-                encoding="utf-8",
-            )
-    else:
-        claude_md_path.parent.mkdir(parents=True, exist_ok=True)
-        claude_md_path.write_text(marker + "\n" + section, encoding="utf-8")
-
-    # 9. Write .claude/commands/.manifest.json
+    # Manifest next to Claude discovery shims (stable path for tooling)
     synced_at = datetime.now(UTC).isoformat()
     manifest_data = {
         "dazzle_version": dazzle_version,
         "commands_version": "1.0.0",
         "synced_at": synced_at,
+        "layout": "agents-skills-v1",
         "commands": {
             name: {
                 "version": cs.version,
@@ -301,7 +396,6 @@ def sync_to_project(project_root: Path) -> SyncManifest:
     manifest_path = commands_dir / ".manifest.json"
     manifest_path.write_text(json.dumps(manifest_data, indent=2) + "\n", encoding="utf-8")
 
-    # 10. Return SyncManifest
     return SyncManifest(
         dazzle_version=dazzle_version,
         commands_version="1.0.0",

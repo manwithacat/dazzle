@@ -27,7 +27,9 @@ def sync_command(
 ) -> None:
     """Sync agent commands from the Dazzle framework to the project.
 
-    Writes .claude/commands/*.md, AGENTS.md, and seeds agent/ backlog files.
+    Writes portable skills under ``.agents/skills/<name>/SKILL.md``, discovery
+    shims under ``.claude/commands/``, canonical ``AGENTS.md``, a thin
+    ``.claude/CLAUDE.md`` adapter, and seeds ``agent/`` backlog files.
     Idempotent — safe to run repeatedly.
     """
     project = project.resolve()

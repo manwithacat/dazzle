@@ -479,88 +479,83 @@ def generate_claude_permissions() -> str:
 
 
 def generate_copilot_context(project_name: str) -> str:
-    """Generate .copilot/CONTEXT.md content."""
+    """Generate a thin `.copilot/CONTEXT.md` pointer at AGENTS.md.
+
+    Full project policy lives in AGENTS.md (native for most harnesses). A
+    full-content Copilot context file previously rotted the same way #1367
+    did for AGENTS.md; keep this a stub.
+    """
     return f"""# GitHub Copilot Context: {project_name}
 
-This repository is **DAZZLE-generated**. DAZZLE is a DSL-first framework that generates
-production code from domain specifications.
+Canonical project instructions live in [`AGENTS.md`](../AGENTS.md) — read that
+file. Prefer editing `dsl/*.dsl` and `dazzle.toml`; run `dazzle validate` then
+`dazzle serve`. Do not hand-edit runtime state under `.dazzle/`.
+"""
 
-## For Copilot
 
-### When Proposing Edits
+def generate_copilot_instructions() -> str:
+    """Generate `.github/copilot-instructions.md` stub pointing at AGENTS.md."""
+    return """# Copilot Instructions
 
-**Prefer modifying DSL** over hand-editing generated code:
-- User wants to add a field → Suggest editing `dsl/*.dsl`
-- User wants to change behavior → Check if it's in the DSL first
-- User wants new entities → Add to DSL, then `dazzle build`
+Canonical project instructions live in [`AGENTS.md`](../../AGENTS.md) — read that
+file. This stub exists only for surfaces that look for
+`.github/copilot-instructions.md` specifically. Do not add project facts here.
+"""
 
-### Generated vs Hand-Written
 
-- `dsl/*.dsl` → **Source of truth** (edit this)
-- `dazzle.toml` → **Configuration** (edit this)
-- `build/` → **Generated code** (regenerate via `dazzle build`, don't hand-edit)
+def generate_claude_md_adapter() -> str:
+    """Generate a thin `.claude/CLAUDE.md` adapter that imports AGENTS.md."""
+    return (
+        "@../AGENTS.md\n"
+        "\n"
+        "# CLAUDE.md — adapter\n"
+        "\n"
+        "Canonical project policy is AGENTS.md (imported above). This file carries\n"
+        "only Claude-Code-runtime specifics; project facts belong in AGENTS.md.\n"
+        "Runtime config in this directory: `permissions.json`, `mcp.json`,\n"
+        "`PROJECT_CONTEXT.md`. Run `dazzle agent sync` for slash-command shims.\n"
+    )
 
-### Workflow
 
-1. User edits DSL or manifest
-2. Run `dazzle validate` to check
-3. Run `dazzle build` to regenerate
-4. Test the changes
+def generate_init_agents_md(project_name: str, stack_name: str | None = None) -> str:
+    """Generate a starter AGENTS.md when the blank template did not supply one.
 
-### Code Patterns to Follow
+    Prefer the blank template's AGENTS.md when present; this is the fallback for
+    example-based inits and older paths that only had LLM instrumentation.
+    """
+    stack_info = f"\nStack: `{stack_name}`.\n" if stack_name else "\n"
+    return f"""# AGENTS.md
 
-When suggesting code:
-- **Match existing generated patterns** (check `build/` for style)
-- **Align API shapes with DSL entities** (follow entity → model → API pipeline)
-- **Follow DAZZLE conventions** (don't mix frameworks or patterns)
+Canonical project instructions for **all** coding agents (any harness).
+{stack_info}
+## Project Overview
 
-### What This Repo Contains
+**{project_name}** — a Dazzle app (DSL-first). Domain logic lives in `dsl/*.dsl`.
 
-Business logic is in **DSL files**, not framework code. Generated code implements
-the DSL specification using selected backends (FastAPI, etc.).
-
-Don't suggest:
-- Duplicating entity definitions in code
-- Embedding DSL logic in generated files
-- Framework-specific workarounds when DSL can express it
-
-Do suggest:
-- DSL improvements for new requirements
-- Custom extensions in designated areas
-- Infrastructure tweaks in `build/infra_*`
-
-### Example Interaction
-
-**User**: "Add a 'phone' field to User"
-
-**Good response**:
-```
-Edit dsl/users.dsl:
-
-entity User "User":
-  ...
-  phone: str(20)
-
-Then run: dazzle build
+```bash
+dazzle validate
+dazzle serve
+# UI: http://localhost:3000 | API: http://localhost:8000/docs
 ```
 
-**Bad response**:
-```
-Edit build/backend/app/models.py:
+## Source of Truth
 
-class User(BaseModel):
-    phone: str = Field(max_length=20)
-```
+- `dsl/*.dsl` — Domain entities, surfaces, experiences, services
+- `dazzle.toml` — Project manifest and configuration
+- `AGENTS.md` — This file (agent policy)
 
-(This will be overwritten on next build!)
+## Workflow
 
-## Summary
+1. Edit DSL or `dazzle.toml`
+2. `dazzle validate`
+3. `dazzle serve` to run the app
 
-- Repository is DAZZLE-generated
-- DSL = source of truth
-- Edit DSL, not generated code
-- Follow regeneration workflow
-- Match existing patterns when adding custom code
+Prefer DSL edits over hand-written side code. Run `dazzle agent sync` to install
+portable workflows under `.agents/skills/` once the project has entities.
+
+## Project notes
+
+_(Add harness-neutral project guidance here.)_
 """
 
 
@@ -572,6 +567,10 @@ def create_llm_instrumentation(
     """
     Create all LLM context files in a project directory.
 
+    Harness-neutral layout (#1575): AGENTS.md is canonical; `.claude/CLAUDE.md`
+    and `.github/copilot-instructions.md` are thin adapters. Claude-runtime
+    extras (permissions, MCP config, PROJECT_CONTEXT) stay under `.claude/`.
+
     Args:
         project_dir: Root directory of the project
         project_name: Name of the project
@@ -582,6 +581,11 @@ def create_llm_instrumentation(
         generate_llm_context_md(project_name, stack_name), encoding="utf-8"
     )
 
+    # Canonical AGENTS.md (do not overwrite a template-provided one)
+    agents_path = project_dir / "AGENTS.md"
+    if not agents_path.exists():
+        agents_path.write_text(generate_init_agents_md(project_name, stack_name), encoding="utf-8")
+
     # Create .llm/ directory and DAZZLE_PRIMER.md
     llm_dir = project_dir / ".llm"
     llm_dir.mkdir(exist_ok=True)
@@ -590,6 +594,9 @@ def create_llm_instrumentation(
     # Create .claude/ directory and files
     claude_dir = project_dir / ".claude"
     claude_dir.mkdir(exist_ok=True)
+    claude_md = claude_dir / "CLAUDE.md"
+    if not claude_md.exists():
+        claude_md.write_text(generate_claude_md_adapter(), encoding="utf-8")
     (claude_dir / "PROJECT_CONTEXT.md").write_text(
         generate_claude_project_context(project_name, stack_name), encoding="utf-8"
     )
@@ -610,7 +617,12 @@ def create_llm_instrumentation(
     }
     (claude_dir / "mcp.json").write_text(json.dumps(mcp_config, indent=2), encoding="utf-8")
 
-    # Create .copilot/ directory and CONTEXT.md
+    # Thin Copilot stubs (native AGENTS.md + optional legacy .copilot path)
+    github_dir = project_dir / ".github"
+    github_dir.mkdir(exist_ok=True)
+    (github_dir / "copilot-instructions.md").write_text(
+        generate_copilot_instructions(), encoding="utf-8"
+    )
     copilot_dir = project_dir / ".copilot"
     copilot_dir.mkdir(exist_ok=True)
     (copilot_dir / "CONTEXT.md").write_text(
@@ -623,6 +635,9 @@ __all__ = [
     "generate_llm_context_md",
     "generate_dazzle_primer",
     "generate_claude_project_context",
+    "generate_claude_md_adapter",
     "generate_claude_permissions",
     "generate_copilot_context",
+    "generate_copilot_instructions",
+    "generate_init_agents_md",
 ]

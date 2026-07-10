@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.27] - 2026-07-10
+
+### Changed
+- **Product templates adopt harness-neutral agent layout** (#1575). Downstream
+  projects from `dazzle init` / `dazzle agent sync` now mirror the in-repo
+  multi-agent model: canonical `AGENTS.md`, portable workflows under
+  `.agents/skills/<name>/SKILL.md`, thin `.claude/CLAUDE.md` adapter
+  (`@../AGENTS.md`), discovery shims in `.claude/commands/`, and
+  `.github/copilot-instructions.md` stub. `agent sync` injects a marked
+  workflows block into AGENTS.md without wiping blank-template project policy.
+  Blank template ships AGENTS.md + thin adapters; `create_llm_instrumentation`
+  writes the same layout for example-based inits.
+
 ## [0.101.26] - 2026-07-10
 
 ### Fixed
