@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.31] - 2026-07-10
+
+### Fixed
+- **HM linux visual baselines** refreshed after the v0.101.30 gallery overflow fix
+  and structured-guidance expansion so standalone HM CI stays green. HM **0.1.69**.
+
 ## [0.101.30] - 2026-07-10
 
 ### Fixed
