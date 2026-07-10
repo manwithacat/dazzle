@@ -9,7 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.101.13] - 2026-07-10
+## [0.101.14] - 2026-07-10
+
+### Fixed
+- **#1572 — Geist / Geist Mono woff2 404s on every pip-installed deploy.** The fonts (and
+  their OFL licence) were vendored and git-tracked but silently dropped from
+  distributions: `MANIFEST.in`'s static recursive-include listed only `*.js *.css *.mjs`
+  (the `dazzle.page.runtime.static` package-data key has never matched — `static/` is not
+  a package). Added `*.woff2` + `OFL.txt` to MANIFEST.in and a correct
+  `dazzle.page.runtime` package-data entry; wheel-build verified (both woff2 + OFL.txt
+  present). Third instance of the #1032/#1308 "asset exists, packaging omits it" class —
+  regression test pins MANIFEST.in (the real gate), pyproject globs, files on disk, and
+  the dist-CSS font references.
 
 ### Fixed
 - **#1573 — fleet-wide list-fragment crash on badge columns (since v0.93.90).** The C2.3

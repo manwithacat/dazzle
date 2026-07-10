@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.101.13"
+version = "0.101.14"
 description = "DAZZLE — declarative SaaS framework with built-in compliance (SOC 2, ISO 27001), provable RBAC, and graph features"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -400,6 +400,15 @@ dazzle = ["py.typed"]
 # `dazzle_page` top-level package was nested as `dazzle.page` so all
 # package-data keys reference the new path.
 "dazzle.page" = ["static/**/*.js", "static/**/*.css", "static/**/*.mjs"]
+# woff2 + OFL.txt (#1572): the vendored Geist fonts are git-tracked but were
+# silently dropped from distributions (third instance of the #1032/#1308 class —
+# asset exists in-repo, packaging manifest omits it). The files live under
+# dazzle/page/runtime/static/fonts/, whose OWNING PACKAGE is dazzle.page.runtime
+# (static/ has no __init__.py, so the long-standing "dazzle.page.runtime.static"
+# key below has never matched anything — assets actually flow via MANIFEST.in +
+# include-package-data; this key + the MANIFEST.in line are kept in agreement).
+# OFL 1.1 requires the licence file to accompany font distribution.
+"dazzle.page.runtime" = ["static/**/*.woff2", "static/fonts/OFL.txt"]
 "dazzle.page.runtime.static" = ["**/*.js", "**/*.css", "**/*.mjs"]
 
 [tool.pytest.ini_options]
