@@ -152,7 +152,7 @@ pre-commit run --all-files
 - Shared types in `types.js`
 - ES modules (bundled to IIFE for runtime)
 
-See [CLAUDE.md](https://github.com/manwithacat/dazzle/blob/main/.claude/CLAUDE.md) for detailed style guide.
+See [AGENTS.md](https://github.com/manwithacat/dazzle/blob/main/AGENTS.md) for detailed style guide.
 
 ## Useful Commands
 

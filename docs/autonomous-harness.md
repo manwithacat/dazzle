@@ -179,7 +179,7 @@ relevant to what changed. Read-only: never commits or pushes.
 #### `/bump [level]`
 **Source:** `.agents/skills/bump/SKILL.md`
 
-Semantic-version bumper. Updates `pyproject.toml`, `.claude/CLAUDE.md`,
+Semantic-version bumper. Updates `pyproject.toml`, `AGENTS.md`,
 `ROADMAP.md`, `src/dazzle/mcp/semantics_kb/core.toml`, and
 `homebrew/dazzle.rb` in lock-step. Moves CHANGELOG's `[Unreleased]`
 entries under a new `[X.Y.Z]` heading. Does not commit or tag — that
