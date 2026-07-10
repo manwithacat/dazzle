@@ -28,11 +28,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install pytest
+      - run: pip install pytest fastapi pydantic
       - run: |
           python build.py
           python build.py --out /tmp/hm-ax --prefix ax-
-      - run: python -m pytest tests/test_contract.py tests/test_boundary.py -q
+      - run: python -m pytest tests/test_contract.py tests/test_boundary.py tests/test_contracts.py tests/test_hyperpart_cohesion.py -q
 
   # Interactive contracts in headless Chromium AND WebKit (Safari's
   # engine): command palette keys (⌘K / Esc / arrows) + pointer dismiss

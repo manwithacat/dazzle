@@ -32,6 +32,10 @@ on the server and in the DOM.
 
 ## Changing the system (contributing)
 
+- **Authoring a new Hyperpart?** Follow `contracts/AUTHORING.md` — the ordered
+  contract-first path (decision test → contract module → controller → registry →
+  Dazzle emitter). Contract modules in `contracts/` are the typed source of truth
+  for each part's ingestion shape and DOM contract.
 - **This repo is a synced mirror** — the source of truth is
   `packages/hatchi-maxchi/` in the
   [Dazzle monorepo](https://github.com/manwithacat/dazzle). See
