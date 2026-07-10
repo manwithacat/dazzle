@@ -44,3 +44,10 @@ _Method key: (d) deterministic, (j) judged._
 1. Use HM tokens (`var(--dz-…)`), the `.dz-` namespace, and `--dz-transition*` for motion. The **component-discipline floor** (`tests/unit/test_component_hygiene.py`) scores every component on this and fails a new one that sprays raw values.
 2. If your component renders a card or region, the **card-safety composite gate** (`tests/unit/test_htmx_workspace_composite.py`) covers its rendered DOM automatically.
 3. For a judged “does it look right” read, run `dazzle qa component-vision <name>` (on-demand, advisory, subscription-billed).
+
+## Standing up a new property
+
+1. **Pick** a shipped family when one fits the brand — `[ui] theme = "stripe" | "paper" | "linear-dark" | "expressive"` — done.
+2. **Or author**: study the target family's exemplars (capture via `scripts/taste/capture_sitespec_references.py`), then `sitespec scaffold_theme` and edit `themespec.yaml` (a compact parametric spec — not raw tokens).
+3. **Deterministic floor (must pass):** `validate_theme` — WCAG-AA contrast-gated on the generated palette, both modes; then `generate_tokens`.
+4. **Judged read (advisory):** `dazzle qa property-vision <url> --family <name>` against the family's exemplars.

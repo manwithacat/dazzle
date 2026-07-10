@@ -339,12 +339,21 @@ def validate_themespec(
     if themespec.palette.brand_chroma == 0.0:
         result.add_warning("palette.brand_chroma is 0 — colors will be completely desaturated")
 
-    # Palette contrast gate (#1567 slice 2): generate the concrete palette for both
-    # modes and hard-fail sub-AA text pairs. A themespec that would render illegible
-    # text is not "done" — this is the deterministic floor of the new-property
-    # authoring path. border-strong is a WARNING: hairline borders are the industry
-    # norm (the scaffold defaults sit ~2.6:1), so 3:1-as-error would block every
-    # reasonable theme rather than catch genuine failures.
+    _check_palette_contrast(themespec, result)
+
+    return result
+
+
+_UI_CONTRAST_PAIRS = (ContrastPair("border-strong", "bg-primary", 3.0, "ui"),)
+
+
+def _check_palette_contrast(themespec: ThemeSpecYAML, result: ThemeSpecValidationResult) -> None:
+    """Palette contrast gate (#1567 slice 2): generate the concrete palette for both
+    modes and hard-fail sub-AA text pairs. A themespec that would render illegible
+    text is not "done" — this is the deterministic floor of the new-property
+    authoring path. border-strong is a WARNING: hairline borders are the industry
+    norm (the scaffold defaults sit ~2.6:1), so 3:1-as-error would block every
+    reasonable theme rather than catch genuine failures."""
     p = themespec.palette
     semantic_overrides: dict[str, float] = {}
     if p.semantic_overrides:
@@ -357,7 +366,6 @@ def validate_themespec(
         ):
             if hue is not None:
                 semantic_overrides[key] = hue
-    _UI_PAIRS = (ContrastPair("border-strong", "bg-primary", 3.0, "ui"),)
     for mode in ("light", "dark"):
         palette = generate_palette(
             p.brand_hue,
@@ -369,10 +377,8 @@ def validate_themespec(
         )
         for failure in check_pairs(palette, THEMESPEC_PAIRS):
             result.add_error(f"palette contrast ({mode}): {failure}")
-        for failure in check_pairs(palette, _UI_PAIRS):
+        for failure in check_pairs(palette, _UI_CONTRAST_PAIRS):
             result.add_warning(f"palette contrast ({mode}): {failure} (UI hairline — advisory)")
-
-    return result
 
 
 def validate_agent_edit(themespec: ThemeSpecYAML, field_path: str) -> bool:

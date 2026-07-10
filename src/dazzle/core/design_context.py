@@ -322,4 +322,26 @@ def render_markdown() -> str:
         "`dazzle qa component-vision <name>` (on-demand, advisory, subscription-billed)."
     )
     lines.append("")
+
+    # New-property workflow (Part E, #1567 slice 2) — pick-or-author, then auto-score.
+    lines.append("## Standing up a new property")
+    lines.append("")
+    lines.append(
+        "1. **Pick** a shipped family when one fits the brand — `[ui] theme = "
+        '"stripe" | "paper" | "linear-dark" | "expressive"` — done.'
+    )
+    lines.append(
+        "2. **Or author**: study the target family's exemplars (capture via "
+        "`scripts/taste/capture_sitespec_references.py`), then `sitespec scaffold_theme` "
+        "and edit `themespec.yaml` (a compact parametric spec — not raw tokens)."
+    )
+    lines.append(
+        "3. **Deterministic floor (must pass):** `validate_theme` — WCAG-AA "
+        "contrast-gated on the generated palette, both modes; then `generate_tokens`."
+    )
+    lines.append(
+        "4. **Judged read (advisory):** `dazzle qa property-vision <url> --family <name>` "
+        "against the family's exemplars."
+    )
+    lines.append("")
     return "\n".join(lines)

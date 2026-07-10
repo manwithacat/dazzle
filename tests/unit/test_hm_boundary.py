@@ -51,6 +51,9 @@ SANCTIONED = {
     # Component token-discipline rubric reads the HM component CSS to *measure*
     # its house-token delegation (the #1567 deterministic Hyperpart gate).
     "src/dazzle/core/component_hygiene.py",
+    # WCAG contrast maths names the HM families path in its docstring (the family
+    # contrast gate measures those files). Measurement, not consumption.
+    "src/dazzle/core/contrast.py",
 }
 
 
