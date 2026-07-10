@@ -934,3 +934,125 @@ class TestActiveSigningStates:
         from dazzle.signing.routes import _active_signing_states
 
         assert _active_signing_states(_signable_entity()) == frozenset({"sent", "viewed"})
+
+
+# ---------------------------------------------------------------------
+# #1571 — durable signed-copy retrieval + completion page
+# ---------------------------------------------------------------------
+
+
+class _CopyFileService(_MockFileService):
+    """Extends the upload mock with the metadata/read_range surface the
+    signed-copy route streams through (#1551 serve_bytes contract)."""
+
+    def __init__(self, entity_name: str, entity_id: str) -> None:
+        super().__init__()
+        self.file_id = uuid4()
+        self._entity_name = entity_name
+        self._entity_id = entity_id
+        self.data = b"%PDF-1.7 signed-copy-bytes"
+
+    async def get_metadata(self, file_id: Any) -> Any:
+        from types import SimpleNamespace
+
+        if str(file_id) != str(self.file_id):
+            return None
+        return SimpleNamespace(
+            id=self.file_id,
+            size=len(self.data),
+            content_type="application/pdf",
+            filename="signed-copy.pdf",
+            entity_name=self._entity_name,
+            entity_id=self._entity_id,
+        )
+
+    async def read_range(self, file_id: Any, start: int, end: int) -> Any:
+        chunk = self.data[start : end + 1]
+
+        async def _aiter():
+            yield chunk
+
+        return _aiter(), len(chunk)
+
+
+class TestSignedCopyRetrieval1571:
+    """The durable retrieval path: the ORIGINAL signing token fetches the
+    persisted signed PDF after signing; the original GET link lands on a
+    completion page carrying that durable download instead of a dead end."""
+
+    def _signed_setup(self, *, with_document: bool = True):
+        from dazzle.signing.tokens import mint_token as _mint
+        from dazzle.signing.tokens import token_hash as _hash
+
+        record_id = str(uuid4())
+        token = _mint(record_id, "devon@example.com")
+        fs = _CopyFileService("Contract", record_id)
+        row = {
+            "id": record_id,
+            "status": "signed",
+            "signing_token_hash": _hash(token),
+            "signed_document": f"/files/{fs.file_id}/signed-copy.pdf" if with_document else None,
+        }
+        app, repo = _app_with_routes({record_id: row}, file_service=fs)
+        return TestClient(app), record_id, token, fs
+
+    def test_signed_copy_streams_the_persisted_pdf(self) -> None:
+        client, record_id, token, fs = self._signed_setup()
+        resp = client.get(f"/sign/Contract/{record_id}/signed-copy", params={"token": token})
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("application/pdf")
+        assert "attachment" in resp.headers["content-disposition"]
+        assert resp.content == fs.data
+
+    def test_wrong_credential_is_rejected(self) -> None:
+        from dazzle.signing.tokens import mint_token as _mint
+
+        client, record_id, _token, _fs = self._signed_setup()
+        other = _mint(record_id, "attacker@example.com")  # valid token, wrong credential
+        resp = client.get(f"/sign/Contract/{record_id}/signed-copy", params={"token": other})
+        assert resp.status_code == 403
+
+    def test_token_for_another_record_is_rejected(self) -> None:
+        from dazzle.signing.tokens import mint_token as _mint
+
+        client, record_id, _token, _fs = self._signed_setup()
+        foreign = _mint(str(uuid4()), "devon@example.com")
+        resp = client.get(f"/sign/Contract/{record_id}/signed-copy", params={"token": foreign})
+        assert resp.status_code == 403
+
+    def test_unsigned_record_is_409(self) -> None:
+        from dazzle.signing.tokens import mint_token as _mint
+        from dazzle.signing.tokens import token_hash as _hash
+
+        record_id = str(uuid4())
+        token = _mint(record_id, "devon@example.com")
+        row = {"id": record_id, "status": "sent", "signing_token_hash": _hash(token)}
+        app, _repo = _app_with_routes(
+            {record_id: row}, file_service=_CopyFileService("Contract", record_id)
+        )
+        resp = TestClient(app).get(
+            f"/sign/Contract/{record_id}/signed-copy", params={"token": token}
+        )
+        assert resp.status_code == 409
+
+    def test_missing_persisted_copy_is_404_with_support_page(self) -> None:
+        client, record_id, token, _fs = self._signed_setup(with_document=False)
+        resp = client.get(f"/sign/Contract/{record_id}/signed-copy", params={"token": token})
+        assert resp.status_code == 404
+        assert "unavailable" in resp.text
+
+    def test_original_link_lands_on_completion_page_with_durable_download(self) -> None:
+        client, record_id, token, _fs = self._signed_setup()
+        resp = client.get(f"/sign/Contract/{record_id}", params={"token": token})
+        assert resp.status_code == 200
+        assert "signed-copy" in resp.text  # the durable link
+        assert "Download your signed copy" in resp.text
+
+    def test_original_link_without_matching_hash_stays_terminal(self) -> None:
+        from dazzle.signing.tokens import mint_token as _mint
+
+        client, record_id, _token, _fs = self._signed_setup()
+        other = _mint(record_id, "someone-else@example.com")
+        resp = client.get(f"/sign/Contract/{record_id}", params={"token": other})
+        assert resp.status_code == 200
+        assert "signed-copy" not in resp.text  # plain terminal page, no leak

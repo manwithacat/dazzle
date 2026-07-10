@@ -42,6 +42,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 from dazzle.core.ir import EntitySpec
+from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
+from dazzle.http.runtime.document_routes import _extract_file_id
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.signing.service import PdfBranding, async_sign_pdf, generate_pdf
 from dazzle.signing.tokens import (
@@ -168,6 +170,21 @@ def create_signing_routes(
             project_root=project_root,
         )
 
+    @router.get("/sign/{entity_name}/{record_id}/signed-copy")
+    async def download_signed_copy(entity_name: str, record_id: UUID, request: Request) -> Response:
+        """Durable retrieval of the persisted signed PDF (#1571). Gated by the
+        ORIGINAL signing token — only the exact credential that signed (or could
+        have signed) this record can fetch the copy."""
+        return await _handle_signed_copy(
+            entity_name=entity_name,
+            record_id=record_id,
+            request=request,
+            signable=signable,
+            repositories=repositories,
+            file_service=file_service,
+            support_contact=support_contact,
+        )
+
     return router
 
 
@@ -277,6 +294,23 @@ async def _handle_get(
 
     status = _row_get(row, "status")
     if status not in _active_signing_states(entity):
+        # #1571: a signatory reopening their ORIGINAL link after signing gets a
+        # completion page with the durable signed-copy download, not a dead end.
+        # Gated on the exact credential that signed (token_hash match) AND the
+        # persisted artifact existing (the upload can fail best-effort at sign
+        # time, leaving signed_document null).
+        if (
+            status == "signed"
+            and _row_get(row, "signed_document")
+            and token_hash(token) == _row_get(row, "signing_token_hash")
+        ):
+            body = _signed_completion_page(
+                entity_name=entity.name,
+                record_id=str(record_id),
+                token=token,
+                support_contact=support_contact,
+            )
+            return HTMLResponse(body, status_code=200)  # nosemgrep
         body = _terminal_page(status)
         return HTMLResponse(body, status_code=200)  # nosemgrep
 
@@ -896,4 +930,128 @@ def _terminal_page(status: str) -> str:
         '<body style="font-family: system-ui; max-width: 540px; margin: 2rem auto;">'
         f"<h1>{safe_status.title()}</h1><p>{message}</p>"
         "</body></html>"
+    )
+
+
+def _signed_completion_page(
+    *, entity_name: str, record_id: str, token: str, support_contact: str = ""
+) -> str:
+    """Post-signing landing for the signatory's ORIGINAL link (#1571): instead
+    of the dead-end terminal page, offer the durable signed-copy download."""
+    from urllib.parse import quote
+
+    copy_href = html.escape(
+        f"/sign/{quote(entity_name, safe='')}/{quote(record_id, safe='')}"
+        f"/signed-copy?token={quote(token, safe='')}",
+        quote=True,
+    )
+    return (
+        "<!DOCTYPE html>"
+        '<html lang="en"><head><meta charset="utf-8">'
+        "<title>Document signed</title></head>"
+        '<body style="font-family: system-ui; max-width: 540px; margin: 2rem auto;">'
+        "<h1>Document signed</h1>"
+        "<p>This document has already been signed. A digitally certified copy is "
+        "stored securely.</p>"
+        f'<p><a href="{copy_href}" style="display:inline-block;padding:0.6rem 1.2rem;'
+        'background:#111;color:#fff;border-radius:0.4rem;text-decoration:none;">'
+        "Download your signed copy</a></p>"
+        "<p>Keep this link — it works whenever you need the document again.</p>"
+        f"{_support_line(support_contact)}"
+        "</body></html>"
+    )
+
+
+async def _handle_signed_copy(
+    *,
+    entity_name: str,
+    record_id: UUID,
+    request: Request,
+    signable: dict[str, EntitySpec],
+    repositories: dict[str, Any],
+    file_service: Any | None,
+    support_contact: str = "",
+) -> Response:
+    """Serve the persisted signed PDF to the bearer of the ORIGINAL signing
+    token (#1571). The external signatory has no app session, so this is the
+    one place stored signing bytes are served outside an authenticated user
+    context — gated by (a) a valid, unexpired token for this record, (b) the
+    record being `signed`, and (c) `token_hash(token)` matching the hash
+    captured AT sign time, then streamed through the #1551 `serve_bytes` core
+    under an explicit `signing_token` decision (ByteAudit'd)."""
+    entity = _lookup_signable(entity_name, signable)
+    repo = _lookup_repo(entity_name, repositories)
+
+    token = request.query_params.get("token", "")
+    if not token:
+        return HTMLResponse(_error_page("Missing signing token"), status_code=400)  # nosemgrep
+
+    try:
+        verified_id, _email = verify_token(token)
+    except InvalidTokenError:
+        # Expired-but-genuine links follow the TR-53 posture: expiry never
+        # extends; the bearer gets the error/support page, and recovery is the
+        # resend flow on the signing link itself.
+        body = _error_page("Invalid or expired link", support_contact=support_contact)
+        return HTMLResponse(body, status_code=403)  # nosemgrep
+    if verified_id != str(record_id):
+        return HTMLResponse(
+            _error_page("Token does not match record"), status_code=403
+        )  # nosemgrep
+
+    row = await repo.read(record_id)
+    if row is None:
+        return HTMLResponse(_error_page("Document not found"), status_code=404)  # nosemgrep
+    if _row_get(row, "status") != "signed":
+        return HTMLResponse(
+            _error_page("Document is not signed yet"),
+            status_code=409,  # nosemgrep
+        )
+    if token_hash(token) != _row_get(row, "signing_token_hash"):
+        return HTMLResponse(
+            _error_page("Token does not match the signing credential"),  # nosemgrep
+            status_code=403,
+        )
+
+    stored = _row_get(row, "signed_document")
+    file_id = _extract_file_id(stored)
+    if file_service is None or file_id is None:
+        # Best-effort upload failed at sign time (the logged-warning branch in
+        # _handle_post) — the copy genuinely doesn't exist server-side.
+        body = _error_page(
+            "Signed copy unavailable — please contact support",
+            support_contact=support_contact,
+        )
+        return HTMLResponse(body, status_code=404)  # nosemgrep
+
+    metadata = await file_service.get_metadata(file_id)
+    if metadata is None or (
+        (getattr(metadata, "entity_name", None), getattr(metadata, "entity_id", None))
+        != (entity.name, str(record_id))
+    ):
+        # The stored pointer must resolve to a file attached to THIS record —
+        # the same entity/record triple check the authenticated file routes
+        # apply in _resolve_access.
+        body = _error_page(
+            "Signed copy unavailable — please contact support",
+            support_contact=support_contact,
+        )
+        return HTMLResponse(body, status_code=404)  # nosemgrep
+
+    decision = AccessDecision(
+        user_id=None,
+        entity=entity.name,
+        record_id=str(record_id),
+        field="signed_document",
+        matched_policy="signing_token",
+        verb="read",
+    )
+    return await serve_bytes(
+        decision=decision,
+        file_service=file_service,
+        metadata=metadata,
+        file_id=file_id,
+        range_header=request.headers.get("range"),
+        disposition_kind="attachment",
+        audit=getattr(getattr(request.app, "state", None), "byte_audit", None),
     )

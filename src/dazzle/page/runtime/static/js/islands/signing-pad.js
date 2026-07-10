@@ -233,6 +233,18 @@ export function mount({ el, props }) {
           "Successfully Signed",
           "Your signed document is downloading. A digitally certified copy is " +
             "stored securely. You may close this page.",
+          // #1571: durable retrieval — the same link keeps working after this
+          // page is closed (token-gated signed-copy route).
+          {
+            href:
+              "/sign/" +
+              encodeURIComponent(entity) +
+              "/" +
+              encodeURIComponent(record) +
+              "/signed-copy?token=" +
+              encodeURIComponent(token),
+            label: "Download your signed copy again anytime with this link.",
+          },
         );
       } else {
         let detail = "Signing failed. Please try again.";
@@ -300,7 +312,7 @@ export function mount({ el, props }) {
   };
 }
 
-function replaceWithMessage(el, alertClass, title, body) {
+function replaceWithMessage(el, alertClass, title, body, link) {
   while (el.firstChild) el.removeChild(el.firstChild);
 
   const div = document.createElement("div");
@@ -319,6 +331,18 @@ function replaceWithMessage(el, alertClass, title, body) {
   p.textContent = body;
   text.appendChild(h3);
   text.appendChild(p);
+
+  // #1571: optional durable link (the signed-copy retrieval URL) — DOM-built,
+  // never innerHTML.
+  if (link && link.href) {
+    const lp = document.createElement("p");
+    lp.className = "text-sm";
+    const a = document.createElement("a");
+    a.href = link.href;
+    a.textContent = link.label || link.href;
+    lp.appendChild(a);
+    text.appendChild(lp);
+  }
 
   div.appendChild(icon);
   div.appendChild(text);

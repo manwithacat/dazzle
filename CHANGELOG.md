@@ -9,7 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.101.14] - 2026-07-10
+## [0.101.15] - 2026-07-10
+
+### Added
+- **#1571 — durable signed-copy retrieval.** New `GET /sign/{entity}/{id}/signed-copy`
+  route (runtime-urls baseline: 58→59): the bearer of the ORIGINAL signing token can
+  re-download the persisted signed PDF any time after signing — verified token (expiry
+  enforced, TR-53 posture), record `signed`, `token_hash` matching the credential
+  captured at sign time, and the stored file's entity/record triple — then streamed
+  through the #1551 `serve_bytes` core under an explicit `signing_token` decision
+  (ByteAudit'd). Reopening the original signing link after signing now lands on a
+  **completion page** with the durable download (was: dead-end terminal page), and the
+  signing pad's success message carries the same durable link.
+
+### Agent Guidance
+- Signing retrieval semantics: the signed copy is gated by the exact signing credential
+  (`signing_token_hash` match), never by possession of any valid token for the record;
+  expired links never extend (recovery = the resend flow). App-side, expose the
+  `signed_document` field on a surface for authenticated-user retrieval — the framework
+  route covers the external signatory only.
 
 ### Fixed
 - **#1572 — Geist / Geist Mono woff2 404s on every pip-installed deploy.** The fonts (and
