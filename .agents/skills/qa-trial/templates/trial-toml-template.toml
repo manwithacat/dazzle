@@ -3,7 +3,7 @@
 # Replace every <PLACEHOLDER> with something specific to your domain.
 # Run: dazzle qa trial --fresh-db
 #
-# Read .claude/skills/qa-trial/SKILL.md before editing — the scenario
+# Read .agents/skills/qa-trial/SKILL.md before editing — the scenario
 # shape matters more than its length. Specific identities produce
 # specific friction.
 

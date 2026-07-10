@@ -177,7 +177,7 @@ Complementary to the improve loop. Catches integration regressions that `dazzle 
 
 **Files:** `.claude/commands/fuzz.md`. Pattern was extracted from the v0.64.5–v0.64.7 sweep (3 real bugs caught, 2 false positives correctly demoted) — see that section's CHANGELOG for the canonical example.
 
-Downstream Dazzle users can author their own `trial.toml` via the `qa-trial` skill (`.claude/skills/qa-trial/SKILL.md`). Each user domain stress-tests a different surface of the framework — aligns with the convergence hypothesis in ROADMAP.md.
+Downstream Dazzle users can author their own `trial.toml` via the `qa-trial` skill (`.agents/skills/qa-trial/SKILL.md`). Each user domain stress-tests a different surface of the framework — aligns with the convergence hypothesis in ROADMAP.md.
 
 ## Extending
 
