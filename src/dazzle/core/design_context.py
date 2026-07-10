@@ -183,7 +183,7 @@ def dimensions_for(concept_key: str) -> tuple[str, ...]:
 
 
 def all_dimension_ids() -> frozenset[str]:
-    """Every fully-qualified rubric dimension id across all three rubrics."""
+    """Every fully-qualified rubric dimension id across all rubrics."""
     return frozenset(f"{r.name}.{k}" for r in RUBRICS for k in r.dimension_keys)
 
 
@@ -203,8 +203,8 @@ def surface_of(qualified_id: str) -> str:
 
 
 def matrix() -> dict[tuple[str, str], RubricRef | None]:
-    """The surface x method matrix. Cells with no rubric today (app_internals x
-    deterministic) are ``None`` — an honest, visible gap, not a hidden capability."""
+    """The surface x method matrix. A cell with no rubric is ``None`` (an honest,
+    visible gap, not a hidden capability); all four cells are filled today."""
     cell: dict[tuple[str, str], RubricRef | None] = {
         (s, m): None for s in SURFACES for m in METHODS
     }
