@@ -164,6 +164,37 @@ def test_guidance_composes_with_ids_are_real() -> None:
             assert not ghosts, f"{h.id}: guidance.composes_with names unknown parts {ghosts}"
 
 
+def test_every_part_has_a_committed_page() -> None:
+    for h in HYPERPARTS:
+        assert (PKG / "site" / "hyperparts" / f"{h.id}.html").is_file(), (
+            f"{h.id}: no committed part page — run site/build_site.py and commit"
+        )
+
+
+# Controller-bearing parts with no atomic behaviour scenario yet. SHRINK-ONLY.
+PENDING_BEHAVIOUR = frozenset({"combobox", "tags", "app-shell"})
+
+
+def test_controller_parts_have_behaviour_coverage_or_pending() -> None:
+    """Atomicity can't be quietly opted out of: every controller-bearing part
+    needs at least one behaviour scenario targeting its own page — via
+    goto_part(page, "<id>") or a direct hyperparts/<id>.html navigation (the
+    pdf test serves its page over ephemeral http for file:// fetch limits)."""
+    behaviour_src = (PKG / "tests" / "test_behaviour.py").read_text(encoding="utf-8")
+    for h in HYPERPARTS:
+        if not h.controller or h.id in PENDING_BEHAVIOUR:
+            continue
+        covered = (
+            f'goto_part(page, "{h.id}")' in behaviour_src
+            or f"hyperparts/{h.id}.html" in behaviour_src
+        )
+        assert covered, (
+            f"{h.id}: controller-bearing part has no atomic behaviour scenario "
+            f"(add one targeting hyperparts/{h.id}.html, or a PENDING_BEHAVIOUR "
+            f"entry — which only shrinks)"
+        )
+
+
 def test_no_orphan_markers() -> None:
     """Every HYPERPART marker in the tree must name a real Hyperpart."""
     orphans = sorted(mid for mid in marker_sites() if mid not in _IDS)

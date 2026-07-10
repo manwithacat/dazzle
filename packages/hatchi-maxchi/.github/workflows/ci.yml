@@ -32,7 +32,7 @@ jobs:
       - run: |
           python build.py
           python build.py --out /tmp/hm-ax --prefix ax-
-      - run: python -m pytest tests/test_contract.py tests/test_boundary.py tests/test_contracts.py tests/test_hyperpart_cohesion.py -q
+      - run: python -m pytest tests/test_contract.py tests/test_boundary.py tests/test_contracts.py tests/test_hyperpart_cohesion.py tests/test_css_parse_integrity.py tests/test_icon_contract.py tests/test_pretty.py -q
 
   # Interactive contracts in headless Chromium AND WebKit (Safari's
   # engine): command palette keys (⌘K / Esc / arrows) + pointer dismiss
