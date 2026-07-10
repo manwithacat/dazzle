@@ -364,6 +364,20 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **Bump on every fix**: Run the bump workflow (patch level) after bug fixes before pushing. Every push gets a unique version for deployment traceability.
 - **Agent Guidance in CHANGELOG**: When a release introduces new patterns, conventions, ADRs, or breaking changes that affect how agents should work, add a `### Agent Guidance` section to that version's changelog entry. Keep entries concise — one bullet per topic, stating the rule and where to look.
 
+## Workflows
+
+Reusable workflows live in `.agents/skills/<name>/SKILL.md` (open-standard format, any harness):
+
+- **ship** — Commit, verify, tag, and push with the repo's pre-flight gate suite (lint, type, drift gates, docs build)
+- **check** — Run all quality checks on modified files — the on-demand pre-ship quality gate
+- **bump** — Bump the semantic version across all six canonical locations and update CHANGELOG
+- **cimonitor** — Monitor CI pipeline status, diagnose failures, and drive the badge back to green
+- **docs-update** — Sync documentation with recently closed GitHub issues
+- **smells** — Two-phase read-only code-smells analysis: regression checks + new systemic patterns
+- **dsl-authoring** — Syntax rules and common mistakes for writing/editing Dazzle `.dsl` files
+- **qa-trial** — Author `trial.toml` scenarios that evaluate a Dazzle app as a real business user
+- **spec-narrate** — Generate a stakeholder-facing SPECIFICATION.md from a Dazzle DSL project
+
 ## Onboarding Guides
 
 When authoring or editing a `guide` (per-persona onboarding overlays), read `docs/reference/guides.md` first. Every example app carries terse, in-fiction, per-persona guides; the quality bar (coverage + terseness + in-fiction + concordance) is enforced by `tests/unit/test_example_guide_bar.py` on every commit, and `dazzle ux verify --guides` is the e2e oracle that proves each guide's overlay renders for its audience persona at runtime. New interactive personas need a guide (or an `_GUIDE_EXEMPT`/`_PENDING_GUIDE_AUTHORING` classification). Note: declaring guides introduces the framework `OnboardingState` entity into the app's RBAC matrix + compliance evidence — regenerate any committed `expected/` references after adding guides.

@@ -58,6 +58,28 @@ def test_copilot_instructions_is_a_stub() -> None:
     )
 
 
+def test_agents_skills_have_shims_and_index() -> None:
+    """Every .agents/skills/<name> has a Claude shim (commands stub or
+    skills stub) pointing at it, and a Workflows-index bullet in AGENTS.md.
+    Keeps the portable home, the Claude discovery path, and the index that
+    non-scanning harnesses rely on in lockstep."""
+    skills = {p.name for p in (REPO_ROOT / ".agents" / "skills").iterdir() if p.is_dir()}
+    assert skills, ".agents/skills is empty — the split has regressed"
+    agents_text = AGENTS.read_text()
+    for name in sorted(skills):
+        cmd_shim = REPO_ROOT / ".claude" / "commands" / f"{name}.md"
+        skill_shim = REPO_ROOT / ".claude" / "skills" / name / "SKILL.md"
+        shim = cmd_shim if cmd_shim.exists() else skill_shim
+        assert shim.exists(), f"no Claude shim for .agents/skills/{name}"
+        body = [
+            ln for ln in shim.read_text().splitlines() if ln.strip() and not ln.startswith("---")
+        ]
+        assert any(f".agents/skills/{name}/SKILL.md" in ln for ln in body), (
+            f"shim {shim} does not point at .agents/skills/{name}/SKILL.md"
+        )
+        assert f"**{name}**" in agents_text, f"AGENTS.md Workflows index is missing `{name}`"
+
+
 def test_agents_md_version_matches_pyproject() -> None:
     agents_match = re.search(r"\*\*Version\*\*: (\d+\.\d+\.\d+)", AGENTS.read_text())
     assert agents_match, "AGENTS.md has lost its version footer (bump target)."
