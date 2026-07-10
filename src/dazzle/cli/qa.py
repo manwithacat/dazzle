@@ -1116,6 +1116,42 @@ def qa_taste_panel(
     raise typer.Exit(code=0 if data["parity"] else 1)
 
 
+@qa_app.command("component-vision")
+def qa_component_vision(
+    name: str = typer.Argument(..., help="Showcase region name, e.g. cat_list"),
+    judges: int = typer.Option(3, "--judges", help="Independent judge passes"),
+    model: str | None = typer.Option(None, "--model", help="Override judge model"),
+    out: Path = typer.Option(
+        Path(".dazzle/qa/component-vision"), "--out", help="Report output dir"
+    ),
+) -> None:
+    """On-demand advisory vision score for one HM component (rendered showcase region).
+
+    Subscription/API-billed. Advisory only — always exits 0 on a successful score.
+    """
+    import json
+
+    from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+    from dazzle.qa.component_vision import score_component_region
+    from dazzle.testing.ux_catalogue import showcase_region_names
+
+    try:
+        result = score_component_region(
+            name, judges=judges, model=model or DEFAULT_JUDGMENT_MODEL, out_dir=out
+        )
+    except KeyError:
+        typer.echo(
+            f"No showcase region {name!r}. Available: {', '.join(showcase_region_names())}",
+            err=True,
+        )
+        raise typer.Exit(code=2) from None
+
+    out.mkdir(parents=True, exist_ok=True)
+    (out / f"{name}.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    typer.echo(json.dumps(result["scores"], indent=2))
+    typer.echo(f"Advisory score for {name} — report: {out / (name + '.json')}")
+
+
 @qa_app.command("trial")
 def qa_trial(
     app: str | None = typer.Option(None, "--app", "-a", help="Example app name (defaults to cwd)"),
