@@ -453,8 +453,18 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             label_attr = _html_mod.escape(str(col.get("label", col_key)), quote=True)
             options_attr = ""
             if kind == "select":
+                # #1573: filter_options arrive in three shapes depending on the
+                # column producer — dicts ({"value","label"}) from dispatch ctx,
+                # (value, label) tuples, or BARE STRINGS from the HTMX row-
+                # fragment path (workspace_columns emits `list(enum_values)`).
+                # Mirror fragment_adapter._filter_option's normalisation (the
+                # render layer can't import http, so the 3 branches are inlined).
                 pairs = [
                     [str(o.get("value", "")), str(o.get("label", ""))]
+                    if isinstance(o, dict)
+                    else [str(o[0]), str(o[1])]
+                    if isinstance(o, (tuple, list)) and len(o) >= 2
+                    else [str(o), str(o)]
                     for o in (col.get("filter_options") or [])
                 ]
                 options_attr = (

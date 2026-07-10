@@ -171,3 +171,52 @@ class TestRenderDataRowParity:
             path.write_text(rendered, encoding="utf-8")
         assert path.exists(), f"missing fixture {path} — regenerate with UPDATE_CHAR_1505=1"
         assert rendered == path.read_text(encoding="utf-8")
+
+
+class TestInlineEditOptionShapes1573:
+    """#1573 regression: the C2.3 inline-edit select branch must accept all three
+    filter_options shapes the column producers emit — dicts (dispatch ctx),
+    (value, label) tuples, and BARE STRINGS (workspace_columns' `list(enum_values)`
+    on the HTMX row-fragment path). The bare-string case crashed every hydrated
+    badge-column list fleet-wide from v0.93.90 until this fix (masked by the #496
+    error-row swallow + empty-state-only fragment CI)."""
+
+    @staticmethod
+    def _render(options: list) -> str:
+        from dazzle.http.runtime.handlers.list_handlers import build_data_table
+        from dazzle.render.fragment.renderer._data_row import render_data_table_rows
+
+        cols = [
+            {
+                "key": "status",
+                "label": "Status",
+                "type": "badge",
+                "sortable": True,
+                "filterable": True,
+                "filter_options": options,
+            }
+        ]
+        table = {
+            "columns": cols,
+            "entity_name": "ParentConsent",
+            "api_endpoint": "/parentconsents",
+            "table_id": "t",
+            "detail_url_template": "/app/parent-consent/{id}",
+            "inline_editable": ["status"],
+        }
+        return render_data_table_rows(build_data_table(table, [{"id": "abc", "status": "pending"}]))
+
+    def test_bare_string_options_render(self) -> None:
+        html = self._render(["pending", "signed", "withdrawn", "expired"])
+        assert "data-dz-edit-options=" in html
+        assert "pending" in html
+
+    def test_dict_options_render(self) -> None:
+        html = self._render([{"value": "pending", "label": "Pending"}])
+        assert "data-dz-edit-options=" in html
+        assert "Pending" in html
+
+    def test_tuple_options_render(self) -> None:
+        html = self._render([("pending", "Pending")])
+        assert "data-dz-edit-options=" in html
+        assert "Pending" in html

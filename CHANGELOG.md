@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.13] - 2026-07-10
+
+### Fixed
+- **#1573 — fleet-wide list-fragment crash on badge columns (since v0.93.90).** The C2.3
+  inline-edit select branch in `render/fragment/renderer/_data_row.py` assumed dict-shaped
+  `filter_options`, but the HTMX row-fragment path's column producers emit bare strings —
+  so every hydrated list with a badge column rendered the "Something went wrong" error row
+  (masked by the #496 error-swallow and empty-state-only fragment CI). Options are now
+  normalised across all three producer shapes (dict / tuple / bare string), mirroring
+  `fragment_adapter._filter_option`. Regression tests pin all three shapes.
+- **#1573 (secondary) — usage-signal log spam:** a missing `_dazzle_usage_events` table
+  (migration-owned DBs that never provisioned the usage DDL) logged a full-traceback
+  WARNING on every list render; that expected steady state now logs at debug. Other
+  usage-read failures still WARN.
+
 ## [0.101.12] - 2026-07-10
 
 ### Removed

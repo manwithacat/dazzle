@@ -139,9 +139,22 @@ def read_usage_counts_for_request(
             raw = read_usage_counts(
                 cur, tenant_id=tenant_id, surface=surface, window_days=window_days
             )
-    except Exception:
+    except Exception as exc:
         # Best-effort: a usage read must never break a render — fall back to the
         # declared default. WARNING (not debug) so a persistent failure is visible.
+        # EXCEPTION (#1573 secondary): a missing `_dazzle_usage_events` table is
+        # the expected steady state in migration-owned DBs that never provisioned
+        # the usage DDL — a full-traceback WARNING on EVERY list render is pure
+        # noise there, so that one case logs at debug.
+        import psycopg.errors as _pg_errors
+
+        if isinstance(exc, _pg_errors.UndefinedTable):
+            logger.debug(
+                "usage-signal table absent for %s/%s (not provisioned); using declared default",
+                surface,
+                kind,
+            )
+            return {}
         logger.warning(
             "usage-signal read failed for %s/%s; using declared default",
             surface,
