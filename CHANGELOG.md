@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.26] - 2026-07-10
+
+### Fixed
+- **fieldtest_hub SPECIFICATION.md refreshed** for the v0.101.25 `ledger_integrity`
+  claim rescope (fieldtest_hub declares ledgers, so its spec brief changed): the
+  ledger sentence now traces to the alpha-scoped claim and the freshness fingerprint
+  is regenerated. The spec-bar gate runs in the full suite (not `-m gate`) — a
+  claims.toml edit must re-narrate every example whose brief carries the claim.
+
 ## [0.101.25] - 2026-07-10
 
 ### Changed
