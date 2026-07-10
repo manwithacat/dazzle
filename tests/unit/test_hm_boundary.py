@@ -48,6 +48,9 @@ SANCTIONED = {
     # Design-context facade names the HM families path in *generated doc prose*
     # (the hm-design-context.md pointer to the vernacular). Reference, not consumption.
     "src/dazzle/core/design_context.py",
+    # Component token-discipline rubric reads the HM component CSS to *measure*
+    # its house-token delegation (the #1567 deterministic Hyperpart gate).
+    "src/dazzle/core/component_hygiene.py",
 }
 
 
