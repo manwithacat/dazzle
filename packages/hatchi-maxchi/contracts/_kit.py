@@ -105,12 +105,16 @@ def validate_dom(html: str, contract: DomContract, require_root: bool = True) ->
         for el in (e for e in els if _matches(e, node.selector)):
             for attr, validator in node.attrs.items():
                 required = True
-                if isinstance(validator, JsonPairs) and validator.required_when:
-                    required = all(el.get(k) == v for k, v in validator.required_when.items())
+                # Duck-typed (not isinstance): consumers may load this kit
+                # standalone (importlib from a repo path) while the contract
+                # module imports it as a package — two class identities.
+                required_when = getattr(validator, "required_when", None)
+                if required_when:
+                    required = all(el.get(k) == v for k, v in required_when.items())
                     if not required and attr in el:
                         out.append(
                             f"{contract.part}: {node.selector} has {attr} but "
-                            f"required_when {validator.required_when} does not match"
+                            f"required_when {required_when} does not match"
                         )
                 if attr not in el:
                     if required:
