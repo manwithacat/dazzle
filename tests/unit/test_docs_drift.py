@@ -23,15 +23,15 @@ pytestmark = pytest.mark.gate
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _claude_md_constructs() -> list[str]:
-    """Parse the ``**Constructs**:`` line from .claude/CLAUDE.md.
+def _agents_md_constructs() -> list[str]:
+    """Parse the ``**Constructs**:`` line from AGENTS.md.
 
     Accepts backtick-quoted names on the same line — the canonical
     quick-reference format. Returns them in order of appearance.
     """
-    text = (REPO_ROOT / ".claude" / "CLAUDE.md").read_text()
+    text = (REPO_ROOT / "AGENTS.md").read_text()
     match = re.search(r"\*\*Constructs\*\*:(.+)", text)
-    assert match, "CLAUDE.md no longer has a `**Constructs**:` line"
+    assert match, "AGENTS.md no longer has a `**Constructs**:` line"
     line = match.group(1)
     # Also absorb the parenthetical extended list that follows — it
     # names additional parser-dispatchable keywords for reference, and
@@ -64,15 +64,15 @@ def _parser_top_level_keywords() -> set[str]:
     return set(method_names) | {"app"}
 
 
-def test_claude_md_constructs_all_exist_in_parser() -> None:
-    """Every DSL construct named in CLAUDE.md must exist in the parser.
+def test_agents_md_constructs_all_exist_in_parser() -> None:
+    """Every DSL construct named in AGENTS.md must exist in the parser.
 
     This is a one-way gate: the parser can dispatch on more constructs
-    than CLAUDE.md mentions (CLAUDE.md curates the user-facing subset).
-    But any name CLAUDE.md lists must actually be a real top-level
+    than AGENTS.md mentions (AGENTS.md curates the user-facing subset).
+    But any name AGENTS.md lists must actually be a real top-level
     keyword — otherwise the doc is lying.
     """
-    claimed = _claude_md_constructs()
+    claimed = _agents_md_constructs()
     real = _parser_top_level_keywords()
     # Exclude `question` because the parser dispatch method is named
     # `_dispatch_question` but the keyword in the DSL is the token
@@ -82,9 +82,9 @@ def test_claude_md_constructs_all_exist_in_parser() -> None:
 
     stale = [name for name in claimed if name not in real and name not in hidden]
     assert not stale, (
-        f"CLAUDE.md names {stale!r} as DSL constructs, but the parser "
+        f"AGENTS.md names {stale!r} as DSL constructs, but the parser "
         f"does not dispatch on them as top-level keywords. Either:\n"
-        f"  (a) remove the stale name(s) from the .claude/CLAUDE.md "
+        f"  (a) remove the stale name(s) from the AGENTS.md "
         f"`**Constructs**:` line, OR\n"
         f"  (b) add a parser dispatch entry in "
         f"src/dazzle/core/dsl_parser_impl/__init__.py.\n"
@@ -92,42 +92,14 @@ def test_claude_md_constructs_all_exist_in_parser() -> None:
     )
 
 
-def test_agents_md_stays_a_stub() -> None:
-    """AGENTS.md must remain a pointer to .claude/CLAUDE.md, not a copy.
-
-    The pre-#1367 full-content AGENTS.md drifted 21 minor versions behind
-    the codebase (Jinja2-era UI claims, pip toolchain, retired commands)
-    because nothing watched it. The durable fix is structural: the file
-    carries no project facts that can rot, so this gate pins it to stub
-    shape — it must reference the canonical file, must not grow a version
-    stamp, and must stay short enough that fact-accretion is conspicuous.
-    """
-    text = (REPO_ROOT / "AGENTS.md").read_text()
-    assert ".claude/CLAUDE.md" in text, (
-        "AGENTS.md no longer points at .claude/CLAUDE.md — it must defer "
-        "to the canonical, drift-gated instruction file."
-    )
-    assert not re.search(r"\*\*Version\*\*:", text), (
-        "AGENTS.md has grown a version stamp. Version stamps in an "
-        "unmaintained copy are how the pre-#1367 file rotted to v0.61.13 "
-        "while the repo was at v0.82.30. Point at pyproject.toml instead."
-    )
-    line_count = len(text.splitlines())
-    assert line_count <= 40, (
-        f"AGENTS.md is {line_count} lines (limit 40). It must stay a stub "
-        f"that defers to .claude/CLAUDE.md — project facts duplicated here "
-        f"will drift (see #1367)."
-    )
-
-
-def _claude_md_mcp_table() -> dict[str, str]:
-    """Parse the ``### MCP Tools`` table from .claude/CLAUDE.md.
+def _agents_md_mcp_table() -> dict[str, str]:
+    """Parse the ``### MCP Tools`` table from AGENTS.md.
 
     Returns {tool_name: operations_cell_text} for every data row.
     """
-    text = (REPO_ROOT / ".claude" / "CLAUDE.md").read_text()
+    text = (REPO_ROOT / "AGENTS.md").read_text()
     section = text.split("### MCP Tools", 1)
-    assert len(section) == 2, "CLAUDE.md no longer has a `### MCP Tools` section"
+    assert len(section) == 2, "AGENTS.md no longer has a `### MCP Tools` section"
     rows = {}
     for line in section[1].splitlines():
         m = re.match(r"\|\s*`([a-z0-9_]+)`\s*\|\s*(.+?)\s*\|\s*$", line)
@@ -135,12 +107,12 @@ def _claude_md_mcp_table() -> dict[str, str]:
             rows[m.group(1)] = m.group(2)
         elif rows and line.strip() and not line.startswith("|"):
             break  # table ended
-    assert rows, "CLAUDE.md `### MCP Tools` table has no parseable rows"
+    assert rows, "AGENTS.md `### MCP Tools` table has no parseable rows"
     return rows
 
 
-def test_claude_md_mcp_tools_table_matches_registry() -> None:
-    """The CLAUDE.md MCP tools table must match the live registry exactly.
+def test_agents_md_mcp_tools_table_matches_registry() -> None:
+    """The AGENTS.md MCP tools table must match the live registry exactly.
 
     #1369 post-mortem: the hand-maintained table silently rotted to 26 of
     34 tools, ~12 stale op lists, and a phantom `llm ask` op that never
@@ -162,12 +134,12 @@ def test_claude_md_mcp_tools_table_matches_registry() -> None:
     # (failed the py3.14 cell on v0.92.81). Pin dev mode off for the read.
     with patch("dazzle.mcp.server.tools_consolidated.is_dev_mode", return_value=False):
         registry = {t.name: t for t in get_all_consolidated_tools()}
-    table = _claude_md_mcp_table()
+    table = _agents_md_mcp_table()
 
     missing = sorted(set(registry) - set(table))
     phantom = sorted(set(table) - set(registry))
     assert not missing and not phantom, (
-        f"CLAUDE.md `### MCP Tools` table drifted from the registry.\n"
+        f"AGENTS.md `### MCP Tools` table drifted from the registry.\n"
         f"  Tools missing from the table: {missing}\n"
         f"  Table rows with no registry tool: {phantom}\n"
         f"Regenerate the row(s) from "
@@ -185,7 +157,7 @@ def test_claude_md_mcp_tools_table_matches_registry() -> None:
                 f"  {name}: table says {sorted(listed)}, registry enum is {sorted(enum)}"
             )
     assert not stale_ops, (
-        "CLAUDE.md MCP tools table op lists drifted from the registry "
+        "AGENTS.md MCP tools table op lists drifted from the registry "
         "operation enums:\n" + "\n".join(stale_ops)
     )
 
@@ -195,20 +167,20 @@ def _backticked_dir_names(line: str) -> set[str]:
     return {m.group(1) for m in re.finditer(r"`([a-z0-9_]+)`", line)}
 
 
-def test_claude_md_examples_and_fixtures_lists_match_disk() -> None:
+def test_agents_md_examples_and_fixtures_lists_match_disk() -> None:
     """The Examples section's two lists must match the directory trees.
 
     Two-way: every directory must be listed, every listed name must be a
     directory. Pre-#1369 the examples line lagged 3 apps and the fixtures
     line lagged 5 probes behind disk.
     """
-    text = (REPO_ROOT / ".claude" / "CLAUDE.md").read_text()
+    text = (REPO_ROOT / "AGENTS.md").read_text()
     for label, prefix, root in (
         ("examples", "Working Dazzle apps in `examples/`:", REPO_ROOT / "examples"),
         ("fixtures", "Framework-validation fixtures in `fixtures/`", REPO_ROOT / "fixtures"),
     ):
         line = next((ln for ln in text.splitlines() if ln.startswith(prefix)), None)
-        assert line, f"CLAUDE.md no longer has the {label} list line (prefix: {prefix!r})"
+        assert line, f"AGENTS.md no longer has the {label} list line (prefix: {prefix!r})"
         # Strip the lead-in (and the fixtures parenthetical lead-in) so only
         # the name list is scanned; path-bearing tokens never match the
         # directory-name pattern.
@@ -217,7 +189,7 @@ def test_claude_md_examples_and_fixtures_lists_match_disk() -> None:
         unlisted = sorted(on_disk - names)
         ghosts = sorted(names - on_disk)
         assert not unlisted and not ghosts, (
-            f"CLAUDE.md {label} list drifted from {root.name}/:\n"
+            f"AGENTS.md {label} list drifted from {root.name}/:\n"
             f"  on disk but not listed: {unlisted}\n"
             f"  listed but no directory: {ghosts}"
         )
