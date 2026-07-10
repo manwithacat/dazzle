@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.24] - 2026-07-10
+
+### Added
+- **HM structured Guidance + the Guide** (pedagogy arc, phase 2 of 3). Registry gains a
+  typed `Guidance` block (seams / pitfalls / do-don't / a11y-keys / composes-with,
+  cross-checked) rendered on part pages and serialised into `agents/<id>.md`; grid
+  migrated as the worked example, the other 14 controller-bearing parts ratcheted via
+  shrink-only `PENDING_GUIDANCE`. New `guide.html` theory track (hypermedia model →
+  tokens → Hyperpart anatomy → exchanges & contracts → Blueprints) — every embedded
+  artifact comes from a drift-gated source.
+
+### Agent Guidance
+- Structured guidance lives on `Hyperpart.guidance` — controller-bearing parts require
+  seams + pitfalls (`PENDING_GUIDANCE` shrinks only). Narrative prose stays in `notes`.
+
 ## [0.101.23] - 2026-07-10
 
 ### Added
