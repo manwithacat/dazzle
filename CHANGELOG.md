@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.21] - 2026-07-10
+
+### Added
+- **Hyperpart contract modules (pilot: grid/grid-edit)** — typed ingestion model +
+  structured DOM contract + executable FastAPI exemplars in
+  `packages/hatchi-maxchi/contracts/`, validated in HM CI (`tests/test_contracts.py`;
+  fastapi/pydantic are HM dev-deps only — dist unchanged). Registry entries gain
+  `contracts=` pointers with a shrink-only `PENDING_CONTRACTS` ratchet
+  (`test_hyperpart_cohesion.py`); the gallery renders each part's contract section
+  (schema table + exemplar source + live output) and `llms.txt` lists the modules.
+  Contract-first authoring path in `contracts/AUTHORING.md`. The #1573 producer shapes
+  (dict/tuple/bare-string options) ship as permanent exemplars.
+  Spec: `docs/superpowers/specs/2026-07-10-hyperpart-contract-modules-design.md`.
+
+### Fixed
+- **HM dist was stale** — a shadow-token change in HM sources had shipped without a
+  dist rebuild (pre-existing; caught by `test_committed_dist_is_current` while landing
+  the contract work). Rebuilt and committed.
+
+### Agent Guidance
+- New Hyperparts start with a contract module — follow
+  `packages/hatchi-maxchi/contracts/AUTHORING.md` (decision test → contract module →
+  controller → registry → Dazzle emitter). Controller-bearing registry entries without
+  `contracts=` fail the cohesion gate; `PENDING_CONTRACTS` only shrinks.
+
 ## [0.101.20] - 2026-07-10
 
 ### Added
