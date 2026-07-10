@@ -80,6 +80,39 @@ def test_agents_skills_have_shims_and_index() -> None:
         assert f"**{name}**" in agents_text, f"AGENTS.md Workflows index is missing `{name}`"
 
 
+_VENDOR_RE = re.compile(r"\b(Claude|Codex|Copilot|Cursor|Grok|Anthropic|OpenAI|xAI)\b")
+# Irreducible vendor mentions outside the Capability Mapping zone. Every entry
+# needs a justification comment. Expected to stay empty.
+_VENDOR_ALLOWLIST: tuple[str, ...] = ()
+
+
+def _strip_capability_mapping(text: str) -> str:
+    if "## Capability Mapping" not in text:
+        return text
+    head, rest = text.split("## Capability Mapping", 1)
+    parts = rest.split("\n## ", 1)
+    return head + ("\n## " + parts[1] if len(parts) == 2 else "")
+
+
+def test_no_vendor_names_outside_capability_mapping() -> None:
+    """Portable files must speak capability language (spec 2026-07-10).
+    Vendor names are allowed only in AGENTS.md's Capability Mapping section."""
+    offenders: list[str] = []
+    scan: list[tuple[str, str]] = [("AGENTS.md", _strip_capability_mapping(AGENTS.read_text()))]
+    for p in sorted((REPO_ROOT / ".agents" / "skills").rglob("*")):
+        if p.is_file() and p.suffix in (".md", ".toml"):
+            scan.append((str(p.relative_to(REPO_ROOT)), p.read_text()))
+    for label, text in scan:
+        for i, line in enumerate(text.splitlines(), 1):
+            m = _VENDOR_RE.search(line)
+            if m and m.group(0) not in _VENDOR_ALLOWLIST:
+                offenders.append(f"{label}:{i}: {line.strip()[:100]}")
+    assert not offenders, (
+        "Vendor names in portable instruction files (generalise to capability "
+        "language, or move to a harness adapter):\n  " + "\n  ".join(offenders)
+    )
+
+
 def test_agents_md_version_matches_pyproject() -> None:
     agents_match = re.search(r"\*\*Version\*\*: (\d+\.\d+\.\d+)", AGENTS.read_text())
     assert agents_match, "AGENTS.md has lost its version footer (bump target)."

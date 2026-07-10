@@ -5,8 +5,8 @@ description: Use when writing or editing Dazzle .dsl files — syntax rules, the
 
 # DSL Authoring
 
-Replaces the never-loading `dsl-patterns.md` (Cursor-style `auto_load` frontmatter,
-not a Claude Code skill — it silently rotted, ending up teaching two patterns the
+Replaces the never-loading `dsl-patterns.md` (an `auto_load` frontmatter convention
+no harness here loads — it silently rotted, ending up teaching two patterns the
 footgun gates now forbid). This version stays thin on purpose: anything with a
 drift-gated home is *pointed to*, not duplicated.
 
