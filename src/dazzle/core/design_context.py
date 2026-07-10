@@ -23,6 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from dazzle.core.component_hygiene import COMPONENT_HYGIENE_DIMENSIONS
 from dazzle.core.sitespec_hygiene import SITESPEC_HYGIENE_DIMENSIONS
 from dazzle.core.sitespec_vision_rubric import SITESPEC_VISION_DIMENSIONS
 from dazzle.core.taste_rubric import TASTE_DIMENSIONS
@@ -83,6 +84,12 @@ RUBRICS: tuple[RubricRef, ...] = (
         "judged",
         tuple(d.key for d in TASTE_DIMENSIONS),
     ),
+    RubricRef(
+        "component",
+        "app_internals",
+        "deterministic",
+        tuple(d.key for d in COMPONENT_HYGIENE_DIMENSIONS),
+    ),
 )
 
 _RUBRIC_BY_NAME: dict[str, RubricRef] = {r.name: r for r in RUBRICS}
@@ -113,7 +120,12 @@ DESIGN_CONCEPTS: tuple[DesignConcept, ...] = (
     DesignConcept(
         "rhythm",
         "Whitespace and vertical rhythm: consistent, confident spacing between things.",
-        ("hygiene.section_rhythm", "vision.whitespace_rhythm", "taste.spatial_rhythm"),
+        (
+            "hygiene.section_rhythm",
+            "vision.whitespace_rhythm",
+            "taste.spatial_rhythm",
+            "component.sizing_tokens",
+        ),
     ),
     DesignConcept(
         "hierarchy",
@@ -123,17 +135,17 @@ DESIGN_CONCEPTS: tuple[DesignConcept, ...] = (
     DesignConcept(
         "colour",
         "Cohesive palette used with intent: a clear accent, tasteful depth.",
-        ("vision.colour_confidence", "taste.color_discipline"),
+        ("vision.colour_confidence", "taste.color_discipline", "component.colour_tokens"),
     ),
     DesignConcept(
         "motion",
         "Subtle, consistent, token-driven motion that reads as considered.",
-        ("hygiene.motion",),
+        ("hygiene.motion", "component.motion_tokens"),
     ),
     DesignConcept(
         "structure",
         "Layout skeleton: responsive reflow and width-constrained, readable content.",
-        ("hygiene.responsive", "hygiene.container"),
+        ("hygiene.responsive", "hygiene.container", "component.namespace"),
     ),
     DesignConcept(
         "finish",
@@ -211,6 +223,7 @@ _RUBRIC_SOURCE = {
     "hygiene": "`core/sitespec_hygiene.py`",
     "vision": "`core/sitespec_vision_rubric.py`",
     "taste": "`core/taste_rubric.py`",
+    "component": "`core/component_hygiene.py`",
 }
 
 
@@ -254,12 +267,12 @@ def render_markdown() -> str:
             )
         lines.append(f"| **{_SURFACE_LABEL[s]}** | {cells[0]} | {cells[1]} |")
     lines.append("")
-    lines.append(
-        "> The app-internals x deterministic cell is empty today — there is no "
-        "deterministic app-internals rubric yet. It is shown so the gap is visible, "
-        "not hidden."
-    )
-    lines.append("")
+    if any(v is None for v in m.values()):
+        lines.append(
+            "> Cells marked “— (none today)” have no rubric yet — shown so the gap is "
+            "visible, not hidden."
+        )
+        lines.append("")
 
     # Concept map
     lines.append("## Concept map")
@@ -288,5 +301,25 @@ def render_markdown() -> str:
             f"{_SURFACE_LABEL[r.surface].lower()}, {_METHOD_LABEL[r.method].lower()}; "
             f"{len(r.dimension_keys)} dimensions."
         )
+    lines.append("")
+
+    # Authoring workflow (Part E, #1567) — the live, discoverable entry-point.
+    lines.append("## Authoring a new Hyperpart")
+    lines.append("")
+    lines.append(
+        "1. Use HM tokens (`var(--dz-…)`), the `.dz-` namespace, and `--dz-transition*` "
+        "for motion. The **component-discipline floor** "
+        "(`tests/unit/test_component_hygiene.py`) scores every component on this and "
+        "fails a new one that sprays raw values."
+    )
+    lines.append(
+        "2. If your component renders a card or region, the **card-safety composite gate** "
+        "(`tests/unit/test_htmx_workspace_composite.py`) covers its rendered DOM "
+        "automatically."
+    )
+    lines.append(
+        "3. For a judged “does it look right” read, run "
+        "`dazzle qa component-vision <name>` (on-demand, advisory, subscription-billed)."
+    )
     lines.append("")
     return "\n".join(lines)

@@ -12,9 +12,7 @@ The *vernacular* — how to actually make something on-family — lives in the a
 | Surface \ Method | Deterministic | Judged (LLM panel) |
 |---|---|---|
 | **Marketing / sitespec** | `core/sitespec_hygiene.py` (6 dims) | `core/sitespec_vision_rubric.py` (8 dims) |
-| **App internals** | — (none today) | `core/taste_rubric.py` (6 dims) |
-
-> The app-internals x deterministic cell is empty today — there is no deterministic app-internals rubric yet. It is shown so the gap is visible, not hidden.
+| **App internals** | `core/component_hygiene.py` (4 dims) | `core/taste_rubric.py` (6 dims) |
 
 ## Concept map
 
@@ -23,11 +21,11 @@ Each concept is one design idea; the rubrics measure it in the columns below. Ev
 | Concept | What it means | Measured by |
 |---|---|---|
 | `type` | Type from a real scale: token-driven sizes, fluid display, modern faces. | `hygiene.type_system` (d), `hygiene.fluid_type` (d), `vision.type_modernity` (j) |
-| `rhythm` | Whitespace and vertical rhythm: consistent, confident spacing between things. | `hygiene.section_rhythm` (d), `vision.whitespace_rhythm` (j), `taste.spatial_rhythm` (j) |
+| `rhythm` | Whitespace and vertical rhythm: consistent, confident spacing between things. | `hygiene.section_rhythm` (d), `vision.whitespace_rhythm` (j), `taste.spatial_rhythm` (j), `component.sizing_tokens` (d) |
 | `hierarchy` | Editorial reading order: one dominant element leads; the eye is led, not lost. | `vision.visual_hierarchy` (j), `vision.hero_impact` (j), `taste.typographic_hierarchy` (j) |
-| `colour` | Cohesive palette used with intent: a clear accent, tasteful depth. | `vision.colour_confidence` (j), `taste.color_discipline` (j) |
-| `motion` | Subtle, consistent, token-driven motion that reads as considered. | `hygiene.motion` (d) |
-| `structure` | Layout skeleton: responsive reflow and width-constrained, readable content. | `hygiene.responsive` (d), `hygiene.container` (d) |
+| `colour` | Cohesive palette used with intent: a clear accent, tasteful depth. | `vision.colour_confidence` (j), `taste.color_discipline` (j), `component.colour_tokens` (d) |
+| `motion` | Subtle, consistent, token-driven motion that reads as considered. | `hygiene.motion` (d), `component.motion_tokens` (d) |
+| `structure` | Layout skeleton: responsive reflow and width-constrained, readable content. | `hygiene.responsive` (d), `hygiene.container` (d), `component.namespace` (d) |
 | `finish` | Overall craft: alignment, state completeness, dark-mode integrity, no rough edges. | `vision.finish_polish` (j), `taste.perceived_craft` (j), `taste.state_completeness` (j), `taste.dark_mode_integrity` (j) |
 | `cta` | The primary action is unmistakable, inviting, and reinforced at decision points. | `vision.cta_prominence` (j) |
 | `family_fidelity` | The page convincingly reads as its intended aesthetic-family vernacular. | `vision.family_fidelity` (j) |
@@ -39,3 +37,10 @@ _Method key: (d) deterministic, (j) judged._
 - **hygiene** — `core/sitespec_hygiene.py` — marketing / sitespec, deterministic; 6 dimensions.
 - **vision** — `core/sitespec_vision_rubric.py` — marketing / sitespec, judged (llm panel); 8 dimensions.
 - **taste** — `core/taste_rubric.py` — app internals, judged (llm panel); 6 dimensions.
+- **component** — `core/component_hygiene.py` — app internals, deterministic; 4 dimensions.
+
+## Authoring a new Hyperpart
+
+1. Use HM tokens (`var(--dz-…)`), the `.dz-` namespace, and `--dz-transition*` for motion. The **component-discipline floor** (`tests/unit/test_component_hygiene.py`) scores every component on this and fails a new one that sprays raw values.
+2. If your component renders a card or region, the **card-safety composite gate** (`tests/unit/test_htmx_workspace_composite.py`) covers its rendered DOM automatically.
+3. For a judged “does it look right” read, run `dazzle qa component-vision <name>` (on-demand, advisory, subscription-billed).

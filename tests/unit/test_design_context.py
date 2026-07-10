@@ -67,8 +67,8 @@ def test_matrix_is_well_formed() -> None:
     assert m[("marketing", "deterministic")].name == "hygiene"
     assert m[("marketing", "judged")].name == "vision"
     assert m[("app_internals", "judged")].name == "taste"
-    # the honest empty cell
-    assert m[("app_internals", "deterministic")] is None
+    # the app-internals deterministic cell is filled by the component rubric (#1567)
+    assert m[("app_internals", "deterministic")].name == "component"
 
 
 def test_method_and_surface_lookups() -> None:
@@ -80,9 +80,22 @@ def test_method_and_surface_lookups() -> None:
 
 def test_accessor_shapes() -> None:
     assert concepts() == DESIGN_CONCEPTS
-    assert len(RUBRICS) == 3
-    # 20 dimensions total across the three rubrics
-    assert len(all_dimension_ids()) == 20
+    assert len(RUBRICS) == 4
+    # 24 dimensions total across the four rubrics (20 + 4 component)
+    assert len(all_dimension_ids()) == 24
+
+
+def test_component_rubric_fills_the_deterministic_app_cell() -> None:
+    from dazzle.core.design_context import dimensions_for, method_of, surface_of
+
+    for key in ("colour_tokens", "namespace", "motion_tokens", "sizing_tokens"):
+        qid = f"component.{key}"
+        assert method_of(qid) == "deterministic"
+        assert surface_of(qid) == "app_internals"
+    assert "component.colour_tokens" in dimensions_for("colour")
+    assert "component.namespace" in dimensions_for("structure")
+    assert "component.motion_tokens" in dimensions_for("motion")
+    assert "component.sizing_tokens" in dimensions_for("rhythm")
 
 
 def test_generated_doc_is_current() -> None:
