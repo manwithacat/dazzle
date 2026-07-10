@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.16] - 2026-07-10
+
+### Added
+- **#1574 — rows-present list-fragment gate** (`tests/unit/test_list_fragment_rows_present_gate.py`,
+  `-m gate`): walks every declared list surface in a representative example matrix
+  (support_tickets / hr_records / ops_dashboard, 17 surfaces), derives REAL production
+  columns + the exact C2.3 `inline_editable` rule, and renders a hydrated row through the
+  real pipeline — below the #496 error-row swallow, so a renderer crash fails CI directly.
+  Includes a detector-liveness meta-test pinning that the matrix always contains the #1573
+  crash shape (badge column with producer-shaped options in the inline-edit set). Closes
+  the CI hole that let #1573 ship green for 5 days.
+
 ## [0.101.15] - 2026-07-10
 
 ### Added
