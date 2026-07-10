@@ -378,6 +378,28 @@ Reusable workflows live in `.agents/skills/<name>/SKILL.md` (open-standard forma
 - **qa-trial** — Author `trial.toml` scenarios that evaluate a Dazzle app as a real business user
 - **spec-narrate** — Generate a stakeholder-facing SPECIFICATION.md from a Dazzle DSL project
 
+## Capability Mapping
+
+Playbooks and skills in this repo are written in capability language. This table — the
+only place in this file where vendor names may appear — maps each capability to concrete
+harness features. Cells marked *degrade* mean: follow the playbook sequentially and note
+the degradation in your report.
+
+| Capability | Generic instruction | Claude Code | Codex CLI | Grok Build |
+|---|---|---|---|---|
+| ask-user-choice | present 2–4 mutually-exclusive options and wait | AskUserQuestion tool | inline prompt | inline prompt |
+| task-list | maintain a visible task list for multi-step work | TaskCreate/TaskUpdate | plan mode | plan mode |
+| subagent-dispatch | delegate a scoped task to a fresh agent | Agent tool | subtask/spawn if available, else *degrade* | subAgents config |
+| parallel-investigation | run independent investigations concurrently | background Agent tool | *degrade* (sequential) | subagents |
+| scheduled-loop | re-run a playbook on a cadence | /loop + session cron | external scheduler (CI cron) | headless CI mode |
+| web-search | consult current docs when knowledge may be stale | WebSearch tool | built-in browse | built-in search |
+| model-tiering | mechanical work → cheapest tier; judgment work → session tier | pins in .claude/CLAUDE.md | single model — n/a | per-subagent model field |
+
+Model policy: mechanical work (lint, fixed-signature scrapes, format churn) runs on the
+cheapest available tier; judgment work (root-cause, design, review) runs at the session
+tier. Never pin judgment work below the session tier — pins freeze quality as models
+advance. Concrete per-harness pins live in the harness adapters.
+
 ## Onboarding Guides
 
 When authoring or editing a `guide` (per-persona onboarding overlays), read `docs/reference/guides.md` first. Every example app carries terse, in-fiction, per-persona guides; the quality bar (coverage + terseness + in-fiction + concordance) is enforced by `tests/unit/test_example_guide_bar.py` on every commit, and `dazzle ux verify --guides` is the e2e oracle that proves each guide's overlay renders for its audience persona at runtime. New interactive personas need a guide (or an `_GUIDE_EXEMPT`/`_PENDING_GUIDE_AUTHORING` classification). Note: declaring guides introduces the framework `OnboardingState` entity into the app's RBAC matrix + compliance evidence — regenerate any committed `expected/` references after adding guides.
