@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.11] - 2026-07-10
+
+### Added
+- **New-property authoring path (#1567, slice 2 — closes #1567)** — `core/contrast.py`
+  (WCAG 2.x maths + canonical pair tables); `validate_theme` now hard-fails sub-AA text
+  contrast on the generated palette (both modes) — the deterministic floor of the
+  authoring path (`border-strong` is a warning: hairline borders are the industry norm);
+  a live gate holds the 4 shipped HM families to the same AA standard
+  (`tests/unit/test_family_contrast.py`); advisory `dazzle qa property-vision <url>
+  --family <name>` scores a rendered property against its family exemplars; and the
+  "Standing up a new property" section in `docs/reference/hm-design-context.md` ties the
+  path together.
+
+### Fixed
+- **8 sub-AA text-contrast pairs in the shipped HM families** — calibrating the new
+  family gate found white-on-destructive button fills at 3.3–4.4:1 (plus expressive
+  accent, linear-dark/stripe primary); all fixed by minimal lightness nudges preserving
+  hue/sat identity. Dist + served themes regenerated.
+
+### Agent Guidance
+- Standing up a new property? Follow the section in `docs/reference/hm-design-context.md`:
+  pick a family or `scaffold_theme` → `validate_theme` (contrast is now a hard error) →
+  `generate_tokens` → optional `qa property-vision`.
+
 ## [0.101.10] - 2026-07-10
 
 ### Added
