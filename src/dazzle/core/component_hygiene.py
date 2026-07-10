@@ -21,10 +21,29 @@ from pathlib import Path
 
 __all__ = [
     "COMPONENT_HYGIENE_DIMENSIONS",
+    "PAGE_CHROME_EXEMPT",
     "ComponentDimension",
     "hm_component_paths",
     "score_component_css",
 ]
+
+# Files that are page-level chrome / overlays rather than card/widget Hyperparts, so
+# the component token-discipline floor (which assumes a component's selectors + values)
+# does not fit them. Kept tiny and explicit — each entry is a deliberate, documented
+# exemption, not a way to dodge the gate.
+#   - transitions.css: page-level toast/view-transition/<dialog>-backdrop/body-state
+#     helpers. Its own docstring documents the intentional literals (the scrim, a few
+#     durations) and it targets page/pseudo/body selectors, not `.dz-` component classes.
+PAGE_CHROME_EXEMPT: frozenset[str] = frozenset({"transitions.css"})
+
+_COMMENT_RE = re.compile(r"/\*.*?\*/", re.S)
+
+
+def _strip_comments(css: str) -> str:
+    """Drop CSS comments so literals/selectors inside prose (e.g. `dz.css` in a
+    docstring) don't register as declarations."""
+    return _COMMENT_RE.sub("", css)
+
 
 _RAW_COLOUR = r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\("
 
@@ -41,7 +60,10 @@ def _score_colour_tokens(css: str) -> tuple[float, str]:
     coloured = [v for v in vals if re.search(rf"var\(--|{_RAW_COLOUR}", v)]
     if not coloured:
         return (1.0, "no literal colour declarations (n/a)")
-    tok = sum(1 for v in coloured if "var(" in v and not re.search(_RAW_COLOUR, v))
+    # A declaration is token-driven if it references any `var(--…)` token — a hex/rgb
+    # *fallback* inside that var() is legitimate (`var(--dz-x, #fallback)`), so only a
+    # raw literal with NO var() reference counts against discipline.
+    tok = sum(1 for v in coloured if "var(--" in v)
     raw = len(coloured) - tok
     return (tok / len(coloured), f"{tok}/{len(coloured)} colour decls token-driven; {raw} raw")
 
@@ -124,6 +146,7 @@ def hm_component_paths() -> list[Path]:
 def score_component_css(css: str) -> dict[str, object]:
     """Score one component's CSS against the token-discipline rubric. Returns the
     weighted /100 total plus a per-dimension breakdown (sub-score, points, detail)."""
+    css = _strip_comments(css)
     breakdown: dict[str, dict[str, object]] = {}
     total = 0.0
     for d in COMPONENT_HYGIENE_DIMENSIONS:
