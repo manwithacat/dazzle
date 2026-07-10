@@ -45,6 +45,9 @@ SANCTIONED = {
     # Reservoir metric names the HM package to measure the delegation drain +
     # recognise HM-generated served files (the marker). Governance, not consumption.
     "scripts/hm_tailwind_reservoir.py",
+    # Design-context facade names the HM families path in *generated doc prose*
+    # (the hm-design-context.md pointer to the vernacular). Reference, not consumption.
+    "src/dazzle/core/design_context.py",
 }
 
 

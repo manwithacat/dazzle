@@ -31,6 +31,7 @@
 | Page | Description |
 |------|-------------|
 | [UX Catalogue](ux-catalogue.md) | A live gallery of Dazzle display modes — each component rendered from real DSL through the real render pipeline, with its DSL snippet. |
+| [HM Design Context](hm-design-context.md) | The unified standard for HM design quality — the three rubrics (hygiene / vision / taste) on one surface × method matrix plus a concept map, the entry-point when customising HM for a new property. |
 | [Project Layout](project-layout.md) | The recommended directory layout for a Dazzle project — where DSL, app code, and one-shot scripts live. |
 | [DSL Grammar Specification](grammar.md) | The formal EBNF grammar for the DAZZLE DSL, regenerated from parser source by `dazzle grammar`. |
 | [Personas and Scenarios](scenarios.md) | Personas define user types; scenarios define test-data states for development and demonstration. |

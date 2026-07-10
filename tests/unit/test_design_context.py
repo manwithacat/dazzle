@@ -83,3 +83,13 @@ def test_accessor_shapes() -> None:
     assert len(RUBRICS) == 3
     # 20 dimensions total across the three rubrics
     assert len(all_dimension_ids()) == 20
+
+
+def test_generated_doc_is_current() -> None:
+    from dazzle.core.design_context import DOC_PATH, render_markdown
+
+    assert DOC_PATH.exists(), "docs/reference/hm-design-context.md must be generated"
+    committed = DOC_PATH.read_text(encoding="utf-8")
+    assert committed == render_markdown().rstrip("\n") + "\n", (
+        "hm-design-context.md is stale — run: python scripts/gen_design_context.py"
+    )
