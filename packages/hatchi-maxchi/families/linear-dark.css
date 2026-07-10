@@ -45,7 +45,7 @@
     --accent: 228 6% 18%;              /* row hover, dropdown hover */
     --accent-foreground: 228 6% 95%;
 
-    --destructive: 0 70% 55%;          /* error red, slightly desaturated */
+    --destructive: 0 70% 51.5%;        /* error red, desaturated; AA vs near-white text */
     --destructive-foreground: 0 0% 98%;
 
     --border: 228 6% 19%;              /* 1px hairlines */
@@ -129,7 +129,7 @@
     --popover: 228 30% 100%;
     --popover-foreground: 228 12% 12%;
 
-    --primary: 205 90% 48%;             /* slightly darker for AA on white */
+    --primary: 205 90% 40%;             /* darker still — true 4.5:1 AA w/ near-white text */
     --primary-foreground: 0 0% 98%;
 
     --secondary: 228 12% 95%;

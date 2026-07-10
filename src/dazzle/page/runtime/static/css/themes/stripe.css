@@ -131,7 +131,7 @@
     --popover: 220 22% 16%;
     --popover-foreground: 220 15% 95%;
 
-    --primary: 245 80% 68%;             /* lifted indigo for AA on dark */
+    --primary: 245 80% 69%;             /* lifted indigo — true 4.5:1 AA w/ dark text */
     --primary-foreground: 220 25% 10%;
 
     --secondary: 220 16% 20%;
@@ -143,7 +143,7 @@
     --accent: 220 16% 22%;
     --accent-foreground: 220 15% 95%;
 
-    --destructive: 355 70% 60%;
+    --destructive: 355 70% 53%;    /* AA vs white text */
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 16% 22%;

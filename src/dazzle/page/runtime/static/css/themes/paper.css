@@ -142,7 +142,7 @@
     --accent: 25 10% 22%;
     --accent-foreground: 38 18% 92%;
 
-    --destructive: 0 55% 55%;
+    --destructive: 0 55% 53%;       /* AA vs cream text */
     --destructive-foreground: 38 25% 98%;
 
     --border: 25 10% 24%;

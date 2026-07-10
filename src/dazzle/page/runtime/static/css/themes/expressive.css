@@ -48,10 +48,10 @@
     --muted: 270 24% 96%;
     --muted-foreground: 265 14% 42%;
 
-    --accent: 292 80% 60%;              /* fuchsia secondary accent — for depth */
+    --accent: 292 80% 48.5%;            /* fuchsia secondary accent — darkened for AA w/ white text */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 350 80% 55%;
+    --destructive: 350 80% 50.5%;   /* AA vs white text */
     --destructive-foreground: 0 0% 100%;
 
     --border: 270 20% 90%;
@@ -178,7 +178,7 @@
     --accent: 292 90% 72%;             /* neon fuchsia */
     --accent-foreground: 270 30% 7%;
 
-    --destructive: 350 80% 64%;
+    --destructive: 350 80% 50.5%;   /* AA vs white text */
     --destructive-foreground: 0 0% 100%;
 
     --border: 270 20% 20%;
