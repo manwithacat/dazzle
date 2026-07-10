@@ -245,11 +245,7 @@ def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore
     committed_files = {
         q.relative_to(committed_root).as_posix(): q
         for q in committed_root.rglob("*")
-        if q.is_file()
-        and "__pycache__" not in q.parts
-        and q.suffix != ".py"
-        # Hand-placed static assets the build does not emit (demo fixtures):
-        and q.relative_to(committed_root).as_posix() not in {"sample.pdf"}
+        if q.is_file() and "__pycache__" not in q.parts and q.suffix != ".py"
     }
     missing = sorted(set(fresh_files) - set(committed_files))
     stale_extra = sorted(set(committed_files) - set(fresh_files))

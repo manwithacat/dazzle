@@ -62,6 +62,32 @@ def _compare(name: str, png_bytes: bytes) -> None:
         )
 
 
+import sys as _sys  # noqa: E402  (path bootstrap must precede registry import)
+
+_PKG = Path(__file__).resolve().parents[1]
+for _p in (str(_PKG), str(_PKG / "site"), str(_PKG / "tools")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
+
+from conftest import goto_part  # noqa: E402
+from registry import HYPERPARTS  # noqa: E402
+
+_PART_IDS = [h.id for h in HYPERPARTS]
+
+
+@pytest.mark.parametrize("part_id", _PART_IDS)
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_part_visual(page, part_id, theme) -> None:  # type: ignore[no-untyped-def]
+    """Atomic per-part baseline — a part's change churns ITS baseline only
+    (spec 2026-07-10-hm-docs-pedagogy-atomic-testing)."""
+    goto_part(page, part_id)
+    if theme == "dark":
+        page.evaluate("hmTheme('dark')")
+    page.wait_for_timeout(300)
+    page.evaluate("document.fonts && document.fonts.ready")
+    _compare(f"part-{part_id}-{theme}", page.screenshot())
+
+
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_gallery_visual(page, theme) -> None:  # type: ignore[no-untyped-def]
     if theme == "dark":

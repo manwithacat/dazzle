@@ -880,6 +880,7 @@ PAGE_CSS = """
 body { background: var(--colour-bg); color: var(--colour-text);
   font-family: var(--font-sans); margin: 0; }
 .hm-wrap { display: grid; grid-template-columns: 15rem 1fr; min-height: 100vh; }
+.hm-wrap.hm-single { display: block; max-width: 72rem; margin-inline: auto; }
 .hm-nav { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
   border-inline-end: 1px solid var(--colour-border); padding: 1.5rem 1rem; }
 .hm-brand { font-weight: var(--weight-bold); font-size: 1.1rem; letter-spacing: -.01em; }
@@ -1286,6 +1287,13 @@ Every snippet is the live example — copy it into any htmx4 app.
     #    bundle/sheet/theme chrome as the index, one part per page.
     hp_dir = out_dir / "hyperparts"
     hp_dir.mkdir(exist_ok=True)
+    # Demo assets referenced RELATIVELY by partials (partial-is-snippet means
+    # the path can't change per page) must exist at both levels: the index dir
+    # and hyperparts/. Source of truth sits next to this script.
+    sample_pdf = Path(__file__).resolve().parent / "sample.pdf"
+    if sample_pdf.exists():
+        (out_dir / "sample.pdf").write_bytes(sample_pdf.read_bytes())
+        (hp_dir / "sample.pdf").write_bytes(sample_pdf.read_bytes())
     theme_toggle = (
         '<div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup">'
         '<label><input type="radio" name="hm-theme" data-hm-theme="light" '
@@ -1306,7 +1314,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 </head>
 <body>
 {sheet}
-<div class="hm-wrap">
+<div class="hm-wrap hm-single">
 <main class="hm-main">
 <div class="hm-topbar">
   <div class="hm-hero">
@@ -1347,7 +1355,7 @@ The demo above renders the exact snippet — copy it into any htmx4 app.
 </head>
 <body>
 {sheet}
-<div class="hm-wrap">
+<div class="hm-wrap hm-single">
 <main class="hm-main">
 <div class="hm-topbar">
   <div class="hm-hero">

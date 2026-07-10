@@ -14,6 +14,8 @@ import pytest
 
 _SITE_URI = (Path(__file__).resolve().parents[1] / "site" / "index.html").as_uri()
 
+from conftest import goto_part  # noqa: E402
+
 PALETTE = "dialog.command"
 INPUT = ".command__input"
 
@@ -60,6 +62,7 @@ def _open_palette(page) -> None:  # type: ignore[no-untyped-def]
 
 
 def test_palette_opens_via_button_and_cmd_k(page) -> None:  # type: ignore[no-untyped-def]
+    goto_part(page, "command")
     _open_palette(page)
     page.keyboard.press("Escape")
     page.wait_for_timeout(100)
@@ -69,6 +72,7 @@ def test_palette_opens_via_button_and_cmd_k(page) -> None:  # type: ignore[no-un
 
 
 def test_palette_esc_closes_even_with_query_text(page) -> None:  # type: ignore[no-untyped-def]
+    goto_part(page, "command")
     _open_palette(page)
     page.fill(f"{PALETTE} {INPUT}", "inv")
     page.keyboard.press("Escape")
@@ -83,6 +87,7 @@ def test_palette_closes_via_backdrop_tap(page) -> None:  # type: ignore[no-untyp
     """A touch device has no Esc key — tapping outside the palette (the
     backdrop) MUST close it, or a mobile user is trapped. Regression pin
     for the bug the keyboard-only tests never caught."""
+    goto_part(page, "command")
     _open_palette(page)
     # The palette is top-anchored + centered; (8, 8) is backdrop, not the box.
     page.mouse.click(8, 8)
@@ -97,6 +102,7 @@ def test_palette_close_button_is_rendered_and_placed(page) -> None:  # type: ign
     dialog. Direct pin for the v0.93.34 Safari bug: absolute positioning
     against a modal <dialog> collapsed the button to 0×0 in WebKit, so it was
     invisible and untappable. The flex bar fixed it — assert it in WebKit."""
+    goto_part(page, "command")
     _open_palette(page)
     box = page.evaluate(
         "() => { const b = document.querySelector('.command__close').getBoundingClientRect();"
@@ -110,6 +116,7 @@ def test_palette_close_button_is_rendered_and_placed(page) -> None:  # type: ign
 def test_palette_closes_via_close_button(page) -> None:  # type: ignore[no-untyped-def]
     """The always-visible close button is the discoverable dismiss
     affordance (touch has no Esc)."""
+    goto_part(page, "command")
     _open_palette(page)
     page.click("[data-hm-close-command]")
     page.wait_for_timeout(100)
@@ -119,6 +126,7 @@ def test_palette_closes_via_close_button(page) -> None:  # type: ignore[no-untyp
 
 
 def test_palette_arrows_and_enter(page) -> None:  # type: ignore[no-untyped-def]
+    goto_part(page, "command")
     _open_palette(page)
     page.focus(f"{PALETTE} {INPUT}")  # focus triggers the mock hx-get
     page.wait_for_timeout(200)
@@ -134,6 +142,7 @@ def test_palette_arrows_and_enter(page) -> None:  # type: ignore[no-untyped-def]
 
 
 def test_confirm_dialog_intercepts_hx_confirm(page) -> None:  # type: ignore[no-untyped-def]
+    goto_part(page, "confirm")
     # The gallery mock fires the real htmx-4 `htmx:confirm` shape (config under
     # detail.ctx, issueRequest/dropRequest). This guards the full flow, not just
     # dialog-open, so an htmx-detail-shape drift (which silently degrades the
@@ -169,6 +178,7 @@ def test_grid_selection_reveals_and_clears_the_bulk_bar(page) -> None:  # type: 
     """dz-grid selection is delegated + state-in-DOM: checking rows writes the
     count to data-bulk-count on the root, the CSS reveals the bulk bar, select-all
     reflects the tri-state, and Clear resets it. (Gallery classes are un-prefixed.)"""
+    goto_part(page, "grid")
     root, bar, boxes = "[data-grid]", ".bulk-actions", "[data-grid-select]"
     disp = "e => getComputedStyle(e).display"
 
@@ -216,6 +226,7 @@ def test_grid_hydrates_rows_via_exchange_with_stable_ids(page) -> None:  # type:
     selection follows its ROW (not its DOM position) across a re-sort/paginate in
     a real innerMorph swap. `data-grid-row-id` stays the bulk-payload anchor; the
     `id` encodes it, so the two agree. (Gallery classes are un-prefixed.)"""
+    goto_part(page, "grid")
     body = "[data-grid-body]"
     boxes = "[data-grid-select]"
 
@@ -270,6 +281,7 @@ def test_grid_sort_cycles_direction_and_reorders_rows(page) -> None:  # type: ig
     th's aria-sort, delegated + state-in-DOM), and each click reloads the tbody
     over the wire (dz-grid:refresh → the sort/dir query → the mock returns the
     sorted rows). No client-side row rendering — the server owns the order."""
+    goto_part(page, "grid")
     # Unsorted at rest: PAGE 1 (page_size 4) of the mock's scrambled order.
     assert _aria_sort(page, "first") == "none"
     natural_p1 = ["Mia", "Ravi", "Amir", "Sofia"]
@@ -299,6 +311,7 @@ def test_grid_sort_is_single_column(page) -> None:  # type: ignore[no-untyped-de
     first's aria-sort (one server ORDER BY, one active indicator). Sorting by a
     DIFFERENT column yields a visibly different order — the diagnostic the sparse
     data lacked."""
+    goto_part(page, "grid")
     page.click("[data-grid-sort='first']")
     page.wait_for_timeout(120)
     assert _aria_sort(page, "first") == "ascending"
@@ -316,6 +329,7 @@ def test_grid_filter_narrows_rows_over_the_wire(page) -> None:  # type: ignore[n
     """Changing a filter select ([data-grid-filter]) rebuilds the tbody query and
     reloads it — the server returns only the matching rows. The 'Any …' option
     (empty value) clears the filter."""
+    goto_part(page, "grid")
     assert len(_grid_names(page)) == 4  # page 1 of 6
 
     page.select_option("[data-grid-filter='plan']", "Free")
@@ -332,6 +346,7 @@ def test_grid_filter_composes_with_sort(page) -> None:  # type: ignore[no-untype
     """Filter and sort compose in one query built from the DOM state: sorting then
     filtering keeps BOTH — the sorted, filtered rows come back and the sort
     indicator is preserved."""
+    goto_part(page, "grid")
     page.click("[data-grid-sort='first']")  # ascending
     page.wait_for_timeout(120)
     page.select_option("[data-grid-filter='plan']", "Pro")
@@ -345,6 +360,7 @@ def test_grid_filter_to_zero_reveals_empty_state(page) -> None:  # type: ignore[
     """A filter combination matching no rows returns an empty tbody, and the
     CSS `:has(tbody tr td)`-driven empty-state appears (the server owns emptiness;
     the client invents nothing)."""
+    goto_part(page, "grid")
     disp = "e => getComputedStyle(e).display"
     assert page.eval_on_selector(".table-empty", disp) == "none", (
         "empty-state hidden while populated"
@@ -364,6 +380,7 @@ def test_grid_search_narrows_rows_debounced(page) -> None:  # type: ignore[no-un
     """Typing in the search box narrows the rows over the wire after a debounce
     (the server matches; the client just adds `q=` to the query). Clearing it
     restores every row (page 1)."""
+    goto_part(page, "grid")
     assert len(_grid_names(page)) == 4  # page 1 of 6
 
     page.fill("[data-grid-search]", "chen")
@@ -390,6 +407,7 @@ def test_grid_bulk_delete_removes_selected_rows(page) -> None:  # type: ignore[n
     """Selecting rows and confirming Delete posts the selection, the server
     removes exactly those rows and returns the refreshed tbody, and the selection
     (and its bar) clears. (Gallery mock mutates its row set.)"""
+    goto_part(page, "grid")
     page.locator("[data-grid-select]").nth(0).check()  # Mia
     page.locator("[data-grid-select]").nth(1).check()  # Ravi
     page.wait_for_timeout(80)
@@ -410,6 +428,7 @@ def test_grid_bulk_payload_carries_selection_and_query(page) -> None:  # type: i
     """The posted payload carries the action, the selected ids, the all-matching /
     excluded shape, AND an echo of the current query — so the server re-scopes the
     action to what the user was viewing and never trusts client ids alone."""
+    goto_part(page, "grid")
     page.select_option("[data-grid-filter='plan']", "Pro")  # Amir, Noah
     page.wait_for_timeout(120)
     page.locator("[data-grid-select]").first.check()  # Amir
@@ -435,6 +454,7 @@ def test_grid_bulk_delete_on_last_page_reclamps(page) -> None:  # type: ignore[n
     """Deleting the only rows on the last page removes that page — the client
     re-syncs the root's page from the server-rendered footer (which clamped it),
     so no stale page lingers (the classic delete-on-last-page bug)."""
+    goto_part(page, "grid")
     page.click("[data-grid-page-next]")  # page 2: Noah, Jane
     page.wait_for_timeout(150)
     assert _grid_names(page) == ["Noah", "Jane"]
@@ -462,6 +482,7 @@ def test_grid_bulk_payload_keys_win_over_query_echo(page) -> None:  # type: igno
     """A query param that collides with a bulk-payload key (e.g. a filter named
     'action') must NOT clobber the operation — the payload keys are written last
     so they always win."""
+    goto_part(page, "grid")
     page.eval_on_selector(
         "[data-grid-body]",
         "b => b.setAttribute('hx-get', b.getAttribute('data-grid-src') + '?action=archive')",
@@ -486,6 +507,7 @@ def test_grid_paginates_and_navigates(page) -> None:  # type: ignore[no-untyped-
     """The server-rendered footer pages the result set (page_size 4 of 6): prev
     is disabled on page 1, next on the last page, and prev / next / a page number
     each reload the tbody for that page."""
+    goto_part(page, "grid")
     assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"], "page 1"
     assert _page_summary(page) == "1-4 of 6"
     assert page.eval_on_selector("[data-grid-page-prev]", "b => b.disabled") is True, (
@@ -512,6 +534,7 @@ def test_grid_paginates_and_navigates(page) -> None:  # type: ignore[no-untyped-
 def test_grid_sort_persists_across_pages(page) -> None:  # type: ignore[no-untyped-def]
     """Sort is applied to the whole result set server-side, so page 2 continues
     the ordered sequence (not a re-sort of the visible page)."""
+    goto_part(page, "grid")
     page.click("[data-grid-sort='first']")  # ascending
     page.wait_for_timeout(150)
     assert _grid_names(page) == ["Amir", "Jane", "Mia", "Noah"], "sorted page 1"
@@ -523,6 +546,7 @@ def test_grid_sort_persists_across_pages(page) -> None:  # type: ignore[no-untyp
 def test_grid_change_resets_to_page_one(page) -> None:  # type: ignore[no-untyped-def]
     """A sort / filter / search change resets the page to 1 (spec) — you never
     land on page 2 of a freshly-narrowed result."""
+    goto_part(page, "grid")
     page.click("[data-grid-page-next]")
     page.wait_for_timeout(150)
     assert page.get_attribute("[data-grid]", "data-grid-page") == "2"
@@ -562,6 +586,7 @@ def test_grid_select_all_matching_spans_pages(page) -> None:  # type: ignore[no-
     query (all pages): state lands on the root (data-grid-all-matching), the
     count shows the matched total (from the footer's data-grid-total, not the
     visible boxes), and rows on other pages arrive selected."""
+    goto_part(page, "grid")
     page.check("[data-grid-select-all]")
     page.wait_for_timeout(80)
     # the affordance announces the matched total, fed from the server-rendered footer
@@ -591,6 +616,7 @@ def test_grid_select_all_matching_spans_pages(page) -> None:  # type: ignore[no-
 def test_grid_all_matching_exclusion_persists_across_pages(page) -> None:  # type: ignore[no-untyped-def]
     """Unchecking a row in all-matching mode records an EXCLUSION on the root —
     it survives paging away and back (state on the root, not the row DOM)."""
+    goto_part(page, "grid")
     _enter_all_matching(page)
     page.locator("[data-grid-select]").nth(1).uncheck()  # Ravi (cust_2)
     page.wait_for_timeout(80)
@@ -616,6 +642,7 @@ def test_grid_all_matching_bulk_delete_applies_query_minus_exclusions(page) -> N
     """A bulk action in all-matching mode sends all_matching_selected=true +
     excluded_ids + the query echo — the server applies it to the whole matched
     set MINUS the exclusions (never just the visible ids)."""
+    goto_part(page, "grid")
     _enter_all_matching(page)
     page.locator("[data-grid-select]").first.uncheck()  # Mia (cust_1) is spared
     page.wait_for_timeout(80)
@@ -636,6 +663,7 @@ def test_grid_all_matching_drops_on_query_change(page) -> None:  # type: ignore[
     """A filter/search change CHANGES the matched set, so all-matching mode must
     drop (the user never confirmed 'all matching' over the new query) — falling
     back to plain per-row selection."""
+    goto_part(page, "grid")
     _enter_all_matching(page)
     page.select_option("[data-grid-filter='plan']", "Pro")
     page.wait_for_timeout(150)
@@ -652,6 +680,7 @@ def test_grid_all_matching_survives_net_unchanged_search(page) -> None:  # type:
     """A keystroke that is immediately deleted leaves the matched set UNCHANGED
     — the debounced search must not silently drop a cross-page all-matching
     selection for it (the classic silent-selection-loss before a bulk delete)."""
+    goto_part(page, "grid")
     _enter_all_matching(page)
     page.type("[data-grid-search]", "x")
     page.wait_for_timeout(50)  # inside the 250ms debounce window
@@ -674,6 +703,7 @@ def test_grid_all_matching_exclusion_survives_resort(page) -> None:  # type: ign
     """Pin for the afterSwap re-projection: after a re-sort (rows re-rendered,
     order changed, mode kept), an excluded row stays unchecked and the others
     stay checked — the root's state re-projects onto whatever rows render."""
+    goto_part(page, "grid")
     _enter_all_matching(page)
     page.locator("[data-grid-select]").first.uncheck()  # Mia (cust_1)
     page.wait_for_timeout(80)
@@ -694,6 +724,7 @@ def test_grid_all_matching_exclusion_survives_resort(page) -> None:  # type: ign
 def test_grid_select_all_header_uncheck_exits_all_matching(page) -> None:  # type: ignore[no-untyped-def]
     """Unchecking the header select-all while in all-matching mode deselects
     EVERYTHING — mode, exclusions, and boxes."""
+    goto_part(page, "grid")
     _enter_all_matching(page)
     page.uncheck("[data-grid-select-all]")
     page.wait_for_timeout(80)
@@ -706,6 +737,7 @@ def test_grid_page_size_rewindows_and_resets_to_page_one(page) -> None:  # type:
     """The page-size select re-WINDOWS the matched set: the server repages for
     the new size (rows + footer from one query), and any size change lands back
     on page 1 — you never keep a page number that no longer exists."""
+    goto_part(page, "grid")
     assert _grid_names(page) == ["Mia", "Ravi", "Amir", "Sofia"], "default 4/page"
 
     page.select_option("[data-grid-page-size]", "8", timeout=3000)
@@ -734,6 +766,7 @@ def test_grid_page_size_keeps_all_matching(page) -> None:  # type: ignore[no-unt
     """Page size WINDOWS the same matched set (like a page click) — it must NOT
     drop an all-matching selection OR its exclusions the way a filter/search
     scope change does."""
+    goto_part(page, "grid")
     _enter_all_matching(page)
     page.locator("[data-grid-select]").first.uncheck()  # exclude Mia (cust_1)
     page.wait_for_timeout(80)
@@ -765,6 +798,7 @@ def test_grid_url_syncs_state_to_the_address_bar(page) -> None:  # type: ignore[
     human-readable params (spec §7) — the URL mirrors the request query EXACTLY
     (page_size included: the select always rides the query), so a deep link
     reproduces the request byte-for-byte."""
+    goto_part(page, "grid")
     ps = {"page_size": "4"}  # the demo's Per-page select rides every query
     page.click("[data-grid-sort='first']")
     page.wait_for_timeout(150)
@@ -792,6 +826,7 @@ def test_grid_url_restores_state_on_load(page) -> None:  # type: ignore[no-untyp
     """Deep link: loading the page WITH grid params applies them — controls
     reflect the state, and the hydration fetch uses the restored query (no
     default-then-correct double fetch)."""
+    goto_part(page, "grid")
     page.goto(_SITE_URI + "?plan=Pro&sort=first&dir=asc")
     page.wait_for_timeout(300)
     assert _grid_names(page) == ["Amir", "Noah"], "rows arrive already narrowed + sorted"
@@ -803,6 +838,7 @@ def test_grid_url_restores_state_on_load(page) -> None:  # type: ignore[no-untyp
 def test_grid_url_back_button_restores_previous_state(page) -> None:  # type: ignore[no-untyped-def]
     """Discrete state changes push history entries, so Back returns to the
     previous grid state — controls, rows, and URL all restore (popstate)."""
+    goto_part(page, "grid")
     page.select_option("[data-grid-filter='plan']", "Pro")
     page.wait_for_timeout(150)
     assert _grid_names(page) == ["Amir", "Noah"]
@@ -825,6 +861,7 @@ def test_grid_url_unresolvable_params_do_not_loop(page) -> None:  # type: ignore
     actually changed the query — else an un-satisfiable URL param re-fetches
     forever (GET storm under real htmx; stack overflow under the synchronous
     gallery mock)."""
+    goto_part(page, "grid")
     page.goto(_SITE_URI + "?sort=renamed_column&dir=asc&page_size=999")
     page.wait_for_timeout(800)
     # The grid still hydrates and works (graceful degradation)…
@@ -846,6 +883,7 @@ def test_grid_url_unresolvable_params_do_not_loop(page) -> None:  # type: ignore
 def test_grid_url_preserves_unrelated_params(page) -> None:  # type: ignore[no-untyped-def]
     """The grid only owns its OWN keys (q/sort/dir/page/page_size + its filter
     fields) — a foreign query param on the page URL survives grid activity."""
+    goto_part(page, "grid")
     page.goto(_SITE_URI + "?foo=bar")
     page.wait_for_timeout(300)
     page.click("[data-grid-sort='plan']")
@@ -859,6 +897,7 @@ def test_grid_announces_result_window_changes(page) -> None:  # type: ignore[no-
     """The footer is server-repainted wholesale, so screen readers can't track
     it — the controller mirrors the result-window summary into a visually-hidden
     polite live region on every data change."""
+    goto_part(page, "grid")
     announce = "[data-grid-announce]"
     assert page.inner_text(announce, timeout=3000).strip() == "Showing 1-4 of 6", (
         "hydration announces the initial window"
@@ -887,6 +926,7 @@ def test_grid_pagination_restores_keyboard_focus(page) -> None:  # type: ignore[
     the keyboard user's focus silently falls to <body> and they lose their
     place. Focus must land on the repainted equivalent control (or the
     current-page button when the equivalent is now disabled)."""
+    goto_part(page, "grid")
     page.click("[data-grid-goto='2']")
     page.wait_for_timeout(150)
     focused = page.evaluate(
@@ -911,6 +951,7 @@ def test_grid_search_debounce_coalesces_keystrokes(page) -> None:  # type: ignor
     the `dz-grid:refresh` events (un-prefixed `grid:refresh` in the gallery). A
     long debounce makes the timing robust: during the burst nothing fires; one
     request lands after it settles."""
+    goto_part(page, "grid")
     page.eval_on_selector("[data-grid-search]", "e => e.setAttribute('data-grid-debounce', '400')")
     page.evaluate(
         "window.__gridRefreshes = 0;"
@@ -931,6 +972,7 @@ def test_grid_search_debounce_coalesces_keystrokes(page) -> None:  # type: ignor
 
 def test_grid_search_composes_with_filter(page) -> None:  # type: ignore[no-untyped-def]
     """Search composes with sort/filter — all read from the DOM into one query."""
+    goto_part(page, "grid")
     page.select_option("[data-grid-filter='plan']", "Pro")  # Amir, Noah
     page.wait_for_timeout(120)
     page.fill("[data-grid-search]", "okafor")  # last name Okafor → Amir
@@ -946,6 +988,7 @@ def test_grid_loading_overlay_is_wired_to_htmx_request(page) -> None:  # type: i
     descendant reveals the `.dz-table-loading` overlay — no controller JS, so
     idiomorph can't strip a JS-held loading flag. At rest the overlay is hidden;
     injecting `.htmx-request` (as htmx does mid-flight) shows it."""
+    goto_part(page, "grid")
     overlay = ".table-loading"
     disp = "e => getComputedStyle(e).display"
     assert page.query_selector(overlay) is not None, "the grid must carry a loading overlay"
@@ -1019,6 +1062,7 @@ def test_dialog_opens_and_closes_natively(page) -> None:  # type: ignore[no-unty
     """The dialog opens from its trigger (the one scripted behaviour) and
     closes with no extra JS: the ✕ is a <form method="dialog"> submit, and
     Esc is native <dialog> cancel. Runs in WebKit too — Safari's <dialog>."""
+    goto_part(page, "dialog")
     dlg = "dialog.dialog"
     assert not page.evaluate(f"document.querySelector('{dlg}').open")
     page.click("[data-dialog-open]")
@@ -1042,6 +1086,7 @@ def test_dialog_instance_isolation(page) -> None:  # type: ignore[no-untyped-def
     """The opener addresses each dialog by id (getElementById), so a second
     dialog with its own id opens independently — N dialogs coexist with no
     shared global handle (contrast the command palette's page singleton)."""
+    goto_part(page, "dialog")
     page.evaluate(
         "() => { const d = document.querySelector('dialog.dialog');"
         " const c = d.cloneNode(true); c.id = 'hm-dialog-clone';"
@@ -1068,6 +1113,7 @@ def test_tabs_switch_and_lazy_load(page) -> None:  # type: ignore[no-untyped-def
     """dz-tabs.js: clicking a tab reveals its panel (hiding siblings) and moves
     aria-current, all scoped to the .dz-tabs root; revealing a hidden panel
     triggers its `intersect once` lazy load (the mock's IntersectionObserver)."""
+    goto_part(page, "tabs")
     cur = '#tabs .tabs__tab[aria-current="true"]'
     assert page.evaluate(f"document.querySelector('{cur}').textContent") == "Overview"
     assert page.evaluate("document.getElementById('hm-tab-activity').hidden")
@@ -1090,6 +1136,7 @@ def test_tabs_switch_and_lazy_load(page) -> None:  # type: ignore[no-untyped-def
 def test_slider_updates_value_readout(page) -> None:  # type: ignore[no-untyped-def]
     """dz-slider.js writes the range value into the group's [data-range-value]
     readout on input, scoped to the slider's own group."""
+    goto_part(page, "slider")
     page.eval_on_selector(
         "#slider input[type=range]",
         "el => { el.value = '30'; el.dispatchEvent(new Event('input', {bubbles: true})); }",
@@ -1104,6 +1151,7 @@ def test_slider_skips_widget_managed_inputs(page) -> None:  # type: ignore[no-un
     """The load-bearing guard: HM's dz-slider.js must NOT touch a range managed
     by a widget bridge ([data-widget] wrapper) — that's what keeps it a no-op on
     a host (e.g. Dazzle) that wires its own range controller."""
+    goto_part(page, "slider")
     page.evaluate(
         "() => { var d = document.createElement('div'); d.id = 'wm';"
         ' d.innerHTML = \'<div data-widget="range-tooltip" class="form-slider-group">'
@@ -1125,6 +1173,7 @@ def test_drawer_opens_via_shared_opener_and_closes(page) -> None:  # type: ignor
     """The drawer is a native <dialog> anchored to the edge; it reuses the
     dialog's opener (no drawer-specific JS) and closes natively. Proves the
     shared dz-dialog.js drives a *second* Hyperpart's trigger."""
+    goto_part(page, "drawer")
     dw = "dialog.drawer"
     assert not page.evaluate(f"document.querySelector('{dw}').open")
     page.click('[data-dialog-open="hm-drawer-demo"]')
@@ -1149,6 +1198,7 @@ def test_master_detail_selection_and_instance_isolation(page) -> None:  # type: 
     """The master-detail composite: clicking a list item selects it (aria-current
     moves) AND the controller is instance-isolated — a second master-detail on
     the page manages its own selection without touching the first."""
+    goto_part(page, "master-detail")
     md_item = ".master-detail__item"
     assert len(page.query_selector_all(md_item)) >= 3
 
@@ -1189,6 +1239,7 @@ def test_grid_column_resize_drags_col_width_and_persists(page) -> None:  # type:
     column's <col> (snap-8, live), and the width survives a reload
     (localStorage). The handle lives INSIDE the th (never clipped by the
     scroll container) and a drag must not fire the header's sort."""
+    goto_part(page, "grid")
     _hydrate_grid(page)
     handle = page.query_selector('[data-grid-resize="first"]')
     assert handle is not None, "the First-name header must carry a resize handle"
@@ -1235,6 +1286,7 @@ def test_grid_column_visibility_menu_toggles_and_persists(page) -> None:  # type
     """grid-cols extension: unchecking a column in the native <details> menu
     hides every cell of that column (header + hydrated data cells + its <col>),
     the preference persists across a reload, and re-checking restores it."""
+    goto_part(page, "grid")
     _hydrate_grid(page)
     toggle = '[data-grid-col-toggle="plan"]'
     assert page.query_selector(toggle) is not None, "the grid must render a column menu"
@@ -1280,6 +1332,7 @@ def test_grid_inline_edit_commits_via_put_and_refreshes(page) -> None:  # type: 
     (the entity's standard update route); on success the controller refreshes
     the rows and the server-rendered cell shows the new value. Escape cancels
     without a request."""
+    goto_part(page, "grid")
     _hydrate_grid(page)
     span = page.query_selector('[data-grid-body] [data-grid-edit="first"]')
     assert span is not None, "hydrated editable cells must carry the edit seam span"
@@ -1375,6 +1428,7 @@ def test_grid_column_visibility_reset_shows_all_and_clears(page) -> None:  # typ
     """grid-cols #853 escape hatch: after hiding columns, the menu's
     "Show all columns" button reveals every cell and CLEARS the stored
     preference (a reload stays all-visible)."""
+    goto_part(page, "grid")
     _hydrate_grid(page)
     visible = "els => els.filter(e => getComputedStyle(e).display !== 'none').length"
     for key in ("plan", "signed"):
@@ -1410,6 +1464,7 @@ def test_confirm_gate_arms_primary_only_when_required_boxes_checked(page) -> Non
     Checking ALL required boxes (and only required ones — the optional
     box must not count) promotes the href and drops aria-disabled;
     unchecking re-disarms."""
+    goto_part(page, "confirm-panel")
     root = "#confirm-panel [data-confirm-gate]"
     primary = f"{root} .confirm-primary"
 
@@ -1441,6 +1496,7 @@ def test_confirm_gate_never_promotes_a_dangerous_scheme_href(page) -> None:  # t
     armed — but a hostile scheme (``javascript:``/``data:``) must never reach
     the DOM sink. Even with such a URL parked in ``data-confirm-href``, arming
     the gate leaves the anchor without that href (no DOM-XSS via click)."""
+    goto_part(page, "confirm-panel")
     root = "#confirm-panel [data-confirm-gate]"
     primary = f"{root} .confirm-primary"
 
@@ -1469,6 +1525,7 @@ def test_drawer_lazy_trigger_opens_dialog_and_loads_body(page) -> None:  # type:
     dialog opener calls preventDefault(), which must NOT suppress the
     htmx exchange — both fire; the drawer opens showing the fetched
     body. Native close (Esc) dismisses."""
+    goto_part(page, "drawer")
     # gallery strips the dz- prefix from data attrs
     trigger = '#drawer [data-dialog-open="hm-drawer-lazy"]'
     page.click(trigger)
@@ -1488,6 +1545,7 @@ def test_search_box_coaching_hides_on_type_via_pure_css(page) -> None:  # type: 
     (`:has(input:not(:placeholder-shown))`) — no client state. Typing
     hides it (before any swap); clearing brings it back; the debounced
     hx-get lands the results fragment."""
+    goto_part(page, "search-box")
     box = "#search-box .search-box-region"
     coaching = f"{box} .search-box-empty"
     inp = f"{box} input[type=search]"
@@ -1510,6 +1568,7 @@ def test_search_box_no_results_state_survives_the_css_toggle(page) -> None:  # t
     catch the server's zero-hit state — `dz-search-box-empty
     --no-results` arrives while the input is non-empty by construction,
     and hiding it would render a blank panel."""
+    goto_part(page, "search-box")
     box = "#search-box .search-box-region"
     page.fill(f"{box} input[type=search]", "zzz-no-such")
     page.eval_on_selector(
@@ -1528,6 +1587,7 @@ def test_related_tables_tab_strip_rides_dz_tabs(page) -> None:  # type: ignore[n
     """F4: the related-tables tab strip is the tabs Hyperpart (no Alpine
     activeTab island) — clicking Files reveals its panel and marks the
     tab current, scoped to the related group's own .dz-tabs root."""
+    goto_part(page, "related-tables")
     root = "#related-tables .tabs"
     files_tab = f'{root} [data-tab-target="hm-rel-files"]'
     assert page.is_hidden("#hm-rel-files")
@@ -1543,6 +1603,7 @@ def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # t
     Focus opens the panel; a result-row click (which blurs the input)
     must land its htmx select exchange within the 200ms grace; focusing
     elsewhere closes the panel."""
+    goto_part(page, "search-select")
     root = "#search-select .search-select"
     inp = f"{root} input[type=text]"
     panel = f"{root} .search-select-results"
@@ -1569,6 +1630,7 @@ def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # t
 def test_money_field_syncs_minor_carrier_and_normalizes(page) -> None:  # type: ignore[no-untyped-def]
     """F4c: typing a major amount keeps the hidden minor carrier in sync
     (input event); blur normalizes the display to the scale."""
+    goto_part(page, "money")
     root = "#money [data-money]"
     inp = f"{root} input[inputmode=decimal]"
     minor = f"{root} input[name=amount_minor]"
@@ -1590,6 +1652,7 @@ def test_wizard_forward_gated_on_validity_back_free(page) -> None:  # type: igno
     """F4d: forward navigation requires the current stage's required
     inputs to be valid; back navigation is always free; completed steps
     swap to the CSS checkmark."""
+    goto_part(page, "wizard")
     root = "#wizard [data-wizard]"
     step2 = f'{root} [data-step-to="1"]'
     stage0 = f'{root} [data-stage="0"]'
@@ -1647,7 +1710,7 @@ def test_pdf_viewer_renders_and_pages(page) -> None:  # type: ignore[no-untyped-
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         thread.start()
         try:
-            page.goto(f"http://127.0.0.1:{port}/index.html")
+            page.goto(f"http://127.0.0.1:{port}/hyperparts/pdf.html")
             page.wait_for_timeout(300)
             _assert_pdf_viewer(page)
         finally:
@@ -1674,6 +1737,7 @@ def test_wizard_submit_jumps_to_first_invalid_stage(page) -> None:  # type: igno
     wizard intercepts at capture phase, jumps to the first invalid
     stage, and surfaces the validity bubble. A fully-valid form
     submits normally."""
+    goto_part(page, "wizard")
     root = "#wizard [data-wizard]"
     # Wrap the demo wizard in a form with a submit button and make the
     # stage-1 date required — the page shape the experience renderer

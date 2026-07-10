@@ -15,11 +15,20 @@ and pinned — bump deliberately.
 """
 
 import json
+import sys as _sys
 from pathlib import Path
 
 import pytest
 
 PKG = Path(__file__).resolve().parents[1]
+for _p in (str(PKG), str(PKG / "site"), str(PKG / "tools")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
+
+from conftest import goto_part, part_uri  # noqa: E402
+from registry import HYPERPARTS  # noqa: E402
+
+_PART_IDS = [h.id for h in HYPERPARTS]
 AXE_JS = (PKG / "tests" / "vendor" / "axe.min.js").read_text(encoding="utf-8")
 ALLOWLIST_PATH = PKG / "tests" / "wcag-allowlist.json"
 
@@ -69,13 +78,32 @@ def test_gallery_page_wcag(page, theme) -> None:  # type: ignore[no-untyped-def]
     _assert_clean(_scan(page), f"gallery-{theme}")
 
 
+@pytest.mark.parametrize("theme", ["light", "dark"])
+@pytest.mark.parametrize("part_id", _PART_IDS)
+def test_part_page_wcag(page, part_id, theme) -> None:  # type: ignore[no-untyped-def]
+    """Atomic axe sweep — violations name the part page."""
+    goto_part(page, part_id)
+    if theme == "dark":
+        page.evaluate("hmTheme('dark')")
+        page.wait_for_timeout(150)
+    _assert_clean(_scan(page), f"part-{part_id}-{theme}")
+
+
+def test_guide_page_wcag(page) -> None:  # type: ignore[no-untyped-def]
+    page.goto((PKG / "site" / "guide.html").as_uri())
+    page.wait_for_timeout(200)
+    _assert_clean(_scan(page), "guide")
+
+
 def test_command_palette_open_wcag(page) -> None:  # type: ignore[no-untyped-def]
+    goto_part(page, "command")
     page.click("[data-hm-open-command]")
     page.wait_for_timeout(200)
     _assert_clean(_scan(page), "palette-open")
 
 
 def test_confirm_dialog_open_wcag(page) -> None:  # type: ignore[no-untyped-def]
+    goto_part(page, "confirm")
     page.click("[hx-delete][hx-confirm]")
     page.wait_for_timeout(200)
     _assert_clean(_scan(page), "confirm-open")
@@ -84,12 +112,14 @@ def test_confirm_dialog_open_wcag(page) -> None:  # type: ignore[no-untyped-def]
 def test_drawer_open_wcag(page) -> None:  # type: ignore[no-untyped-def]
     """The drawer is a bigger overlay surface (header/body/footer); scan it
     open. Native <dialog> + aria-labelledby + a labelled close button."""
+    goto_part(page, "drawer")
     page.click('[data-dialog-open="hm-drawer-demo"]')
     page.wait_for_timeout(200)
     _assert_clean(_scan(page), "drawer-open")
 
 
 def test_menu_open_wcag(page) -> None:  # type: ignore[no-untyped-def]
+    goto_part(page, "menu")
     page.evaluate("document.querySelector('details.menu').open = true")
     page.wait_for_timeout(150)
     _assert_clean(_scan(page), "menu-open")
@@ -102,12 +132,12 @@ def test_allowlist_entries_all_still_needed(page) -> None:  # type: ignore[no-un
     if not allow:
         return
     fired: set[tuple[str, str]] = set()
-    for setup in (
-        lambda: None,
-        lambda: page.click("[data-hm-open-command]"),
-        lambda: page.click("[hx-delete][hx-confirm]"),
+    for uri, setup in (
+        (None, lambda: None),
+        (part_uri("command"), lambda: page.click("[data-hm-open-command]")),
+        (part_uri("confirm"), lambda: page.click("[hx-delete][hx-confirm]")),
     ):
-        page.goto(page.url)
+        page.goto(uri or page.url)
         page.wait_for_timeout(200)
         setup()
         page.wait_for_timeout(200)
