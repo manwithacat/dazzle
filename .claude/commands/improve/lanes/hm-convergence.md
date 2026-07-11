@@ -46,7 +46,15 @@ reservoir delta; the number should now fall in big steps (hundreds of lines/cycl
 ```bash
 python scripts/hm_tailwind_reservoir.py           # human summary
 python scripts/hm_tailwind_reservoir.py --json     # machine-readable
+python scripts/hm_tailwind_reservoir.py --suggest  # residual CSS → HM name matches
+python scripts/hm_css_classify.py                 # load-bearing vs aesthetic + token literals
+python scripts/hm_css_classify.py --tokens-only    # raw hex/rgb/px outside tokens.css
 ```
+
+**Before deleting/rewriting a CSS file in aggressive mode**, run `hm_css_classify.py`
+on it. Rules dominated by **load-bearing** properties (`display`, `pointer-events`,
+`z-index`, `overflow`, flex/grid, …) need a functional gate after the edit;
+aesthetic-heavy files can move under dual-lock + subscription visual smoke.
 
 Two numbers, both must trend to **zero**:
 - **`total_tailwind_tokens`** — Tailwind utility classes in the render/page emitters'

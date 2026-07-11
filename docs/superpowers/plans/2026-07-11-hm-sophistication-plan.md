@@ -104,7 +104,7 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 |-------|--------|------:|-------|
 | A | **Done** | #1581 | Plan + coverage generator + map + gate test |
 | B | **Done** | #1582 | confirm/pdf/wizard/master_detail dual-locks; dual_pane_flow emits Hyperpart |
-| C | **Partial** | #1583 | Reservoir `--suggest` shipped; classifier/stylelint optional |
+| C | **Done** | #1583 | `--suggest` + `hm_css_classify.py` (load-bearing + token literals) |
 | D | **Partial** | #1584 | Subscription smoke → `.dazzle/hm-visual-*`; vision API optional only |
 
 **Epic:** #1580
@@ -116,6 +116,7 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 - Coverage generator: `packages/hatchi-maxchi/tools/dual_lock_coverage.py`
 - Dual-lock registry: `tests/unit/hm_contract_registry.py`
 - Reservoir: `scripts/hm_tailwind_reservoir.py`
+- CSS classify (Phase C): `scripts/hm_css_classify.py`
 - Improve lane: `.claude/commands/improve/lanes/hm-convergence.md`
 - Vision: `src/dazzle/qa/taste_panel.py`, `component_vision.py`, `property_vision.py`
 - Contract authoring: `packages/hatchi-maxchi/contracts/AUTHORING.md`
