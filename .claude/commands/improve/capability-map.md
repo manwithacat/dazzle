@@ -63,7 +63,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 318 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 320 | USED |
-| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 304 | USED |
+| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 324 | USED |
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 323 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 305 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 306 | USED |
