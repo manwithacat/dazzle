@@ -128,3 +128,30 @@ def test_money_field_fixed_conforms_to_money_contract() -> None:
     assert "data-dz-money" in html
     assert 'data-dz-currency="GBP"' in html
     assert 'data-dz-scale="2"' in html
+
+
+def test_money_field_selector_conforms_to_money_contract() -> None:
+    """Selector-mode MoneyField root must still carry data-dz-currency (DOM_CONTRACT)."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.forms import MoneyField as FormMoneyField
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    money_mod = load_hm_module("contracts/money.py")
+    kit = load_hm_module("contracts/_kit.py")
+    frag = FormMoneyField(
+        name="fee",
+        label="Fee",
+        currency_code="USD",
+        scale="2",
+        symbol="$",
+        currency_fixed=False,
+        currency_options=(("USD", "2", "$"), ("GBP", "2", "£")),
+        minor_initial="99",
+    )
+    html = FragmentRenderer().render(frag)
+    violations = kit.validate_dom(html, money_mod.DOM_CONTRACT, require_root=False)
+    assert not violations, violations
+    assert "data-dz-money" in html
+    assert 'data-dz-currency="USD"' in html
+    assert 'data-dz-scale="2"' in html
+    assert 'name="fee_currency"' in html

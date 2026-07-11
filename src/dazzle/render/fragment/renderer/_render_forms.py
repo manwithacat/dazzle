@@ -426,7 +426,9 @@ class _RenderFormsMixin:
             for code, opt_scale, opt_symbol in m.currency_options
         )
         return (
-            f'<div class="dz-money" data-dz-money data-dz-scale="{ctx.escape_attr(m.scale)}">'
+            '<div class="dz-money" data-dz-money '
+            f'data-dz-currency="{ctx.escape_attr(m.currency_code)}" '
+            f'data-dz-scale="{ctx.escape_attr(m.scale)}">'
             '<div class="dz-form-money-group">'
             f'<select name="{name}_currency" '
             'class="dz-form-money-select" '
