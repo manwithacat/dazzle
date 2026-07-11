@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **box-plot + progress → schema+DOM dual-lock** — HM `contracts/box_plot.py`
+  (`BoxPlot`/`BoxPlotGroup`, root `data-dz-box-plot`, trusted `svg_html`) and
+  `contracts/progress.py` (`Progress`/`ProgressStage`, root
+  `data-dz-progress-region`) with ingest models/renders + sole-emitters. Stage
+  chip tones stay `data-dz-stage-tone`; whisker SVG stays host-side.
 - **histogram + pivot → schema+DOM dual-lock** — HM `contracts/histogram.py`
   (`Histogram`/`HistogramBin`, root `data-dz-histogram`, trusted `svg_html`) and
   `contracts/pivot.py` (`PivotTable`, root `data-dz-pivot`, trusted cell HTML)

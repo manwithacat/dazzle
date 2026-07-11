@@ -72,12 +72,7 @@ def render(h: Histogram) -> str:
         f"{len(h.bins)} bins · {total} samples · peak {max_count}"
         f"</p>"
     )
-    return (
-        f'<div class="dz-histogram-region" data-dz-histogram>'
-        f"{h.svg_html}"
-        f"{summary}"
-        f"</div>"
-    )
+    return f'<div class="dz-histogram-region" data-dz-histogram>{h.svg_html}{summary}</div>'
 ```
 
 ## Notes

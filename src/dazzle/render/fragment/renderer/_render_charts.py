@@ -21,6 +21,8 @@ from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import BarChart as BarChartSeam
 from dazzle.render.fragment.ingest import BarChartRow as BarChartRowSeam
+from dazzle.render.fragment.ingest import BoxPlot as BoxPlotSeam
+from dazzle.render.fragment.ingest import BoxPlotGroup as BoxPlotGroupSeam
 from dazzle.render.fragment.ingest import Bullet as BulletSeam
 from dazzle.render.fragment.ingest import BulletBand as BulletBandSeam
 from dazzle.render.fragment.ingest import BulletRow as BulletRowSeam
@@ -35,6 +37,7 @@ from dazzle.render.fragment.ingest import Sparkline as SparklineSeam
 from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
 from dazzle.render.fragment.ingest import (
     render_bar_chart,
+    render_box_plot,
     render_bullet,
     render_funnel,
     render_heatmap,
@@ -349,32 +352,15 @@ class _RenderChartsMixin:
         return f'<div class="dz-radar-region">{svg}{summary}</div>'
 
     def _emit_box_plot(self, b: BoxPlot, ctx: RenderContext) -> str:
-        """Render a box-plot as inline SVG box+whisker glyphs — byte-
-        equivalent to `workspace/regions/box_plot.html` for the common
-        case (modulo the documented divergence in `box_plot_svg`).
+        """Render a BoxPlot via HM dual-lock BoxPlot seam.
 
-        Phase 4B.4 wave 2: stripped the prior Phase 4B.1.c chrome
-        (`<section class="dz-box-plot">` + `<h4>` + summary line +
-        `<dl>` references block) for byte-equivalence with the legacy
-        template, which emits only `<div class="dz-box-plot-region">`
-        wrapping the SVG. The summary referenced legacy's `n` field
-        (sum of samples across groups); the typed primitive doesn't
-        carry `n`, so the summary can't be reproduced — dropped. The
-        `<dl>` references block was a Phase 4B-only addition with no
-        legacy counterpart; also dropped to match.
-
-        Empty case renders `<p class="dz-empty-dense">…</p>` inside
-        the region wrapper, matching the legacy `{% else %}` branch.
+        SVG geometry stays in ``dazzle.render.svg.box_plot_svg``; the seam
+        carries the trusted SVG plus group stats for the summary line.
         """
         from dazzle.render.svg import box_plot_svg
 
         if not b.groups:
-            empty_msg = "No data available."
-            return (
-                f'<div class="dz-box-plot-region">'
-                f'<p class="dz-empty-dense" role="status">{empty_msg}</p>'
-                f"</div>"
-            )
+            return render_box_plot(BoxPlotSeam(label=b.label, groups=[]))
 
         svg = box_plot_svg(
             b.label,
@@ -382,12 +368,25 @@ class _RenderChartsMixin:
             reference_lines=b.reference_lines,
             samples=b.samples,
         )
-        # Summary line — matches legacy `{{ count }} groups · {{ sum(n) }} samples`.
-        # When samples is empty, sum is 0 (legacy Jinja sum on missing
-        # attribute returns 0 too).
-        n_total = sum(b.samples) if b.samples else 0
-        summary = f'<p class="dz-box-plot-summary">{len(b.groups)} groups · {n_total} samples</p>'
-        return f'<div class="dz-box-plot-region">{svg}{summary}</div>'
+        samples = b.samples if b.samples else (0,) * len(b.groups)
+        return render_box_plot(
+            BoxPlotSeam(
+                label=b.label,
+                groups=[
+                    BoxPlotGroupSeam(
+                        label=label,
+                        min=mn,
+                        q1=q1,
+                        median=med,
+                        q3=q3,
+                        max=mx,
+                        samples=samples[i] if i < len(samples) else 0,
+                    )
+                    for i, (label, mn, q1, med, q3, mx) in enumerate(b.groups)
+                ],
+                svg_html=svg,
+            )
+        )
 
     def _emit_bullet(self, b: Bullet, ctx: RenderContext) -> str:
         """Render a Bullet via HM dual-lock Bullet seam."""

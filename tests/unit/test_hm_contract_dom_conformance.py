@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -670,6 +670,62 @@ def test_pivot_emission_conforms_to_pivot_contract() -> None:
     assert "System" in html  # dim header
     assert "Api" in html  # non-FK dim cell → status badge (humanized)
     assert "is-measure" in html
+
+
+def test_box_plot_emission_conforms_to_box_plot_contract() -> None:
+    """Real FragmentRenderer BoxPlot path satisfies contracts/box_plot.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import BoxPlot as BoxFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    bp_mod = load_hm_module("contracts/box_plot.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        BoxFrag(
+            label="Latency",
+            groups=(
+                ("API", 10.0, 20.0, 30.0, 45.0, 80.0),
+                ("Web", 5.0, 15.0, 25.0, 40.0, 70.0),
+            ),
+            samples=(40, 30),
+        )
+    )
+    violations = kit.validate_dom(html, bp_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-box-plot" in html
+    assert "dz-box-plot-summary" in html
+    assert "<svg" in html
+    assert "2 groups · 70 samples" in html
+
+
+def test_progress_emission_conforms_to_progress_contract() -> None:
+    """Real FragmentRenderer StageBar path satisfies contracts/progress.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import StageBar
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    prog_mod = load_hm_module("contracts/progress.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        StageBar(
+            stages=(
+                ("Draft", 4, True),
+                ("Review", 2, False),
+                ("Published", 0, False),
+            ),
+            complete_pct=33.0,
+            complete_count=1,
+            total=3,
+        )
+    )
+    violations = kit.validate_dom(html, prog_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-progress-region" in html
+    assert 'data-dz-progress value="33"' in html
+    assert 'data-dz-stage-tone="complete"' in html
+    assert 'data-dz-stage-tone="active"' in html
+    assert 'data-dz-stage-tone="empty"' in html
+    assert "1 of 3 complete" in html
 
 
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────

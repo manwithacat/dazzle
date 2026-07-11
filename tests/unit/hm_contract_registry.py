@@ -176,6 +176,30 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "PivotTable",
     ),
+    (
+        "contracts/box_plot.py",
+        "BoxPlot",
+        "dazzle.render.fragment.ingest",
+        "BoxPlot",
+    ),
+    (
+        "contracts/box_plot.py",
+        "BoxPlotGroup",
+        "dazzle.render.fragment.ingest",
+        "BoxPlotGroup",
+    ),
+    (
+        "contracts/progress.py",
+        "Progress",
+        "dazzle.render.fragment.ingest",
+        "Progress",
+    ),
+    (
+        "contracts/progress.py",
+        "ProgressStage",
+        "dazzle.render.fragment.ingest",
+        "ProgressStage",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.

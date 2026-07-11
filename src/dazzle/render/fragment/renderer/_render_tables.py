@@ -34,6 +34,8 @@ from dazzle.render.fragment.ingest import BarTrackRow as BarTrackRowSeam
 from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
 from dazzle.render.fragment.ingest import PivotTable as PivotTableSeam
 from dazzle.render.fragment.ingest import ProfileCard as ProfileCardSeam
+from dazzle.render.fragment.ingest import Progress as ProgressSeam
+from dazzle.render.fragment.ingest import ProgressStage as ProgressStageSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
 from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
 from dazzle.render.fragment.ingest import (
@@ -43,6 +45,7 @@ from dazzle.render.fragment.ingest import (
     render_metric_tile,
     render_pivot_table,
     render_profile_card,
+    render_progress,
     render_queue_row,
     render_status_list_entry,
 )
@@ -1116,39 +1119,15 @@ class _RenderTablesMixin:
         return f"{region}{refs}"
 
     def _emit_stage_bar(self, s: StageBar, ctx: RenderContext) -> str:
-        """Render a StageBar matching legacy
-        `workspace/regions/progress.html` byte-for-byte: outer
-        `dz-progress-region` wrapper, header `<progress>` + percent
-        readout, chip list of stages with per-chip tone (complete /
-        active / empty), and an optional "N of M complete" summary.
-        """
-        # Match Jinja's `{{ complete_pct }}` rendering: int values
-        # render without trailing `.0`, floats render as-is. The
-        # adapter coerces to float for type safety; the renderer
-        # narrows back to int when the value is whole so byte-
-        # equivalence holds for the common round-percentage case.
-        pct = s.complete_pct
-        pct_str = str(int(pct)) if pct == int(pct) else str(pct)
-
-        chips_html = "".join(
-            f'<span class="dz-progress-chip" '
-            f'data-dz-stage-tone="{("complete" if complete else ("active" if count > 0 else "empty"))}">'
-            f"{ctx.escape(name)} ({count})"
-            f"</span>"
-            for name, count, complete in s.stages
-        )
-        summary_html = (
-            f'<p class="dz-progress-summary">{s.complete_count} of {s.total} complete</p>'
-            if s.total > 0
-            else ""
-        )
-        return (
-            f'<div class="dz-progress-region">'
-            f'<div class="dz-progress-header">'
-            f'<progress data-dz-progress value="{pct_str}" max="100"></progress>'
-            f"<span>{pct_str}%</span>"
-            f"</div>"
-            f'<div class="dz-progress-stages">{chips_html}</div>'
-            f"{summary_html}"
-            f"</div>"
+        """Render a StageBar via HM dual-lock Progress seam."""
+        return render_progress(
+            ProgressSeam(
+                stages=[
+                    ProgressStageSeam(name=name, count=count, complete=complete)
+                    for name, count, complete in s.stages
+                ],
+                complete_pct=s.complete_pct,
+                complete_count=s.complete_count,
+                total=s.total,
+            )
         )

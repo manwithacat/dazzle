@@ -17,6 +17,7 @@ from dazzle.render.fragment.ingest.models import (
     ActivityRow,
     BarChart,
     BarTrack,
+    BoxPlot,
     Bullet,
     ComboboxField,
     Funnel,
@@ -28,6 +29,8 @@ from dazzle.render.fragment.ingest.models import (
     MoneyField,
     PivotTable,
     ProfileCard,
+    Progress,
+    ProgressStage,
     QueueRow,
     SearchResultRow,
     SearchSelectShell,
@@ -853,6 +856,14 @@ def pivot_root_attrs(_p: PivotTable) -> str:
     return "data-dz-pivot"
 
 
+def box_plot_root_attrs(_b: BoxPlot) -> str:
+    return "data-dz-box-plot"
+
+
+def progress_root_attrs(_p: Progress) -> str:
+    return "data-dz-progress-region"
+
+
 def render_histogram(h: Histogram) -> str:
     """Model → histogram region (matches HM contracts/histogram.py)."""
     root_attrs = histogram_root_attrs(h)
@@ -909,6 +920,60 @@ def render_pivot_table(p: PivotTable) -> str:
         f'<table class="dz-pivot-grid">{thead}{tbody}</table>'
         f"</div>"
         f"{summary}"
+        f"</div>"
+    )
+
+
+def render_box_plot(b: BoxPlot) -> str:
+    """Model → box-plot region (matches HM contracts/box_plot.py)."""
+    root_attrs = box_plot_root_attrs(b)
+    if not b.groups:
+        return (
+            f'<div class="dz-box-plot-region" {root_attrs}>'
+            f'<p class="dz-empty-dense" role="status">'
+            f"{_html.escape(b.empty_message)}</p>"
+            f"</div>"
+        )
+    n_total = sum(g.samples for g in b.groups)
+    summary = f'<p class="dz-box-plot-summary">{len(b.groups)} groups · {n_total} samples</p>'
+    return f'<div class="dz-box-plot-region" {root_attrs}>{b.svg_html}{summary}</div>'
+
+
+def _progress_stage_tone(stage: ProgressStage) -> str:
+    if stage.complete:
+        return "complete"
+    if stage.count > 0:
+        return "active"
+    return "empty"
+
+
+def _progress_pct_str(pct: float) -> str:
+    return str(int(pct)) if pct == int(pct) else str(pct)
+
+
+def render_progress(p: Progress) -> str:
+    """Model → progress region (matches HM contracts/progress.py)."""
+    root_attrs = progress_root_attrs(p)
+    pct_str = _progress_pct_str(p.complete_pct)
+    chips_html = "".join(
+        f'<span class="dz-progress-chip" data-dz-stage-tone="{_progress_stage_tone(s)}">'
+        f"{_html.escape(s.name)} ({s.count})"
+        f"</span>"
+        for s in p.stages
+    )
+    summary_html = (
+        f'<p class="dz-progress-summary">{p.complete_count} of {p.total} complete</p>'
+        if p.total > 0
+        else ""
+    )
+    return (
+        f'<div class="dz-progress-region" {root_attrs}>'
+        f'<div class="dz-progress-header">'
+        f'<progress data-dz-progress value="{pct_str}" max="100"></progress>'
+        f"<span>{pct_str}%</span>"
+        f"</div>"
+        f'<div class="dz-progress-stages">{chips_html}</div>'
+        f"{summary_html}"
         f"</div>"
     )
 

@@ -3129,7 +3129,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "Distribution five-number summaries per bucket — a server-rendered "
             "SVG with the counts in the summary line.",
-            '<div class="dz-box-plot-region hm-measure-lg">'
+            '<div class="dz-box-plot-region hm-measure-lg" data-dz-box-plot>'
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" '
             'role="img" aria-label="Box plot — 3 buckets">'
             '<line x1="20" y1="8" x2="20" y2="40" stroke="var(--colour-text-muted)"/>'
@@ -3145,11 +3145,16 @@ def select(source: str, id: str) -> str:
             'fill-opacity="0.25" stroke="var(--colour-brand)"/>'
             '<line x1="148" y1="26" x2="172" y2="26" stroke="var(--colour-brand)" stroke-width="2"/>'
             "</svg>"
-            '<p class="dz-box-plot-summary">3 buckets · whiskers at min/max</p>'
+            '<p class="dz-box-plot-summary">3 groups · 0 samples</p>'
             "</div>",
-            notes="Schematic demo — real whisker/quartile geometry is "
-            "server-computed. The summary line carries the bucket count.",
+            notes="Dual-lock root is <code>data-dz-box-plot</code> "
+            "(<code>contracts/box_plot.py</code>). Schematic demo — real "
+            "whisker/quartile geometry is server-computed via "
+            "<code>dazzle.render.svg.box_plot_svg</code> and rides trusted "
+            "<code>svg_html</code>. The summary line carries group count and "
+            "sample total.",
             tags=("data", "chart"),
+            contracts=("contracts/box_plot.py",),
         ),
         Hyperpart(
             "progress-region",
@@ -3157,7 +3162,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "A native progress bar with stage chips — where the work is, stage "
             "by stage, with completion tones.",
-            '<div class="dz-progress-region hm-measure-lg">'
+            '<div class="dz-progress-region hm-measure-lg" data-dz-progress-region>'
             '<div class="dz-progress-header">'
             '<progress data-dz-progress value="33" max="100"></progress>'
             "<span>33%</span>"
@@ -3169,13 +3174,16 @@ def select(source: str, id: str) -> str:
             "</div>"
             '<p class="dz-progress-summary">1 of 3 complete</p>'
             "</div>",
-            notes="The bar is a NATIVE <code>&lt;progress&gt;</code> (styled via "
+            notes="Dual-lock root is <code>data-dz-progress-region</code> "
+            "(<code>contracts/progress.py</code>). The bar is a NATIVE "
+            "<code>&lt;progress&gt;</code> (styled via "
             "<code>data-dz-progress</code>) with its percent readout as a plain "
             "<code>&lt;span&gt;</code> beside it in the header; chips are plain "
             "text (<code>Name (count)</code>) toned by "
             "<code>data-dz-stage-tone=&quot;complete|active|empty&quot;</code>; "
             "the summary paragraph follows the stages.",
             tags=("data",),
+            contracts=("contracts/progress.py",),
         ),
         Hyperpart(
             "profile-card",

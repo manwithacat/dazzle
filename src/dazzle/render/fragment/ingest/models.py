@@ -516,3 +516,47 @@ class PivotTable(BaseModel):
     measure_headers: list[str] = Field(default_factory=list)
     rows: list[list[str]] = Field(default_factory=list)
     empty_message: str = "No data to pivot."
+
+
+# ── Box-plot seam copy (contracts/box_plot.py) ───────────────────────
+
+
+class BoxPlotGroup(BaseModel):
+    """One box-plot group five-number summary."""
+
+    label: str
+    min: float = 0.0
+    q1: float = 0.0
+    median: float = 0.0
+    q3: float = 0.0
+    max: float = 0.0
+    samples: int = 0
+
+
+class BoxPlot(BaseModel):
+    """Distribution box-plot — dual-lock unit for box-plot."""
+
+    label: str = ""
+    groups: list[BoxPlotGroup] = Field(default_factory=list)
+    svg_html: str = ""
+    empty_message: str = "No data available."
+
+
+# ── Progress seam copy (contracts/progress.py) ───────────────────────
+
+
+class ProgressStage(BaseModel):
+    """One workflow stage chip."""
+
+    name: str
+    count: int = 0
+    complete: bool = False
+
+
+class Progress(BaseModel):
+    """Progress region — dual-lock unit for progress-region."""
+
+    stages: list[ProgressStage] = Field(default_factory=list)
+    complete_pct: float = 0.0
+    complete_count: int = 0
+    total: int = 0
