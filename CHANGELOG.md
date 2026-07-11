@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.42] - 2026-07-11
+
+### Changed
+- **Further split detail dispatch_ctx** — fields / subtype panels / related
+  groups / actions are separate helpers (detail entry CC ~82 → ~14).
+
+### Added
+- **PersonaVariant ``defaults:``** — form ``initial_values`` prefill with
+  ``current_user`` resolution; does not overwrite existing EDIT values.
+- **Root-only dual locks for grid_cols + grid_resize** — skeleton Table +
+  ColumnVisibilityMenu fixture.
+
 ## [0.101.41] - 2026-07-11
 
 ### Changed
