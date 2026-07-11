@@ -1909,14 +1909,12 @@ window.addEventListener('storage', function (e) {{
         # site/pretty.py). Sprite-dependency note prepended to the snippet only.
         pretty = pretty_html(live)
         snippet_src = _SPRITE_NOTE + pretty if '<use href="#i-' in live else pretty
-        # Dogfood the code Hyperpart: surface + copy; HTML is escaped plain
-        # (pretty already legible). Python colour is reserved for contract blocks.
+        # Dogfood the code Hyperpart: surface + copy; HTML/Python build-time colour.
         snippet_block = apply_prefix(
             render_code_block(
                 snippet_src,
                 language="html",
                 aria_label=f"Code for {c.title}",
-                highlight=False,
             ),
             prefix,
         )
@@ -2215,7 +2213,6 @@ Generated from the design-system sources by <code>site/build_site.py</code>.
                 pretty_html(bp_live),
                 language="html",
                 aria_label=f"Page source for {bp.title}",
-                highlight=False,
             ),
             prefix,
         )

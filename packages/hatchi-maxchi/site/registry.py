@@ -1899,9 +1899,10 @@ HYPERPARTS: list[Hyperpart] = [
         "Copy is pushed trailing by CSS (<code>margin-inline-start: auto</code> on the "
         "button) — do <em>not</em> absolute-position it (nested part-page flex/"
         "<code>min-width:0</code> chains left-shift absolute children). "
-        "The gallery builder runs a stdlib Python highlighter "
-        "(<code>site/highlight.py</code>) into <code>dz-code__tok--*</code> spans; "
-        "copy uses <code>textContent</code> so spans never paste. "
+        "The gallery builder runs a stdlib highlighter "
+        "(<code>site/highlight.py</code>) for <strong>Python and HTML</strong> into "
+        "<code>dz-code__tok--*</code> spans; copy uses <code>textContent</code> so "
+        "spans never paste. "
         "Omit the lang span when there is no language; omit the copy button when "
         "display-only (keep the meta bar if a lang chip remains). "
         "<strong>Scheme:</strong> the surface follows the page theme via "
@@ -1915,14 +1916,15 @@ HYPERPARTS: list[Hyperpart] = [
                 "figure[data-dz-code] → div.dz-code__meta → pre.dz-code__pre > code.dz-code__source",
                 "meta flex row: optional .dz-code__lang, optional [data-dz-code-copy] "
                 "(CSS margin-inline-start:auto keeps copy trailing)",
-                "build-time token spans (.dz-code__tok--*) for Python colour",
+                "build-time token spans (.dz-code__tok--*) for Python and HTML colour",
                 "surface uses light-dark() — follows [data-theme], not always-dark",
             ),
             pitfalls=(
                 "do not absolute-position .dz-code__copy — it drifts left inside nested "
                 "min-width:0 containers (Hyperpart detail pages); use the meta flex row",
                 "do not put copy/lang as direct children of the figure without .dz-code__meta",
-                "do not ship a browser syntax engine for static docs — highlight at build",
+                "do not ship a browser syntax engine for static docs — highlight at build "
+                "(python + html/svg/xml only today)",
                 "copy must read textContent (not innerHTML) so spans never paste",
             ),
             do_dont=(

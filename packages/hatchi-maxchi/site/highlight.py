@@ -4,7 +4,8 @@ Emits ``<span class="dz-code__tok--*">`` wrappers. Prefer this over a
 browser highlighter: static Pages, agent-scrapeable HTML, no runtime dep.
 
 Languages:
-- ``python`` — keywords, strings, comments, numbers, decorators
+- ``python`` / ``py`` — keywords, strings, comments, numbers, decorators
+- ``html`` / ``htm`` / ``xml`` — tags, attributes, values, comments
 - anything else / ``None`` — HTML-escaped plain text (still prettified by caller)
 
 Token class names use the ``dz-`` namespace so ``apply_prefix`` rewrites them
@@ -157,6 +158,97 @@ def highlight_python(source: str) -> str:
     return "".join(out)
 
 
+# Tag open / full comment / text. Tag interiors are tokenised separately.
+_HTML_CHUNK_RE = re.compile(
+    r"(?P<cmt><!--[\s\S]*?-->)"
+    r"|(?P<tag><[!?/]?[A-Za-z][\w:.-]*"  # <div  </div  <!DOCTYPE  <?xml
+    r"(?:\s+[A-Za-z_:][\w:.-]*(?:\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s\"'=<>`]+))?)*"
+    r"\s*/?>)"
+    r"|(?P<text>[^<]+)"
+    r"|(?P<lt><)",  # stray <
+)
+
+_HTML_TAG_RE = re.compile(
+    r"^(?P<br_open></?|[!?])"
+    r"(?P<name>[A-Za-z][\w:.-]*)"
+    r"(?P<body>[\s\S]*?)"
+    r"(?P<br_close>/?>)$"
+)
+
+_HTML_ATTR_RE = re.compile(
+    r"(?P<ws>\s+)"
+    r"|(?P<attr>[A-Za-z_:][\w:.-]*)"
+    r"|(?P<eq>=)"
+    r"|(?P<val>\"[^\"]*\"|'[^']*'|[^\s\"'=<>`]+)"
+    r"|(?P<other>.)"
+)
+
+
+def _highlight_html_tag(tag: str) -> str:
+    """Colour one ``<…>`` token: brackets, name, attrs, values."""
+    # Normalise <?xml … ?> / <!DOCTYPE …> openers into br_open + name.
+    if tag.startswith("<!"):
+        # <!-- already handled as comment; DOCTYPE / other declarations
+        m = re.match(r"^(<!/?)\s*([A-Za-z][\w:.-]*)([\s\S]*?)(/?>)$", tag)
+        if not m:
+            return _span("op", tag)
+        br_open, name, body, br_close = m.groups()
+    elif tag.startswith("<?"):
+        m = re.match(r"^(<\?)\s*([A-Za-z][\w:.-]*)([\s\S]*?)(\?>)$", tag)
+        if not m:
+            return _span("op", tag)
+        br_open, name, body, br_close = m.groups()
+    else:
+        m = _HTML_TAG_RE.match(tag)
+        if not m:
+            return _span("op", tag)
+        br_open, name, body, br_close = (
+            m.group("br_open"),
+            m.group("name"),
+            m.group("body"),
+            m.group("br_close"),
+        )
+
+    parts = [_span("op", br_open), _span("kw", name)]
+    for am in _HTML_ATTR_RE.finditer(body):
+        if am.lastgroup == "ws":
+            parts.append(html.escape(am.group()))
+        elif am.lastgroup == "attr":
+            # data-*/hx-* look like “directives” — same token family as decorators
+            attr = am.group()
+            kind = "dec" if attr.startswith(("data-", "hx-", "x-", "aria-")) else "name"
+            parts.append(_span(kind, attr))
+        elif am.lastgroup == "eq":
+            parts.append(_span("op", "="))
+        elif am.lastgroup == "val":
+            parts.append(_span("str", am.group()))
+        else:
+            parts.append(_span("op", am.group()))
+    parts.append(_span("op", br_close))
+    return "".join(parts)
+
+
+def highlight_html(source: str) -> str:
+    """Return HTML (no outer tags) with token spans for HTML/XML markup."""
+    out: list[str] = []
+    pos = 0
+    for m in _HTML_CHUNK_RE.finditer(source):
+        if m.start() > pos:
+            out.append(_span("plain", source[pos : m.start()]))
+        if m.lastgroup == "cmt":
+            out.append(_span("cmt", m.group()))
+        elif m.lastgroup == "tag":
+            out.append(_highlight_html_tag(m.group()))
+        elif m.lastgroup == "text":
+            out.append(_span("plain", m.group()))
+        else:  # stray <
+            out.append(_span("op", m.group()))
+        pos = m.end()
+    if pos < len(source):
+        out.append(_span("plain", source[pos:]))
+    return "".join(out)
+
+
 def highlight_source(source: str, language: str | None = None) -> str:
     """Highlight *source* for *language*; always HTML-escaped at minimum."""
     if not source:
@@ -164,6 +256,8 @@ def highlight_source(source: str, language: str | None = None) -> str:
     lang = (language or "").strip().lower()
     if lang in ("python", "py"):
         return highlight_python(source)
+    if lang in ("html", "htm", "xml", "svg"):
+        return highlight_html(source)
     return html.escape(source)
 
 
@@ -177,7 +271,7 @@ def render_code_block(
 ) -> str:
     """Emit a full ``dz-code`` figure. *source* is plain text (not pre-escaped).
 
-    When *highlight* is True and language is python, tokens are coloured;
+    When *highlight* is True and language is python or html, tokens are coloured;
     otherwise the body is escaped plain text. Copy uses ``textContent`` so
     spans never leak into the clipboard.
     """

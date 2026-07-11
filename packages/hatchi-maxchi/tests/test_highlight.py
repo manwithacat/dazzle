@@ -1,4 +1,4 @@
-"""Build-time Python highlighter for the code Hyperpart."""
+"""Build-time highlighter for the code Hyperpart (Python + HTML)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,12 @@ import pytest
 PKG = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PKG / "site"))
 
-from highlight import highlight_python, render_code_block  # noqa: E402
+from highlight import (  # noqa: E402
+    highlight_html,
+    highlight_python,
+    highlight_source,
+    render_code_block,
+)
 
 pytestmark = pytest.mark.gate
 
@@ -31,6 +36,41 @@ def test_highlight_python_comments_and_decorators() -> None:
     assert 'class="dz-code__tok--num"' in html
 
 
+def test_highlight_html_tags_attrs_and_values() -> None:
+    html = highlight_html(
+        '<!-- setup -->\n<button class="x" data-variant="primary" hx-get="/a">Ok</button>\n'
+    )
+    assert 'class="dz-code__tok--cmt"' in html
+    assert "setup" in html
+    assert 'class="dz-code__tok--kw"' in html
+    assert ">button<" in html
+    assert 'class="dz-code__tok--name"' in html  # class=
+    assert 'class="dz-code__tok--dec"' in html  # data- / hx-
+    assert 'class="dz-code__tok--str"' in html
+    assert "primary" in html
+    assert "&lt;" not in html or "tok--op" in html  # brackets as op spans, not raw
+    # Escaped angle brackets appear only inside escaped content of spans
+    assert "&lt;button" not in html  # whole tag is not plain-escaped as one blob
+    assert "Ok" in html
+
+
+def test_highlight_html_void_and_close() -> None:
+    html = highlight_html('<br/>\n</div>\n<input type="text" />\n')
+    assert ">br<" in html
+    assert ">div<" in html
+    assert ">input<" in html
+    assert 'class="dz-code__tok--str"' in html
+
+
+def test_highlight_source_dispatches() -> None:
+    assert "tok--kw" in highlight_source("def x():\n  pass\n", "python")
+    assert "tok--kw" in highlight_source("<span>a</span>", "html")
+    assert "tok--kw" in highlight_source("<svg/>", "svg")
+    plain = highlight_source("nope", "rust")
+    assert "tok--" not in plain
+    assert plain == "nope"
+
+
 def test_render_code_block_structure_and_copy_text() -> None:
     src = "def f():\n    return 1\n"
     block = render_code_block(src, language="python", aria_label="demo")
@@ -48,7 +88,20 @@ def test_render_code_block_structure_and_copy_text() -> None:
     assert "f" in block
 
 
-def test_render_code_block_html_language_is_escaped_not_tokenised() -> None:
+def test_render_code_block_html_language_is_tokenised() -> None:
+    block = render_code_block(
+        '<button class="x">Ok</button>',
+        language="html",
+    )
+    assert 'data-dz-language="html"' in block
+    assert "dz-code__tok--kw" in block
+    assert ">button<" in block
+    assert "dz-code__tok--str" in block
+    # Source text is never raw unescaped angle brackets outside spans
+    assert "<button class=" not in block
+
+
+def test_render_code_block_highlight_false_is_plain_escape() -> None:
     block = render_code_block(
         '<button class="x">Ok</button>',
         language="html",

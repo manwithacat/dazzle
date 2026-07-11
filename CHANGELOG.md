@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM code Hyperpart highlights HTML as well as Python** — build-time
+  `site/highlight.py` colours tags, attributes (`data-*`/`hx-*` as
+  directive tokens), values, and comments on Copy this / blueprint
+  snippets (same `dz-code__tok--*` classes).
 - **HM code Hyperpart is theme-aware** — surface and token colours use
   `light-dark()` so light pages get a light code block (dense docs stay
   scannable); dark theme keeps the elevated dark block.
