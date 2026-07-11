@@ -15,13 +15,31 @@ authoring agent and the improve loop (follow-ons).
 | `dazzle qa taste-panel` / `component-vision` | Blind LLM aesthetic parity (metered) | **No** unless a human sets a threshold *and* API credits are intentional |
 
 CI stays deterministic. Vision scores never block green solely because a model
-scored low. Subscription default after dual-lock work:
+scored low.
+
+### Subscription vision scores (no metered API)
+
+Two playbooks — both bill cognition to the **host harness subscription**
+(Claude Code Task / Grok Build Read / similar). Neither calls
+`anthropic.Anthropic().messages.create`.
+
+| Scope | Capture | Judge | Strategy / CLI |
+|-------|---------|-------|----------------|
+| Example-app fleet | `dazzle qa capture` | Subagent **Reads** PNGs → findings JSON | `.claude/commands/improve/strategies/visual_tier2_subagent.md` |
+| HM dual-lock exemplars | `scripts/hm_visual_smoke.py` | Subagent **Reads** PNG → taste dimension scores | `scripts/hm_subscription_vision.py` |
 
 ```bash
+# Dual-lock smoke → subscription scores
 python scripts/hm_visual_smoke.py --dazzle-emit
-# → .dazzle/hm-visual-smoke/ + .dazzle/hm-visual-last.json (gitignored)
-# Dispatch a host-harness subagent to Read full_page.png
+python scripts/hm_subscription_vision.py --from-smoke --write-prompt
+# → .dazzle/hm-subscription-vision-prompt.txt
+# Dispatch host subagent (or Read PNGs in-session); Write scores JSON; then:
+python scripts/hm_subscription_vision.py --ingest .dazzle/hm-visual-scores-raw.json
+# → .dazzle/hm-visual-scores.json  (ship_gate: false, billing: subscription-host-read)
 ```
+
+Avoid for day-to-day agent loops: `dazzle qa taste-panel` / `component-vision`
+(those still use the metered vision client in `taste_panel.score_image`).
 
 Also enforced by: the opt-in `composition analyze` taste focus (`focus=["taste"]`),
 and the per-rule gates listed below. The blind taste panel remains available for

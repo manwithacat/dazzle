@@ -162,8 +162,11 @@ Sub-strategies, pick the highest-leverage:
 6. **dual_lock_visual_smoke** (subscription default) — after dual-lock expansion or
    contract changes, run `python scripts/hm_visual_smoke.py --dazzle-emit`. Output
    lands in gitignored `.dazzle/hm-visual-smoke/` (+ `.dazzle/hm-visual-last.json`
-   pointer). Dispatch a host-harness subagent to **Read** `full_page.png`; file
-   improve rows for real defects. Never treat vision scores as a ship gate.
+   pointer). For **structured taste scores without metered API**, continue with
+   `python scripts/hm_subscription_vision.py --from-smoke --write-prompt` and
+   dispatch a host subagent to Read PNGs (same economics as
+   `visual_tier2_subagent`). Ingest with `--ingest`. Never treat vision scores
+   as a ship gate.
 
 ## Owns (capability-map)
 

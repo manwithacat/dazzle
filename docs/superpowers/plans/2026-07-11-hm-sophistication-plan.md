@@ -91,7 +91,7 @@ Prefer **in-subscription** paths over metered vision/LLM APIs:
 | Task | Preferred | Avoid (unless credits intentional) |
 |------|-----------|-------------------------------------|
 | Screenshots | Playwright (`dazzle qa capture`, `scripts/hm_visual_smoke.py`) | — |
-| Visual judgment | Host-harness subagent **Read**s PNGs | `dazzle qa component-vision` / `taste-panel` |
+| Visual judgment + **scores** | Host-harness **Read** PNGs → JSON (`hm_subscription_vision`, `visual_tier2_subagent`) | `dazzle qa component-vision` / `taste-panel` (metered `score_image`) |
 | Regression | Dual-locks + gate suite + pixel-diff of captures | Vision score deltas as ship gates |
 | Explore fleet UX | `visual_tier2_subagent` strategy | API-bound visual scrape CLIs |
 
@@ -119,6 +119,8 @@ optional follow-on if API credits are intentional (not required for D exit).
 - Reservoir: `scripts/hm_tailwind_reservoir.py`
 - CSS classify (Phase C): `scripts/hm_css_classify.py`
 - Taste ship policy: `docs/reference/taste.md` (ship floor vs advisory)
+- Subscription scores: `scripts/hm_subscription_vision.py`, `src/dazzle/qa/subscription_vision.py`
+- Fleet visual findings (subscription): `.claude/commands/improve/strategies/visual_tier2_subagent.md`
 - Improve lane: `.claude/commands/improve/lanes/hm-convergence.md`
 - Vision: `src/dazzle/qa/taste_panel.py`, `component_vision.py`, `property_vision.py`
 - Contract authoring: `packages/hatchi-maxchi/contracts/AUTHORING.md`
