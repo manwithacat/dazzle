@@ -10267,7 +10267,7 @@ onboarding-step {
   font-weight: 500;
 }
 
-/* Open-enum "Add «query»" row — same option role, distinct chrome.
+/* Growing-list "Add «query»" row — same option role, distinct chrome.
  * Shown only when data-allow-create is set and the filter has no exact match. */
 .combobox-create {
   border-block-start: 1px solid var(--colour-border);

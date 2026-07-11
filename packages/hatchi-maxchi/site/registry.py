@@ -1665,13 +1665,13 @@ def select(source: str, id: str) -> str:
         "combobox",
         "Combobox",
         "Forms",
-        "Searchable enum single-select — a native <select> progressively "
-        "enhanced into a type-to-filter combobox. Closed enums by default; "
-        "open enums (add a new value) use the same Hyperpart with "
-        "data-dz-allow-create — not a separate part.",
+        "Searchable single-select over a list of options — a native <select> "
+        "progressively enhanced into a type-to-filter combobox. Fixed lists "
+        "by default; growing catalogues (add a missing value) use the same "
+        "Hyperpart with data-dz-allow-create — not a separate part.",
         '<div class="hm-stack hm-measure" data-gap="md">'
         '<label class="dz-field" for="hm-cb-field">'
-        '<span class="dz-field__label">Priority (closed enum)</span>'
+        '<span class="dz-field__label">Priority (fixed list)</span>'
         '<select id="hm-cb-field" name="priority" '
         'data-dz-combobox class="dz-form-input">'
         '<option value="">Select a priority…</option>'
@@ -1680,31 +1680,34 @@ def select(source: str, id: str) -> str:
         '<option value="high">High</option>'
         '<option value="urgent">Urgent</option>'
         "</select></label>"
-        '<label class="dz-field" for="hm-cb-label">'
-        '<span class="dz-field__label">Label (open enum — type a new value)</span>'
-        '<select id="hm-cb-label" name="label" '
+        '<label class="dz-field" for="hm-cb-dept">'
+        '<span class="dz-field__label">Department (growing list — type to add)</span>'
+        '<select id="hm-cb-dept" name="department" '
         'data-dz-combobox data-dz-allow-create class="dz-form-input">'
-        '<option value="">Pick or add a label…</option>'
-        '<option value="bug">bug</option>'
-        '<option value="feature">feature</option>'
-        '<option value="chore">chore</option>'
+        '<option value="">Pick or add a department…</option>'
+        '<option value="operations">Operations</option>'
+        '<option value="finance">Finance</option>'
+        '<option value="support">Support</option>'
         "</select></label>"
         "</div>",
         notes="<strong>Same Hyperpart, two recipes.</strong> Progressive "
         "enhancement: server renders a real "
         "<code>&lt;select data-dz-combobox&gt;</code> (placeholder option first). "
         "JS builds a filterable listbox; the native select remains the submit "
-        "value. <strong>Closed enum</strong> (priority above): options are "
-        "fixed — filter and pick only. <strong>Open enum / add new value</strong> "
-        "(label above): set <code>data-dz-allow-create</code> on the "
-        "<code>&lt;select&gt;</code>. When the typed query has no exact match, "
-        'an <code>Add "…"</code> row appears; Enter/click appends a new '
-        "<code>&lt;option&gt;</code> to the native select and commits it "
-        "(value = label string). Server still owns persistence — on submit you "
-        "upsert the enum if the value is new; the client only extends the "
-        "option list for this page. "
-        "<strong>Not this part:</strong> multi free-form labels → "
-        "<code>tags</code>; remote FK search → <code>search-select</code>. "
+        "value. <strong>Fixed list</strong> (priority above): the set is "
+        "authoritative and closed — filter and pick only (workflow priority, "
+        "severity tiers, anything you do not let users invent). "
+        "<strong>Growing list / mutable catalogue</strong> (department above): "
+        "set <code>data-dz-allow-create</code> on the <code>&lt;select&gt;</code>. "
+        'When the typed query has no exact match, an <code>Add "…"</code> row '
+        "appears; Enter/click appends a new <code>&lt;option&gt;</code> and "
+        "commits it (value = label string). That is the common "
+        '"pick from our list, or add one" pattern — departments, cost centres, '
+        "queues, product lines — not a new Hyperpart. "
+        "Server still owns persistence: on submit upsert the catalogue row if "
+        "the value is new; the client only extends the option list for this page. "
+        "<strong>Not this part:</strong> multi free-form chips → "
+        "<code>tags</code>; remote FK typeahead → <code>search-select</code>. "
         "Do not invent a fourth picker. "
         "<strong>After select:</strong> "
         "<code>data-dz-focus-after-select=blur|keep|select</code> "
@@ -1716,8 +1719,8 @@ def select(source: str, id: str) -> str:
             seams=(
                 "server renders a real <select data-dz-combobox> — progressive enhancement",
                 "native select stays as the submitted value after the overlay mounts",
-                "CLOSED enum: omit allow-create — filter + pick only",
-                "OPEN enum (add new): data-dz-allow-create — type a miss → "
+                "FIXED list: omit allow-create — filter + pick only",
+                "GROWING list (mutable catalogue): data-dz-allow-create — type a miss → "
                 'Add "…" row → appends <option> + commits (same Hyperpart)',
                 "data-dz-focus-after-select=blur|keep|select (default blur)",
             ),
@@ -1725,13 +1728,13 @@ def select(source: str, id: str) -> str:
                 "pointerdown on the bare select must enhance first and swallow the native menu",
                 "state is data-dz-open on the root — not a JS open flag a morph would drop",
                 "allow-create is client option-list UX only — server must accept/upsert "
-                "unknown values; do not treat the new option as a durable catalogue alone",
+                "unknown values into the catalogue; do not treat the new option as durable alone",
                 "multi free-create chips are tags, not combobox; remote ids are search-select",
             ),
             do_dont=(
                 (
-                    "use combobox + data-dz-allow-create for single open-enum add",
-                    "invent a new Hyperpart or bespoke create-dropdown for 'add enum value'",
+                    "use combobox + data-dz-allow-create for single growing-list / add-if-missing",
+                    "invent a new Hyperpart or bespoke create-dropdown for 'add to catalogue'",
                 ),
                 (
                     "filter options client-side from the server-rendered <option> list",

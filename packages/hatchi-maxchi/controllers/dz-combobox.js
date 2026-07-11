@@ -156,8 +156,8 @@
     }
   }
 
-  // Open-enum recipe: append a new <option> to the native select + list row,
-  // then commit it. Same Hyperpart as closed enum — data-dz-allow-create only.
+  // Growing-list recipe: append a new <option> to the native select + list
+  // row, then commit it. Same Hyperpart as a fixed list — allow-create only.
   function createAndChoose(root, rawLabel) {
     var select = root.querySelector("select[data-dz-combobox]");
     var input = root.querySelector(".dz-combobox-input");
@@ -250,7 +250,7 @@
       if (text === q) exact = true;
     });
 
-    // Open-enum: offer "Add «query»" when allow-create and no exact match.
+    // Growing list: offer "Add «query»" when allow-create and no exact match.
     var create = root.querySelector(".dz-combobox-create");
     if (allowCreate(select)) {
       create = ensureCreateRow(root, select);

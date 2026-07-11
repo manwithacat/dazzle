@@ -1876,7 +1876,7 @@ def test_combobox_focus_after_select_keep(page) -> None:  # type: ignore[no-unty
 
 
 def test_combobox_allow_create_appends_option(page) -> None:  # type: ignore[no-untyped-def]
-    """Open-enum recipe: data-allow-create offers Add "…"; pick appends <option>."""
+    """Growing-list recipe: data-allow-create offers Add "…"; pick appends <option>."""
     goto_part(page, "combobox")
     preview = page.locator(".hm-preview")
     sel = preview.locator("select[data-allow-create], select[data-dz-allow-create]")

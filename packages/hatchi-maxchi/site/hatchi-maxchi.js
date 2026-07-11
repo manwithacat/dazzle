@@ -3042,8 +3042,8 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     }
   }
 
-  // Open-enum recipe: append a new <option> to the native select + list row,
-  // then commit it. Same Hyperpart as closed enum — data-allow-create only.
+  // Growing-list recipe: append a new <option> to the native select + list
+  // row, then commit it. Same Hyperpart as a fixed list — allow-create only.
   function createAndChoose(root, rawLabel) {
     var select = root.querySelector("select[data-combobox]");
     var input = root.querySelector(".combobox-input");
@@ -3136,7 +3136,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       if (text === q) exact = true;
     });
 
-    // Open-enum: offer "Add «query»" when allow-create and no exact match.
+    // Growing list: offer "Add «query»" when allow-create and no exact match.
     var create = root.querySelector(".combobox-create");
     if (allowCreate(select)) {
       create = ensureCreateRow(root, select);

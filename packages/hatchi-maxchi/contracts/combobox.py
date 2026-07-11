@@ -9,16 +9,18 @@ Optional on the <select>:
     keep   — keep focus for immediate re-filter typing
     select — keep focus and select-all the label (next keystroke replaces filter)
 
-  data-dz-allow-create  (presence) — open-enum recipe: when the typed query
-    has no exact option match, show an Add "…" row; choosing it appends a new
-    <option> to this select and commits it. Same Hyperpart as closed enum —
-    not a separate part. Server must accept/upsert unknown values on submit.
+  data-dz-allow-create  (presence) — growing-list / mutable-catalogue recipe:
+    when the typed query has no exact option match, show an Add "…" row;
+    choosing it appends a new <option> to this select and commits it.
+    Same Hyperpart as a fixed list — not a separate part. Typical domains:
+    departments, cost centres, queues, product lines. Server must
+    accept/upsert unknown values into the catalogue on submit.
 
 Recipe (do not invent a new Hyperpart):
-  closed enum     → <select data-dz-combobox>
-  open enum / add → <select data-dz-combobox data-dz-allow-create>
-  multi free tags → tags Hyperpart
-  remote FK       → search-select Hyperpart
+  fixed list (closed set)     → <select data-dz-combobox>
+  growing list (add if missing) → <select data-dz-combobox data-dz-allow-create>
+  multi free-form chips       → tags Hyperpart
+  remote FK typeahead         → search-select Hyperpart
 """
 
 import html

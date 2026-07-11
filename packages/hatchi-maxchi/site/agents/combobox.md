@@ -1,6 +1,6 @@
 # Combobox (`combobox`)
 
-Searchable enum single-select — a native <select> progressively enhanced into a type-to-filter combobox. Closed enums by default; open enums (add a new value) use the same Hyperpart with data-dz-allow-create — not a separate part.
+Searchable single-select over a list of options — a native <select> progressively enhanced into a type-to-filter combobox. Fixed lists by default; growing catalogues (add a missing value) use the same Hyperpart with data-dz-allow-create — not a separate part.
 
 > **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
 
@@ -11,7 +11,7 @@ Searchable enum single-select — a native <select> progressively enhanced into 
 ```html
 <div class="hm-stack hm-measure" data-gap="md">
   <label class="field" for="hm-cb-field">
-    <span class="field__label">Priority (closed enum)</span>
+    <span class="field__label">Priority (fixed list)</span>
     <select id="hm-cb-field" name="priority" data-combobox class="form-input">
       <option value="">Select a priority…</option>
       <option value="low">Low</option>
@@ -20,13 +20,13 @@ Searchable enum single-select — a native <select> progressively enhanced into 
       <option value="urgent">Urgent</option>
     </select>
   </label>
-  <label class="field" for="hm-cb-label">
-    <span class="field__label">Label (open enum — type a new value)</span>
-    <select id="hm-cb-label" name="label" data-combobox data-allow-create class="form-input">
-      <option value="">Pick or add a label…</option>
-      <option value="bug">bug</option>
-      <option value="feature">feature</option>
-      <option value="chore">chore</option>
+  <label class="field" for="hm-cb-dept">
+    <span class="field__label">Department (growing list — type to add)</span>
+    <select id="hm-cb-dept" name="department" data-combobox data-allow-create class="form-input">
+      <option value="">Pick or add a department…</option>
+      <option value="operations">Operations</option>
+      <option value="finance">Finance</option>
+      <option value="support">Support</option>
     </select>
   </label>
 </div>
@@ -42,15 +42,15 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - server renders a real <select data-dz-combobox> — progressive enhancement
 - native select stays as the submitted value after the overlay mounts
-- CLOSED enum: omit allow-create — filter + pick only
-- OPEN enum (add new): data-dz-allow-create — type a miss → Add "…" row → appends <option> + commits (same Hyperpart)
+- FIXED list: omit allow-create — filter + pick only
+- GROWING list (mutable catalogue): data-dz-allow-create — type a miss → Add "…" row → appends <option> + commits (same Hyperpart)
 - data-dz-focus-after-select=blur|keep|select (default blur)
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
-| use combobox + data-dz-allow-create for single open-enum add | invent a new Hyperpart or bespoke create-dropdown for 'add enum value' |
+| use combobox + data-dz-allow-create for single growing-list / add-if-missing | invent a new Hyperpart or bespoke create-dropdown for 'add to catalogue' |
 | filter options client-side from the server-rendered <option> list | replace the select with a div and invent a new submit contract |
 | use tags for multi free-form labels; search-select for remote FKs | overload combobox for multi-create or server-search FK flows |
 
@@ -58,7 +58,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - pointerdown on the bare select must enhance first and swallow the native menu
 - state is data-dz-open on the root — not a JS open flag a morph would drop
-- allow-create is client option-list UX only — server must accept/upsert unknown values; do not treat the new option as a durable catalogue alone
+- allow-create is client option-list UX only — server must accept/upsert unknown values into the catalogue; do not treat the new option as durable alone
 - multi free-create chips are tags, not combobox; remote ids are search-select
 
 ### Keyboard / AT
@@ -115,7 +115,7 @@ def render(field: ComboboxField) -> str:
 
 ## Notes
 
-Same Hyperpart, two recipes. Progressive enhancement: server renders a real <select data-dz-combobox> (placeholder option first). JS builds a filterable listbox; the native select remains the submit value. Closed enum (priority above): options are fixed — filter and pick only. Open enum / add new value (label above): set data-dz-allow-create on the <select>. When the typed query has no exact match, an Add "…" row appears; Enter/click appends a new <option> to the native select and commits it (value = label string). Server still owns persistence — on submit you upsert the enum if the value is new; the client only extends the option list for this page. Not this part: multi free-form labels → tags; remote FK search → search-select. Do not invent a fourth picker. After select: data-dz-focus-after-select=blur|keep|select (default blur).
+Same Hyperpart, two recipes. Progressive enhancement: server renders a real <select data-dz-combobox> (placeholder option first). JS builds a filterable listbox; the native select remains the submit value. Fixed list (priority above): the set is authoritative and closed — filter and pick only (workflow priority, severity tiers, anything you do not let users invent). Growing list / mutable catalogue (department above): set data-dz-allow-create on the <select>. When the typed query has no exact match, an Add "…" row appears; Enter/click appends a new <option> and commits it (value = label string). That is the common "pick from our list, or add one" pattern — departments, cost centres, queues, product lines — not a new Hyperpart. Server still owns persistence: on submit upsert the catalogue row if the value is new; the client only extends the option list for this page. Not this part: multi free-form chips → tags; remote FK typeahead → search-select. Do not invent a fourth picker. After select: data-dz-focus-after-select=blur|keep|select (default blur).
 
 ## Source files
 
