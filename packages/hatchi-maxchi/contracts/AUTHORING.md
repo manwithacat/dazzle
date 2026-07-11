@@ -1,5 +1,10 @@
 # Authoring a new Hyperpart — the ordered path
 
+**Coverage map (dual-locks):** regenerate with
+`python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write` →
+`packages/hatchi-maxchi/DUAL_LOCK_COVERAGE.md`. Sophistication plan:
+`docs/superpowers/plans/2026-07-11-hm-sophistication-plan.md` (epic #1580).
+
 ## 0. Should this be a new Hyperpart at all?
 
 - **Compose first**: if existing parts + Layout primitives express it, write a
