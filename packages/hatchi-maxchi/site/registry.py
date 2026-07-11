@@ -52,6 +52,12 @@ class Exchange:
     # coding agent needs these enumerated, not implied — an endpoint-backed
     # component is under-specified without its empty/error behaviour.
     states: tuple[str, ...] = ()
+    # Optional FastAPI-shaped handler source for HTMX4 app authors / agents.
+    # This is the *exchange* endpoint (what runs after the client affordance),
+    # not a dual-lock module. Omit when the part is pure client chrome.
+    # Do not use ``from __future__ import annotations`` in these snippets
+    # (ADR-0014 — FastAPI needs runtime types in route files).
+    server_example: str = ""
 
 
 @dataclass(frozen=True)
@@ -737,6 +743,24 @@ HYPERPARTS: list[Hyperpart] = [
                 "for the affected region (e.g. the row's removal, or an empty-state). "
                 "Not a toast — the gallery's 'Deleted (demo).' toast is MOCK_HTMX only",
                 swap="per the button's `hx-target`/`hx-swap` (row removal by default)",
+                server_example=(
+                    "# This is the DELETE after confirm — not a “confirm API”.\n"
+                    "# The dialog is client-only (hx-confirm + dz-confirm.js).\n"
+                    "from fastapi import FastAPI\n"
+                    "from fastapi.responses import HTMLResponse\n"
+                    "\n"
+                    "app = FastAPI()\n"
+                    "\n"
+                    "\n"
+                    '@app.delete("/app/invoices/{invoice_id}", response_class=HTMLResponse)\n'
+                    "def delete_invoice(invoice_id: str) -> str:\n"
+                    "    # delete_invoice_from_db(invoice_id)\n"
+                    "    # Return whatever hx-target/hx-swap expect, e.g.:\n"
+                    "    #   - empty string with hx-swap='delete' on the trigger\n"
+                    "    #   - an empty-state partial for the list region\n"
+                    "    #   - OOB markup to refresh a sibling region\n"
+                    '    return ""\n'
+                ),
             ),
         ),
         controller="controllers/dz-confirm.js",
@@ -748,15 +772,18 @@ HYPERPARTS: list[Hyperpart] = [
                 "on approval the controller issues the underlying request — no per-button wiring",
             ),
             pitfalls=(
-                "hx-confirm is a client affordance — it needs no Exchange of its own",
+                "hx-confirm is a client affordance — it needs no Exchange of its own "
+                "(and no FastAPI route for “confirm”)",
                 "do not re-implement confirm with window.confirm (loses the designed dialog)",
                 "gallery toast 'Deleted (demo).' is MOCK_HTMX scaffolding in site/build_site.py — "
                 "not Hyperpart surface; production returns the DELETE fragment from the Exchange",
             ),
             do_dont=(
                 (
-                    "put hx-confirm on the destructive action element",
-                    "wire a bespoke dialog open/close for every delete button",
+                    "put hx-confirm on the destructive action element; implement the DELETE "
+                    "(or other) endpoint as the Server exchange",
+                    "wire a bespoke dialog open/close for every delete button or invent a "
+                    "POST /confirm endpoint for the dialog itself",
                 ),
             ),
             a11y_keys=(

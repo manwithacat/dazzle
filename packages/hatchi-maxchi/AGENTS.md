@@ -12,24 +12,44 @@ request/response the server must satisfy) + optionally a vanilla-JS
 controller and extensions. There is no client state graph — state lives
 on the server and in the DOM.
 
+## Two audiences (same Hyperpart, different entry)
+
+| Audience | Who | What the agent should do |
+|---|---|---|
+| **Dazzle** | Founders / vibe coders building SaaS without deep stack knowledge | Treat Dazzle as the product surface. Emit SSR + wiring from the app model; HM supplies the design system the runtime already knows. Prefer monorepo dual-lock (`dz-` / `data-dz-*`) and Dazzle emitters over hand-rolled FastAPI. |
+| **Standalone HM** | HTMX4 developers (often with agent support) who own their server | Read each part as: **this markup** (Copy this) → **this DOM contract** (what the fragment must look like) → **this API shape** (Server exchange + optional `server_example`). Wire `hx-*` to your handlers; return HTML fragments, not JSON. |
+
+Example direction that should resolve from the agent pack alone:
+
+> I'm building an HTMX4 site using HM as the design system. I need an API
+> that emits the correct server-side rendered code and is wired up to my
+> file. I normally use React, but I've heard good things about Hyperparts.
+
+→ Open `agents/<part>.md` (or `hyperparts/<id>.html`): copy the partial,
+implement the Server exchange handler (FastAPI-shaped when present),
+satisfy the DOM contract tables, load the listed controller. Do **not**
+paste `contracts/*.py` dual-lock modules into app routes.
+
 ## Consuming components (building an app with HM)
 
 - **Source of truth for every component**: `site/registry.py`. Each
   entry carries the canonical markup (`partial`), the endpoint contracts
   (`exchanges` — method, endpoint shape, trigger, response fragment,
-  swap, states), controller/extension pointers, and wiring notes. Parse
-  it; don't scrape the gallery HTML.
+  swap, states, optional `server_example`), controller/extension pointers,
+  and wiring notes. Parse it; don't scrape the gallery HTML.
 - **Per-part agent pack**: `site/agents/<id>.md` (Pages: `agents/<id>.md`)
   is the one-fetch scrape target — same linear sections as
   `hyperparts/<id>.html`: Copy this → Server exchange → How to use it →
   DOM contract → Notes → Source files. Prefer the `.md` when implementing;
   the HTML page adds the live demo.
-- **DOM contract** (`contracts/<part>.py`) is CI stop-ship: required root
-  attrs / ingestion model / optional FastAPI feed. Gallery mocks (toasts,
-  `/mock/*`) are **not** contracts.
+- **DOM contract** (`contracts/<part>.py`) is CI stop-ship for required
+  markup (root attrs / ingestion model). It is **package-internal**
+  (`contracts._kit`) — not the FastAPI handler you write for a product.
+  **Server exchange** (and optional `server_example` FastAPI snippets on
+  the part page) is what a standalone HTMX4 API implements. Gallery mocks
+  are not contracts.
 - **Dialect:** gallery partials are unprefixed; Dazzle dual-lock is
-  `dz-` / `data-dz-*`. Contract Python is usually the dual-lock form —
-  match the bundle you load.
+  `dz-` / `data-dz-*`. Match the CSS/JS bundle you load.
 - The snippets ship unprefixed by default. `build.py --prefix dz-`
   (or any prefix) renamespaces classes, data-attributes, and keyframes
   consistently — pick one and stay with it.

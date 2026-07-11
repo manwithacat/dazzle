@@ -1,7 +1,5 @@
 """HYPERPART: command — palette dialog root contract."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node
 
 DOM_CONTRACT = DomContract(

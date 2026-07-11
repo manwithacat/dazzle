@@ -42,7 +42,7 @@ Native <input type=range> — styled track + thumb, both themes, with a live val
 
 ## DOM contract
 
-CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
 
 ### `contracts/slider.py`
 
@@ -55,10 +55,11 @@ CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes
 
 #### Module source
 
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
 ```python
 """HYPERPART: slider — native range group + live value readout."""
 
-from __future__ import annotations
 
 from contracts._kit import DomContract, Node
 

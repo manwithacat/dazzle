@@ -1,7 +1,5 @@
 """HYPERPART: code — fenced code surface (root + optional copy control)."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

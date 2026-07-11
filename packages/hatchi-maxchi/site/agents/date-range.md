@@ -18,7 +18,7 @@ Two native date inputs driving one htmx exchange — the from/to filter bar for 
 
 ## Server exchange
 
-After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
+When the client affordance finishes, htmx issues **this** request. Return the HTML fragment described (not gallery mock toasts). Dazzle often implements these from the app model; a standalone HTMX4 app implements them explicitly.
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|

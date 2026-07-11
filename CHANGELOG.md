@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM contracts / part pages for agent cognition** — drop redundant
+  `from __future__ import annotations` in `contracts/` (noise; ADR-0014 is
+  about FastAPI routes). Clarify DOM contract = dual-lock lock, not app
+  code. `Exchange.server_example` optional FastAPI-shaped handlers on the
+  Server exchange section (confirm ships a DELETE exemplar — not a fake
+  confirm API).
+
+### Changed
 - **HM part pages linearized for agents + humans** — drop accordion
   disclosures on `hyperparts/<id>.html`; fixed section order (Copy →
   Server exchange → How to use → DOM contract → Notes → Files) matching

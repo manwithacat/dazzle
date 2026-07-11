@@ -17,7 +17,7 @@ The hx-get palette — the htmx4 flagship. Press ⌘K.
 
 ## Server exchange
 
-After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
+When the client affordance finishes, htmx issues **this** request. Return the HTML fragment described (not gallery mock toasts). Dazzle often implements these from the app model; a standalone HTMX4 app implements them explicitly.
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
@@ -53,7 +53,7 @@ After the client affordance runs, htmx issues this request. Return the response 
 
 ## DOM contract
 
-CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
 
 ### `contracts/command.py`
 
@@ -65,10 +65,11 @@ CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes
 
 #### Module source
 
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
 ```python
 """HYPERPART: command — palette dialog root contract."""
 
-from __future__ import annotations
 
 from contracts._kit import DomContract, Node
 

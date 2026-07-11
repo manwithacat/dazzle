@@ -1,7 +1,5 @@
 """HYPERPART: wizard — multi-stage form with data-dz-step state."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node, OneOf, Present
 
 DOM_CONTRACT = DomContract(

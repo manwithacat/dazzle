@@ -1,7 +1,5 @@
 """HYPERPART: confirm-panel — irreversible-action consent gate."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

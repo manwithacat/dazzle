@@ -1,7 +1,5 @@
 """HYPERPART: tabs — tablist root + panel targets."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

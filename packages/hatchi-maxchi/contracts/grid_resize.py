@@ -1,7 +1,5 @@
 """HYPERPART: grid (extension: dz-grid-resize) — column resize seam."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

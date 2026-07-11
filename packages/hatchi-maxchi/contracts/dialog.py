@@ -1,7 +1,5 @@
 """HYPERPART: dialog — native <dialog> open trigger contract."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

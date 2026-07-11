@@ -12,11 +12,34 @@ Designed replacement for window.confirm — every hx-confirm upgrades automatica
 
 ## Server exchange
 
-After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
+When the client affordance finishes, htmx issues **this** request. Return the HTML fragment described (not gallery mock toasts). Dazzle often implements these from the app model; a standalone HTMX4 app implements them explicitly.
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `DELETE /app/invoices/{id}` | the button, after the user approves the designed confirm dialog | the server deletes the resource and returns the replacement markup for the affected region (e.g. the row's removal, or an empty-state). Not a toast — the gallery's 'Deleted (demo).' toast is MOCK_HTMX only | per the button's `hx-target`/`hx-swap` (row removal by default) | — |
+
+### `DELETE /app/invoices/{id}` — example handler
+
+Application code (not the dual-lock module). FastAPI-shaped; do not use `from __future__ import annotations` in route files (ADR-0014).
+
+```python
+# This is the DELETE after confirm — not a “confirm API”.
+# The dialog is client-only (hx-confirm + dz-confirm.js).
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+
+@app.delete("/app/invoices/{invoice_id}", response_class=HTMLResponse)
+def delete_invoice(invoice_id: str) -> str:
+    # delete_invoice_from_db(invoice_id)
+    # Return whatever hx-target/hx-swap expect, e.g.:
+    #   - empty string with hx-swap='delete' on the trigger
+    #   - an empty-state partial for the list region
+    #   - OOB markup to refresh a sibling region
+    return ""
+```
 
 ## How to use it
 
@@ -30,11 +53,11 @@ After the client affordance runs, htmx issues this request. Return the response 
 
 | Do | Don't |
 |---|---|
-| put hx-confirm on the destructive action element | wire a bespoke dialog open/close for every delete button |
+| put hx-confirm on the destructive action element; implement the DELETE (or other) endpoint as the Server exchange | wire a bespoke dialog open/close for every delete button or invent a POST /confirm endpoint for the dialog itself |
 
 ### Pitfalls
 
-- hx-confirm is a client affordance — it needs no Exchange of its own
+- hx-confirm is a client affordance — it needs no Exchange of its own (and no FastAPI route for “confirm”)
 - do not re-implement confirm with window.confirm (loses the designed dialog)
 - gallery toast 'Deleted (demo).' is MOCK_HTMX scaffolding in site/build_site.py — not Hyperpart surface; production returns the DELETE fragment from the Exchange
 
@@ -50,7 +73,7 @@ After the client affordance runs, htmx issues this request. Return the response 
 
 ## DOM contract
 
-CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
 
 ### `contracts/confirm.py`
 
@@ -62,13 +85,20 @@ CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes
 
 #### Module source
 
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
 ```python
-"""HYPERPART: confirm — hx-confirm interceptor (no server root; trigger attrs).
+"""HYPERPART: confirm — hx-confirm interceptor (client affordance).
 
-Any element with hx-confirm is in-contract; opt-out is data-dz-native-confirm.
+Package-internal dual-lock for CI / validate_dom — not application business
+code. To use confirm in an HTMX app: put ``hx-confirm="…"`` on the action
+element and load the controller (``controllers/dz-confirm.js``). The dialog
+itself is not server-rendered; after the user approves, htmx issues the
+element's existing ``hx-*`` request (see the part page Server exchange).
+
+In-contract: any element with ``hx-confirm``. Opt-out: ``data-dz-native-confirm``
+(source token; gallery demos may strip the ``dz-`` prefix).
 """
-
-from __future__ import annotations
 
 from contracts._kit import DomContract, Node, Present
 

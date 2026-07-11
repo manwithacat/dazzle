@@ -8,8 +8,6 @@ payloads deliberately include the #1573 producer shapes (dict / tuple /
 bare-string options) as permanent regression documentation.
 """
 
-from __future__ import annotations
-
 import html
 import json
 from typing import Literal
@@ -50,7 +48,7 @@ class GridEditCell(BaseModel):
         return out
 
     @model_validator(mode="after")
-    def _select_requires_options(self) -> GridEditCell:
+    def _select_requires_options(self) -> "GridEditCell":
         if self.kind == "select" and not self.options:
             raise ValueError("kind='select' requires options")
         if self.kind != "select" and self.options:

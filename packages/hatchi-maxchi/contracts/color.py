@@ -1,7 +1,5 @@
 """HYPERPART: field (extension: dz-color) — colour input group."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node
 
 DOM_CONTRACT = DomContract(

@@ -43,7 +43,7 @@ Major-unit decimal input over a hidden minor-unit carrier — the form posts int
 
 ## DOM contract
 
-CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
 
 ### `contracts/money.py`
 

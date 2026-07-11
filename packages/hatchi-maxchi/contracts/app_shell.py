@@ -1,7 +1,5 @@
 """HYPERPART: app-shell — DOM contract for the sidebar shell controller."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node, OneOf
 
 DOM_CONTRACT = DomContract(

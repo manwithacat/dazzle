@@ -1,7 +1,5 @@
 """HYPERPART: tags — comma-joined native input, chips progressive enhancement."""
 
-from __future__ import annotations
-
 import html
 
 from pydantic import BaseModel, field_validator

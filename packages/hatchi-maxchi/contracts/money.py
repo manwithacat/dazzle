@@ -1,7 +1,5 @@
 """HYPERPART: money — major display + hidden minor-unit carrier."""
 
-from __future__ import annotations
-
 import html
 
 from pydantic import BaseModel

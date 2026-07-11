@@ -1,7 +1,5 @@
 """HYPERPART: pdf — progressive PDF shell (access + lazy PDF.js)."""
 
-from __future__ import annotations
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

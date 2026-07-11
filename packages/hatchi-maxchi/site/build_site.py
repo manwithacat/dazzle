@@ -95,10 +95,11 @@ _SVG_RE = re.compile(r"\{svg:([a-z0-9-]+)\}")
 
 
 def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
-    """Always-visible server exchange table (no accordion — part pages are linear)."""
+    """Always-visible server exchange table + optional FastAPI-shaped examples."""
     if not hyperpart.exchanges:
         return ""
     rows = []
+    examples: list[str] = []
     for e in hyperpart.exchanges:
         states = " ".join(f"<code>{_html.escape(s)}</code>" for s in e.states) if e.states else "—"
         rows.append(
@@ -111,17 +112,32 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             f"<td>{states}</td>"
             "</tr>"
         )
+        if e.server_example.strip():
+            examples.append(
+                f'<h4><code class="hm-verb">{_html.escape(e.method)}</code> '
+                f"<code>{_html.escape(e.endpoint)}</code> — example handler</h4>"
+                '<p class="hm-ref-lead">HTMX4 / standalone HM: return HTML fragments. '
+                "Dazzle often emits this for you from the model; agents building a "
+                "plain FastAPI app should match this shape. "
+                "Not a dual-lock module — application code.</p>"
+                + render_code_block(
+                    e.server_example.strip() + "\n",
+                    language="python",
+                    aria_label=f"{e.method} {e.endpoint} example",
+                )
+            )
     return (
         '<section class="hm-ref" id="exchange">'
         "<h3>Server exchange</h3>"
-        '<p class="hm-ref-lead">After the client affordance runs (here: user confirms), '
-        "htmx issues this request. Your server must return the response fragment — "
-        "not a toast, not JSON, unless the partial says otherwise. Dazzle renders "
-        "many of these automatically; a plain htmx app returns matching markup.</p>"
+        '<p class="hm-ref-lead">When the client affordance finishes (click, confirm, '
+        "keystroke…), htmx issues <strong>this</strong> request. Your API must return "
+        "the response fragment described below — usually HTML, not JSON (unless the "
+        "partial says otherwise). Gallery mocks (toasts, <code>/mock/*</code>) are not "
+        "the contract. Dazzle often renders these routes from the app model; a "
+        "standalone HTMX4 app implements them explicitly.</p>"
         '<table class="hm-contract-table"><thead><tr>'
         "<th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th>"
-        f"</tr></thead><tbody>{''.join(rows)}</tbody></table>"
-        "</section>"
+        f"</tr></thead><tbody>{''.join(rows)}</tbody></table>" + "".join(examples) + "</section>"
     )
 
 
@@ -298,8 +314,12 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             h = f" — {_html.escape(title)}" if title else ""
             parts.append(
                 f"<h4>FastAPI feed example{h}</h4>"
-                '<p class="hm-ref-lead">How a server feeds this seam (not the '
-                "gallery mock).</p>"
+                '<p class="hm-ref-lead">Package exemplar for feeding this seam '
+                "(not the gallery mock). Prefer the part&#x27;s "
+                '<a href="#exchange">Server exchange</a> '
+                "<code>server_example</code> when present — that is the product "
+                "handler shape. Avoid <code>from __future__ import annotations</code> "
+                "in real FastAPI route files (ADR-0014).</p>"
                 + render_code_block(
                     "\n\n".join(fastapi_src),
                     language="python",
@@ -316,8 +336,10 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             if full:
                 parts.append(
                     "<h4>Module source</h4>"
-                    '<p class="hm-ref-lead">Source-token form (often '
-                    "<code>data-dz-*</code>). Gallery demos above are unprefixed.</p>"
+                    '<p class="hm-ref-lead">Import path is monorepo/package-local '
+                    "(<code>from contracts._kit import …</code>). "
+                    "Source-token form often uses <code>data-dz-*</code>; gallery demos "
+                    "above are unprefixed. Do not copy this into app routes.</p>"
                     + render_code_block(
                         full,
                         language="python",
@@ -330,10 +352,15 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     return (
         '<section class="hm-ref" id="dom-contract">'
         "<h3>DOM contract</h3>"
-        '<p class="hm-ref-lead">Machine-checkable stop-ship for this part. '
-        "Agents: do not invent attrs or response shapes outside this module. "
-        "Humans: treat the table as the required surface; the Python is the "
-        "canonical definition CI runs against.</p>" + "".join(blocks) + "</section>"
+        '<p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — '
+        "the table is the required surface; Python under <code>contracts/</code> is "
+        "the package-internal dual-lock CI runs "
+        "(<code>tests/test_contracts.py</code>), not an app route. "
+        "Standalone HTMX4: implement the API so responses match this markup. "
+        "Dazzle: the agent emits SSR that already satisfies it. "
+        "Do not invent attrs outside these tables. "
+        'For request/response wiring see <a href="#exchange">Server exchange</a>.'
+        "</p>" + "".join(blocks) + "</section>"
     )
 
 
@@ -496,8 +523,10 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
         lines += [
             "## Server exchange",
             "",
-            "After the client affordance runs, htmx issues this request. "
-            "Return the response fragment (not gallery mock toasts).",
+            "When the client affordance finishes, htmx issues **this** request. "
+            "Return the HTML fragment described (not gallery mock toasts). "
+            "Dazzle often implements these from the app model; a standalone HTMX4 "
+            "app implements them explicitly.",
             "",
             "| Request | Trigger | Response fragment | Swap | States |",
             "|---|---|---|---|---|",
@@ -509,6 +538,20 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
             )
             lines.append(row.replace("\n", " "))
         lines.append("")
+        for e in hyperpart.exchanges:
+            if not e.server_example.strip():
+                continue
+            lines += [
+                f"### `{e.method} {e.endpoint}` — example handler",
+                "",
+                "Application code (not the dual-lock module). FastAPI-shaped; "
+                "do not use `from __future__ import annotations` in route files (ADR-0014).",
+                "",
+                "```python",
+                e.server_example.strip(),
+                "```",
+                "",
+            ]
     g = hyperpart.guidance
     if g is not None:
         lines += ["## How to use it", ""]
@@ -535,8 +578,12 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
         lines += [
             "## DOM contract",
             "",
-            "CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or "
-            "response shapes outside these modules.",
+            "What emitted markup must satisfy (CI: `tests/test_contracts.py`). "
+            "Do not invent attrs outside the tables. Python modules under "
+            "`contracts/` are **package-internal dual-locks** "
+            "(`from contracts._kit import …`) — not FastAPI business handlers. "
+            "App servers implement **Server exchange** endpoints; this section "
+            "constrains the HTML those endpoints return.",
             "",
         ]
         for ref in hyperpart.contracts:
@@ -610,6 +657,9 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
                 if full:
                     lines += [
                         "#### Module source",
+                        "",
+                        "Monorepo dual-lock only — import `contracts._kit` from the "
+                        "HM package. Do not paste into app route modules.",
                         "",
                         "```python",
                         full.rstrip("\n"),

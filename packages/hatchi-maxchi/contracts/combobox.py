@@ -4,8 +4,6 @@ Server renders a real <select data-dz-combobox> with options; the controller
 enhances on first interaction. The native select remains the submit value.
 """
 
-from __future__ import annotations
-
 import html
 
 from pydantic import BaseModel, field_validator
