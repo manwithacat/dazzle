@@ -2527,30 +2527,34 @@ def select(source: str, id: str) -> str:
             "data-dz-state per row, never colour alone.",
             '<div class="dz-status-list-region hm-measure-lg">'
             '<ul class="dz-status-list" data-dz-entry-count="3">'
-            '<li class="dz-status-list-entry" data-dz-state="success">'
+            '<li class="dz-status-list-entry" data-dz-status-entry data-dz-state="positive">'
             '<span class="dz-status-list-icon" aria-hidden="true">{svg:circle-check}</span>'
             '<div class="dz-status-list-text">'
             '<div class="dz-status-list-title">Payments API</div>'
             '<div class="dz-status-list-caption">Operational · 99.99% this month</div></div>'
-            '<span class="dz-status-list-pill">success</span></li>'
-            '<li class="dz-status-list-entry" data-dz-state="warning">'
+            '<span class="dz-status-list-pill">positive</span></li>'
+            '<li class="dz-status-list-entry" data-dz-status-entry data-dz-state="warning">'
             '<span class="dz-status-list-icon" aria-hidden="true">{svg:triangle-alert}</span>'
             '<div class="dz-status-list-text">'
             '<div class="dz-status-list-title">Webhooks</div>'
             '<div class="dz-status-list-caption">Elevated retries since 09:20</div></div>'
             '<span class="dz-status-list-pill">warning</span></li>'
-            '<li class="dz-status-list-entry" data-dz-state="neutral">'
+            '<li class="dz-status-list-entry" data-dz-status-entry data-dz-state="neutral">'
             '<span class="dz-status-list-icon-spacer" aria-hidden="true"></span>'
             '<div class="dz-status-list-text">'
             '<div class="dz-status-list-title">Nightly export</div>'
             '<div class="dz-status-list-caption">Scheduled 02:00</div></div></li>'
             "</ul></div>",
             notes="Per-row state is <code>data-dz-state</code> on the entry (the "
-            "pill repeats it as text for WCAG 1.4.1); a neutral row has no pill "
-            "and an icon SPACER keeps the text column aligned. The wrapper's "
+            "pill repeats it as text for WCAG 1.4.1); dual-lock root is "
+            "<code>data-dz-status-entry</code> (<code>contracts/status_list.py</code>). "
+            "Vocabulary: neutral / positive / warning / destructive / accent "
+            "(not <code>success</code>). A neutral row has no pill and an icon "
+            "SPACER keeps the text column aligned. The wrapper's "
             "<code>data-dz-entry-count</code> is the server's row count — "
             "handy for e2e assertions without counting DOM.",
             tags=("data",),
+            contracts=("contracts/status_list.py",),
         ),
         Hyperpart(
             "action-grid",
@@ -2601,24 +2605,27 @@ def select(source: str, id: str) -> str:
             '<div class="dz-queue-metric">'
             '<div class="dz-queue-metric-value">4h</div>'
             '<div class="dz-queue-metric-label">median age</div></div></div>'
-            '<ul class="dz-queue-rows">'
-            '<li class="dz-queue-row" data-dz-attn="critical">'
-            '<div class="dz-queue-row-main">'
+            '<div class="dz-queue-rows">'
+            '<div class="dz-queue-row dz-attn-both dz-attn-tone-critical" data-dz-queue-row data-dz-attn="critical">'
+            '<div class="dz-queue-row-main ">'
             '<div class="dz-queue-row-headline">'
             '<span class="dz-queue-row-title">Refund request — Acme</span></div>'
             '<p class="dz-queue-row-attn">SLA breaches at 16:00 — assign now.</p>'
-            '<span class="dz-queue-row-date">2h left</span></div></li>'
-            '<li class="dz-queue-row">'
-            '<div class="dz-queue-row-main">'
+            '<span class="dz-queue-row-date">2h left</span></div></div>'
+            '<div class="dz-queue-row " data-dz-queue-row>'
+            '<div class="dz-queue-row-main ">'
             '<div class="dz-queue-row-headline">'
             '<span class="dz-queue-row-title">KYC review — Globex</span></div>'
-            '<span class="dz-queue-row-date">due tomorrow</span></div></li>'
-            "</ul></div>",
-            notes="Attention rows carry <code>data-dz-attn=&quot;&lt;level&gt;&quot;</code> "
-            "plus a human message (<code>dz-queue-row-attn</code>) — the flag is "
-            "never colour-only. Counts and metrics are SERVER-rendered rollups "
-            "(the same query that produced the rows, so they can't disagree).",
+            '<span class="dz-queue-row-date">due tomorrow</span></div></div>'
+            "</div></div>",
+            notes="Dual-lock root is <code>data-dz-queue-row</code> "
+            "(<code>contracts/queue.py</code>). Attention rows also carry "
+            "<code>data-dz-attn</code> plus a human message "
+            "(<code>dz-queue-row-attn</code>) — the flag is never colour-only. "
+            "Counts and metrics are SERVER-rendered rollups (the same query "
+            "that produced the rows, so they can't disagree).",
             tags=("data",),
+            contracts=("contracts/queue.py",),
         ),
         Hyperpart(
             "kanban",

@@ -8,7 +8,8 @@ equality — and the emitted DOM is locked by
 ``tests/unit/test_hm_contract_dom_conformance.py``.
 
 Seam models: ``GridEditCell``, ``ComboboxField``, ``TagsField``,
-``MoneyField``, ``SearchResultRow``, ``SearchSelectShell``, ``ActionCard``.
+``MoneyField``, ``SearchResultRow``, ``SearchSelectShell``, ``ActionCard``,
+``StatusListEntry``, ``QueueRow``.
 
 **Two layers (#1577):** form primitives in ``primitives/forms.py`` are the
 public product API (``required``, currency selector, symbol, …). These
@@ -224,6 +225,49 @@ class ActionCard(BaseModel):
         return v
 
 
+# ── Status-list seam copy (contracts/status_list.py) ─────────────────
+
+
+StatusListState = Literal["neutral", "positive", "warning", "destructive", "accent"]
+
+
+class StatusListEntry(BaseModel):
+    """One status row — dual-lock unit for the status-list Hyperpart."""
+
+    title: str
+    state: StatusListState = "neutral"
+    caption: str = ""
+    icon_html: str = ""
+
+    @field_validator("title")
+    @classmethod
+    def _title_nonempty(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("StatusListEntry requires a non-empty title")
+        return v
+
+
+# ── Queue seam copy (contracts/queue.py) ─────────────────────────────
+
+
+class QueueRow(BaseModel):
+    """One triage row — dual-lock unit for the queue Hyperpart."""
+
+    title: str
+    attention_level: str = ""
+    attention_message: str = ""
+    date_html: str = ""
+    badges_html: str = ""
+    actions_html: str = ""
+
+    @field_validator("title")
+    @classmethod
+    def _title_nonempty(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("QueueRow requires a non-empty title")
+        return v
+
+
 # ── Form → ingest adapters (#1577) ───────────────────────────────────
 # Form primitives stay the public API; emission builds these models then
 # uses the attr helpers below for HM contract attributes.
@@ -414,6 +458,76 @@ def render_action_card(card: ActionCard) -> str:
         href = _html.escape(card.url, quote=True)
         return f'<a href="{href}" class="dz-action-card" {root_attrs}>{body}</a>'
     return f'<div class="dz-action-card" {root_attrs}>{body}</div>'
+
+
+def status_list_entry_root_attrs(entry: StatusListEntry) -> str:
+    """Assemble status-entry dual-lock root + state — sole emitter site."""
+    return f'data-dz-status-entry data-dz-state="{_html.escape(entry.state, quote=True)}"'
+
+
+def queue_row_root_attrs(row: QueueRow) -> str:
+    """Assemble queue-row dual-lock root (+ optional attn) — sole emitter site."""
+    base = "data-dz-queue-row"
+    if row.attention_level:
+        return f'{base} data-dz-attn="{_html.escape(row.attention_level, quote=True)}"'
+    return base
+
+
+def render_status_list_entry(entry: StatusListEntry) -> str:
+    """Model → one status-list ``<li>`` (matches HM contracts/status_list.py)."""
+    title = _html.escape(entry.title)
+    if entry.icon_html.strip():
+        icon_html = entry.icon_html
+    else:
+        icon_html = '<span class="dz-status-list-icon-spacer" aria-hidden="true"></span>'
+    caption_html = ""
+    if entry.caption:
+        caption_html = f'<div class="dz-status-list-caption">{_html.escape(entry.caption)}</div>'
+    pill_html = ""
+    if entry.state != "neutral":
+        pill_html = f'<span class="dz-status-list-pill">{_html.escape(entry.state)}</span>'
+    root_attrs = status_list_entry_root_attrs(entry)
+    return (
+        f'<li class="dz-status-list-entry" {root_attrs}>'
+        f"{icon_html}"
+        f'<div class="dz-status-list-text">'
+        f'<div class="dz-status-list-title">{title}</div>'
+        f"{caption_html}"
+        f"</div>"
+        f"{pill_html}"
+        f"</li>"
+    )
+
+
+def render_queue_row(row: QueueRow) -> str:
+    """Model → one queue row (matches HM contracts/queue.py)."""
+    title = _html.escape(row.title)
+    attn_class = ""
+    attn_message_html = ""
+    if row.attention_level:
+        attn_class = f"dz-attn-both dz-attn-tone-{_html.escape(row.attention_level)}"
+        if row.attention_message:
+            attn_message_html = (
+                f'<p class="dz-queue-row-attn">{_html.escape(row.attention_message)}</p>'
+            )
+    headline_html = (
+        f'<div class="dz-queue-row-headline">'
+        f'<span class="dz-queue-row-title">{title}</span>'
+        f"{row.badges_html}"
+        f"</div>"
+    )
+    row_open_class = f"dz-queue-row {attn_class}" if attn_class else "dz-queue-row "
+    root_attrs = queue_row_root_attrs(row)
+    return (
+        f'<div class="{row_open_class}" {root_attrs}>'
+        f'<div class="dz-queue-row-main ">'
+        f"{headline_html}"
+        f"{attn_message_html}"
+        f"{row.date_html}"
+        f"</div>"
+        f"{row.actions_html}"
+        f"</div>"
+    )
 
 
 def render_search_result_row(row: SearchResultRow) -> str:

@@ -28,7 +28,13 @@ from typing import TYPE_CHECKING
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
-from dazzle.render.fragment.ingest import render_action_card
+from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
+from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
+from dazzle.render.fragment.ingest import (
+    render_action_card,
+    render_queue_row,
+    render_status_list_entry,
+)
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
@@ -800,15 +806,10 @@ class _RenderTablesMixin:
         )
 
     def _emit_queue_region(self, q: QueueRegion, ctx: RenderContext) -> str:
-        """Render a QueueRegion matching legacy
-        `workspace/regions/queue.html` byte-for-byte: outer
-        `dz-queue-region`, optional count row + metrics row, then
-        the queue items list with per-row attention accent +
-        headline (title + badges) + optional attn message + date
-        secondaries + transition action buttons.
+        """Render a QueueRegion via HM dual-lock QueueRow seams.
 
-        Empty path renders `<p class="dz-empty-dense dz-queue-empty">`
-        — note the legacy template uses BOTH classes.
+        Region chrome (count/metrics/overflow) stays local; each row maps
+        through ``render_queue_row`` so markup matches ``contracts/queue.py``.
         """
         from dazzle.render.fragment.region import (
             _render_status_badge_html,
@@ -843,24 +844,7 @@ class _RenderTablesMixin:
 
         rows_html: list[str] = []
         for row in q.rows:
-            attn_class = ""
-            attn_data_attr = ""
-            attn_message_html = ""
-            if row.attention_level:
-                attn_class = f"dz-attn-both dz-attn-tone-{row.attention_level}"
-                attn_data_attr = f' data-dz-attn="{ctx.escape_attr(row.attention_level)}"'
-                attn_message_html = (
-                    f'<p class="dz-queue-row-attn">{ctx.escape(row.attention_message)}</p>'
-                )
-
             badges_html = "".join(_render_status_badge_html(b.value) for b in row.badges)
-            headline_html = (
-                f'<div class="dz-queue-row-headline">'
-                f'<span class="dz-queue-row-title">{ctx.escape(row.title)}</span>'
-                f"{badges_html}"
-                f"</div>"
-            )
-
             date_html = "".join(
                 f'<span class="dz-queue-row-date">'
                 f"{ctx.escape(d.label)}: {ctx.escape(d.timeago_str)}"
@@ -891,19 +875,17 @@ class _RenderTablesMixin:
                     f"</div>"
                 )
 
-            # Trailing space inside `class="dz-queue-row "` mirrors
-            # legacy Jinja interpolation when no attn is present.
-            row_open_class = f"dz-queue-row {attn_class}" if attn_class else "dz-queue-row "
-            # Same artifact for `class="dz-queue-row-main "`.
             rows_html.append(
-                f'<div class="{row_open_class}"{attn_data_attr}>'
-                f'<div class="dz-queue-row-main ">'
-                f"{headline_html}"
-                f"{attn_message_html}"
-                f"{date_html}"
-                f"</div>"
-                f"{actions_html}"
-                f"</div>"
+                render_queue_row(
+                    QueueRowSeam(
+                        title=row.title,
+                        attention_level=row.attention_level,
+                        attention_message=row.attention_message,
+                        date_html=date_html,
+                        badges_html=badges_html,
+                        actions_html=actions_html,
+                    )
+                )
             )
 
         rows_block = f'<div class="dz-queue-rows">{"".join(rows_html)}</div>'
@@ -1172,15 +1154,10 @@ class _RenderTablesMixin:
         )
 
     def _emit_status_list(self, s: StatusList, ctx: RenderContext) -> str:
-        """Render a StatusList matching legacy
-        `workspace/regions/status_list.html` byte-for-byte: outer
-        `dz-status-list-region` wrapper, `<ul class="dz-status-list"
-        data-dz-entry-count="N">` with per-row `data-dz-state` attr,
-        icon column (or spacer), title + optional caption, pill for
-        non-neutral states.
+        """Render a StatusList via HM dual-lock StatusListEntry seams.
 
-        Empty state renders the `dz-empty-dense` paragraph inside the
-        region wrapper, matching the legacy template's else branch.
+        Region wrapper + entry-count stay local; each entry maps through
+        ``render_status_list_entry`` so markup matches ``contracts/status_list.py``.
         """
         if not s.entries:
             return (
@@ -1192,33 +1169,18 @@ class _RenderTablesMixin:
 
         rows: list[str] = []
         for entry in s.entries:
-            if entry.icon:
-                icon_html = lucide_icon_html(entry.icon, cls="dz-status-list-icon")
-            else:
-                icon_html = '<span class="dz-status-list-icon-spacer" aria-hidden="true"></span>'
-
-            caption_html = (
-                f'<div class="dz-status-list-caption">{ctx.escape(entry.caption)}</div>'
-                if entry.caption
-                else ""
+            icon_html = (
+                lucide_icon_html(entry.icon, cls="dz-status-list-icon") if entry.icon else ""
             )
-
-            pill_html = (
-                f'<span class="dz-status-list-pill">{ctx.escape(entry.state)}</span>'
-                if entry.state != "neutral"
-                else ""
-            )
-
             rows.append(
-                f'<li class="dz-status-list-entry" '
-                f'data-dz-state="{ctx.escape_attr(entry.state)}">'
-                f"{icon_html}"
-                f'<div class="dz-status-list-text">'
-                f'<div class="dz-status-list-title">{ctx.escape(entry.title)}</div>'
-                f"{caption_html}"
-                f"</div>"
-                f"{pill_html}"
-                f"</li>"
+                render_status_list_entry(
+                    StatusListEntrySeam(
+                        title=entry.title,
+                        state=entry.state,
+                        caption=entry.caption,
+                        icon_html=icon_html,
+                    )
+                )
             )
 
         return (

@@ -56,9 +56,10 @@ def test_typed_path_is_sole_emitter() -> None:
     """HM contract attribute *assembly* is allowed ONLY in ingest.py.
 
     Families (#1577): ``data-dz-edit-``, ``data-dz-tags``, ``data-dz-combobox``,
-    ``data-dz-money``, ``data-dz-action-card``, ``data-dz-widget="search_select"``
-    (+ search-select timing knobs). Docstrings and runtime readers (has_attr)
-    are ignored; HTML f-string / quoted assembly outside ingest fails.
+    ``data-dz-money``, ``data-dz-action-card``, ``data-dz-status-entry``,
+    ``data-dz-queue-row``, ``data-dz-widget="search_select"`` (+ search-select
+    timing knobs). Docstrings and runtime readers (has_attr) are ignored;
+    HTML f-string / quoted assembly outside ingest fails.
     """
     import re
 
@@ -67,8 +68,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -275,6 +276,66 @@ def test_action_card_emission_conforms_to_action_grid_contract() -> None:
     assert 'data-dz-tone="neutral"' in html
     assert "dz-action-card-icon-spacer" in html
     assert "Overdue invoices" in html
+
+
+def test_status_list_emission_conforms_to_status_list_contract() -> None:
+    """Real FragmentRenderer StatusList path satisfies contracts/status_list.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import StatusList
+    from dazzle.render.fragment.primitives.data import StatusListEntry as EntryFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    sl_mod = load_hm_module("contracts/status_list.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        StatusList(
+            entries=(
+                EntryFrag(
+                    title="Payments API",
+                    state="positive",
+                    caption="Operational",
+                    icon="circle-check",
+                ),
+                EntryFrag(title="Nightly export", state="neutral", caption="02:00"),
+            )
+        )
+    )
+    violations = kit.validate_dom(html, sl_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert html.count("data-dz-status-entry") == 2
+    assert 'data-dz-state="positive"' in html
+    assert "dz-status-list-icon-spacer" in html
+    assert "Payments API" in html
+
+
+def test_queue_region_emission_conforms_to_queue_contract() -> None:
+    """Real FragmentRenderer QueueRegion path satisfies contracts/queue.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import QueueRegion
+    from dazzle.render.fragment.primitives.data import QueueRow as RowFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    q_mod = load_hm_module("contracts/queue.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        QueueRegion(
+            total=2,
+            rows=(
+                RowFrag(
+                    row_id="1",
+                    title="Refund request — Acme",
+                    attention_level="critical",
+                    attention_message="SLA breaches at 16:00",
+                ),
+                RowFrag(row_id="2", title="KYC review — Globex"),
+            ),
+        )
+    )
+    violations = kit.validate_dom(html, q_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert html.count("data-dz-queue-row") == 2
+    assert 'data-dz-attn="critical"' in html
+    assert "Refund request" in html
 
 
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────

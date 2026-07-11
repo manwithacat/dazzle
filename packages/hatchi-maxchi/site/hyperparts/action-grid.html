@@ -288,8 +288,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
     <span class="code__tok--name">count_html</span> <span class="code__tok--op">=</span> <span class="code__tok--str">&quot;&quot;</span>
     <span class="code__tok--kw">if</span> <span class="code__tok--name">card</span><span class="code__tok--op">.</span><span class="code__tok--name">count</span> <span class="code__tok--kw">is</span> <span class="code__tok--kw">not</span> <span class="code__tok--kw">None</span><span class="code__tok--op">:</span>
         <span class="code__tok--name">count_html</span> <span class="code__tok--op">=</span> <span class="code__tok--op">(</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;span class=&quot;dz-action-card-count&quot; data-dz-tone-badge=&quot;{tone}&quot;&gt;&#x27;</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&quot;{card.count}&lt;/span&gt;&quot;</span>
+            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;span class=&quot;dz-action-card-count&quot; data-dz-tone-badge=&quot;{tone}&quot;&gt;{card.count}&lt;/span&gt;&#x27;</span>
         <span class="code__tok--op">)</span>
     <span class="code__tok--name">body</span> <span class="code__tok--op">=</span> <span class="code__tok--op">(</span>
         <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-action-card-row&quot;&gt;{icon_html}{count_html}&lt;/div&gt;&#x27;</span>

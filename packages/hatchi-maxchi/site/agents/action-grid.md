@@ -82,8 +82,7 @@ def render(card: ActionCard) -> str:
     count_html = ""
     if card.count is not None:
         count_html = (
-            f'<span class="dz-action-card-count" data-dz-tone-badge="{tone}">'
-            f"{card.count}</span>"
+            f'<span class="dz-action-card-count" data-dz-tone-badge="{tone}">{card.count}</span>'
         )
     body = (
         f'<div class="dz-action-card-row">{icon_html}{count_html}</div>'

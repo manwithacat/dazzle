@@ -15,15 +15,15 @@ System / check states as an icon + title + caption list — tone rides data-dz-s
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
 <div class="status-list-region hm-measure-lg">
   <ul class="status-list" data-entry-count="3">
-    <li class="status-list-entry" data-state="success">
+    <li class="status-list-entry" data-status-entry data-state="positive">
       <span class="status-list-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg></span>
       <div class="status-list-text">
         <div class="status-list-title">Payments API</div>
         <div class="status-list-caption">Operational · 99.99% this month</div>
       </div>
-      <span class="status-list-pill">success</span>
+      <span class="status-list-pill">positive</span>
     </li>
-    <li class="status-list-entry" data-state="warning">
+    <li class="status-list-entry" data-status-entry data-state="warning">
       <span class="status-list-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg></span>
       <div class="status-list-text">
         <div class="status-list-title">Webhooks</div>
@@ -31,7 +31,7 @@ System / check states as an icon + title + caption list — tone rides data-dz-s
       </div>
       <span class="status-list-pill">warning</span>
     </li>
-    <li class="status-list-entry" data-state="neutral">
+    <li class="status-list-entry" data-status-entry data-state="neutral">
       <span class="status-list-icon-spacer" aria-hidden="true"></span>
       <div class="status-list-text">
         <div class="status-list-title">Nightly export</div>
@@ -54,16 +54,67 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/status_list.py`
+
+- **Required root:** `[data-dz-status-entry]` (part `status-list`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-status-entry]` | `data-dz-status-entry` | present (any value) |
+| `[data-dz-status-entry]` | `data-dz-state` | one of ['neutral', 'positive', 'warning', 'destructive', 'accent'] |
+
+#### Ingestion model `StatusListEntry`
+
+| Field | Type | Required |
+|---|---|---|
+| `title` | `string` | yes |
+| `state` | `string ∈ ['neutral', 'positive', 'warning', 'destructive', 'accent']` | no |
+| `caption` | `string` | no |
+| `icon_html` | `string` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(entry: StatusListEntry) -> str:
+    """Model → one ``<li>`` status entry."""
+    state = html.escape(entry.state, quote=True)
+    title = html.escape(entry.title)
+    if entry.icon_html.strip():
+        icon_html = entry.icon_html
+    else:
+        icon_html = '<span class="dz-status-list-icon-spacer" aria-hidden="true"></span>'
+    caption_html = ""
+    if entry.caption:
+        caption_html = (
+            f'<div class="dz-status-list-caption">{html.escape(entry.caption)}</div>'
+        )
+    pill_html = ""
+    if entry.state != "neutral":
+        pill_html = f'<span class="dz-status-list-pill">{html.escape(entry.state)}</span>'
+    return (
+        f'<li class="dz-status-list-entry" data-dz-status-entry '
+        f'data-dz-state="{state}">'
+        f"{icon_html}"
+        f'<div class="dz-status-list-text">'
+        f'<div class="dz-status-list-title">{title}</div>'
+        f"{caption_html}"
+        f"</div>"
+        f"{pill_html}"
+        f"</li>"
+    )
+```
 
 ## Notes
 
-Per-row state is data-dz-state on the entry (the pill repeats it as text for WCAG 1.4.1); a neutral row has no pill and an icon SPACER keeps the text column aligned. The wrapper's data-dz-entry-count is the server's row count — handy for e2e assertions without counting DOM.
+Per-row state is data-dz-state on the entry (the pill repeats it as text for WCAG 1.4.1); dual-lock root is data-dz-status-entry (contracts/status_list.py). Vocabulary: neutral / positive / warning / destructive / accent (not success). A neutral row has no pill and an icon SPACER keeps the text column aligned. The wrapper's data-dz-entry-count is the server's row count — handy for e2e assertions without counting DOM.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/status_list.py`

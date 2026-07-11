@@ -113,8 +113,11 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 
 **Epic:** #1580 — phases A–D complete.
 
-**Follow-on (2026-07-11):** `search_select` promoted DOM-only → schema+DOM (ingest `SearchResultRow`/`SearchSelectShell` + fragment search route). Then `action-grid` / `ActionCard` schema+DOM (ingest render + `data-dz-action-card` root). Dual-lock schema+DOM count: **6**. Metered vision score persistence remains
-optional follow-on if API credits are intentional (not required for D exit).
+**Follow-on (2026-07-11):** `search_select` → schema+DOM; then W1 workspace
+fragments `action-grid` / `status-list` / `queue` (`ActionCard`,
+`StatusListEntry`, `QueueRow`). Dual-lock schema+DOM count: **8**. Metered
+vision score persistence remains optional follow-on if API credits are
+intentional (not required for D exit).
 
 ## Related paths
 

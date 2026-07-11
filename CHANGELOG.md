@@ -10,12 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **status-list + queue → schema+DOM dual-lock** — HM `contracts/status_list.py`
+  (`StatusListEntry`, root `data-dz-status-entry`) and `contracts/queue.py`
+  (`QueueRow`, root `data-dz-queue-row`) with ingest renders + sole-emitters.
+  FragmentRenderer maps product dataclasses through the seams. Gallery status
+  vocabulary fixed to `positive` (not `success`). Dual-lock coverage:
+  **8 schema+DOM** / 14 DOM-only.
 - **action-grid → schema+DOM dual-lock** — HM `contracts/action_grid.py`
   (`ActionCard` + `DOM_CONTRACT` root `data-dz-action-card` + `render`) with
   ingest copy + `render_action_card` / `action_card_root_attrs` sole-emitter.
   Dashboard `ActionCard` dataclass still public API; FragmentRenderer maps
-  Lucide icon → `icon_html` then the seam render. Dual-lock coverage:
-  **6 schema+DOM** / 14 DOM-only.
+  Lucide icon → `icon_html` then the seam render.
 - **search_select → schema+DOM dual-lock** — HM `SearchResultRow` +
   `SearchSelectShell` copied into `dazzle.render.fragment.ingest` (schema-parity
   gated). Form emission uses `search_select_shell_from_form` /
