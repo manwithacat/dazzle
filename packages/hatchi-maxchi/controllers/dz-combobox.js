@@ -37,16 +37,43 @@
     if (!open) setActive(root, null);
   }
 
+  // Permanent options only (not the ephemeral "Add …" create row).
   function options(root) {
     return Array.prototype.slice.call(
-      root.querySelectorAll(".dz-combobox-option"),
+      root.querySelectorAll(".dz-combobox-option:not(.dz-combobox-create)"),
     );
   }
 
   function visibleOptions(root) {
-    return options(root).filter(function (li) {
-      return !li.hidden;
-    });
+    return Array.prototype.slice
+      .call(root.querySelectorAll(".dz-combobox-option"))
+      .filter(function (li) {
+        return !li.hidden;
+      });
+  }
+
+  function allowCreate(select) {
+    return !!(select && select.hasAttribute("data-dz-allow-create"));
+  }
+
+  function ensureCreateRow(root, select) {
+    var list = root.querySelector(".dz-combobox-listbox");
+    if (!list) return null;
+    var create = root.querySelector(".dz-combobox-create");
+    if (create) return create;
+    var name = select.id || select.name || "dz-combobox";
+    create = document.createElement("li");
+    create.className = "dz-combobox-option dz-combobox-create";
+    create.id = name + "-create";
+    create.setAttribute("role", "option");
+    create.setAttribute("data-dz-create", "true");
+    create.setAttribute("aria-selected", "false");
+    create.hidden = true;
+    // After permanent options, before the empty-state row.
+    var empty = root.querySelector(".dz-combobox-empty");
+    if (empty) list.insertBefore(create, empty);
+    else list.appendChild(create);
+    return create;
   }
 
   // The active (keyboard-highlighted) descendant — distinct from the
@@ -99,27 +126,21 @@
   // input mid-click (avoids a blur/re-focus reopen race). After commit we
   // apply focus-after-select (default blur) so enum picks don't leave the
   // field in free-text edit mode with an I-beam caret.
-  function choose(root, li) {
-    var select = root.querySelector("select[data-dz-combobox]");
-    var input = root.querySelector(".dz-combobox-input");
-    if (!select || !input) return;
-    select.value = li.getAttribute("data-dz-value") || "";
+  // Commit a permanent option (existing or just created).
+  function commitValue(root, select, input, value, label) {
+    select.value = value;
     options(root).forEach(function (o) {
-      o.setAttribute("aria-selected", o === li ? "true" : "false");
+      var v = o.getAttribute("data-dz-value") || "";
+      o.setAttribute("aria-selected", v === value ? "true" : "false");
     });
-    input.value = li.textContent;
+    input.value = label;
     setOpen(root, false);
-    // Clear filter so a re-open shows the full list, not a stale query.
     filter(root, "");
     select.dispatchEvent(new Event("change", { bubbles: true }));
 
     var mode = focusAfterSelect(root, select);
-    if (mode === "keep" || mode === "focus") {
-      // Leave caret in the input; listbox stays closed until they type/arrow.
-      return;
-    }
+    if (mode === "keep" || mode === "focus") return;
     if (mode === "select" || mode === "select-all") {
-      // Keep focus and highlight the label so the next keystroke re-filters.
       try {
         input.focus();
         input.select();
@@ -128,7 +149,6 @@
       }
       return;
     }
-    // default "blur" — committed select UX
     try {
       input.blur();
     } catch (e2) {
@@ -136,15 +156,117 @@
     }
   }
 
+  // Open-enum recipe: append a new <option> to the native select + list row,
+  // then commit it. Same Hyperpart as closed enum — data-dz-allow-create only.
+  function createAndChoose(root, rawLabel) {
+    var select = root.querySelector("select[data-dz-combobox]");
+    var input = root.querySelector(".dz-combobox-input");
+    var list = root.querySelector(".dz-combobox-listbox");
+    if (!select || !input || !list) return;
+    var label = String(rawLabel || "").trim();
+    if (!label) return;
+
+    var value = label;
+    var existing = null;
+    Array.prototype.forEach.call(select.options, function (opt) {
+      if (
+        opt.value === value ||
+        opt.textContent.trim().toLowerCase() === label.toLowerCase()
+      ) {
+        existing = opt;
+      }
+    });
+    if (existing) {
+      var matchLi = null;
+      options(root).forEach(function (o) {
+        if (o.getAttribute("data-dz-value") === existing.value) matchLi = o;
+      });
+      if (matchLi) {
+        commitValue(root, select, input, existing.value, existing.textContent);
+        return;
+      }
+      value = existing.value;
+      label = existing.textContent;
+    } else {
+      var opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = label;
+      select.appendChild(opt);
+
+      var name = select.id || select.name || "dz-combobox";
+      var li = document.createElement("li");
+      li.className = "dz-combobox-option";
+      li.id = name + "-opt-" + (options(root).length);
+      li.setAttribute("role", "option");
+      li.setAttribute("data-dz-value", value);
+      li.setAttribute("aria-selected", "false");
+      li.textContent = label;
+      var create = root.querySelector(".dz-combobox-create");
+      if (create) list.insertBefore(li, create);
+      else {
+        var empty = root.querySelector(".dz-combobox-empty");
+        if (empty) list.insertBefore(li, empty);
+        else list.appendChild(li);
+      }
+    }
+    commitValue(root, select, input, value, label);
+  }
+
+  function choose(root, li) {
+    var select = root.querySelector("select[data-dz-combobox]");
+    var input = root.querySelector(".dz-combobox-input");
+    if (!select || !input || !li) return;
+    if (
+      li.hasAttribute("data-dz-create") ||
+      li.classList.contains("dz-combobox-create")
+    ) {
+      createAndChoose(
+        root,
+        li.getAttribute("data-dz-value") || input.value,
+      );
+      return;
+    }
+    commitValue(
+      root,
+      select,
+      input,
+      li.getAttribute("data-dz-value") || "",
+      li.textContent,
+    );
+  }
+
   function filter(root, query) {
-    var q = query.trim().toLowerCase();
+    var select = root.querySelector("select[data-dz-combobox]");
+    var qRaw = query.trim();
+    var q = qRaw.toLowerCase();
     var empty = root.querySelector(".dz-combobox-empty");
     var anyVisible = false;
+    var exact = false;
     options(root).forEach(function (li) {
-      var match = li.textContent.toLowerCase().indexOf(q) !== -1;
+      var text = li.textContent.toLowerCase();
+      var match = !q || text.indexOf(q) !== -1;
       li.hidden = !match;
       if (match) anyVisible = true;
+      if (text === q) exact = true;
     });
+
+    // Open-enum: offer "Add «query»" when allow-create and no exact match.
+    var create = root.querySelector(".dz-combobox-create");
+    if (allowCreate(select)) {
+      create = ensureCreateRow(root, select);
+      if (qRaw && !exact) {
+        create.hidden = false;
+        create.setAttribute("data-dz-value", qRaw);
+        create.textContent = 'Add "' + qRaw + '"';
+        anyVisible = true;
+      } else {
+        create.hidden = true;
+        create.removeAttribute("data-dz-value");
+      }
+    } else if (create) {
+      create.hidden = true;
+    }
+
     if (empty) empty.hidden = anyVisible;
     // Keep the active descendant on a still-visible row.
     var active = activeOption(root);
@@ -324,9 +446,14 @@
       setActive(root, vis[next]);
     } else if (evt.key === "Enter") {
       var active = activeOption(root);
+      var selectEl = root.querySelector("select[data-dz-combobox]");
       if (active && !active.hidden) {
         evt.preventDefault();
         choose(root, active);
+      } else if (allowCreate(selectEl) && input.value.trim()) {
+        // No highlighted row (e.g. empty list + create hidden race) — still create.
+        evt.preventDefault();
+        createAndChoose(root, input.value);
       }
     } else if (evt.key === "Escape") {
       if (root.hasAttribute("data-dz-open")) {

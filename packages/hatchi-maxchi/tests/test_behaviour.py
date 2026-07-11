@@ -1824,62 +1824,90 @@ def test_combobox_enhances_and_selects(page) -> None:  # type: ignore[no-untyped
     goto_part(page, "combobox")
     # Scope to the gallery preview — contract sections also render live exemplars.
     preview = page.locator(".hm-preview")
-    # pointerdown on bare select enhances + opens (and swallows the native menu)
-    preview.locator("select[data-combobox]").dispatch_event("pointerdown")
+    # First select is the closed priority enum in the dual demo.
+    sel = preview.locator("select[data-combobox]").first
+    sel.dispatch_event("pointerdown")
     page.wait_for_timeout(100)
-    root = preview.locator(".combobox[data-enhanced]")
+    root = preview.locator(".combobox[data-enhanced]").first
     assert root.count() == 1
     assert root.get_attribute("data-open") == "true"
     # Keyboard-select High: value commits and listbox stays closed.
-    preview.locator(".combobox-input").fill("Hi")
+    root.locator(".combobox-input").fill("Hi")
     page.keyboard.press("ArrowDown")
     page.keyboard.press("Enter")
     page.wait_for_timeout(50)
-    assert preview.locator("select[data-combobox]").input_value() == "high"
-    assert preview.locator(".combobox-input").input_value() == "High"
+    assert sel.input_value() == "high"
+    assert root.locator(".combobox-input").input_value() == "High"
     assert root.get_attribute("data-open") is None
     # Default focus-after-select=blur — leave free-text / I-beam mode.
-    assert not preview.locator(".combobox-input").evaluate("el => el === document.activeElement")
+    assert not root.locator(".combobox-input").evaluate("el => el === document.activeElement")
 
 
 def test_combobox_click_option_closes_listbox(page) -> None:  # type: ignore[no-untyped-def]
     """Pointer pick must close the picker (not re-open via focusin)."""
     goto_part(page, "combobox")
     preview = page.locator(".hm-preview")
-    preview.locator("select[data-combobox]").dispatch_event("pointerdown")
+    sel = preview.locator("select[data-combobox]").first
+    sel.dispatch_event("pointerdown")
     page.wait_for_timeout(100)
-    root = preview.locator(".combobox[data-enhanced]")
+    root = preview.locator(".combobox[data-enhanced]").first
     assert root.get_attribute("data-open") == "true"
-    preview.locator('.combobox-option[data-value="high"]').click()
+    root.locator('.combobox-option[data-value="high"]').click()
     page.wait_for_timeout(50)
-    assert preview.locator("select[data-combobox]").input_value() == "high"
-    assert preview.locator(".combobox-input").input_value() == "High"
+    assert sel.input_value() == "high"
+    assert root.locator(".combobox-input").input_value() == "High"
     assert root.get_attribute("data-open") is None
-    assert not preview.locator(".combobox-input").evaluate("el => el === document.activeElement")
+    assert not root.locator(".combobox-input").evaluate("el => el === document.activeElement")
 
 
 def test_combobox_focus_after_select_keep(page) -> None:  # type: ignore[no-untyped-def]
     """data-focus-after-select=keep leaves the overlay input focused for re-filter."""
     goto_part(page, "combobox")
     preview = page.locator(".hm-preview")
-    sel = preview.locator("select[data-combobox]")
+    sel = preview.locator("select[data-combobox]").first
     sel.evaluate("el => el.setAttribute('data-focus-after-select', 'keep')")
     sel.dispatch_event("pointerdown")
     page.wait_for_timeout(100)
-    preview.locator('.combobox-option[data-value="high"]').click()
+    root = preview.locator(".combobox[data-enhanced]").first
+    root.locator('.combobox-option[data-value="high"]').click()
     page.wait_for_timeout(50)
-    assert preview.locator("select[data-combobox]").input_value() == "high"
-    assert preview.locator(".combobox-input").evaluate("el => el === document.activeElement")
+    assert sel.input_value() == "high"
+    assert root.locator(".combobox-input").evaluate("el => el === document.activeElement")
+
+
+def test_combobox_allow_create_appends_option(page) -> None:  # type: ignore[no-untyped-def]
+    """Open-enum recipe: data-allow-create offers Add "…"; pick appends <option>."""
+    goto_part(page, "combobox")
+    preview = page.locator(".hm-preview")
+    sel = preview.locator("select[data-allow-create], select[data-dz-allow-create]")
+    assert sel.count() == 1
+    sel.dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    root = sel.locator(
+        "xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' combobox ')][1]"
+    )
+    inp = root.locator(".combobox-input")
+    inp.fill("docs")
+    page.wait_for_timeout(50)
+    create = root.locator(".combobox-create")
+    assert create.is_visible()
+    assert 'Add "docs"' in create.inner_text()
+    create.click()
+    page.wait_for_timeout(50)
+    assert sel.input_value() == "docs"
+    values = sel.evaluate("el => Array.from(el.options).map(o => o.value)")
+    assert "docs" in values
 
 
 def test_combobox_type_filters_options(page) -> None:  # type: ignore[no-untyped-def]
     goto_part(page, "combobox")
     preview = page.locator(".hm-preview")
-    preview.locator("select[data-combobox]").dispatch_event("pointerdown")
+    preview.locator("select[data-combobox]").first.dispatch_event("pointerdown")
     page.wait_for_timeout(80)
-    preview.locator(".combobox-input").fill("ur")
+    root = preview.locator(".combobox[data-enhanced]").first
+    root.locator(".combobox-input").fill("ur")
     page.wait_for_timeout(50)
-    visible = preview.locator(".combobox-option:not([hidden])")
+    visible = root.locator(".combobox-option:not([hidden]):not(.combobox-create)")
     # "Urgent" matches; empty placeholder is not an option row
     labels = [t.strip() for t in visible.all_text_contents() if t.strip() != "No matches"]
     assert labels == ["Urgent"], labels

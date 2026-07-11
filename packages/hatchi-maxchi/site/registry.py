@@ -1666,12 +1666,12 @@ def select(source: str, id: str) -> str:
         "Combobox",
         "Forms",
         "Searchable enum single-select — a native <select> progressively "
-        "enhanced into a type-to-filter combobox. JS off: a fully usable "
-        "select. JS on: a searchable role=combobox overlay; the native "
-        "select stays as the submitted value. After a pick, focus leaves the "
-        "text field by default (committed select UX).",
-        '<label class="dz-field hm-measure" for="hm-cb-field">'
-        '<span class="dz-field__label">Priority</span>'
+        "enhanced into a type-to-filter combobox. Closed enums by default; "
+        "open enums (add a new value) use the same Hyperpart with "
+        "data-dz-allow-create — not a separate part.",
+        '<div class="hm-stack hm-measure" data-gap="md">'
+        '<label class="dz-field" for="hm-cb-field">'
+        '<span class="dz-field__label">Priority (closed enum)</span>'
         '<select id="hm-cb-field" name="priority" '
         'data-dz-combobox class="dz-form-input">'
         '<option value="">Select a priority…</option>'
@@ -1679,28 +1679,36 @@ def select(source: str, id: str) -> str:
         '<option value="medium" selected>Medium</option>'
         '<option value="high">High</option>'
         '<option value="urgent">Urgent</option>'
-        "</select></label>",
-        notes="Progressive enhancement: the server renders a real "
-        "<code>&lt;select data-dz-combobox&gt;</code> with all its options "
-        "(placeholder first) — usable and submittable with no JS, native "
-        "<code>required</code> intact. On first interaction "
-        "<code>dz-combobox.js</code> builds a sibling overlay: a "
-        "<code>role=&quot;combobox&quot;</code> input + a "
-        "<code>role=&quot;listbox&quot;</code> of the options, hiding the "
-        "native select (kept in the DOM as the submitted value). State is "
-        "in the DOM — <code>data-dz-open</code> on the root (CSS hides the "
-        "listbox off it), <code>aria-expanded</code> mirrored on the input. "
-        "Typing filters (substring, case-insensitive); Up/Down move "
-        "<code>aria-activedescendant</code>; Enter/click selects (writes the "
-        "native select + fires <code>change</code>); Esc closes; focus "
-        "leaving the widget closes after a 200ms grace. "
+        "</select></label>"
+        '<label class="dz-field" for="hm-cb-label">'
+        '<span class="dz-field__label">Label (open enum — type a new value)</span>'
+        '<select id="hm-cb-label" name="label" '
+        'data-dz-combobox data-dz-allow-create class="dz-form-input">'
+        '<option value="">Pick or add a label…</option>'
+        '<option value="bug">bug</option>'
+        '<option value="feature">feature</option>'
+        '<option value="chore">chore</option>'
+        "</select></label>"
+        "</div>",
+        notes="<strong>Same Hyperpart, two recipes.</strong> Progressive "
+        "enhancement: server renders a real "
+        "<code>&lt;select data-dz-combobox&gt;</code> (placeholder option first). "
+        "JS builds a filterable listbox; the native select remains the submit "
+        "value. <strong>Closed enum</strong> (priority above): options are "
+        "fixed — filter and pick only. <strong>Open enum / add new value</strong> "
+        "(label above): set <code>data-dz-allow-create</code> on the "
+        "<code>&lt;select&gt;</code>. When the typed query has no exact match, "
+        'an <code>Add "…"</code> row appears; Enter/click appends a new '
+        "<code>&lt;option&gt;</code> to the native select and commits it "
+        "(value = label string). Server still owns persistence — on submit you "
+        "upsert the enum if the value is new; the client only extends the "
+        "option list for this page. "
+        "<strong>Not this part:</strong> multi free-form labels → "
+        "<code>tags</code>; remote FK search → <code>search-select</code>. "
+        "Do not invent a fourth picker. "
         "<strong>After select:</strong> "
-        "<code>data-dz-focus-after-select</code> on the native "
-        "<code>&lt;select&gt;</code> controls post-commit focus — "
-        "<code>blur</code> (default, no I-beam / free-text mode), "
-        "<code>keep</code> (caret stays for re-filter), "
-        "<code>select</code> (keep focus + select-all so the next keystroke "
-        "replaces the label as a filter).",
+        "<code>data-dz-focus-after-select=blur|keep|select</code> "
+        "(default <code>blur</code>).",
         tags=("forms",),
         controller="controllers/dz-combobox.js",
         contracts=("contracts/combobox.py",),
@@ -1708,30 +1716,38 @@ def select(source: str, id: str) -> str:
             seams=(
                 "server renders a real <select data-dz-combobox> — progressive enhancement",
                 "native select stays as the submitted value after the overlay mounts",
-                "data-dz-focus-after-select=blur|keep|select on the <select> "
-                "(default blur — leave text-editing mode after a pick)",
+                "CLOSED enum: omit allow-create — filter + pick only",
+                "OPEN enum (add new): data-dz-allow-create — type a miss → "
+                'Add "…" row → appends <option> + commits (same Hyperpart)',
+                "data-dz-focus-after-select=blur|keep|select (default blur)",
             ),
             pitfalls=(
                 "pointerdown on the bare select must enhance first and swallow the native menu",
                 "state is data-dz-open on the root — not a JS open flag a morph would drop",
-                "default after-select is blur; without it the overlay input keeps "
-                "focus and looks like free-text edit (I-beam caret)",
+                "allow-create is client option-list UX only — server must accept/upsert "
+                "unknown values; do not treat the new option as a durable catalogue alone",
+                "multi free-create chips are tags, not combobox; remote ids are search-select",
             ),
             do_dont=(
+                (
+                    "use combobox + data-dz-allow-create for single open-enum add",
+                    "invent a new Hyperpart or bespoke create-dropdown for 'add enum value'",
+                ),
                 (
                     "filter options client-side from the server-rendered <option> list",
                     "replace the select with a div and invent a new submit contract",
                 ),
                 (
-                    "use focus-after-select=keep/select only when continued typing is intentional",
-                    "leave enum picks stuck in free-text focus by accident",
+                    "use tags for multi free-form labels; search-select for remote FKs",
+                    "overload combobox for multi-create or server-search FK flows",
                 ),
             ),
             a11y_keys=(
                 "input is role=combobox with aria-expanded / aria-activedescendant",
-                "ArrowUp/Down move highlight; Enter selects; Esc closes",
+                "ArrowUp/Down move highlight; Enter selects or creates; Esc closes",
+                'Add "…" row is role=option (same listbox semantics)',
             ),
-            composes_with=("field",),
+            composes_with=("field", "tags", "search-select"),
         ),
     ),
     Hyperpart(

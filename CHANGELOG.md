@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM combobox open-enum recipe (same Hyperpart)** —
+  `data-dz-allow-create` shows an `Add "…"` row when the filter misses;
+  picking it appends a native `<option>` and commits. Dual gallery demo
+  (closed priority + open label). Recipe vs tags / search-select documented.
 - **HM combobox post-select focus is controllable** —
   `data-dz-focus-after-select=blur|keep|select` on the native `<select>`
   (default `blur` so enum picks leave free-text / I-beam mode).
