@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM part-page meta footer** — Markup dialect, Dogfood, Glossary, and
+  provenance move to a single “About this page” footer after the implementer
+  spine. Agents still get dialect at the top of `agents/<id>.md`.
 - **HM every part page shares the full linear skeleton** — Server exchange,
   How to use it, DOM contract, and Source files always render (explicit empty
   states when N/A). Agent packs match. Dogfood: breadcrumb nav, toggle-group

@@ -163,7 +163,17 @@ def test_every_part_page_has_linear_skeleton() -> None:
         assert 'class="code"' in html or "class='code'" in html or "code__" in html, (
             f"{h.id}: snippets must dogfood the code Hyperpart"
         )
-        assert "hm-dogfood" in html, f"{h.id}: missing dogfood banner"
+        # Meta (dialect / dogfood / provenance) is footer-only — not above the spine.
+        # (CSS also mentions hm-page-meta — match the footer element, not the style block.)
+        meta_marker = '<footer class="hm-page-meta"'
+        assert meta_marker in html, f"{h.id}: missing page meta footer"
+        assert "hm-dogfood" in html, f"{h.id}: missing dogfood meta item"
+        assert "Markup dialect" in html, f"{h.id}: missing dialect meta item"
+        spine_pos = html.find('id="copy"')
+        meta_pos = html.find(meta_marker)
+        assert spine_pos != -1 and meta_pos != -1 and spine_pos < meta_pos, (
+            f"{h.id}: page meta footer must come after the implementer spine"
+        )
 
 
 def test_every_agent_pack_has_linear_skeleton() -> None:

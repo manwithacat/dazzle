@@ -43,11 +43,6 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-ref-lead { font-size: var(--text-sm); color: var(--colour-text-muted);
   margin: 0 0 .75rem; max-width: 46rem; line-height: 1.55; }
 .hm-ref-mod { font-family: var(--font-mono); font-weight: var(--weight-medium); }
-.hm-dialect { font-size: var(--text-sm); color: var(--colour-text-muted);
-  margin: 0 0 1.25rem; padding: .55rem .75rem; max-width: 46rem;
-  border: 1px solid var(--colour-border); border-radius: var(--radius-md);
-  background: var(--colour-surface); line-height: 1.5; }
-.hm-dialect code { font-size: .9em; }
 /* Glossary terms — human confidence on agent-primary pages (non-critical).
    Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
 .hm-term {
@@ -95,26 +90,59 @@ body { background: var(--colour-bg); color: var(--colour-text);
   opacity: 1;
   transition-delay: 180ms;
 }
-.hm-term-hint {
-  display: block;
-  margin-top: .45rem;
-  font-size: var(--text-xs, .75rem);
-  color: var(--colour-text-muted);
-  opacity: .92;
-}
-.hm-dogfood {
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin: 0 0 1rem;
-  padding: .5rem .75rem;
+.hm-hero .breadcrumb { margin-bottom: .5rem; }
+/* Part-page meta footer: dialect / dogfood / provenance — after the spine. */
+.hm-page-meta {
+  margin-block: 2.5rem 0;
+  padding-block: 1.5rem 2rem;
+  border-block-start: 1px solid var(--colour-border);
   max-width: 46rem;
-  border-inline-start: 3px solid var(--colour-brand);
-  background: var(--colour-brand-soft, var(--colour-surface));
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+.hm-page-meta__title {
+  margin: 0 0 .85rem;
+  font-size: .7rem;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--colour-text-muted);
+}
+.hm-page-meta__list {
+  margin: 0;
+  display: grid;
+  gap: .85rem;
+}
+.hm-page-meta__item {
+  margin: 0;
+  padding: .65rem .75rem;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
+.hm-page-meta__item dt {
+  margin: 0 0 .25rem;
+  font-size: .65rem;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--colour-text-muted);
+}
+.hm-page-meta__item dd {
+  margin: 0;
+  color: var(--colour-text);
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
-.hm-dogfood code { font-size: .9em; }
-.hm-hero .breadcrumb { margin-bottom: .5rem; }
+.hm-page-meta__item code { font-size: .9em; }
+.hm-page-meta__provenance {
+  margin: 1rem 0 0;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  line-height: 1.45;
+}
+.hm-page-meta__provenance code { font-size: .9em; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -200,7 +228,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="master-detail"><h2>Master–detail<span class="hm-tag">composite</span><span class="hm-dep" data-dep="composite" tabindex="0" data-tooltip="Built by composing other Hyperparts (see Composed of).">Composite</span><span class="hm-dep" data-dep="controller" tabindex="0" data-tooltip="Ships a small vanilla-JS controller (still no SPA state).">Controller</span><span class="hm-dep" data-dep="endpoint" tabindex="0" data-tooltip="Needs a server exchange — an API that returns HTML fragments.">Endpoint</span><span class="hm-dep" data-dep="sprite" tabindex="0" data-tooltip="Needs the icon symbol sheet inlined once on the page.">Sprite</span></h2><p class="blurb">Exchange composition — a list item hx-gets its detail card into the detail pane. The canonical htmx composite; two can coexist on a page.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><p class="hm-dogfood" role="note"><strong>Dogfood:</strong> the live demo, code snippets (<dfn class="hm-term" tabindex="0" data-tooltip="The HTML fragment the server renders — the look of the control, ready to paste or emit. No client state graph inside it.">partial</dfn> + code Hyperpart), theme control (toggle-group), and this breadcrumb are HaTchi-MaXchi. Page layout chrome (<code>hm-*</code> grid/nav) is gallery scaffolding on the same tokens — not a separate UI kit.</p><div class="hm-preview"><div class="master-detail" data-master-detail><ul class="master-detail__list" aria-label="Invoices" data-master-detail-list-body><li><a class="master-detail__item" href="#" aria-current="true" hx-get="/mock/master-detail/inv-001" hx-target="next .master-detail__detail">INV-001 · Acme</a></li><li><a class="master-detail__item" href="#" hx-get="/mock/master-detail/inv-002" hx-target="next .master-detail__detail">INV-002 · Globex</a></li><li><a class="master-detail__item" href="#" hx-get="/mock/master-detail/inv-003" hx-target="next .master-detail__detail">INV-003 · Initech</a></li></ul><div class="master-detail__detail" data-master-detail-detail-body><div class="card card-body"><div class="card-label">INV-001 · Acme</div><div class="card-value">£1,250.00</div><div class="card-delta">Paid · 2 days ago</div></div></div></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Master–detail"><code class="code__source">&lt;div class=&quot;master-detail&quot; data-master-detail&gt;
+<section class="hm-comp" id="master-detail"><h2>Master–detail<span class="hm-tag">composite</span><span class="hm-dep" data-dep="composite" tabindex="0" data-tooltip="Built by composing other Hyperparts (see Composed of).">Composite</span><span class="hm-dep" data-dep="controller" tabindex="0" data-tooltip="Ships a small vanilla-JS controller (still no SPA state).">Controller</span><span class="hm-dep" data-dep="endpoint" tabindex="0" data-tooltip="Needs a server exchange — an API that returns HTML fragments.">Endpoint</span><span class="hm-dep" data-dep="sprite" tabindex="0" data-tooltip="Needs the icon symbol sheet inlined once on the page.">Sprite</span></h2><p class="blurb">Exchange composition — a list item hx-gets its detail card into the detail pane. The canonical htmx composite; two can coexist on a page.</p><div class="hm-preview"><div class="master-detail" data-master-detail><ul class="master-detail__list" aria-label="Invoices" data-master-detail-list-body><li><a class="master-detail__item" href="#" aria-current="true" hx-get="/mock/master-detail/inv-001" hx-target="next .master-detail__detail">INV-001 · Acme</a></li><li><a class="master-detail__item" href="#" hx-get="/mock/master-detail/inv-002" hx-target="next .master-detail__detail">INV-002 · Globex</a></li><li><a class="master-detail__item" href="#" hx-get="/mock/master-detail/inv-003" hx-target="next .master-detail__detail">INV-003 · Initech</a></li></ul><div class="master-detail__detail" data-master-detail-detail-body><div class="card card-body"><div class="card-label">INV-001 · Acme</div><div class="card-value">£1,250.00</div><div class="card-delta">Paid · 2 days ago</div></div></div></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Master–detail"><code class="code__source">&lt;div class=&quot;master-detail&quot; data-master-detail&gt;
   &lt;ul class=&quot;master-detail__list&quot; aria-label=&quot;Invoices&quot; data-master-detail-list-body&gt;
     &lt;li&gt;&lt;a class=&quot;master-detail__item&quot; href=&quot;#&quot; aria-current=&quot;true&quot; hx-get=&quot;/mock/master-detail/inv-001&quot; hx-target=&quot;next .master-detail__detail&quot;&gt;INV-001 · Acme&lt;/a&gt;&lt;/li&gt;
     &lt;li&gt;&lt;a class=&quot;master-detail__item&quot; href=&quot;#&quot; hx-get=&quot;/mock/master-detail/inv-002&quot; hx-target=&quot;next .master-detail__detail&quot;&gt;INV-002 · Globex&lt;/a&gt;&lt;/li&gt;
@@ -236,14 +264,7 @@ List rows carry ``.dz-master-detail__item`` and hx-get a detail fragment into
 
 <span class="code__tok--name">__all__</span> <span class="code__tok--op">=</span> <span class="code__tok--op">[</span><span class="code__tok--str">&quot;DOM_CONTRACT&quot;</span><span class="code__tok--op">]</span>
 </code></pre></figure></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">The detail pane loads a card fragment via hx-get; master-detail.js sets aria-current on the chosen item, scoped to THIS root so two coexist.</div></section><section class="hm-ref" id="files"><h3>Source files</h3><p class="hm-ref-lead">One logical Hyperpart, 5 code items (CSS layered, JS bundled). Bound by <code>HYPERPART: master-detail</code> — <code>python tools/hyperpart.py master-detail</code> lists them.</p><p class="hm-anatomy"><code>site/registry.py</code> · <code>contracts/master_detail.py</code> · <code>components/hm-core.css:443</code> · <code>controllers/dz-master-detail.js</code> · mock <code>/mock/master-detail</code></p></section><section class="hm-ref" id="composed"><h3>Composed of</h3><p class="hm-composed"><a href="card">Card</a></p></section></section>
-<footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
-Generated from the design-system sources by <code>site/build_site.py</code>.
-The demo above renders the exact snippet — copy it into any htmx4 app.
-<strong>Dazzle monorepo:</strong> dual-lock attrs use the <code>data-dz-*</code>
-prefix (and <code>dz-*</code> classes when <code>DEFAULT_PREFIX</code> is applied);
-this gallery’s demos are unprefixed by design. Do not paste gallery markup into
-Dazzle without the package prefixer / dual-lock contract.
-</footer>
+<footer class="hm-page-meta" aria-label="Page meta"><h2 class="hm-page-meta__title">About this page</h2><dl class="hm-page-meta__list"><div class="hm-page-meta__item hm-dialect"><dt>Markup dialect</dt><dd>Demos and Copy this are <strong>unprefixed</strong> (standalone HM / paste into any htmx4 app). Dazzle apps use the <code></code> class and <code>data-*</code> form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python on this page is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-*</code>). Match the CSS/JS bundle you load — do not paste gallery markup into Dazzle without the package prefixer.</dd></div><div class="hm-page-meta__item hm-dogfood"><dt>Dogfood</dt><dd>The live demo, code snippets (<dfn class="hm-term" tabindex="0" data-tooltip="The HTML fragment the server renders — the look of the control, ready to paste or emit. No client state graph inside it.">partial</dfn> + code Hyperpart), theme control (toggle-group), and breadcrumb are HaTchi-MaXchi. Page layout (<code>hm-*</code>) is gallery scaffolding on the same tokens — not a separate UI kit.</dd></div><div class="hm-page-meta__item"><dt>Glossary</dt><dd>Dotted terms (Hyperpart, affordance, Server exchange, DOM contract, …) explain on hover or keyboard focus — fundamental hypermedia, not a black box. Tips are non-critical; section prose and tables are the contract.</dd></div></dl><p class="hm-page-meta__provenance">Generated from the design-system sources by <code>site/build_site.py</code>. The demo is the same string as <strong>Copy this</strong> — they cannot drift.</p></footer>
 </main>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>

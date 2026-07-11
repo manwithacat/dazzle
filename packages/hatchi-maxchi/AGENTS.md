@@ -49,7 +49,9 @@ paste `contracts/*.py` dual-lock modules into app routes.
   DOM contract → Notes (if any) → Source files. Empty states are explicit
   (“no server exchange”, “no typed dual-lock yet”) so a thin part never
   looks incomplete. Prefer the `.md` when implementing; the HTML page adds
-  the live demo, glossary tooltips, and dogfood chrome.
+  the live demo and glossary tooltips. Dialect / dogfood / provenance sit in
+  an **About this page** footer on HTML (not above the spine). This pack still
+  leads with dialect because agents scrape markdown first.
 - **Dogfood:** demos are HM partials; snippets use the code Hyperpart; theme
   control is toggle-group; part-page nav is breadcrumb. Gallery layout
   classes (`hm-*`) are site scaffolding on the same tokens — not a second kit.

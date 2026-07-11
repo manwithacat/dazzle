@@ -43,11 +43,6 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-ref-lead { font-size: var(--text-sm); color: var(--colour-text-muted);
   margin: 0 0 .75rem; max-width: 46rem; line-height: 1.55; }
 .hm-ref-mod { font-family: var(--font-mono); font-weight: var(--weight-medium); }
-.hm-dialect { font-size: var(--text-sm); color: var(--colour-text-muted);
-  margin: 0 0 1.25rem; padding: .55rem .75rem; max-width: 46rem;
-  border: 1px solid var(--colour-border); border-radius: var(--radius-md);
-  background: var(--colour-surface); line-height: 1.5; }
-.hm-dialect code { font-size: .9em; }
 /* Glossary terms — human confidence on agent-primary pages (non-critical).
    Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
 .hm-term {
@@ -95,26 +90,59 @@ body { background: var(--colour-bg); color: var(--colour-text);
   opacity: 1;
   transition-delay: 180ms;
 }
-.hm-term-hint {
-  display: block;
-  margin-top: .45rem;
-  font-size: var(--text-xs, .75rem);
-  color: var(--colour-text-muted);
-  opacity: .92;
-}
-.hm-dogfood {
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin: 0 0 1rem;
-  padding: .5rem .75rem;
+.hm-hero .breadcrumb { margin-bottom: .5rem; }
+/* Part-page meta footer: dialect / dogfood / provenance — after the spine. */
+.hm-page-meta {
+  margin-block: 2.5rem 0;
+  padding-block: 1.5rem 2rem;
+  border-block-start: 1px solid var(--colour-border);
   max-width: 46rem;
-  border-inline-start: 3px solid var(--colour-brand);
-  background: var(--colour-brand-soft, var(--colour-surface));
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+.hm-page-meta__title {
+  margin: 0 0 .85rem;
+  font-size: .7rem;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--colour-text-muted);
+}
+.hm-page-meta__list {
+  margin: 0;
+  display: grid;
+  gap: .85rem;
+}
+.hm-page-meta__item {
+  margin: 0;
+  padding: .65rem .75rem;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
+.hm-page-meta__item dt {
+  margin: 0 0 .25rem;
+  font-size: .65rem;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--colour-text-muted);
+}
+.hm-page-meta__item dd {
+  margin: 0;
+  color: var(--colour-text);
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
-.hm-dogfood code { font-size: .9em; }
-.hm-hero .breadcrumb { margin-bottom: .5rem; }
+.hm-page-meta__item code { font-size: .9em; }
+.hm-page-meta__provenance {
+  margin: 1rem 0 0;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  line-height: 1.45;
+}
+.hm-page-meta__provenance code { font-size: .9em; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -200,21 +228,14 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="badge"><h2>Badge<span class="hm-tag">identity</span><span class="hm-dep" data-dep="sprite" tabindex="0" data-tooltip="Needs the icon symbol sheet inlined once on the page.">Sprite</span></h2><p class="blurb">Colour + icon + text — status never relies on colour alone (WCAG 1.4.1).</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><p class="hm-dogfood" role="note"><strong>Dogfood:</strong> the live demo, code snippets (<dfn class="hm-term" tabindex="0" data-tooltip="The HTML fragment the server renders — the look of the control, ready to paste or emit. No client state graph inside it.">partial</dfn> + code Hyperpart), theme control (toggle-group), and this breadcrumb are HaTchi-MaXchi. Page layout chrome (<code>hm-*</code> grid/nav) is gallery scaffolding on the same tokens — not a separate UI kit.</p><div class="hm-preview"><div class="hm-demo-row"><span class="badge" data-tone="success"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg></span>Approved</span><span class="badge" data-tone="warning"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg></span>Pending</span><span class="badge" data-tone="destructive"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-circle-x"/></svg></span>Rejected</span><span class="badge" data-tone="neutral">Draft</span></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Badge"><code class="code__source">&lt;!-- icons: include the icon sheet once per page (see the Setup section, #setup) --&gt;
+<section class="hm-comp" id="badge"><h2>Badge<span class="hm-tag">identity</span><span class="hm-dep" data-dep="sprite" tabindex="0" data-tooltip="Needs the icon symbol sheet inlined once on the page.">Sprite</span></h2><p class="blurb">Colour + icon + text — status never relies on colour alone (WCAG 1.4.1).</p><div class="hm-preview"><div class="hm-demo-row"><span class="badge" data-tone="success"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg></span>Approved</span><span class="badge" data-tone="warning"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg></span>Pending</span><span class="badge" data-tone="destructive"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-circle-x"/></svg></span>Rejected</span><span class="badge" data-tone="neutral">Draft</span></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Badge"><code class="code__source">&lt;!-- icons: include the icon sheet once per page (see the Setup section, #setup) --&gt;
 &lt;div class=&quot;hm-demo-row&quot;&gt;
   &lt;span class=&quot;badge&quot; data-tone=&quot;success&quot;&gt;&lt;span class=&quot;badge-icon&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-circle-check&quot;/&gt;&lt;/svg&gt;&lt;/span&gt;Approved&lt;/span&gt;
   &lt;span class=&quot;badge&quot; data-tone=&quot;warning&quot;&gt;&lt;span class=&quot;badge-icon&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-triangle-alert&quot;/&gt;&lt;/svg&gt;&lt;/span&gt;Pending&lt;/span&gt;
   &lt;span class=&quot;badge&quot; data-tone=&quot;destructive&quot;&gt;&lt;span class=&quot;badge-icon&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-circle-x&quot;/&gt;&lt;/svg&gt;&lt;/span&gt;Rejected&lt;/span&gt;
   &lt;span class=&quot;badge&quot; data-tone=&quot;neutral&quot;&gt;Draft&lt;/span&gt;
 &lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="exchange"><h3><dfn class="hm-term" tabindex="0" data-tooltip="The deal for one action: which request goes out, what HTML comes back, and where it lands. Classic hypermedia — not a private JSON API for a SPA.">Server exchange</dfn></h3><p class="hm-ref-lead">This <dfn class="hm-term" tabindex="0" data-tooltip="Reusable unit of UI: the HTML the server sends, the request it may fire, and maybe a tiny bit of JS. Not a React component — pure hypermedia.">Hyperpart</dfn> has <strong>no server exchange</strong> — it is presentation or client chrome only. htmx does not issue a request on this part&#x27;s behalf. If you put an <dfn class="hm-term" tabindex="0" data-tooltip="Something the user can act on that starts a request — a Delete button with hx-delete, a search box that hx-gets results. Browser talks to server; server returns HTML.">affordance</dfn> (<code>hx-*</code>) on a control that uses this markup, that action&#x27;s exchange belongs to the action, not this part.</p></section><section class="hm-ref" id="how-to"><h3>How to use it</h3><p class="hm-ref-lead">No extended guidance authored yet — start from Copy this and the dependency chips (Primitive = markup only; <dfn class="hm-term" tabindex="0" data-tooltip="Small vanilla-JS helper only when the platform lacks a primitive. No client store — it only reads and writes the DOM.">controller</dfn> = load listed JS; Endpoint = implement <dfn class="hm-term" tabindex="0" data-tooltip="The deal for one action: which request goes out, what HTML comes back, and where it lands. Classic hypermedia — not a private JSON API for a SPA.">Server exchange</dfn>).</p><h4>Seams</h4><ul><li>copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches</li><li>no Server exchange on this part — pure presentation or client chrome</li><li>no typed contracts/ module yet — the partial is the surface of record</li></ul></section><section class="hm-ref" id="dom-contract"><h3><dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn></h3><p class="hm-ref-lead">No typed dual-lock module in <code>contracts/</code> for this part yet. Treat <strong>Copy this</strong> as the required surface — preserve the root class and <code>data-*</code> modifiers so the CSS/JS bundle matches. Author <code>contracts/&lt;part&gt;.py</code> when CI should stop-ship attribute drift (see <code>contracts/AUTHORING.md</code>).</p></section><section class="hm-ref" id="files"><h3>Source files</h3><p class="hm-ref-lead">Canonical registration in the registry. No dedicated controller — CSS for this part lives in the layered bundle.</p><p class="hm-anatomy"><code>site/registry.py</code></p></section></section>
-<footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
-Generated from the design-system sources by <code>site/build_site.py</code>.
-The demo above renders the exact snippet — copy it into any htmx4 app.
-<strong>Dazzle monorepo:</strong> dual-lock attrs use the <code>data-dz-*</code>
-prefix (and <code>dz-*</code> classes when <code>DEFAULT_PREFIX</code> is applied);
-this gallery’s demos are unprefixed by design. Do not paste gallery markup into
-Dazzle without the package prefixer / dual-lock contract.
-</footer>
+<footer class="hm-page-meta" aria-label="Page meta"><h2 class="hm-page-meta__title">About this page</h2><dl class="hm-page-meta__list"><div class="hm-page-meta__item hm-dialect"><dt>Markup dialect</dt><dd>Demos and Copy this are <strong>unprefixed</strong> (standalone HM / paste into any htmx4 app). Dazzle apps use the <code></code> class and <code>data-*</code> form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python on this page is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-*</code>). Match the CSS/JS bundle you load — do not paste gallery markup into Dazzle without the package prefixer.</dd></div><div class="hm-page-meta__item hm-dogfood"><dt>Dogfood</dt><dd>The live demo, code snippets (<dfn class="hm-term" tabindex="0" data-tooltip="The HTML fragment the server renders — the look of the control, ready to paste or emit. No client state graph inside it.">partial</dfn> + code Hyperpart), theme control (toggle-group), and breadcrumb are HaTchi-MaXchi. Page layout (<code>hm-*</code>) is gallery scaffolding on the same tokens — not a separate UI kit.</dd></div><div class="hm-page-meta__item"><dt>Glossary</dt><dd>Dotted terms (Hyperpart, affordance, Server exchange, DOM contract, …) explain on hover or keyboard focus — fundamental hypermedia, not a black box. Tips are non-critical; section prose and tables are the contract.</dd></div></dl><p class="hm-page-meta__provenance">Generated from the design-system sources by <code>site/build_site.py</code>. The demo is the same string as <strong>Copy this</strong> — they cannot drift.</p></footer>
 </main>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>

@@ -519,17 +519,58 @@ def _notes_html(hyperpart, prefix: str) -> str:  # type: ignore[no-untyped-def]
     )
 
 
-def _dialect_html() -> str:
-    return (
-        '<p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page '
-        "are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). "
-        "Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> "
-        f"attribute form. {_term('dom-contract')} Python below is "
-        f"{_term('dual-lock')} source (often still <code>data-dz-*</code>). "
-        "Match the CSS/JS bundle you load. "
-        '<span class="hm-term-hint">Dotted terms explain on hover or keyboard focus '
-        "— hypermedia, not a black box.</span></p>"
+def _part_page_meta_footer(prefix: str) -> str:
+    """Boilerplate footer for part pages — dialect, dogfood, provenance.
+
+    Lives at the bottom on purpose: agents scrape ``agents/<id>.md`` (dialect
+    still leads there). Humans on HTML should hit demo + contracts first; this
+    meta is orientation, not the implementer spine.
+    """
+    dialect = (
+        f"Demos and Copy this are <strong>unprefixed</strong> (standalone HM / "
+        f"paste into any htmx4 app). Dazzle apps use the <code>dz-</code> class "
+        f"and <code>data-dz-*</code> form. {_term('dom-contract')} Python on this "
+        f"page is {_term('dual-lock')} source (often still <code>data-dz-*</code>). "
+        f"Match the CSS/JS bundle you load — do not paste gallery markup into "
+        f"Dazzle without the package prefixer."
     )
+    dogfood = (
+        f"The live demo, code snippets ({_term('partial')} + code Hyperpart), "
+        f"theme control (toggle-group), and breadcrumb are HaTchi-MaXchi. "
+        f"Page layout (<code>hm-*</code>) is gallery scaffolding on the same "
+        f"tokens — not a separate UI kit."
+    )
+    glossary = (
+        "Dotted terms (Hyperpart, affordance, Server exchange, DOM contract, …) "
+        "explain on hover or keyboard focus — fundamental hypermedia, not a "
+        "black box. Tips are non-critical; section prose and tables are the contract."
+    )
+    provenance = (
+        "Generated from the design-system sources by "
+        "<code>site/build_site.py</code>. The demo is the same string as "
+        "<strong>Copy this</strong> — they cannot drift."
+    )
+    body = (
+        '<footer class="hm-page-meta" aria-label="Page meta">'
+        '<h2 class="hm-page-meta__title">About this page</h2>'
+        '<dl class="hm-page-meta__list">'
+        '<div class="hm-page-meta__item hm-dialect">'
+        "<dt>Markup dialect</dt>"
+        f"<dd>{dialect}</dd>"
+        "</div>"
+        '<div class="hm-page-meta__item hm-dogfood">'
+        "<dt>Dogfood</dt>"
+        f"<dd>{dogfood}</dd>"
+        "</div>"
+        '<div class="hm-page-meta__item">'
+        "<dt>Glossary</dt>"
+        f"<dd>{glossary}</dd>"
+        "</div>"
+        "</dl>"
+        f'<p class="hm-page-meta__provenance">{provenance}</p>'
+        "</footer>"
+    )
+    return apply_prefix(body, prefix)
 
 
 def _guide_body() -> str:
@@ -858,19 +899,6 @@ def _part_breadcrumb(part_id: str, title: str) -> str:
         f'<li><a href="../#{_html.escape(part_id)}">Hyperparts</a></li>'
         f'<li aria-current="page">{_html.escape(title)}</li>'
         "</ol></nav>"
-    )
-
-
-def _dogfood_banner() -> str:
-    """Human-facing note: product UX on the page is HaTchi-MaXchi itself."""
-    return (
-        '<p class="hm-dogfood" role="note">'
-        "<strong>Dogfood:</strong> the live demo, code snippets "
-        f"({_term('partial')} + code Hyperpart), theme control (toggle-group), "
-        "and this breadcrumb are HaTchi-MaXchi. Page layout chrome "
-        "(<code>hm-*</code> grid/nav) is gallery scaffolding on the same tokens "
-        "— not a separate UI kit."
-        "</p>"
     )
 
 
@@ -1437,11 +1465,6 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-ref-lead { font-size: var(--text-sm); color: var(--colour-text-muted);
   margin: 0 0 .75rem; max-width: 46rem; line-height: 1.55; }
 .hm-ref-mod { font-family: var(--font-mono); font-weight: var(--weight-medium); }
-.hm-dialect { font-size: var(--text-sm); color: var(--colour-text-muted);
-  margin: 0 0 1.25rem; padding: .55rem .75rem; max-width: 46rem;
-  border: 1px solid var(--colour-border); border-radius: var(--radius-md);
-  background: var(--colour-surface); line-height: 1.5; }
-.hm-dialect code { font-size: .9em; }
 /* Glossary terms — human confidence on agent-primary pages (non-critical).
    Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
 .hm-term {
@@ -1489,26 +1512,59 @@ body { background: var(--colour-bg); color: var(--colour-text);
   opacity: 1;
   transition-delay: 180ms;
 }
-.hm-term-hint {
-  display: block;
-  margin-top: .45rem;
-  font-size: var(--text-xs, .75rem);
-  color: var(--colour-text-muted);
-  opacity: .92;
-}
-.hm-dogfood {
-  font-size: var(--text-sm);
-  color: var(--colour-text-muted);
-  margin: 0 0 1rem;
-  padding: .5rem .75rem;
+.hm-hero .breadcrumb { margin-bottom: .5rem; }
+/* Part-page meta footer: dialect / dogfood / provenance — after the spine. */
+.hm-page-meta {
+  margin-block: 2.5rem 0;
+  padding-block: 1.5rem 2rem;
+  border-block-start: 1px solid var(--colour-border);
   max-width: 46rem;
-  border-inline-start: 3px solid var(--colour-brand);
-  background: var(--colour-brand-soft, var(--colour-surface));
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+.hm-page-meta__title {
+  margin: 0 0 .85rem;
+  font-size: .7rem;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--colour-text-muted);
+}
+.hm-page-meta__list {
+  margin: 0;
+  display: grid;
+  gap: .85rem;
+}
+.hm-page-meta__item {
+  margin: 0;
+  padding: .65rem .75rem;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
+.hm-page-meta__item dt {
+  margin: 0 0 .25rem;
+  font-size: .65rem;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--colour-text-muted);
+}
+.hm-page-meta__item dd {
+  margin: 0;
+  color: var(--colour-text);
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
-.hm-dogfood code { font-size: .9em; }
-.hm-hero .breadcrumb { margin-bottom: .5rem; }
+.hm-page-meta__item code { font-size: .9em; }
+.hm-page-meta__provenance {
+  margin: 1rem 0 0;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  line-height: 1.45;
+}
+.hm-page-meta__provenance code { font-size: .9em; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -1732,13 +1788,13 @@ window.addEventListener('storage', function (e) {{
                     f'<section class="hm-comp" id="{c.id}">'
                     f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
                     f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
-                    f"{_dialect_html()}"
-                    f"{apply_prefix(_dogfood_banner(), prefix)}"
                     f'<div class="hm-preview">{framed_live_part}</div>'
                     f'<section class="hm-ref" id="copy"><h3>Copy this</h3>'
                     f"{snippet_block}</section>"
                     # Linear skeleton on EVERY part (empty states when N/A):
                     # exchange → how-to → DOM contract → notes → files.
+                    # Dialect/dogfood/provenance live in the page footer — not
+                    # ahead of the implementer spine (agents use agents/<id>.md).
                     f"{apply_prefix(_exchanges_html(c), prefix)}"
                     f"{apply_prefix(_guidance_html(c), prefix)}"
                     # Contract Python keeps dual-lock names (data-dz-*).
@@ -1886,14 +1942,7 @@ Every snippet is the live example — copy it into any htmx4 app.
   {theme_toggle}
 </div>
 {section}
-<footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
-Generated from the design-system sources by <code>site/build_site.py</code>.
-The demo above renders the exact snippet — copy it into any htmx4 app.
-<strong>Dazzle monorepo:</strong> dual-lock attrs use the <code>data-dz-*</code>
-prefix (and <code>dz-*</code> classes when <code>DEFAULT_PREFIX</code> is applied);
-this gallery’s demos are unprefixed by design. Do not paste gallery markup into
-Dazzle without the package prefixer / dual-lock contract.
-</footer>
+{_part_page_meta_footer(prefix)}
 </main>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>
