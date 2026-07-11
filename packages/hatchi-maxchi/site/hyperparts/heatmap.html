@@ -305,21 +305,15 @@ body { background: var(--colour-bg); color: var(--colour-text);
         <span class="code__tok--name">cells_html</span> <span class="code__tok--op">=</span> <span class="code__tok--str">&quot;&quot;</span>
         <span class="code__tok--kw">for</span> <span class="code__tok--name">cell</span> <span class="code__tok--kw">in</span> <span class="code__tok--name">row</span><span class="code__tok--op">.</span><span class="code__tok--name">cells</span><span class="code__tok--op">:</span>
             <span class="code__tok--name">cells_html</span> <span class="code__tok--op">+=</span> <span class="code__tok--op">(</span>
-                <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;td class=&quot;dz-heatmap-cell&quot;{_tone_attr(cell, h.thresholds)}&gt; &#x27;</span>
-                <span class="code__tok--name">f</span><span class="code__tok--str">&quot;{cell:.1f} &lt;/td&gt;&quot;</span>
+                <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;td class=&quot;dz-heatmap-cell&quot;{_tone_attr(cell, h.thresholds)}&gt; {cell:.1f} &lt;/td&gt;&#x27;</span>
             <span class="code__tok--op">)</span>
         <span class="code__tok--name">body_rows</span><span class="code__tok--op">.</span><span class="code__tok--name">append</span><span class="code__tok--op">(</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&quot;&lt;tr&gt;&quot;</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;td class=&quot;dz-heatmap-row-label&quot;&gt;{html.escape(row.label)}&lt;/td&gt;&#x27;</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&quot;{cells_html}&quot;</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&quot;&lt;/tr&gt;&quot;</span>
+            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;tr&gt;&lt;td class=&quot;dz-heatmap-row-label&quot;&gt;{html.escape(row.label)}&lt;/td&gt;{cells_html}&lt;/tr&gt;&#x27;</span>
         <span class="code__tok--op">)</span>
     <span class="code__tok--name">tbody</span> <span class="code__tok--op">=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&quot;&lt;tbody&gt;{&#x27;&#x27;.join(body_rows)}&lt;/tbody&gt;&quot;</span>
     <span class="code__tok--name">overflow_html</span> <span class="code__tok--op">=</span> <span class="code__tok--str">&quot;&quot;</span>
     <span class="code__tok--kw">if</span> <span class="code__tok--name">h</span><span class="code__tok--op">.</span><span class="code__tok--name">total</span> <span class="code__tok--op">&gt;</span> <span class="code__tok--builtin">len</span><span class="code__tok--op">(</span><span class="code__tok--name">h</span><span class="code__tok--op">.</span><span class="code__tok--name">rows</span><span class="code__tok--op">):</span>
-        <span class="code__tok--name">overflow_html</span> <span class="code__tok--op">=</span> <span class="code__tok--op">(</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;p class=&quot;dz-heatmap-overflow&quot;&gt;Showing {len(h.rows)} of {h.total}&lt;/p&gt;&#x27;</span>
-        <span class="code__tok--op">)</span>
+        <span class="code__tok--name">overflow_html</span> <span class="code__tok--op">=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;p class=&quot;dz-heatmap-overflow&quot;&gt;Showing {len(h.rows)} of {h.total}&lt;/p&gt;&#x27;</span>
     <span class="code__tok--kw">return</span> <span class="code__tok--op">(</span>
         <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-heatmap-region&quot; data-dz-heatmap&gt;&#x27;</span>
         <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-heatmap-scroll&quot;&gt;&#x27;</span>

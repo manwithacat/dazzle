@@ -22,9 +22,11 @@ from dazzle.render.fragment.ingest.models import (
     Funnel,
     GridEditCell,
     Heatmap,
+    Histogram,
     KanbanCard,
     MetricTile,
     MoneyField,
+    PivotTable,
     ProfileCard,
     QueueRow,
     SearchResultRow,
@@ -839,6 +841,74 @@ def render_bar_track(b: BarTrack) -> str:
         f'<p class="dz-bar-track-summary">'
         f"{len(b.rows)} rows · scale 0–{max_summary}"
         f"</p>"
+        f"</div>"
+    )
+
+
+def histogram_root_attrs(_h: Histogram) -> str:
+    return "data-dz-histogram"
+
+
+def pivot_root_attrs(_p: PivotTable) -> str:
+    return "data-dz-pivot"
+
+
+def render_histogram(h: Histogram) -> str:
+    """Model → histogram region (matches HM contracts/histogram.py)."""
+    root_attrs = histogram_root_attrs(h)
+    if not h.bins:
+        return (
+            f'<div class="dz-histogram-region" {root_attrs}>'
+            f'<p class="dz-empty-dense" role="status">'
+            f"{_html.escape(h.empty_message)}</p>"
+            f"</div>"
+        )
+    total = sum(b.count for b in h.bins)
+    max_count = max(b.count for b in h.bins) or 1
+    summary = (
+        f'<p class="dz-histogram-summary">'
+        f"{len(h.bins)} bins · {total} samples · peak {max_count}"
+        f"</p>"
+    )
+    return f'<div class="dz-histogram-region" {root_attrs}>{h.svg_html}{summary}</div>'
+
+
+def render_pivot_table(p: PivotTable) -> str:
+    """Model → pivot region (matches HM contracts/pivot.py)."""
+    root_attrs = pivot_root_attrs(p)
+    if not p.rows:
+        return (
+            f'<div class="dz-pivot-region" {root_attrs}>'
+            f'<p class="dz-empty-dense" role="status">'
+            f"{_html.escape(p.empty_message)}</p>"
+            f"</div>"
+        )
+
+    head_dim = "".join(f"<th>{_html.escape(h)}</th>" for h in p.dim_headers)
+    head_measure = "".join(
+        f'<th class="is-measure">{_html.escape(h)}</th>' for h in p.measure_headers
+    )
+    thead = f"<thead><tr>{head_dim}{head_measure}</tr></thead>"
+    n_dim = len(p.dim_headers)
+    body_parts: list[str] = []
+    for row in p.rows:
+        cells = ""
+        for i, c in enumerate(row):
+            if i >= n_dim:
+                cells += f'<td class="is-measure">{c}</td>'
+            else:
+                cells += f"<td>{c}</td>"
+        body_parts.append(f"<tr>{cells}</tr>")
+    tbody = f"<tbody>{''.join(body_parts)}</tbody>"
+    n = len(p.rows)
+    suffix = "" if n == 1 else "s"
+    summary = f'<p class="dz-pivot-summary">{n} row{suffix}</p>'
+    return (
+        f'<div class="dz-pivot-region" {root_attrs}>'
+        f'<div class="dz-pivot-scroll">'
+        f'<table class="dz-pivot-grid">{thead}{tbody}</table>'
+        f"</div>"
+        f"{summary}"
         f"</div>"
     )
 

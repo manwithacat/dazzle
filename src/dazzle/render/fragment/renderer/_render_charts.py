@@ -28,6 +28,8 @@ from dazzle.render.fragment.ingest import Funnel as FunnelSeam
 from dazzle.render.fragment.ingest import FunnelStage as FunnelStageSeam
 from dazzle.render.fragment.ingest import Heatmap as HeatmapSeam
 from dazzle.render.fragment.ingest import HeatmapRow as HeatmapRowSeam
+from dazzle.render.fragment.ingest import Histogram as HistogramSeam
+from dazzle.render.fragment.ingest import HistogramBin as HistogramBinSeam
 from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
 from dazzle.render.fragment.ingest import Sparkline as SparklineSeam
 from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
@@ -36,6 +38,7 @@ from dazzle.render.fragment.ingest import (
     render_bullet,
     render_funnel,
     render_heatmap,
+    render_histogram,
     render_kanban_card,
     render_sparkline,
     render_timeline_event,
@@ -646,30 +649,28 @@ class _RenderChartsMixin:
         )
 
     def _emit_histogram(self, h: Histogram, ctx: RenderContext) -> str:
-        """Render a Histogram matching legacy
-        `workspace/regions/histogram.html` byte-for-byte: outer
-        `dz-histogram-region` wrapping the SVG (via `histogram_svg`)
-        and a `dz-histogram-summary` line "{count} bins · {total}
-        samples · peak {max_count}". Empty path renders the
-        `dz-empty-dense` fallback inside the region wrapper.
+        """Render a Histogram via HM dual-lock Histogram seam.
+
+        SVG geometry stays in ``dazzle.render.svg.histogram_svg``; the seam
+        carries the trusted SVG plus bin stats for the summary line.
         """
         from dazzle.render.svg import histogram_svg
 
         if not h.bins:
-            return (
-                f'<div class="dz-histogram-region">'
-                f'<p class="dz-empty-dense" role="status">'
-                f"{ctx.escape(h.empty_message)}</p>"
-                f"</div>"
+            return render_histogram(
+                HistogramSeam(label=h.label, bins=[], empty_message=h.empty_message)
             )
 
         svg_bins = tuple((b.label, b.count, b.low, b.high) for b in h.bins)
         svg = histogram_svg(h.label, svg_bins, reference_lines=h.reference_lines)
-        total = sum(b.count for b in h.bins)
-        max_count = max(b.count for b in h.bins) or 1
-        summary = (
-            f'<p class="dz-histogram-summary">'
-            f"{len(h.bins)} bins · {total} samples · peak {max_count}"
-            f"</p>"
+        return render_histogram(
+            HistogramSeam(
+                label=h.label,
+                bins=[
+                    HistogramBinSeam(label=b.label, count=b.count, low=b.low, high=b.high)
+                    for b in h.bins
+                ],
+                svg_html=svg,
+                empty_message=h.empty_message,
+            )
         )
-        return f'<div class="dz-histogram-region">{svg}{summary}</div>'

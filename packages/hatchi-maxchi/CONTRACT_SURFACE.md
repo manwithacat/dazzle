@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 34 |
+| Modules | 36 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -32,11 +32,13 @@ blast radius (who embeds / refuses this part).
 | `grid_edit` | `grid-edit` | `[data-dz-grid][data-dz-grid-edit-url]` | [data-dz-grid-edit][data-dz-edit-kind=one_of:text\|date\|bool\|select, data-dz-edit-label=present, data-dz-edit-options=json_pairs(when:data-dz-edit-kind=select), data-dz-edit-value=present] | GridEditCell(col:str:req; kind:Literal:req; label:str:req; options:list[tuple[str,str]]\|None:opt; value:str:req) |
 | `grid_resize` | `grid-resize` | `[data-dz-grid]` | [data-dz-grid-resize][data-dz-grid-resize=present]; col[data-dz-col], [data-dz-col][data-dz-col=present] | — |
 | `heatmap` | `heatmap` | `[data-dz-heatmap]` | [data-dz-heatmap][data-dz-heatmap=present] | Heatmap(columns:list[str]:opt; empty_message:str:opt; rows:list[HeatmapRow]:opt; thresholds:list[float]:opt; total:int:opt); HeatmapRow(cells:list[float]:opt; label:str:req) |
+| `histogram` | `histogram` | `[data-dz-histogram]` | [data-dz-histogram][data-dz-histogram=present] | Histogram(bins:list[HistogramBin]:opt; empty_message:str:opt; label:str:opt; svg_html:str:opt); HistogramBin(count:int:opt; high:float:opt; label:str:req; low:float:opt) |
 | `kanban` | `kanban` | `[data-dz-kanban-card]` | [data-dz-kanban-card][data-dz-kanban-card=present] | KanbanCard(attention_level:str:opt; attention_message:str:opt; fields_html:str:opt; title:str:req) |
 | `master_detail` | `master-detail` | `[data-dz-master-detail]` | [data-dz-master-detail][]; [data-dz-master-detail-list-body][]; [data-dz-master-detail-detail-body][] | — |
 | `metrics` | `metrics` | `[data-dz-metric-key]` | [data-dz-metric-key][data-dz-metric-key=present] | MetricTile(delta_direction:Literal:opt; delta_pct:float:opt; delta_period_label:str:opt; delta_sentiment:Literal:opt; delta_value:str:opt; label:str:req; metric_key:str:opt; tone:Literal:opt; value:str:req) |
 | `money` | `money` | `[data-dz-money]` | [data-dz-money][data-dz-currency=present, data-dz-scale=present] | MoneyField(currency:str:opt; field_id:str:opt; major_display:str:opt; minor_value:int:opt; name:str:req; scale:int:opt) |
 | `pdf` | `pdf` | `[data-dz-pdf]` | [data-dz-pdf][data-dz-pdf-lib=present, data-dz-pdf-src=present]; [data-dz-pdf-viewer][] | — |
+| `pivot` | `pivot` | `[data-dz-pivot]` | [data-dz-pivot][data-dz-pivot=present] | PivotTable(dim_headers:list[str]:opt; empty_message:str:opt; measure_headers:list[str]:opt; rows:list[list[str]]:opt) |
 | `profile_card` | `profile-card` | `[data-dz-profile-card]` | [data-dz-profile-card][data-dz-profile-card=present] | ProfileCard(avatar_url:str:opt; facts:list[str]:opt; initials:str:opt; primary:str:opt; secondary:str:opt; stats:list[tuple[str,str]]:opt) |
 | `queue` | `queue` | `[data-dz-queue-row]` | [data-dz-queue-row][data-dz-queue-row=present] | QueueRow(actions_html:str:opt; attention_level:str:opt; attention_message:str:opt; badges_html:str:opt; date_html:str:opt; title:str:req) |
 | `search_select` | `search-select` | `[data-dz-widget="search_select"]` | [data-dz-widget="search_select"][] | SearchResultRow(id:str:req; media_html:str:opt; name:str:req; results_target:str:req; secondary:str:opt; select_url:str:req); SearchSelectShell(blur_grace_ms:int:opt; confirm_hold_ms:int:opt; debounce_ms:int:opt; field_id:str:opt; field_name:str:req; initial_label:str:opt; initial_value:str:opt; input_id:str:opt; placeholder:str:opt; prompt:str:opt; results_id:str:opt; search_url:str:req) |

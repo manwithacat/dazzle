@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **histogram + pivot → schema+DOM dual-lock** — HM `contracts/histogram.py`
+  (`Histogram`/`HistogramBin`, root `data-dz-histogram`, trusted `svg_html`) and
+  `contracts/pivot.py` (`PivotTable`, root `data-dz-pivot`, trusted cell HTML)
+  with ingest models/renders + sole-emitters. SVG geometry and badge/FK cell
+  markup stay host-side; region chrome is dual-locked.
 - **heatmap + bullet + bar-track → schema+DOM dual-lock** — HM
   `contracts/heatmap.py`, `contracts/bullet.py`, `contracts/bar_track.py` with
   ingest models/renders + region roots `data-dz-heatmap` / `data-dz-bullet` /

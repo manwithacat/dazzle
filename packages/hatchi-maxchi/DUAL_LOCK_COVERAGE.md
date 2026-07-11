@@ -10,8 +10,8 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 |--------|------:|
 | Component CSS modules | 63 |
 | Controllers | 20 |
-| Contract modules | 34 |
-| Dual-lock schema+DOM | 19 |
+| Contract modules | 36 |
+| Dual-lock schema+DOM | 21 |
 | Dual-lock DOM-only | 14 |
 | Dual-lock deferred | 0 |
 | Contract with no dual-lock row | 1 |
@@ -41,11 +41,13 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `grid_edit` | `grid_edit.py` | `dz-grid-edit.js` | yes | yes | yes | **schema+DOM** |
 | `grid_resize` | `grid_resize.py` | `dz-grid-resize.js` | yes | no | no | **DOM-only** |
 | `heatmap` | `heatmap.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `histogram` | `histogram.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `kanban` | `kanban.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `master_detail` | `master_detail.py` | `dz-master-detail.js` | yes | no | no | **DOM-only** |
 | `metrics` | `metrics.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `money` | `money.py` | `dz-money.js` | yes | yes | yes | **schema+DOM** |
 | `pdf` | `pdf.py` | `dz-pdf.js` | yes | no | no | **DOM-only** |
+| `pivot` | `pivot.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `profile_card` | `profile_card.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `queue` | `queue.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `search_select` | `search_select.py` | `dz-search-select.js` | yes | yes | yes | **schema+DOM** |

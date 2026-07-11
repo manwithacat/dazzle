@@ -483,3 +483,36 @@ class BarTrack(BaseModel):
 
     rows: list[BarTrackRow] = Field(default_factory=list)
     max_value: float = 100.0
+
+
+# ── Histogram seam copy (contracts/histogram.py) ─────────────────────
+
+
+class HistogramBin(BaseModel):
+    """One continuous histogram bin."""
+
+    label: str
+    count: int = 0
+    low: float = 0.0
+    high: float = 0.0
+
+
+class Histogram(BaseModel):
+    """Distribution histogram — dual-lock unit for histogram."""
+
+    label: str = ""
+    bins: list[HistogramBin] = Field(default_factory=list)
+    svg_html: str = ""
+    empty_message: str = "No data available."
+
+
+# ── Pivot seam copy (contracts/pivot.py) ─────────────────────────────
+
+
+class PivotTable(BaseModel):
+    """Cross-tab matrix — dual-lock unit for pivot."""
+
+    dim_headers: list[str] = Field(default_factory=list)
+    measure_headers: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
+    empty_message: str = "No data to pivot."

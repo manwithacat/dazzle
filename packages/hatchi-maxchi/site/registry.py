@@ -3032,7 +3032,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "Two group-bys crossed into a matrix — row labels × column buckets, "
             "empty intersections rendered as explicit nulls.",
-            '<div class="dz-pivot-region hm-measure-lg">'
+            '<div class="dz-pivot-region hm-measure-lg" data-dz-pivot>'
             '<div class="dz-pivot-scroll">'
             '<table class="dz-pivot-grid">'
             "<thead><tr><th>System</th><th>Severity</th>"
@@ -3049,15 +3049,19 @@ def select(source: str, id: str) -> str:
             "</tbody></table></div>"
             '<p class="dz-pivot-summary">2 rows</p>'
             "</div>",
-            notes="One scope-aware two-dimensional <code>GROUP BY</code> fills "
-            "the whole matrix: dimension columns lead (status values render as "
-            "badges, FK values as their label text), then measure columns — "
+            notes="Dual-lock root is <code>data-dz-pivot</code> "
+            "(<code>contracts/pivot.py</code>). One scope-aware two-dimensional "
+            "<code>GROUP BY</code> fills the whole matrix: dimension columns "
+            "lead (status values render as badges, FK values as their label "
+            "text), then measure columns — "
             "<code>class=&quot;is-measure&quot;</code> on the measure th/td pair "
             "drives the mono right-aligned numeric treatment. Empty "
             "intersections render <code>dz-pivot-null</code> em-dashes rather "
             "than blanks (absence is data). The scroll wrapper keeps wide "
-            "matrices inside their card.",
+            "matrices inside their card. Cell HTML is host-trusted SSR so "
+            "badges stay on the Dazzle side.",
             tags=("data", "chart"),
+            contracts=("contracts/pivot.py",),
         ),
         Hyperpart(
             "bar-track",
@@ -3097,7 +3101,7 @@ def select(source: str, id: str) -> str:
             "Histogram",
             "Data",
             "Value-distribution buckets as a server-rendered SVG plus a mono summary line.",
-            '<div class="dz-histogram-region hm-measure-lg">'
+            '<div class="dz-histogram-region hm-measure-lg" data-dz-histogram>'
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" '
             'role="img" aria-label="Histogram — 6 buckets, 120 samples">'
             '<rect x="4" y="30" width="24" height="18" fill="var(--colour-brand)" fill-opacity="0.7"/>'
@@ -3109,11 +3113,15 @@ def select(source: str, id: str) -> str:
             "</svg>"
             '<p class="dz-histogram-summary">6 buckets · 120 samples</p>'
             "</div>",
-            notes="The SVG body is SERVER-computed (this demo is schematic — the "
-            "real geometry comes from <code>dazzle.render.svg.histogram_svg</code>) "
-            "with the numeric story in <code>aria-label</code> and the mono "
-            "summary line.",
+            notes="Dual-lock root is <code>data-dz-histogram</code> "
+            "(<code>contracts/histogram.py</code>). The SVG body is "
+            "SERVER-computed (this demo is schematic — the real geometry comes "
+            "from <code>dazzle.render.svg.histogram_svg</code>) with the numeric "
+            "story in <code>aria-label</code> and the mono summary line. Bin "
+            "geometry rides trusted <code>svg_html</code> so HM need not import "
+            "Dazzle SVG helpers.",
             tags=("data", "chart"),
+            contracts=("contracts/histogram.py",),
         ),
         Hyperpart(
             "box-plot",

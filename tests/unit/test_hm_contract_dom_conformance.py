@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -613,6 +613,63 @@ def test_bar_track_emission_conforms_to_bar_track_contract() -> None:
     assert "data-dz-bar-track" in html
     assert 'role="progressbar"' in html
     assert "Storage" in html
+
+
+def test_histogram_emission_conforms_to_histogram_contract() -> None:
+    """Real FragmentRenderer Histogram path satisfies contracts/histogram.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import Histogram as HistFrag
+    from dazzle.render.fragment.primitives.data import HistogramBin as BinFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    hist_mod = load_hm_module("contracts/histogram.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        HistFrag(
+            label="Latency",
+            bins=(
+                BinFrag(label="0-10", count=12, low=0.0, high=10.0),
+                BinFrag(label="10-20", count=30, low=10.0, high=20.0),
+                BinFrag(label="20-30", count=42, low=20.0, high=30.0),
+            ),
+        )
+    )
+    violations = kit.validate_dom(html, hist_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-histogram" in html
+    assert "dz-histogram-summary" in html
+    assert "<svg" in html
+
+
+def test_pivot_emission_conforms_to_pivot_contract() -> None:
+    """Real FragmentRenderer PivotTableRegion path satisfies contracts/pivot.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import PivotDimSpec
+    from dazzle.render.fragment.primitives.data import PivotTableRegion as PivotFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    pivot_mod = load_hm_module("contracts/pivot.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        PivotFrag(
+            dim_specs=(
+                PivotDimSpec(name="system", label="System"),
+                PivotDimSpec(name="severity", label="Severity"),
+            ),
+            measure_keys=("count",),
+            rows=(
+                {"system": "API", "severity": "Critical", "count": 3},
+                {"system": "Dashboard", "severity": None, "count": 9},
+            ),
+        )
+    )
+    violations = kit.validate_dom(html, pivot_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-pivot" in html
+    assert "dz-pivot-grid" in html
+    assert "System" in html  # dim header
+    assert "Api" in html  # non-FK dim cell → status badge (humanized)
+    assert "is-measure" in html
 
 
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────

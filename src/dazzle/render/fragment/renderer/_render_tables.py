@@ -32,6 +32,7 @@ from dazzle.render.fragment.ingest import ActivityRow as ActivityRowSeam
 from dazzle.render.fragment.ingest import BarTrack as BarTrackSeam
 from dazzle.render.fragment.ingest import BarTrackRow as BarTrackRowSeam
 from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
+from dazzle.render.fragment.ingest import PivotTable as PivotTableSeam
 from dazzle.render.fragment.ingest import ProfileCard as ProfileCardSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
 from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
@@ -40,6 +41,7 @@ from dazzle.render.fragment.ingest import (
     render_activity_row,
     render_bar_track,
     render_metric_tile,
+    render_pivot_table,
     render_profile_card,
     render_queue_row,
     render_status_list_entry,
@@ -802,71 +804,49 @@ class _RenderTablesMixin:
         )
 
     def _emit_pivot_table_region(self, p: PivotTableRegion, ctx: RenderContext) -> str:
-        """Render a PivotTableRegion matching legacy
-        `workspace/regions/pivot_table.html` byte-for-byte: outer
-        `dz-pivot-region`, `dz-pivot-scroll` + `<table class="dz-pivot-grid">`.
-        Header has N dimension `<th>` cells + M measure `<th class="is-measure">`
-        cells (humanized from measure_keys). Per-row dimension cells
-        use FK label fallback for `is_fk=True` specs and status_badge
-        rendering for non-FK specs (em-dash placeholder for None).
-        Measure cells render raw values with `.is-measure` class.
-        Summary line "{N} row(s)".
+        """Render a PivotTableRegion via HM dual-lock PivotTable seam.
+
+        Dim/measure cell HTML (badges, FK labels) is built host-side and
+        passed as trusted cell strings so the table chrome is dual-locked.
         """
         from dazzle.render.fragment.region import (
             _render_status_badge_html,
         )
 
         if not p.rows:
-            return (
-                f'<div class="dz-pivot-region">'
-                f'<p class="dz-empty-dense" role="status">'
-                f"{ctx.escape(p.empty_message)}</p>"
-                f"</div>"
-            )
+            return render_pivot_table(PivotTableSeam(empty_message=p.empty_message))
 
-        # Header — dim columns then measure columns.
-        head_dim = "".join(f"<th>{ctx.escape(s.label)}</th>" for s in p.dim_specs)
-        head_measure = "".join(
-            f'<th class="is-measure">{ctx.escape(k.replace("_", " ").title())}</th>'
-            for k in p.measure_keys
-        )
-        thead = f"<thead><tr>{head_dim}{head_measure}</tr></thead>"
-
-        body_rows: list[str] = []
+        dim_headers = [s.label for s in p.dim_specs]
+        measure_headers = [k.replace("_", " ").title() for k in p.measure_keys]
+        seam_rows: list[list[str]] = []
         for row in p.rows:
-            cells_html = ""
+            cells: list[str] = []
             for spec in p.dim_specs:
                 if spec.is_fk:
                     fk_label = row.get(f"{spec.name}_label")
                     if fk_label is None:
-                        # Fallback: raw spec.name value, em-dash if also None.
                         sval = row.get(spec.name)
-                        cells_html += f"<td>{ctx.escape(str(sval)) if sval else '—'}</td>"
+                        cells.append(ctx.escape(str(sval)) if sval else "—")
                     else:
-                        cells_html += f"<td>{ctx.escape(str(fk_label))}</td>"
+                        cells.append(ctx.escape(str(fk_label)))
                 else:
                     sval = row.get(spec.name)
                     if sval is None:
-                        cells_html += '<td><span class="dz-pivot-null">—</span></td>'
+                        cells.append('<span class="dz-pivot-null">—</span>')
                     else:
-                        cells_html += f"<td>{_render_status_badge_html(sval, size='sm')}</td>"
+                        cells.append(_render_status_badge_html(sval, size="sm"))
             for k in p.measure_keys:
                 v = row.get(k)
-                cells_html += f'<td class="is-measure">{ctx.escape(str(v))}</td>'
-            body_rows.append(f"<tr>{cells_html}</tr>")
-        tbody = f"<tbody>{''.join(body_rows)}</tbody>"
+                cells.append(ctx.escape(str(v)))
+            seam_rows.append(cells)
 
-        n = len(p.rows)
-        suffix = "" if n == 1 else "s"
-        summary = f'<p class="dz-pivot-summary">{n} row{suffix}</p>'
-
-        return (
-            f'<div class="dz-pivot-region">'
-            f'<div class="dz-pivot-scroll">'
-            f'<table class="dz-pivot-grid">{thead}{tbody}</table>'
-            f"</div>"
-            f"{summary}"
-            f"</div>"
+        return render_pivot_table(
+            PivotTableSeam(
+                dim_headers=dim_headers,
+                measure_headers=measure_headers,
+                rows=seam_rows,
+                empty_message=p.empty_message,
+            )
         )
 
     def _emit_list_region(self, lst: ListRegion, ctx: RenderContext) -> str:

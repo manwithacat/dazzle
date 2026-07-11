@@ -95,21 +95,15 @@ def render(h: Heatmap) -> str:
         cells_html = ""
         for cell in row.cells:
             cells_html += (
-                f'<td class="dz-heatmap-cell"{_tone_attr(cell, h.thresholds)}> '
-                f"{cell:.1f} </td>"
+                f'<td class="dz-heatmap-cell"{_tone_attr(cell, h.thresholds)}> {cell:.1f} </td>'
             )
         body_rows.append(
-            f"<tr>"
-            f'<td class="dz-heatmap-row-label">{html.escape(row.label)}</td>'
-            f"{cells_html}"
-            f"</tr>"
+            f'<tr><td class="dz-heatmap-row-label">{html.escape(row.label)}</td>{cells_html}</tr>'
         )
     tbody = f"<tbody>{''.join(body_rows)}</tbody>"
     overflow_html = ""
     if h.total > len(h.rows):
-        overflow_html = (
-            f'<p class="dz-heatmap-overflow">Showing {len(h.rows)} of {h.total}</p>'
-        )
+        overflow_html = f'<p class="dz-heatmap-overflow">Showing {len(h.rows)} of {h.total}</p>'
     return (
         f'<div class="dz-heatmap-region" data-dz-heatmap>'
         f'<div class="dz-heatmap-scroll">'
