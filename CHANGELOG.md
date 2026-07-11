@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.37] - 2026-07-11
+
+### Changed
+- **#1577 form → ingest emission path** — tags / WidgetCombobox / money form
+  primitives still own product chrome (required, currency selector, symbol);
+  HM contract attributes assemble only via ingest.*_from_form + attr helpers
+  (sole-emitter gates for data-dz-tags / data-dz-combobox / data-dz-money).
+  Public form API unchanged; dual locks remain green.
+
+### Agent Guidance
+- Do not assemble data-dz-tags / data-dz-combobox / money root attrs
+  outside dazzle.render.fragment.ingest — construct the seam model first.
+
 ## [0.101.36] - 2026-07-11
 
 ### Added

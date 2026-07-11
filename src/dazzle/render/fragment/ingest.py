@@ -159,11 +159,13 @@ def tags_from_form(
     initial_value: str = "",
 ) -> TagsField:
     """Map a form ``TagsField`` (or equivalent kwargs) to the HM seam model."""
+    # Pass comma-string through the validator when non-empty; else empty list.
+    tags_seed: str | list[str] = initial_value if initial_value else []
     return TagsField(
         name=name,
         field_id=f"field-{name}",
         label=label or name,
-        tags=initial_value if initial_value else [],
+        tags=tags_seed,  # type: ignore[arg-type]  # before-validator accepts str
         placeholder=placeholder,
     )
 
@@ -177,11 +179,12 @@ def combobox_from_form(
     initial_value: str = "",
 ) -> ComboboxField:
     """Map a form ``WidgetCombobox`` to the HM combobox seam model."""
+    # Pairs go through ComboboxField._pairs before → list[ComboboxOption].
     return ComboboxField(
         name=name,
         field_id=f"field-{name}",
         label=label or name,
-        options=list(options),
+        options=list(options),  # type: ignore[arg-type]  # before-validator
         selected=initial_value,
         placeholder=placeholder,
     )
