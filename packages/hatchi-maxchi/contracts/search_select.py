@@ -77,6 +77,8 @@ class SearchSelectShell(BaseModel):
     initial_value: str = ""
     initial_label: str = ""
     debounce_ms: int = 300
+    blur_grace_ms: int = 200
+    confirm_dwell_ms: int = 1500
 
 
 EXEMPLARS: list[SearchResultRow] = [
@@ -149,7 +151,9 @@ def render_result_list(rows: list[SearchResultRow], *, empty_q: str = "") -> str
 def render_shell(shell: SearchSelectShell) -> str:
     """Widget shell only (prompt in the listbox)."""
     return (
-        f'<div class="dz-search-select" data-dz-widget="search_select">'
+        f'<div class="dz-search-select" data-dz-widget="search_select" '
+        f'data-dz-blur-grace-ms="{shell.blur_grace_ms}" '
+        f'data-dz-confirm-dwell-ms="{shell.confirm_dwell_ms}">'
         f'<input type="hidden" name="{html.escape(shell.field_name, quote=True)}" '
         f'id="{html.escape(shell.field_id, quote=True)}" '
         f'value="{html.escape(shell.initial_value, quote=True)}">'

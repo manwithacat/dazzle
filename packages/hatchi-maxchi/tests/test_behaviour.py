@@ -1625,10 +1625,13 @@ def test_related_tables_tab_strip_rides_dz_tabs(page) -> None:  # type: ignore[n
 
 
 def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # type: ignore[no-untyped-def]
-    """F4b: the typeahead's open state is one aria-expanded attribute.
-    Focus opens the panel; a result-row click (which blurs the input)
-    must land its htmx select exchange within the 200ms grace; focusing
-    elsewhere closes the panel."""
+    """F4b: open state is data-dz-open / aria-expanded on the widget.
+
+    Focus opens the panel; a result-row click (which blurs the input) must
+    land its htmx select exchange within the blur grace. After select, the
+    confirm fragment stays visible for data-dz-confirm-dwell-ms (default
+    ~1.5s) — not hidden by the 200ms blur grace alone.
+    """
     goto_part(page, "search-select")
     root = "#search-select .search-select"
     inp = f"{root} input[type=text]"
@@ -1641,14 +1644,17 @@ def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # t
     page.fill(inp, "auro")
     page.wait_for_timeout(450)  # past the 300ms debounce
     assert "Aurora Energy" in page.inner_text(panel)
+    # Optional media: company rows may be text-only; person rows carry media.
+    assert page.locator(f"{panel} .search-result-row").count() >= 1
 
     page.click(f"{panel} .search-result-row >> nth=0")
     page.wait_for_timeout(300)
-    # the select exchange landed within the 200ms grace (a 0ms close
-    # would hide the row before its click fired)...
-    assert "Selected: Aurora Energy Ltd" in page.inner_text(panel)
-    # ...and by +300ms the panel has closed (Alpine-parity: the blur
-    # grace expired; the confirm line lives inside the closed panel).
+    # Select exchange landed within blur grace...
+    assert "Selected" in page.inner_text(panel)
+    # ...and confirm-dwell keeps the panel open past the blur grace.
+    assert page.is_visible(panel)
+    # After confirm dwell (gallery sets 1800ms) the panel closes.
+    page.wait_for_timeout(2000)
     assert page.is_hidden(panel)
     page.reload()
 

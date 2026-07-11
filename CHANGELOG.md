@@ -17,10 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM search-select timing + demo clarity** — `data-dz-blur-grace-ms`
+  (default 200) vs `data-dz-confirm-dwell-ms` (default 1500) so select
+  confirm feedback stays visible; gallery shell is production-shaped
+  (closed until focus; `load` seeds mock rows). Optional media variance
+  documented as intentional.
 - **HM search-select: fixed result-row anatomy + richer demo** — domain maps
   into name / secondary / optional media slots (`SearchResultRow` +
   `render_result_row`); agents must not invent a picker per entity. Gallery
-  opens with company / person / SKU samples; exchanges document search +
+  shows company / person / SKU samples; exchanges document search +
   select shapes with FastAPI exemplars.
 - **HM code Hyperpart highlights HTML as well as Python** — build-time
   `site/highlight.py` colours tags, attributes (`data-*`/`hx-*` as

@@ -1506,66 +1506,44 @@ HYPERPARTS: list[Hyperpart] = [
         "The FK typeahead: debounced remote search into a listbox, then a "
         "per-row select exchange that fills a hidden id. Domain data maps "
         "into a fixed result-row anatomy (name / secondary / optional media) "
-        "— do not invent a new combobox per entity.",
-        # Gallery: open with sample rows so the fixed anatomy is visible
-        # without typing (mock re-fetches the same family on keyup).
+        "— do not invent a new combobox per entity. "
+        "Demo: focus the input (or type) to open; media is optional so some "
+        "rows are text-only.",
+        # Production-shaped shell: closed + prompt. Gallery mock seeds rich
+        # rows on `load` (and keyup); open only on focus. Confirm dwell keeps
+        # the select feedback visible after a row click.
         '<div class="dz-search-select hm-measure" data-dz-widget="search_select" '
-        'data-dz-open="true">'
+        'data-dz-blur-grace-ms="200" data-dz-confirm-dwell-ms="1800">'
         '<input type="hidden" name="company" id="hm-ss-field" value="">'
         '<input type="text" id="hm-ss-input" class="dz-search-select-input" '
         'placeholder="Search companies, people, SKUs…" autocomplete="off" '
-        'role="combobox" aria-expanded="true" aria-controls="hm-ss-results" '
+        'role="combobox" aria-expanded="false" aria-controls="hm-ss-results" '
         'aria-autocomplete="list" aria-haspopup="listbox" '
         'hx-get="/mock/typeahead" '
-        'hx-trigger="keyup changed delay:300ms" '
+        'hx-trigger="load, keyup changed delay:300ms" '
         'hx-target="#hm-ss-results" hx-params="q">'
         '<div id="hm-ss-results" role="listbox" '
         'aria-label="Suggestions" class="dz-search-select-results">'
-        # text-only company
-        '<div class="dz-search-result-row" role="option" tabindex="-1" '
-        'data-dz-result-id="co-aurora" '
-        'hx-get="/mock/typeahead/select?id=co-aurora" hx-target="#hm-ss-results" '
-        'hx-swap="innerHTML">'
-        '<div class="dz-search-result-body">'
-        '<div class="dz-search-result-name">Aurora Energy Ltd</div>'
-        '<div class="dz-search-result-secondary">Company no. 09182736 · Utilities'
-        "</div></div></div>"
-        # person + initials media
-        '<div class="dz-search-result-row" role="option" tabindex="-1" '
-        'data-dz-result-id="user-jd" '
-        'hx-get="/mock/typeahead/select?id=user-jd" hx-target="#hm-ss-results" '
-        'hx-swap="innerHTML">'
-        '<div class="dz-search-result-media" aria-hidden="true">JD</div>'
-        '<div class="dz-search-result-body">'
-        '<div class="dz-search-result-name">Jordan Dias</div>'
-        '<div class="dz-search-result-secondary">jordan@acme.example · Ops lead'
-        "</div></div></div>"
-        # SKU + media chip
-        '<div class="dz-search-result-row" role="option" tabindex="-1" '
-        'data-dz-result-id="sku-42" '
-        'hx-get="/mock/typeahead/select?id=sku-42" hx-target="#hm-ss-results" '
-        'hx-swap="innerHTML">'
-        '<div class="dz-search-result-media" aria-hidden="true">SP</div>'
-        '<div class="dz-search-result-body">'
-        '<div class="dz-search-result-name">Sensor pack · SP-42</div>'
-        '<div class="dz-search-result-secondary">SKU · In stock (14)'
-        "</div></div></div>"
-        "</div></div>",
+        '<div class="dz-search-select-prompt" role="option" aria-disabled="true">'
+        "Type to search — rows share one anatomy; media is optional"
+        "</div></div></div>",
         notes="<strong>One Hyperpart, two surfaces.</strong> (1) <em>Shell</em> — "
-        "hidden FK + typeahead + listbox; <code>dz-search-select.js</code> only "
-        "opens/closes (<code>data-dz-open</code> / <code>aria-expanded</code>, "
-        "200ms blur grace so a row click lands). (2) <em>Result rows</em> — the "
-        "search exchange returns a <strong>fixed</strong> micro-pattern: "
-        "<code>.dz-search-result-row</code> → optional "
-        "<code>.dz-search-result-media</code> → <code>.dz-search-result-body</code> "
-        "with <code>.dz-search-result-name</code> + optional "
-        "<code>.dz-search-result-secondary</code>. Map company / user / SKU / "
-        "image-heavy records into those slots — do <em>not</em> invent a new "
-        "picker per data shape. Each row&#x27;s <code>hx-get</code> is the select "
-        "exchange (confirm fragment + hidden id filled server-side). The form "
-        "posts the hidden input, never the visible text. See "
-        "<code>contracts/search_select.py</code> (<code>SearchResultRow</code> + "
-        "<code>render_result_row</code>).",
+        "hidden FK + typeahead + listbox; <code>dz-search-select.js</code> "
+        "opens/closes (<code>data-dz-open</code> / <code>aria-expanded</code>). "
+        "<strong>Timing knobs on the root:</strong> "
+        "<code>data-dz-blur-grace-ms</code> (default 200) — wait after blur so a "
+        "result-row click can land; <code>data-dz-confirm-dwell-ms</code> "
+        "(default 1500) — how long to keep the panel open after a select "
+        "exchange paints <code>.dz-select-result-confirm</code> (0 closes with "
+        "blur and the confirm may never be seen). (2) <em>Result rows</em> — "
+        "fixed micro-pattern: optional <code>.dz-search-result-media</code> + "
+        "name + optional secondary. <strong>Different shapes in one list are "
+        "intentional:</strong> media is optional — a company row without a badge "
+        "and a person row with initials are the same Hyperpart. Map domain "
+        "fields into slots; do not invent a picker per entity. Form posts the "
+        "hidden input, never the visible text. "
+        "<code>contracts/search_select.py</code> "
+        "(<code>SearchResultRow</code> + <code>render_result_row</code>).",
         tags=("forms", "htmx"),
         controller="controllers/dz-search-select.js",
         contracts=("contracts/search_select.py",),
@@ -1573,18 +1551,22 @@ HYPERPARTS: list[Hyperpart] = [
             seams=(
                 "shell: hidden FK + typeahead input + listbox panel "
                 "(`data-dz-widget=search_select`)",
+                "data-dz-blur-grace-ms (default 200) — blur→close delay so row "
+                "clicks land; data-dz-confirm-dwell-ms (default 1500) — hold "
+                "panel open after .dz-select-result-confirm paints",
                 "search exchange returns N× fixed result-row fragments "
-                "(or `.dz-search-result-empty`) — map domain fields into "
-                "name / secondary / media slots",
+                "(or `.dz-search-result-empty`) — map domain into "
+                "name / secondary / optional media (omit media for text-only rows)",
                 "each row carries its own hx-get to the select exchange",
                 "select exchange: confirm line (+ OOB hidden FK / label) — "
                 "never client-side write of the id",
             ),
             pitfalls=(
-                "200ms blur grace — result rows are htmx affordances; the click must land first",
+                "blur grace is NOT confirm dwell — without confirm-dwell the "
+                "select feedback is hidden as soon as focus leaves (~200ms)",
                 "form posts the hidden input, never the visible text",
                 "do not invent a new combobox Hyperpart for 'users vs companies' — "
-                "same row anatomy, different field mapping",
+                "same row anatomy, different field mapping; missing media is valid",
                 "media is optional free HTML inside `.dz-search-result-media` "
                 "(img, initials, icon) — keep primary text in `.dz-search-result-name`",
             ),
@@ -1593,6 +1575,10 @@ HYPERPARTS: list[Hyperpart] = [
                     "map any record to SearchResultRow "
                     "(id, name, secondary?, media_html?) and render_result_row",
                     "build a bespoke listbox DOM per entity or return JSON for the client to paint",
+                ),
+                (
+                    "set data-dz-confirm-dwell-ms when the confirm line is user-facing",
+                    "rely on blur grace alone to show select feedback",
                 ),
                 (
                     "swap the panel with a confirmation fragment that fills the hidden FK server-side",
