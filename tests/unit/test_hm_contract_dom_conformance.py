@@ -68,8 +68,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -403,6 +403,57 @@ def test_kanban_region_emission_conforms_to_kanban_contract() -> None:
     assert html.count("data-dz-kanban-card") == 2
     assert 'data-dz-attn="critical"' in html
     assert "Refund request" in html
+
+
+def test_activity_feed_emission_conforms_to_activity_feed_contract() -> None:
+    """Real FragmentRenderer ActivityFeed path satisfies contracts/activity_feed.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import ActivityFeed
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    af_mod = load_hm_module("contracts/activity_feed.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        ActivityFeed(
+            items=(
+                ("09:41", "Ada", "approved the refund."),
+                ("09:12", "System", "flagged the account for review."),
+            )
+        )
+    )
+    violations = kit.validate_dom(html, af_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert html.count("data-dz-activity-row") == 2
+    assert "dz-activity-actor" in html
+    assert "approved the refund" in html
+
+
+def test_timeline_emission_conforms_to_timeline_contract() -> None:
+    """Real FragmentRenderer Timeline path satisfies contracts/timeline.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import Timeline
+    from dazzle.render.fragment.primitives.data import TimelineEvent as EvtFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    tl_mod = load_hm_module("contracts/timeline.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        Timeline(
+            events=(
+                EvtFrag(
+                    title="Payment failed",
+                    date_label="Today",
+                    fields=(("Reason", "Card declined"),),
+                ),
+                EvtFrag(title="Invoice sent", date_label="Mon"),
+            )
+        )
+    )
+    violations = kit.validate_dom(html, tl_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert html.count("data-dz-timeline-item") == 2
+    assert "Payment failed" in html
+    assert "dz-timeline-field" in html
 
 
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────

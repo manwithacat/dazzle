@@ -9,7 +9,8 @@ equality — and the emitted DOM is locked by
 
 Seam models: ``GridEditCell``, ``ComboboxField``, ``TagsField``,
 ``MoneyField``, ``SearchResultRow``, ``SearchSelectShell``, ``ActionCard``,
-``StatusListEntry``, ``QueueRow``, ``MetricTile``, ``KanbanCard``.
+``StatusListEntry``, ``QueueRow``, ``MetricTile``, ``KanbanCard``,
+``ActivityRow``, ``TimelineEvent``.
 
 **Two layers (#1577):** form primitives in ``primitives/forms.py`` are the
 public product API (``required``, currency selector, symbol, …). These
@@ -327,6 +328,43 @@ class KanbanCard(BaseModel):
         return v
 
 
+# ── Activity-feed seam copy (contracts/activity_feed.py) ─────────────
+
+
+class ActivityRow(BaseModel):
+    """One activity feed row — dual-lock unit for activity-feed."""
+
+    time_str: str
+    description: str
+    actor: str = ""
+
+    @field_validator("description")
+    @classmethod
+    def _description_nonempty(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("ActivityRow requires a non-empty description")
+        return v
+
+
+# ── Timeline seam copy (contracts/timeline.py) ───────────────────────
+
+
+class TimelineEvent(BaseModel):
+    """One timeline item — dual-lock unit for timeline."""
+
+    title: str
+    date_label: str = ""
+    fields_html: str = ""
+    bullet_html: str = ""
+
+    @field_validator("title")
+    @classmethod
+    def _title_nonempty(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("TimelineEvent requires a non-empty title")
+        return v
+
+
 # ── Form → ingest adapters (#1577) ───────────────────────────────────
 # Form primitives stay the public API; emission builds these models then
 # uses the attr helpers below for HM contract attributes.
@@ -603,6 +641,16 @@ def kanban_card_root_attrs(_card: KanbanCard) -> str:
     return "data-dz-kanban-card"
 
 
+def activity_row_root_attrs(_row: ActivityRow) -> str:
+    """Assemble activity-row dual-lock root — sole emitter site."""
+    return "data-dz-activity-row"
+
+
+def timeline_item_root_attrs(_evt: TimelineEvent) -> str:
+    """Assemble timeline-item dual-lock root — sole emitter site."""
+    return "data-dz-timeline-item"
+
+
 def render_metric_tile(tile: MetricTile) -> str:
     """Model → one metric tile (matches HM contracts/metrics.py)."""
     label = _html.escape(tile.label)
@@ -668,6 +716,62 @@ def render_kanban_card(card: KanbanCard) -> str:
         f"{attn_html}"
         f"</div>"
         f"</div>"
+    )
+
+
+_ACTIVITY_DOT_SVG = (
+    '<svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
+    '<circle cx="10" cy="10" r="6"/>'
+    "</svg>"
+)
+
+_TIMELINE_DEFAULT_BULLET = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" '
+    'fill="currentColor" '
+    'class="dz-timeline-bullet dz-attn-bullet dz-attn-tone-default" '
+    'aria-hidden="true">'
+    '<circle cx="10" cy="10" r="6"/>'
+    "</svg>"
+)
+
+
+def render_activity_row(row: ActivityRow) -> str:
+    """Model → one activity feed row (matches HM contracts/activity_feed.py)."""
+    time_s = _html.escape(row.time_str)
+    actor_html = ""
+    if row.actor:
+        actor_html = f'<span class="dz-activity-actor">{_html.escape(row.actor)}</span> '
+    root_attrs = activity_row_root_attrs(row)
+    return (
+        f'<li class="dz-activity-row" {root_attrs}>'
+        f'<span class="dz-activity-dot">{_ACTIVITY_DOT_SVG}</span>'
+        f'<div class="dz-activity-row-inner">'
+        f'<div class="dz-activity-time">{time_s}</div>'
+        f'<div class="dz-activity-bubble" >'
+        f"{actor_html}{_html.escape(row.description)}"
+        f"</div>"
+        f"</div>"
+        f"</li>"
+    )
+
+
+def render_timeline_event(evt: TimelineEvent) -> str:
+    """Model → one timeline item (matches HM contracts/timeline.py)."""
+    title = _html.escape(evt.title)
+    date = _html.escape(evt.date_label)
+    bullet = evt.bullet_html.strip() or _TIMELINE_DEFAULT_BULLET
+    root_attrs = timeline_item_root_attrs(evt)
+    return (
+        f'<li class="dz-timeline-item" {root_attrs}>'
+        f'<span class="dz-timeline-bullet-wrap">{bullet}</span>'
+        f'<div class="dz-timeline-row">'
+        f'<div class="dz-timeline-date">{date}</div>'
+        f'<div class="dz-timeline-content">'
+        f'<p class="dz-timeline-title">{title}</p>'
+        f"{evt.fields_html}"
+        f"</div>"
+        f"</div>"
+        f"</li>"
     )
 
 

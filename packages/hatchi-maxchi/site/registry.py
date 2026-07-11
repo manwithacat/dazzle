@@ -2692,7 +2692,7 @@ def select(source: str, id: str) -> str:
             "contract, dates keep a fixed column so titles align.",
             '<div class="dz-timeline-region hm-measure-lg">'
             '<ul class="dz-timeline-list">'
-            '<li class="dz-timeline-item">'
+            '<li class="dz-timeline-item" data-dz-timeline-item>'
             '<span class="dz-timeline-bullet-wrap">'
             '<svg class="dz-timeline-bullet dz-attn-bullet dz-attn-tone-critical" '
             'fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
@@ -2703,7 +2703,7 @@ def select(source: str, id: str) -> str:
             '<p class="dz-timeline-title">Payment failed — retry scheduled</p>'
             '<p class="dz-timeline-field">Card declined (insufficient funds)</p>'
             "</div></div></li>"
-            '<li class="dz-timeline-item">'
+            '<li class="dz-timeline-item" data-dz-timeline-item>'
             '<span class="dz-timeline-bullet-wrap">'
             '<svg class="dz-timeline-bullet dz-attn-bullet dz-attn-tone-default" '
             'fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
@@ -2714,11 +2714,13 @@ def select(source: str, id: str) -> str:
             '<p class="dz-timeline-title">Invoice sent</p>'
             "</div></div></li>"
             "</ul></div>",
-            notes="The bullet is an inline SVG on <code>currentColor</code>, "
-            "toned by <code>dz-attn-tone-*</code> (critical/warning/notice/"
-            "default) — the shared attention vocabulary. Overflowing timelines "
-            "append a <code>dz-timeline-overflow</code> count line.",
+            notes="Dual-lock root is <code>data-dz-timeline-item</code> "
+            "(<code>contracts/timeline.py</code>). The bullet is an inline SVG "
+            "on <code>currentColor</code>, toned by <code>dz-attn-tone-*</code> "
+            "(critical/warning/notice/default). Overflowing timelines append a "
+            "<code>dz-timeline-overflow</code> count line.",
             tags=("data",),
+            contracts=("contracts/timeline.py",),
         ),
         Hyperpart(
             "activity-feed",
@@ -2727,7 +2729,7 @@ def select(source: str, id: str) -> str:
             "Who-did-what rows on a dotted spine — actor, time, and a message bubble.",
             '<div class="hm-measure-lg">'
             '<ul class="dz-activity-feed">'
-            '<li class="dz-activity-row">'
+            '<li class="dz-activity-row" data-dz-activity-row>'
             '<span class="dz-activity-dot">'
             '<svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
             '<circle cx="10" cy="10" r="6"/></svg></span>'
@@ -2736,7 +2738,7 @@ def select(source: str, id: str) -> str:
             '<div class="dz-activity-bubble">'
             '<span class="dz-activity-actor">Ada</span> approved the refund.'
             "</div></div></li>"
-            '<li class="dz-activity-row">'
+            '<li class="dz-activity-row" data-dz-activity-row>'
             '<span class="dz-activity-dot">'
             '<svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
             '<circle cx="10" cy="10" r="6"/></svg></span>'
@@ -2746,10 +2748,13 @@ def select(source: str, id: str) -> str:
             '<span class="dz-activity-actor">System</span> flagged the account '
             "for review.</div></div></li>"
             "</ul></div>",
-            notes="Rows are server-rendered newest-first; an empty feed renders "
-            "<code>dz-activity-empty</code>. The dot column and bubble keep "
-            "alignment without a grid — the row is the flex unit.",
+            notes="Dual-lock root is <code>data-dz-activity-row</code> "
+            "(<code>contracts/activity_feed.py</code>). Rows are server-rendered "
+            "newest-first; an empty feed renders <code>dz-activity-empty</code>. "
+            "The dot column and bubble keep alignment without a grid — the row "
+            "is the flex unit.",
             tags=("data",),
+            contracts=("contracts/activity_feed.py",),
         ),
         Hyperpart(
             "related-tables",

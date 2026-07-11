@@ -10,10 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **activity-feed + timeline → schema+DOM dual-lock** — HM
+  `contracts/activity_feed.py` (`ActivityRow`, root `data-dz-activity-row`) and
+  `contracts/timeline.py` (`TimelineEvent`, root `data-dz-timeline-item`) with
+  ingest renders + sole-emitters. Dual-lock coverage: **12 schema+DOM** / 14 DOM-only.
 - **metrics + kanban → schema+DOM dual-lock** — HM `contracts/metrics.py`
   (`MetricTile`, root `data-dz-metric-key`) and `contracts/kanban.py`
   (`KanbanCard`, root `data-dz-kanban-card`) with ingest renders + sole-emitters.
-  Dual-lock coverage: **10 schema+DOM** / 14 DOM-only.
 - **status-list + queue → schema+DOM dual-lock** — HM `contracts/status_list.py`
   (`StatusListEntry`, root `data-dz-status-entry`) and `contracts/queue.py`
   (`QueueRow`, root `data-dz-queue-row`) with ingest renders + sole-emitters.

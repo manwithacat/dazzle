@@ -28,11 +28,13 @@ from typing import TYPE_CHECKING
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
+from dazzle.render.fragment.ingest import ActivityRow as ActivityRowSeam
 from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
 from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
 from dazzle.render.fragment.ingest import (
     render_action_card,
+    render_activity_row,
     render_metric_tile,
     render_queue_row,
     render_status_list_entry,
@@ -712,39 +714,19 @@ class _RenderTablesMixin:
         )
 
     def _emit_activity_feed(self, a: ActivityFeed, ctx: RenderContext) -> str:
-        """Render an ActivityFeed matching legacy
-        `workspace/regions/activity_feed.html` byte-for-byte: outer
-        `<ul class="dz-activity-feed">`, per-row dot SVG + time + bubble.
+        """Render an ActivityFeed via HM dual-lock ActivityRow seams.
 
-        The dot SVG is identical across rows (constant). The bubble
-        renders an optional `<span class="dz-activity-actor">` when an
-        actor is present, then the description as raw text. Click-to-
-        drawer wiring (legacy `action_url` → hx-get on the bubble) is
-        not yet plumbed through — initial port covers the read-only
-        feed shape only; clickable rows are a follow-up.
+        List chrome stays local; each row maps through ``render_activity_row``
+        so markup matches ``contracts/activity_feed.py``.
         """
         if not a.items:
             return f'<div class="dz-activity-empty">{ctx.escape(a.empty_message)}</div>'
-        rows: list[str] = []
-        for time_str, actor, description in a.items:
-            actor_html = (
-                f'<span class="dz-activity-actor">{ctx.escape(actor)}</span>' if actor else ""
+        rows = [
+            render_activity_row(
+                ActivityRowSeam(time_str=time_str, actor=actor, description=description)
             )
-            rows.append(
-                f'<li class="dz-activity-row">'
-                f'<span class="dz-activity-dot">'
-                f'<svg fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">'
-                f'<circle cx="10" cy="10" r="6"/>'
-                f"</svg>"
-                f"</span>"
-                f'<div class="dz-activity-row-inner">'
-                f'<div class="dz-activity-time">{ctx.escape(time_str)}</div>'
-                f'<div class="dz-activity-bubble" >'
-                f"{actor_html}{ctx.escape(description)}"
-                f"</div>"
-                f"</div>"
-                f"</li>"
-            )
+            for time_str, actor, description in a.items
+        ]
         return f'<ul class="dz-activity-feed">{"".join(rows)}</ul>'
 
     def _emit_action_grid(self, g: ActionGrid, ctx: RenderContext) -> str:

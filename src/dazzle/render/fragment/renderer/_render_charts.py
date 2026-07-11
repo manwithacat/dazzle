@@ -20,7 +20,8 @@ from typing import TYPE_CHECKING
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
-from dazzle.render.fragment.ingest import render_kanban_card
+from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
+from dazzle.render.fragment.ingest import render_kanban_card, render_timeline_event
 from dazzle.render.fragment.primitives import (
     BarChart,
     BoxPlot,
@@ -125,19 +126,12 @@ class _RenderChartsMixin:
         return f'<div class="dz-bar-chart-region"><div class="dz-bar-chart-bars">{rows}</div></div>'
 
     def _emit_timeline(self, t: Timeline, ctx: RenderContext) -> str:
-        """Render a Timeline matching legacy
-        `workspace/regions/timeline.html` byte-for-byte: outer
-        `dz-timeline-region`, `<ul class="dz-timeline-list">` of
-        `<li class="dz-timeline-item">` rows. Each row carries a bullet
-        SVG, formatted date, primary title, and optional secondary
-        fields rendered as `<p class="dz-timeline-field">` lines.
-        Optional overflow line "Showing N of M" when total exceeds
-        the events count. Empty path renders the `dz-empty-dense`
-        fallback inside the region wrapper.
+        """Render a Timeline via HM dual-lock TimelineEvent seams.
+
+        Region chrome / overflow stay local; each item maps through
+        ``render_timeline_event`` so markup matches ``contracts/timeline.py``.
         """
-        # Coerce Phase 4A `(label, iso-date)` tuples to TimelineEvent
-        # for rendering uniformity. New callers construct TimelineEvent
-        # instances directly.
+        # Coerce Phase 4A `(label, iso-date)` tuples for uniformity.
         events_norm: list[TimelineEvent] = []
         for evt in t.events:
             if isinstance(evt, TimelineEvent):
@@ -154,21 +148,6 @@ class _RenderChartsMixin:
                 f"</div>"
             )
 
-        # Legacy bullet always picks up `attention_classes(attn, 'bullet')`
-        # which defaults to `dz-attn-bullet dz-attn-tone-default` when
-        # the item has no `_attention` entry. The typed primitive
-        # doesn't track per-row attention yet (Phase 4B follow-up); for
-        # now, emit the default attention class so the no-attention
-        # case is byte-equivalent to legacy.
-        bullet_svg = (
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" '
-            'fill="currentColor" '
-            'class="dz-timeline-bullet dz-attn-bullet dz-attn-tone-default" '
-            'aria-hidden="true">'
-            '<circle cx="10" cy="10" r="6"/>'
-            "</svg>"
-        )
-
         items: list[str] = []
         for evt in events_norm:
             fields_html = ""
@@ -184,16 +163,13 @@ class _RenderChartsMixin:
                     f"</p>"
                 )
             items.append(
-                f'<li class="dz-timeline-item">'
-                f'<span class="dz-timeline-bullet-wrap">{bullet_svg}</span>'
-                f'<div class="dz-timeline-row">'
-                f'<div class="dz-timeline-date">{ctx.escape(evt.date_label)}</div>'
-                f'<div class="dz-timeline-content">'
-                f'<p class="dz-timeline-title">{ctx.escape(evt.title)}</p>'
-                f"{fields_html}"
-                f"</div>"
-                f"</div>"
-                f"</li>"
+                render_timeline_event(
+                    TimelineEventSeam(
+                        title=evt.title,
+                        date_label=evt.date_label,
+                        fields_html=fields_html,
+                    )
+                )
             )
 
         overflow_html = ""

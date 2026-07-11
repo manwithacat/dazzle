@@ -97,9 +97,7 @@ def render(card: KanbanCard) -> str:
     if card.attention_level:
         level = html.escape(card.attention_level, quote=True)
         msg = html.escape(card.attention_message)
-        attn_html = (
-            f'<p class="dz-kanban-card-attn" data-dz-attn="{level}">{msg}</p>'
-        )
+        attn_html = f'<p class="dz-kanban-card-attn" data-dz-attn="{level}">{msg}</p>'
     return (
         f'<div class="dz-kanban-card" data-dz-kanban-card>'
         f'<div class="dz-kanban-card-body">'

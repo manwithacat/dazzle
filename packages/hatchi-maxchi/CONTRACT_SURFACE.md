@@ -9,11 +9,12 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 25 |
+| Modules | 27 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
 | `action_grid` | `action-grid` | `[data-dz-action-card]` | [data-dz-action-card][data-dz-action-card=present, data-dz-tone=one_of:neutral\|positive\|warning\|destructive\|accent] | ActionCard(count:int\|None:opt; icon_html:str:opt; label:str:req; tone:Literal:opt; url:str:opt) |
+| `activity_feed` | `activity-feed` | `[data-dz-activity-row]` | [data-dz-activity-row][data-dz-activity-row=present] | ActivityRow(actor:str:opt; description:str:req; time_str:str:req) |
 | `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |
@@ -37,6 +38,7 @@ blast radius (who embeds / refuses this part).
 | `status_list` | `status-list` | `[data-dz-status-entry]` | [data-dz-status-entry][data-dz-state=one_of:neutral\|positive\|warning\|destructive\|accent, data-dz-status-entry=present] | StatusListEntry(caption:str:opt; icon_html:str:opt; state:Literal:opt; title:str:req) |
 | `tabs` | `tabs` | `[data-dz-tabs]` | [data-dz-tabs][]; [data-dz-tab-target][data-dz-tab-target=present] | — |
 | `tags` | `tags` | `[data-dz-tags]` | [data-dz-tags][name=present] | TagsField(field_id:str:req; label:str:req; name:str:req; placeholder:str:opt; tags:list[str]:opt) |
+| `timeline` | `timeline` | `[data-dz-timeline-item]` | [data-dz-timeline-item][data-dz-timeline-item=present] | TimelineEvent(bullet_html:str:opt; date_label:str:opt; fields_html:str:opt; title:str:req) |
 | `wizard` | `wizard` | `[data-dz-wizard]` | [data-dz-wizard][data-dz-step=present]; [data-dz-stage][data-dz-stage=present]; [data-dz-state][data-dz-state=one_of:complete\|current\|pending] | — |
 
 ## Related
