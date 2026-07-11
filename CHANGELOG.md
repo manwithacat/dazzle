@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **HaTchi-MaXchi `code` Hyperpart** — fenced code surface (language chip +
+  copy control) with build-time Python highlighting (`site/highlight.py`).
+  Gallery HTML snippets and contract/FastAPI/module source blocks dogfood it;
+  dual-lock names in Python source are preserved when the gallery strips
+  `dz-` from chrome.
+
+### Changed
+- **HM Tailwind reservoir → permanent zero-floor.** Drain campaign tooling
+  retired (`port_suggestions`, `--suggest`, `--write-baseline`).
+  `scripts/hm_tailwind_reservoir.py` + `tests/unit/test_hm_tailwind_reservoir.py`
+  now assert markup tokens and CSS grand total stay at 0 (exit 1 when red).
+  CSS boundary remains `tests/unit/test_hm_delegation_proof.py`.
+  `hm-convergence` lane reframed around dual-locks / taste, not CSS file-batch drain.
+
 ## [0.102.0] - 2026-07-11
 
 ### Changed

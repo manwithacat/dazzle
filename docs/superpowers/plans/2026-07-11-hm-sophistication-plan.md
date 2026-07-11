@@ -32,7 +32,11 @@ Raise the sophistication of (1) HM as a design system and (2) Dazzle tools that 
 | Root-only dual-lock (`DOM_ONLY_CONTRACTS`) | 15 (incl. confirm, pdf, wizard, master_detail) |
 | Root-only deferred (contract exists, no DOM lock fixture) | 0 (drained) |
 
-Reservoir metric (`scripts/hm_tailwind_reservoir.py`): **GRANDTOTAL 0** — migration thermometer is drained; remaining work is *quality locks* and *tooling depth*, not Tailwind drain.
+Reservoir / zero-floor (`scripts/hm_tailwind_reservoir.py` +
+`tests/unit/test_hm_tailwind_reservoir.py`): **GRANDTOTAL 0** permanently
+gated — drain campaign retired; remaining work is *quality locks* and
+*tooling depth*, not Tailwind drain. CSS boundary:
+`tests/unit/test_hm_delegation_proof.py`.
 
 ## Phases
 
@@ -116,7 +120,8 @@ optional follow-on if API credits are intentional (not required for D exit).
 - Coverage map: `packages/hatchi-maxchi/DUAL_LOCK_COVERAGE.md`
 - Coverage generator: `packages/hatchi-maxchi/tools/dual_lock_coverage.py`
 - Dual-lock registry: `tests/unit/hm_contract_registry.py`
-- Reservoir: `scripts/hm_tailwind_reservoir.py`
+- Zero-floor: `scripts/hm_tailwind_reservoir.py` + `tests/unit/test_hm_tailwind_reservoir.py`
+- CSS allowlist: `tests/unit/test_hm_delegation_proof.py`
 - CSS classify (Phase C): `scripts/hm_css_classify.py`
 - Taste ship policy: `docs/reference/taste.md` (ship floor vs advisory)
 - Subscription scores: `scripts/hm_subscription_vision.py`, `src/dazzle/qa/subscription_vision.py`

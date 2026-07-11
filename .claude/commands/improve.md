@@ -19,7 +19,7 @@ If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count
 | trials | qualitative persona scenarios (trial.toml) | `## Lane: trials` | `improve/lanes/trials.md` |
 | ux-converge | example apps with nonzero UX contract failures | `## Lane: ux-converge` | `improve/lanes/ux-converge.md` |
 | test-suite | test-suite redundancy-cluster collapse (#1530) | `## Lane: test-suite` | `improve/lanes/test-suite.md` |
-| hm-convergence | drain Tailwind + legacy-layout CSS into HaTchi-MaXchi (2026-07-08 directive) | `## Lane: hm-convergence` | `improve/lanes/hm-convergence.md` |
+| hm-convergence | HM ownership floors + dual-locks / taste (Tailwind drain complete; zero-floor gates only) | `## Lane: hm-convergence` | `improve/lanes/hm-convergence.md` |
 
 ## State files
 
@@ -103,7 +103,7 @@ Selection priority:
 6. **All counts zero → explore phase, capability-coverage-directed.** Consult `improve/capability-map.md`: if any capability is `UNOWNED` or `STALE`, pick its owning lane and have the lane **exercise that specific capability** this cycle (log `picked {lane} to exercise {capability} — {UNOWNED | STALE N cycles}`). This is what keeps the full toolset live against the framework's velocity — nothing we build rots unexercised. Otherwise pick the lane with oldest `last_run_at` and run its ordinary **explore phase**.
 7. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit. The log entry must name the two renewal routes so the loop never looks permanently stuck: the budget resets automatically on the next `dazzle-updated` release signal, or manually via `/improve --reset-budget`.
 
-Record the choice. Bias from signals or capability-coverage must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N"; "picked hm-convergence to exercise the Tailwind-reservoir metric — STALE 24 cycles") so future operators can audit.
+Record the choice. Bias from signals or capability-coverage must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N"; "picked hm-convergence to expand dual-locks — STALE 24 cycles") so future operators can audit.
 
 ### Step 2: Hand off to lane
 

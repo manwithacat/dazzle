@@ -12,7 +12,7 @@
    document order, and kill the theme toggle. */
 body { background: var(--colour-bg); color: var(--colour-text);
   font-family: var(--font-sans); margin: 0; }
-/* minmax(0,1fr) — long unwrapped <code> lines must scroll inside .hm-code pre,
+/* minmax(0,1fr) — long unwrapped code lines must scroll inside the code Hyperpart,
    not force the main track wider than the viewport (Pages overflow at 1280). */
 .hm-wrap { display: grid; grid-template-columns: 15rem minmax(0, 1fr); min-height: 100vh; }
 .hm-wrap.hm-single { display: block; max-width: 72rem; margin-inline: auto; }
@@ -42,25 +42,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-pag-row { padding: .6rem .9rem; font-size: var(--text-sm); }
 .hm-pag-row + .hm-pag-row { border-block-start: 1px solid var(--colour-border); }
 .hm-inline { display:inline-flex; align-items:center; gap: .5rem; font-size: var(--text-sm); }
-.hm-code { position: relative; min-width: 0; max-width: 100%; }
-.hm-code pre { margin: 0; padding: 1rem 4rem 1rem 1.25rem; overflow-x: auto;
-  max-width: 100%; background: var(--neutral-900); color: var(--neutral-100);
-  border-radius: var(--radius-md); font-family: var(--font-mono); font-size: .75rem;
-  line-height: 1.6; }
-.hm-copy { position: absolute; top: .5rem; right: .5rem; display: inline-flex; align-items: center;
-  background: var(--neutral-800); color: var(--neutral-100); border: 1px solid var(--neutral-700);
-  border-radius: var(--radius-sm); padding: .3rem .65rem; font-size: .75rem;
-  font-family: var(--font-sans); font-weight: var(--weight-medium); cursor: pointer;
-  transition: background 120ms var(--ease-default, ease); }
-.hm-copy:hover { background: var(--neutral-700); }
-.hm-copy:active { background: var(--neutral-600); }
-.hm-copy:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--focus-ring-offset); }
-.hm-copy svg { width: .875rem; height: .875rem; }
-.hm-copy__idle, .hm-copy__done { display: inline-flex; align-items: center; gap: .4rem; }
-.hm-copy__done { display: none; color: var(--success-500); }
-.hm-copy[data-copied] .hm-copy__idle { display: none; }
-.hm-copy[data-copied] .hm-copy__done { display: inline-flex; }
+/* Snippet / contract source blocks use the code Hyperpart (.dz-code) — not gallery chrome. */
 .hm-anatomy { font-size: .75rem; color: var(--colour-text-muted); margin-top: .6rem;
   padding: .5rem .7rem; border-left: 2px solid var(--colour-brand); background: var(--colour-brand-soft);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
@@ -167,7 +149,7 @@ document.addEventListener('click', function (e) {
 });
 </script>
 <details class="hm-contract"><summary>Page source — the whole page is the snippet</summary>
-<pre class="hm-code"><code>&lt;div class=&quot;app-shell&quot; data-sidebar=&quot;open&quot;&gt;
+<figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Page source for SaaS app shell"><code class="code__source">&lt;div class=&quot;app-shell&quot; data-sidebar=&quot;open&quot;&gt;
   &lt;aside class=&quot;app-sidebar&quot; id=&quot;app-sidebar&quot;&gt;
     &lt;div class=&quot;sidebar&quot;&gt;
       &lt;div class=&quot;sidebar-brand&quot;&gt;&lt;span class=&quot;sidebar-brand-text&quot;&gt;Acme Ops&lt;/span&gt;&lt;/div&gt;
@@ -207,7 +189,7 @@ document.addEventListener('click', function (e) {
       &lt;/div&gt;
     &lt;/main&gt;
   &lt;/div&gt;
-&lt;/div&gt;</code></pre></details>
+&lt;/div&gt;</code></pre></figure></details>
 <details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">Routing is one attribute per link: <code>hx-get</code> the page fragment, <code>hx-target=&quot;#main-content&quot;</code> — the server returns only the workspace body, and everything else (shell, sidebar collapse state, focus, scroll) persists. In Dazzle this is the workspace pattern: every example app's views render inside this shell. The collapse toggle writes the <code>dz_sidebar</code> cookie so the SERVER renders <code>data-sidebar</code> correctly on the next full page load — state-in-DOM at SSR, no client hydration flash.</div></details>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>

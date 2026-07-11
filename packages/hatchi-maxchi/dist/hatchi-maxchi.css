@@ -10226,6 +10226,181 @@ onboarding-step {
 }
 
 }
+/* ── components/code.css ── */
+@layer components {
+/* HYPERPART: code
+ *
+ * Server-emitted fenced code surface — chrome for docs and in-app samples.
+ * Syntax colour is build-time (span.code__tok--*); this file owns surface,
+ * meta bar, copy control, and token colours from design tokens.
+ *
+ * Contract:
+ *   <figure class="code" data-code data-language="python">
+ *     <div class="code__meta">
+ *       <span class="code__lang">python</span>
+ *       <button type="button" class="code__copy" data-code-copy …>…</button>
+ *     </div>
+ *     <pre class="code__pre" tabindex="0" role="region" aria-label="…">
+ *       <code class="code__source">…</code>
+ *     </pre>
+ *   </figure>
+ *
+ * data-language is optional (hides the lang chip when absent).
+ * data-code-copy is optional (no copy control when absent).
+ */
+
+.code {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--neutral-900);
+  color: var(--neutral-100);
+  overflow: hidden;
+}
+
+.code__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-md);
+  border-block-end: 1px solid var(--neutral-700);
+  background: var(--neutral-800);
+  min-height: 2rem;
+}
+
+.code__lang {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--neutral-400);
+}
+
+/* Hide empty language chip (no data-language / empty label) */
+.code:not([data-language]) .code__lang,
+.code[data-language=""] .code__lang {
+  display: none;
+}
+
+.code__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-inline-start: auto;
+  background: var(--neutral-700);
+  color: var(--neutral-100);
+  border: 1px solid var(--neutral-600);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background 120ms var(--ease-default, ease);
+}
+
+.code__copy:hover {
+  background: var(--neutral-600);
+}
+
+.code__copy:active {
+  background: var(--neutral-500);
+}
+
+.code__copy:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.code__copy svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.code__copy-idle,
+.code__copy-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.code__copy-done {
+  display: none;
+  color: var(--success-500);
+}
+
+.code__copy[data-copied] .code__copy-idle {
+  display: none;
+}
+
+.code__copy[data-copied] .code__copy-done {
+  display: inline-flex;
+}
+
+.code__pre {
+  margin: 0;
+  padding: var(--space-md) var(--space-lg);
+  overflow-x: auto;
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  tab-size: 4;
+}
+
+.code__source {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  white-space: pre;
+}
+
+/* ── Syntax tokens (build-time spans; plain text when unhighlighted) ──
+ * Contrast against neutral-900: use house scale tokens, not raw hues. */
+
+.code__tok--kw {
+  color: var(--brand-300);
+}
+
+.code__tok--str {
+  color: var(--success-500);
+}
+
+.code__tok--cmt {
+  color: var(--neutral-500);
+  font-style: italic;
+}
+
+.code__tok--num {
+  color: var(--warning-500);
+}
+
+.code__tok--dec {
+  color: var(--brand-200);
+}
+
+.code__tok--op {
+  color: var(--neutral-300);
+}
+
+.code__tok--name {
+  color: var(--neutral-100);
+}
+
+.code__tok--builtin {
+  color: var(--brand-200);
+}
+
+}
 /* ── components/tags.css ── */
 @layer components {
 /* HYPERPART: tags */

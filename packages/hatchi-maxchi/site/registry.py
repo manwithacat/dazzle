@@ -1843,6 +1843,59 @@ HYPERPARTS: list[Hyperpart] = [
         '<p class="dz-empty-state__description">Create your first invoice to get started.</p>'
         '<div class="dz-empty-state__action"><a class="dz-button" data-dz-variant="primary" href="#">New Invoice</a></div></div></div>',
     ),
+    Hyperpart(
+        "code",
+        "Code block",
+        "Primitives",
+        "Fenced code surface with optional language chip and copy control — "
+        "server-emitted chrome for docs and samples. Syntax colour is build-time "
+        "token spans (Python), not a browser highlighter.",
+        '<figure class="dz-code" data-dz-code data-dz-language="python">'
+        '<div class="dz-code__meta">'
+        '<span class="dz-code__lang">python</span>'
+        '<button type="button" class="dz-code__copy" data-dz-code-copy '
+        'aria-label="Copy code to clipboard">'
+        '<span class="dz-code__copy-idle">Copy</span>'
+        '<span class="dz-code__copy-done">Copied</span>'
+        "</button></div>"
+        '<pre class="dz-code__pre" tabindex="0" role="region" aria-label="Python example">'
+        '<code class="dz-code__source">'
+        "def greet(name: str) -> str:\n"
+        '    """Return a friendly hello."""\n'
+        '    return f"Hello, {name}"\n'
+        "</code></pre></figure>",
+        notes="Use the code Hyperpart for any fenced sample in docs or app chrome. "
+        "The gallery builder runs a stdlib Python highlighter "
+        "(<code>site/highlight.py</code>) that wraps tokens in "
+        "<code>dz-code__tok--*</code> spans; copy always uses "
+        "<code>textContent</code> so spans never reach the clipboard. "
+        "Omit <code>data-dz-language</code> to hide the language chip; omit "
+        "the copy button when the block is display-only.",
+        tags=("docs",),
+        controller="controllers/dz-code.js",
+        contracts=("contracts/code.py",),
+        guidance=Guidance(
+            seams=(
+                "data-dz-code root marks the fenced surface",
+                "data-dz-language optional chip; data-dz-code-copy optional control",
+                "build-time token spans (.dz-code__tok--*) for Python colour",
+            ),
+            pitfalls=(
+                "do not ship a browser syntax engine for static docs — highlight at build",
+                "copy must read textContent (not innerHTML) so spans never paste",
+            ),
+            do_dont=(
+                (
+                    "emit figure.dz-code from the server/docs builder",
+                    "paste Prism/Shiki client bundles just for gallery colour",
+                ),
+            ),
+            a11y_keys=(
+                "pre is a keyboard-scrollable region (tabindex=0)",
+                "copy button is a real button with aria-label",
+            ),
+        ),
+    ),
     # ── Composites (Hyperparts built FROM other Hyperparts) ──────────
     Hyperpart(
         "toolbar",

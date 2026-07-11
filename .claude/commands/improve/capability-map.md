@@ -51,7 +51,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | — | OWNED-IDLE |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | — | OWNED-IDLE |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | — | OWNED-IDLE |
-| **Tailwind-reservoir metric** (emitter utils + Dazzle-native CSS not in HM) | script | **hm-convergence** | 334 | USED |
+| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 334 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | — | OWNED-IDLE |
@@ -113,7 +113,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `trials` | qa trial scenarios | `lanes/trials.md` |
 | `ux-converge` | contract-failure convergence | `lanes/ux-converge.md` |
 | `test-suite` | redundancy-cluster collapse, sentinel mutate/nightly | `lanes/test-suite.md` |
-| `hm-convergence` | Tailwind-reservoir drain into HaTchi-MaXchi, taste-panel, legacy-Tailwind retirement | `lanes/hm-convergence.md` |
+| `hm-convergence` | HM ownership floors + dual-locks / taste (drain complete); zero-floor + delegation gates | `lanes/hm-convergence.md` |
 
 > `pitch`, `spec-narrate`, `dsl-authoring`, `phase-contract` are `EXEMPT` — deliberately
 > human-invoked, not loop gaps. The three standalone loops (`/fuzz`, `/smells`, `/xproject`)

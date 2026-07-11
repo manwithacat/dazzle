@@ -24,8 +24,10 @@ Two guarantees:
    drain to delete the xfail marker and make this the standing green proof of
    Goal 1. That is the "clear proof" deliverable, wired to trip exactly when true.
 
-The metric ``scripts/hm_tailwind_reservoir.py`` tracks the *size* of the drain;
-this gate proves the *boundary*.
+CSS **boundary** proof lives here (exact allowlist). Markup Tailwind in
+emitters is a separate permanent zero-floor:
+``tests/unit/test_hm_tailwind_reservoir.py`` (``scripts/hm_tailwind_reservoir.py``).
+The 2026-07 drain campaign is complete; both gates now only prevent regression.
 """
 
 from pathlib import Path

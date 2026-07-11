@@ -1924,6 +1924,178 @@ dialog.dz-alert-dialog::backdrop {
 /* The dz-chart-degenerate-* fallback family that lived here was DEAD
  * on arrival (Jinja-era shapes retired with ADR-0023; zero emitters in
  * the typed substrate) — dropped rather than published as fake API. */
+/* --- hatchi-maxchi/components/code.css --- */
+/* HYPERPART: code
+ *
+ * Server-emitted fenced code surface — chrome for docs and in-app samples.
+ * Syntax colour is build-time (span.dz-code__tok--*); this file owns surface,
+ * meta bar, copy control, and token colours from design tokens.
+ *
+ * Contract:
+ *   <figure class="dz-code" data-dz-code data-dz-language="python">
+ *     <div class="dz-code__meta">
+ *       <span class="dz-code__lang">python</span>
+ *       <button type="button" class="dz-code__copy" data-dz-code-copy …>…</button>
+ *     </div>
+ *     <pre class="dz-code__pre" tabindex="0" role="region" aria-label="…">
+ *       <code class="dz-code__source">…</code>
+ *     </pre>
+ *   </figure>
+ *
+ * data-dz-language is optional (hides the lang chip when absent).
+ * data-dz-code-copy is optional (no copy control when absent).
+ */
+
+.dz-code {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--neutral-900);
+  color: var(--neutral-100);
+  overflow: hidden;
+}
+
+.dz-code__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-md);
+  border-block-end: 1px solid var(--neutral-700);
+  background: var(--neutral-800);
+  min-height: 2rem;
+}
+
+.dz-code__lang {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--neutral-400);
+}
+
+/* Hide empty language chip (no data-dz-language / empty label) */
+.dz-code:not([data-dz-language]) .dz-code__lang,
+.dz-code[data-dz-language=""] .dz-code__lang {
+  display: none;
+}
+
+.dz-code__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-inline-start: auto;
+  background: var(--neutral-700);
+  color: var(--neutral-100);
+  border: 1px solid var(--neutral-600);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background 120ms var(--ease-default, ease);
+}
+
+.dz-code__copy:hover {
+  background: var(--neutral-600);
+}
+
+.dz-code__copy:active {
+  background: var(--neutral-500);
+}
+
+.dz-code__copy:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.dz-code__copy svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.dz-code__copy-idle,
+.dz-code__copy-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dz-code__copy-done {
+  display: none;
+  color: var(--success-500);
+}
+
+.dz-code__copy[data-copied] .dz-code__copy-idle {
+  display: none;
+}
+
+.dz-code__copy[data-copied] .dz-code__copy-done {
+  display: inline-flex;
+}
+
+.dz-code__pre {
+  margin: 0;
+  padding: var(--space-md) var(--space-lg);
+  overflow-x: auto;
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  tab-size: 4;
+}
+
+.dz-code__source {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  white-space: pre;
+}
+
+/* ── Syntax tokens (build-time spans; plain text when unhighlighted) ──
+ * Contrast against neutral-900: use house scale tokens, not raw hues. */
+
+.dz-code__tok--kw {
+  color: var(--brand-300);
+}
+
+.dz-code__tok--str {
+  color: var(--success-500);
+}
+
+.dz-code__tok--cmt {
+  color: var(--neutral-500);
+  font-style: italic;
+}
+
+.dz-code__tok--num {
+  color: var(--warning-500);
+}
+
+.dz-code__tok--dec {
+  color: var(--brand-200);
+}
+
+.dz-code__tok--op {
+  color: var(--neutral-300);
+}
+
+.dz-code__tok--name {
+  color: var(--neutral-100);
+}
+
+.dz-code__tok--builtin {
+  color: var(--brand-200);
+}
 /* --- hatchi-maxchi/components/combobox.css --- */
 /* HYPERPART: combobox */
 /* dz-combobox — HM-native searchable enum single-select (HMC-018 slice 1).

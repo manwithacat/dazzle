@@ -152,7 +152,7 @@ Dazzle has a single agent-first entrypoint for autonomous investigation, improve
 | `trials` | Qualitative persona scenarios via `dazzle qa trial`. ~5 min/cycle, burns tokens — was `/trial-cycle` |
 | `ux-converge` | Example apps with nonzero contract failures; runs converge-to-zero per app — was `/ux-converge` |
 | `test-suite` | Test-suite redundancy-cluster collapse (#1530). One cluster family per cycle; parametrize-collapse with the nightly mutation floors as backstop |
-| `hm-convergence` | Drain the Tailwind + legacy-layout CSS reservoir into HaTchi-MaXchi (2026-07-08 directive). Metric: `scripts/hm_tailwind_reservoir.py`; owns `qa taste-panel` + the contract_checker legacy-Tailwind retirement |
+| `hm-convergence` | HM design ownership (drain complete 2026-07). Permanent floors: `test_hm_delegation_proof` + `test_hm_tailwind_reservoir` zero-floor; dual-locks / taste / vision tooling. Not a Tailwind drain lane anymore |
 
 The driver also maintains `improve/capability-map.md` — a registry mapping every
 `dazzle` CLI/MCP/skill/loop capability to an owning lane + staleness, so the loop

@@ -1910,3 +1910,28 @@ def test_app_shell_sidebar_toggle(page) -> None:  # type: ignore[no-untyped-def]
     page.locator("[data-sidebar-toggle]").click()
     page.wait_for_timeout(80)
     assert shell.get_attribute("data-sidebar") == "open"
+
+
+def test_code_copy_uses_source_text(page) -> None:  # type: ignore[no-untyped-def]
+    """code Hyperpart: copy control writes the plain source (textContent) and
+    shows the data-copied feedback. Clipboard is stubbed — file:// hosts often
+    deny the real Clipboard API."""
+    goto_part(page, "code")
+    page.evaluate(
+        """() => {
+          window.__hmCopied = null;
+          navigator.clipboard.writeText = (t) => {
+            window.__hmCopied = t;
+            return Promise.resolve();
+          };
+        }"""
+    )
+    # Unprefixed gallery: data-code / .code__* (not data-dz-*)
+    preview = page.locator("#code .hm-preview")
+    preview.locator("[data-code-copy]").click()
+    page.wait_for_timeout(120)
+    copied = page.evaluate("window.__hmCopied")
+    assert copied is not None, "copy control must call clipboard.writeText"
+    assert "def greet" in copied
+    assert "<span" not in copied, "clipboard must be plain text, not highlighted HTML"
+    assert preview.locator("[data-code-copy][data-copied]").count() == 1

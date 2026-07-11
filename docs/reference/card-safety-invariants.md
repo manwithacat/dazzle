@@ -79,11 +79,11 @@ A DOM element is card chrome iff it is a **block container** AND either:
   (`border`, `border-<shade>`, `border-<color>`) that is NOT side-scoped
   (`border-l-*`/`-r-*`/`-t-*`/`-b-*`/`-x-*`/`-y-*` are accents, not card edges).
 
-> **HM-convergence note.** The legacy Tailwind-utility path is **migration debt**.
-> The house direction (2026-07-08) is to delegate all frontend design into
-> HaTchi-MaXchi; the `dz-*` semantic vocabulary is the HM-aligned target, and this
-> Tailwind path is retired by the `hm-convergence` improve lane once the
-> Tailwind reservoir in the emitters reaches zero.
+> **HM-convergence note.** Emitter Tailwind utilities are at a permanent
+> **zero floor** (`tests/unit/test_hm_tailwind_reservoir.py`). The legacy
+> Tailwind-shaped branch in `_has_card_chrome` remains defence-in-depth for
+> any residual/third-party markup; new house chrome must use the `dz-*` /
+> HM vocabulary, not utility classes.
 
 Block containers: `div`, `article`, `section`, `aside`, `nav`,
 `main`, `header`, `footer`, `li`. Inline elements (`span`, `button`,

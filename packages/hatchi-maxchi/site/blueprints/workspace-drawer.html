@@ -12,7 +12,7 @@
    document order, and kill the theme toggle. */
 body { background: var(--colour-bg); color: var(--colour-text);
   font-family: var(--font-sans); margin: 0; }
-/* minmax(0,1fr) — long unwrapped <code> lines must scroll inside .hm-code pre,
+/* minmax(0,1fr) — long unwrapped code lines must scroll inside the code Hyperpart,
    not force the main track wider than the viewport (Pages overflow at 1280). */
 .hm-wrap { display: grid; grid-template-columns: 15rem minmax(0, 1fr); min-height: 100vh; }
 .hm-wrap.hm-single { display: block; max-width: 72rem; margin-inline: auto; }
@@ -42,25 +42,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-pag-row { padding: .6rem .9rem; font-size: var(--text-sm); }
 .hm-pag-row + .hm-pag-row { border-block-start: 1px solid var(--colour-border); }
 .hm-inline { display:inline-flex; align-items:center; gap: .5rem; font-size: var(--text-sm); }
-.hm-code { position: relative; min-width: 0; max-width: 100%; }
-.hm-code pre { margin: 0; padding: 1rem 4rem 1rem 1.25rem; overflow-x: auto;
-  max-width: 100%; background: var(--neutral-900); color: var(--neutral-100);
-  border-radius: var(--radius-md); font-family: var(--font-mono); font-size: .75rem;
-  line-height: 1.6; }
-.hm-copy { position: absolute; top: .5rem; right: .5rem; display: inline-flex; align-items: center;
-  background: var(--neutral-800); color: var(--neutral-100); border: 1px solid var(--neutral-700);
-  border-radius: var(--radius-sm); padding: .3rem .65rem; font-size: .75rem;
-  font-family: var(--font-sans); font-weight: var(--weight-medium); cursor: pointer;
-  transition: background 120ms var(--ease-default, ease); }
-.hm-copy:hover { background: var(--neutral-700); }
-.hm-copy:active { background: var(--neutral-600); }
-.hm-copy:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--focus-ring-offset); }
-.hm-copy svg { width: .875rem; height: .875rem; }
-.hm-copy__idle, .hm-copy__done { display: inline-flex; align-items: center; gap: .4rem; }
-.hm-copy__done { display: none; color: var(--success-500); }
-.hm-copy[data-copied] .hm-copy__idle { display: none; }
-.hm-copy[data-copied] .hm-copy__done { display: inline-flex; }
+/* Snippet / contract source blocks use the code Hyperpart (.dz-code) — not gallery chrome. */
 .hm-anatomy { font-size: .75rem; color: var(--colour-text-muted); margin-top: .6rem;
   padding: .5rem .7rem; border-left: 2px solid var(--colour-brand); background: var(--colour-brand-soft);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
@@ -167,7 +149,7 @@ document.addEventListener('click', function (e) {
 });
 </script>
 <details class="hm-contract"><summary>Page source — the whole page is the snippet</summary>
-<pre class="hm-code"><code>&lt;div class=&quot;sidebar-layout&quot; style=&quot;--sidebar-width: 14rem&quot;&gt;
+<figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Page source for Workspace with drawer"><code class="code__source">&lt;div class=&quot;sidebar-layout&quot; style=&quot;--sidebar-width: 14rem&quot;&gt;
   &lt;nav class=&quot;stack&quot; data-gap=&quot;xs&quot; aria-label=&quot;Workspace&quot;&gt;&lt;button class=&quot;button&quot; data-variant=&quot;primary&quot;&gt;Dashboard&lt;/button&gt;&lt;button class=&quot;button&quot; data-variant=&quot;ghost&quot;&gt;Invoices&lt;/button&gt;&lt;button class=&quot;button&quot; data-variant=&quot;ghost&quot;&gt;Customers&lt;/button&gt;&lt;button class=&quot;button&quot; data-variant=&quot;ghost&quot;&gt;Reports&lt;/button&gt;&lt;button class=&quot;button&quot; data-variant=&quot;ghost&quot;&gt;Settings&lt;/button&gt;&lt;/nav&gt;
   &lt;main class=&quot;stack&quot; data-gap=&quot;lg&quot;&gt;
     &lt;div class=&quot;cluster&quot; data-justify=&quot;between&quot;&gt;
@@ -207,7 +189,7 @@ document.addEventListener('click', function (e) {
     &lt;/div&gt;
     &lt;div class=&quot;dialog__footer&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;button&quot; data-variant=&quot;outline&quot;&gt;Cancel&lt;/button&gt;&lt;button type=&quot;submit&quot; class=&quot;button&quot; data-variant=&quot;primary&quot; value=&quot;confirm&quot;&gt;Create&lt;/button&gt;&lt;/div&gt;
   &lt;/form&gt;
-&lt;/dialog&gt;</code></pre></details>
+&lt;/dialog&gt;</code></pre></figure></details>
 <details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">Every class on this page is a published Hyperpart or Layout primitive — there is no page-specific CSS. The responsive behaviour is owned by the layout primitives (the sidebar's <code>--sidebar-content-min</code> and the grid's <code>--grid-min</code>), so the same composition works inside a narrower container without edits.</div></details>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>

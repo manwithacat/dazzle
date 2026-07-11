@@ -49,6 +49,7 @@
 - [Progress](https://manwithacat.github.io/hatchi-maxchi/agents/progress.md): Toned determinate bar.
 - [Skeleton](https://manwithacat.github.io/hatchi-maxchi/agents/skeleton.md): Loading placeholder with a lifecycle-driven sheen (TASTE-9) — drop it into a swap target while the request is in flight.
 - [Empty state](https://manwithacat.github.io/hatchi-maxchi/agents/empty-state.md): Icon + one sentence + primary action — never a bare 'No X'.
+- [Code block](https://manwithacat.github.io/hatchi-maxchi/agents/code.md): Fenced code surface with optional language chip and copy control — server-emitted chrome for docs and samples. Syntax colour is build-time token spans (Python), not a browser highlighter.
 - [Toolbar](https://manwithacat.github.io/hatchi-maxchi/agents/toolbar.md): Inline composition — real button, toggle-group and menu markup nested in a role=toolbar bar. No client tree, no props: composition is HTML.
 - [Master–detail](https://manwithacat.github.io/hatchi-maxchi/agents/master-detail.md): Exchange composition — a list item hx-gets its detail card into the detail pane. The canonical htmx composite; two can coexist on a page.
 - [Stack](https://manwithacat.github.io/hatchi-maxchi/agents/stack.md): Vertical rhythm: children flow top-to-bottom with one gap token. The workhorse — most page sections are a stack of stacks.

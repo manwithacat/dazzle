@@ -33,8 +33,46 @@ from build import (  # noqa: E402  (package build.py)
     build_css,
     build_js,
 )
+from highlight import render_code_block  # noqa: E402
 from hyperpart import anatomy  # noqa: E402  (package tools/hyperpart.py)
-from icons import ICONS, LUCIDE_VERSION, lucide_svg_html  # noqa: E402
+
+
+def _prefix_code_figure(figure: str, prefix: str) -> str:
+    """Prefix code Hyperpart chrome + token *class names*; leave source text intact.
+
+    ``apply_prefix`` is a global ``dz-`` rewrite — safe for class/attr names, but
+    it would also rewrite dual-lock strings inside Python source (e.g.
+    ``data-dz-native-confirm`` in a docstring). Agents need those names exact.
+    """
+    m = re.search(r'(<code class="dz-code__source">)([\s\S]*?)(</code>)', figure)
+    if not m:
+        return apply_prefix(figure, prefix)
+    head, body, tail = m.group(1), m.group(2), m.group(3)
+    body_out = re.sub(
+        r'class="([^"]*)"',
+        lambda mm: 'class="' + apply_prefix(mm.group(1), prefix) + '"',
+        body,
+    )
+    shell = figure[: m.start()] + head + "\0BODY\0" + tail + figure[m.end() :]
+    return apply_prefix(shell, prefix).replace("\0BODY\0", body_out)
+
+
+def _contracts_html_prefixed(hyperpart, prefix: str) -> str:  # type: ignore[no-untyped-def]
+    """Contracts section with gallery class prefix, dual-lock source text preserved."""
+    raw = _contracts_html(hyperpart)
+    if not raw:
+        return ""
+    parts = re.split(r'(<figure class="dz-code"[\s\S]*?</figure>)', raw)
+    out: list[str] = []
+    for part in parts:
+        if part.startswith('<figure class="dz-code"'):
+            out.append(_prefix_code_figure(part, prefix))
+        else:
+            out.append(apply_prefix(part, prefix) if part else part)
+    return "".join(out)
+
+
+from icons import ICONS, LUCIDE_VERSION  # noqa: E402
 from icons.sprite import build_symbol_sheet, sprite_use_html  # noqa: E402
 from pretty import pretty_html  # noqa: E402
 from registry import GROUPS, HYPERPARTS  # noqa: E402
@@ -230,24 +268,32 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             )
 
         if render_fn and exemplars:
-            src = _html.escape(inspect.getsource(render_fn))
             live = render_fn(exemplars[0])
             parts.append(
                 '<details class="hm-contract" open><summary>Exemplar '
-                "(executable — runs in CI)</summary><pre><code>" + src + "</code></pre>"
-                f'<div class="hm-contract-live">{live}</div></details>'
+                "(executable — runs in CI)</summary>"
+                + render_code_block(
+                    inspect.getsource(render_fn),
+                    language="python",
+                    aria_label=f"Exemplar render for {ref}",
+                )
+                + f'<div class="hm-contract-live">{live}</div></details>'
             )
 
         if fastapi_src:
-            code = _html.escape("\n\n".join(fastapi_src))
             title = ""
             app = getattr(mod, "app", None)
             if app is not None and getattr(app, "title", None):
                 title = f" — {_html.escape(app.title)}"
             parts.append(
                 f'<details class="hm-contract" open><summary>FastAPI exemplar'
-                f"{title}</summary><pre><code>{code}</code></pre>"
-                "<p>How a server feeds this seam — the gallery mock is not a "
+                f"{title}</summary>"
+                + render_code_block(
+                    "\n\n".join(fastapi_src),
+                    language="python",
+                    aria_label=f"FastAPI exemplar for {ref}",
+                )
+                + "<p>How a server feeds this seam — the gallery mock is not a "
                 "substitute for this route contract.</p></details>"
             )
 
@@ -261,7 +307,13 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             if full:
                 parts.append(
                     '<details class="hm-contract" open><summary>Module source'
-                    "</summary><pre><code>" + _html.escape(full) + "</code></pre></details>"
+                    "</summary>"
+                    + render_code_block(
+                        full,
+                        language="python",
+                        aria_label=f"Module source {ref}",
+                    )
+                    + "</details>"
                 )
 
         blocks.append("".join(parts))
@@ -1080,7 +1132,7 @@ PAGE_CSS = """
    document order, and kill the theme toggle. */
 body { background: var(--colour-bg); color: var(--colour-text);
   font-family: var(--font-sans); margin: 0; }
-/* minmax(0,1fr) — long unwrapped <code> lines must scroll inside .hm-code pre,
+/* minmax(0,1fr) — long unwrapped code lines must scroll inside the code Hyperpart,
    not force the main track wider than the viewport (Pages overflow at 1280). */
 .hm-wrap { display: grid; grid-template-columns: 15rem minmax(0, 1fr); min-height: 100vh; }
 .hm-wrap.hm-single { display: block; max-width: 72rem; margin-inline: auto; }
@@ -1110,25 +1162,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-pag-row { padding: .6rem .9rem; font-size: var(--text-sm); }
 .hm-pag-row + .hm-pag-row { border-block-start: 1px solid var(--colour-border); }
 .hm-inline { display:inline-flex; align-items:center; gap: .5rem; font-size: var(--text-sm); }
-.hm-code { position: relative; min-width: 0; max-width: 100%; }
-.hm-code pre { margin: 0; padding: 1rem 4rem 1rem 1.25rem; overflow-x: auto;
-  max-width: 100%; background: var(--neutral-900); color: var(--neutral-100);
-  border-radius: var(--radius-md); font-family: var(--font-mono); font-size: .75rem;
-  line-height: 1.6; }
-.hm-copy { position: absolute; top: .5rem; right: .5rem; display: inline-flex; align-items: center;
-  background: var(--neutral-800); color: var(--neutral-100); border: 1px solid var(--neutral-700);
-  border-radius: var(--radius-sm); padding: .3rem .65rem; font-size: .75rem;
-  font-family: var(--font-sans); font-weight: var(--weight-medium); cursor: pointer;
-  transition: background 120ms var(--ease-default, ease); }
-.hm-copy:hover { background: var(--neutral-700); }
-.hm-copy:active { background: var(--neutral-600); }
-.hm-copy:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--focus-ring-offset); }
-.hm-copy svg { width: .875rem; height: .875rem; }
-.hm-copy__idle, .hm-copy__done { display: inline-flex; align-items: center; gap: .4rem; }
-.hm-copy__done { display: none; color: var(--success-500); }
-.hm-copy[data-copied] .hm-copy__idle { display: none; }
-.hm-copy[data-copied] .hm-copy__done { display: inline-flex; }
+/* Snippet / contract source blocks use the code Hyperpart (.dz-code) — not gallery chrome. */
 .hm-anatomy { font-size: .75rem; color: var(--colour-text-muted); margin-top: .6rem;
   padding: .5rem .7rem; border-left: 2px solid var(--colour-brand); background: var(--colour-brand-soft);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
@@ -1265,19 +1299,6 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
     for bp in BLUEPRINTS:
         nav_parts.append(f'<a href="blueprints/{bp.id}.html">{_html.escape(bp.title)}</a>')
 
-    # Copy button: dedicated gallery chrome (NOT a data-dz-variant="ghost"
-    # button — the
-    # ghost hover wash is near-white in light scheme and fought the dark
-    # code block), with icon feedback: clipboard -> check "Copied".
-    copy_icon = lucide_svg_html("copy", cls="")
-    check_icon = lucide_svg_html("check", cls="")
-    copy_button = (
-        '<button class="hm-copy" type="button" aria-label="Copy snippet to clipboard">'
-        f'<span class="hm-copy__idle">{copy_icon}Copy</span>'
-        f'<span class="hm-copy__done">{check_icon}Copied</span>'
-        "</button>"
-    )
-
     theme_js = (
         "function hmTheme(t){document.documentElement.setAttribute('data-theme',t);"
         "localStorage.setItem('hm-theme',t);}"
@@ -1342,7 +1363,17 @@ window.addEventListener('storage', function (e) {{
         # site/pretty.py). Sprite-dependency note prepended to the snippet only.
         pretty = pretty_html(live)
         snippet_src = _SPRITE_NOTE + pretty if '<use href="#i-' in live else pretty
-        snippet = _html.escape(snippet_src)
+        # Dogfood the code Hyperpart: surface + copy; HTML is escaped plain
+        # (pretty already legible). Python colour is reserved for contract blocks.
+        snippet_block = apply_prefix(
+            render_code_block(
+                snippet_src,
+                language="html",
+                aria_label=f"Code for {c.title}",
+                highlight=False,
+            ),
+            prefix,
+        )
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         deps = _dependency_chips(c)
         # The notes are written FOR coding agents (implementation guidance,
@@ -1371,11 +1402,11 @@ window.addEventListener('storage', function (e) {{
                     f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
                     f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
                     f'<div class="hm-preview">{framed_live_part}</div>'
-                    f'<div class="hm-code">{copy_button}'
-                    f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
-                    f"<code>{snippet}</code></pre></div>"
+                    f"{snippet_block}"
                     f"{apply_prefix(_exchanges_html(c), prefix)}"
-                    f"{apply_prefix(_contracts_html(c), prefix)}"
+                    # Contract source is dual-lock truth (data-dz-*) — do not
+                    # strip the namespace; only the figure chrome is reprefixed.
+                    f"{_contracts_html_prefixed(c, prefix)}"
                     f"{_composed_of_html(c)}"
                     f"{_anatomy_html(c)}"
                     f"{apply_prefix(_guidance_html(c), prefix)}"
@@ -1391,29 +1422,20 @@ window.addEventListener('storage', function (e) {{
             f"<h2>{_html.escape(c.title)}{tag}</h2>"
             f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
             f'<div class="hm-preview">{framed_live}</div>'
-            f'<div class="hm-code">{copy_button}'
-            f'<pre tabindex="0" role="region" aria-label="Code for {_html.escape(c.title)}">'
-            f"<code>{snippet}</code></pre></div>"
+            f"{snippet_block}"
             f'<p class="hm-more"><a href="hyperparts/{c.id}.html">Full reference: '
             f"contracts, guidance, anatomy →</a></p></section>"
         )
 
     # opener references the published selectors (dialog.dz-command,
     # .dz-command__input) — reprefix to match the shipped namespace.
+    # Command palette opener only — code copy lives in controllers/dz-code.js
+    # (code Hyperpart), not gallery chrome.
     opener_js = apply_prefix(
         "document.addEventListener('click',function(e){"
         "var b=e.target.closest('[data-hm-open-command]');if(!b)return;"
         "var dlg=document.querySelector('dialog.dz-command');"
-        "if(dlg){dlg.showModal();var i=dlg.querySelector('.dz-command__input');if(i)i.focus();}});"
-        # Copy-to-clipboard with icon feedback; blur() so no focus/hover
-        # state lingers on the button after the click.
-        "document.addEventListener('click',function(e){"
-        "var b=e.target.closest('.hm-copy');if(!b)return;"
-        "var code=b.parentElement.querySelector('code');"
-        "navigator.clipboard.writeText(code.textContent).then(function(){"
-        "b.setAttribute('data-copied','');b.blur();"
-        "clearTimeout(b.__hmCopyTimer);"
-        "b.__hmCopyTimer=setTimeout(function(){b.removeAttribute('data-copied');},1600);});});",
+        "if(dlg){dlg.showModal();var i=dlg.querySelector('.dz-command__input');if(i)i.focus();}});",
         prefix,
     )
     # `sheet` (built in the assets section) is inlined once per page so every
@@ -1659,7 +1681,15 @@ Generated from the design-system sources by <code>site/build_site.py</code>.
     bp_dir.mkdir(exist_ok=True)
     for bp in BLUEPRINTS:
         bp_live = apply_prefix(expand_icons(bp.partial), prefix)
-        bp_snippet = _html.escape(pretty_html(bp_live))
+        bp_snippet_block = apply_prefix(
+            render_code_block(
+                pretty_html(bp_live),
+                language="html",
+                aria_label=f"Page source for {bp.title}",
+                highlight=False,
+            ),
+            prefix,
+        )
         bp_notes = (
             f'<details class="hm-guidance"><summary>Agent Implementation '
             f'Guidance</summary><div class="hm-notes">{apply_prefix(bp.notes, prefix)}'
@@ -1739,7 +1769,7 @@ document.addEventListener('click', function (e) {{
 }});
 </script>
 <details class="hm-contract"><summary>Page source — the whole page is the snippet</summary>
-<pre class="hm-code"><code>{bp_snippet}</code></pre></details>
+{bp_snippet_block}</details>
 {bp_notes}
 </div>
 <script src="../hatchi-maxchi.js" defer></script>

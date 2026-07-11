@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Alert — HaTchi-MaXchi</title>
+<title>Code block — HaTchi-MaXchi</title>
 <link rel="stylesheet" href="../hatchi-maxchi.css">
 <style>
 /* color-scheme comes from the bundle (tokens.css advertises `light dark`
@@ -123,19 +123,38 @@ body { background: var(--colour-bg); color: var(--colour-text);
 <main class="hm-main">
 <div class="hm-topbar">
   <div class="hm-hero">
-    <p class="hm-more"><a href="../index.html#alert">← All Hyperparts</a></p>
-    <h1>Alert</h1>
+    <p class="hm-more"><a href="../index.html#code">← All Hyperparts</a></p>
+    <h1>Code block</h1>
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="alert"><h2>Alert<span class="hm-tag">identity</span><span class="hm-dep" data-dep="sprite" title="Dependency class: Sprite">Sprite</span></h2><p class="blurb">Tone-wash surfaces — an identity layer shadcn has no vocabulary for.</p><div class="hm-preview"><div class="alert hm-measure-lg" data-tone="warning" role="alert"><span class="alert__icon"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert"/></svg></span><div class="alert__body"><div class="alert__title">Payment method expiring</div><div class="alert__description">Your card ending 4242 expires next month.</div></div></div></div><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Alert"><code class="code__source">&lt;!-- icons: include the icon sheet once per page (see the Setup section, #setup) --&gt;
-&lt;div class=&quot;alert hm-measure-lg&quot; data-tone=&quot;warning&quot; role=&quot;alert&quot;&gt;
-  &lt;span class=&quot;alert__icon&quot;&gt;&lt;svg class=&quot;icon&quot; aria-hidden=&quot;true&quot;&gt;&lt;use href=&quot;#i-triangle-alert&quot;/&gt;&lt;/svg&gt;&lt;/span&gt;
-  &lt;div class=&quot;alert__body&quot;&gt;
-    &lt;div class=&quot;alert__title&quot;&gt;Payment method expiring&lt;/div&gt;
-    &lt;div class=&quot;alert__description&quot;&gt;Your card ending 4242 expires next month.&lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;</code></pre></figure></section>
+<section class="hm-comp" id="code"><h2>Code block<span class="hm-tag">docs</span><span class="hm-dep" data-dep="controller" title="Dependency class: Controller">Controller</span></h2><p class="blurb">Fenced code surface with optional language chip and copy control — server-emitted chrome for docs and samples. Syntax colour is build-time token spans (Python), not a browser highlighter.</p><div class="hm-preview"><figure class="code" data-code data-language="python"><div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Python example"><code class="code__source">def greet(name: str) -> str:
+    """Return a friendly hello."""
+    return f"Hello, {name}"
+</code></pre></figure></div><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Code block"><code class="code__source">&lt;figure class=&quot;code&quot; data-code data-language=&quot;python&quot;&gt;
+  &lt;div class=&quot;code__meta&quot;&gt;&lt;span class=&quot;code__lang&quot;&gt;python&lt;/span&gt;&lt;button type=&quot;button&quot; class=&quot;code__copy&quot; data-code-copy aria-label=&quot;Copy code to clipboard&quot;&gt;&lt;span class=&quot;code__copy-idle&quot;&gt;Copy&lt;/span&gt;&lt;span class=&quot;code__copy-done&quot;&gt;Copied&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;
+  &lt;pre class=&quot;code__pre&quot; tabindex=&quot;0&quot; role=&quot;region&quot; aria-label=&quot;Python example&quot;&gt;&lt;code class=&quot;code__source&quot;&gt;def greet(name: str) -&gt; str:
+    &quot;&quot;&quot;Return a friendly hello.&quot;&quot;&quot;
+    return f&quot;Hello, {name}&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/figure&gt;</code></pre></figure><details class="hm-contract" open><summary>Contract module (typed)</summary><h4><code>contracts/code.py</code></h4><p class="hm-contract-kind"><strong>DOM root:</strong> <code>[data-code]</code> · part <code>code</code></p><table class="hm-contract-table"><thead><tr><th>Node</th><th>Attr</th><th>Constraint</th></tr></thead><tbody><tr><td><code>[data-code]</code></td><td><code>data-code</code></td><td>present (any value)</td></tr><tr><td><code>[data-code-copy]</code></td><td><code>data-code-copy</code></td><td>present (any value)</td></tr></tbody></table><details class="hm-contract" open><summary>Module source</summary><figure class="code" data-code data-language="python"><div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Module source contracts/code.py"><code class="code__source"><span class="code__tok--str">&quot;&quot;&quot;HYPERPART: code — fenced code surface (root + optional copy control).&quot;&quot;&quot;</span>
+
+<span class="code__tok--kw">from</span> <span class="code__tok--name">__future__</span> <span class="code__tok--kw">import</span> <span class="code__tok--name">annotations</span>
+
+<span class="code__tok--kw">from</span> <span class="code__tok--name">contracts</span><span class="code__tok--op">.</span><span class="code__tok--name">_kit</span> <span class="code__tok--kw">import</span> <span class="code__tok--name">DomContract</span><span class="code__tok--op">,</span> <span class="code__tok--name">Node</span><span class="code__tok--op">,</span> <span class="code__tok--name">Present</span>
+
+<span class="code__tok--name">DOM_CONTRACT</span> <span class="code__tok--op">=</span> <span class="code__tok--name">DomContract</span><span class="code__tok--op">(</span>
+    <span class="code__tok--name">part</span><span class="code__tok--op">=</span><span class="code__tok--str">&quot;code&quot;</span><span class="code__tok--op">,</span>
+    <span class="code__tok--name">root</span><span class="code__tok--op">=</span><span class="code__tok--str">&quot;[data-dz-code]&quot;</span><span class="code__tok--op">,</span>
+    <span class="code__tok--name">nodes</span><span class="code__tok--op">=(</span>
+        <span class="code__tok--name">Node</span><span class="code__tok--op">(</span><span class="code__tok--str">&quot;[data-dz-code]&quot;</span><span class="code__tok--op">,</span> <span class="code__tok--name">attrs</span><span class="code__tok--op">={</span><span class="code__tok--str">&quot;data-dz-code&quot;</span><span class="code__tok--op">:</span> <span class="code__tok--name">Present</span><span class="code__tok--op">()}),</span>
+        <span class="code__tok--cmt"># Copy is optional chrome; when present the attr marks the control.</span>
+        <span class="code__tok--name">Node</span><span class="code__tok--op">(</span><span class="code__tok--str">&quot;[data-dz-code-copy]&quot;</span><span class="code__tok--op">,</span> <span class="code__tok--name">attrs</span><span class="code__tok--op">={</span><span class="code__tok--str">&quot;data-dz-code-copy&quot;</span><span class="code__tok--op">:</span> <span class="code__tok--name">Present</span><span class="code__tok--op">()}),</span>
+    <span class="code__tok--op">),</span>
+<span class="code__tok--op">)</span>
+
+<span class="code__tok--name">__all__</span> <span class="code__tok--op">=</span> <span class="code__tok--op">[</span><span class="code__tok--str">&quot;DOM_CONTRACT&quot;</span><span class="code__tok--op">]</span>
+</code></pre></figure></details><p>Typed source of truth: DOM contract, optional ingestion model, executable exemplar, and FastAPI feed example — validated in CI (<code>tests/test_contracts.py</code>). See <code>contracts/AUTHORING.md</code>.</p></details><p class="hm-anatomy"><strong>One Hyperpart, 4 code items:</strong> <code>site/registry.py</code> · <code>components/code.css:1</code> · <code>controllers/dz-code.js</code>. Distributed by the build (CSS layered, JS bundled) but bound by <code>HYPERPART: code</code> markers — <code>python tools/hyperpart.py code</code> lists them.</p><details class="hm-guidance" open><summary>Structured guidance</summary><div class="hm-notes"><h4>Seams</h4><ul><li>data-code root marks the fenced surface</li><li>data-language optional chip; data-code-copy optional control</li><li>build-time token spans (.code__tok--*) for Python colour</li></ul><h4>Pitfalls</h4><ul><li>do not ship a browser syntax engine for static docs — highlight at build</li><li>copy must read textContent (not innerHTML) so spans never paste</li></ul><h4>Do / Don't</h4><table class="hm-contract-table"><thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody><tr><td>emit figure.code from the server/docs builder</td><td>paste Prism/Shiki client bundles just for gallery colour</td></tr></tbody></table><h4>Keyboard / AT</h4><ul><li>pre is a keyboard-scrollable region (tabindex=0)</li><li>copy button is a real button with aria-label</li></ul></div></details><details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">Use the code Hyperpart for any fenced sample in docs or app chrome. The gallery builder runs a stdlib Python highlighter (<code>site/highlight.py</code>) that wraps tokens in <code>code__tok--*</code> spans; copy always uses <code>textContent</code> so spans never reach the clipboard. Omit <code>data-language</code> to hide the language chip; omit the copy button when the block is display-only.</div></details></section>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
 The demo above renders the exact snippet — copy it into any htmx4 app.
