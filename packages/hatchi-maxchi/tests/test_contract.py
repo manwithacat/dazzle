@@ -359,6 +359,24 @@ def test_interactive_htmx_components_declare_contracts() -> None:
     assert not missing, f"htmx components making requests but declaring no Exchange: {missing}"
 
 
+def test_exchange_empty_only_when_no_declared_exchanges() -> None:
+    """``exchange_empty`` documents form-bound server work when there is no
+    hx-* Exchange table. Combining both is contradictory — pick one."""
+    both = [c.id for c in HYPERPARTS if c.exchange_empty.strip() and c.exchanges]
+    assert not both, f"exchange_empty set alongside declared Exchange(s): {both}"
+
+
+def test_combobox_documents_form_bound_server_contract() -> None:
+    """Growing-list must not look like pure presentation — agents reject
+    unknown catalogue values if Server exchange says 'no exchange'."""
+    cb = next(c for c in HYPERPARTS if c.id == "combobox")
+    assert not cb.exchanges, "combobox has no dedicated hx-* affordance"
+    prose = cb.exchange_empty.lower()
+    assert "upsert" in prose
+    assert "allow-create" in prose or "growing" in prose
+    assert "enclosing form" in prose
+
+
 _DATA_ATTR_RE = re.compile(r"\bdata-([a-z][a-z0-9-]*)=")
 
 

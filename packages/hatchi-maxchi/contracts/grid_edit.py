@@ -6,6 +6,10 @@ controllers/dz-grid-edit.js requires — mirrors its prose header), and an
 executable FastAPI exemplar mirroring how Dazzle feeds it. The exemplar
 payloads deliberately include the #1573 producer shapes (dict / tuple /
 bare-string options) as permanent regression documentation.
+
+Non-composition: kind=select uses a bare <select class=dz-inline-edit-select>,
+NOT the combobox Hyperpart. Declared on grid.does_not_compose; flip path is
+docs/spikes/combobox-in-grid-cell.md. See CONSUMER_MAP.md.
 """
 
 import html

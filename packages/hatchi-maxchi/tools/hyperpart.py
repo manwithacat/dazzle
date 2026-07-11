@@ -55,6 +55,12 @@ def anatomy(hp_id: str) -> dict:
     if hp is None:
         raise SystemExit(f"no Hyperpart {hp_id!r} (see: python tools/hyperpart.py)")
     sites = marker_sites().get(hp_id, [])
+    # Reverse consumers (light — full table is CONSUMER_MAP.md)
+    embedded_by = [h.id for h in HYPERPARTS if hp_id in h.composes]
+    refused_by = [
+        f"{h.id} ({nc.seam})" for h in HYPERPARTS for nc in h.does_not_compose if nc.other == hp_id
+    ]
+    does_not = [f"{nc.other} @ {nc.seam}" for nc in hp.does_not_compose]
     return {
         "id": hp.id,
         "title": hp.title,
@@ -64,6 +70,10 @@ def anatomy(hp_id: str) -> dict:
         "controller": hp.controller,
         "extensions": list(hp.extensions),
         "mock": hp.mock,
+        "composes": list(hp.composes),
+        "does_not_compose": does_not,
+        "embedded_by": embedded_by,
+        "refused_by": refused_by,
     }
 
 
@@ -76,6 +86,20 @@ def _print(hp_id: str) -> None:
     print(f"  controller  {a['controller'] or '—'}")
     print(f"  extensions  {', '.join(a['extensions']) or '—'}")
     print(f"  mock        {a['mock'] or '—'}")
+    print(f"  composes    {', '.join(a['composes']) or '—'}")
+    print(f"  not-compose {', '.join(a['does_not_compose']) or '—'}")
+    print(f"  embedded-by {', '.join(a['embedded_by']) or '—'}")
+    print(f"  refused-by  {', '.join(a['refused_by']) or '—'}")
+    # Recipe / layer from registry (agent didactics)
+    from registry import RECIPE_LABELS, effective_layer, effective_recipe
+
+    hp = next(h for h in HYPERPARTS if h.id == hp_id)
+    recipe = effective_recipe(hp)
+    layer = effective_layer(hp)
+    rlabel = RECIPE_LABELS.get(recipe, recipe) if recipe else "—"
+    print(f"  layer       {layer}")
+    print(f"  recipe      {recipe or '—'} ({rlabel})")
+    print("  (full reverse map: CONSUMER_MAP.md · curriculum: AGENTS.md)")
 
 
 def main() -> int:

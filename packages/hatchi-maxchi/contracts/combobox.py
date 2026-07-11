@@ -3,6 +3,11 @@
 Server renders a real <select data-dz-combobox> with options; the controller
 enhances on first interaction. The native select remains the submit value.
 
+Server exchange: no dedicated htmx of this part — the select value rides the
+enclosing form. Fixed list = closed enum on that POST. Growing list
+(data-dz-allow-create) = form handler MUST accept unknown strings and upsert
+the catalogue (client create is page-local only). See registry exchange_empty.
+
 Optional on the <select>:
   data-dz-focus-after-select = blur | keep | select
     blur   (default) — after a pick, blur the overlay input (committed select UX)
@@ -14,7 +19,7 @@ Optional on the <select>:
     choosing it appends a new <option> to this select and commits it.
     Same Hyperpart as a fixed list — not a separate part. Typical domains:
     departments, cost centres, queues, product lines. Server must
-    accept/upsert unknown values into the catalogue on submit.
+    accept/upsert unknown values into the catalogue on form submit.
 
 Recipe (do not invent a new Hyperpart):
   fixed list (closed set)     → <select data-dz-combobox>

@@ -13,6 +13,11 @@ must not block CI.
 
 ## 0. Should this be a new Hyperpart at all?
 
+**Read first:** `docs/agent/invent-safely.md` (invention ladder) and
+`AGENTS.md` (curriculum + stems). This section is the gate at the top of the
+ladder—not optional colour.
+
+- **Ladder:** reuse L1 → refuse+local primitive → promote → **only then** new part.
 - **Compose first**: if existing parts + Layout primitives express it, write a
   Blueprint, not a part.
 - **Build-to-replace**: an HM part must REPLACE a Dazzle-native equivalent (or fill a
@@ -23,8 +28,12 @@ must not block CI.
   partial embeds the child; `guidance.composes_with` for soft agent links;
   `extensions` for optional controllers on another part’s seams. Resembling
   another part’s UX (e.g. grid-edit’s bare `<select>` vs combobox) is **not**
-  composition — document the non-use so agents don’t force dogfood. See
-  AGENTS.md › *Composition: who uses whom*.
+  composition — declare `does_not_compose=NonComposition(...)` with CI
+  require/forbid locks and an optional spike path. See
+  `docs/decisions/0003-composition-declared.md`, `docs/agent/compose-or-refuse.md`,
+  `CONSUMER_MAP.md`, and `docs/spikes/`.
+- **Layers:** same job (L0) can have multiple surfaces (L1); do not merge by shape
+  (`docs/decisions/0002-three-layers.md`, `docs/agent/pick-a-surface.md`).
 
 ## 1. Contract module FIRST — `contracts/<part>.py`
 
@@ -68,6 +77,22 @@ affordance needs one — gated), `controller`/`extensions`, `mock`, and
 `contracts=("contracts/<part>.py",)`. A controller-bearing entry without contracts
 fails `test_hyperpart_cohesion.py` unless it is in `PENDING_CONTRACTS` — and that
 list only shrinks; new parts never enter it.
+
+If the part has **no** `hx-*` of its own but still has server work on the enclosing
+form (e.g. combobox `data-dz-allow-create` catalogue upsert), set `exchange_empty=`
+to HTML that documents that form-bound contract — do **not** claim “presentation
+only,” and do **not** invent an orphan `Exchange` without a matching affordance.
+
+After any contract surface change (DOM attrs, model fields), regenerate:
+
+```bash
+python packages/hatchi-maxchi/tools/contract_surface.py --write
+python packages/hatchi-maxchi/tools/consumer_map.py --write
+python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write
+```
+
+Read `CONSUMER_MAP.md` for the part you changed — hard embeds and blueprints are
+blast radius; `refused_by` edges mean “do not dogfood me into that parent.”
 
 ## 4. Dazzle emitter against the typed model
 

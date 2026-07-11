@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.103.0] - 2026-07-11
+
 ### Fixed
+- **HM combobox field size jump on enhance** — align overlay input to
+  form-input box model (`box-sizing: border-box`, min-height 2.5rem); pin
+  `select.form-input` height for WebKit; remove colliding legacy
+  `.dz-combobox` fragment stack CSS; regression
+  `test_combobox_enhance_preserves_field_box`.
 - **HM code Hyperpart copy control** — restore `div.dz-code__meta` flex row
   (lang + trailing copy via `margin-inline-start: auto`). Absolute positioning
   drifted left on nested Hyperpart detail pages (`min-width: 0` chains).
@@ -17,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **Epistemic stems layout (framework + HM + examples)** — monorepo
+  `stems/` (compressed judgement), package `packages/hatchi-maxchi/stems/`,
+  every example `stems/`, blank-app scaffold; ADRs/decisions as expressions.
+- **HM agent didactics** — AGENTS curriculum, `docs/agent/` playbooks,
+  `docs/decisions/`, recipe/layer on Hyperparts, `CONSUMER_MAP` /
+  `CONTRACT_SURFACE` drift gates, pack one-liners.
+- **HM combobox growing-list server contract** — `exchange_empty` documents
+  form-bound catalogue upsert (not “no server work”).
+- **grid `does_not_compose` → combobox** — CI require/forbid locks + spike
+  `docs/spikes/combobox-in-grid-cell.md`.
 - **HM composition model documented** — AGENTS.md: composes / composes_with /
   extensions / contracts vs non-composition; grid-edit `kind=select` is a
   bare native select, not combobox (explicit non-dogfood).
@@ -97,6 +114,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now assert markup tokens and CSS grand total stay at 0 (exit 1 when red).
   CSS boundary remains `tests/unit/test_hm_delegation_proof.py`.
   `hm-convergence` lane reframed around dual-locks / taste, not CSS file-batch drain.
+
+### Agent Guidance
+- Reconstruct from **`stems/`** before inventing structure (framework INDEX →
+  package/example stems → AGENTS). Skill: `.agents/skills/stems/`.
+- HM: open `packages/hatchi-maxchi/AGENTS.md` then
+  `docs/agent/pick-a-surface.md`; do not wire combobox into grid cells
+  (`does_not_compose` + CONSUMER_MAP).
+- Gallery `/mock/*` and toasts are not the product API.
+
 
 ## [0.102.0] - 2026-07-11
 

@@ -11,6 +11,14 @@ dazzle serve
 
 Open http://localhost:3000 to see the running app.
 
+### Stems
+
+Every example carries a **`stems/`** directory: domain epistemic stems plus a
+pointer to monorepo framework stems (`/stems/`) and HM stems when UI work
+matters. New-app template notes: monorepo `stems/app-template/`. Agents:
+reconstruct domain judgement from `stems/INDEX.md` before expanding the DSL.
+Gate: `tests/unit/test_stems_layout.py`.
+
 ---
 
 ## Learning Path

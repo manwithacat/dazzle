@@ -481,30 +481,15 @@
     outline-offset: 1px;
   }
 
-  .dz-combobox {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-  }
+  /* NOTE: do NOT use `.dz-combobox` here. That class is the combobox
+   * Hyperpart enhancement root (components/combobox.css). A prior
+   * fragment "labeled select stack" under the same name made the
+   * Hyperpart root `display:flex; flex-direction:column; gap:…` and
+   * fought progressive enhancement layout. Unused BEM removed 2026-07. */
 
-  .dz-combobox__label {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    color: var(--colour-text);
-  }
-
-  .dz-combobox__select {
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--text-base);
-    color: var(--colour-text);
-    background: var(--colour-surface);
-    border: 1px solid var(--colour-border);
-    border-radius: var(--radius-sm);
-  }
-
-  /* Plan 14: RefPicker — REF field selector. Parallels .dz-combobox in
-     visual treatment; the data-ref-api attribute drives client-side
-     option population via dz.filterRefSelect. */
+  /* Plan 14: RefPicker — REF field selector. Labeled select stack;
+     the data-ref-api attribute drives client-side option population
+     via dz.filterRefSelect. */
   .dz-ref-picker {
     display: flex;
     flex-direction: column;

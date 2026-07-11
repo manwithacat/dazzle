@@ -12,6 +12,10 @@
 
 .dz-combobox {
   position: relative;
+  /* block, not flex: a legacy fragment rule once set .dz-combobox to a
+   * column flex stack (label+select). The Hyperpart root must not inherit
+   * that layout or the enhance wrapper gains gap/flex quirks. */
+  display: block;
   width: 100%;
 }
 
@@ -20,14 +24,22 @@
  * over and the native select is removed from the visual layer (it stays
  * in the DOM to carry the submitted value). */
 .dz-combobox[data-dz-enhanced] > select[data-dz-combobox] {
-  display: none;
+  display: none !important; /* beat any residual form/fragment display rules */
 }
 
 .dz-combobox-input {
   width: 100%;
-  height: 2rem;
+  /* Match .dz-form-input box model exactly. Without border-box, <input>
+   * is content-box while the pre-enhance <select class="form-input"> is
+   * border-box — same min-height 2.5rem jumps ~18px (padding+border) on
+   * enhance, and width:100% overflows by the horizontal padding. */
+  box-sizing: border-box;
+  height: auto;
+  min-height: 2.5rem;
+  line-height: 1.4;
+  padding-block: var(--space-sm);
   padding-inline-start: var(--space-md);
-  padding-inline-end: 2rem;
+  padding-inline-end: 2rem; /* room for trailing chrome (if any) */
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
   border: 1px solid var(--colour-border);

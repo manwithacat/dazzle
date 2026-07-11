@@ -2,6 +2,9 @@
 
 A server-rendered data table on a real <table>, all HTML over the wire: search, sortable headers, filters, row selection (one page or every matching row), bulk actions, pagination, and deep-linkable URL-synced state. Optional extensions add column visibility, column resize, and inline cell editing. See How to use it and the DOM contract on this page for wiring.
 
+> **Layer:** L2 host · **Recipe:** `list-region-host` — server-driven list / data table host · **Refuses:** `combobox`
+> Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
+
 > **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
 
 > **Demo vs contract:** Live gallery behaviour may use `/mock/*` or flash toasts. Those are **offline demos only** — implement **Server exchange** + **DOM contract**, not the mock. See AGENTS.md › Gallery demos.
@@ -161,6 +164,12 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 
 - `button` — agents/button.md
 - `badge` — agents/badge.md
+
+### Does not compose
+
+Local primitives that look like another Hyperpart. Declared in the registry; CI-locked. See `CONSUMER_MAP.md`.
+
+- does **not** use `combobox` (kind=select in-cell editor): bare <select class=dz-inline-edit-select> for density, morph survival (root._dzEdit + before/after-swap), and commit-on-change PUT — not the progressive-enhancement combobox overlay — spike `docs/spikes/combobox-in-grid-cell.md`
 
 ## DOM contract
 

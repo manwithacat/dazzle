@@ -4,11 +4,22 @@ Every Dazzle project starts with a DSL directory and a `dazzle.toml`
 manifest. As the project grows, custom Python code needs a home. This
 reference describes the recommended layout.
 
+### Epistemic stems (`stems/`)
+
+Apps should keep a short **`stems/`** directory: compressed domain judgement
+(INDEX + small stem files). Framework stems live in the monorepo root
+`stems/`; HaTchi-MaXchi has `packages/hatchi-maxchi/stems/`. See monorepo
+`stems/README.md` and `AGENTS.md` › Epistemic layout. SPEC/DSL are
+*expressions* of stems, not replacements for them.
+
 ## Minimal Project
 
 ```
 my-app/
   dazzle.toml              # Project manifest
+  stems/                   # Domain stems (even for small apps)
+    README.md
+    INDEX.md
   dsl/
     app.dsl                # DSL entry point
     entities.dsl           # Entity definitions
@@ -16,6 +27,7 @@ my-app/
 ```
 
 This is sufficient for apps that are fully DSL-driven with no custom code.
+Add stem files under `stems/` as domain judgement solidifies.
 
 ## Full Project Layout
 
@@ -24,6 +36,9 @@ When a project has custom Python code beyond the DSL:
 ```
 my-app/
   dazzle.toml              # Project manifest
+  stems/                   # Domain epistemic stems (INDEX + short files)
+    README.md
+    INDEX.md
   dsl/                     # DSL source files
     app.dsl
     entities.dsl

@@ -22,10 +22,22 @@ cd examples/simple_task && dazzle serve
 # UI: http://localhost:3000 | API: http://localhost:8000/docs
 ```
 
+## Epistemic entry (read before inventing structure)
+
+| Path | Contents |
+|------|----------|
+| [`stems/`](https://github.com/manwithacat/dazzle/tree/main/stems) | **Framework stems** — compressed Dazzle judgement (dsl-first, hypermedia SSR, …) |
+| [`AGENTS.md`](https://github.com/manwithacat/dazzle/blob/main/AGENTS.md) | Always-on agent curriculum + commands |
+| [`packages/hatchi-maxchi/stems/`](https://github.com/manwithacat/dazzle/tree/main/packages/hatchi-maxchi/stems) | Design-system stems (Hyperpart, composition) |
+| `examples/*/stems/` | Per-app domain stems |
+
+Stems are not “more docs.” Reconstruct from `stems/INDEX.md` first; ADRs under `docs/adr/` are expressions of those stems.
+
 ## Repository Structure
 
 | Path | Contents |
 |------|----------|
+| `stems/` | Framework epistemic stems (INDEX + stem files) |
 | `src/dazzle/core/` | Parser, IR types, linker, validation |
 | `src/dazzle/mcp/` | MCP server — see `docs/reference/mcp-tools.md` for the live tool inventory + knowledge graph |
 | `src/dazzle/agent/` | Mission-driven agent framework |
@@ -33,8 +45,10 @@ cd examples/simple_task && dazzle serve
 | `src/dazzle/rbac/` | Provable RBAC — static matrix, dynamic verification, audit trail |
 | `src/dazzle/http/` | FastAPI runtime (CRUD, auth, events, grants) |
 | `src/dazzle/page/` | Server-rendered UI runtime — typed Fragment substrate + HTMX |
+| `packages/hatchi-maxchi/` | Design system (Hyperparts); own `stems/` + `AGENTS.md` |
 | `docs/reference/` | DSL reference documentation |
-| `examples/` | Runnable example applications |
+| `docs/adr/` | Decision history (expressions of stems) |
+| `examples/` | Runnable example applications (each with `stems/`) |
 
 ## DSL Quick Reference
 

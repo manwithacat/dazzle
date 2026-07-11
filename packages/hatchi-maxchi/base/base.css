@@ -79,11 +79,18 @@ a:focus-visible {
 
 /* Form controls — minimal Dazzle-flavoured baseline so an
  * un-styled <input> looks intentional rather than browser-default.
- * Components extend this; they do not fight it. */
+ * Components extend this; they do not fight it.
+ *
+ * box-sizing: border-box is mandatory here. UAs treat <select> as
+ * border-box for height purposes but <input type=text> as content-box.
+ * Progressive enhancement (combobox: select → text input) then jumps
+ * outer height by padding+border (~18px) while min-height stays 2.5rem.
+ * Force one box model so form-input / combobox-input / bare controls match. */
 
 input,
 textarea,
 select {
+  box-sizing: border-box;
   background: var(--colour-surface);
   color: var(--colour-text);
   border: 1px solid var(--colour-border);

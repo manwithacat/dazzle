@@ -193,10 +193,15 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     """Always-visible Server exchange section (every part page — same skeleton).
 
     Parts with no exchanges still render the section so agents/humans never
-    wonder whether the page is incomplete. Empty state = pure client / presentation.
+    wonder whether the page is incomplete. Default empty state = pure client /
+    presentation; ``exchange_empty`` overrides that for form-bound contracts
+    (e.g. combobox growing-list catalogue upsert on the enclosing form POST).
     """
     head = f'<section class="hm-ref" id="exchange"><h3>{_term("exchange")}</h3>'
     if not hyperpart.exchanges:
+        custom = (getattr(hyperpart, "exchange_empty", "") or "").strip()
+        if custom:
+            return head + f'<div class="hm-exchange-empty">{custom}</div></section>'
         return (
             head + f'<p class="hm-ref-lead">This {_term("hyperpart")} has <strong>no server '
             "exchange</strong> — it is presentation or client chrome only. htmx does "
@@ -578,6 +583,22 @@ def _guidance_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     if g.composes_with:
         links = " ".join(f'<a href="{pid}"><code>{pid}</code></a>' for pid in g.composes_with)
         blocks.append(f"<h4>Related parts</h4><p>{links}</p>")
+    if getattr(hyperpart, "does_not_compose", None):
+        lis = []
+        for nc in hyperpart.does_not_compose:
+            spike = f" — spike <code>{_html.escape(nc.spike)}</code>" if nc.spike else ""
+            lis.append(
+                "<li>does <strong>not</strong> use "
+                f"<code>{_html.escape(nc.other)}</code> "
+                f"({_html.escape(nc.seam)}): {_html.escape(nc.reason)}{spike}</li>"
+            )
+        blocks.append(
+            "<h4>Does not compose</h4>"
+            '<p class="hm-ref-lead">Local primitives that look like another Hyperpart. '
+            "Declared in the registry; CI-locked. See "
+            "<code>CONSUMER_MAP.md</code>.</p>"
+            f"<ul>{''.join(lis)}</ul>"
+        )
     blocks.append("</section>")
     return "".join(blocks)
 
@@ -785,6 +806,24 @@ def _guide_body() -> str:
         "<code>contracts/AUTHORING.md</code> — decision test, contract module, "
         "controller, registry, consumer emitter.</p></section>"
     )
+    sections.append(
+        '<section class="hm-comp" id="layers"><h2>6 · Layers, recipes, and agents</h2>'
+        "<p>Same visual shape does not mean the same Hyperpart. Judgement is "
+        "organised in three layers: <strong>L0 recipe</strong> (the user job), "
+        "<strong>L1 surface</strong> (markup + exchange + lifetime), and "
+        "<strong>L2 host</strong> (who embeds or deliberately refuses a surface). "
+        "Composition is declared (<code>composes</code> / "
+        "<code>does_not_compose</code>); resemblance alone is not composition. "
+        "Example: the data table hosts in-cell enums with a bare "
+        "<code>&lt;select&gt;</code> and refuses the combobox Hyperpart today—"
+        "density, morph survival, and single-field PUT—not a forgotten dogfood.</p>"
+        "<p>Coding agents should start at <code>AGENTS.md</code> (curriculum), "
+        "then <code>docs/agent/pick-a-surface.md</code> (pick matrix), then the "
+        "per-part <code>agents/&lt;id&gt;.md</code> pack. Blast radius: "
+        "<code>CONSUMER_MAP.md</code>. Frozen why: <code>docs/decisions/</code>. "
+        "This guide is the human theory track; it does not replace that "
+        "sequence.</p></section>"
+    )
     return "".join(sections)
 
 
@@ -794,6 +833,55 @@ def _plain_notes(notes: str) -> str:
     text = re.sub(r"</p\s*>", "\n\n", text, flags=re.I)
     text = re.sub(r"<[^>]+>", "", text)
     return _html.unescape(text).strip()
+
+
+def _epistemic_one_liner(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    """Recipe/layer line for agent packs — points at curriculum, not a second matrix."""
+    from registry import RECIPE_LABELS, effective_layer  # local import: site on path
+
+    layer = effective_layer(hyperpart)
+    layer_s = "L2 host" if layer == "L2" else "L1 surface"
+    recipe = hyperpart.recipe
+    if recipe:
+        label = RECIPE_LABELS.get(recipe, recipe)
+        recipe_s = f"`{recipe}` — {label}"
+    else:
+        recipe_s = "_(unset — see docs/agent/pick-a-surface.md)_"
+    refuse = ""
+    if getattr(hyperpart, "does_not_compose", None):
+        others = ", ".join(f"`{nc.other}`" for nc in hyperpart.does_not_compose)
+        refuse = f" · **Refuses:** {others}"
+    return (
+        f"> **Layer:** {layer_s} · **Recipe:** {recipe_s}{refuse}  \n"
+        f"> Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · "
+        f"blast radius: `CONSUMER_MAP.md`"
+    )
+
+
+def _epistemic_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    from registry import RECIPE_LABELS, effective_layer
+
+    layer = effective_layer(hyperpart)
+    layer_s = "L2 host" if layer == "L2" else "L1 surface"
+    recipe = hyperpart.recipe
+    if recipe:
+        label = RECIPE_LABELS.get(recipe, recipe)
+        recipe_html = f"<code>{_html.escape(recipe)}</code> — {_html.escape(label)}"
+    else:
+        recipe_html = "<em>unset</em> — see <code>docs/agent/pick-a-surface.md</code>"
+    refuse = ""
+    if getattr(hyperpart, "does_not_compose", None):
+        bits = ", ".join(
+            f"<code>{_html.escape(nc.other)}</code>" for nc in hyperpart.does_not_compose
+        )
+        refuse = f" · <strong>Refuses:</strong> {bits}"
+    return (
+        f'<p class="hm-ref-lead hm-epistemic"><strong>Layer:</strong> {layer_s} · '
+        f"<strong>Recipe:</strong> {recipe_html}{refuse}. "
+        "Curriculum: <code>AGENTS.md</code>; "
+        "pick matrix: <code>docs/agent/pick-a-surface.md</code>; "
+        "blast radius: <code>CONSUMER_MAP.md</code>.</p>"
+    )
 
 
 def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-def]
@@ -807,6 +895,8 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
         f"# {hyperpart.title} (`{hyperpart.id}`)",
         "",
         hyperpart.blurb,
+        "",
+        _epistemic_one_liner(hyperpart),
         "",
         "> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). "
         "DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` "
@@ -826,12 +916,16 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
     # Always emit Server exchange / How to use / DOM contract (same skeleton as HTML).
     lines += ["## Server exchange", ""]
     if not hyperpart.exchanges:
-        lines += [
-            "This Hyperpart has **no server exchange** — presentation or client "
-            "chrome only. If you put `hx-*` on a control that uses this markup, "
-            "that action's exchange belongs to the action, not this part.",
-            "",
-        ]
+        custom = (getattr(hyperpart, "exchange_empty", "") or "").strip()
+        if custom:
+            lines += [_plain_notes(custom), ""]
+        else:
+            lines += [
+                "This Hyperpart has **no server exchange** — presentation or client "
+                "chrome only. If you put `hx-*` on a control that uses this markup, "
+                "that action's exchange belongs to the action, not this part.",
+                "",
+            ]
     else:
         lines += [
             "When the client affordance finishes, htmx issues **this** request. "
@@ -899,6 +993,18 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
         if g.composes_with:
             lines += ["### Related parts", ""]
             lines += [f"- `{pid}` — agents/{pid}.md" for pid in g.composes_with] + [""]
+    if getattr(hyperpart, "does_not_compose", None):
+        lines += [
+            "### Does not compose",
+            "",
+            "Local primitives that look like another Hyperpart. Declared in the "
+            "registry; CI-locked. See `CONSUMER_MAP.md`.",
+            "",
+        ]
+        for nc in hyperpart.does_not_compose:
+            spike = f" — spike `{nc.spike}`" if nc.spike else ""
+            lines.append(f"- does **not** use `{nc.other}` ({nc.seam}): {nc.reason}{spike}")
+        lines.append("")
 
     lines += ["## DOM contract", ""]
     if not hyperpart.contracts:
@@ -2005,6 +2111,7 @@ window.addEventListener('storage', function (e) {{
                     f'<section class="hm-comp" id="{c.id}">'
                     f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
                     f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
+                    f"{_epistemic_html(c)}"
                     f'<div class="hm-preview">{framed_live_part}</div>'
                     f'<section class="hm-ref" id="copy"><h3>Copy this</h3>'
                     f"{snippet_block}</section>"
@@ -2384,23 +2491,39 @@ document.addEventListener('click', function (e) {{
         "> server-rendered partial + its endpoint exchange contracts + an\n"
         "> optional vanilla-JS controller. No client framework.\n\n"
         "## Sources\n\n"
+        "- [AGENTS.md]"
+        "(https://github.com/manwithacat/hatchi-maxchi/blob/main/AGENTS.md):"
+        " **always-on curriculum** — stems, layers, invention ladder,"
+        " authority hierarchy\n"
+        "- [Package stems]"
+        "(https://github.com/manwithacat/hatchi-maxchi/tree/main/stems):"
+        " compressed Hyperpart judgement (INDEX + stem files)\n"
+        "- [Agent playbooks]"
+        "(https://github.com/manwithacat/hatchi-maxchi/tree/main/docs/agent):"
+        " pick-a-surface, compose-or-refuse, mutate-a-primitive, invent-safely\n"
+        "- [Decisions (expressions of stems)]"
+        "(https://github.com/manwithacat/hatchi-maxchi/tree/main/docs/decisions):"
+        " dated why — Hyperpart, layers, composition, invention ladder\n"
         "- [Component registry (source of truth)]"
         "(https://github.com/manwithacat/hatchi-maxchi/blob/main/site/registry.py):"
         " canonical markup + exchange contracts per component — parse this,"
         " don't scrape the gallery\n"
+        "- [CONSUMER_MAP]"
+        "(https://github.com/manwithacat/hatchi-maxchi/blob/main/CONSUMER_MAP.md):"
+        " reverse composition / refusal index (blast radius)\n"
+        "- [CONTRACT_SURFACE]"
+        "(https://github.com/manwithacat/hatchi-maxchi/blob/main/CONTRACT_SURFACE.md):"
+        " dual-lock attr/field breaking-change detector\n"
         "- [Contract modules (typed)]"
         "(https://github.com/manwithacat/hatchi-maxchi/tree/main/contracts):"
         " per-part typed ingestion model + DOM contract + executable exemplar;"
         " authoring path in contracts/AUTHORING.md\n"
-        "- [AGENTS.md]"
-        "(https://github.com/manwithacat/hatchi-maxchi/blob/main/AGENTS.md):"
-        " consuming + contributing with a coding agent\n"
         "- [README]"
         "(https://github.com/manwithacat/hatchi-maxchi#readme):"
         " setup, theming, prefixing, releases\n"
         "- [Guide](https://manwithacat.github.io/hatchi-maxchi/guide):"
-        " the theory track — hypermedia model, tokens, Hyperpart anatomy,"
-        " exchanges & contracts, Blueprints\n\n"
+        " human theory track — hypermedia model, tokens, Hyperpart anatomy,"
+        " exchanges & contracts, Blueprints, layers\n\n"
         "## Per-part agent files (one chunk per Hyperpart)\n\n"
         + "".join(
             f"- [{h.title}](https://manwithacat.github.io/hatchi-maxchi/"

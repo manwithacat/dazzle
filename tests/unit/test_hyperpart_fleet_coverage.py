@@ -105,6 +105,8 @@ SIGNALS: dict[str, object] = {
     "popover": "exempt:no Dazzle emitter yet (gallery primitive)",
     "tooltip": "exempt:no Dazzle emitter yet (gallery primitive)",
     "alert": "exempt:no Dazzle emitter yet (form errors are form-chrome dz-form-errors; the banner is a CSS-only different contract)",
+    # HM gallery / agent-pack snippets (build_site code Hyperpart); not a DSL surface.
+    "code": "exempt:HM gallery + agent-pack snippets (no Dazzle DSL emitter yet)",
 }
 
 # ── the ratchet: recorded adoption debt (#164) ──────────────────────

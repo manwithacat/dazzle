@@ -1,20 +1,21 @@
 {
   "version": "2.0",
-  "dsl_hash": "c0adc9a0e4971fd1",
-  "generated_at": "2026-05-04T15:42:42.060945",
+  "dsl_hash": "b18c4b586dc70588",
+  "generated_at": "2026-07-11T19:23:49.594865",
   "project_name": "simple_task",
   "coverage": {
     "entities": [
       "AIJob",
       "DeployHistory",
       "FeedbackReport",
+      "OnboardingState",
       "SystemHealth",
       "SystemMetric",
       "Task",
       "TaskComment",
       "User"
     ],
-    "entities_total": 8,
+    "entities_total": 9,
     "state_machines": [
       "FeedbackReport",
       "Task"
@@ -34,8 +35,14 @@
       "team_overview"
     ],
     "workspaces_total": 5,
-    "events": [],
-    "events_total": 0,
+    "events": [
+      "CommentAdded",
+      "TaskAssigned",
+      "TaskCreated",
+      "TaskOverdue",
+      "TaskStatusChanged"
+    ],
+    "events_total": 5,
     "processes": [
       "task_auto_assignment",
       "task_escalation",
@@ -62,7 +69,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_328b3eae@example.com",
+            "email": "test_c16ebd08@example.com",
             "name": "Test name"
           },
           "rationale": "Create valid Team Member"
@@ -91,7 +98,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060313"
+      "created_at": "2026-07-11T19:23:49.594024"
     },
     {
       "test_id": "CRUD_USER_READ",
@@ -105,7 +112,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_2dd93470@example.com",
+            "email": "test_f9347151@example.com",
             "name": "Test name"
           },
           "rationale": "Seed test data"
@@ -139,7 +146,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060330"
+      "created_at": "2026-07-11T19:23:49.594044"
     },
     {
       "test_id": "VAL_USER_REQUIRED",
@@ -179,7 +186,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060334"
+      "created_at": "2026-07-11T19:23:49.594049"
     },
     {
       "test_id": "VAL_USER_EMAIL_UNIQUE",
@@ -193,7 +200,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_f64cb5a5@example.com",
+            "email": "test_458c96e0@example.com",
             "name": "Test name"
           },
           "rationale": "Create first entity"
@@ -202,7 +209,7 @@
           "action": "create_expect_error",
           "target": "entity:User",
           "data": {
-            "email": "test_f64cb5a5@example.com",
+            "email": "test_458c96e0@example.com",
             "name": "Test name"
           },
           "rationale": "Attempt duplicate email"
@@ -231,7 +238,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060347"
+      "created_at": "2026-07-11T19:23:49.594062"
     },
     {
       "test_id": "CRUD_TASK_CREATE",
@@ -246,7 +253,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04"
+            "due_date": "2026-07-11"
           },
           "rationale": "Create valid Task"
         },
@@ -274,7 +281,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060381"
+      "created_at": "2026-07-11T19:23:49.594095"
     },
     {
       "test_id": "CRUD_TASK_READ",
@@ -289,7 +296,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04"
+            "due_date": "2026-07-11"
           },
           "rationale": "Seed test data"
         },
@@ -322,7 +329,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060395"
+      "created_at": "2026-07-11T19:23:49.594109"
     },
     {
       "test_id": "VAL_TASK_REQUIRED",
@@ -362,7 +369,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060398"
+      "created_at": "2026-07-11T19:23:49.594113"
     },
     {
       "test_id": "CRUD_TASKCOMMENT_CREATE",
@@ -377,7 +384,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04"
+            "due_date": "2026-07-11"
           },
           "store_result": "parent_task",
           "rationale": "Create parent Task"
@@ -386,7 +393,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_39b734e9@example.com",
+            "email": "test_6ff7a8bd@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -428,7 +435,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060436"
+      "created_at": "2026-07-11T19:23:49.594152"
     },
     {
       "test_id": "CRUD_TASKCOMMENT_READ",
@@ -443,7 +450,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04"
+            "due_date": "2026-07-11"
           },
           "store_result": "parent_task",
           "rationale": "Create parent Task"
@@ -452,7 +459,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_39b734e9@example.com",
+            "email": "test_6ff7a8bd@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -499,7 +506,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060442"
+      "created_at": "2026-07-11T19:23:49.594158"
     },
     {
       "test_id": "VAL_TASKCOMMENT_REQUIRED",
@@ -539,7 +546,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060444"
+      "created_at": "2026-07-11T19:23:49.594161"
     },
     {
       "test_id": "CRUD_AIJOB_READ",
@@ -579,7 +586,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060451"
+      "created_at": "2026-07-11T19:23:49.594169"
     },
     {
       "test_id": "CRUD_FEEDBACKREPORT_CREATE",
@@ -622,7 +629,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060463"
+      "created_at": "2026-07-11T19:23:49.594184"
     },
     {
       "test_id": "CRUD_FEEDBACKREPORT_READ",
@@ -670,7 +677,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060471"
+      "created_at": "2026-07-11T19:23:49.594192"
     },
     {
       "test_id": "VAL_FEEDBACKREPORT_REQUIRED",
@@ -710,7 +717,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060475"
+      "created_at": "2026-07-11T19:23:49.594197"
     },
     {
       "test_id": "VAL_FEEDBACKREPORT_IDEMPOTENCY_KEY_UNIQUE",
@@ -725,7 +732,8 @@
           "target": "entity:FeedbackReport",
           "data": {
             "category": "visual",
-            "description": "Test description for description"
+            "description": "Test description for description",
+            "idempotency_key": "Test idempotency_key_84e8156b"
           },
           "rationale": "Create first entity"
         },
@@ -734,7 +742,8 @@
           "target": "entity:FeedbackReport",
           "data": {
             "category": "visual",
-            "description": "Test description for description"
+            "description": "Test description for description",
+            "idempotency_key": "Test idempotency_key_84e8156b"
           },
           "rationale": "Attempt duplicate idempotency_key"
         },
@@ -762,7 +771,47 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060485"
+      "created_at": "2026-07-11T19:23:49.594215"
+    },
+    {
+      "test_id": "CRUD_ONBOARDINGSTATE_READ",
+      "title": "Read Onboarding State list",
+      "description": "Test reading Onboarding State list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:OnboardingState",
+          "rationale": "Fetch Onboarding State list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Onboarding State list succeeds"
+      ],
+      "entities": [
+        "OnboardingState"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594222"
     },
     {
       "test_id": "CRUD_SYSTEMHEALTH_READ",
@@ -802,7 +851,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060490"
+      "created_at": "2026-07-11T19:23:49.594227"
     },
     {
       "test_id": "CRUD_SYSTEMMETRIC_READ",
@@ -842,7 +891,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060495"
+      "created_at": "2026-07-11T19:23:49.594231"
     },
     {
       "test_id": "CRUD_DEPLOYHISTORY_READ",
@@ -882,7 +931,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060499"
+      "created_at": "2026-07-11T19:23:49.594236"
     },
     {
       "test_id": "SM_TASK_TODO_IN_PROGRESS",
@@ -897,7 +946,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "todo"
           },
           "rationale": "Create entity in todo state"
@@ -935,7 +984,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060522"
+      "created_at": "2026-07-11T19:23:49.594269"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_REVIEW",
@@ -950,7 +999,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -988,7 +1037,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060527"
+      "created_at": "2026-07-11T19:23:49.594273"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_TODO",
@@ -1003,7 +1052,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -1041,7 +1090,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060530"
+      "created_at": "2026-07-11T19:23:49.594277"
     },
     {
       "test_id": "SM_TASK_REVIEW_DONE",
@@ -1056,7 +1105,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "review"
           },
           "rationale": "Create entity in review state"
@@ -1094,7 +1143,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060534"
+      "created_at": "2026-07-11T19:23:49.594282"
     },
     {
       "test_id": "SM_TASK_REVIEW_IN_PROGRESS",
@@ -1109,7 +1158,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "review"
           },
           "rationale": "Create entity in review state"
@@ -1147,7 +1196,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060537"
+      "created_at": "2026-07-11T19:23:49.594286"
     },
     {
       "test_id": "SM_TASK_DONE_TODO",
@@ -1162,7 +1211,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "done"
           },
           "rationale": "Create entity in done state"
@@ -1200,7 +1249,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060540"
+      "created_at": "2026-07-11T19:23:49.594289"
     },
     {
       "test_id": "SM_TASK_TODO_REVIEW_INVALID",
@@ -1215,7 +1264,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "todo"
           },
           "rationale": "Create entity in todo state"
@@ -1253,7 +1302,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060547"
+      "created_at": "2026-07-11T19:23:49.594296"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_DONE_INVALID",
@@ -1268,7 +1317,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -1306,7 +1355,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060552"
+      "created_at": "2026-07-11T19:23:49.594302"
     },
     {
       "test_id": "SM_TASK_REVIEW_TODO_INVALID",
@@ -1321,7 +1370,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "review"
           },
           "rationale": "Create entity in review state"
@@ -1359,7 +1408,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060555"
+      "created_at": "2026-07-11T19:23:49.594306"
     },
     {
       "test_id": "SM_TASK_DONE_REVIEW_INVALID",
@@ -1374,7 +1423,7 @@
           "target": "entity:Task",
           "data": {
             "title": "Test title",
-            "due_date": "2026-05-04",
+            "due_date": "2026-07-11",
             "status": "done"
           },
           "rationale": "Create entity in done state"
@@ -1412,7 +1461,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060559"
+      "created_at": "2026-07-11T19:23:49.594309"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_NEW_TRIAGED",
@@ -1465,7 +1514,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060593"
+      "created_at": "2026-07-11T19:23:49.594325"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_TRIAGED_IN_PROGRESS",
@@ -1518,7 +1567,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060597"
+      "created_at": "2026-07-11T19:23:49.594328"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_TRIAGED_WONT_FIX",
@@ -1571,7 +1620,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060599"
+      "created_at": "2026-07-11T19:23:49.594330"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_TRIAGED_DUPLICATE",
@@ -1624,7 +1673,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060602"
+      "created_at": "2026-07-11T19:23:49.594336"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_TRIAGED_RESOLVED",
@@ -1677,7 +1726,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060604"
+      "created_at": "2026-07-11T19:23:49.594338"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_RESOLVED",
@@ -1730,7 +1779,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060607"
+      "created_at": "2026-07-11T19:23:49.594341"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_WONT_FIX",
@@ -1783,7 +1832,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060609"
+      "created_at": "2026-07-11T19:23:49.594343"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_RESOLVED_VERIFIED",
@@ -1836,7 +1885,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060611"
+      "created_at": "2026-07-11T19:23:49.594345"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_RESOLVED_IN_PROGRESS",
@@ -1889,12 +1938,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060615"
+      "created_at": "2026-07-11T19:23:49.594348"
     },
     {
-      "test_id": "SM_FEEDBACKREPORT_NEW_VERIFIED_INVALID",
-      "title": "Feedback Report: new \u2192 verified (invalid)",
-      "description": "Test that invalid transition from new to verified is rejected",
+      "test_id": "SM_FEEDBACKREPORT_NEW_RESOLVED_INVALID",
+      "title": "Feedback Report: new \u2192 resolved (invalid)",
+      "description": "Test that invalid transition from new to resolved is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1913,9 +1962,9 @@
           "action": "transition_expect_error",
           "target": "entity:FeedbackReport",
           "data": {
-            "to_state": "verified"
+            "to_state": "resolved"
           },
-          "rationale": "Attempt invalid transition to verified"
+          "rationale": "Attempt invalid transition to resolved"
         },
         {
           "action": "assert_state",
@@ -1928,7 +1977,7 @@
         }
       ],
       "expected_outcomes": [
-        "Feedback Report: new \u2192 verified (invalid) succeeds"
+        "Feedback Report: new \u2192 resolved (invalid) succeeds"
       ],
       "entities": [
         "FeedbackReport"
@@ -1942,12 +1991,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060620"
+      "created_at": "2026-07-11T19:23:49.594353"
     },
     {
-      "test_id": "SM_FEEDBACKREPORT_TRIAGED_NEW_INVALID",
-      "title": "Feedback Report: triaged \u2192 new (invalid)",
-      "description": "Test that invalid transition from triaged to new is rejected",
+      "test_id": "SM_FEEDBACKREPORT_TRIAGED_VERIFIED_INVALID",
+      "title": "Feedback Report: triaged \u2192 verified (invalid)",
+      "description": "Test that invalid transition from triaged to verified is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1966,9 +2015,9 @@
           "action": "transition_expect_error",
           "target": "entity:FeedbackReport",
           "data": {
-            "to_state": "new"
+            "to_state": "verified"
           },
-          "rationale": "Attempt invalid transition to new"
+          "rationale": "Attempt invalid transition to verified"
         },
         {
           "action": "assert_state",
@@ -1981,7 +2030,7 @@
         }
       ],
       "expected_outcomes": [
-        "Feedback Report: triaged \u2192 new (invalid) succeeds"
+        "Feedback Report: triaged \u2192 verified (invalid) succeeds"
       ],
       "entities": [
         "FeedbackReport"
@@ -1995,12 +2044,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060624"
+      "created_at": "2026-07-11T19:23:49.594357"
     },
     {
-      "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_DUPLICATE_INVALID",
-      "title": "Feedback Report: in_progress \u2192 duplicate (invalid)",
-      "description": "Test that invalid transition from in_progress to duplicate is rejected",
+      "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_VERIFIED_INVALID",
+      "title": "Feedback Report: in_progress \u2192 verified (invalid)",
+      "description": "Test that invalid transition from in_progress to verified is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2019,9 +2068,9 @@
           "action": "transition_expect_error",
           "target": "entity:FeedbackReport",
           "data": {
-            "to_state": "duplicate"
+            "to_state": "verified"
           },
-          "rationale": "Attempt invalid transition to duplicate"
+          "rationale": "Attempt invalid transition to verified"
         },
         {
           "action": "assert_state",
@@ -2034,7 +2083,7 @@
         }
       ],
       "expected_outcomes": [
-        "Feedback Report: in_progress \u2192 duplicate (invalid) succeeds"
+        "Feedback Report: in_progress \u2192 verified (invalid) succeeds"
       ],
       "entities": [
         "FeedbackReport"
@@ -2048,12 +2097,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060627"
+      "created_at": "2026-07-11T19:23:49.594361"
     },
     {
-      "test_id": "SM_FEEDBACKREPORT_RESOLVED_WONT_FIX_INVALID",
-      "title": "Feedback Report: resolved \u2192 wont_fix (invalid)",
-      "description": "Test that invalid transition from resolved to wont_fix is rejected",
+      "test_id": "SM_FEEDBACKREPORT_RESOLVED_NEW_INVALID",
+      "title": "Feedback Report: resolved \u2192 new (invalid)",
+      "description": "Test that invalid transition from resolved to new is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2072,9 +2121,9 @@
           "action": "transition_expect_error",
           "target": "entity:FeedbackReport",
           "data": {
-            "to_state": "wont_fix"
+            "to_state": "new"
           },
-          "rationale": "Attempt invalid transition to wont_fix"
+          "rationale": "Attempt invalid transition to new"
         },
         {
           "action": "assert_state",
@@ -2087,7 +2136,7 @@
         }
       ],
       "expected_outcomes": [
-        "Feedback Report: resolved \u2192 wont_fix (invalid) succeeds"
+        "Feedback Report: resolved \u2192 new (invalid) succeeds"
       ],
       "entities": [
         "FeedbackReport"
@@ -2101,12 +2150,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060631"
+      "created_at": "2026-07-11T19:23:49.594364"
     },
     {
-      "test_id": "SM_FEEDBACKREPORT_VERIFIED_IN_PROGRESS_INVALID",
-      "title": "Feedback Report: verified \u2192 in_progress (invalid)",
-      "description": "Test that invalid transition from verified to in_progress is rejected",
+      "test_id": "SM_FEEDBACKREPORT_VERIFIED_RESOLVED_INVALID",
+      "title": "Feedback Report: verified \u2192 resolved (invalid)",
+      "description": "Test that invalid transition from verified to resolved is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2125,9 +2174,9 @@
           "action": "transition_expect_error",
           "target": "entity:FeedbackReport",
           "data": {
-            "to_state": "in_progress"
+            "to_state": "resolved"
           },
-          "rationale": "Attempt invalid transition to in_progress"
+          "rationale": "Attempt invalid transition to resolved"
         },
         {
           "action": "assert_state",
@@ -2140,7 +2189,7 @@
         }
       ],
       "expected_outcomes": [
-        "Feedback Report: verified \u2192 in_progress (invalid) succeeds"
+        "Feedback Report: verified \u2192 resolved (invalid) succeeds"
       ],
       "entities": [
         "FeedbackReport"
@@ -2154,12 +2203,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060635"
+      "created_at": "2026-07-11T19:23:49.594368"
     },
     {
-      "test_id": "SM_FEEDBACKREPORT_WONT_FIX_VERIFIED_INVALID",
-      "title": "Feedback Report: wont_fix \u2192 verified (invalid)",
-      "description": "Test that invalid transition from wont_fix to verified is rejected",
+      "test_id": "SM_FEEDBACKREPORT_WONT_FIX_RESOLVED_INVALID",
+      "title": "Feedback Report: wont_fix \u2192 resolved (invalid)",
+      "description": "Test that invalid transition from wont_fix to resolved is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2178,9 +2227,9 @@
           "action": "transition_expect_error",
           "target": "entity:FeedbackReport",
           "data": {
-            "to_state": "verified"
+            "to_state": "resolved"
           },
-          "rationale": "Attempt invalid transition to verified"
+          "rationale": "Attempt invalid transition to resolved"
         },
         {
           "action": "assert_state",
@@ -2193,7 +2242,7 @@
         }
       ],
       "expected_outcomes": [
-        "Feedback Report: wont_fix \u2192 verified (invalid) succeeds"
+        "Feedback Report: wont_fix \u2192 resolved (invalid) succeeds"
       ],
       "entities": [
         "FeedbackReport"
@@ -2207,12 +2256,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060638"
+      "created_at": "2026-07-11T19:23:49.594371"
     },
     {
-      "test_id": "SM_FEEDBACKREPORT_DUPLICATE_VERIFIED_INVALID",
-      "title": "Feedback Report: duplicate \u2192 verified (invalid)",
-      "description": "Test that invalid transition from duplicate to verified is rejected",
+      "test_id": "SM_FEEDBACKREPORT_DUPLICATE_RESOLVED_INVALID",
+      "title": "Feedback Report: duplicate \u2192 resolved (invalid)",
+      "description": "Test that invalid transition from duplicate to resolved is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2231,9 +2280,9 @@
           "action": "transition_expect_error",
           "target": "entity:FeedbackReport",
           "data": {
-            "to_state": "verified"
+            "to_state": "resolved"
           },
-          "rationale": "Attempt invalid transition to verified"
+          "rationale": "Attempt invalid transition to resolved"
         },
         {
           "action": "assert_state",
@@ -2246,7 +2295,7 @@
         }
       ],
       "expected_outcomes": [
-        "Feedback Report: duplicate \u2192 verified (invalid) succeeds"
+        "Feedback Report: duplicate \u2192 resolved (invalid) succeeds"
       ],
       "entities": [
         "FeedbackReport"
@@ -2260,7 +2309,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060641"
+      "created_at": "2026-07-11T19:23:49.594374"
     },
     {
       "test_id": "ACL_ADMIN_ACCESS",
@@ -2294,7 +2343,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060645"
+      "created_at": "2026-07-11T19:23:49.594380"
     },
     {
       "test_id": "GOAL_ADMIN_MANAGE_ALL_TASKS",
@@ -2328,7 +2377,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060701"
+      "created_at": "2026-07-11T19:23:49.594435"
     },
     {
       "test_id": "GOAL_ADMIN_CONFIGURE_TEAM_SETTI",
@@ -2362,7 +2411,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060705"
+      "created_at": "2026-07-11T19:23:49.594439"
     },
     {
       "test_id": "GOAL_ADMIN_VIEW_ANALYTICS",
@@ -2396,7 +2445,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060709"
+      "created_at": "2026-07-11T19:23:49.594442"
     },
     {
       "test_id": "ACL_MANAGER_ACCESS",
@@ -2430,7 +2479,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060711"
+      "created_at": "2026-07-11T19:23:49.594445"
     },
     {
       "test_id": "GOAL_MANAGER_ASSIGN_TASKS_TO_TEAM",
@@ -2464,7 +2513,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060715"
+      "created_at": "2026-07-11T19:23:49.594449"
     },
     {
       "test_id": "GOAL_MANAGER_TRACK_TEAM_PROGRESS",
@@ -2498,7 +2547,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060718"
+      "created_at": "2026-07-11T19:23:49.594451"
     },
     {
       "test_id": "GOAL_MANAGER_REVIEW_COMPLETED_WOR",
@@ -2532,7 +2581,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060721"
+      "created_at": "2026-07-11T19:23:49.594454"
     },
     {
       "test_id": "ACL_MEMBER_ACCESS",
@@ -2566,7 +2615,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060723"
+      "created_at": "2026-07-11T19:23:49.594456"
     },
     {
       "test_id": "GOAL_MEMBER_COMPLETE_ASSIGNED_TA",
@@ -2600,7 +2649,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060727"
+      "created_at": "2026-07-11T19:23:49.594459"
     },
     {
       "test_id": "GOAL_MEMBER_UPDATE_TASK_STATUS",
@@ -2634,7 +2683,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060730"
+      "created_at": "2026-07-11T19:23:49.594461"
     },
     {
       "test_id": "GOAL_MEMBER_REQUEST_HELP",
@@ -2668,7 +2717,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060732"
+      "created_at": "2026-07-11T19:23:49.594464"
     },
     {
       "test_id": "AUTH_LOGIN_VALID_ADMIN",
@@ -2717,7 +2766,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060736"
+      "created_at": "2026-07-11T19:23:49.594467"
     },
     {
       "test_id": "AUTH_LOGIN_INVALID_ADMIN",
@@ -2767,7 +2816,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060738"
+      "created_at": "2026-07-11T19:23:49.594613"
     },
     {
       "test_id": "AUTH_REDIRECT_ADMIN",
@@ -2808,7 +2857,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060741"
+      "created_at": "2026-07-11T19:23:49.594615"
     },
     {
       "test_id": "AUTH_SESSION_VALID_ADMIN",
@@ -2853,7 +2902,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060743"
+      "created_at": "2026-07-11T19:23:49.594617"
     },
     {
       "test_id": "AUTH_SESSION_EXPIRED_ADMIN",
@@ -2905,7 +2954,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060745"
+      "created_at": "2026-07-11T19:23:49.594620"
     },
     {
       "test_id": "AUTH_LOGOUT_ADMIN",
@@ -2972,7 +3021,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060747"
+      "created_at": "2026-07-11T19:23:49.594623"
     },
     {
       "test_id": "AUTH_LOGIN_VALID_MANAGER",
@@ -3021,7 +3070,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060750"
+      "created_at": "2026-07-11T19:23:49.594627"
     },
     {
       "test_id": "AUTH_LOGIN_INVALID_MANAGER",
@@ -3071,7 +3120,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060752"
+      "created_at": "2026-07-11T19:23:49.594630"
     },
     {
       "test_id": "AUTH_REDIRECT_MANAGER",
@@ -3112,7 +3161,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060754"
+      "created_at": "2026-07-11T19:23:49.594632"
     },
     {
       "test_id": "AUTH_SESSION_VALID_MANAGER",
@@ -3157,7 +3206,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060756"
+      "created_at": "2026-07-11T19:23:49.594634"
     },
     {
       "test_id": "AUTH_SESSION_EXPIRED_MANAGER",
@@ -3209,7 +3258,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060758"
+      "created_at": "2026-07-11T19:23:49.594636"
     },
     {
       "test_id": "AUTH_LOGOUT_MANAGER",
@@ -3276,7 +3325,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060760"
+      "created_at": "2026-07-11T19:23:49.594638"
     },
     {
       "test_id": "AUTH_LOGIN_VALID_MEMBER",
@@ -3325,7 +3374,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060763"
+      "created_at": "2026-07-11T19:23:49.594641"
     },
     {
       "test_id": "AUTH_LOGIN_INVALID_MEMBER",
@@ -3375,7 +3424,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060765"
+      "created_at": "2026-07-11T19:23:49.594642"
     },
     {
       "test_id": "AUTH_REDIRECT_MEMBER",
@@ -3416,7 +3465,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060813"
+      "created_at": "2026-07-11T19:23:49.594644"
     },
     {
       "test_id": "AUTH_SESSION_VALID_MEMBER",
@@ -3461,7 +3510,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060816"
+      "created_at": "2026-07-11T19:23:49.594648"
     },
     {
       "test_id": "AUTH_SESSION_EXPIRED_MEMBER",
@@ -3513,7 +3562,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060817"
+      "created_at": "2026-07-11T19:23:49.594650"
     },
     {
       "test_id": "AUTH_LOGOUT_MEMBER",
@@ -3580,7 +3629,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060820"
+      "created_at": "2026-07-11T19:23:49.594652"
     },
     {
       "test_id": "WS_TASK_BOARD_NAV",
@@ -3634,7 +3683,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060825"
+      "created_at": "2026-07-11T19:23:49.594657"
     },
     {
       "test_id": "WS_TASK_BOARD_ROUTE",
@@ -3671,7 +3720,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060827"
+      "created_at": "2026-07-11T19:23:49.594659"
     },
     {
       "test_id": "WS_ADMIN_DASHBOARD_NAV",
@@ -3725,7 +3774,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060831"
+      "created_at": "2026-07-11T19:23:49.594663"
     },
     {
       "test_id": "WS_ADMIN_DASHBOARD_ROUTE",
@@ -3762,7 +3811,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060833"
+      "created_at": "2026-07-11T19:23:49.594665"
     },
     {
       "test_id": "WS_TEAM_OVERVIEW_NAV",
@@ -3816,7 +3865,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060836"
+      "created_at": "2026-07-11T19:23:49.594668"
     },
     {
       "test_id": "WS_TEAM_OVERVIEW_ROUTE",
@@ -3853,7 +3902,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060838"
+      "created_at": "2026-07-11T19:23:49.594670"
     },
     {
       "test_id": "WS_MY_WORK_NAV",
@@ -3902,7 +3951,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060840"
+      "created_at": "2026-07-11T19:23:49.594673"
     },
     {
       "test_id": "WS_MY_WORK_ROUTE",
@@ -3934,7 +3983,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060842"
+      "created_at": "2026-07-11T19:23:49.594676"
     },
     {
       "test_id": "WS__PLATFORM_ADMIN_NAV",
@@ -3988,7 +4037,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060845"
+      "created_at": "2026-07-11T19:23:49.594680"
     },
     {
       "test_id": "WS__PLATFORM_ADMIN_ROUTE",
@@ -4025,7 +4074,417 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060847"
+      "created_at": "2026-07-11T19:23:49.594682"
+    },
+    {
+      "test_id": "EVT_TASKCREATED_EMIT",
+      "title": "Emit TaskCreated event",
+      "description": "Test that TaskCreated event is emitted correctly",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event",
+          "target": "event:TaskCreated",
+          "data": {
+            "task_id": "d187bd60-2ec6-4ad4-a803-744868f5c359",
+            "title": "test_title",
+            "priority": "test_priority",
+            "created_by": "aad5ef4f-d447-4e9f-ae35-46857075b14d",
+            "created_at": "2026-07-11"
+          },
+          "rationale": "Emit TaskCreated event"
+        },
+        {
+          "action": "assert_event_logged",
+          "target": "topic:task_events",
+          "data": {
+            "event_type": "TaskCreated"
+          },
+          "rationale": "Verify event was logged"
+        }
+      ],
+      "expected_outcomes": [
+        "Emit TaskCreated event succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "emission",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594701"
+    },
+    {
+      "test_id": "EVT_TASKCREATED_SCHEMA",
+      "title": "Validate TaskCreated schema",
+      "description": "Test that TaskCreated event payload is validated",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event_expect_error",
+          "target": "event:TaskCreated",
+          "data": {},
+          "rationale": "Emit invalid TaskCreated event"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "event_validation_error"
+          },
+          "rationale": "Verify validation error"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate TaskCreated schema succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "validation",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594704"
+    },
+    {
+      "test_id": "EVT_TASKSTATUSCHANGED_EMIT",
+      "title": "Emit TaskStatusChanged event",
+      "description": "Test that TaskStatusChanged event is emitted correctly",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event",
+          "target": "event:TaskStatusChanged",
+          "data": {
+            "task_id": "fd3d4da7-67fe-4656-971f-8c1d10961d0c",
+            "old_status": "test_old_status",
+            "new_status": "test_new_status",
+            "changed_by": "6de4c450-58d4-4a29-bfa0-fee123f68af0",
+            "changed_at": "2026-07-11"
+          },
+          "rationale": "Emit TaskStatusChanged event"
+        },
+        {
+          "action": "assert_event_logged",
+          "target": "topic:task_events",
+          "data": {
+            "event_type": "TaskStatusChanged"
+          },
+          "rationale": "Verify event was logged"
+        }
+      ],
+      "expected_outcomes": [
+        "Emit TaskStatusChanged event succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "emission",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594715"
+    },
+    {
+      "test_id": "EVT_TASKSTATUSCHANGED_SCHEMA",
+      "title": "Validate TaskStatusChanged schema",
+      "description": "Test that TaskStatusChanged event payload is validated",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event_expect_error",
+          "target": "event:TaskStatusChanged",
+          "data": {},
+          "rationale": "Emit invalid TaskStatusChanged event"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "event_validation_error"
+          },
+          "rationale": "Verify validation error"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate TaskStatusChanged schema succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "validation",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594717"
+    },
+    {
+      "test_id": "EVT_TASKASSIGNED_EMIT",
+      "title": "Emit TaskAssigned event",
+      "description": "Test that TaskAssigned event is emitted correctly",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event",
+          "target": "event:TaskAssigned",
+          "data": {
+            "task_id": "5dcd36b2-6fd8-4d90-b43a-edd212bc1c62",
+            "previous_assignee": "6579a293-73f2-42cd-bc23-9494512ffeda",
+            "new_assignee": "bf5359e6-85d6-4d53-b922-69d84162508e",
+            "assigned_by": "8ba78d18-8f2a-410d-999d-5ef6b3d9012d",
+            "assigned_at": "2026-07-11"
+          },
+          "rationale": "Emit TaskAssigned event"
+        },
+        {
+          "action": "assert_event_logged",
+          "target": "topic:task_events",
+          "data": {
+            "event_type": "TaskAssigned"
+          },
+          "rationale": "Verify event was logged"
+        }
+      ],
+      "expected_outcomes": [
+        "Emit TaskAssigned event succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "emission",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594731"
+    },
+    {
+      "test_id": "EVT_TASKASSIGNED_SCHEMA",
+      "title": "Validate TaskAssigned schema",
+      "description": "Test that TaskAssigned event payload is validated",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event_expect_error",
+          "target": "event:TaskAssigned",
+          "data": {},
+          "rationale": "Emit invalid TaskAssigned event"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "event_validation_error"
+          },
+          "rationale": "Verify validation error"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate TaskAssigned schema succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "validation",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594736"
+    },
+    {
+      "test_id": "EVT_TASKOVERDUE_EMIT",
+      "title": "Emit TaskOverdue event",
+      "description": "Test that TaskOverdue event is emitted correctly",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event",
+          "target": "event:TaskOverdue",
+          "data": {
+            "task_id": "363109f2-8461-41fd-8209-dce63ea6ea18",
+            "due_date": "2026-07-11",
+            "days_overdue": 1,
+            "assigned_to": "f3a68571-6173-40bc-8cc6-5386022612ff",
+            "priority": "test_priority"
+          },
+          "rationale": "Emit TaskOverdue event"
+        },
+        {
+          "action": "assert_event_logged",
+          "target": "topic:task_events",
+          "data": {
+            "event_type": "TaskOverdue"
+          },
+          "rationale": "Verify event was logged"
+        }
+      ],
+      "expected_outcomes": [
+        "Emit TaskOverdue event succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "emission",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594747"
+    },
+    {
+      "test_id": "EVT_TASKOVERDUE_SCHEMA",
+      "title": "Validate TaskOverdue schema",
+      "description": "Test that TaskOverdue event payload is validated",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event_expect_error",
+          "target": "event:TaskOverdue",
+          "data": {},
+          "rationale": "Emit invalid TaskOverdue event"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "event_validation_error"
+          },
+          "rationale": "Verify validation error"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate TaskOverdue schema succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "validation",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594749"
+    },
+    {
+      "test_id": "EVT_COMMENTADDED_EMIT",
+      "title": "Emit CommentAdded event",
+      "description": "Test that CommentAdded event is emitted correctly",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event",
+          "target": "event:CommentAdded",
+          "data": {
+            "comment_id": "4bdee6f5-38d3-43ea-8af6-322b61a5743b",
+            "task_id": "8d0a6a2a-3b9d-414f-92bd-9a0cdeae0a27",
+            "author_id": "df8f0de4-0667-4a6c-941b-1706d7074717",
+            "content_preview": "test_content_preview",
+            "created_at": "2026-07-11"
+          },
+          "rationale": "Emit CommentAdded event"
+        },
+        {
+          "action": "assert_event_logged",
+          "target": "topic:task_events",
+          "data": {
+            "event_type": "CommentAdded"
+          },
+          "rationale": "Verify event was logged"
+        }
+      ],
+      "expected_outcomes": [
+        "Emit CommentAdded event succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "emission",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594760"
+    },
+    {
+      "test_id": "EVT_COMMENTADDED_SCHEMA",
+      "title": "Validate CommentAdded schema",
+      "description": "Test that CommentAdded event payload is validated",
+      "trigger": "event_emission",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "emit_event_expect_error",
+          "target": "event:CommentAdded",
+          "data": {},
+          "rationale": "Emit invalid CommentAdded event"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "event_validation_error"
+          },
+          "rationale": "Verify validation error"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate CommentAdded schema succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "event",
+        "validation",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-11T19:23:49.594761"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_TRIGGER",
@@ -4039,7 +4498,7 @@
           "action": "trigger_process",
           "target": "process:task_auto_assignment",
           "data": {
-            "task_id": "24f89db0-0f33-4253-a95f-59a928feb305"
+            "task_id": "5e944b46-a7f6-433a-bc94-50f679289f25"
           },
           "rationale": "Start task_auto_assignment process"
         },
@@ -4062,7 +4521,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060867"
+      "created_at": "2026-07-11T19:23:49.594775"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_COMPLETE",
@@ -4076,7 +4535,7 @@
           "action": "trigger_process",
           "target": "process:task_auto_assignment",
           "data": {
-            "task_id": "917e2b78-9fd8-45e5-a495-d65320168573"
+            "task_id": "4d76e3e3-fa95-4c85-a88c-3b2a1b27f96f"
           },
           "rationale": "Start task_auto_assignment process"
         },
@@ -4107,7 +4566,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060877"
+      "created_at": "2026-07-11T19:23:49.594783"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_STEP_FIND_CANDIDATE",
@@ -4144,7 +4603,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060880"
+      "created_at": "2026-07-11T19:23:49.594786"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_STEP_NOTIFY_ASSIGNEE",
@@ -4181,7 +4640,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060883"
+      "created_at": "2026-07-11T19:23:49.594788"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_TRIGGER",
@@ -4195,7 +4654,7 @@
           "action": "trigger_process",
           "target": "process:task_escalation",
           "data": {
-            "task_id": "ffd1f774-4c1a-4f29-b6cc-b769a148f014"
+            "task_id": "b6358ddf-f72b-4f11-b687-653f9a2f40f7"
           },
           "rationale": "Start task_escalation process"
         },
@@ -4218,7 +4677,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060891"
+      "created_at": "2026-07-11T19:23:49.594798"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_COMPLETE",
@@ -4232,7 +4691,7 @@
           "action": "trigger_process",
           "target": "process:task_escalation",
           "data": {
-            "task_id": "15b8529e-91e3-407f-835c-ebc5b7e1612e"
+            "task_id": "0c50ebdf-b8c9-4216-a180-21923a175c67"
           },
           "rationale": "Start task_escalation process"
         },
@@ -4263,7 +4722,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060898"
+      "created_at": "2026-07-11T19:23:49.594804"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_STEP_LEVEL_1_NOTIFY",
@@ -4300,7 +4759,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060901"
+      "created_at": "2026-07-11T19:23:49.594808"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_STEP_WAIT_FOR_ACTION",
@@ -4337,7 +4796,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060903"
+      "created_at": "2026-07-11T19:23:49.594810"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_STEP_LEVEL_2_ESCALATE",
@@ -4374,7 +4833,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060905"
+      "created_at": "2026-07-11T19:23:49.594812"
     },
     {
       "test_id": "PROC_URGENT_TASK_APPROVAL_TRIGGER",
@@ -4388,7 +4847,7 @@
           "action": "trigger_process",
           "target": "process:urgent_task_approval",
           "data": {
-            "task_id": "a0da431a-bb7a-48a1-ab4e-dd267bf052e9"
+            "task_id": "0b96412b-234d-45a0-bd30-5f3fd8fd9578"
           },
           "rationale": "Start urgent_task_approval process"
         },
@@ -4411,7 +4870,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060912"
+      "created_at": "2026-07-11T19:23:49.594818"
     },
     {
       "test_id": "PROC_URGENT_TASK_APPROVAL_COMPLETE",
@@ -4425,7 +4884,7 @@
           "action": "trigger_process",
           "target": "process:urgent_task_approval",
           "data": {
-            "task_id": "d1473285-c559-48a4-9cc3-7fa6301322cb"
+            "task_id": "87930dc6-f96a-492b-85df-258235388e90"
           },
           "rationale": "Start urgent_task_approval process"
         },
@@ -4456,7 +4915,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060919"
+      "created_at": "2026-07-11T19:23:49.594824"
     },
     {
       "test_id": "PROC_URGENT_TASK_APPROVAL_STEP_REQUEST_APPROVAL",
@@ -4493,7 +4952,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:42:42.060921"
+      "created_at": "2026-07-11T19:23:49.594826"
     }
   ]
 }

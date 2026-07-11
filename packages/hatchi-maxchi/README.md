@@ -106,7 +106,8 @@ and a human. Two mechanisms, kept honest by a gate:
   Hyperpart it serves. Styles are *discovered* from these markers (a
   component's CSS is genuinely many-to-many across files), not hand-listed.
 
-`python tools/hyperpart.py <id>` assembles the full anatomy:
+`python tools/hyperpart.py <id>` assembles the full anatomy (including who
+embeds / refuses this part):
 
 ```
 $ python tools/hyperpart.py command
@@ -117,6 +118,18 @@ Hyperpart: command  (Command palette)
   controller  controllers/dz-command.js
   mock        /mock/command
 ```
+
+**For coding agents:** start at [`AGENTS.md`](./AGENTS.md) (curriculum, stems,
+layers, invention ladder). Procedures: `docs/agent/`. Constitution:
+`docs/decisions/`. Do not treat the gallery mock as the product API.
+
+**Consistency tools (committed + CI drift gates):**
+
+| Tool | Output | Purpose |
+|------|--------|---------|
+| `tools/consumer_map.py --write` | `CONSUMER_MAP.md` | Reverse composition index + explicit non-compositions |
+| `tools/contract_surface.py --write` | `CONTRACT_SURFACE.md` | DOM/model surface breaking-change detector |
+| `tools/dual_lock_coverage.py --write` | `DUAL_LOCK_COVERAGE.md` | Dual-lock tier inventory |
 
 `tests/test_hyperpart_cohesion.py` fails CI if the manifest and the markers
 disagree (unowned controller, orphan marker, interactive Hyperpart with no

@@ -19,9 +19,14 @@
 
 .dz-search-select-input {
   width: 100%;
-  height: 2rem;
+  /* Match .dz-form-input box model (border-box + min-height 2.5rem). */
+  box-sizing: border-box;
+  height: auto;
+  min-height: 2.5rem;
+  line-height: 1.4;
+  padding-block: var(--space-sm);
   padding-inline-start: var(--space-md);
-  padding-inline-end: 2rem;
+  padding-inline-end: 2rem; /* room for the spinner */
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
   border: 1px solid var(--colour-border);

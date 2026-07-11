@@ -2,6 +2,9 @@
 
 Searchable single-select over a list of options — a native <select> progressively enhanced into a type-to-filter combobox. Fixed lists by default; growing catalogues (add a missing value) use the same Hyperpart with data-dz-allow-create — not a separate part.
 
+> **Layer:** L1 surface · **Recipe:** `single-select-form` — single-select (form field)
+> Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
+
 > **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
 
 > **Demo vs contract:** Live gallery behaviour may use `/mock/*` or flash toasts. Those are **offline demos only** — implement **Server exchange** + **DOM contract**, not the mock. See AGENTS.md › Gallery demos.
@@ -34,7 +37,13 @@ Searchable single-select over a list of options — a native <select> progressiv
 
 ## Server exchange
 
-This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+No dedicated htmx request of this Hyperpart's own — the controller never issues one. The native <select> value rides the enclosing form (or any hx-* you put on that form). That form handler is the server contract for this part.
+
+Fixed list (default — no data-dz-allow-create): closed set. Accept only values that were in the seed <option> list.
+
+Growing list (data-dz-allow-create): the client may submit a value that was not in the seed options (Add "…" appends a local <option> with value = label string). On form submit the server must accept that unknown string and upsert it into the catalogue, then store the field (FK or label per your model). The new option is page-local until that submit succeeds — do not treat client create as durable storage.
+
+If you put hx-* on a control that uses this markup, that action's exchange belongs to the action, not this part.
 
 ## How to use it
 
@@ -42,8 +51,8 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - server renders a real <select data-dz-combobox> — progressive enhancement
 - native select stays as the submitted value after the overlay mounts
-- FIXED list: omit allow-create — filter + pick only
-- GROWING list (mutable catalogue): data-dz-allow-create — type a miss → Add "…" row → appends <option> + commits (same Hyperpart)
+- FIXED list: omit allow-create — filter + pick only; form POST is closed enum
+- GROWING list (mutable catalogue): data-dz-allow-create — type a miss → Add "…" row → appends <option> + commits; form POST must upsert the catalogue
 - data-dz-focus-after-select=blur|keep|select (default blur)
 
 ### Do / Don't
@@ -51,6 +60,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 | Do | Don't |
 |---|---|
 | use combobox + data-dz-allow-create for single growing-list / add-if-missing | invent a new Hyperpart or bespoke create-dropdown for 'add to catalogue' |
+| on growing-list form submit, upsert unknown values into the catalogue | reject every value not in the original seed options (breaks Add "…") |
 | filter options client-side from the server-rendered <option> list | replace the select with a div and invent a new submit contract |
 | use tags for multi free-form labels; search-select for remote FKs | overload combobox for multi-create or server-search FK flows |
 
@@ -58,7 +68,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - pointerdown on the bare select must enhance first and swallow the native menu
 - state is data-dz-open on the root — not a JS open flag a morph would drop
-- allow-create is client option-list UX only — server must accept/upsert unknown values into the catalogue; do not treat the new option as durable alone
+- allow-create is client option-list UX only — the enclosing form handler must accept/upsert unknown values; do not treat the new option as durable alone
 - multi free-create chips are tags, not combobox; remote ids are search-select
 
 ### Keyboard / AT

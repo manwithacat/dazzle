@@ -37,7 +37,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `master_detail` | `master_detail.py` | `dz-master-detail.js` | yes | no | no | **DOM-only** |
 | `money` | `money.py` | `dz-money.js` | yes | yes | yes | **schema+DOM** |
 | `pdf` | `pdf.py` | `dz-pdf.js` | yes | no | no | **DOM-only** |
-| `search_select` | `search_select.py` | `dz-search-select.js` | yes | no | no | **DOM-only** |
+| `search_select` | `search_select.py` | `dz-search-select.js` | yes | yes | yes | **DOM-only** |
 | `slider` | `slider.py` | `dz-slider.js` | yes | no | no | **DOM-only** |
 | `tabs` | `tabs.py` | `dz-tabs.js` | yes | no | no | **DOM-only** |
 | `tags` | `tags.py` | `dz-tags.js` | yes | yes | yes | **schema+DOM** |

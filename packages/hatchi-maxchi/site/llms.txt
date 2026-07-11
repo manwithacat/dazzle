@@ -6,11 +6,16 @@
 
 ## Sources
 
+- [AGENTS.md](https://github.com/manwithacat/hatchi-maxchi/blob/main/AGENTS.md): **always-on curriculum** — stems, layers, invention ladder, authority hierarchy
+- [Package stems](https://github.com/manwithacat/hatchi-maxchi/tree/main/stems): compressed Hyperpart judgement (INDEX + stem files)
+- [Agent playbooks](https://github.com/manwithacat/hatchi-maxchi/tree/main/docs/agent): pick-a-surface, compose-or-refuse, mutate-a-primitive, invent-safely
+- [Decisions (expressions of stems)](https://github.com/manwithacat/hatchi-maxchi/tree/main/docs/decisions): dated why — Hyperpart, layers, composition, invention ladder
 - [Component registry (source of truth)](https://github.com/manwithacat/hatchi-maxchi/blob/main/site/registry.py): canonical markup + exchange contracts per component — parse this, don't scrape the gallery
+- [CONSUMER_MAP](https://github.com/manwithacat/hatchi-maxchi/blob/main/CONSUMER_MAP.md): reverse composition / refusal index (blast radius)
+- [CONTRACT_SURFACE](https://github.com/manwithacat/hatchi-maxchi/blob/main/CONTRACT_SURFACE.md): dual-lock attr/field breaking-change detector
 - [Contract modules (typed)](https://github.com/manwithacat/hatchi-maxchi/tree/main/contracts): per-part typed ingestion model + DOM contract + executable exemplar; authoring path in contracts/AUTHORING.md
-- [AGENTS.md](https://github.com/manwithacat/hatchi-maxchi/blob/main/AGENTS.md): consuming + contributing with a coding agent
 - [README](https://github.com/manwithacat/hatchi-maxchi#readme): setup, theming, prefixing, releases
-- [Guide](https://manwithacat.github.io/hatchi-maxchi/guide): the theory track — hypermedia model, tokens, Hyperpart anatomy, exchanges & contracts, Blueprints
+- [Guide](https://manwithacat.github.io/hatchi-maxchi/guide): human theory track — hypermedia model, tokens, Hyperpart anatomy, exchanges & contracts, Blueprints, layers
 
 ## Per-part agent files (one chunk per Hyperpart)
 

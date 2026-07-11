@@ -1843,6 +1843,52 @@ def test_combobox_enhances_and_selects(page) -> None:  # type: ignore[no-untyped
     assert not root.locator(".combobox-input").evaluate("el => el === document.activeElement")
 
 
+def test_combobox_enhance_preserves_field_box(page) -> None:  # type: ignore[no-untyped-def]
+    """Progressive enhance must not jump width/height (box-sizing / legacy class).
+
+    Regression: <select class=form-input> is border-box; bare <input> was
+    content-box, so min-height 2.5rem grew by padding+border (~18px) and
+    width:100% overflowed by horizontal padding. Also a dead fragment
+    `.combobox { display:flex; flex-direction:column }` stole the root.
+    """
+    goto_part(page, "combobox")
+    preview = page.locator(".hm-preview")
+    sel = preview.locator("select[data-combobox]").first
+    before = sel.evaluate(
+        """el => {
+          const r = el.getBoundingClientRect();
+          const cs = getComputedStyle(el);
+          return {w: r.width, h: r.height, box: cs.boxSizing};
+        }"""
+    )
+    assert before["box"] == "border-box"
+    sel.dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    root = preview.locator(".combobox[data-enhanced]").first
+    # Close listbox so root height is the field only (listbox is absolute either way).
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(50)
+    after = root.locator(".combobox-input").evaluate(
+        """el => {
+          const r = el.getBoundingClientRect();
+          const cs = getComputedStyle(el);
+          return {w: r.width, h: r.height, box: cs.boxSizing, display: cs.display};
+        }"""
+    )
+    root_box = root.evaluate(
+        """el => {
+          const r = el.getBoundingClientRect();
+          const cs = getComputedStyle(el);
+          return {w: r.width, h: r.height, display: cs.display};
+        }"""
+    )
+    assert after["box"] == "border-box", after
+    assert root_box["display"] == "block", root_box
+    assert abs(after["h"] - before["h"]) <= 1.0, (before, after)
+    assert abs(after["w"] - before["w"]) <= 2.0, (before, after)
+    assert abs(root_box["h"] - before["h"]) <= 1.0, (before, root_box)
+
+
 def test_combobox_click_option_closes_listbox(page) -> None:  # type: ignore[no-untyped-def]
     """Pointer pick must close the picker (not re-open via focusin)."""
     goto_part(page, "combobox")

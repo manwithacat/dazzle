@@ -6,6 +6,23 @@ its version footer is maintained by the bump workflow. Harness adapters
 (`.claude/CLAUDE.md`, `.github/copilot-instructions.md`) must stay thin — project facts
 live only here.
 
+## Epistemic layout (reconstruct first)
+
+**Stems** are the small conceptual structures that regenerate Dazzle judgement.
+They are not “extra docs.” Open them before inventing architecture.
+
+| Rank | Location | Role |
+|------|----------|------|
+| 1 | **[`stems/`](stems/INDEX.md)** | Framework stems (compressed judgement) |
+| 2 | **This file** | Always-on didactics + commands |
+| 3 | **`docs/adr/`** | Decision history (expressions of stems) |
+| 4 | **Package stems** | e.g. `packages/hatchi-maxchi/stems/` |
+| 5 | **Example / app stems** | `examples/<app>/stems/` — domain judgement |
+| 6 | Guides / reference | Mechanics |
+
+Curriculum: `stems/INDEX.md` → stem that matches the task → this file’s commands →
+local code. HaTchi-MaXchi agents: also `packages/hatchi-maxchi/AGENTS.md`.
+
 ## Project Overview
 
 **DAZZLE** - DSL-first toolkit for building apps from high-level specifications.
@@ -24,6 +41,7 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 
 | Directory | Purpose |
 |-----------|---------|
+| **`stems/`** | **Framework epistemic stems** — reconstruct judgement here first |
 | `src/dazzle/core/` | Parser, IR, linker, validation |
 | `src/dazzle/agent/` | Generic mission-driven agent framework |
 | `src/dazzle/mcp/` | MCP server, knowledge graph, semantics KB |
@@ -36,6 +54,8 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle/http/` | **HTTP runtime** (FastAPI: API, auth, channels, events, grants). Renamed from `back/` in ADR-0041 (2026-06-20). |
 | `src/dazzle/page/` | **Page-orchestration layer** — page/route renderers (`*_renderer.py`), converters, + static JS/CSS assets. Calls *down* into `render/` (the typed Fragment substrate → HTML via `dazzle.render.html.esc`). No Jinja2 since #1042 (ADR-0023). Renamed from `ui/` in ADR-0041. |
 | `src/dazzle/render/` | Pure rendering: AppSpec → Fragment → HTML, no I/O (serverless-testable). The four-layer stack is `http → page → render → core` (ADR-0038/0041). |
+| `packages/hatchi-maxchi/` | Design system (Hyperparts); own `stems/` + `AGENTS.md` |
+| `examples/*/` | Apps; each should carry `stems/` for domain judgement |
 
 ## Project Layout Convention
 
@@ -377,6 +397,7 @@ Reusable workflows live in `.agents/skills/<name>/SKILL.md` (open-standard forma
 - **dsl-authoring** — Syntax rules and common mistakes for writing/editing Dazzle `.dsl` files
 - **qa-trial** — Author `trial.toml` scenarios that evaluate a Dazzle app as a real business user
 - **spec-narrate** — Generate a stakeholder-facing SPECIFICATION.md from a Dazzle DSL project
+- **stems** — Reconstruct framework/package/app judgement from `stems/` before inventing structure
 
 ## Capability Mapping
 
@@ -444,4 +465,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.102.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.103.0 | **Python**: 3.12+ | **Status**: Production Ready

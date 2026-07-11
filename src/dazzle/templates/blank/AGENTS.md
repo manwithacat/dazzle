@@ -35,11 +35,24 @@ When the Dazzle MCP server is connected, prefer MCP tools for quick lookups:
 4. **Fix validation errors** by editing `.dsl` files
 5. Answer questions about Dazzle DSL syntax and capabilities
 
+## Epistemic layout
+
+| Rank | Location | Role |
+|------|----------|------|
+| 1 | **`stems/`** | Domain stems (compressed app judgement) |
+| 2 | **This file** | Always-on policy + workflows |
+| 3 | **`dsl/`** | Executable model (expression of stems) |
+| 4 | **SPEC.md** | Narrative requirements (expression) |
+
+Framework stems (DSL-first, hypermedia SSR, …) live in the Dazzle monorepo
+`stems/` when developing against source, or in published package docs.
+
 ## Project Structure
 
 ```
 .
 ├── AGENTS.md           # This file — canonical agent policy
+├── stems/              # Domain epistemic stems (INDEX + short stem files)
 ├── dazzle.toml         # Project configuration
 ├── SPEC.md             # Natural language requirements (optional)
 ├── dsl/                # DSL specification files

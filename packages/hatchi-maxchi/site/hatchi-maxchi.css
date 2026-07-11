@@ -1366,11 +1366,18 @@ a:focus-visible {
 
 /* Form controls — minimal Dazzle-flavoured baseline so an
  * un-styled <input> looks intentional rather than browser-default.
- * Components extend this; they do not fight it. */
+ * Components extend this; they do not fight it.
+ *
+ * box-sizing: border-box is mandatory here. UAs treat <select> as
+ * border-box for height purposes but <input type=text> as content-box.
+ * Progressive enhancement (combobox: select → text input) then jumps
+ * outer height by padding+border (~18px) while min-height stays 2.5rem.
+ * Force one box model so form-input / combobox-input / bare controls match. */
 
 input,
 textarea,
 select {
+  box-sizing: border-box;
   background: var(--colour-surface);
   color: var(--colour-text);
   border: 1px solid var(--colour-border);
@@ -2453,6 +2460,8 @@ dialog.drawer > form {
 
 .form-input {
   width: 100%;
+  /* border-box: see base.css form controls — select vs input UA mismatch. */
+  box-sizing: border-box;
   /* #930: previously `height: 2rem` (32px) with `padding: 8px 12px`
      left only 16px of vertical content area for a ~22px line-box,
      clipping descenders (g/p/y) on every input + select placeholder.
@@ -2472,6 +2481,17 @@ dialog.drawer > form {
   transition:
     box-shadow var(--duration-base) var(--ease-out),
     border-color var(--duration-base) var(--ease-out);
+}
+
+/* WebKit (and some UA styles) ignore min-height on native <select>, so a
+ * pre-enhance combobox seed can paint ~23px while the post-enhance text
+ * input honors min-height 2.5rem — a visible jump on first click. Pin
+ * the used height for selects only; text inputs stay height:auto. */
+select.form-input {
+  height: 2.5rem;
+  /* Flatten UA chrome so padding+height share one border-box model. */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .form-input::placeholder {
@@ -3635,30 +3655,15 @@ input.switch:checked::before {
     outline-offset: 1px;
   }
 
-  .combobox {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-  }
+  /* NOTE: do NOT use `.combobox` here. That class is the combobox
+   * Hyperpart enhancement root (components/combobox.css). A prior
+   * fragment "labeled select stack" under the same name made the
+   * Hyperpart root `display:flex; flex-direction:column; gap:…` and
+   * fought progressive enhancement layout. Unused BEM removed 2026-07. */
 
-  .combobox__label {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    color: var(--colour-text);
-  }
-
-  .combobox__select {
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--text-base);
-    color: var(--colour-text);
-    background: var(--colour-surface);
-    border: 1px solid var(--colour-border);
-    border-radius: var(--radius-sm);
-  }
-
-  /* Plan 14: RefPicker — REF field selector. Parallels .combobox in
-     visual treatment; the data-ref-api attribute drives client-side
-     option population via dz.filterRefSelect. */
+  /* Plan 14: RefPicker — REF field selector. Labeled select stack;
+     the data-ref-api attribute drives client-side option population
+     via dz.filterRefSelect. */
   .ref-picker {
     display: flex;
     flex-direction: column;
@@ -10085,9 +10090,14 @@ onboarding-step {
 
 .search-select-input {
   width: 100%;
-  height: 2rem;
+  /* Match .form-input box model (border-box + min-height 2.5rem). */
+  box-sizing: border-box;
+  height: auto;
+  min-height: 2.5rem;
+  line-height: 1.4;
+  padding-block: var(--space-sm);
   padding-inline-start: var(--space-md);
-  padding-inline-end: 2rem;
+  padding-inline-end: 2rem; /* room for the spinner */
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
   border: 1px solid var(--colour-border);
@@ -10180,6 +10190,10 @@ onboarding-step {
 
 .combobox {
   position: relative;
+  /* block, not flex: a legacy fragment rule once set .combobox to a
+   * column flex stack (label+select). The Hyperpart root must not inherit
+   * that layout or the enhance wrapper gains gap/flex quirks. */
+  display: block;
   width: 100%;
 }
 
@@ -10188,14 +10202,22 @@ onboarding-step {
  * over and the native select is removed from the visual layer (it stays
  * in the DOM to carry the submitted value). */
 .combobox[data-enhanced] > select[data-combobox] {
-  display: none;
+  display: none !important; /* beat any residual form/fragment display rules */
 }
 
 .combobox-input {
   width: 100%;
-  height: 2rem;
+  /* Match .form-input box model exactly. Without border-box, <input>
+   * is content-box while the pre-enhance <select class="form-input"> is
+   * border-box — same min-height 2.5rem jumps ~18px (padding+border) on
+   * enhance, and width:100% overflows by the horizontal padding. */
+  box-sizing: border-box;
+  height: auto;
+  min-height: 2.5rem;
+  line-height: 1.4;
+  padding-block: var(--space-sm);
   padding-inline-start: var(--space-md);
-  padding-inline-end: 2rem;
+  padding-inline-end: 2rem; /* room for trailing chrome (if any) */
   border-radius: var(--radius-sm);
   background: var(--colour-surface);
   border: 1px solid var(--colour-border);

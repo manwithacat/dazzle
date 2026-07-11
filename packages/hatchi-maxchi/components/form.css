@@ -70,6 +70,8 @@
 
 .dz-form-input {
   width: 100%;
+  /* border-box: see base.css form controls — select vs input UA mismatch. */
+  box-sizing: border-box;
   /* #930: previously `height: 2rem` (32px) with `padding: 8px 12px`
      left only 16px of vertical content area for a ~22px line-box,
      clipping descenders (g/p/y) on every input + select placeholder.
@@ -89,6 +91,17 @@
   transition:
     box-shadow var(--duration-base) var(--ease-out),
     border-color var(--duration-base) var(--ease-out);
+}
+
+/* WebKit (and some UA styles) ignore min-height on native <select>, so a
+ * pre-enhance combobox seed can paint ~23px while the post-enhance text
+ * input honors min-height 2.5rem — a visible jump on first click. Pin
+ * the used height for selects only; text inputs stay height:auto. */
+select.dz-form-input {
+  height: 2.5rem;
+  /* Flatten UA chrome so padding+height share one border-box model. */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .dz-form-input::placeholder {
