@@ -48,6 +48,60 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border: 1px solid var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); line-height: 1.5; }
 .hm-dialect code { font-size: .9em; }
+/* Glossary terms — human confidence on agent-primary pages (non-critical).
+   Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
+.hm-term {
+  font-style: normal;
+  font-weight: inherit;
+  border-bottom: 1px dotted color-mix(in oklab, var(--colour-brand) 55%, var(--colour-border));
+  cursor: help;
+  text-underline-offset: .15em;
+}
+.hm-term:focus { outline: none; }
+.hm-term:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hm-term[data-tooltip]::after {
+  white-space: normal;
+  width: max(12rem, min(20rem, 70vw));
+  max-width: 20rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+  padding: .4rem .55rem;
+  box-shadow: var(--shadow-md, 0 4px 16px oklab(0% 0 0 / .18));
+}
+.hm-term[data-tooltip]:hover::after,
+.hm-term[data-tooltip]:focus::after,
+.hm-term[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-dep[data-tooltip] { cursor: help; }
+.hm-dep[data-tooltip]::after {
+  white-space: normal;
+  width: max(10rem, min(16rem, 60vw));
+  max-width: 16rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  padding: .35rem .5rem;
+}
+.hm-dep[data-tooltip]:hover::after,
+.hm-dep[data-tooltip]:focus::after,
+.hm-dep[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-term-hint {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  opacity: .92;
+}
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -133,7 +187,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="skeleton"><h2>Skeleton<span class="hm-dep" data-dep="primitive" title="Dependency class: Primitive">Primitive</span></h2><p class="blurb">Loading placeholder with a lifecycle-driven sheen (TASTE-9) — drop it into a swap target while the request is in flight.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><div class="card card-body hm-measure hm-stack" aria-hidden="true"><div class="hm-demo-row"><div class="skeleton" data-shape="circle"></div><div class="hm-grow hm-stack"><div class="skeleton" data-shape="text"></div><div class="skeleton" data-shape="text"></div></div></div><div class="skeleton" data-shape="block"></div></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Skeleton"><code class="code__source">&lt;div class=&quot;card card-body hm-measure hm-stack&quot; aria-hidden=&quot;true&quot;&gt;
+<section class="hm-comp" id="skeleton"><h2>Skeleton<span class="hm-dep" data-dep="primitive" tabindex="0" data-tooltip="HTML + CSS only — no controller script required.">Primitive</span></h2><p class="blurb">Loading placeholder with a lifecycle-driven sheen (TASTE-9) — drop it into a swap target while the request is in flight.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><div class="hm-preview"><div class="card card-body hm-measure hm-stack" aria-hidden="true"><div class="hm-demo-row"><div class="skeleton" data-shape="circle"></div><div class="hm-grow hm-stack"><div class="skeleton" data-shape="text"></div><div class="skeleton" data-shape="text"></div></div></div><div class="skeleton" data-shape="block"></div></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Skeleton"><code class="code__source">&lt;div class=&quot;card card-body hm-measure hm-stack&quot; aria-hidden=&quot;true&quot;&gt;
   &lt;div class=&quot;hm-demo-row&quot;&gt;
     &lt;div class=&quot;skeleton&quot; data-shape=&quot;circle&quot;&gt;&lt;/div&gt;
     &lt;div class=&quot;hm-grow hm-stack&quot;&gt;

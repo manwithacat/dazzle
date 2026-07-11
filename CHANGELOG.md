@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM part-page glossary tooltips (human confidence)** — dotted terms
+  (Hyperpart, affordance, Server exchange, DOM contract, dual-lock,
+  dependency chips) show multi-line ELI5 tips on hover/focus. Agents stay
+  primary; tips are non-critical and not the contract surface.
 - **HM contracts / part pages for agent cognition** — drop redundant
   `from __future__ import annotations` in `contracts/` (noise; ADR-0014 is
   about FastAPI routes). Clarify DOM contract = dual-lock lock, not app

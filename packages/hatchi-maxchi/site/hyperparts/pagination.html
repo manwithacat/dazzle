@@ -48,6 +48,60 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border: 1px solid var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); line-height: 1.5; }
 .hm-dialect code { font-size: .9em; }
+/* Glossary terms — human confidence on agent-primary pages (non-critical).
+   Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
+.hm-term {
+  font-style: normal;
+  font-weight: inherit;
+  border-bottom: 1px dotted color-mix(in oklab, var(--colour-brand) 55%, var(--colour-border));
+  cursor: help;
+  text-underline-offset: .15em;
+}
+.hm-term:focus { outline: none; }
+.hm-term:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hm-term[data-tooltip]::after {
+  white-space: normal;
+  width: max(12rem, min(20rem, 70vw));
+  max-width: 20rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+  padding: .4rem .55rem;
+  box-shadow: var(--shadow-md, 0 4px 16px oklab(0% 0 0 / .18));
+}
+.hm-term[data-tooltip]:hover::after,
+.hm-term[data-tooltip]:focus::after,
+.hm-term[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-dep[data-tooltip] { cursor: help; }
+.hm-dep[data-tooltip]::after {
+  white-space: normal;
+  width: max(10rem, min(16rem, 60vw));
+  max-width: 16rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  padding: .35rem .5rem;
+}
+.hm-dep[data-tooltip]:hover::after,
+.hm-dep[data-tooltip]:focus::after,
+.hm-dep[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-term-hint {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  opacity: .92;
+}
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -133,7 +187,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="pagination"><h2>Pagination<span class="hm-tag">htmx</span><span class="hm-dep" data-dep="endpoint" title="Dependency class: Endpoint">Endpoint</span></h2><p class="blurb">The footer beneath a data table — a summary and page buttons. Each button hx-gets a page into the list body (an Exchange, not a widget).</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><div class="hm-stack hm-measure-lg"><div id="hm-pag-body" class="hm-pag-list"><div class="hm-pag-row">INV-001 · Acme</div><div class="hm-pag-row">INV-002 · Globex</div><div class="hm-pag-row">INV-003 · Initech</div></div><nav class="pagination" aria-label="Pagination"><span class="pagination-summary">42 rows</span><div class="pagination-pages"><button class="pagination-page" disabled aria-label="Previous page">‹</button><button class="pagination-page is-current" aria-current="page">1</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML">2</button><button class="pagination-page" hx-get="/mock/pagination/3" hx-target="#hm-pag-body" hx-swap="innerHTML">3</button><span class="pagination-ellipsis" aria-hidden="true">…</span><button class="pagination-page" hx-get="/mock/pagination/9" hx-target="#hm-pag-body" hx-swap="innerHTML">9</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML" aria-label="Next page">›</button></div></nav></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Pagination"><code class="code__source">&lt;div class=&quot;hm-stack hm-measure-lg&quot;&gt;
+<section class="hm-comp" id="pagination"><h2>Pagination<span class="hm-tag">htmx</span><span class="hm-dep" data-dep="endpoint" tabindex="0" data-tooltip="Needs a server exchange — an API that returns HTML fragments.">Endpoint</span></h2><p class="blurb">The footer beneath a data table — a summary and page buttons. Each button hx-gets a page into the list body (an Exchange, not a widget).</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><div class="hm-preview"><div class="hm-stack hm-measure-lg"><div id="hm-pag-body" class="hm-pag-list"><div class="hm-pag-row">INV-001 · Acme</div><div class="hm-pag-row">INV-002 · Globex</div><div class="hm-pag-row">INV-003 · Initech</div></div><nav class="pagination" aria-label="Pagination"><span class="pagination-summary">42 rows</span><div class="pagination-pages"><button class="pagination-page" disabled aria-label="Previous page">‹</button><button class="pagination-page is-current" aria-current="page">1</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML">2</button><button class="pagination-page" hx-get="/mock/pagination/3" hx-target="#hm-pag-body" hx-swap="innerHTML">3</button><span class="pagination-ellipsis" aria-hidden="true">…</span><button class="pagination-page" hx-get="/mock/pagination/9" hx-target="#hm-pag-body" hx-swap="innerHTML">9</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML" aria-label="Next page">›</button></div></nav></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Pagination"><code class="code__source">&lt;div class=&quot;hm-stack hm-measure-lg&quot;&gt;
   &lt;div id=&quot;hm-pag-body&quot; class=&quot;hm-pag-list&quot;&gt;
     &lt;div class=&quot;hm-pag-row&quot;&gt;INV-001 · Acme&lt;/div&gt;
     &lt;div class=&quot;hm-pag-row&quot;&gt;INV-002 · Globex&lt;/div&gt;
@@ -143,7 +197,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
     &lt;span class=&quot;pagination-summary&quot;&gt;42 rows&lt;/span&gt;
     &lt;div class=&quot;pagination-pages&quot;&gt;&lt;button class=&quot;pagination-page&quot; disabled aria-label=&quot;Previous page&quot;&gt;‹&lt;/button&gt;&lt;button class=&quot;pagination-page is-current&quot; aria-current=&quot;page&quot;&gt;1&lt;/button&gt;&lt;button class=&quot;pagination-page&quot; hx-get=&quot;/mock/pagination/2&quot; hx-target=&quot;#hm-pag-body&quot; hx-swap=&quot;innerHTML&quot;&gt;2&lt;/button&gt;&lt;button class=&quot;pagination-page&quot; hx-get=&quot;/mock/pagination/3&quot; hx-target=&quot;#hm-pag-body&quot; hx-swap=&quot;innerHTML&quot;&gt;3&lt;/button&gt;&lt;span class=&quot;pagination-ellipsis&quot; aria-hidden=&quot;true&quot;&gt;…&lt;/span&gt;&lt;button class=&quot;pagination-page&quot; hx-get=&quot;/mock/pagination/9&quot; hx-target=&quot;#hm-pag-body&quot; hx-swap=&quot;innerHTML&quot;&gt;9&lt;/button&gt;&lt;button class=&quot;pagination-page&quot; hx-get=&quot;/mock/pagination/2&quot; hx-target=&quot;#hm-pag-body&quot; hx-swap=&quot;innerHTML&quot; aria-label=&quot;Next page&quot;&gt;›&lt;/button&gt;&lt;/div&gt;
   &lt;/nav&gt;
-&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="exchange"><h3>Server exchange</h3><p class="hm-ref-lead">When the client affordance finishes (click, confirm, keystroke…), htmx issues <strong>this</strong> request. Your API must return the response fragment described below — usually HTML, not JSON (unless the partial says otherwise). Gallery mocks (toasts, <code>/mock/*</code>) are not the contract. Dazzle often renders these routes from the app model; a standalone HTMX4 app implements them explicitly.</p><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/{region}?page={n}&amp;page_size={size}</code></td><td>a page button, on click</td><td>the list body fragment for page n — the rows the region renders, with the current-page button marked `is-current` + `aria-current=&#x27;page&#x27;`</td><td>innerMorph of the region&#x27;s body (`#{region}-body`)</td><td><code>loading</code> <code>populated</code> <code>error</code></td></tr></tbody></table></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">Each page button carries its own <code>hx-get</code>; here a mock htmx swaps a canned page into <code>#hm-pag-body</code>. In Dazzle the button hits the region endpoint (<code>?page=N&amp;page_size=…</code>) and the server returns the repainted list body (via <code>innerMorph</code>) plus the moved <code>is-current</code> marker.</div></section></section>
+&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="exchange"><h3><dfn class="hm-term" tabindex="0" data-tooltip="The deal for one action: which request goes out, what HTML comes back, and where it lands. Classic hypermedia — not a private JSON API for a SPA.">Server exchange</dfn></h3><p class="hm-ref-lead">When the client <dfn class="hm-term" tabindex="0" data-tooltip="Something the user can act on that starts a request — a Delete button with hx-delete, a search box that hx-gets results. Browser talks to server; server returns HTML.">affordance</dfn> finishes (click, confirm, keystroke…), htmx issues <strong>this</strong> request. Your API must return the response fragment described below — usually HTML, not JSON (unless the partial says otherwise). Gallery mocks (toasts, <code>/mock/*</code>) are not the contract. Dazzle often renders these routes from the app model; a standalone HTMX4 app implements them explicitly.</p><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/{region}?page={n}&amp;page_size={size}</code></td><td>a page button, on click</td><td>the list body fragment for page n — the rows the region renders, with the current-page button marked `is-current` + `aria-current=&#x27;page&#x27;`</td><td>innerMorph of the region&#x27;s body (`#{region}-body`)</td><td><code>loading</code> <code>populated</code> <code>error</code></td></tr></tbody></table></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">Each page button carries its own <code>hx-get</code>; here a mock htmx swaps a canned page into <code>#hm-pag-body</code>. In Dazzle the button hits the region endpoint (<code>?page=N&amp;page_size=…</code>) and the server returns the repainted list body (via <code>innerMorph</code>) plus the moved <code>is-current</code> marker.</div></section></section>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
 The demo above renders the exact snippet — copy it into any htmx4 app.

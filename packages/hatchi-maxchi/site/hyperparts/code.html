@@ -48,6 +48,60 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border: 1px solid var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); line-height: 1.5; }
 .hm-dialect code { font-size: .9em; }
+/* Glossary terms — human confidence on agent-primary pages (non-critical).
+   Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
+.hm-term {
+  font-style: normal;
+  font-weight: inherit;
+  border-bottom: 1px dotted color-mix(in oklab, var(--colour-brand) 55%, var(--colour-border));
+  cursor: help;
+  text-underline-offset: .15em;
+}
+.hm-term:focus { outline: none; }
+.hm-term:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hm-term[data-tooltip]::after {
+  white-space: normal;
+  width: max(12rem, min(20rem, 70vw));
+  max-width: 20rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+  padding: .4rem .55rem;
+  box-shadow: var(--shadow-md, 0 4px 16px oklab(0% 0 0 / .18));
+}
+.hm-term[data-tooltip]:hover::after,
+.hm-term[data-tooltip]:focus::after,
+.hm-term[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-dep[data-tooltip] { cursor: help; }
+.hm-dep[data-tooltip]::after {
+  white-space: normal;
+  width: max(10rem, min(16rem, 60vw));
+  max-width: 16rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  padding: .35rem .5rem;
+}
+.hm-dep[data-tooltip]:hover::after,
+.hm-dep[data-tooltip]:focus::after,
+.hm-dep[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-term-hint {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  opacity: .92;
+}
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -133,7 +187,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="code"><h2>Code block<span class="hm-tag">docs</span><span class="hm-dep" data-dep="controller" title="Dependency class: Controller">Controller</span></h2><p class="blurb">Fenced code surface with optional language chip and copy control — server-emitted chrome for docs and samples. Syntax colour is build-time token spans (Python), not a browser highlighter.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><figure class="code" data-code data-language="python"><div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Python example"><code class="code__source">def greet(name: str) -> str:
+<section class="hm-comp" id="code"><h2>Code block<span class="hm-tag">docs</span><span class="hm-dep" data-dep="controller" tabindex="0" data-tooltip="Ships a small vanilla-JS controller (still no SPA state).">Controller</span></h2><p class="blurb">Fenced code surface with optional language chip and copy control — server-emitted chrome for docs and samples. Syntax colour is build-time token spans (Python), not a browser highlighter.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><div class="hm-preview"><figure class="code" data-code data-language="python"><div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Python example"><code class="code__source">def greet(name: str) -> str:
     """Return a friendly hello."""
     return f"Hello, {name}"
 </code></pre></figure></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Code block"><code class="code__source">&lt;figure class=&quot;code&quot; data-code data-language=&quot;python&quot;&gt;
@@ -142,8 +196,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
     &quot;&quot;&quot;Return a friendly hello.&quot;&quot;&quot;
     return f&quot;Hello, {name}&quot;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;/figure&gt;</code></pre></figure></section><section class="hm-ref" id="how-to"><h3>How to use it</h3><h4>Seams</h4><ul><li>figure[data-code] → div.code__meta → pre.code__pre &gt; code.code__source</li><li>meta flex row: optional .code__lang, optional [data-code-copy] (CSS margin-inline-start:auto keeps copy trailing)</li><li>build-time token spans (.code__tok--*) for Python colour</li></ul><h4>Do / Don't</h4><table class="hm-contract-table"><thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody><tr><td>emit figure &gt; .code__meta &gt; (lang? + copy?) &gt; pre &gt; code</td><td>absolute-position the copy control or invent a one-off toolbar</td></tr></tbody></table><h4>Pitfalls</h4><ul><li>do not absolute-position .code__copy — it drifts left inside nested min-width:0 containers (Hyperpart detail pages); use the meta flex row</li><li>do not put copy/lang as direct children of the figure without .code__meta</li><li>do not ship a browser syntax engine for static docs — highlight at build</li><li>copy must read textContent (not innerHTML) so spans never paste</li></ul><h4>Keyboard / AT</h4><ul><li>pre is a keyboard-scrollable region (tabindex=0)</li><li>copy button is a real button with aria-label</li></ul></section><section class="hm-ref" id="dom-contract"><h3>DOM contract</h3><p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — the table is the required surface; Python under <code>contracts/</code> is the package-internal dual-lock CI runs (<code>tests/test_contracts.py</code>), not an app route. Standalone HTMX4: implement the API so responses match this markup. Dazzle: the agent emits SSR that already satisfies it. Do not invent attrs outside these tables. For request/response wiring see <a href="#exchange">Server exchange</a>.</p><h4 class="hm-ref-mod"><code>contracts/code.py</code></h4><p class="hm-ref-lead"><strong>Required in the DOM:</strong> root <code>[data-code]</code> (part <code>code</code>). Emit only these attributes — inventing extras is fine only if controllers ignore them; omitting required ones fails CI (<code>tests/test_contracts.py</code>).</p><table class="hm-contract-table"><thead><tr><th>Node</th><th>Attr</th><th>Constraint</th></tr></thead><tbody><tr><td><code>[data-code]</code></td><td><code>data-code</code></td><td>present (any value)</td></tr><tr><td><code>[data-code-copy]</code></td><td><code>data-code-copy</code></td><td>present (any value)</td></tr></tbody></table><h4>Module source</h4><p class="hm-ref-lead">Import path is monorepo/package-local (<code>from contracts._kit import …</code>). Source-token form often uses <code>data-*</code>; gallery demos above are unprefixed. Do not copy this into app routes.</p><figure class="code" data-code data-language="python"><div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Module source contracts/code.py"><code class="code__source"><span class="code__tok--str">&quot;&quot;&quot;HYPERPART: code — fenced code surface (root + optional copy control).&quot;&quot;&quot;</span>
-
+&lt;/figure&gt;</code></pre></figure></section><section class="hm-ref" id="how-to"><h3>How to use it</h3><h4>Seams</h4><ul><li>figure[data-code] → div.code__meta → pre.code__pre &gt; code.code__source</li><li>meta flex row: optional .code__lang, optional [data-code-copy] (CSS margin-inline-start:auto keeps copy trailing)</li><li>build-time token spans (.code__tok--*) for Python colour</li></ul><h4>Do / Don't</h4><table class="hm-contract-table"><thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody><tr><td>emit figure &gt; .code__meta &gt; (lang? + copy?) &gt; pre &gt; code</td><td>absolute-position the copy control or invent a one-off toolbar</td></tr></tbody></table><h4>Pitfalls</h4><ul><li>do not absolute-position .code__copy — it drifts left inside nested min-width:0 containers (Hyperpart detail pages); use the meta flex row</li><li>do not put copy/lang as direct children of the figure without .code__meta</li><li>do not ship a browser syntax engine for static docs — highlight at build</li><li>copy must read textContent (not innerHTML) so spans never paste</li></ul><h4>Keyboard / AT</h4><ul><li>pre is a keyboard-scrollable region (tabindex=0)</li><li>copy button is a real button with aria-label</li></ul></section><section class="hm-ref" id="dom-contract"><h3><dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn></h3><p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — the table is the required surface; Python under <code>contracts/</code> is the package-internal <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> CI runs (<code>tests/test_contracts.py</code>), not an app route. Standalone HTMX4: implement the API so responses match this markup. Dazzle: the agent emits SSR that already satisfies it. Do not invent attrs outside these tables. For request/response wiring see <a href="#exchange">Server exchange</a>.</p><h4 class="hm-ref-mod"><code>contracts/code.py</code></h4><p class="hm-ref-lead"><strong>Required in the DOM:</strong> root <code>[data-code]</code> (part <code>code</code>). Emit only these attributes — inventing extras is fine only if controllers ignore them; omitting required ones fails CI (<code>tests/test_contracts.py</code>).</p><table class="hm-contract-table"><thead><tr><th>Node</th><th>Attr</th><th>Constraint</th></tr></thead><tbody><tr><td><code>[data-code]</code></td><td><code>data-code</code></td><td>present (any value)</td></tr><tr><td><code>[data-code-copy]</code></td><td><code>data-code-copy</code></td><td>present (any value)</td></tr></tbody></table><h4>Module source</h4><p class="hm-ref-lead">Import path is monorepo/package-local (<code>from contracts._kit import …</code>). Source-token form often uses <code>data-*</code>; gallery demos above are unprefixed. Do not copy this into app routes.</p><figure class="code" data-code data-language="python"><div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Module source contracts/code.py"><code class="code__source"><span class="code__tok--str">&quot;&quot;&quot;HYPERPART: code — fenced code surface (root + optional copy control).&quot;&quot;&quot;</span>
 
 <span class="code__tok--kw">from</span> <span class="code__tok--name">contracts</span><span class="code__tok--op">.</span><span class="code__tok--name">_kit</span> <span class="code__tok--kw">import</span> <span class="code__tok--name">DomContract</span><span class="code__tok--op">,</span> <span class="code__tok--name">Node</span><span class="code__tok--op">,</span> <span class="code__tok--name">Present</span>
 

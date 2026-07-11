@@ -48,6 +48,60 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border: 1px solid var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); line-height: 1.5; }
 .hm-dialect code { font-size: .9em; }
+/* Glossary terms — human confidence on agent-primary pages (non-critical).
+   Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
+.hm-term {
+  font-style: normal;
+  font-weight: inherit;
+  border-bottom: 1px dotted color-mix(in oklab, var(--colour-brand) 55%, var(--colour-border));
+  cursor: help;
+  text-underline-offset: .15em;
+}
+.hm-term:focus { outline: none; }
+.hm-term:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hm-term[data-tooltip]::after {
+  white-space: normal;
+  width: max(12rem, min(20rem, 70vw));
+  max-width: 20rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+  padding: .4rem .55rem;
+  box-shadow: var(--shadow-md, 0 4px 16px oklab(0% 0 0 / .18));
+}
+.hm-term[data-tooltip]:hover::after,
+.hm-term[data-tooltip]:focus::after,
+.hm-term[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-dep[data-tooltip] { cursor: help; }
+.hm-dep[data-tooltip]::after {
+  white-space: normal;
+  width: max(10rem, min(16rem, 60vw));
+  max-width: 16rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  padding: .35rem .5rem;
+}
+.hm-dep[data-tooltip]:hover::after,
+.hm-dep[data-tooltip]:focus::after,
+.hm-dep[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-term-hint {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  opacity: .92;
+}
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -133,7 +187,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="form-chrome"><h2>Form chrome<span class="hm-tag">forms</span><span class="hm-dep" data-dep="composite" title="Dependency class: Composite">Composite</span></h2><p class="blurb">The structural form pieces: titled sections, the validation-error summary, and the multi-section progress stepper.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><div class="hm-stack hm-measure"><div class="form-errors" role="alert"><svg class="form-errors-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg><div class="form-errors-body"><h3 class="form-errors-title">Validation Error</h3><ul class="form-errors-list" role="list"><li>Name is required</li><li>Start date must be before end date</li></ul></div></div><ol class="form-stepper" role="list" aria-label="Form progress"><li class="form-stepper-item is-not-last" aria-current="step"><span class="form-stepper-circle is-active"><span>1</span></span><span class="form-stepper-label is-active">Details</span><span class="form-stepper-connector" aria-hidden="true"></span></li><li class="form-stepper-item is-not-last"><span class="form-stepper-circle"><span>2</span></span><span class="form-stepper-label">Schedule</span><span class="form-stepper-connector" aria-hidden="true"></span></li><li class="form-stepper-item"><span class="form-stepper-circle"><span>3</span></span><span class="form-stepper-label">Review</span></li></ol><section class="form-section"><h3 class="form-section-title">Contact details</h3><p class="form-section-note">Shown on invoices and receipts.</p><div class="form-field"><label class="form-label" for="hm-fc-name">Full name<span class="form-required" aria-hidden="true">*</span></label><input id="hm-fc-name" class="form-input" type="text" aria-required="true"></div></section></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Form chrome"><code class="code__source">&lt;div class=&quot;hm-stack hm-measure&quot;&gt;
+<section class="hm-comp" id="form-chrome"><h2>Form chrome<span class="hm-tag">forms</span><span class="hm-dep" data-dep="composite" tabindex="0" data-tooltip="Built by composing other Hyperparts (see Composed of).">Composite</span></h2><p class="blurb">The structural form pieces: titled sections, the validation-error summary, and the multi-section progress stepper.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><div class="hm-preview"><div class="hm-stack hm-measure"><div class="form-errors" role="alert"><svg class="form-errors-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg><div class="form-errors-body"><h3 class="form-errors-title">Validation Error</h3><ul class="form-errors-list" role="list"><li>Name is required</li><li>Start date must be before end date</li></ul></div></div><ol class="form-stepper" role="list" aria-label="Form progress"><li class="form-stepper-item is-not-last" aria-current="step"><span class="form-stepper-circle is-active"><span>1</span></span><span class="form-stepper-label is-active">Details</span><span class="form-stepper-connector" aria-hidden="true"></span></li><li class="form-stepper-item is-not-last"><span class="form-stepper-circle"><span>2</span></span><span class="form-stepper-label">Schedule</span><span class="form-stepper-connector" aria-hidden="true"></span></li><li class="form-stepper-item"><span class="form-stepper-circle"><span>3</span></span><span class="form-stepper-label">Review</span></li></ol><section class="form-section"><h3 class="form-section-title">Contact details</h3><p class="form-section-note">Shown on invoices and receipts.</p><div class="form-field"><label class="form-label" for="hm-fc-name">Full name<span class="form-required" aria-hidden="true">*</span></label><input id="hm-fc-name" class="form-input" type="text" aria-required="true"></div></section></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Form chrome"><code class="code__source">&lt;div class=&quot;hm-stack hm-measure&quot;&gt;
   &lt;div class=&quot;form-errors&quot; role=&quot;alert&quot;&gt;
     &lt;svg class=&quot;form-errors-icon&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; fill=&quot;none&quot; viewBox=&quot;0 0 24 24&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; aria-hidden=&quot;true&quot;&gt;&lt;path stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; d=&quot;M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z&quot;/&gt;&lt;/svg&gt;
     &lt;div class=&quot;form-errors-body&quot;&gt;

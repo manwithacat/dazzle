@@ -60,7 +60,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: slider — native range group + live value readout."""
 
-
 from contracts._kit import DomContract, Node
 
 DOM_CONTRACT = DomContract(

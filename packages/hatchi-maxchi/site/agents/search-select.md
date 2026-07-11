@@ -72,7 +72,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: search-select — typeahead open/close + hidden FK submit."""
 
-
 from contracts._kit import DomContract, Node
 
 DOM_CONTRACT = DomContract(

@@ -48,6 +48,60 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border: 1px solid var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); line-height: 1.5; }
 .hm-dialect code { font-size: .9em; }
+/* Glossary terms — human confidence on agent-primary pages (non-critical).
+   Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
+.hm-term {
+  font-style: normal;
+  font-weight: inherit;
+  border-bottom: 1px dotted color-mix(in oklab, var(--colour-brand) 55%, var(--colour-border));
+  cursor: help;
+  text-underline-offset: .15em;
+}
+.hm-term:focus { outline: none; }
+.hm-term:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hm-term[data-tooltip]::after {
+  white-space: normal;
+  width: max(12rem, min(20rem, 70vw));
+  max-width: 20rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+  padding: .4rem .55rem;
+  box-shadow: var(--shadow-md, 0 4px 16px oklab(0% 0 0 / .18));
+}
+.hm-term[data-tooltip]:hover::after,
+.hm-term[data-tooltip]:focus::after,
+.hm-term[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-dep[data-tooltip] { cursor: help; }
+.hm-dep[data-tooltip]::after {
+  white-space: normal;
+  width: max(10rem, min(16rem, 60vw));
+  max-width: 16rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  padding: .35rem .5rem;
+}
+.hm-dep[data-tooltip]:hover::after,
+.hm-dep[data-tooltip]:focus::after,
+.hm-dep[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-term-hint {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  opacity: .92;
+}
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -133,7 +187,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="app-shell"><h2>App shell<span class="hm-tag">composite</span><span class="hm-dep" data-dep="sprite" title="Dependency class: Sprite">Sprite</span><span class="hm-dep" data-dep="controller" title="Dependency class: Controller">Controller</span></h2><p class="blurb">The SaaS/admin application frame: persistent left navigation, an optional sticky top bar, a routed main workspace, and a responsive/collapsible sidebar whose state the server renders.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><iframe class="hm-hp-frame" src="app-shell-live.html" title="App shell — live preview"></iframe></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for App shell"><code class="code__source">&lt;!-- icons: include the icon sheet once per page (see the Setup section, #setup) --&gt;
+<section class="hm-comp" id="app-shell"><h2>App shell<span class="hm-tag">composite</span><span class="hm-dep" data-dep="sprite" tabindex="0" data-tooltip="Needs the icon symbol sheet inlined once on the page.">Sprite</span><span class="hm-dep" data-dep="controller" tabindex="0" data-tooltip="Ships a small vanilla-JS controller (still no SPA state).">Controller</span></h2><p class="blurb">The SaaS/admin application frame: persistent left navigation, an optional sticky top bar, a routed main workspace, and a responsive/collapsible sidebar whose state the server renders.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><div class="hm-preview"><iframe class="hm-hp-frame" src="app-shell-live.html" title="App shell — live preview"></iframe></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for App shell"><code class="code__source">&lt;!-- icons: include the icon sheet once per page (see the Setup section, #setup) --&gt;
 &lt;div class=&quot;app-shell&quot; data-sidebar=&quot;open&quot;&gt;
   &lt;aside class=&quot;app-sidebar&quot; id=&quot;app-sidebar&quot;&gt;
     &lt;div class=&quot;sidebar&quot;&gt;
@@ -158,8 +212,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
       &lt;p class=&quot;hm-demo-muted&quot;&gt;The routed workspace. The hamburger collapses the sidebar; the state persists via a cookie so the server renders it correctly on the next request.&lt;/p&gt;
     &lt;/div&gt;
   &lt;/div&gt;
-&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="how-to"><h3>How to use it</h3><h4>Seams</h4><ul><li>root data-sidebar=open|closed is SERVER-rendered from the dz_sidebar cookie</li><li>[data-sidebar-toggle] flips state and rewrites the cookie (1y, SameSite=Lax)</li></ul><h4>Do / Don't</h4><table class="hm-contract-table"><thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody><tr><td>SSR data-sidebar from the cookie so first paint has no flash</td><td>default open in HTML and fix it client-side after load</td></tr></tbody></table><h4>Pitfalls</h4><ul><li>cookie not localStorage — the server must paint the correct first state</li><li>the component owns the ≥64rem media query (viewport policy); layout primitives stay MQ-free</li></ul><h4>Keyboard / AT</h4><ul><li>toggle mirrors aria-expanded to the open/closed state</li><li>narrow viewports: sidebar overlays; desktop: persistent rail</li></ul><h4>Related parts</h4><p><a href="button"><code>button</code></a> <a href="sidebar-layout"><code>sidebar-layout</code></a></p></section><section class="hm-ref" id="dom-contract"><h3>DOM contract</h3><p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — the table is the required surface; Python under <code>contracts/</code> is the package-internal dual-lock CI runs (<code>tests/test_contracts.py</code>), not an app route. Standalone HTMX4: implement the API so responses match this markup. Dazzle: the agent emits SSR that already satisfies it. Do not invent attrs outside these tables. For request/response wiring see <a href="#exchange">Server exchange</a>.</p><h4 class="hm-ref-mod"><code>contracts/app_shell.py</code></h4><p class="hm-ref-lead"><strong>Required in the DOM:</strong> root <code>[data-sidebar]</code> (part <code>app-shell</code>). Emit only these attributes — inventing extras is fine only if controllers ignore them; omitting required ones fails CI (<code>tests/test_contracts.py</code>).</p><table class="hm-contract-table"><thead><tr><th>Node</th><th>Attr</th><th>Constraint</th></tr></thead><tbody><tr><td><code>[data-sidebar]</code></td><td><code>data-sidebar</code></td><td>one of [&#x27;open&#x27;, &#x27;closed&#x27;]</td></tr><tr><td><code>[data-sidebar-toggle]</code></td><td><code>—</code></td><td>—</td></tr></tbody></table><h4>Module source</h4><p class="hm-ref-lead">Import path is monorepo/package-local (<code>from contracts._kit import …</code>). Source-token form often uses <code>data-*</code>; gallery demos above are unprefixed. Do not copy this into app routes.</p><figure class="code" data-code data-language="python"><div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Module source contracts/app_shell.py"><code class="code__source"><span class="code__tok--str">&quot;&quot;&quot;HYPERPART: app-shell — DOM contract for the sidebar shell controller.&quot;&quot;&quot;</span>
-
+&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="how-to"><h3>How to use it</h3><h4>Seams</h4><ul><li>root data-sidebar=open|closed is SERVER-rendered from the dz_sidebar cookie</li><li>[data-sidebar-toggle] flips state and rewrites the cookie (1y, SameSite=Lax)</li></ul><h4>Do / Don't</h4><table class="hm-contract-table"><thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody><tr><td>SSR data-sidebar from the cookie so first paint has no flash</td><td>default open in HTML and fix it client-side after load</td></tr></tbody></table><h4>Pitfalls</h4><ul><li>cookie not localStorage — the server must paint the correct first state</li><li>the component owns the ≥64rem media query (viewport policy); layout primitives stay MQ-free</li></ul><h4>Keyboard / AT</h4><ul><li>toggle mirrors aria-expanded to the open/closed state</li><li>narrow viewports: sidebar overlays; desktop: persistent rail</li></ul><h4>Related parts</h4><p><a href="button"><code>button</code></a> <a href="sidebar-layout"><code>sidebar-layout</code></a></p></section><section class="hm-ref" id="dom-contract"><h3><dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn></h3><p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — the table is the required surface; Python under <code>contracts/</code> is the package-internal <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> CI runs (<code>tests/test_contracts.py</code>), not an app route. Standalone HTMX4: implement the API so responses match this markup. Dazzle: the agent emits SSR that already satisfies it. Do not invent attrs outside these tables. For request/response wiring see <a href="#exchange">Server exchange</a>.</p><h4 class="hm-ref-mod"><code>contracts/app_shell.py</code></h4><p class="hm-ref-lead"><strong>Required in the DOM:</strong> root <code>[data-sidebar]</code> (part <code>app-shell</code>). Emit only these attributes — inventing extras is fine only if controllers ignore them; omitting required ones fails CI (<code>tests/test_contracts.py</code>).</p><table class="hm-contract-table"><thead><tr><th>Node</th><th>Attr</th><th>Constraint</th></tr></thead><tbody><tr><td><code>[data-sidebar]</code></td><td><code>data-sidebar</code></td><td>one of [&#x27;open&#x27;, &#x27;closed&#x27;]</td></tr><tr><td><code>[data-sidebar-toggle]</code></td><td><code>—</code></td><td>—</td></tr></tbody></table><h4>Module source</h4><p class="hm-ref-lead">Import path is monorepo/package-local (<code>from contracts._kit import …</code>). Source-token form often uses <code>data-*</code>; gallery demos above are unprefixed. Do not copy this into app routes.</p><figure class="code" data-code data-language="python"><div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Module source contracts/app_shell.py"><code class="code__source"><span class="code__tok--str">&quot;&quot;&quot;HYPERPART: app-shell — DOM contract for the sidebar shell controller.&quot;&quot;&quot;</span>
 
 <span class="code__tok--kw">from</span> <span class="code__tok--name">contracts</span><span class="code__tok--op">.</span><span class="code__tok--name">_kit</span> <span class="code__tok--kw">import</span> <span class="code__tok--name">DomContract</span><span class="code__tok--op">,</span> <span class="code__tok--name">Node</span><span class="code__tok--op">,</span> <span class="code__tok--name">OneOf</span>
 

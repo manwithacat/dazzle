@@ -44,7 +44,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: field (extension: dz-color) — colour input group."""
 
-
 from contracts._kit import DomContract, Node
 
 DOM_CONTRACT = DomContract(

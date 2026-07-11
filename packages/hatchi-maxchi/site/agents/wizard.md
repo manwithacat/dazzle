@@ -81,7 +81,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: wizard — multi-stage form with data-dz-step state."""
 
-
 from contracts._kit import DomContract, Node, OneOf, Present
 
 DOM_CONTRACT = DomContract(

@@ -48,6 +48,60 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border: 1px solid var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); line-height: 1.5; }
 .hm-dialect code { font-size: .9em; }
+/* Glossary terms — human confidence on agent-primary pages (non-critical).
+   Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
+.hm-term {
+  font-style: normal;
+  font-weight: inherit;
+  border-bottom: 1px dotted color-mix(in oklab, var(--colour-brand) 55%, var(--colour-border));
+  cursor: help;
+  text-underline-offset: .15em;
+}
+.hm-term:focus { outline: none; }
+.hm-term:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hm-term[data-tooltip]::after {
+  white-space: normal;
+  width: max(12rem, min(20rem, 70vw));
+  max-width: 20rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+  padding: .4rem .55rem;
+  box-shadow: var(--shadow-md, 0 4px 16px oklab(0% 0 0 / .18));
+}
+.hm-term[data-tooltip]:hover::after,
+.hm-term[data-tooltip]:focus::after,
+.hm-term[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-dep[data-tooltip] { cursor: help; }
+.hm-dep[data-tooltip]::after {
+  white-space: normal;
+  width: max(10rem, min(16rem, 60vw));
+  max-width: 16rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  padding: .35rem .5rem;
+}
+.hm-dep[data-tooltip]:hover::after,
+.hm-dep[data-tooltip]:focus::after,
+.hm-dep[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-term-hint {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  opacity: .92;
+}
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -133,7 +187,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="search-box"><h2>Search box<span class="hm-tag">forms</span><span class="hm-dep" data-dep="endpoint" title="Dependency class: Endpoint">Endpoint</span></h2><p class="blurb">The FTS search region: a debounced search input, an aria-live results panel, and a coaching line that hides — via pure CSS — the moment the user types.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><div class="search-box-region hm-measure"><div class="search-box-input-row"><label for="hm-search-input" class="visually-hidden">Search records</label><input id="hm-search-input" type="search" name="q" class="search-box-input" placeholder="Search records…" autocomplete="off" hx-get="/mock/search" hx-trigger="input changed delay:250ms, search" hx-target="#hm-search-results" hx-swap="innerHTML"></div><div id="hm-search-results" class="search-box-results" role="region" aria-live="polite"><div class="search-box-empty">Type a title or keyword</div></div></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Search box"><code class="code__source">&lt;div class=&quot;search-box-region hm-measure&quot;&gt;
+<section class="hm-comp" id="search-box"><h2>Search box<span class="hm-tag">forms</span><span class="hm-dep" data-dep="endpoint" tabindex="0" data-tooltip="Needs a server exchange — an API that returns HTML fragments.">Endpoint</span></h2><p class="blurb">The FTS search region: a debounced search input, an aria-live results panel, and a coaching line that hides — via pure CSS — the moment the user types.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><div class="hm-preview"><div class="search-box-region hm-measure"><div class="search-box-input-row"><label for="hm-search-input" class="visually-hidden">Search records</label><input id="hm-search-input" type="search" name="q" class="search-box-input" placeholder="Search records…" autocomplete="off" hx-get="/mock/search" hx-trigger="input changed delay:250ms, search" hx-target="#hm-search-results" hx-swap="innerHTML"></div><div id="hm-search-results" class="search-box-results" role="region" aria-live="polite"><div class="search-box-empty">Type a title or keyword</div></div></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Search box"><code class="code__source">&lt;div class=&quot;search-box-region hm-measure&quot;&gt;
   &lt;div class=&quot;search-box-input-row&quot;&gt;
     &lt;label for=&quot;hm-search-input&quot; class=&quot;visually-hidden&quot;&gt;Search records&lt;/label&gt;
     &lt;input id=&quot;hm-search-input&quot; type=&quot;search&quot; name=&quot;q&quot; class=&quot;search-box-input&quot; placeholder=&quot;Search records…&quot; autocomplete=&quot;off&quot; hx-get=&quot;/mock/search&quot; hx-trigger=&quot;input changed delay:250ms, search&quot; hx-target=&quot;#hm-search-results&quot; hx-swap=&quot;innerHTML&quot;&gt;
@@ -141,7 +195,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   &lt;div id=&quot;hm-search-results&quot; class=&quot;search-box-results&quot; role=&quot;region&quot; aria-live=&quot;polite&quot;&gt;
     &lt;div class=&quot;search-box-empty&quot;&gt;Type a title or keyword&lt;/div&gt;
   &lt;/div&gt;
-&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="exchange"><h3>Server exchange</h3><p class="hm-ref-lead">When the client affordance finishes (click, confirm, keystroke…), htmx issues <strong>this</strong> request. Your API must return the response fragment described below — usually HTML, not JSON (unless the partial says otherwise). Gallery mocks (toasts, <code>/mock/*</code>) are not the contract. Dazzle often renders these routes from the app model; a standalone HTMX4 app implements them explicitly.</p><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/fts/{entity}?q=&amp;html=1</code></td><td>the input, debounced 250ms (and the native `search` event — Esc/clear on type=search)</td><td>the results fragment: a `search-box-result-count` line + a `search-box-result-list` of linked rows with `&lt;mark&gt;`-highlighted snippets; zero hits return the `--no-results` variant of the empty line (which the CSS toggle deliberately never hides). Empty queries aren&#x27;t sent (min length 1)</td><td>innerHTML</td><td>—</td></tr></tbody></table></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">No JS beyond htmx: the 250ms debounce is <code>hx-trigger=&quot;input changed delay:250ms, search&quot;</code>, the results land in an <code>aria-live=&quot;polite&quot;</code> region, and the coaching line is hidden by <code>:has(input:not(:placeholder-shown))</code> — no client state. Results are server-rendered <code>search-box-result</code> rows (title + per-field <code>&lt;mark&gt;</code>-highlighted snippets, count line above); the no-results state reuses <code>search-box-empty</code> with the <code>--no-results</code> modifier.</div></section></section>
+&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="exchange"><h3><dfn class="hm-term" tabindex="0" data-tooltip="The deal for one action: which request goes out, what HTML comes back, and where it lands. Classic hypermedia — not a private JSON API for a SPA.">Server exchange</dfn></h3><p class="hm-ref-lead">When the client <dfn class="hm-term" tabindex="0" data-tooltip="Something the user can act on that starts a request — a Delete button with hx-delete, a search box that hx-gets results. Browser talks to server; server returns HTML.">affordance</dfn> finishes (click, confirm, keystroke…), htmx issues <strong>this</strong> request. Your API must return the response fragment described below — usually HTML, not JSON (unless the partial says otherwise). Gallery mocks (toasts, <code>/mock/*</code>) are not the contract. Dazzle often renders these routes from the app model; a standalone HTMX4 app implements them explicitly.</p><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/fts/{entity}?q=&amp;html=1</code></td><td>the input, debounced 250ms (and the native `search` event — Esc/clear on type=search)</td><td>the results fragment: a `search-box-result-count` line + a `search-box-result-list` of linked rows with `&lt;mark&gt;`-highlighted snippets; zero hits return the `--no-results` variant of the empty line (which the CSS toggle deliberately never hides). Empty queries aren&#x27;t sent (min length 1)</td><td>innerHTML</td><td>—</td></tr></tbody></table></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">No JS beyond htmx: the 250ms debounce is <code>hx-trigger=&quot;input changed delay:250ms, search&quot;</code>, the results land in an <code>aria-live=&quot;polite&quot;</code> region, and the coaching line is hidden by <code>:has(input:not(:placeholder-shown))</code> — no client state. Results are server-rendered <code>search-box-result</code> rows (title + per-field <code>&lt;mark&gt;</code>-highlighted snippets, count line above); the no-results state reuses <code>search-box-empty</code> with the <code>--no-results</code> modifier.</div></section></section>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
 The demo above renders the exact snippet — copy it into any htmx4 app.

@@ -48,6 +48,60 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border: 1px solid var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); line-height: 1.5; }
 .hm-dialect code { font-size: .9em; }
+/* Glossary terms — human confidence on agent-primary pages (non-critical).
+   Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
+.hm-term {
+  font-style: normal;
+  font-weight: inherit;
+  border-bottom: 1px dotted color-mix(in oklab, var(--colour-brand) 55%, var(--colour-border));
+  cursor: help;
+  text-underline-offset: .15em;
+}
+.hm-term:focus { outline: none; }
+.hm-term:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hm-term[data-tooltip]::after {
+  white-space: normal;
+  width: max(12rem, min(20rem, 70vw));
+  max-width: 20rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+  padding: .4rem .55rem;
+  box-shadow: var(--shadow-md, 0 4px 16px oklab(0% 0 0 / .18));
+}
+.hm-term[data-tooltip]:hover::after,
+.hm-term[data-tooltip]:focus::after,
+.hm-term[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-dep[data-tooltip] { cursor: help; }
+.hm-dep[data-tooltip]::after {
+  white-space: normal;
+  width: max(10rem, min(16rem, 60vw));
+  max-width: 16rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  padding: .35rem .5rem;
+}
+.hm-dep[data-tooltip]:hover::after,
+.hm-dep[data-tooltip]:focus::after,
+.hm-dep[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-term-hint {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  opacity: .92;
+}
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -133,7 +187,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="sparkline"><h2>Sparkline<span class="hm-tag">data</span><span class="hm-dep" data-dep="primitive" title="Dependency class: Primitive">Primitive</span></h2><p class="blurb">A headline number with its recent shape — the smallest chart: a current value, its bucket label, and an area glyph.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><div class="sparkline-region"><div class="sparkline-headline"><span class="sparkline-value">184ms</span><span class="sparkline-bucket-label">this hour</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" class="sparkline-svg" role="img" aria-label="Sparkline — 12 points, latest 184ms, peak 240ms"><polygon points="0,32 0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9 180,32" fill="var(--colour-brand)" fill-opacity="0.15" stroke="none"/><polyline points="0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9" fill="none" stroke="var(--colour-brand)" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/></svg></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Sparkline"><code class="code__source">&lt;div class=&quot;sparkline-region&quot;&gt;
+<section class="hm-comp" id="sparkline"><h2>Sparkline<span class="hm-tag">data</span><span class="hm-dep" data-dep="primitive" tabindex="0" data-tooltip="HTML + CSS only — no controller script required.">Primitive</span></h2><p class="blurb">A headline number with its recent shape — the smallest chart: a current value, its bucket label, and an area glyph.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><div class="hm-preview"><div class="sparkline-region"><div class="sparkline-headline"><span class="sparkline-value">184ms</span><span class="sparkline-bucket-label">this hour</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" class="sparkline-svg" role="img" aria-label="Sparkline — 12 points, latest 184ms, peak 240ms"><polygon points="0,32 0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9 180,32" fill="var(--colour-brand)" fill-opacity="0.15" stroke="none"/><polyline points="0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9" fill="none" stroke="var(--colour-brand)" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/></svg></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Sparkline"><code class="code__source">&lt;div class=&quot;sparkline-region&quot;&gt;
   &lt;div class=&quot;sparkline-headline&quot;&gt;&lt;span class=&quot;sparkline-value&quot;&gt;184ms&lt;/span&gt;&lt;span class=&quot;sparkline-bucket-label&quot;&gt;this hour&lt;/span&gt;&lt;/div&gt;
   &lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 180 32&quot; class=&quot;sparkline-svg&quot; role=&quot;img&quot; aria-label=&quot;Sparkline — 12 points, latest 184ms, peak 240ms&quot;&gt;&lt;polygon points=&quot;0,32 0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9 180,32&quot; fill=&quot;var(--colour-brand)&quot; fill-opacity=&quot;0.15&quot; stroke=&quot;none&quot;/&gt;&lt;polyline points=&quot;0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9&quot; fill=&quot;none&quot; stroke=&quot;var(--colour-brand)&quot; stroke-width=&quot;1.25&quot; stroke-linejoin=&quot;round&quot; stroke-linecap=&quot;round&quot;/&gt;&lt;/svg&gt;
 &lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">The SVG is server-rendered with a numeric summary in <code>aria-label</code> (points / latest / peak) — the glyph is decoration; the numbers are the content. An empty series renders <code>sparkline-empty</code>; a single point renders the headline alone.</div></section></section>

@@ -86,7 +86,6 @@ List rows carry ``.dz-master-detail__item`` and hx-get a detail fragment into
 ``.dz-master-detail__detail``; ``dz-master-detail.js`` owns aria-current.
 """
 
-
 from contracts._kit import DomContract, Node
 
 DOM_CONTRACT = DomContract(

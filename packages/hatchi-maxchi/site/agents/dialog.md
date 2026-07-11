@@ -69,7 +69,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: dialog — native <dialog> open trigger contract."""
 
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

@@ -77,7 +77,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: tabs — tablist root + panel targets."""
 
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

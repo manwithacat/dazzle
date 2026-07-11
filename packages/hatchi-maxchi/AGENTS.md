@@ -19,6 +19,12 @@ on the server and in the DOM.
 | **Dazzle** | Founders / vibe coders building SaaS without deep stack knowledge | Treat Dazzle as the product surface. Emit SSR + wiring from the app model; HM supplies the design system the runtime already knows. Prefer monorepo dual-lock (`dz-` / `data-dz-*`) and Dazzle emitters over hand-rolled FastAPI. |
 | **Standalone HM** | HTMX4 developers (often with agent support) who own their server | Read each part as: **this markup** (Copy this) → **this DOM contract** (what the fragment must look like) → **this API shape** (Server exchange + optional `server_example`). Wire `hx-*` to your handlers; return HTML fragments, not JSON. |
 
+**Humans on the HTML part pages:** dotted glossary terms (Hyperpart, affordance,
+Server exchange, DOM contract, …) show a short plain-language tooltip on hover
+or keyboard focus. They are confidence aids — fundamental hypermedia, not a
+black box. Agents should still prefer section prose, tables, and this file;
+do not scrape tooltip attributes as the contract.
+
 Example direction that should resolve from the agent pack alone:
 
 > I'm building an HTMX4 site using HM as the design system. I need an API

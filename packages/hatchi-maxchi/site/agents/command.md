@@ -70,7 +70,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: command — palette dialog root contract."""
 
-
 from contracts._kit import DomContract, Node
 
 DOM_CONTRACT = DomContract(

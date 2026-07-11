@@ -93,6 +93,72 @@ ROOT = Path(__file__).resolve().parents[3]
 _ICON_RE = re.compile(r"\{icon:([a-z0-9-]+)\}")
 _SVG_RE = re.compile(r"\{svg:([a-z0-9-]+)\}")
 
+# Human-facing ELI5 glosses for part-page terms (agents use prose + tables).
+# Avoid the substring "dz-" in tips — site build may run apply_prefix which
+# strips that token from the published gallery namespace.
+# Tooltips are non-critical hints (hover / keyboard focus); leads still explain.
+_GLOSSARY: dict[str, tuple[str, str]] = {
+    "hyperpart": (
+        "Hyperpart",
+        "Reusable unit of UI: the HTML the server sends, the request it may "
+        "fire, and maybe a tiny bit of JS. Not a React component — pure hypermedia.",
+    ),
+    "partial": (
+        "partial",
+        "The HTML fragment the server renders — the look of the control, ready "
+        "to paste or emit. No client state graph inside it.",
+    ),
+    "affordance": (
+        "affordance",
+        "Something the user can act on that starts a request — a Delete button "
+        "with hx-delete, a search box that hx-gets results. Browser talks to "
+        "server; server returns HTML.",
+    ),
+    "exchange": (
+        "Server exchange",
+        "The deal for one action: which request goes out, what HTML comes back, "
+        "and where it lands. Classic hypermedia — not a private JSON API for a SPA.",
+    ),
+    "dom-contract": (
+        "DOM contract",
+        "Required shape of the HTML the server returns (which roots and "
+        "attributes must be present). CI checks it so nobody invents freestyle markup.",
+    ),
+    "controller": (
+        "controller",
+        "Small vanilla-JS helper only when the platform lacks a primitive. "
+        "No client store — it only reads and writes the DOM.",
+    ),
+    "dual-lock": (
+        "dual-lock",
+        "Same design, two namespaces: gallery demos use plain class names; "
+        "Dazzle apps use a product prefix on classes and data attributes.",
+    ),
+}
+
+_DEP_GLOSSARY: dict[str, str] = {
+    "Primitive": "HTML + CSS only — no controller script required.",
+    "Sprite": "Needs the icon symbol sheet inlined once on the page.",
+    "Controller": "Ships a small vanilla-JS controller (still no SPA state).",
+    "Endpoint": "Needs a server exchange — an API that returns HTML fragments.",
+    "Composite": "Built by composing other Hyperparts (see Composed of).",
+}
+
+
+def _term(key: str, label: str | None = None) -> str:
+    """Glossary term with multi-line CSS tooltip (gallery chrome, not product surface).
+
+    ``<dfn class="hm-term">`` is human-facing confidence: hover or focus for
+    an ELI5. Agents scrape the surrounding section prose and tables.
+    """
+    display, tip = _GLOSSARY[key]
+    text = display if label is None else label
+    return (
+        f'<dfn class="hm-term" tabindex="0" '
+        f'data-tooltip="{_html.escape(tip, quote=True)}">'
+        f"{_html.escape(text)}</dfn>"
+    )
+
 
 def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     """Always-visible server exchange table + optional FastAPI-shaped examples."""
@@ -128,13 +194,14 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             )
     return (
         '<section class="hm-ref" id="exchange">'
-        "<h3>Server exchange</h3>"
-        '<p class="hm-ref-lead">When the client affordance finishes (click, confirm, '
-        "keystroke…), htmx issues <strong>this</strong> request. Your API must return "
-        "the response fragment described below — usually HTML, not JSON (unless the "
-        "partial says otherwise). Gallery mocks (toasts, <code>/mock/*</code>) are not "
-        "the contract. Dazzle often renders these routes from the app model; a "
-        "standalone HTMX4 app implements them explicitly.</p>"
+        f"<h3>{_term('exchange')}</h3>"
+        f'<p class="hm-ref-lead">When the client {_term("affordance")} finishes '
+        "(click, confirm, keystroke…), htmx issues <strong>this</strong> request. "
+        "Your API must return the response fragment described below — usually HTML, "
+        "not JSON (unless the partial says otherwise). Gallery mocks (toasts, "
+        "<code>/mock/*</code>) are not the contract. Dazzle often renders these "
+        "routes from the app model; a standalone HTMX4 app implements them "
+        "explicitly.</p>"
         '<table class="hm-contract-table"><thead><tr>'
         "<th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th>"
         f"</tr></thead><tbody>{''.join(rows)}</tbody></table>" + "".join(examples) + "</section>"
@@ -351,10 +418,10 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
 
     return (
         '<section class="hm-ref" id="dom-contract">'
-        "<h3>DOM contract</h3>"
+        f"<h3>{_term('dom-contract')}</h3>"
         '<p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — '
         "the table is the required surface; Python under <code>contracts/</code> is "
-        "the package-internal dual-lock CI runs "
+        f"the package-internal {_term('dual-lock')} CI runs "
         "(<code>tests/test_contracts.py</code>), not an app route. "
         "Standalone HTMX4: implement the API so responses match this markup. "
         "Dazzle: the agent emits SSR that already satisfies it. "
@@ -412,8 +479,11 @@ def _dialect_html() -> str:
         '<p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page '
         "are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). "
         "Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> "
-        "attribute form. DOM contract Python below is dual-lock source "
-        "(often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p>"
+        f"attribute form. {_term('dom-contract')} Python below is "
+        f"{_term('dual-lock')} source (often still <code>data-dz-*</code>). "
+        "Match the CSS/JS bundle you load. "
+        '<span class="hm-term-hint">Dotted terms explain on hover or keyboard focus '
+        "— hypermedia, not a black box.</span></p>"
     )
 
 
@@ -430,12 +500,15 @@ def _guide_body() -> str:
         "markup, the browser swaps fragments, and there is no client state "
         "graph. State lives in two places only — on the server, and in the DOM "
         "itself (attributes, <code>.checked</code>, <code>aria-*</code>). A "
-        "component here is a <strong>Hyperpart</strong>: a partial plus its "
-        "exchange contracts plus, only where the platform lacks a primitive, a "
-        "small delegated vanilla-JS controller. If you arrive with React "
-        "priors, the renaming is deliberate: there is nothing to hydrate, no "
-        "composition tree, and morphing swaps will discard any state a JS "
-        "object tries to hold.</p></section>"
+        f"component here is a {_term('hyperpart')}: a {_term('partial')} plus its "
+        f"{_term('exchange', 'exchange')} contracts plus, only where the platform "
+        f"lacks a primitive, a small delegated vanilla-JS {_term('controller')}. "
+        "If you arrive with React priors, the renaming is deliberate: there is "
+        "nothing to hydrate, no composition tree, and morphing swaps will discard "
+        "any state a JS object tries to hold. "
+        '<span class="hm-term-hint">Dotted terms: hover or focus for a plain-language '
+        "gloss — these are fundamental hypermedia techniques, not a proprietary box."
+        "</span></p></section>"
     )
     sections.append(
         '<section class="hm-comp" id="tokens"><h2>2 · Tokens &amp; theming</h2>'
@@ -459,13 +532,14 @@ def _guide_body() -> str:
         "path).</p>" + _anatomy_html(grid) + "</section>"
     )
     sections.append(
-        '<section class="hm-comp" id="contracts"><h2>4 · Exchanges &amp; '
-        "contracts</h2>"
-        "<p>A Hyperpart is only half markup. The other half is the contract the "
-        "server must satisfy: the <em>exchange</em> (request/response round-trip "
-        "each affordance initiates) and, for data-bearing seams, the <em>typed "
-        "contract module</em> — ingestion model, DOM contract, and an executable "
-        "exemplar that CI renders and validates. Both halves for the grid:</p>"
+        '<section class="hm-comp" id="contracts"><h2>4 · '
+        f"{_term('exchange', 'Exchanges')} &amp; contracts</h2>"
+        f"<p>A {_term('hyperpart')} is only half markup. The other half is the "
+        "contract the server must satisfy: the exchange (request/response "
+        f"round-trip each {_term('affordance')} initiates) and, for data-bearing "
+        "seams, the <em>typed contract module</em> — ingestion model, "
+        f"{_term('dom-contract')}, and an executable exemplar that CI renders and "
+        "validates. Both halves for the grid:</p>"
         + _exchanges_html(grid)
         + _contracts_html(grid)
         + "</section>"
@@ -753,10 +827,14 @@ def _composed_of_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
 
 
 def _dependency_chips(hyperpart) -> str:  # type: ignore[no-untyped-def]
-    return "".join(
-        f'<span class="hm-dep" data-dep="{d.lower()}" title="Dependency class: {d}">{d}</span>'
-        for d in _dependency_classes(hyperpart)
-    )
+    chips = []
+    for d in _dependency_classes(hyperpart):
+        tip = _DEP_GLOSSARY.get(d, f"Dependency class: {d}")
+        chips.append(
+            f'<span class="hm-dep" data-dep="{d.lower()}" '
+            f'tabindex="0" data-tooltip="{_html.escape(tip, quote=True)}">{d}</span>'
+        )
+    return "".join(chips)
 
 
 def _require(name: str) -> str:
@@ -1259,6 +1337,60 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border: 1px solid var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); line-height: 1.5; }
 .hm-dialect code { font-size: .9em; }
+/* Glossary terms — human confidence on agent-primary pages (non-critical).
+   Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
+.hm-term {
+  font-style: normal;
+  font-weight: inherit;
+  border-bottom: 1px dotted color-mix(in oklab, var(--colour-brand) 55%, var(--colour-border));
+  cursor: help;
+  text-underline-offset: .15em;
+}
+.hm-term:focus { outline: none; }
+.hm-term:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hm-term[data-tooltip]::after {
+  white-space: normal;
+  width: max(12rem, min(20rem, 70vw));
+  max-width: 20rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+  padding: .4rem .55rem;
+  box-shadow: var(--shadow-md, 0 4px 16px oklab(0% 0 0 / .18));
+}
+.hm-term[data-tooltip]:hover::after,
+.hm-term[data-tooltip]:focus::after,
+.hm-term[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-dep[data-tooltip] { cursor: help; }
+.hm-dep[data-tooltip]::after {
+  white-space: normal;
+  width: max(10rem, min(16rem, 60vw));
+  max-width: 16rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  padding: .35rem .5rem;
+}
+.hm-dep[data-tooltip]:hover::after,
+.hm-dep[data-tooltip]:focus::after,
+.hm-dep[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-term-hint {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  opacity: .92;
+}
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }

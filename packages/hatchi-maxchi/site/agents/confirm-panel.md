@@ -84,7 +84,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: confirm-panel — irreversible-action consent gate."""
 
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

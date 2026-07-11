@@ -172,7 +172,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 root attributes; the data-bearing seams live in extension contracts
 (grid_edit). Root-only: no ingestion model, no exemplars."""
 
-
 from contracts._kit import DomContract
 
 DOM_CONTRACT = DomContract(
@@ -254,7 +253,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: grid (extension: dz-grid-cols) — column visibility seam."""
 
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(
@@ -285,7 +283,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 
 ```python
 """HYPERPART: grid (extension: dz-grid-resize) — column resize seam."""
-
 
 from contracts._kit import DomContract, Node, Present
 

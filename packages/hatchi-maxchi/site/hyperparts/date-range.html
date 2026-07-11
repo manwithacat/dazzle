@@ -48,6 +48,60 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border: 1px solid var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); line-height: 1.5; }
 .hm-dialect code { font-size: .9em; }
+/* Glossary terms — human confidence on agent-primary pages (non-critical).
+   Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
+.hm-term {
+  font-style: normal;
+  font-weight: inherit;
+  border-bottom: 1px dotted color-mix(in oklab, var(--colour-brand) 55%, var(--colour-border));
+  cursor: help;
+  text-underline-offset: .15em;
+}
+.hm-term:focus { outline: none; }
+.hm-term:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.hm-term[data-tooltip]::after {
+  white-space: normal;
+  width: max(12rem, min(20rem, 70vw));
+  max-width: 20rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.4;
+  padding: .4rem .55rem;
+  box-shadow: var(--shadow-md, 0 4px 16px oklab(0% 0 0 / .18));
+}
+.hm-term[data-tooltip]:hover::after,
+.hm-term[data-tooltip]:focus::after,
+.hm-term[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-dep[data-tooltip] { cursor: help; }
+.hm-dep[data-tooltip]::after {
+  white-space: normal;
+  width: max(10rem, min(16rem, 60vw));
+  max-width: 16rem;
+  text-align: start;
+  font-weight: var(--weight-regular);
+  line-height: 1.35;
+  padding: .35rem .5rem;
+}
+.hm-dep[data-tooltip]:hover::after,
+.hm-dep[data-tooltip]:focus::after,
+.hm-dep[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 180ms;
+}
+.hm-term-hint {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  opacity: .92;
+}
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -133,13 +187,13 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="date-range"><h2>Date range<span class="hm-tag">forms</span><span class="hm-dep" data-dep="endpoint" title="Dependency class: Endpoint">Endpoint</span></h2><p class="blurb">Two native date inputs driving one htmx exchange — the from/to filter bar for time-scoped regions.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><div class="date-range-picker date-range-bar"><label class="date-range-label" for="hm-dr-from">From</label><input type="date" id="hm-dr-from" name="date_from" value="2026-06-01" class="date-range-input" hx-get="/mock/search" hx-target="#hm-dr-out" hx-swap="innerHTML" hx-include="closest .date-range-bar"><label class="date-range-label" for="hm-dr-to">To</label><input type="date" id="hm-dr-to" name="date_to" value="2026-06-30" class="date-range-input" hx-get="/mock/search" hx-target="#hm-dr-out" hx-swap="innerHTML" hx-include="closest .date-range-bar"><div id="hm-dr-out" hidden></div></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Date range"><code class="code__source">&lt;div class=&quot;date-range-picker date-range-bar&quot;&gt;
+<section class="hm-comp" id="date-range"><h2>Date range<span class="hm-tag">forms</span><span class="hm-dep" data-dep="endpoint" tabindex="0" data-tooltip="Needs a server exchange — an API that returns HTML fragments.">Endpoint</span></h2><p class="blurb">Two native date inputs driving one htmx exchange — the from/to filter bar for time-scoped regions.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. <dfn class="hm-term" tabindex="0" data-tooltip="Required shape of the HTML the server returns (which roots and attributes must be present). CI checks it so nobody invents freestyle markup.">DOM contract</dfn> Python below is <dfn class="hm-term" tabindex="0" data-tooltip="Same design, two namespaces: gallery demos use plain class names; Dazzle apps use a product prefix on classes and data attributes.">dual-lock</dfn> source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load. <span class="hm-term-hint">Dotted terms explain on hover or keyboard focus — hypermedia, not a black box.</span></p><div class="hm-preview"><div class="date-range-picker date-range-bar"><label class="date-range-label" for="hm-dr-from">From</label><input type="date" id="hm-dr-from" name="date_from" value="2026-06-01" class="date-range-input" hx-get="/mock/search" hx-target="#hm-dr-out" hx-swap="innerHTML" hx-include="closest .date-range-bar"><label class="date-range-label" for="hm-dr-to">To</label><input type="date" id="hm-dr-to" name="date_to" value="2026-06-30" class="date-range-input" hx-get="/mock/search" hx-target="#hm-dr-out" hx-swap="innerHTML" hx-include="closest .date-range-bar"><div id="hm-dr-out" hidden></div></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Date range"><code class="code__source">&lt;div class=&quot;date-range-picker date-range-bar&quot;&gt;
   &lt;label class=&quot;date-range-label&quot; for=&quot;hm-dr-from&quot;&gt;From&lt;/label&gt;
   &lt;input type=&quot;date&quot; id=&quot;hm-dr-from&quot; name=&quot;date_from&quot; value=&quot;2026-06-01&quot; class=&quot;date-range-input&quot; hx-get=&quot;/mock/search&quot; hx-target=&quot;#hm-dr-out&quot; hx-swap=&quot;innerHTML&quot; hx-include=&quot;closest .date-range-bar&quot;&gt;
   &lt;label class=&quot;date-range-label&quot; for=&quot;hm-dr-to&quot;&gt;To&lt;/label&gt;
   &lt;input type=&quot;date&quot; id=&quot;hm-dr-to&quot; name=&quot;date_to&quot; value=&quot;2026-06-30&quot; class=&quot;date-range-input&quot; hx-get=&quot;/mock/search&quot; hx-target=&quot;#hm-dr-out&quot; hx-swap=&quot;innerHTML&quot; hx-include=&quot;closest .date-range-bar&quot;&gt;
   &lt;div id=&quot;hm-dr-out&quot; hidden&gt;&lt;/div&gt;
-&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="exchange"><h3>Server exchange</h3><p class="hm-ref-lead">When the client affordance finishes (click, confirm, keystroke…), htmx issues <strong>this</strong> request. Your API must return the response fragment described below — usually HTML, not JSON (unless the partial says otherwise). Gallery mocks (toasts, <code>/mock/*</code>) are not the contract. Dazzle often renders these routes from the app model; a standalone HTMX4 app implements them explicitly.</p><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/{region}?date_from=&amp;date_to=</code></td><td>either date input&#x27;s change — hx-include sends both bounds</td><td>the re-rendered region body for the new range</td><td>innerHTML</td><td>—</td></tr></tbody></table></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">Native <code>type=&quot;date&quot;</code> inputs — no picker JS. Each input fires the region's hx-get on change and <code>hx-include=&quot;closest .date-range-bar&quot;</code> sends BOTH bounds every time, so the server always sees the full range.</div></section></section>
+&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="exchange"><h3><dfn class="hm-term" tabindex="0" data-tooltip="The deal for one action: which request goes out, what HTML comes back, and where it lands. Classic hypermedia — not a private JSON API for a SPA.">Server exchange</dfn></h3><p class="hm-ref-lead">When the client <dfn class="hm-term" tabindex="0" data-tooltip="Something the user can act on that starts a request — a Delete button with hx-delete, a search box that hx-gets results. Browser talks to server; server returns HTML.">affordance</dfn> finishes (click, confirm, keystroke…), htmx issues <strong>this</strong> request. Your API must return the response fragment described below — usually HTML, not JSON (unless the partial says otherwise). Gallery mocks (toasts, <code>/mock/*</code>) are not the contract. Dazzle often renders these routes from the app model; a standalone HTMX4 app implements them explicitly.</p><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/{region}?date_from=&amp;date_to=</code></td><td>either date input&#x27;s change — hx-include sends both bounds</td><td>the re-rendered region body for the new range</td><td>innerHTML</td><td>—</td></tr></tbody></table></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">Native <code>type=&quot;date&quot;</code> inputs — no picker JS. Each input fires the region's hx-get on change and <code>hx-include=&quot;closest .date-range-bar&quot;</code> sends BOTH bounds every time, so the server always sees the full range.</div></section></section>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
 The demo above renders the exact snippet — copy it into any htmx4 app.

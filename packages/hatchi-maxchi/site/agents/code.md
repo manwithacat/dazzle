@@ -62,7 +62,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: code — fenced code surface (root + optional copy control)."""
 
-
 from contracts._kit import DomContract, Node, Present
 
 DOM_CONTRACT = DomContract(

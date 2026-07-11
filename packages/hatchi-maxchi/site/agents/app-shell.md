@@ -83,7 +83,6 @@ Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not 
 ```python
 """HYPERPART: app-shell — DOM contract for the sidebar shell controller."""
 
-
 from contracts._kit import DomContract, Node, OneOf
 
 DOM_CONTRACT = DomContract(
