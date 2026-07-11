@@ -97,8 +97,13 @@ def test_selector_mode_currency_options() -> None:
     assert '<option value="USD"' in html
     assert 'data-symbol="$"' in html
     assert '<option value="EUR"' in html
-    # Selector mode has no fixed data-dz-currency on the controller.
-    assert "data-dz-currency=" not in html
+    # HM contract (dz-money.js): root always carries data-dz-currency + scale;
+    # selector mode still SSR's the initial currency (selected option). Currency
+    # changes update scale via option data-scale (change handler); currency attr
+    # is the initial/current code for the controller mount (#1577 sole-emitter).
+    assert 'data-dz-currency="USD"' in html
+    assert 'data-dz-scale="2"' in html
+    assert "data-dz-money" in html
     # Still carries the hidden minor input.
     assert 'name="price_minor"' in html
 
