@@ -250,6 +250,11 @@ class FormContext(BaseModel):
     # (handled at the page_routes level; the form should never render
     # for a read-only persona).
     persona_read_only: set[str] = Field(default_factory=set)
+    # Per-persona form field defaults from ``for <persona>: defaults:``.
+    # Values may be literals or the token ``current_user`` (resolved to the
+    # authenticated user id at request time). Applied into ``initial_values``
+    # only for keys that are still empty (CREATE fills; EDIT fills blanks).
+    persona_defaults: dict[str, dict[str, str]] = Field(default_factory=dict)
 
 
 class TransitionContext(BaseModel):

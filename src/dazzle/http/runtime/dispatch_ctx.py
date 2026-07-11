@@ -109,15 +109,10 @@ def _dispatch_ctx_from_form(form: Any) -> dict[str, Any]:
     return ctx_out
 
 
-def _dispatch_ctx_from_detail(
-    detail: Any,
-    surface: ir.SurfaceSpec | None,
-    *,
-    services: Any = None,
-) -> dict[str, Any]:
-    """VIEW: DetailContext → flat detail-adapter ctx."""
+def _detail_fields_from_context(detail: Any) -> list[dict[str, Any]]:
+    """Map DetailContext.fields + item values → adapter field dicts."""
     item = getattr(detail, "item", {}) or {}
-    detail_fields_out: list[dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for f in getattr(detail, "fields", []) or []:
         field_name = getattr(f, "name", "") or getattr(f, "key", "")
         kind = getattr(f, "type", "text") or "text"
@@ -127,7 +122,7 @@ def _dispatch_ctx_from_detail(
             value = item.get(f"{rel}_display") or item.get(f"{field_name}_display") or value
         extra = getattr(f, "extra", None) or {}
         currency_code = str(extra.get("currency_code", "") or "") if isinstance(extra, dict) else ""
-        detail_fields_out.append(
+        out.append(
             {
                 "key": field_name,
                 "label": getattr(f, "label", "") or field_name,
@@ -137,39 +132,45 @@ def _dispatch_ctx_from_detail(
                 "semantic_map": dict(getattr(f, "enum_semantics", {}) or {}),
             }
         )
-    app_spec = getattr(services, "app_spec", None) if services is not None else None
-    if (
-        app_spec is not None
-        and surface is not None
-        and getattr(surface, "sections", None)
-        and isinstance(item, dict)
-    ):
-        from dazzle.render.subtype_panel import resolve_subtype_panel_surface
+    return out
 
-        row_kind = item.get("kind")
-        seen_keys = {f["key"] for f in detail_fields_out}
-        for section in surface.sections:
-            if getattr(section, "subtype_panel", None) is None:
-                continue
-            resolved = resolve_subtype_panel_surface(section, row_kind, app_spec)
-            if resolved is None:
-                continue
-            for resolved_section in getattr(resolved, "sections", []) or []:
-                for element in getattr(resolved_section, "elements", []) or []:
-                    field_name = getattr(element, "field_name", "") or ""
-                    if not field_name or field_name in seen_keys:
-                        continue
-                    value = item.get(field_name, "")
-                    detail_fields_out.append(
-                        {
-                            "key": field_name,
-                            "label": getattr(element, "label", "") or field_name,
-                            "value": "" if value is None else value,
-                            "kind": "text",
-                        }
-                    )
-                    seen_keys.add(field_name)
-    fields_out = detail_fields_out
+
+def _append_subtype_panel_fields(
+    detail_fields_out: list[dict[str, Any]],
+    item: dict[str, Any],
+    surface: ir.SurfaceSpec,
+    app_spec: Any,
+) -> None:
+    """#1217 Phase 3e: merge subtype_panel branch fields into the detail list."""
+    from dazzle.render.subtype_panel import resolve_subtype_panel_surface
+
+    row_kind = item.get("kind")
+    seen_keys = {f["key"] for f in detail_fields_out}
+    for section in surface.sections:
+        if getattr(section, "subtype_panel", None) is None:
+            continue
+        resolved = resolve_subtype_panel_surface(section, row_kind, app_spec)
+        if resolved is None:
+            continue
+        for resolved_section in getattr(resolved, "sections", []) or []:
+            for element in getattr(resolved_section, "elements", []) or []:
+                field_name = getattr(element, "field_name", "") or ""
+                if not field_name or field_name in seen_keys:
+                    continue
+                value = item.get(field_name, "")
+                detail_fields_out.append(
+                    {
+                        "key": field_name,
+                        "label": getattr(element, "label", "") or field_name,
+                        "value": "" if value is None else value,
+                        "kind": "text",
+                    }
+                )
+                seen_keys.add(field_name)
+
+
+def _related_groups_from_detail(detail: Any) -> list[dict[str, Any]]:
+    """Map fetched RelatedGroupContext list → adapter related_groups dicts."""
     related_groups_out: list[dict[str, Any]] = []
     for rg in getattr(detail, "related_groups", []) or []:
         tabs_out: list[dict[str, Any]] = []
@@ -209,6 +210,11 @@ def _dispatch_ctx_from_detail(
                 "tabs": tabs_out,
             }
         )
+    return related_groups_out
+
+
+def _detail_actions_from_context(detail: Any) -> dict[str, Any]:
+    """Transitions, integration actions, external links from DetailContext."""
     transitions_out = [
         {
             "to_state": getattr(t, "to_state", "") or "",
@@ -236,17 +242,42 @@ def _dispatch_ctx_from_detail(
         for a in (getattr(detail, "external_link_actions", []) or [])
     ]
     return {
-        "fields": fields_out,
+        "transitions": transitions_out,
+        "integration_actions": integration_actions_out,
+        "external_link_actions": external_links_out,
+    }
+
+
+def _dispatch_ctx_from_detail(
+    detail: Any,
+    surface: ir.SurfaceSpec | None,
+    *,
+    services: Any = None,
+) -> dict[str, Any]:
+    """VIEW: DetailContext → flat detail-adapter ctx."""
+    item = getattr(detail, "item", {}) or {}
+    detail_fields_out = _detail_fields_from_context(detail)
+    app_spec = getattr(services, "app_spec", None) if services is not None else None
+    if (
+        app_spec is not None
+        and surface is not None
+        and getattr(surface, "sections", None)
+        and isinstance(item, dict)
+    ):
+        _append_subtype_panel_fields(detail_fields_out, item, surface, app_spec)
+    actions = _detail_actions_from_context(detail)
+    return {
+        "fields": detail_fields_out,
         "region_name": getattr(detail, "entity_name", "") + "_detail",
-        "related_groups": related_groups_out,
+        "related_groups": _related_groups_from_detail(detail),
         "edit_url": getattr(detail, "edit_url", None) or "",
         "delete_url": getattr(detail, "delete_url", None) or "",
         "back_url": getattr(detail, "back_url", "/") or "/",
         "entity_name": getattr(detail, "entity_name", "") or "",
-        "transitions": transitions_out,
+        "transitions": actions["transitions"],
         "status_field": getattr(detail, "status_field", "status") or "status",
-        "integration_actions": integration_actions_out,
-        "external_link_actions": external_links_out,
+        "integration_actions": actions["integration_actions"],
+        "external_link_actions": actions["external_link_actions"],
         "item_id": str(item.get("id", "") or "") if isinstance(item, dict) else "",
         "show_history": bool(getattr(detail, "show_history", False)),
         "detail_context": detail,

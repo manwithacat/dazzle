@@ -1026,18 +1026,22 @@ def _compile_form_surface(
     companions = _build_companion_contexts(surface)
 
     # Cycle 245 — collect persona-variant overrides for form surfaces.
-    # Mirrors the cycle 243 list-surface path. Currently wires `hide`
-    # and `read_only`; future cycles can extend with `defaults`,
-    # `show`, and `action_primary`.
+    # Mirrors the cycle 243 list-surface path. Wires hide / read_only /
+    # defaults (``current_user`` resolved at request time).
     ux = surface.ux
     persona_hide: dict[str, list[str]] = {}
     persona_read_only: set[str] = set()
+    persona_defaults: dict[str, dict[str, str]] = {}
     if ux and ux.persona_variants:
         for _variant in ux.persona_variants:
             if _variant.hide:
                 persona_hide[_variant.persona] = list(_variant.hide)
             if _variant.read_only:
                 persona_read_only.add(_variant.persona)
+            if _variant.defaults:
+                persona_defaults[_variant.persona] = {
+                    str(k): str(v) for k, v in _variant.defaults.items()
+                }
 
     page_purpose, persona_purposes = _extract_surface_purpose(ux)
     if surface.mode == SurfaceMode.CREATE:
@@ -1060,6 +1064,7 @@ def _compile_form_surface(
                 sections=sections,
                 persona_hide=persona_hide,
                 persona_read_only=persona_read_only,
+                persona_defaults=persona_defaults,
                 layout=getattr(surface, "layout", "wizard"),  # v0.61.88 (#918)
                 companions=companions,  # v0.61.102 (#923)
             ),
@@ -1084,6 +1089,7 @@ def _compile_form_surface(
                 sections=sections,
                 persona_hide=persona_hide,
                 persona_read_only=persona_read_only,
+                persona_defaults=persona_defaults,
                 layout=getattr(surface, "layout", "wizard"),  # v0.61.88 (#918)
                 companions=companions,  # v0.61.102 (#923)
             ),

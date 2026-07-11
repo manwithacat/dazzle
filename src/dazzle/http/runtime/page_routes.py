@@ -386,7 +386,12 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
             return
 
 
-def _apply_persona_form_overrides(req_form: Any, user_roles: list[str]) -> bool:
+def _apply_persona_form_overrides(
+    req_form: Any,
+    user_roles: list[str],
+    *,
+    user_id: str | None = None,
+) -> bool:
     """Apply per-persona PersonaVariant overrides to a per-request form copy.
 
     Cycle 245 — form-surface parallel to ``_apply_persona_overrides``.
@@ -396,6 +401,8 @@ def _apply_persona_form_overrides(req_form: Any, user_roles: list[str]) -> bool:
 
     - ``persona_hide: dict[str, list[str]]`` — field hide list per persona
     - ``persona_read_only: set[str]`` — persona ids that cannot mutate
+    - ``persona_defaults: dict[str, dict[str, str]]`` — field prefill
+      (``current_user`` → authenticated user id)
 
     Hide semantics: fields whose ``name`` is in the persona's hide list
     are removed from ``req_form.fields``, ``req_form.sections[*].fields``,
@@ -403,6 +410,11 @@ def _apply_persona_form_overrides(req_form: Any, user_roles: list[str]) -> bool:
     well prevents any pre-filled value from landing in the POST body
     (defensive against hidden-field injection — the hidden fields
     genuinely don't exist for this persona).
+
+    Defaults semantics: for each key in the persona's defaults map, if
+    ``initial_values`` is missing or empty for that key, fill it. Token
+    ``current_user`` becomes ``user_id`` when provided. Does not overwrite
+    non-empty values (EDIT forms keep entity data).
 
     Read-only semantics: if the persona is in ``persona_read_only``,
     the helper returns ``True`` to signal the caller should abort
@@ -422,8 +434,9 @@ def _apply_persona_form_overrides(req_form: Any, user_roles: list[str]) -> bool:
 
     persona_hide = getattr(req_form, "persona_hide", None) or {}
     persona_read_only = getattr(req_form, "persona_read_only", None) or set()
+    persona_defaults = getattr(req_form, "persona_defaults", None) or {}
 
-    if not persona_hide and not persona_read_only:
+    if not persona_hide and not persona_read_only and not persona_defaults:
         return False
 
     for role in user_roles:
@@ -447,6 +460,21 @@ def _apply_persona_form_overrides(req_form: Any, user_roles: list[str]) -> bool:
                     for key in list(req_form.initial_values.keys()):
                         if key in hide_set:
                             del req_form.initial_values[key]
+            matched = True
+
+        # Defaults prefill (only empty keys).
+        if normalised in persona_defaults:
+            iv = dict(req_form.initial_values or {})
+            for key, raw in persona_defaults[normalised].items():
+                existing = iv.get(key, None)
+                if existing not in (None, ""):
+                    continue
+                if raw == "current_user":
+                    if user_id:
+                        iv[key] = user_id
+                else:
+                    iv[key] = raw
+            req_form.initial_values = iv
             matched = True
 
         if matched:
@@ -1457,7 +1485,12 @@ async def _handle_edit_form(prc: _PageRequestContext) -> None:
     # per-request form copy. Mirrors the cycle 243 list-surface
     # pattern. Returns True if the persona is read-only, in which
     # case we abort form rendering with a 403.
-    if prc.ctx.user_roles and _apply_persona_form_overrides(req_form, prc.ctx.user_roles):
+    user_id: str | None = None
+    if prc.auth_ctx is not None and getattr(prc.auth_ctx, "user", None) is not None:
+        user_id = str(getattr(prc.auth_ctx.user, "id", "") or "") or None
+    if prc.ctx.user_roles and _apply_persona_form_overrides(
+        req_form, prc.ctx.user_roles, user_id=user_id
+    ):
         raise HTTPException(
             status_code=403,
             detail="This surface is read-only for your role",
@@ -1470,10 +1503,16 @@ def _handle_create_form(prc: _PageRequestContext) -> None:
     """Prepare create form data for the per-request context."""
     # Cycle 245 -- create forms previously used ctx.form directly
     # with no per-request mutation. Now they need a per-request
-    # copy so PersonaVariant hide/read_only overrides can apply.
+    # copy so PersonaVariant hide/read_only/defaults overrides apply.
     req_form = prc.ctx.form.model_copy(deep=True)
 
-    if prc.ctx.user_roles and _apply_persona_form_overrides(req_form, prc.ctx.user_roles):
+    user_id: str | None = None
+    if prc.auth_ctx is not None and getattr(prc.auth_ctx, "user", None) is not None:
+        user_id = str(getattr(prc.auth_ctx.user, "id", "") or "") or None
+
+    if prc.ctx.user_roles and _apply_persona_form_overrides(
+        req_form, prc.ctx.user_roles, user_id=user_id
+    ):
         raise HTTPException(
             status_code=403,
             detail="This surface is read-only for your role",

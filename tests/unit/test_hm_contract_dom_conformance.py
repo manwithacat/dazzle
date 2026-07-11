@@ -236,13 +236,32 @@ def _emit_root_only_html(part_id: str) -> str:
         )
     if part_id == "tabs":
         return r.render(Tabs(tabs=(("one", Text("One")), ("two", Text("Two")))))
-    if part_id == "grid":
+    if part_id in ("grid", "grid_cols", "grid_resize"):
         from dazzle.render.fragment.primitives.containers import DzTableMount, Region
+        from dazzle.render.fragment.primitives.data import (
+            ColumnVisibilityMenu,
+            Sequence,
+            Table,
+        )
 
+        table = Table(
+            columns=("Title", "Status"),
+            rows=(),
+            skeleton=True,
+            tbody_id="grid-fixture-body",
+            hx_endpoint="/api/tickets",
+            caption="Tickets",
+            has_actions=True,
+            column_keys=("title", "status"),
+            sortable_keys=("title",),
+            sort_field="title",
+            sort_dir="asc",
+        )
+        menu = ColumnVisibilityMenu(columns=(("title", "Title"), ("status", "Status")))
         return r.render(
             Region(
                 kind="list",
-                body=Text("rows"),
+                body=Sequence(children=(menu, table)),
                 data_table="Ticket",
                 mount=DzTableMount(
                     table_id="grid-fixture",
