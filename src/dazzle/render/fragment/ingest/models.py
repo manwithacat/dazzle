@@ -407,6 +407,79 @@ class BarChart(BaseModel):
     rows: list[BarChartRow] = Field(default_factory=list)
 
 
-# ── Form → ingest adapters (#1577) ───────────────────────────────────
-# Form primitives stay the public API; emission builds these models then
-# uses the attr helpers below for HM contract attributes.
+# ── Heatmap seam copy (contracts/heatmap.py) ─────────────────────────
+
+
+class HeatmapRow(BaseModel):
+    """One heatmap matrix row."""
+
+    label: str
+    cells: list[float] = Field(default_factory=list)
+
+
+class Heatmap(BaseModel):
+    """Threshold-toned matrix — dual-lock unit for heatmap."""
+
+    columns: list[str] = Field(default_factory=list)
+    rows: list[HeatmapRow] = Field(default_factory=list)
+    thresholds: list[float] = Field(default_factory=list)
+    total: int = 0
+    empty_message: str = "No data available."
+
+
+# ── Bullet seam copy (contracts/bullet.py) ───────────────────────────
+
+
+BulletBandColor = Literal["target", "positive", "warning", "destructive", "muted"]
+
+
+class BulletBand(BaseModel):
+    """Qualitative range band behind the actual bar."""
+
+    from_value: float
+    to_value: float
+    label: str = ""
+    color: BulletBandColor = "target"
+
+
+class BulletRow(BaseModel):
+    """One bullet chart row."""
+
+    label: str
+    actual: float
+    target: float | None = None
+
+
+class Bullet(BaseModel):
+    """Stephen Few bullet chart — dual-lock unit for bullet."""
+
+    rows: list[BulletRow] = Field(default_factory=list)
+    max_value: float = 100.0
+    bands: list[BulletBand] = Field(default_factory=list)
+    empty_message: str = "No data available."
+
+
+# ── Bar-track seam copy (contracts/bar_track.py) ─────────────────────
+
+
+class BarTrackRow(BaseModel):
+    """One capacity track row."""
+
+    label: str
+    value: float = 0.0
+    formatted: str = ""
+    fill_pct: float = 0.0
+
+    @field_validator("fill_pct")
+    @classmethod
+    def _clamp_fill(cls, v: float) -> float:
+        if not (0.0 <= v <= 100.0):
+            raise ValueError(f"fill_pct={v} outside [0, 100]")
+        return v
+
+
+class BarTrack(BaseModel):
+    """Resource-usage track list — dual-lock unit for bar-track."""
+
+    rows: list[BarTrackRow] = Field(default_factory=list)
+    max_value: float = 100.0

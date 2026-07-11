@@ -16,9 +16,12 @@ from dazzle.render.fragment.ingest.models import (
     ActionCard,
     ActivityRow,
     BarChart,
+    BarTrack,
+    Bullet,
     ComboboxField,
     Funnel,
     GridEditCell,
+    Heatmap,
     KanbanCard,
     MetricTile,
     MoneyField,
@@ -31,6 +34,14 @@ from dazzle.render.fragment.ingest.models import (
     TagsField,
     TimelineEvent,
 )
+
+_BULLET_BAND_COLORS: dict[str, str] = {
+    "target": "var(--colour-brand)",
+    "positive": "hsl(145, 55%, 45%)",
+    "warning": "hsl(40, 90%, 55%)",
+    "destructive": "var(--colour-danger)",
+    "muted": "var(--colour-text-muted)",
+}
 
 
 def edit_span_attrs(cell: GridEditCell) -> str:
@@ -654,6 +665,180 @@ def render_bar_chart(chart: BarChart) -> str:
     return (
         f'<div class="dz-bar-chart-region" {root_attrs}>'
         f'<div class="dz-bar-chart-bars">{rows_html}</div>'
+        f"</div>"
+    )
+
+
+def heatmap_root_attrs(_h: Heatmap) -> str:
+    return "data-dz-heatmap"
+
+
+def bullet_root_attrs(_b: Bullet) -> str:
+    return "data-dz-bullet"
+
+
+def bar_track_root_attrs(_b: BarTrack) -> str:
+    return "data-dz-bar-track"
+
+
+def _heatmap_tone_attr(value: float, thresholds: list[float]) -> str:
+    n = len(thresholds)
+    if n >= 2:
+        if value < thresholds[0]:
+            return ' data-dz-heatmap-tone="bad"'
+        if value < thresholds[1]:
+            return ' data-dz-heatmap-tone="warn"'
+        return ' data-dz-heatmap-tone="good"'
+    if n == 1:
+        if value < thresholds[0]:
+            return ' data-dz-heatmap-tone="bad"'
+        return ' data-dz-heatmap-tone="good"'
+    return ""
+
+
+def _jinja_num(value: float) -> str:
+    return str(int(value)) if value == int(value) else str(value)
+
+
+def render_heatmap(h: Heatmap) -> str:
+    """Model → heatmap region (matches HM contracts/heatmap.py)."""
+    root_attrs = heatmap_root_attrs(h)
+    if not h.rows:
+        return (
+            f'<div class="dz-heatmap-region" {root_attrs}>'
+            f'<p class="dz-empty-dense" role="status">'
+            f"{_html.escape(h.empty_message)}</p>"
+            f"</div>"
+        )
+
+    head_cols = "".join(f"<th>{_html.escape(c)}</th>" for c in h.columns)
+    thead = f"<thead><tr><th></th>{head_cols}</tr></thead>"
+    body_rows: list[str] = []
+    for row in h.rows:
+        cells_html = ""
+        for cell in row.cells:
+            cells_html += (
+                f'<td class="dz-heatmap-cell"{_heatmap_tone_attr(cell, h.thresholds)}> '
+                f"{cell:.1f} </td>"
+            )
+        body_rows.append(
+            f'<tr><td class="dz-heatmap-row-label">{_html.escape(row.label)}</td>{cells_html}</tr>'
+        )
+    tbody = f"<tbody>{''.join(body_rows)}</tbody>"
+    overflow_html = ""
+    if h.total > len(h.rows):
+        overflow_html = f'<p class="dz-heatmap-overflow">Showing {len(h.rows)} of {h.total}</p>'
+    return (
+        f'<div class="dz-heatmap-region" {root_attrs}>'
+        f'<div class="dz-heatmap-scroll">'
+        f'<table class="dz-heatmap-grid">{thead}{tbody}</table>'
+        f"</div>"
+        f"{overflow_html}"
+        f"</div>"
+    )
+
+
+def render_bullet(b: Bullet) -> str:
+    """Model → bullet chart (matches HM contracts/bullet.py)."""
+    root_attrs = bullet_root_attrs(b)
+    if not b.rows or b.max_value <= 0:
+        return (
+            f'<div class="dz-bullet-region" {root_attrs}>'
+            f'<p class="dz-empty-dense" role="status">'
+            f"{_html.escape(b.empty_message)}</p>"
+            f"</div>"
+        )
+
+    rows_html: list[str] = []
+    for row in b.rows:
+        actual_pct = round(row.actual / b.max_value * 100, 2)
+        bands_html = ""
+        for band in b.bands:
+            band_left = round(band.from_value / b.max_value * 100, 2)
+            band_width = round((band.to_value - band.from_value) / b.max_value * 100, 2)
+            colour = _BULLET_BAND_COLORS.get(band.color, _BULLET_BAND_COLORS["target"])
+            bands_html += (
+                f'<span class="dz-bullet-band" '
+                f'style="left: {band_left}%; width: {band_width}%; '
+                f'background: {colour};" '
+                f'title="{_html.escape(band.label, quote=True)}: '
+                f'{_jinja_num(band.from_value)}–{_jinja_num(band.to_value)}"></span>'
+            )
+
+        actual_rounded = round(row.actual, 1)
+        value_html = _jinja_num(actual_rounded)
+        target_html = ""
+        if row.target is not None:
+            target_pct = round(row.target / b.max_value * 100, 2)
+            target_html = (
+                f'<span class="dz-bullet-target" '
+                f'style="left: {target_pct}%;" '
+                f'title="{_html.escape(row.label, quote=True)} target: '
+                f'{_jinja_num(row.target)}"></span>'
+            )
+            target_rounded = round(row.target, 1)
+            value_html += f" / {_jinja_num(target_rounded)}"
+
+        rows_html.append(
+            f'<div class="dz-bullet-row">'
+            f'<span class="dz-bullet-label">{_html.escape(row.label)}</span>'
+            f'<div class="dz-bullet-track">'
+            f"{bands_html}"
+            f'<span class="dz-bullet-actual" '
+            f'style="width: {actual_pct}%;" '
+            f'title="{_html.escape(row.label, quote=True)} actual: '
+            f'{_jinja_num(row.actual)}"></span>'
+            f"{target_html}"
+            f"</div>"
+            f'<span class="dz-bullet-value">{value_html}</span>'
+            f"</div>"
+        )
+
+    return (
+        f'<div class="dz-bullet-region" {root_attrs}>'
+        f'<div class="dz-bullet-rows">{"".join(rows_html)}</div>'
+        f'<p class="dz-bullet-summary">'
+        f"{len(b.rows)} rows · scale 0–{_jinja_num(round(b.max_value, 1))}"
+        f"</p>"
+        f"</div>"
+    )
+
+
+def render_bar_track(b: BarTrack) -> str:
+    """Model → bar-track region (matches HM contracts/bar_track.py)."""
+    root_attrs = bar_track_root_attrs(b)
+    if not b.rows:
+        return f'<div class="dz-bar-track-region" {root_attrs}></div>'
+
+    max_str = _jinja_num(b.max_value)
+    rows_html = "".join(
+        f'<div class="dz-bar-track-row">'
+        f'<span class="dz-bar-track-label" title="{_html.escape(row.label, quote=True)}">'
+        f"{_html.escape(row.label)}</span>"
+        f'<div class="dz-bar-track" role="progressbar" '
+        f'aria-valuemin="0" '
+        f'aria-valuemax="{max_str}" '
+        f'aria-valuenow="{_jinja_num(row.value)}" '
+        f'aria-label="{_html.escape(row.label, quote=True)}: '
+        f'{_html.escape(row.formatted or _jinja_num(row.value), quote=True)}">'
+        f'<span class="dz-bar-track-fill" '
+        f'style="width: {_jinja_num(round(row.fill_pct, 2))}%;" '
+        f'title="{_html.escape(row.label, quote=True)}: '
+        f'{_html.escape(row.formatted or _jinja_num(row.value), quote=True)}"></span>'
+        f"</div>"
+        f'<span class="dz-bar-track-value">'
+        f"{_html.escape(row.formatted or _jinja_num(row.value))}</span>"
+        f"</div>"
+        for row in b.rows
+    )
+    max_rounded = round(b.max_value, 2)
+    max_summary = str(int(max_rounded)) if max_rounded == int(max_rounded) else str(max_rounded)
+    return (
+        f'<div class="dz-bar-track-region" {root_attrs}>'
+        f'<div class="dz-bar-track-rows">{rows_html}</div>'
+        f'<p class="dz-bar-track-summary">'
+        f"{len(b.rows)} rows · scale 0–{max_summary}"
+        f"</p>"
         f"</div>"
     )
 

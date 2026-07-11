@@ -29,6 +29,8 @@ from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
 from dazzle.render.fragment.ingest import ActivityRow as ActivityRowSeam
+from dazzle.render.fragment.ingest import BarTrack as BarTrackSeam
+from dazzle.render.fragment.ingest import BarTrackRow as BarTrackRowSeam
 from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
 from dazzle.render.fragment.ingest import ProfileCard as ProfileCardSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
@@ -36,6 +38,7 @@ from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
 from dazzle.render.fragment.ingest import (
     render_action_card,
     render_activity_row,
+    render_bar_track,
     render_metric_tile,
     render_profile_card,
     render_queue_row,
@@ -1110,54 +1113,27 @@ class _RenderTablesMixin:
         )
 
     def _emit_bar_track(self, b: BarTrack, ctx: RenderContext) -> str:
-        """Render a BarTrack matching legacy `workspace/regions/bar_track.html`
-        byte-for-byte: outer `dz-bar-track-region` wrapper, per-row track
-        with ARIA progressbar semantics, summary line, and optional
-        reference annotations.
+        """Render a BarTrack via HM dual-lock BarTrack seam.
 
-        Phase 4B.1.c (bar-track variant): added the outer
-        `<div class="dz-bar-track-region">` wrapper so the emit matches
-        the legacy template structurally — completes the chart family
-        port. The references block (BEM `__references`) rides along
-        outside the region wrapper, consistent with TimeSeries / BoxPlot
-        / BarChart — references are a Phase 4B-only programmatic-data
-        layer with no legacy template equivalent.
+        Phase 4B reference annotations still ride outside the dual-locked
+        region wrapper (host-local programmatic-data layer).
         """
-
-        # Match Jinja's `{{ value }}` rendering — int repr for whole values.
-        def _num(v: float) -> str:
-            return str(int(v)) if v == int(v) else str(v)
-
-        max_str = _num(b.max_value)
-        rows_html = "".join(
-            f'<div class="dz-bar-track-row">'
-            f'<span class="dz-bar-track-label" title="{ctx.escape_attr(label)}">'
-            f"{ctx.escape(label)}</span>"
-            f'<div class="dz-bar-track" role="progressbar" '
-            f'aria-valuemin="0" '
-            f'aria-valuemax="{max_str}" '
-            f'aria-valuenow="{_num(value)}" '
-            f'aria-label="{ctx.escape_attr(label)}: {ctx.escape_attr(formatted)}">'
-            f'<span class="dz-bar-track-fill" '
-            f'style="width: {_num(round(fill_pct, 2))}%;" '
-            f'title="{ctx.escape_attr(label)}: {ctx.escape_attr(formatted)}"></span>'
-            f"</div>"
-            f'<span class="dz-bar-track-value">{ctx.escape(formatted)}</span>'
-            f"</div>"
-            for label, value, formatted, fill_pct in b.rows
+        region = render_bar_track(
+            BarTrackSeam(
+                rows=[
+                    BarTrackRowSeam(
+                        label=label,
+                        value=value,
+                        formatted=formatted,
+                        fill_pct=fill_pct,
+                    )
+                    for label, value, formatted, fill_pct in b.rows
+                ],
+                max_value=b.max_value,
+            )
         )
         refs = _render_references("dz-bar-track", b.reference_lines, b.reference_bands, ctx)
-        max_rounded = round(b.max_value, 2)
-        max_summary = str(int(max_rounded)) if max_rounded == int(max_rounded) else str(max_rounded)
-        return (
-            f'<div class="dz-bar-track-region">'
-            f'<div class="dz-bar-track-rows">{rows_html}</div>'
-            f'<p class="dz-bar-track-summary">'
-            f"{len(b.rows)} rows · scale 0–{max_summary}"
-            f"</p>"
-            f"</div>"
-            f"{refs}"
-        )
+        return f"{region}{refs}"
 
     def _emit_stage_bar(self, s: StageBar, ctx: RenderContext) -> str:
         """Render a StageBar matching legacy

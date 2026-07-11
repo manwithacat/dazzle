@@ -2963,7 +2963,7 @@ def select(source: str, id: str) -> str:
             "A two-dimensional grid of toned cells — rows × buckets, thresholds "
             "driving good/warn/bad tones, never colour alone (the value is IN "
             "the cell).",
-            '<div class="dz-heatmap-region hm-measure-lg">'
+            '<div class="dz-heatmap-region hm-measure-lg" data-dz-heatmap>'
             '<div class="dz-heatmap-scroll">'
             '<table class="dz-heatmap-grid">'
             "<thead><tr><th></th><th>Mon</th><th>Tue</th><th>Wed</th></tr></thead>"
@@ -2978,13 +2978,16 @@ def select(source: str, id: str) -> str:
             '<td class="dz-heatmap-cell" data-dz-heatmap-tone="bad"> 89.4 </td>'
             '<td class="dz-heatmap-cell" data-dz-heatmap-tone="good"> 99.2 </td>'
             "</tr></tbody></table></div></div>",
-            notes="Cell tones ride <code>data-dz-heatmap-tone=&quot;good|warn|"
-            "bad&quot;</code>, resolved server-side against the declared "
-            "thresholds — and the numeric value always renders inside the cell, "
-            "so tone is reinforcement, not the only signal. Overflowing grids "
-            "append a <code>dz-heatmap-overflow</code> count line; the scroll "
-            "wrapper keeps wide grids inside their card.",
+            notes="Dual-lock root is <code>data-dz-heatmap</code> "
+            "(<code>contracts/heatmap.py</code>). Cell tones ride "
+            "<code>data-dz-heatmap-tone=&quot;good|warn|bad&quot;</code>, resolved "
+            "server-side against the declared thresholds — and the numeric value "
+            "always renders inside the cell, so tone is reinforcement, not the "
+            "only signal. Overflowing grids append a "
+            "<code>dz-heatmap-overflow</code> count line; the scroll wrapper keeps "
+            "wide grids inside their card.",
             tags=("data", "chart"),
+            contracts=("contracts/heatmap.py",),
         ),
         Hyperpart(
             "bullet",
@@ -2992,7 +2995,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "Actual vs target on qualitative bands — the KPI-with-context bar. "
             "All geometry is server-computed inline percentages.",
-            '<div class="dz-bullet-region hm-measure-lg">'
+            '<div class="dz-bullet-region hm-measure-lg" data-dz-bullet>'
             '<div class="dz-bullet-rows">'
             '<div class="dz-bullet-row">'
             '<span class="dz-bullet-label">Revenue</span>'
@@ -3012,18 +3015,16 @@ def select(source: str, id: str) -> str:
             "</div></div>"
             '<p class="dz-bullet-summary">1 rows · scale 0–100</p>'
             "</div>",
-            notes="Bands, the actual bar, and the target tick are absolutely "
-            "positioned by SERVER-computed inline percentages (per-row data, the "
-            "same contract as the funnel widths); each carries a "
-            "<code>title</code> with its numeric range. Band fills come from the "
-            "server's reference-band colour map (<code>target</code> → "
-            "<code>var(--colour-brand)</code>, <code>destructive</code> → "
-            "<code>var(--colour-danger)</code>, plus fixed positive/warning/"
-            "muted values) — saturated colours, because the band layer renders "
-            "at 0.18 opacity. The value (and target, when set) renders as text "
-            "beside the track; the mono summary line carries row count and "
-            "scale.",
+            notes="Dual-lock root is <code>data-dz-bullet</code> "
+            "(<code>contracts/bullet.py</code>). Bands, the actual bar, and the "
+            "target tick are absolutely positioned by SERVER-computed inline "
+            "percentages (per-row data, the same contract as the funnel widths); "
+            "each carries a <code>title</code> with its numeric range. Band fills "
+            "come from the server's reference-band colour map. The value (and "
+            "target, when set) renders as text beside the track; the mono summary "
+            "line carries row count and scale.",
             tags=("data", "chart"),
+            contracts=("contracts/bullet.py",),
         ),
         Hyperpart(
             "pivot",
@@ -3064,7 +3065,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "Value-against-capacity rows with real progressbar semantics — the "
             "resource-usage sibling of the bar chart.",
-            '<div class="dz-bar-track-region hm-measure-lg">'
+            '<div class="dz-bar-track-region hm-measure-lg" data-dz-bar-track>'
             '<div class="dz-bar-track-rows">'
             '<div class="dz-bar-track-row">'
             '<span class="dz-bar-track-label" title="Storage">Storage</span>'
@@ -3080,12 +3081,16 @@ def select(source: str, id: str) -> str:
             '<span class="dz-bar-track-fill" style="width: 38%;" '
             'title="Compute: 38%"></span></div>'
             '<span class="dz-bar-track-value">38%</span></div>'
-            "</div></div>",
-            notes="Each track is a real <code>role=&quot;progressbar&quot;</code> "
-            "with numeric aria values — the fill width is presentation, the "
-            "aria is the content. Labels and fills both carry <code>title</code> "
-            "for hover detail.",
+            "</div>"
+            '<p class="dz-bar-track-summary">2 rows · scale 0–100</p>'
+            "</div>",
+            notes="Dual-lock root is <code>data-dz-bar-track</code> "
+            "(<code>contracts/bar_track.py</code>). Each track is a real "
+            "<code>role=&quot;progressbar&quot;</code> with numeric aria values "
+            "— the fill width is presentation, the aria is the content. Labels "
+            "and fills both carry <code>title</code> for hover detail.",
             tags=("data", "chart"),
+            contracts=("contracts/bar_track.py",),
         ),
         Hyperpart(
             "histogram",

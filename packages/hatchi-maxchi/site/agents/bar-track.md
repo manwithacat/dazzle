@@ -12,7 +12,7 @@ Value-against-capacity rows with real progressbar semantics — the resource-usa
 ## Copy this
 
 ```html
-<div class="bar-track-region hm-measure-lg">
+<div class="bar-track-region hm-measure-lg" data-bar-track>
   <div class="bar-track-rows">
     <div class="bar-track-row">
       <span class="bar-track-label" title="Storage">Storage</span>
@@ -25,6 +25,7 @@ Value-against-capacity rows with real progressbar semantics — the resource-usa
       <span class="bar-track-value">38%</span>
     </div>
   </div>
+  <p class="bar-track-summary">2 rows · scale 0–100</p>
 </div>
 ```
 
@@ -40,16 +41,75 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/bar_track.py`
+
+- **Required root:** `[data-dz-bar-track]` (part `bar-track`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-bar-track]` | `data-dz-bar-track` | present (any value) |
+
+#### Ingestion model `BarTrackRow`
+
+| Field | Type | Required |
+|---|---|---|
+| `label` | `string` | yes |
+| `value` | `number` | no |
+| `formatted` | `string` | no |
+| `fill_pct` | `number` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(b: BarTrack) -> str:
+    """Model → bar-track region (references block is host-local)."""
+    if not b.rows:
+        return '<div class="dz-bar-track-region" data-dz-bar-track></div>'
+
+    max_str = _num(b.max_value)
+    rows_html = "".join(
+        f'<div class="dz-bar-track-row">'
+        f'<span class="dz-bar-track-label" title="{html.escape(row.label, quote=True)}">'
+        f"{html.escape(row.label)}</span>"
+        f'<div class="dz-bar-track" role="progressbar" '
+        f'aria-valuemin="0" '
+        f'aria-valuemax="{max_str}" '
+        f'aria-valuenow="{_num(row.value)}" '
+        f'aria-label="{html.escape(row.label, quote=True)}: '
+        f'{html.escape(row.formatted or _num(row.value), quote=True)}">'
+        f'<span class="dz-bar-track-fill" '
+        f'style="width: {_num(round(row.fill_pct, 2))}%;" '
+        f'title="{html.escape(row.label, quote=True)}: '
+        f'{html.escape(row.formatted or _num(row.value), quote=True)}"></span>'
+        f"</div>"
+        f'<span class="dz-bar-track-value">'
+        f"{html.escape(row.formatted or _num(row.value))}</span>"
+        f"</div>"
+        for row in b.rows
+    )
+    max_rounded = round(b.max_value, 2)
+    max_summary = str(int(max_rounded)) if max_rounded == int(max_rounded) else str(max_rounded)
+    return (
+        f'<div class="dz-bar-track-region" data-dz-bar-track>'
+        f'<div class="dz-bar-track-rows">{rows_html}</div>'
+        f'<p class="dz-bar-track-summary">'
+        f"{len(b.rows)} rows · scale 0–{max_summary}"
+        f"</p>"
+        f"</div>"
+    )
+```
 
 ## Notes
 
-Each track is a real role="progressbar" with numeric aria values — the fill width is presentation, the aria is the content. Labels and fills both carry title for hover detail.
+Dual-lock root is data-dz-bar-track (contracts/bar_track.py). Each track is a real role="progressbar" with numeric aria values — the fill width is presentation, the aria is the content. Labels and fills both carry title for hover detail.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/bar_track.py`

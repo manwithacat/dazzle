@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -543,6 +543,76 @@ def test_bar_chart_emission_conforms_to_bar_chart_contract() -> None:
     assert "data-dz-bar-chart" in html
     assert "dz-bar-chart-fill" in html
     assert "126" in html
+
+
+def test_heatmap_emission_conforms_to_heatmap_contract() -> None:
+    """Real FragmentRenderer Heatmap path satisfies contracts/heatmap.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import Heatmap as HeatFrag
+    from dazzle.render.fragment.primitives.data import HeatmapRow as RowFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    hm_mod = load_hm_module("contracts/heatmap.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        HeatFrag(
+            columns=("Mon", "Tue"),
+            rows=(RowFrag(label="API", cells=(99.9, 97.2)),),
+            thresholds=(90.0, 98.0),
+        )
+    )
+    violations = kit.validate_dom(html, hm_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-heatmap" in html
+    assert "data-dz-heatmap-tone=" in html
+    assert "API" in html
+
+
+def test_bullet_emission_conforms_to_bullet_contract() -> None:
+    """Real FragmentRenderer Bullet path satisfies contracts/bullet.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import Bullet as BulletFrag
+    from dazzle.render.fragment.primitives.data import BulletRow as RowFrag
+    from dazzle.render.fragment.primitives.data import ReferenceBand
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    bl_mod = load_hm_module("contracts/bullet.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        BulletFrag(
+            max_value=100.0,
+            rows=(RowFrag(label="Revenue", actual=72.0, target=80.0),),
+            reference_bands=(
+                ReferenceBand(from_value=0, to_value=60, label="Poor", color="destructive"),
+            ),
+        )
+    )
+    violations = kit.validate_dom(html, bl_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-bullet" in html
+    assert "Revenue" in html
+    assert "dz-bullet-actual" in html
+
+
+def test_bar_track_emission_conforms_to_bar_track_contract() -> None:
+    """Real FragmentRenderer BarTrack path satisfies contracts/bar_track.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import BarTrack as TrackFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    bt_mod = load_hm_module("contracts/bar_track.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        TrackFrag(
+            max_value=100.0,
+            rows=(("Storage", 62.0, "62%", 62.0), ("Compute", 38.0, "38%", 38.0)),
+        )
+    )
+    violations = kit.validate_dom(html, bt_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-bar-track" in html
+    assert 'role="progressbar"' in html
+    assert "Storage" in html
 
 
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────

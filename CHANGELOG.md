@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **heatmap + bullet + bar-track → schema+DOM dual-lock** — HM
+  `contracts/heatmap.py`, `contracts/bullet.py`, `contracts/bar_track.py` with
+  ingest models/renders + region roots `data-dz-heatmap` / `data-dz-bullet` /
+  `data-dz-bar-track`. Dual-lock schema model count continues to grow with
+  nested row/band models.
 - **Split `dazzle.render.fragment.ingest` into a package** — `models.py`
   (Pydantic seam models) + `emit.py` (adapters / sole-emitters / renderers)
   with a stable facade `__init__.py`. Restores maintainability after dual-lock

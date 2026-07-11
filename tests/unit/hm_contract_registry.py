@@ -116,6 +116,48 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "BarChartRow",
     ),
+    (
+        "contracts/heatmap.py",
+        "Heatmap",
+        "dazzle.render.fragment.ingest",
+        "Heatmap",
+    ),
+    (
+        "contracts/heatmap.py",
+        "HeatmapRow",
+        "dazzle.render.fragment.ingest",
+        "HeatmapRow",
+    ),
+    (
+        "contracts/bullet.py",
+        "Bullet",
+        "dazzle.render.fragment.ingest",
+        "Bullet",
+    ),
+    (
+        "contracts/bullet.py",
+        "BulletRow",
+        "dazzle.render.fragment.ingest",
+        "BulletRow",
+    ),
+    (
+        "contracts/bullet.py",
+        "BulletBand",
+        "dazzle.render.fragment.ingest",
+        "BulletBand",
+    ),
+    (
+        "contracts/bar_track.py",
+        "BarTrack",
+        "dazzle.render.fragment.ingest",
+        "BarTrack",
+    ),
+    (
+        "contracts/bar_track.py",
+        "BarTrackRow",
+        "dazzle.render.fragment.ingest",
+        "BarTrackRow",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.

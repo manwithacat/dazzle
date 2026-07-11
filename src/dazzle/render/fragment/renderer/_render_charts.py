@@ -21,14 +21,21 @@ from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import BarChart as BarChartSeam
 from dazzle.render.fragment.ingest import BarChartRow as BarChartRowSeam
+from dazzle.render.fragment.ingest import Bullet as BulletSeam
+from dazzle.render.fragment.ingest import BulletBand as BulletBandSeam
+from dazzle.render.fragment.ingest import BulletRow as BulletRowSeam
 from dazzle.render.fragment.ingest import Funnel as FunnelSeam
 from dazzle.render.fragment.ingest import FunnelStage as FunnelStageSeam
+from dazzle.render.fragment.ingest import Heatmap as HeatmapSeam
+from dazzle.render.fragment.ingest import HeatmapRow as HeatmapRowSeam
 from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
 from dazzle.render.fragment.ingest import Sparkline as SparklineSeam
 from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
 from dazzle.render.fragment.ingest import (
     render_bar_chart,
+    render_bullet,
     render_funnel,
+    render_heatmap,
     render_kanban_card,
     render_sparkline,
     render_timeline_event,
@@ -380,94 +387,24 @@ class _RenderChartsMixin:
         return f'<div class="dz-box-plot-region">{svg}{summary}</div>'
 
     def _emit_bullet(self, b: Bullet, ctx: RenderContext) -> str:
-        """Render a Bullet matching legacy
-        `workspace/regions/bullet.html` byte-for-byte: outer
-        `dz-bullet-region` wrapper, per-row label + track (bands behind,
-        actual bar, optional target tick) + formatted value, summary
-        line "N rows · scale 0–MAX".
-
-        Empty path renders the `dz-empty-dense` fallback inside the
-        region wrapper. Reference bands use the same colour map as the
-        chart-family SVG helpers (`var(--colour-brand)` for `target`
-        etc.); `from`/`to` positions are rendered as percentage of
-        max_value.
-
-        Numeric formatting matches the legacy Jinja `{{ value }}`
-        rendering — whole-valued floats narrow to int repr (so 75.0
-        renders as "75"), fractional values keep the trailing decimal.
-        """
-        from dazzle.render.svg import _BAND_COLORS
-
-        if not b.rows or b.max_value <= 0:
-            return (
-                f'<div class="dz-bullet-region">'
-                f'<p class="dz-empty-dense" role="status">'
-                f"{ctx.escape(b.empty_message)}</p>"
-                f"</div>"
+        """Render a Bullet via HM dual-lock Bullet seam."""
+        return render_bullet(
+            BulletSeam(
+                rows=[
+                    BulletRowSeam(label=r.label, actual=r.actual, target=r.target) for r in b.rows
+                ],
+                max_value=b.max_value,
+                bands=[
+                    BulletBandSeam(
+                        from_value=band.from_value,
+                        to_value=band.to_value,
+                        label=band.label,
+                        color=band.color,
+                    )
+                    for band in b.reference_bands
+                ],
+                empty_message=b.empty_message,
             )
-
-        # Match Jinja's `{{ value }}` rendering: whole floats render
-        # without trailing `.0`. Used for tooltip numerics where the
-        # legacy template did not apply `round()`.
-        def _jinja_num(value: float) -> str:
-            return str(int(value)) if value == int(value) else str(value)
-
-        rows_html: list[str] = []
-        for row in b.rows:
-            actual_pct = round(row.actual / b.max_value * 100, 2)
-            bands_html = ""
-            for band in b.reference_bands:
-                band_left = round(band.from_value / b.max_value * 100, 2)
-                band_width = round((band.to_value - band.from_value) / b.max_value * 100, 2)
-                colour = _BAND_COLORS.get(band.color, _BAND_COLORS["target"])
-                bands_html += (
-                    f'<span class="dz-bullet-band" '
-                    f'style="left: {band_left}%; width: {band_width}%; '
-                    f'background: {colour};" '
-                    f'title="{ctx.escape_attr(band.label)}: '
-                    f'{_jinja_num(band.from_value)}–{_jinja_num(band.to_value)}"></span>'
-                )
-
-            target_html = ""
-            # `round(1)` for value display matches `{{ value | round(1) }}`;
-            # but Jinja's round renders 75.0 as "75.0" only if the value
-            # was already non-int. For ints, round(1) gives an int so
-            # "75". Mirror that with _jinja_num after round.
-            actual_rounded = round(row.actual, 1)
-            value_html = _jinja_num(actual_rounded)
-            if row.target is not None:
-                target_pct = round(row.target / b.max_value * 100, 2)
-                target_html = (
-                    f'<span class="dz-bullet-target" '
-                    f'style="left: {target_pct}%;" '
-                    f'title="{ctx.escape_attr(row.label)} target: '
-                    f'{_jinja_num(row.target)}"></span>'
-                )
-                target_rounded = round(row.target, 1)
-                value_html += f" / {_jinja_num(target_rounded)}"
-
-            rows_html.append(
-                f'<div class="dz-bullet-row">'
-                f'<span class="dz-bullet-label">{ctx.escape(row.label)}</span>'
-                f'<div class="dz-bullet-track">'
-                f"{bands_html}"
-                f'<span class="dz-bullet-actual" '
-                f'style="width: {actual_pct}%;" '
-                f'title="{ctx.escape_attr(row.label)} actual: '
-                f'{_jinja_num(row.actual)}"></span>'
-                f"{target_html}"
-                f"</div>"
-                f'<span class="dz-bullet-value">{value_html}</span>'
-                f"</div>"
-            )
-
-        return (
-            f'<div class="dz-bullet-region">'
-            f'<div class="dz-bullet-rows">{"".join(rows_html)}</div>'
-            f'<p class="dz-bullet-summary">'
-            f"{len(b.rows)} rows · scale 0–{_jinja_num(round(b.max_value, 1))}"
-            f"</p>"
-            f"</div>"
         )
 
     def _emit_sparkline(self, s: Sparkline, ctx: RenderContext) -> str:
@@ -697,65 +634,15 @@ class _RenderChartsMixin:
         )
 
     def _emit_heatmap(self, h: Heatmap, ctx: RenderContext) -> str:
-        """Render a Heatmap matching legacy
-        `workspace/regions/heatmap.html` byte-for-byte: outer
-        `dz-heatmap-region` wrapping a `dz-heatmap-scroll` with a
-        `<table class="dz-heatmap-grid">`. Headers row has an empty
-        leading `<th></th>` followed by column labels. Each row carries
-        a label `<td class="dz-heatmap-row-label">` then per-cell
-        `<td class="dz-heatmap-cell">` with `data-dz-heatmap-tone`
-        threshold-banded tone (bad / warn / good). Values formatted
-        as `%.1f`. Optional overflow line.
-        """
-        if not h.rows:
-            return (
-                f'<div class="dz-heatmap-region">'
-                f'<p class="dz-empty-dense" role="status">'
-                f"{ctx.escape(h.empty_message)}</p>"
-                f"</div>"
+        """Render a Heatmap via HM dual-lock Heatmap seam."""
+        return render_heatmap(
+            HeatmapSeam(
+                columns=list(h.columns),
+                rows=[HeatmapRowSeam(label=r.label, cells=list(r.cells)) for r in h.rows],
+                thresholds=list(h.thresholds),
+                total=h.total,
+                empty_message=h.empty_message,
             )
-
-        head_cols = "".join(f"<th>{ctx.escape(c)}</th>" for c in h.columns)
-        thead = f"<thead><tr><th></th>{head_cols}</tr></thead>"
-
-        def _tone_attr(value: float) -> str:
-            n = len(h.thresholds)
-            if n >= 2:
-                if value < h.thresholds[0]:
-                    return ' data-dz-heatmap-tone="bad"'
-                if value < h.thresholds[1]:
-                    return ' data-dz-heatmap-tone="warn"'
-                return ' data-dz-heatmap-tone="good"'
-            if n == 1:
-                if value < h.thresholds[0]:
-                    return ' data-dz-heatmap-tone="bad"'
-                return ' data-dz-heatmap-tone="good"'
-            return ""
-
-        body_rows: list[str] = []
-        for row in h.rows:
-            cells_html = ""
-            for cell in row.cells:
-                cells_html += f'<td class="dz-heatmap-cell"{_tone_attr(cell)}> {cell:.1f} </td>'
-            body_rows.append(
-                f"<tr>"
-                f'<td class="dz-heatmap-row-label">{ctx.escape(row.label)}</td>'
-                f"{cells_html}"
-                f"</tr>"
-            )
-        tbody = f"<tbody>{''.join(body_rows)}</tbody>"
-
-        overflow_html = ""
-        if h.total > len(h.rows):
-            overflow_html = f'<p class="dz-heatmap-overflow">Showing {len(h.rows)} of {h.total}</p>'
-
-        return (
-            f'<div class="dz-heatmap-region">'
-            f'<div class="dz-heatmap-scroll">'
-            f'<table class="dz-heatmap-grid">{thead}{tbody}</table>'
-            f"</div>"
-            f"{overflow_html}"
-            f"</div>"
         )
 
     def _emit_histogram(self, h: Histogram, ctx: RenderContext) -> str:

@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 31 |
+| Modules | 34 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -17,6 +17,8 @@ blast radius (who embeds / refuses this part).
 | `activity_feed` | `activity-feed` | `[data-dz-activity-row]` | [data-dz-activity-row][data-dz-activity-row=present] | ActivityRow(actor:str:opt; description:str:req; time_str:str:req) |
 | `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
 | `bar_chart` | `bar-chart` | `[data-dz-bar-chart]` | [data-dz-bar-chart][data-dz-bar-chart=present] | BarChart(rows:list[BarChartRow]:opt); BarChartRow(count:int:opt; label:str:req; label_html:str:opt; width_pct:int:opt) |
+| `bar_track` | `bar-track` | `[data-dz-bar-track]` | [data-dz-bar-track][data-dz-bar-track=present] | BarTrack(max_value:float:opt; rows:list[BarTrackRow]:opt); BarTrackRow(fill_pct:float:opt; formatted:str:opt; label:str:req; value:float:opt) |
+| `bullet` | `bullet` | `[data-dz-bullet]` | [data-dz-bullet][data-dz-bullet=present] | Bullet(bands:list[BulletBand]:opt; empty_message:str:opt; max_value:float:opt; rows:list[BulletRow]:opt); BulletBand(color:Literal:opt; from_value:float:req; label:str:opt; to_value:float:req); BulletRow(actual:float:req; label:str:req; target:float\|None:opt) |
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |
 | `combobox` | `combobox` | `[data-dz-combobox]` | [data-dz-combobox][name=present] | ComboboxField(field_id:str:req; label:str:req; name:str:req; options:list[ComboboxOption]:req; placeholder:str:opt; selected:str:opt); ComboboxOption(label:str:req; value:str:req) |
@@ -29,6 +31,7 @@ blast radius (who embeds / refuses this part).
 | `grid_cols` | `grid-cols` | `[data-dz-grid]` | [data-dz-grid-col-toggle][data-dz-grid-col-toggle=present]; [data-dz-col][data-dz-col=present]; [data-dz-grid-cols-reset][] | — |
 | `grid_edit` | `grid-edit` | `[data-dz-grid][data-dz-grid-edit-url]` | [data-dz-grid-edit][data-dz-edit-kind=one_of:text\|date\|bool\|select, data-dz-edit-label=present, data-dz-edit-options=json_pairs(when:data-dz-edit-kind=select), data-dz-edit-value=present] | GridEditCell(col:str:req; kind:Literal:req; label:str:req; options:list[tuple[str,str]]\|None:opt; value:str:req) |
 | `grid_resize` | `grid-resize` | `[data-dz-grid]` | [data-dz-grid-resize][data-dz-grid-resize=present]; col[data-dz-col], [data-dz-col][data-dz-col=present] | — |
+| `heatmap` | `heatmap` | `[data-dz-heatmap]` | [data-dz-heatmap][data-dz-heatmap=present] | Heatmap(columns:list[str]:opt; empty_message:str:opt; rows:list[HeatmapRow]:opt; thresholds:list[float]:opt; total:int:opt); HeatmapRow(cells:list[float]:opt; label:str:req) |
 | `kanban` | `kanban` | `[data-dz-kanban-card]` | [data-dz-kanban-card][data-dz-kanban-card=present] | KanbanCard(attention_level:str:opt; attention_message:str:opt; fields_html:str:opt; title:str:req) |
 | `master_detail` | `master-detail` | `[data-dz-master-detail]` | [data-dz-master-detail][]; [data-dz-master-detail-list-body][]; [data-dz-master-detail-detail-body][] | — |
 | `metrics` | `metrics` | `[data-dz-metric-key]` | [data-dz-metric-key][data-dz-metric-key=present] | MetricTile(delta_direction:Literal:opt; delta_pct:float:opt; delta_period_label:str:opt; delta_sentiment:Literal:opt; delta_value:str:opt; label:str:req; metric_key:str:opt; tone:Literal:opt; value:str:req) |
