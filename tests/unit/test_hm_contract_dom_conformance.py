@@ -293,6 +293,32 @@ def _emit_root_only_html(part_id: str) -> str:
         }
         row = {"id": str(uuid.uuid4()), "title": "x"}
         return render_data_table_rows(build_data_table(table, [row]))
+    if part_id == "pdf":
+        from dazzle.page.runtime.pdf_viewer_renderer import render_pdf_viewer_component
+
+        return render_pdf_viewer_component(
+            src="/files/fixture.pdf",
+            back_url="/app",
+            title="Fixture PDF",
+        )
+    if part_id == "wizard":
+        from types import SimpleNamespace
+
+        from dazzle.page.runtime.experience_renderer import _render_form_step_body
+
+        form = SimpleNamespace(
+            sections=[
+                {"title": "Basics", "fields": []},
+                {"title": "Details", "fields": []},
+            ],
+            initial_values={},
+            fields=[],
+            entity_name="Ticket",
+            mode="create",
+            method="post",
+            action_url="/api/tickets",
+        )
+        return _render_form_step_body(SimpleNamespace(transitions=[]), SimpleNamespace(form=form))
     raise AssertionError(f"no fixture builder for root-only part {part_id!r}")
 
 

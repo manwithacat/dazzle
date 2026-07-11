@@ -157,6 +157,33 @@ def _collect_dazzle_emit_sections() -> list[tuple[str, str]]:
     }
     row = {"id": str(uuid.uuid4()), "title": "confirm-smoke"}
     out.append(("dazzle-confirm-hx", render_data_table_rows(build_data_table(table, [row]))))
+    from dazzle.page.runtime.pdf_viewer_renderer import render_pdf_viewer_component
+
+    out.append(
+        (
+            "dazzle-pdf",
+            render_pdf_viewer_component(src="/files/smoke.pdf", back_url="/app", title="Smoke"),
+        )
+    )
+    from types import SimpleNamespace
+
+    from dazzle.page.runtime.experience_renderer import _render_form_step_body
+
+    form = SimpleNamespace(
+        sections=[{"title": "A", "fields": []}, {"title": "B", "fields": []}],
+        initial_values={},
+        fields=[],
+        entity_name="Ticket",
+        mode="create",
+        method="post",
+        action_url="/api/tickets",
+    )
+    out.append(
+        (
+            "dazzle-wizard",
+            _render_form_step_body(SimpleNamespace(transitions=[]), SimpleNamespace(form=form)),
+        )
+    )
     return out
 
 

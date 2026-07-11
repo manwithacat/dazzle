@@ -12,8 +12,8 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Controllers | 19 |
 | Contract modules | 19 |
 | Dual-lock schema+DOM | 4 |
-| Dual-lock DOM-only | 12 |
-| Dual-lock deferred | 3 |
+| Dual-lock DOM-only | 14 |
+| Dual-lock deferred | 1 |
 | Contract with no dual-lock row | 0 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
@@ -35,17 +35,17 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `grid_resize` | `grid_resize.py` | `dz-grid-resize.js` | yes | no | no | **DOM-only** |
 | `master_detail` | `master_detail.py` | `dz-master-detail.js` | yes | no | no | **deferred** |
 | `money` | `money.py` | `dz-money.js` | yes | yes | yes | **schema+DOM** |
-| `pdf` | `pdf.py` | `dz-pdf.js` | yes | no | no | **deferred** |
+| `pdf` | `pdf.py` | `dz-pdf.js` | yes | no | no | **DOM-only** |
 | `search_select` | `search_select.py` | `dz-search-select.js` | yes | no | no | **DOM-only** |
 | `slider` | `slider.py` | `dz-slider.js` | yes | no | no | **DOM-only** |
 | `tabs` | `tabs.py` | `dz-tabs.js` | yes | no | no | **DOM-only** |
 | `tags` | `tags.py` | `dz-tags.js` | yes | yes | yes | **schema+DOM** |
-| `wizard` | `wizard.py` | `dz-wizard.js` | yes | no | no | **deferred** |
+| `wizard` | `wizard.py` | `dz-wizard.js` | yes | no | no | **DOM-only** |
 
 ## Priority notes (Phase B)
 
-1. **deferred → DOM-only** when a stable Dazzle emission fixture exists (wizard, pdf, master_detail, confirm).
-2. **DOM-only → schema+DOM** when an ingest model is shared with Dazzle (pattern: money / combobox / tags / grid_edit).
+1. **deferred → DOM-only** when a stable Dazzle emission fixture exists (remaining: master_detail — needs product decision on emission site). Promoted: confirm, pdf, wizard.
+2. **DOM-only → schema+DOM** when an ingest model is shared with Dazzle (pattern: money / combobox / tags / grid_edit). No additional model-bearing contracts exist yet — root-only parts stay DOM-only until a real ingest model lands.
 3. **CSS-only Hyperparts** (no contract file) are out of this table — gallery/registry expansion is a separate queue from dual-locks.
 
 ## Plan

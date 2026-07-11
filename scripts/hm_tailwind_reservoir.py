@@ -188,6 +188,51 @@ def _css_reservoir(repo_root: Path) -> dict[str, Any]:
     }
 
 
+def _hm_component_stems(repo_root: Path) -> set[str]:
+    hm_comp = repo_root / "packages" / "hatchi-maxchi" / "components"
+    if not hm_comp.is_dir():
+        return set()
+    return {p.stem for p in hm_comp.glob("*.css")}
+
+
+def port_suggestions(repo_root: Path, css_files: list[tuple[str, int]]) -> list[dict[str, Any]]:
+    """Heuristic drain suggestions (Phase C): map Dazzle CSS files → HM components.
+
+    Pure filesystem naming — not a selector-equivalence engine. Use to prioritise
+    agent drain work; verify with dual-locks + functional gates (not vision API).
+    """
+    hm = _hm_component_stems(repo_root)
+    out: list[dict[str, Any]] = []
+    for rel, lines in css_files:
+        stem = Path(rel).stem
+        # normalize dazzle names (dz-tones → tones, fragment-primitives → fragments-ish)
+        seen: set[str] = set()
+        candidates: list[str] = []
+        for key in (stem, stem.removeprefix("dz-"), stem.replace("dz-", "")):
+            if key in hm and key not in seen:
+                seen.add(key)
+                candidates.append(key)
+        # soft matches: shared prefix length ≥ 4
+        if not candidates:
+            for h in sorted(hm):
+                if h in seen:
+                    continue
+                if stem.startswith(h) or h.startswith(stem):
+                    if min(len(stem), len(h)) >= 4:
+                        seen.add(h)
+                        candidates.append(h)
+        action = "port_or_delete_duplicate" if candidates else "author_new_hm_or_rewrite_to_tokens"
+        out.append(
+            {
+                "dazzle_css": rel,
+                "lines": lines,
+                "hm_candidates": candidates[:5],
+                "action": action,
+            }
+        )
+    return out
+
+
 def scan(repo_root: Path) -> dict[str, Any]:
     per_file: Counter[str] = Counter()
     token_counts: Counter[str] = Counter()
@@ -206,11 +251,16 @@ def scan(repo_root: Path) -> dict[str, Any]:
             if hits:
                 per_file[str(py.relative_to(repo_root))] = hits
     css = _css_reservoir(repo_root)
+    suggestions = port_suggestions(
+        repo_root,
+        list(css["css_files"]) + list(css["css_peripheral_files"]),
+    )
     return {
         "total_tailwind_tokens": sum(per_file.values()),
         "files_with_tailwind": len(per_file),
         "top_files": per_file.most_common(15),
         "top_tokens": token_counts.most_common(20),
+        "port_suggestions": suggestions,
         **css,
     }
 
@@ -218,6 +268,11 @@ def scan(repo_root: Path) -> dict[str, Any]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--json", action="store_true", help="machine-readable output")
+    ap.add_argument(
+        "--suggest",
+        action="store_true",
+        help="print heuristic HM port suggestions for residual CSS files",
+    )
     ap.add_argument(
         "--write-baseline",
         action="store_true",
@@ -269,6 +324,13 @@ def main() -> int:
         f"  [css/GRAND TOTAL] Dazzle-native design CSS to delegate into HM: "
         f"{result['css_lines_grand_total']}"
     )
+    if args.suggest or result["css_lines_grand_total"] > 0:
+        print("  [suggest] heuristic drain targets (name-match only — verify before delete):")
+        for s in result.get("port_suggestions") or []:
+            if s["lines"] <= 0:
+                continue
+            cands = ",".join(s["hm_candidates"]) if s["hm_candidates"] else "—"
+            print(f"    {s['lines']:5d}  {s['dazzle_css']}  →  {cands}  ({s['action']})")
     return 0
 
 

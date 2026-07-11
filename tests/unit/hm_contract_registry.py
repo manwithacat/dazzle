@@ -44,15 +44,15 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/grid.py", "grid", True),
     ("contracts/grid_cols.py", "grid_cols", True),
     ("contracts/grid_resize.py", "grid_resize", True),
+    ("contracts/pdf.py", "pdf", True),  # render_pdf_viewer_component (#1582)
+    ("contracts/wizard.py", "wizard", True),  # experience form multi-section (#1582)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
 # Keep as inventory so the drain is greppable; add a DOM_ONLY_CONTRACTS row
 # when a stable emission site exists.
 DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
-    ("contracts/wizard.py", "page-layer experience_renderer only"),
-    ("contracts/pdf.py", "page-layer pdf_viewer_renderer (not Fragment)"),
-    ("contracts/master_detail.py", "no stable Dazzle emission site yet"),
+    ("contracts/master_detail.py", "no stable Dazzle emission site yet — needs product decision"),
 ]
 
 

@@ -29,8 +29,8 @@ Raise the sophistication of (1) HM as a design system and (2) Dazzle tools that 
 | Controllers (`dz-*.js`) | 19 |
 | Formal contract modules | 19 |
 | Schema + DOM dual-lock (`CONTRACT_MODELS`) | 4 (grid_edit, combobox, tags, money) |
-| Root-only dual-lock (`DOM_ONLY_CONTRACTS`) | 11 |
-| Root-only deferred (contract exists, no DOM lock fixture) | 4 (wizard, pdf, master_detail, confirm) |
+| Root-only dual-lock (`DOM_ONLY_CONTRACTS`) | 14 (incl. confirm, pdf, wizard) |
+| Root-only deferred (contract exists, no DOM lock fixture) | 1 (master_detail — product decision) |
 
 Reservoir metric (`scripts/hm_tailwind_reservoir.py`): **GRANDTOTAL 0** — migration thermometer is drained; remaining work is *quality locks* and *tooling depth*, not Tailwind drain.
 
@@ -99,8 +99,8 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 | Phase | Status | Issue | Notes |
 |-------|--------|------:|-------|
 | A | **Done** | #1581 | Plan + coverage generator + map + gate test |
-| B | **In progress** | #1582 | `confirm` → DOM-only dual-lock; scaffold tool; visual smoke |
-| C | Not started | #1583 | Reservoir port suggestions |
+| B | **Mostly done** | #1582 | confirm/pdf/wizard → DOM-only; scaffold; visual smoke; master_detail deferred |
+| C | **Partial** | #1583 | Reservoir `--suggest` / `port_suggestions` (drain thermometer already 0) |
 | D | Not started | #1584 | Taste closed-loop (subscription Read path first) |
 
 **Epic:** #1580
