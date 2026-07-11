@@ -5,34 +5,17 @@ rendered through build_data_table → render_data_table_rows and validated
 against contracts/grid_edit.py's DOM_CONTRACT (fragment mode — the grid
 root is page furniture, validated in HM's own exemplar tests)."""
 
-import importlib.util
-import sys
 import uuid
-from pathlib import Path
 
 import pytest
 
 from dazzle.http.runtime.handlers.list_handlers import build_data_table
 from dazzle.render.fragment.renderer._data_row import render_data_table_rows
+from tests.unit.hm_contract_registry import REPO_ROOT, load_hm_module
 
 pytestmark = pytest.mark.gate
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-HM = REPO_ROOT / "packages" / "hatchi-maxchi"
-
-
-def _load(rel: str):
-    if str(HM) not in sys.path:
-        sys.path.insert(0, str(HM))
-    spec = importlib.util.spec_from_file_location(f"hm_{Path(rel).stem}", HM / rel)
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod  # dataclass/pydantic need the module registered
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod
-
-
-_KIT = _load("contracts/_kit.py")
+_KIT = load_hm_module("contracts/_kit.py")
 
 PRODUCER_SHAPES = [
     [{"value": "open", "label": "Open"}, {"value": "closed", "label": "Closed"}],
@@ -44,7 +27,7 @@ PRODUCER_SHAPES = [
 @pytest.mark.parametrize("options", PRODUCER_SHAPES)
 def test_hydrated_badge_row_conforms_to_grid_edit_contract(options) -> None:
     pytest.importorskip("fastapi")
-    grid_edit = _load("contracts/grid_edit.py")
+    grid_edit = load_hm_module("contracts/grid_edit.py")
     table = {
         "columns": [
             {"key": "title", "label": "Title", "type": "text"},
@@ -77,3 +60,25 @@ def test_typed_path_is_sole_emitter() -> None:
         f"data-dz-edit-* assembled outside the typed boundary: {offenders} — "
         f"construct a GridEditCell and use edit_span_attrs() instead."
     )
+
+
+def test_widget_combobox_conforms_to_combobox_contract() -> None:
+    """Real Dazzle WidgetCombobox emission must satisfy contracts/combobox.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.forms import WidgetCombobox
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    combobox = load_hm_module("contracts/combobox.py")
+    kit = load_hm_module("contracts/_kit.py")
+    frag = WidgetCombobox(
+        name="priority",
+        label="Priority",
+        options=(("low", "Low"), ("medium", "Medium"), ("high", "High")),
+        placeholder="Select…",
+        initial_value="medium",
+    )
+    html = FragmentRenderer().render(frag)
+    violations = kit.validate_dom(html, combobox.DOM_CONTRACT, require_root=False)
+    assert not violations, violations
+    assert "data-dz-combobox" in html
+    assert 'name="priority"' in html
