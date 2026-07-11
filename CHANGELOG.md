@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.43] - 2026-07-11
+
+### Fixed
+- **TR-57 workspace primary CTA label** — workspace-header "New …" actions
+  use the entity display title (or create-surface title with Create/New
+  stripped), never the list-surface title. Fixes "New Contact List" when the
+  list surface is titled "Contact List". Fragment list adapter also preserves
+  an explicit ``create_label`` from context (persona ``action_primary``) instead
+  of overwriting it.
+
 ## [0.101.42] - 2026-07-11
 
 ### Changed

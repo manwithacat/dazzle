@@ -2070,6 +2070,7 @@ def _build_workspace_primary_action_candidates(
     app_prefix: str,
     create_surfaces_by_entity: dict[str, Any],
     list_surfaces_by_entity: dict[str, Any],
+    entity_titles: dict[str, str] | None = None,
 ) -> list[dict[str, str]]:
     """Collect "New X" primary-action candidates for a workspace header.
 
@@ -2079,16 +2080,23 @@ def _build_workspace_primary_action_candidates(
     expected to apply ``_user_can_mutate`` per-request before surfacing the
     button. Closes #827 (workspace dashboards with no create CTA).
 
+    Label preference (#1487 / TR-57): entity display title → create-surface
+    title → humanised entity name. **Never** the list-surface title (e.g.
+    "Contact List" produced the wrong CTA "New Contact List").
+
     Args:
         workspace: WorkspaceSpec IR node.
         app_prefix: Route prefix (e.g. ``/app``).
         create_surfaces_by_entity: Map entity_ref → CREATE SurfaceSpec.
-        list_surfaces_by_entity: Map entity_ref → LIST SurfaceSpec (used
-            for a nicer label fallback from the list surface title).
+        list_surfaces_by_entity: Map entity_ref → LIST SurfaceSpec (unused
+            for labels; kept for call-site compatibility).
+        entity_titles: Map entity_ref → DSL entity title for CTA labels.
 
     Returns:
         List of action dicts: ``{entity, surface, label, route}``.
     """
+    _ = list_surfaces_by_entity  # reserved; labels must not use list surface title
+    titles = entity_titles or {}
     seen: set[str] = set()
     actions: list[dict[str, str]] = []
     for region in workspace.regions:
@@ -2104,15 +2112,25 @@ def _build_workspace_primary_action_candidates(
             if not create_surface:
                 continue
             entity_slug = app_paths.entity_slug(src)
-            list_surface = list_surfaces_by_entity.get(src)
-            label_source = (
-                getattr(list_surface, "title", "") if list_surface else ""
-            ) or src.replace("_", " ").title()
+            # Prefer entity display title ("Contact") — never list surface title
+            # ("Contact List" → wrong CTA "New Contact List"; TR-57 / #1487).
+            ent_title = (titles.get(src) or "").strip()
+            if not ent_title or ent_title == src:
+                create_title = (getattr(create_surface, "title", "") or "").strip()
+                if create_title.lower().startswith("create "):
+                    ent_title = create_title[7:].strip()
+                elif create_title.lower().startswith("new "):
+                    ent_title = create_title[4:].strip()
+                elif create_title:
+                    ent_title = create_title
+                else:
+                    ent_title = src.replace("_", " ").title()
+            label = f"New {ent_title}"
             actions.append(
                 {
                     "entity": src,
                     "surface": create_surface.name,
-                    "label": f"New {label_source}",
+                    "label": label,
                     "route": app_paths.create_path(app_prefix, entity_slug),
                 }
             )
@@ -2766,12 +2784,19 @@ def create_page_routes(
         # Task from that view. Filter by persona-create permission happens
         # per-request in ``_workspace_handler``; this build step just collects
         # the candidate set from the workspace's region sources.
+        # TR-57 / #1487: labels use entity titles, never list-surface titles.
+        _entity_titles: dict[str, str] = {}
+        for _ent in getattr(getattr(appspec, "domain", None), "entities", []) or []:
+            _t = (getattr(_ent, "title", "") or getattr(_ent, "label", "") or "").strip()
+            if _t:
+                _entity_titles[_ent.name] = _t
         ws_primary_actions: dict[str, list[dict[str, str]]] = {
             ws.name: _build_workspace_primary_action_candidates(
                 ws,
                 app_prefix=app_prefix,
                 create_surfaces_by_entity=_create_surfaces_by_entity,
                 list_surfaces_by_entity=_list_surfaces_by_entity,
+                entity_titles=_entity_titles,
             )
             for ws in workspaces
         }

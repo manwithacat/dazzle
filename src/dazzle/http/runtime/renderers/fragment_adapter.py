@@ -188,7 +188,10 @@ class FragmentSurfaceAdapter:
         )
 
         empty_title, empty_description = _pick_empty_state(ctx)
-        create_label = f"New {entity_title or entity_name.replace('_', ' ')}" if create_url else ""
+        # Prefer explicit create_label (persona action_primary / surface title);
+        # else #1487 entity display title — never the list surface title.
+        if not create_label and create_url:
+            create_label = f"New {entity_title or entity_name.replace('_', ' ')}"
         shell = DataListScroll(
             table=table,
             table_id=table_id,
