@@ -143,6 +143,19 @@ body { background: var(--colour-bg); color: var(--colour-text);
   line-height: 1.45;
 }
 .hm-page-meta__provenance code { font-size: .9em; }
+.hm-page-meta__link-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: .35rem;
+}
+.hm-page-meta__link-list a {
+  color: var(--colour-brand-text, var(--colour-brand));
+  text-decoration: underline;
+  text-underline-offset: .12em;
+}
+.hm-page-meta__link-list code { font-size: .9em; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
