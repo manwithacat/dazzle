@@ -2,7 +2,9 @@
 
 Bordered surface with a resting stacked shadow. Content classes (label / value / delta) build KPI tiles; compose several in auto-grid so each card keeps a natural width instead of stretching full-bleed across the preview.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -25,6 +27,6 @@ Bordered surface with a resting stacked shadow. Content classes (label / value /
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-A card is a <strong>surface</strong>, not a layout. One card in a full-width preview looks clumsy because the box stretches; real use is several cards in <code>auto-grid</code> (or a stack of content cards). Workspace dashboard cards add <code>data-display</code> for CLS height reservation — static KPI tiles omit it and size to content. Classes: <code>dz-card</code> + <code>dz-card-body</code> + <code>dz-card-label</code> / <code>dz-card-value</code> / <code>dz-card-delta</code>.
+A card is a surface, not a layout. One card in a full-width preview looks clumsy because the box stretches; real use is several cards in auto-grid (or a stack of content cards). Workspace dashboard cards add data-display for CLS height reservation — static KPI tiles omit it and size to content. Classes: dz-card + dz-card-body + dz-card-label / dz-card-value / dz-card-delta.

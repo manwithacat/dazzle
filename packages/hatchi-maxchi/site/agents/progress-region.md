@@ -2,7 +2,9 @@
 
 A native progress bar with stage chips — where the work is, stage by stage, with completion tones.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="progress-region hm-measure-lg">
@@ -15,6 +17,6 @@ A native progress bar with stage chips — where the work is, stage by stage, wi
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-The bar is a NATIVE <code>&lt;progress&gt;</code> (styled via <code>data-dz-progress</code>) with its percent readout as a plain <code>&lt;span&gt;</code> beside it in the header; chips are plain text (<code>Name (count)</code>) toned by <code>data-dz-stage-tone=&quot;complete|active|empty&quot;</code>; the summary paragraph follows the stages.
+The bar is a NATIVE <progress> (styled via data-dz-progress) with its percent readout as a plain <span> beside it in the header; chips are plain text (Name (count)) toned by data-dz-stage-tone="complete|active|empty"; the summary paragraph follows the stages.

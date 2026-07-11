@@ -2,7 +2,9 @@
 
 A headline number with its recent shape — the smallest chart: a current value, its bucket label, and an area glyph.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="sparkline-region">
@@ -11,6 +13,6 @@ A headline number with its recent shape — the smallest chart: a current value,
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-The SVG is server-rendered with a numeric summary in <code>aria-label</code> (points / latest / peak) — the glyph is decoration; the numbers are the content. An empty series renders <code>dz-sparkline-empty</code>; a single point renders the headline alone.
+The SVG is server-rendered with a numeric summary in aria-label (points / latest / peak) — the glyph is decoration; the numbers are the content. An empty series renders dz-sparkline-empty; a single point renders the headline alone.

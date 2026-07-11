@@ -33,7 +33,21 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-topbar { display:flex; align-items:center; gap:1rem; margin-bottom: 2rem; }
 .hm-comp { border-block-start: 1px solid var(--colour-border); padding-block: 2.5rem; }
 .hm-comp h2 { font-size: 1.25rem; margin: 0 0 .25rem; scroll-margin-top: 1rem; }
-.hm-comp .blurb { color: var(--colour-text-muted); margin: 0 0 1.25rem; font-size: var(--text-sm); }
+.hm-comp h3 { font-size: 1.05rem; margin: 1.75rem 0 .5rem; scroll-margin-top: 1rem;
+  letter-spacing: -.01em; }
+.hm-comp h4 { font-size: var(--text-sm); margin: 1.25rem 0 .4rem;
+  color: var(--colour-text); font-weight: var(--weight-semibold); }
+.hm-comp .blurb { color: var(--colour-text-muted); margin: 0 0 .75rem; font-size: var(--text-sm); }
+/* Linear reference sections (part pages) — no accordions; agent-scrapeable. */
+.hm-ref { margin-top: 1.25rem; }
+.hm-ref-lead { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0 0 .75rem; max-width: 46rem; line-height: 1.55; }
+.hm-ref-mod { font-family: var(--font-mono); font-weight: var(--weight-medium); }
+.hm-dialect { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0 0 1.25rem; padding: .55rem .75rem; max-width: 46rem;
+  border: 1px solid var(--colour-border); border-radius: var(--radius-md);
+  background: var(--colour-surface); line-height: 1.5; }
+.hm-dialect code { font-size: .9em; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -52,32 +66,23 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-setup-body { padding: 0 .9rem .75rem; font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 46rem; }
 .hm-setup-body code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
 .hm-setup-body a { color: var(--colour-brand); }
-.hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .75rem; }
+/* Notes prose + contract tables (always visible on part pages). */
+.hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0; max-width: 46rem; line-height: 1.55; }
 .hm-notes code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
-/* Agent Implementation Guidance — the per-Hyperpart notes, collapsed behind
-   the same disclosure treatment as the endpoint contract (primary audience:
-   coding agents; the visual gallery stays scannable). */
-.hm-guidance { margin-top: .75rem; border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
-.hm-guidance > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
-  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
-.hm-guidance > .hm-notes { margin: 0; padding: .6rem .75rem; background: var(--colour-surface);
-  border-top: 1px solid var(--colour-border);
-  border-radius: 0 0 var(--radius-md) var(--radius-md); }
-.hm-contract { margin-top: .75rem; border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
-.hm-contract > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
-  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
 .hm-contract-table { width: 100%; border-collapse: collapse; font-size: .75rem;
-  background: var(--colour-surface); }
+  background: var(--colour-surface); margin: 0 0 .75rem;
+  border: 1px solid var(--colour-border); border-radius: var(--radius-md); overflow: hidden; }
 .hm-contract-table th, .hm-contract-table td { text-align: left; vertical-align: top;
-  padding: .4rem .6rem; border-top: 1px solid var(--colour-border); }
+  padding: .45rem .65rem; border-top: 1px solid var(--colour-border); }
+.hm-contract-table thead th { border-top: 0; background: var(--colour-bg); }
 .hm-contract-table th { color: var(--colour-text-muted); font-weight: var(--weight-medium);
   text-transform: uppercase; letter-spacing: .04em; font-size: .625rem; }
 .hm-contract-table code { font-family: var(--font-mono); }
 .hm-verb { color: var(--colour-brand-text); font-weight: var(--weight-semibold); }
-.hm-contract > p { font-size: var(--text-sm); color: var(--colour-text-muted);
-  margin: 0; padding: .6rem .75rem; }
+.hm-contract-live { margin: .5rem 0 1rem; padding: .75rem;
+  border: 1px dashed var(--colour-border); border-radius: var(--radius-md);
+  background: var(--colour-surface); }
 .hm-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
   background: var(--colour-text); color: var(--colour-bg); padding: .5rem 1rem;
   border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); }
@@ -128,17 +133,17 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="code"><h2>Code block<span class="hm-tag">docs</span><span class="hm-dep" data-dep="controller" title="Dependency class: Controller">Controller</span></h2><p class="blurb">Fenced code surface with optional language chip and copy control — server-emitted chrome for docs and samples. Syntax colour is build-time token spans (Python), not a browser highlighter.</p><div class="hm-preview"><figure class="code" data-code data-language="python"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">python</span><pre class="code__pre" tabindex="0" role="region" aria-label="Python example"><code class="code__source">def greet(name: str) -> str:
+<section class="hm-comp" id="code"><h2>Code block<span class="hm-tag">docs</span><span class="hm-dep" data-dep="controller" title="Dependency class: Controller">Controller</span></h2><p class="blurb">Fenced code surface with optional language chip and copy control — server-emitted chrome for docs and samples. Syntax colour is build-time token spans (Python), not a browser highlighter.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><figure class="code" data-code data-language="python"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">python</span><pre class="code__pre" tabindex="0" role="region" aria-label="Python example"><code class="code__source">def greet(name: str) -> str:
     """Return a friendly hello."""
     return f"Hello, {name}"
-</code></pre></figure></div><figure class="code" data-code data-language="html"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">html</span><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Code block"><code class="code__source">&lt;figure class=&quot;code&quot; data-code data-language=&quot;python&quot;&gt;
+</code></pre></figure></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">html</span><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Code block"><code class="code__source">&lt;figure class=&quot;code&quot; data-code data-language=&quot;python&quot;&gt;
   &lt;button type=&quot;button&quot; class=&quot;code__copy&quot; data-code-copy aria-label=&quot;Copy code to clipboard&quot;&gt;&lt;span class=&quot;code__copy-idle&quot;&gt;Copy&lt;/span&gt;&lt;span class=&quot;code__copy-done&quot;&gt;Copied&lt;/span&gt;&lt;/button&gt;
   &lt;span class=&quot;code__lang&quot;&gt;python&lt;/span&gt;
   &lt;pre class=&quot;code__pre&quot; tabindex=&quot;0&quot; role=&quot;region&quot; aria-label=&quot;Python example&quot;&gt;&lt;code class=&quot;code__source&quot;&gt;def greet(name: str) -&gt; str:
     &quot;&quot;&quot;Return a friendly hello.&quot;&quot;&quot;
     return f&quot;Hello, {name}&quot;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;/figure&gt;</code></pre></figure><details class="hm-contract" open><summary>Contract module (typed)</summary><h4><code>contracts/code.py</code></h4><p class="hm-contract-kind"><strong>DOM root:</strong> <code>[data-code]</code> · part <code>code</code></p><table class="hm-contract-table"><thead><tr><th>Node</th><th>Attr</th><th>Constraint</th></tr></thead><tbody><tr><td><code>[data-code]</code></td><td><code>data-code</code></td><td>present (any value)</td></tr><tr><td><code>[data-code-copy]</code></td><td><code>data-code-copy</code></td><td>present (any value)</td></tr></tbody></table><details class="hm-contract" open><summary>Module source</summary><figure class="code" data-code data-language="python"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">python</span><pre class="code__pre" tabindex="0" role="region" aria-label="Module source contracts/code.py"><code class="code__source"><span class="code__tok--str">&quot;&quot;&quot;HYPERPART: code — fenced code surface (root + optional copy control).&quot;&quot;&quot;</span>
+&lt;/figure&gt;</code></pre></figure></section><section class="hm-ref" id="how-to"><h3>How to use it</h3><h4>Seams</h4><ul><li>data-code root marks the fenced surface</li><li>data-language optional chip; data-code-copy optional control</li><li>build-time token spans (.code__tok--*) for Python colour</li></ul><h4>Do / Don't</h4><table class="hm-contract-table"><thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody><tr><td>emit figure.code from the server/docs builder</td><td>paste Prism/Shiki client bundles just for gallery colour</td></tr></tbody></table><h4>Pitfalls</h4><ul><li>do not ship a browser syntax engine for static docs — highlight at build</li><li>copy must read textContent (not innerHTML) so spans never paste</li></ul><h4>Keyboard / AT</h4><ul><li>pre is a keyboard-scrollable region (tabindex=0)</li><li>copy button is a real button with aria-label</li></ul></section><section class="hm-ref" id="dom-contract"><h3>DOM contract</h3><p class="hm-ref-lead">Machine-checkable stop-ship for this part. Agents: do not invent attrs or response shapes outside this module. Humans: treat the table as the required surface; the Python is the canonical definition CI runs against.</p><h4 class="hm-ref-mod"><code>contracts/code.py</code></h4><p class="hm-ref-lead"><strong>Required in the DOM:</strong> root <code>[data-code]</code> (part <code>code</code>). Emit only these attributes — inventing extras is fine only if controllers ignore them; omitting required ones fails CI (<code>tests/test_contracts.py</code>).</p><table class="hm-contract-table"><thead><tr><th>Node</th><th>Attr</th><th>Constraint</th></tr></thead><tbody><tr><td><code>[data-code]</code></td><td><code>data-code</code></td><td>present (any value)</td></tr><tr><td><code>[data-code-copy]</code></td><td><code>data-code-copy</code></td><td>present (any value)</td></tr></tbody></table><h4>Module source</h4><p class="hm-ref-lead">Source-token form (often <code>data-*</code>). Gallery demos above are unprefixed.</p><figure class="code" data-code data-language="python"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">python</span><pre class="code__pre" tabindex="0" role="region" aria-label="Module source contracts/code.py"><code class="code__source"><span class="code__tok--str">&quot;&quot;&quot;HYPERPART: code — fenced code surface (root + optional copy control).&quot;&quot;&quot;</span>
 
 <span class="code__tok--kw">from</span> <span class="code__tok--name">__future__</span> <span class="code__tok--kw">import</span> <span class="code__tok--name">annotations</span>
 
@@ -155,7 +160,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
 <span class="code__tok--op">)</span>
 
 <span class="code__tok--name">__all__</span> <span class="code__tok--op">=</span> <span class="code__tok--op">[</span><span class="code__tok--str">&quot;DOM_CONTRACT&quot;</span><span class="code__tok--op">]</span>
-</code></pre></figure></details><p>Typed source of truth: DOM contract, optional ingestion model, executable exemplar, and FastAPI feed example — validated in CI (<code>tests/test_contracts.py</code>). See <code>contracts/AUTHORING.md</code>.</p></details><p class="hm-anatomy"><strong>One Hyperpart, 4 code items:</strong> <code>site/registry.py</code> · <code>components/code.css:1</code> · <code>controllers/dz-code.js</code>. Distributed by the build (CSS layered, JS bundled) but bound by <code>HYPERPART: code</code> markers — <code>python tools/hyperpart.py code</code> lists them.</p><details class="hm-guidance" open><summary>Structured guidance</summary><div class="hm-notes"><h4>Seams</h4><ul><li>data-code root marks the fenced surface</li><li>data-language optional chip; data-code-copy optional control</li><li>build-time token spans (.code__tok--*) for Python colour</li></ul><h4>Pitfalls</h4><ul><li>do not ship a browser syntax engine for static docs — highlight at build</li><li>copy must read textContent (not innerHTML) so spans never paste</li></ul><h4>Do / Don't</h4><table class="hm-contract-table"><thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody><tr><td>emit figure.code from the server/docs builder</td><td>paste Prism/Shiki client bundles just for gallery colour</td></tr></tbody></table><h4>Keyboard / AT</h4><ul><li>pre is a keyboard-scrollable region (tabindex=0)</li><li>copy button is a real button with aria-label</li></ul></div></details><details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">Use the code Hyperpart for any fenced sample in docs or app chrome. The gallery builder runs a stdlib Python highlighter (<code>site/highlight.py</code>) that wraps tokens in <code>code__tok--*</code> spans; copy always uses <code>textContent</code> so spans never reach the clipboard. Omit <code>data-language</code> to hide the language chip; omit the copy button when the block is display-only.</div></details></section>
+</code></pre></figure></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">Use the code Hyperpart for any fenced sample in docs or app chrome. The gallery builder runs a stdlib Python highlighter (<code>site/highlight.py</code>) that wraps tokens in <code>code__tok--*</code> spans; copy always uses <code>textContent</code> so spans never reach the clipboard. Omit <code>data-language</code> to hide the language chip; omit the copy button when the block is display-only.</div></section><section class="hm-ref" id="files"><h3>Source files</h3><p class="hm-ref-lead">One logical Hyperpart, 4 code items (CSS layered, JS bundled). Bound by <code>HYPERPART: code</code> — <code>python tools/hyperpart.py code</code> lists them.</p><p class="hm-anatomy"><code>site/registry.py</code> · <code>components/code.css:1</code> · <code>controllers/dz-code.js</code></p></section></section>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
 The demo above renders the exact snippet — copy it into any htmx4 app.

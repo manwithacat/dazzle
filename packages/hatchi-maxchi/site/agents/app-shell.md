@@ -2,7 +2,9 @@
 
 The SaaS/admin application frame: persistent left navigation, an optional sticky top bar, a routed main workspace, and a responsive/collapsible sidebar whose state the server renders.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -33,20 +35,48 @@ The SaaS/admin application frame: persistent left navigation, an optional sticky
 </div>
 ```
 
-## Contract modules (typed source of truth)
+## How to use it
 
-Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+### Seams
+
+- root data-dz-sidebar=open|closed is SERVER-rendered from the dz_sidebar cookie
+- [data-dz-sidebar-toggle] flips state and rewrites the cookie (1y, SameSite=Lax)
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| SSR data-dz-sidebar from the cookie so first paint has no flash | default open in HTML and fix it client-side after load |
+
+### Pitfalls
+
+- cookie not localStorage — the server must paint the correct first state
+- the component owns the ≥64rem media query (viewport policy); layout primitives stay MQ-free
+
+### Keyboard / AT
+
+- toggle mirrors aria-expanded to the open/closed state
+- narrow viewports: sidebar overlays; desktop: persistent rail
+
+### Related parts
+
+- `button` — agents/button.md
+- `sidebar-layout` — agents/sidebar-layout.md
+
+## DOM contract
+
+CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
 
 ### `contracts/app_shell.py`
 
-- **DOM root:** `[data-dz-sidebar]` (part `app-shell`)
+- **Required root:** `[data-dz-sidebar]` (part `app-shell`)
 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[data-dz-sidebar]` | `data-dz-sidebar` | one of ['open', 'closed'] |
 | `[data-dz-sidebar-toggle]` | `—` | — |
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: app-shell — DOM contract for the sidebar shell controller."""
@@ -67,38 +97,10 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
-## Guidance (structured)
+## Notes
 
-### Seams
+The shell root carries data-dz-sidebar="open|closed" — SERVER-rendered from the dz_sidebar cookie, so first paint is correct with no flash; dz-app-shell.js flips the attribute and re-writes the cookie when [data-dz-sidebar-toggle] is clicked (and mirrors aria-expanded). Desktop (≥64rem): the sidebar is persistent and the content pane pads around it; narrow: it slides off-canvas and overlays (this component owns that media query deliberately — viewport policy, not intrinsic wrapping — the layout primitives inside stay media-query-free). The demo above is a standalone page embedded via iframe (its own browsing context, so the fixed sidebar behaves exactly as shipped) — the snippet below is the pure, copyable shell markup, with one embedding concession: the workspace slot is a <div> here because this demo lives inside the gallery's own <main>; in your app it is <main id="main-content"> (one visible main per document — the Blueprint shows the true form). The full motif — routed navigation swapping the main slot — is the saas-shell Blueprint.
 
-- root data-dz-sidebar=open|closed is SERVER-rendered from the dz_sidebar cookie
-- [data-dz-sidebar-toggle] flips state and rewrites the cookie (1y, SameSite=Lax)
-
-### Pitfalls
-
-- cookie not localStorage — the server must paint the correct first state
-- the component owns the ≥64rem media query (viewport policy); layout primitives stay MQ-free
-
-### Keyboard / AT
-
-- toggle mirrors aria-expanded to the open/closed state
-- narrow viewports: sidebar overlays; desktop: persistent rail
-
-### Do / Don't
-
-| Do | Don't |
-|---|---|
-| SSR data-dz-sidebar from the cookie so first paint has no flash | default open in HTML and fix it client-side after load |
-
-### Composes with
-
-- `button` (agents/button.md)
-- `sidebar-layout` (agents/sidebar-layout.md)
-
-## Guidance (prose; HTML from the registry notes field)
-
-The shell root carries <code>data-dz-sidebar=&quot;open|closed&quot;</code> — SERVER-rendered from the <code>dz_sidebar</code> cookie, so first paint is correct with no flash; <code>dz-app-shell.js</code> flips the attribute and re-writes the cookie when <code>[data-dz-sidebar-toggle]</code> is clicked (and mirrors <code>aria-expanded</code>). Desktop (≥64rem): the sidebar is persistent and the content pane pads around it; narrow: it slides off-canvas and overlays (this component owns that media query deliberately — viewport policy, not intrinsic wrapping — the layout primitives inside stay media-query-free). The demo above is a standalone page embedded via iframe (its own browsing context, so the fixed sidebar behaves exactly as shipped) — the snippet below is the pure, copyable shell markup, with one embedding concession: the workspace slot is a <code>&lt;div&gt;</code> here because this demo lives inside the gallery's own <code>&lt;main&gt;</code>; in your app it is <code>&lt;main id=&quot;main-content&quot;&gt;</code> (one visible main per document — the Blueprint shows the true form). The full motif — routed navigation swapping the main slot — is the <a href="blueprints/saas-shell">saas-shell Blueprint</a>.
-
-## Controller files
+## Source files
 
 - `controllers/dz-app-shell.js`

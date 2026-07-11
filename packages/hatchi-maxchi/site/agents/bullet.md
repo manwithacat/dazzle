@@ -2,7 +2,9 @@
 
 Actual vs target on qualitative bands — the KPI-with-context bar. All geometry is server-computed inline percentages.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="bullet-region hm-measure-lg">
@@ -17,6 +19,6 @@ Actual vs target on qualitative bands — the KPI-with-context bar. All geometry
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Bands, the actual bar, and the target tick are absolutely positioned by SERVER-computed inline percentages (per-row data, the same contract as the funnel widths); each carries a <code>title</code> with its numeric range. Band fills come from the server's reference-band colour map (<code>target</code> → <code>var(--colour-brand)</code>, <code>destructive</code> → <code>var(--colour-danger)</code>, plus fixed positive/warning/muted values) — saturated colours, because the band layer renders at 0.18 opacity. The value (and target, when set) renders as text beside the track; the mono summary line carries row count and scale.
+Bands, the actual bar, and the target tick are absolutely positioned by SERVER-computed inline percentages (per-row data, the same contract as the funnel widths); each carries a title with its numeric range. Band fills come from the server's reference-band colour map (target → var(--colour-brand), destructive → var(--colour-danger), plus fixed positive/warning/muted values) — saturated colours, because the band layer renders at 0.18 opacity. The value (and target, when set) renders as text beside the track; the mono summary line carries row count and scale.

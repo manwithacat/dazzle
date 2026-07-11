@@ -19,19 +19,17 @@ on the server and in the DOM.
   (`exchanges` — method, endpoint shape, trigger, response fragment,
   swap, states), controller/extension pointers, and wiring notes. Parse
   it; don't scrape the gallery HTML.
-- **Per-part agent pack**: `site/agents/<id>.md` (also on Pages under
-  `agents/`) is the one-fetch epistemic unit — partial, exchanges,
-  contract module (DOM_CONTRACT + schema + FastAPI exemplar when
-  present), structured guidance. Prefer it over HTML when implementing.
-- **Contract modules** (`contracts/<part>.py`) stop emission drift:
-  `DOM_CONTRACT` is what controllers require; Pydantic models +
-  `render()` + optional FastAPI `app` routes show how a server feeds the
-  seam. Gallery mocks (toasts, `/mock/*` JSON) are **not** contracts —
-  they only make the static demo clickable.
-- The [gallery](https://manwithacat.github.io/hatchi-maxchi/) renders
-  the same strings live. Each component's **Agent Implementation
-  Guidance** disclosure is written for you: it names the seams, the
-  attribute contracts, and the mistakes the design already rejected.
+- **Per-part agent pack**: `site/agents/<id>.md` (Pages: `agents/<id>.md`)
+  is the one-fetch scrape target — same linear sections as
+  `hyperparts/<id>.html`: Copy this → Server exchange → How to use it →
+  DOM contract → Notes → Source files. Prefer the `.md` when implementing;
+  the HTML page adds the live demo.
+- **DOM contract** (`contracts/<part>.py`) is CI stop-ship: required root
+  attrs / ingestion model / optional FastAPI feed. Gallery mocks (toasts,
+  `/mock/*`) are **not** contracts.
+- **Dialect:** gallery partials are unprefixed; Dazzle dual-lock is
+  `dz-` / `data-dz-*`. Contract Python is usually the dual-lock form —
+  match the bundle you load.
 - The snippets ship unprefixed by default. `build.py --prefix dz-`
   (or any prefix) renamespaces classes, data-attributes, and keyframes
   consistently — pick one and stay with it.

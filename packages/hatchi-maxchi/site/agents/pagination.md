@@ -2,7 +2,9 @@
 
 The footer beneath a data table — a summary and page buttons. Each button hx-gets a page into the list body (an Exchange, not a widget).
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="hm-stack hm-measure-lg">
@@ -18,12 +20,14 @@ The footer beneath a data table — a summary and page buttons. Each button hx-g
 </div>
 ```
 
-## Exchanges (the endpoint contract your server must satisfy)
+## Server exchange
+
+After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `GET /app/{region}?page={n}&page_size={size}` | a page button, on click | the list body fragment for page n — the rows the region renders, with the current-page button marked `is-current` + `aria-current='page'` | innerMorph of the region's body (`#{region}-body`) | loading populated error |
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Each page button carries its own <code>hx-get</code>; here a mock htmx swaps a canned page into <code>#hm-pag-body</code>. In Dazzle the button hits the region endpoint (<code>?page=N&amp;page_size=…</code>) and the server returns the repainted list body (via <code>innerMorph</code>) plus the moved <code>is-current</code> marker.
+Each page button carries its own hx-get; here a mock htmx swaps a canned page into #hm-pag-body. In Dazzle the button hits the region endpoint (?page=N&page_size=…) and the server returns the repainted list body (via innerMorph) plus the moved is-current marker.

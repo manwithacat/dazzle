@@ -2,7 +2,9 @@
 
 The in-card data table: an actions row with CSV export, a horizontally scrollable table, and an overflow count.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -37,6 +39,6 @@ The in-card data table: an actions row with CSV export, a horizontally scrollabl
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-The CSV button is ALWAYS rendered in the actions row. The snippet omits its wiring: the real emitter adds <code>data-dz-csv-endpoint</code>/<code>data-dz-csv-filename</code> and an <code>onclick</code> that calls <code>window.dz.downloadCsv(endpoint, filename)</code> against the server export route. Sortable headers are <code>dz-list-sort-link</code> anchors carrying an hx-get with <code>?sort=&lt;col&gt;&amp;dir=&lt;asc|desc&gt;</code> — the server re-renders the region; the active column shows a text caret. Rows wired to a drill URL carry <code>is-clickable</code>; the overflow line reports what the page cut. For the full hypermedia table primitive (selection, filters, pagination) use the <code>grid</code> Hyperpart — this one is the lighter in-card region.
+The CSV button is ALWAYS rendered in the actions row. The snippet omits its wiring: the real emitter adds data-dz-csv-endpoint/data-dz-csv-filename and an onclick that calls window.dz.downloadCsv(endpoint, filename) against the server export route. Sortable headers are dz-list-sort-link anchors carrying an hx-get with ?sort=<col>&dir=<asc|desc> — the server re-renders the region; the active column shows a text caret. Rows wired to a drill URL carry is-clickable; the overflow line reports what the page cut. For the full hypermedia table primitive (selection, filters, pagination) use the grid Hyperpart — this one is the lighter in-card region.

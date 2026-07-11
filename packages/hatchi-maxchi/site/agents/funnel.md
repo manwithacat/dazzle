@@ -2,7 +2,9 @@
 
 Stage-by-stage narrowing — each bar's width is the stage's share, with a total summary line.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="funnel-chart-region hm-measure-lg">
@@ -21,6 +23,6 @@ Stage-by-stage narrowing — each bar's width is the stage's share, with a total
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Widths are SERVER-computed percentages on inline style — the one place inline style is the contract (a per-row datum, like the progress knob). <code>data-dz-funnel-step</code> tones the stages in sequence.
+Widths are SERVER-computed percentages on inline style — the one place inline style is the contract (a per-row datum, like the progress knob). data-dz-funnel-step tones the stages in sequence.

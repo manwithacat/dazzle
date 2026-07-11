@@ -2,7 +2,9 @@
 
 The worklist: a count, roll-up metrics, and attention-flagged rows — the triage surface for SLA-driven work.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="queue-region hm-measure-lg">
@@ -35,6 +37,6 @@ The worklist: a count, roll-up metrics, and attention-flagged rows — the triag
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Attention rows carry <code>data-dz-attn=&quot;&lt;level&gt;&quot;</code> plus a human message (<code>dz-queue-row-attn</code>) — the flag is never colour-only. Counts and metrics are SERVER-rendered rollups (the same query that produced the rows, so they can't disagree).
+Attention rows carry data-dz-attn="<level>" plus a human message (dz-queue-row-attn) — the flag is never colour-only. Counts and metrics are SERVER-rendered rollups (the same query that produced the rows, so they can't disagree).

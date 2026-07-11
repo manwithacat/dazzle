@@ -2,7 +2,9 @@
 
 Edge-anchored panel on the native <dialog> — a drawer with a modal's guarantees (focus trap, inert background, Esc, backdrop). Built on the dialog: shares its opener, adds a side + slide. No drawer-specific JS.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -31,12 +33,14 @@ Edge-anchored panel on the native <dialog> — a drawer with a modal's guarantee
 </dialog>
 ```
 
-## Exchanges (the endpoint contract your server must satisfy)
+## Server exchange
+
+After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `GET /app/records/{id}?peek=1` | the opener button's click — the SAME click also fires the dz-dialog.js opener (`data-dz-dialog-open`), so the drawer shows while the body loads | the record's detail body HTML — swapped into the drawer's `dz-drawer__body` target | innerHTML | — |
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Opened by the shared <code>dz-dialog.js</code> (<code>[data-dz-dialog-open]</code>); close is native (method=dialog submit, Esc, backdrop). Anchor the edge with <code>data-dz-side=&quot;right|left&quot;</code>; the panel slides in via the native <code>@starting-style</code> transition, honouring <code>prefers-reduced-motion</code>. The second trigger shows the HYPERMEDIA drawer (the Dazzle row-peek contract): one button carries both an <code>hx-get</code> targeting the drawer body and <code>data-dz-dialog-open</code> — the exchange and the opener fire together. <code>data-dz-width=&quot;sm|md|lg|xl|full&quot;</code> picks a width preset on viewports that can afford it.
+Opened by the shared dz-dialog.js ([data-dz-dialog-open]); close is native (method=dialog submit, Esc, backdrop). Anchor the edge with data-dz-side="right|left"; the panel slides in via the native @starting-style transition, honouring prefers-reduced-motion. The second trigger shows the HYPERMEDIA drawer (the Dazzle row-peek contract): one button carries both an hx-get targeting the drawer body and data-dz-dialog-open — the exchange and the opener fire together. data-dz-width="sm|md|lg|xl|full" picks a width preset on viewports that can afford it.

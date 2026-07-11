@@ -2,7 +2,9 @@
 
 A responsive card grid with no breakpoints: columns pack to fit, each at least the minimum width, all equal.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="auto-grid" style="--grid-min: 9rem">
@@ -14,6 +16,6 @@ A responsive card grid with no breakpoints: columns pack to fit, each at least t
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-<code>grid-template-columns: repeat(auto-fit, minmax(min(var(--dz-grid-min, 14rem), 100%), 1fr))</code> — the inner <code>min()</code> stops overflow when the container is narrower than the minimum (the classic auto-fit footgun). <code>--dz-grid-min</code> is a PUBLIC knob; gap rides <code>data-dz-gap</code> as on stack.
+grid-template-columns: repeat(auto-fit, minmax(min(var(--dz-grid-min, 14rem), 100%), 1fr)) — the inner min() stops overflow when the container is narrower than the minimum (the classic auto-fit footgun). --dz-grid-min is a PUBLIC knob; gap rides data-dz-gap as on stack.

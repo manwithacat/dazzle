@@ -2,7 +2,9 @@
 
 Colour + icon + text — status never relies on colour alone (WCAG 1.4.1).
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->

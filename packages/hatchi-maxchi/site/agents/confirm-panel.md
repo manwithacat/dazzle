@@ -2,7 +2,9 @@
 
 The irreversible-action consent gate: a checklist of obligations that must be ticked before the primary action arms, plus live and revoked summary states.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="hm-measure">
@@ -34,20 +36,48 @@ The irreversible-action consent gate: a checklist of obligations that must be ti
 </div>
 ```
 
-## Contract modules (typed source of truth)
+## How to use it
 
-Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+### Seams
+
+- data-dz-confirm-gate root + data-dz-required=true checkboxes + data-dz-required-count
+- primary anchor parks destination in data-dz-confirm-href until armed
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| keep armed state in the DOM (aria-disabled + href promotion) | mirror checked counts into a JS boolean a swap would orphan |
+
+### Pitfalls
+
+- optional boxes never gate — only data-dz-required=true count
+- zero required boxes means the gate is always armed
+
+### Keyboard / AT
+
+- primary stays aria-disabled until required count is met
+- live/revoked branches use data-dz-confirm-tone for tone, not colour alone
+
+### Related parts
+
+- `button` — agents/button.md
+- `field` — agents/field.md
+
+## DOM contract
+
+CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
 
 ### `contracts/confirm_panel.py`
 
-- **DOM root:** `[data-dz-confirm-gate]` (part `confirm-panel`)
+- **Required root:** `[data-dz-confirm-gate]` (part `confirm-panel`)
 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[data-dz-confirm-gate]` | `data-dz-required-count` | present (any value) |
 | `[data-dz-required="true"]` | `data-dz-required` | present (any value) |
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: confirm-panel — irreversible-action consent gate."""
@@ -71,38 +101,10 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
-## Guidance (structured)
+## Notes
 
-### Seams
+The gate is state-in-DOM: the primary anchor ships with aria-disabled="true" and its destination parked in data-dz-confirm-href; dz-confirm-gate.js recounts checked data-dz-required="true" boxes on every change inside the [data-dz-confirm-gate] root and promotes the href / removes aria-disabled only when the count meets data-dz-required-count. Optional boxes never gate. Zero required boxes = always armed. The live and revoked branches swap the checklist for a dz-confirm-summary toned via data-dz-confirm-tone="success|muted".
 
-- data-dz-confirm-gate root + data-dz-required=true checkboxes + data-dz-required-count
-- primary anchor parks destination in data-dz-confirm-href until armed
-
-### Pitfalls
-
-- optional boxes never gate — only data-dz-required=true count
-- zero required boxes means the gate is always armed
-
-### Keyboard / AT
-
-- primary stays aria-disabled until required count is met
-- live/revoked branches use data-dz-confirm-tone for tone, not colour alone
-
-### Do / Don't
-
-| Do | Don't |
-|---|---|
-| keep armed state in the DOM (aria-disabled + href promotion) | mirror checked counts into a JS boolean a swap would orphan |
-
-### Composes with
-
-- `button` (agents/button.md)
-- `field` (agents/field.md)
-
-## Guidance (prose; HTML from the registry notes field)
-
-The gate is state-in-DOM: the primary anchor ships with <code>aria-disabled=&quot;true&quot;</code> and its destination parked in <code>data-dz-confirm-href</code>; <code>dz-confirm-gate.js</code> recounts checked <code>data-dz-required=&quot;true&quot;</code> boxes on every change inside the <code>[data-dz-confirm-gate]</code> root and promotes the href / removes <code>aria-disabled</code> only when the count meets <code>data-dz-required-count</code>. Optional boxes never gate. Zero required boxes = always armed. The live and revoked branches swap the checklist for a <code>dz-confirm-summary</code> toned via <code>data-dz-confirm-tone=&quot;success|muted&quot;</code>.
-
-## Controller files
+## Source files
 
 - `controllers/dz-confirm-gate.js`

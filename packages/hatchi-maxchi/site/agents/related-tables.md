@@ -2,7 +2,9 @@
 
 A detail view's companions: tabbed groups of related records — status cards, a compact table, or a file list — each tab counted.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -38,6 +40,6 @@ A detail view's companions: tabbed groups of related records — status cards, a
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-One <code>dz-related-group</code> per related entity. The tab strip IS the tabs Hyperpart (<code>dz-tabs__tab</code> + <code>data-dz-tab-target</code>, driven by dz-tabs.js) with a related-specific count chip; panels are native-<code>hidden</code> toggles. Three body shapes share the chrome: the status-card grid (shown), a compact <code>dz-related-table</code>, and a <code>dz-related-file-list</code>. In Dazzle these render from the detail view's related groups — the same shared cell core as list rows, so badges/dates match.
+One dz-related-group per related entity. The tab strip IS the tabs Hyperpart (dz-tabs__tab + data-dz-tab-target, driven by dz-tabs.js) with a related-specific count chip; panels are native-hidden toggles. Three body shapes share the chrome: the status-card grid (shown), a compact dz-related-table, and a dz-related-file-list. In Dazzle these render from the detail view's related groups — the same shared cell core as list rows, so badges/dates match.

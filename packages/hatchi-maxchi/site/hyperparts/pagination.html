@@ -33,7 +33,21 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-topbar { display:flex; align-items:center; gap:1rem; margin-bottom: 2rem; }
 .hm-comp { border-block-start: 1px solid var(--colour-border); padding-block: 2.5rem; }
 .hm-comp h2 { font-size: 1.25rem; margin: 0 0 .25rem; scroll-margin-top: 1rem; }
-.hm-comp .blurb { color: var(--colour-text-muted); margin: 0 0 1.25rem; font-size: var(--text-sm); }
+.hm-comp h3 { font-size: 1.05rem; margin: 1.75rem 0 .5rem; scroll-margin-top: 1rem;
+  letter-spacing: -.01em; }
+.hm-comp h4 { font-size: var(--text-sm); margin: 1.25rem 0 .4rem;
+  color: var(--colour-text); font-weight: var(--weight-semibold); }
+.hm-comp .blurb { color: var(--colour-text-muted); margin: 0 0 .75rem; font-size: var(--text-sm); }
+/* Linear reference sections (part pages) — no accordions; agent-scrapeable. */
+.hm-ref { margin-top: 1.25rem; }
+.hm-ref-lead { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0 0 .75rem; max-width: 46rem; line-height: 1.55; }
+.hm-ref-mod { font-family: var(--font-mono); font-weight: var(--weight-medium); }
+.hm-dialect { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0 0 1.25rem; padding: .55rem .75rem; max-width: 46rem;
+  border: 1px solid var(--colour-border); border-radius: var(--radius-md);
+  background: var(--colour-surface); line-height: 1.5; }
+.hm-dialect code { font-size: .9em; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -52,32 +66,23 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-setup-body { padding: 0 .9rem .75rem; font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 46rem; }
 .hm-setup-body code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
 .hm-setup-body a { color: var(--colour-brand); }
-.hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .75rem; }
+/* Notes prose + contract tables (always visible on part pages). */
+.hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0; max-width: 46rem; line-height: 1.55; }
 .hm-notes code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
-/* Agent Implementation Guidance — the per-Hyperpart notes, collapsed behind
-   the same disclosure treatment as the endpoint contract (primary audience:
-   coding agents; the visual gallery stays scannable). */
-.hm-guidance { margin-top: .75rem; border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
-.hm-guidance > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
-  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
-.hm-guidance > .hm-notes { margin: 0; padding: .6rem .75rem; background: var(--colour-surface);
-  border-top: 1px solid var(--colour-border);
-  border-radius: 0 0 var(--radius-md) var(--radius-md); }
-.hm-contract { margin-top: .75rem; border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
-.hm-contract > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
-  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
 .hm-contract-table { width: 100%; border-collapse: collapse; font-size: .75rem;
-  background: var(--colour-surface); }
+  background: var(--colour-surface); margin: 0 0 .75rem;
+  border: 1px solid var(--colour-border); border-radius: var(--radius-md); overflow: hidden; }
 .hm-contract-table th, .hm-contract-table td { text-align: left; vertical-align: top;
-  padding: .4rem .6rem; border-top: 1px solid var(--colour-border); }
+  padding: .45rem .65rem; border-top: 1px solid var(--colour-border); }
+.hm-contract-table thead th { border-top: 0; background: var(--colour-bg); }
 .hm-contract-table th { color: var(--colour-text-muted); font-weight: var(--weight-medium);
   text-transform: uppercase; letter-spacing: .04em; font-size: .625rem; }
 .hm-contract-table code { font-family: var(--font-mono); }
 .hm-verb { color: var(--colour-brand-text); font-weight: var(--weight-semibold); }
-.hm-contract > p { font-size: var(--text-sm); color: var(--colour-text-muted);
-  margin: 0; padding: .6rem .75rem; }
+.hm-contract-live { margin: .5rem 0 1rem; padding: .75rem;
+  border: 1px dashed var(--colour-border); border-radius: var(--radius-md);
+  background: var(--colour-surface); }
 .hm-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
   background: var(--colour-text); color: var(--colour-bg); padding: .5rem 1rem;
   border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); }
@@ -128,7 +133,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="pagination"><h2>Pagination<span class="hm-tag">htmx</span><span class="hm-dep" data-dep="endpoint" title="Dependency class: Endpoint">Endpoint</span></h2><p class="blurb">The footer beneath a data table — a summary and page buttons. Each button hx-gets a page into the list body (an Exchange, not a widget).</p><div class="hm-preview"><div class="hm-stack hm-measure-lg"><div id="hm-pag-body" class="hm-pag-list"><div class="hm-pag-row">INV-001 · Acme</div><div class="hm-pag-row">INV-002 · Globex</div><div class="hm-pag-row">INV-003 · Initech</div></div><nav class="pagination" aria-label="Pagination"><span class="pagination-summary">42 rows</span><div class="pagination-pages"><button class="pagination-page" disabled aria-label="Previous page">‹</button><button class="pagination-page is-current" aria-current="page">1</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML">2</button><button class="pagination-page" hx-get="/mock/pagination/3" hx-target="#hm-pag-body" hx-swap="innerHTML">3</button><span class="pagination-ellipsis" aria-hidden="true">…</span><button class="pagination-page" hx-get="/mock/pagination/9" hx-target="#hm-pag-body" hx-swap="innerHTML">9</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML" aria-label="Next page">›</button></div></nav></div></div><figure class="code" data-code data-language="html"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">html</span><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Pagination"><code class="code__source">&lt;div class=&quot;hm-stack hm-measure-lg&quot;&gt;
+<section class="hm-comp" id="pagination"><h2>Pagination<span class="hm-tag">htmx</span><span class="hm-dep" data-dep="endpoint" title="Dependency class: Endpoint">Endpoint</span></h2><p class="blurb">The footer beneath a data table — a summary and page buttons. Each button hx-gets a page into the list body (an Exchange, not a widget).</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><div class="hm-stack hm-measure-lg"><div id="hm-pag-body" class="hm-pag-list"><div class="hm-pag-row">INV-001 · Acme</div><div class="hm-pag-row">INV-002 · Globex</div><div class="hm-pag-row">INV-003 · Initech</div></div><nav class="pagination" aria-label="Pagination"><span class="pagination-summary">42 rows</span><div class="pagination-pages"><button class="pagination-page" disabled aria-label="Previous page">‹</button><button class="pagination-page is-current" aria-current="page">1</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML">2</button><button class="pagination-page" hx-get="/mock/pagination/3" hx-target="#hm-pag-body" hx-swap="innerHTML">3</button><span class="pagination-ellipsis" aria-hidden="true">…</span><button class="pagination-page" hx-get="/mock/pagination/9" hx-target="#hm-pag-body" hx-swap="innerHTML">9</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML" aria-label="Next page">›</button></div></nav></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">html</span><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Pagination"><code class="code__source">&lt;div class=&quot;hm-stack hm-measure-lg&quot;&gt;
   &lt;div id=&quot;hm-pag-body&quot; class=&quot;hm-pag-list&quot;&gt;
     &lt;div class=&quot;hm-pag-row&quot;&gt;INV-001 · Acme&lt;/div&gt;
     &lt;div class=&quot;hm-pag-row&quot;&gt;INV-002 · Globex&lt;/div&gt;
@@ -138,7 +143,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
     &lt;span class=&quot;pagination-summary&quot;&gt;42 rows&lt;/span&gt;
     &lt;div class=&quot;pagination-pages&quot;&gt;&lt;button class=&quot;pagination-page&quot; disabled aria-label=&quot;Previous page&quot;&gt;‹&lt;/button&gt;&lt;button class=&quot;pagination-page is-current&quot; aria-current=&quot;page&quot;&gt;1&lt;/button&gt;&lt;button class=&quot;pagination-page&quot; hx-get=&quot;/mock/pagination/2&quot; hx-target=&quot;#hm-pag-body&quot; hx-swap=&quot;innerHTML&quot;&gt;2&lt;/button&gt;&lt;button class=&quot;pagination-page&quot; hx-get=&quot;/mock/pagination/3&quot; hx-target=&quot;#hm-pag-body&quot; hx-swap=&quot;innerHTML&quot;&gt;3&lt;/button&gt;&lt;span class=&quot;pagination-ellipsis&quot; aria-hidden=&quot;true&quot;&gt;…&lt;/span&gt;&lt;button class=&quot;pagination-page&quot; hx-get=&quot;/mock/pagination/9&quot; hx-target=&quot;#hm-pag-body&quot; hx-swap=&quot;innerHTML&quot;&gt;9&lt;/button&gt;&lt;button class=&quot;pagination-page&quot; hx-get=&quot;/mock/pagination/2&quot; hx-target=&quot;#hm-pag-body&quot; hx-swap=&quot;innerHTML&quot; aria-label=&quot;Next page&quot;&gt;›&lt;/button&gt;&lt;/div&gt;
   &lt;/nav&gt;
-&lt;/div&gt;</code></pre></figure><details class="hm-contract"><summary>Endpoint contract</summary><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/{region}?page={n}&amp;page_size={size}</code></td><td>a page button, on click</td><td>the list body fragment for page n — the rows the region renders, with the current-page button marked `is-current` + `aria-current=&#x27;page&#x27;`</td><td>innerMorph of the region&#x27;s body (`#{region}-body`)</td><td><code>loading</code> <code>populated</code> <code>error</code></td></tr></tbody></table><p>The partial above is only half the Hyperpart; the server must satisfy this contract for it to work. In Dazzle the response is rendered automatically — for any other htmx app, return matching markup from your endpoint.</p></details><details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">Each page button carries its own <code>hx-get</code>; here a mock htmx swaps a canned page into <code>#hm-pag-body</code>. In Dazzle the button hits the region endpoint (<code>?page=N&amp;page_size=…</code>) and the server returns the repainted list body (via <code>innerMorph</code>) plus the moved <code>is-current</code> marker.</div></details></section>
+&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="exchange"><h3>Server exchange</h3><p class="hm-ref-lead">After the client affordance runs (here: user confirms), htmx issues this request. Your server must return the response fragment — not a toast, not JSON, unless the partial says otherwise. Dazzle renders many of these automatically; a plain htmx app returns matching markup.</p><table class="hm-contract-table"><thead><tr><th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th></tr></thead><tbody><tr><td><code class="hm-verb">GET</code> <code>/app/{region}?page={n}&amp;page_size={size}</code></td><td>a page button, on click</td><td>the list body fragment for page n — the rows the region renders, with the current-page button marked `is-current` + `aria-current=&#x27;page&#x27;`</td><td>innerMorph of the region&#x27;s body (`#{region}-body`)</td><td><code>loading</code> <code>populated</code> <code>error</code></td></tr></tbody></table></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">Each page button carries its own <code>hx-get</code>; here a mock htmx swaps a canned page into <code>#hm-pag-body</code>. In Dazzle the button hits the region endpoint (<code>?page=N&amp;page_size=…</code>) and the server returns the repainted list body (via <code>innerMorph</code>) plus the moved <code>is-current</code> marker.</div></section></section>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
 The demo above renders the exact snippet — copy it into any htmx4 app.

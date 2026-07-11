@@ -2,7 +2,9 @@
 
 Major-unit decimal input over a hidden minor-unit carrier — the form posts integer minor units, never floats.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="money hm-measure" data-money data-currency="GBP" data-scale="2">
@@ -12,20 +14,47 @@ Major-unit decimal input over a hidden minor-unit carrier — the form posts int
 </div>
 ```
 
-## Contract modules (typed source of truth)
+## How to use it
 
-Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+### Seams
+
+- root data-dz-scale is the conversion factor; hidden *_minor carrier is the submit value
+- selector mode reads currency <select> data-scale / data-symbol options
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| keep the minor integer in a hidden input the form posts | post the formatted display string as the money value |
+
+### Pitfalls
+
+- display value is SERVER-computed from the minor carrier — no client init pass
+- empty blur clears the carrier; never invent a client-side float source of truth
+
+### Keyboard / AT
+
+- display input is a normal text field; AT reads the typed amount
+- currency select changes retune scale and prefix without remounting
+
+### Related parts
+
+- `field` — agents/field.md
+
+## DOM contract
+
+CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
 
 ### `contracts/money.py`
 
-- **DOM root:** `[data-dz-money]` (part `money`)
+- **Required root:** `[data-dz-money]` (part `money`)
 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[data-dz-money]` | `data-dz-scale` | present (any value) |
 | `[data-dz-money]` | `data-dz-currency` | present (any value) |
 
-**Ingestion model:** `MoneyField`
+#### Ingestion model `MoneyField`
 
 | Field | Type | Required |
 |---|---|---|
@@ -36,7 +65,7 @@ Epistemic lock: do not invent attrs or response shapes that diverge from these m
 | `minor_value` | `integer` | no |
 | `field_id` | `string` | no |
 
-**Exemplar `render()`** (executable — CI)
+#### Exemplar `render()`
 
 ```python
 def render(field: MoneyField) -> str:
@@ -53,37 +82,10 @@ def render(field: MoneyField) -> str:
     )
 ```
 
-## Guidance (structured)
+## Notes
 
-### Seams
+State-in-DOM: the root's data-dz-scale is the conversion factor; dz-money.js keeps the hidden *_minor carrier in sync on input, normalizes the display to toFixed(scale) on blur (empty clears the carrier), and — in selector mode — reads a currency <select>'s data-scale/data-symbol options to retune scale and prefix. The edit-mode display value is SERVER-computed from the minor carrier, so there is no client init pass.
 
-- root data-dz-scale is the conversion factor; hidden *_minor carrier is the submit value
-- selector mode reads currency <select> data-scale / data-symbol options
-
-### Pitfalls
-
-- display value is SERVER-computed from the minor carrier — no client init pass
-- empty blur clears the carrier; never invent a client-side float source of truth
-
-### Keyboard / AT
-
-- display input is a normal text field; AT reads the typed amount
-- currency select changes retune scale and prefix without remounting
-
-### Do / Don't
-
-| Do | Don't |
-|---|---|
-| keep the minor integer in a hidden input the form posts | post the formatted display string as the money value |
-
-### Composes with
-
-- `field` (agents/field.md)
-
-## Guidance (prose; HTML from the registry notes field)
-
-State-in-DOM: the root's <code>data-dz-scale</code> is the conversion factor; <code>dz-money.js</code> keeps the hidden <code>*_minor</code> carrier in sync on input, normalizes the display to <code>toFixed(scale)</code> on blur (empty clears the carrier), and — in selector mode — reads a currency <code>&lt;select&gt;</code>'s <code>data-scale</code>/<code>data-symbol</code> options to retune scale and prefix. The edit-mode display value is SERVER-computed from the minor carrier, so there is no client init pass.
-
-## Controller files
+## Source files
 
 - `controllers/dz-money.js`

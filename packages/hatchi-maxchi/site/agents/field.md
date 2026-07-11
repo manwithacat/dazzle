@@ -2,7 +2,9 @@
 
 The label + control + help + error triad as one accessible unit. Error state derives from aria-invalid; help/error bind via aria-describedby.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="hm-stack hm-measure">
@@ -23,19 +25,19 @@ The label + control + help + error triad as one accessible unit. Error state der
 </div>
 ```
 
-## Contract modules (typed source of truth)
+## DOM contract
 
-Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
 
 ### `contracts/color.py`
 
-- **DOM root:** `[data-dz-color-group]` (part `color`)
+- **Required root:** `[data-dz-color-group]` (part `color`)
 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[data-dz-color-group]` | `—` | — |
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: field (extension: dz-color) — colour input group."""
@@ -53,6 +55,6 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Reuses the <code>dz-form-*</code> family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off <code>aria-invalid=&quot;true&quot;</code>, the same attribute assistive tech reads. The colour group uses <code>data-dz-color-group</code> so <code>dz-color.js</code> can mirror the swatch into the hex readout (contract: contracts/color.py).
+Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch into the hex readout (contract: contracts/color.py).

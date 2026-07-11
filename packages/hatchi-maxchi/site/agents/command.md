@@ -2,7 +2,9 @@
 
 The hx-get palette — the htmx4 flagship. Press ⌘K.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -13,25 +15,55 @@ The hx-get palette — the htmx4 flagship. Press ⌘K.
 </dialog>
 ```
 
-## Exchanges (the endpoint contract your server must satisfy)
+## Server exchange
+
+After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `GET /app/command` | the search input, on `input` (debounced 150ms) and first `focus` | zero or more result rows — `<a>`/`<button class="dz-command__item" role="option">` grouped by `<div class="dz-command__group">` headers; empty query or no matches returns `<div class="dz-command__empty">` | innerHTML of the sibling `.dz-command__results` listbox | loading empty populated error |
 
-## Contract modules (typed source of truth)
+## How to use it
 
-Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+### Seams
+
+- hx-get on the search input returns persona-scoped result fragments
+- open triggers: data-hm-open-command / ⌘K; close: data-hm-close-command + closedby=any
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| return result-list fragments from /app/command (or mock) | hydrate a client-side result model the palette must re-render |
+
+### Pitfalls
+
+- type=search swallows Esc to clear the value — the controller must close on first Esc
+- do not absolute-position the close button against a modal dialog (Safari/iPadOS collapse)
+
+### Keyboard / AT
+
+- Esc closes the palette on first press even mid-query
+- Arrow keys move aria-activedescendant through results; Enter activates
+- close button is the touch dismiss affordance (no Esc key on tablets)
+
+### Related parts
+
+- `button` — agents/button.md
+
+## DOM contract
+
+CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
 
 ### `contracts/command.py`
 
-- **DOM root:** `[data-dz-command]` (part `command`)
+- **Required root:** `[data-dz-command]` (part `command`)
 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[data-dz-command]` | `—` | — |
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: command — palette dialog root contract."""
@@ -49,38 +81,10 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
-## Guidance (structured)
+## Notes
 
-### Seams
+In Dazzle the input's hx-get hits /app/command, which returns persona-scoped results as real links. The gallery mock returns <button type=button class=dz-command__item> rows so picking an option closes the palette without href=# scrolling the page to the top mid-browse.
 
-- hx-get on the search input returns persona-scoped result fragments
-- open triggers: data-hm-open-command / ⌘K; close: data-hm-close-command + closedby=any
-
-### Pitfalls
-
-- type=search swallows Esc to clear the value — the controller must close on first Esc
-- do not absolute-position the close button against a modal dialog (Safari/iPadOS collapse)
-
-### Keyboard / AT
-
-- Esc closes the palette on first press even mid-query
-- Arrow keys move aria-activedescendant through results; Enter activates
-- close button is the touch dismiss affordance (no Esc key on tablets)
-
-### Do / Don't
-
-| Do | Don't |
-|---|---|
-| return result-list fragments from /app/command (or mock) | hydrate a client-side result model the palette must re-render |
-
-### Composes with
-
-- `button` (agents/button.md)
-
-## Guidance (prose; HTML from the registry notes field)
-
-In Dazzle the input's hx-get hits <code>/app/command</code>, which returns persona-scoped results as real links. The gallery mock returns <code>&lt;button type=button class=dz-command__item&gt;</code> rows so picking an option closes the palette without <code>href=#</code> scrolling the page to the top mid-browse.
-
-## Controller files
+## Source files
 
 - `controllers/dz-command.js`

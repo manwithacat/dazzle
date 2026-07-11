@@ -2,7 +2,9 @@
 
 Exchange composition — a list item hx-gets its detail card into the detail pane. The canonical htmx composite; two can coexist on a page.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="master-detail" data-master-detail>
@@ -21,19 +23,49 @@ Exchange composition — a list item hx-gets its detail card into the detail pan
 </div>
 ```
 
-## Exchanges (the endpoint contract your server must satisfy)
+## Server exchange
+
+After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `GET /app/master-detail/{id}` | a list item, on click | a detail card fragment — `<div class="dz-card dz-card-body">…` | innerHTML of the sibling `.dz-master-detail__detail` pane | loading populated error |
 
-## Contract modules (typed source of truth)
+## How to use it
 
-Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+### Seams
+
+- detail pane loads a card fragment via hx-get from the selected item
+- aria-current marks the chosen list item, scoped to THIS root
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| hx-get the detail card into the detail pane on item activate | stash all detail payloads in data-* attributes on every list row |
+
+### Pitfalls
+
+- two master-detail roots must not share aria-current — controller is per-root
+- detail content is a server fragment, not a client template
+
+### Keyboard / AT
+
+- aria-current=true on the active list item
+- list items remain keyboard-activatable links/buttons
+
+### Related parts
+
+- `card` — agents/card.md
+- `list-region` — agents/list-region.md
+
+## DOM contract
+
+CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
 
 ### `contracts/master_detail.py`
 
-- **DOM root:** `[data-dz-master-detail]` (part `master-detail`)
+- **Required root:** `[data-dz-master-detail]` (part `master-detail`)
 
 | Node | Attr | Constraint |
 |---|---|---|
@@ -41,7 +73,7 @@ Epistemic lock: do not invent attrs or response shapes that diverge from these m
 | `[data-dz-master-detail-list-body]` | `—` | — |
 | `[data-dz-master-detail-detail-body]` | `—` | — |
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: master-detail — selection marker + detail pane root.
@@ -70,38 +102,10 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
-## Guidance (structured)
-
-### Seams
-
-- detail pane loads a card fragment via hx-get from the selected item
-- aria-current marks the chosen list item, scoped to THIS root
-
-### Pitfalls
-
-- two master-detail roots must not share aria-current — controller is per-root
-- detail content is a server fragment, not a client template
-
-### Keyboard / AT
-
-- aria-current=true on the active list item
-- list items remain keyboard-activatable links/buttons
-
-### Do / Don't
-
-| Do | Don't |
-|---|---|
-| hx-get the detail card into the detail pane on item activate | stash all detail payloads in data-* attributes on every list row |
-
-### Composes with
-
-- `card` (agents/card.md)
-- `list-region` (agents/list-region.md)
-
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
 The detail pane loads a card fragment via hx-get; dz-master-detail.js sets aria-current on the chosen item, scoped to THIS root so two coexist.
 
-## Controller files
+## Source files
 
 - `controllers/dz-master-detail.js`

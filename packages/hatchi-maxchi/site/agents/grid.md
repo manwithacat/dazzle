@@ -1,8 +1,10 @@
 # Data table (`grid`)
 
-A server-rendered data table on a real <table>, all HTML over the wire: search, sortable headers, filters, row selection (one page or every matching row), bulk actions, pagination, and deep-linkable URL-synced state. Optional extensions add column visibility, column resize, and inline cell editing. The wiring lives in the Agent Implementation Guidance below.
+A server-rendered data table on a real <table>, all HTML over the wire: search, sortable headers, filters, row selection (one page or every matching row), bulk actions, pagination, and deep-linkable URL-synced state. Optional extensions add column visibility, column resize, and inline cell editing. See How to use it and the DOM contract on this page for wiring.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -110,7 +112,9 @@ A server-rendered data table on a real <table>, all HTML over the wire: search, 
 </div>
 ```
 
-## Exchanges (the endpoint contract your server must satisfy)
+## Server exchange
+
+After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
@@ -118,16 +122,48 @@ A server-rendered data table on a real <table>, all HTML over the wire: search, 
 | `POST /app/{region}/bulk` | a bulk-action button (e.g. Delete), after the user approves its confirm dialog; the controller injects the selection on `htmx:configRequest` | the server RE-VALIDATES permissions and RE-SCOPES the action to the echoed query (never trusting the client `selected_ids` alone) and applies it. Two patterns: with `data-dz-grid-bulk-refresh` on the button (this demo), the response swaps NOTHING (JSON/204) and the controller re-fetches rows + footer via the normal GET; without it, put `hx-target` on the button and return the refreshed `<tr>` rows directly. When `all_matching_selected=true`, the action applies to the WHOLE matched query minus `excluded_ids` — the server re-runs the echoed query itself, and MUST strip `page`/`page_size` first (they window the display, not the matched set — re-running them verbatim would apply the action to one page only); `selected_ids` is informational (visible state) only. NB form encoding: with no exclusions the `excluded_ids` key is ABSENT from the POST (not sent empty) — default it to the empty list | innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer (its `data-dz-grid-total` re-stamps the matched total) | populated empty error |
 | `PUT /app/{entity}/{id}` | the inline-edit extension (dz-grid-edit.js): dblclick an editable cell's display span opens an in-cell editor; Enter (or a change, for bool/select/date) commits a raw fetch PUT to `{data-dz-grid-edit-url}/{rowId}` — NOT an htmx exchange | this is the entity's STANDARD update route, not a bespoke field endpoint: the body is a single-field JSON object (`{"plan": "Pro"}`), so an all-optional update schema + exclude-unset semantics make it a partial update, and the full update gate (permissions, scoping, validation) applies. Return 2xx JSON on success; any non-2xx keeps the editor open with the response text as its error. The controller then fires `dz-grid:refresh` on the tbody, so the committed value renders SERVER-side (badges/dates re-render; no client patching) | none (raw fetch) — the follow-up `dz-grid:refresh` re-fetches rows + footer via the tbody's normal GET | populated error |
 
-## Contract modules (typed source of truth)
+## How to use it
 
-Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+### Seams
+
+- column visibility: dz-grid-cols.js projects the hidden set onto [data-dz-col] cells after every swap — no per-cell bindings
+- column resize: dz-grid-resize.js rides the header cells
+- inline edit: dz-grid-edit.js reads the [data-dz-grid-edit] display span (kind/value/label/options) — contract in contracts/grid_edit.py
+- row identity: a row's id IS the idiomorph morph key and encodes data-dz-row-id (the bulk payload anchor)
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| keep selection state in the DOM (.checked on the row checkbox) | mirror selection into a JS array a tbody swap would orphan |
+| return full row fragments from the grid endpoint | return cell deltas the client must splice in |
+
+### Pitfalls
+
+- edit state in JS objects dies on morph — the typed buffer lives on the grid root (root._dzEdit) with before/after-swap hooks
+- select options must be JSON [[value,label],…] — producers with dicts/tuples/bare strings normalise at ONE boundary (#1573)
+- never patch committed values client-side — commit fires dz-grid:refresh so the server re-renders badges/dates
+
+### Keyboard / AT
+
+- Enter commits (text/date), Escape cancels an open editor
+- Tab / Shift-Tab commit then advance to the next/previous editable cell, wrapping to the adjacent row
+- row checkboxes carry aria-label 'Select {row}'
+
+### Related parts
+
+- `button` — agents/button.md
+- `badge` — agents/badge.md
+
+## DOM contract
+
+CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
 
 ### `contracts/grid.py`
 
-- **DOM root:** `[data-dz-grid]` (part `grid`)
-- Root-only DOM contract (no per-node attribute constraints).
+- **Required root:** `[data-dz-grid]` (part `grid`)
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: grid — root contract (thin). The base grid's structural
@@ -149,7 +185,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ### `contracts/grid_edit.py`
 
-- **DOM root:** `[data-dz-grid][data-dz-grid-edit-url]` (part `grid-edit`)
+- **Required root:** `[data-dz-grid][data-dz-grid-edit-url]` (part `grid-edit`)
 
 | Node | Attr | Constraint |
 |---|---|---|
@@ -158,7 +194,7 @@ __all__ = ["DOM_CONTRACT"]
 | `[data-dz-grid-edit]` | `data-dz-edit-label` | present (any value) |
 | `[data-dz-grid-edit]` | `data-dz-edit-options` | JSON [[value, label], …]; required when {'data-dz-edit-kind': 'select'} |
 
-**Ingestion model:** `GridEditCell`
+#### Ingestion model `GridEditCell`
 
 | Field | Type | Required |
 |---|---|---|
@@ -168,7 +204,7 @@ __all__ = ["DOM_CONTRACT"]
 | `label` | `string` | yes |
 | `options` | `array | null` | no |
 
-**Exemplar `render()`** (executable — CI)
+#### Exemplar `render()`
 
 ```python
 def render(cell: GridEditCell) -> str:
@@ -187,9 +223,7 @@ def render(cell: GridEditCell) -> str:
     )
 ```
 
-**FastAPI exemplar** — grid-edit exemplar — how a server feeds the inline-edit seam
-
-How a server feeds this seam (not the gallery mock):
+#### FastAPI feed example — grid-edit exemplar — how a server feeds the inline-edit seam
 
 ```python
 @app.get("/rows", response_class=HTMLResponse)
@@ -204,7 +238,7 @@ def rows() -> str:
 
 ### `contracts/grid_cols.py`
 
-- **DOM root:** `[data-dz-grid]` (part `grid-cols`)
+- **Required root:** `[data-dz-grid]` (part `grid-cols`)
 
 | Node | Attr | Constraint |
 |---|---|---|
@@ -212,7 +246,7 @@ def rows() -> str:
 | `[data-dz-col]` | `data-dz-col` | present (any value) |
 | `[data-dz-grid-cols-reset]` | `—` | — |
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: grid (extension: dz-grid-cols) — column visibility seam."""
@@ -236,14 +270,14 @@ __all__ = ["DOM_CONTRACT"]
 
 ### `contracts/grid_resize.py`
 
-- **DOM root:** `[data-dz-grid]` (part `grid-resize`)
+- **Required root:** `[data-dz-grid]` (part `grid-resize`)
 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[data-dz-grid-resize]` | `data-dz-grid-resize` | present (any value) |
 | `col[data-dz-col], [data-dz-col]` | `data-dz-col` | present (any value) |
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: grid (extension: dz-grid-resize) — column resize seam."""
@@ -264,44 +298,11 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
-## Guidance (structured)
+## Notes
 
-### Seams
+The tbody hydrates over the wire — hx-get on load fetches the rows, and innerMorph swaps them in. Each row carries a stable id (the idiomorph morph key) so a selection follows its row — not its DOM position — across a re-sort or paginate; data-dz-grid-row-id stays the bulk-action payload anchor, and the id encodes it so the two agree. Loading is pure-CSS (.htmx-request → the overlay, #972 — no controller flag idiomorph could strip). Selection is delegated + state-in-DOM: dz-grid.js counts the checked [data-dz-grid-select] boxes, writes the total to data-dz-bulk-count, and the CSS reveals the .dz-bulk-actions bar; the count / select-all tri-state re-sync on change and on htmx:afterSwap. Sorting is delegated + state-in-DOM too: a header button ([data-dz-grid-sort]) cycles its column none → ascending → descending → none (state on the th's aria-sort, one active column), rebuilds the tbody's request query, and fires dz-grid:refresh so the server returns the re-ordered rows — no client-side row rendering. Filters and search ride the same seam: a [data-dz-grid-filter] select (on change) and the [data-dz-grid-search] box (on input, debounced) each rebuild the query and compose with the active sort — all read from the DOM into one query; an empty result reveals the empty-state. Note the Status filter is a teaching case: the table renders no Status column, yet the filter narrows on it — filters (like scopes) can target any queryable server field, not only what's displayed (here only Plan is both shown and filtered). Bulk actions post the selection safely: the [data-dz-grid-bulk-action] Delete button (behind its confirm dialog) sends the action + selected ids + the current query — so the server re-scopes and re-validates rather than trusting client ids (§15). Select all N results escalates a page selection to the whole result set for the current query — search + filters + sort scope, including rows on other pages (not “visually similar” rows). State on the root: data-dz-grid-all-matching + a data-dz-grid-excluded JSON list of unchecked exceptions) — rows on other pages arrive selected, the count shows the server-stamped matched total (the footer's data-dz-grid-total), and a bulk action sends all_matching_selected=true + excluded_ids so the server applies it to the matched set minus exclusions. A filter or search change drops the mode (the matched set changed); sort and paging keep it. The footer is server-rendered: the client intercepts a page click, adds page= to the query, and the server returns that page's rows plus the repainted footer (row slice + total from one query, so they can't disagree); sort / filter / search reset to page 1. The Per page select is a windowing control on the same seam ([data-dz-grid-page-size] → page_size=): it re-pages the same matched set, resets to page 1, and — unlike a filter/search change — keeps an all-matching selection. State is URL-synced (data-dz-grid-url, opt-in): the grid's query mirrors into the address bar as the same human-readable params the server sees — deep links restore on load (before the hydration fetch, so no double fetch), discrete actions push history entries (Back walks grid states), the debounced search replaces, and foreign URL params survive (the grid only touches its own keys). The all-matching selection is ephemeral and deliberately NOT in the URL. The three extensions are opt-in per grid, keyed off their own seams. Column visibility (dz-grid-cols.js): the Columns <details> menu's checkboxes ([data-dz-grid-col-toggle]) project a hidden set onto every [data-dz-col] cell — header, hydrated tds, and the colgroup's <col> — persisted per grid id in localStorage; re-fetched rows re-hide on swap; stale keys prune at init. Column resize (dz-grid-resize.js): a pointer drag on the in-th handle ([data-dz-grid-resize]) widens col[data-dz-col] live (snap-8, clamp 80–800px), persists per grid, and never fires the header's sort; the table stays table-layout:auto, so a width is a strong hint. Inline edit (dz-grid-edit.js): dblclick a cell's display span ([data-dz-grid-edit] + data-dz-edit-kind/-value/-label/-options) to open an in-cell editor; Enter commits, Escape cancels, Tab advances — the commit is a single-field JSON PUT to the entity's standard update route (data-dz-grid-edit-url on the root; no bespoke field endpoint), and a dz-grid:refresh re-renders the row server-side. An in-flight edit survives a tbody swap: the buffer lives on the grid root, outside the morph path. (The gallery mock approximates the innerMorph swap with an innerHTML replace — copy the snippet into a real htmx4 app, with the idiomorph extension for hx-swap="innerMorph", for true morph-preserved selection.)
 
-- column visibility: dz-grid-cols.js projects the hidden set onto [data-dz-col] cells after every swap — no per-cell bindings
-- column resize: dz-grid-resize.js rides the header cells
-- inline edit: dz-grid-edit.js reads the [data-dz-grid-edit] display span (kind/value/label/options) — contract in contracts/grid_edit.py
-- row identity: a row's id IS the idiomorph morph key and encodes data-dz-row-id (the bulk payload anchor)
-
-### Pitfalls
-
-- edit state in JS objects dies on morph — the typed buffer lives on the grid root (root._dzEdit) with before/after-swap hooks
-- select options must be JSON [[value,label],…] — producers with dicts/tuples/bare strings normalise at ONE boundary (#1573)
-- never patch committed values client-side — commit fires dz-grid:refresh so the server re-renders badges/dates
-
-### Keyboard / AT
-
-- Enter commits (text/date), Escape cancels an open editor
-- Tab / Shift-Tab commit then advance to the next/previous editable cell, wrapping to the adjacent row
-- row checkboxes carry aria-label 'Select {row}'
-
-### Do / Don't
-
-| Do | Don't |
-|---|---|
-| keep selection state in the DOM (.checked on the row checkbox) | mirror selection into a JS array a tbody swap would orphan |
-| return full row fragments from the grid endpoint | return cell deltas the client must splice in |
-
-### Composes with
-
-- `button` (agents/button.md)
-- `badge` (agents/badge.md)
-
-## Guidance (prose; HTML from the registry notes field)
-
-The tbody hydrates over the wire — <code>hx-get</code> on <code>load</code> fetches the rows, and <code>innerMorph</code> swaps them in. Each row carries a stable <code>id</code> (the idiomorph <em>morph key</em>) so a selection follows its <em>row</em> — not its DOM position — across a re-sort or paginate; <code>data-dz-grid-row-id</code> stays the bulk-action payload anchor, and the id encodes it so the two agree. Loading is pure-CSS (<code>.htmx-request</code> → the overlay, #972 — no controller flag idiomorph could strip). Selection is delegated + state-in-DOM: <code>dz-grid.js</code> counts the checked <code>[data-dz-grid-select]</code> boxes, writes the total to <code>data-dz-bulk-count</code>, and the CSS reveals the <code>.dz-bulk-actions</code> bar; the count / select-all tri-state re-sync on change and on <code>htmx:afterSwap</code>. Sorting is delegated + state-in-DOM too: a header button (<code>[data-dz-grid-sort]</code>) cycles its column none → ascending → descending → none (state on the th's <code>aria-sort</code>, one active column), rebuilds the tbody's request query, and fires <code>dz-grid:refresh</code> so the <em>server</em> returns the re-ordered rows — no client-side row rendering. Filters and search ride the same seam: a <code>[data-dz-grid-filter]</code> select (on change) and the <code>[data-dz-grid-search]</code> box (on input, debounced) each rebuild the query and <em>compose</em> with the active sort — all read from the DOM into one query; an empty result reveals the empty-state. Note the <strong>Status</strong> filter is a teaching case: the table renders no Status column, yet the filter narrows on it — filters (like scopes) can target <em>any</em> queryable server field, not only what's displayed (here only <strong>Plan</strong> is both shown and filtered). Bulk actions post the selection safely: the <code>[data-dz-grid-bulk-action]</code> Delete button (behind its confirm dialog) sends the action + selected ids + the <em>current query</em> — so the server re-scopes and re-validates rather than trusting client ids (§15). <strong>Select all N results</strong> escalates a page selection to the whole result set for the current query — search + filters + sort scope, including rows on other pages (not “visually similar” rows). State on the root: <code>data-dz-grid-all-matching</code> + a <code>data-dz-grid-excluded</code> JSON list of unchecked exceptions) — rows on other pages arrive selected, the count shows the server-stamped matched total (the footer's <code>data-dz-grid-total</code>), and a bulk action sends <code>all_matching_selected=true</code> + <code>excluded_ids</code> so the server applies it to the matched set minus exclusions. A filter or search change drops the mode (the matched set changed); sort and paging keep it. The footer is <em>server-rendered</em>: the client intercepts a page click, adds <code>page=</code> to the query, and the server returns that page's rows plus the repainted footer (row slice + total from one query, so they can't disagree); sort / filter / search reset to page 1. The <strong>Per page</strong> select is a windowing control on the same seam (<code>[data-dz-grid-page-size]</code> → <code>page_size=</code>): it re-pages the same matched set, resets to page 1, and — unlike a filter/search change — keeps an all-matching selection. State is <strong>URL-synced</strong> (<code>data-dz-grid-url</code>, opt-in): the grid's query mirrors into the address bar as the same human-readable params the server sees — deep links restore on load (before the hydration fetch, so no double fetch), discrete actions push history entries (Back walks grid states), the debounced search replaces, and foreign URL params survive (the grid only touches its own keys). The all-matching selection is ephemeral and deliberately NOT in the URL. The three <strong>extensions</strong> are opt-in per grid, keyed off their own seams. <em>Column visibility</em> (<code>dz-grid-cols.js</code>): the Columns <code>&lt;details&gt;</code> menu's checkboxes (<code>[data-dz-grid-col-toggle]</code>) project a hidden set onto every <code>[data-dz-col]</code> cell — header, hydrated tds, and the colgroup's <code>&lt;col&gt;</code> — persisted per grid id in localStorage; re-fetched rows re-hide on swap; stale keys prune at init. <em>Column resize</em> (<code>dz-grid-resize.js</code>): a pointer drag on the in-th handle (<code>[data-dz-grid-resize]</code>) widens <code>col[data-dz-col]</code> live (snap-8, clamp 80–800px), persists per grid, and never fires the header's sort; the table stays <code>table-layout:auto</code>, so a width is a strong hint. <em>Inline edit</em> (<code>dz-grid-edit.js</code>): dblclick a cell's display span (<code>[data-dz-grid-edit]</code> + <code>data-dz-edit-kind/-value/-label/-options</code>) to open an in-cell editor; Enter commits, Escape cancels, Tab advances — the commit is a single-field JSON <strong>PUT to the entity's standard update route</strong> (<code>data-dz-grid-edit-url</code> on the root; no bespoke field endpoint), and a <code>dz-grid:refresh</code> re-renders the row server-side. An in-flight edit survives a tbody swap: the buffer lives on the grid root, outside the morph path. (The gallery mock approximates the <code>innerMorph</code> swap with an innerHTML replace — copy the snippet into a real htmx4 app, with the idiomorph extension for <code>hx-swap=&quot;innerMorph&quot;</code>, for true morph-preserved selection.)
-
-## Controller files
+## Source files
 
 - `controllers/dz-grid.js`
 - `controllers/dz-grid-cols.js`

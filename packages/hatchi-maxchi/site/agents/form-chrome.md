@@ -2,7 +2,9 @@
 
 The structural form pieces: titled sections, the validation-error summary, and the multi-section progress stepper.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="hm-stack hm-measure">
@@ -32,6 +34,6 @@ The structural form pieces: titled sections, the validation-error summary, and t
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Sections are real <code>&lt;section&gt;</code>s with an <code>h3</code> title + optional note; fields inside use the HM form primitives. The error summary is <code>role=&quot;alert&quot;</code> (the server re-renders it on a failed submit). The stepper here shows RENDERED states (<code>is-active</code>/<code>is-not-last</code>, <code>aria-current=&quot;step&quot;</code>) — the live navigation behaviour is the <code>wizard</code> Hyperpart (<code>dz-wizard.js</code>; the dzWizard Alpine island retired in Tier F4d).
+Sections are real <section>s with an h3 title + optional note; fields inside use the HM form primitives. The error summary is role="alert" (the server re-renders it on a failed submit). The stepper here shows RENDERED states (is-active/is-not-last, aria-current="step") — the live navigation behaviour is the wizard Hyperpart (dz-wizard.js; the dzWizard Alpine island retired in Tier F4d).

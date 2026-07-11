@@ -2,7 +2,9 @@
 
 Status columns of cards — the flow view. Columns show a count; overflowing boards offer a server-rendered Load-all.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -45,6 +47,6 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Cards are SERVER-rendered — a drag-and-drop extension is a future controller on these seams, not a client state graph. Attention text carries <code>data-dz-attn=&quot;&lt;level&gt;&quot;</code> (critical/warning/notice — the same attn contract the timeline's bullets and the queue's rows use). An overflowing board renders a <code>dz-kanban-load-all</code> button whose <code>hx-get</code> re-fetches the region at full page size.
+Cards are SERVER-rendered — a drag-and-drop extension is a future controller on these seams, not a client state graph. Attention text carries data-dz-attn="<level>" (critical/warning/notice — the same attn contract the timeline's bullets and the queue's rows use). An overflowing board renders a dz-kanban-load-all button whose hx-get re-fetches the region at full page size.

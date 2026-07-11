@@ -2,7 +2,9 @@
 
 Who-did-what rows on a dotted spine — actor, time, and a message bubble.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="hm-measure-lg">
@@ -25,6 +27,6 @@ Who-did-what rows on a dotted spine — actor, time, and a message bubble.
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Rows are server-rendered newest-first; an empty feed renders <code>dz-activity-empty</code>. The dot column and bubble keep alignment without a grid — the row is the flex unit.
+Rows are server-rendered newest-first; an empty feed renders dz-activity-empty. The dot column and bubble keep alignment without a grid — the row is the flex unit.

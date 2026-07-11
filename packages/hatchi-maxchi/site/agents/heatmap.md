@@ -2,7 +2,9 @@
 
 A two-dimensional grid of toned cells — rows × buckets, thresholds driving good/warn/bad tones, never colour alone (the value is IN the cell).
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="heatmap-region hm-measure-lg">
@@ -35,6 +37,6 @@ A two-dimensional grid of toned cells — rows × buckets, thresholds driving go
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Cell tones ride <code>data-dz-heatmap-tone=&quot;good|warn|bad&quot;</code>, resolved server-side against the declared thresholds — and the numeric value always renders inside the cell, so tone is reinforcement, not the only signal. Overflowing grids append a <code>dz-heatmap-overflow</code> count line; the scroll wrapper keeps wide grids inside their card.
+Cell tones ride data-dz-heatmap-tone="good|warn|bad", resolved server-side against the declared thresholds — and the numeric value always renders inside the cell, so tone is reinforcement, not the only signal. Overflowing grids append a dz-heatmap-overflow count line; the scroll wrapper keeps wide grids inside their card.

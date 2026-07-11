@@ -2,7 +2,9 @@
 
 Hierarchy on native <details>/<summary> — indented children, rotating chevron, child-count chips. No JS at all.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="hm-measure">
@@ -25,6 +27,6 @@ Hierarchy on native <details>/<summary> — indented children, rotating chevron,
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Pure hypermedia: state is the native <code>open</code> attribute, the chevron rotation keys off <code>.dz-tree-node[open]</code>, and each level indents via its <code>dz-tree-children</code> wrapper. The server emits depth-0 nodes <code>open</code> by default; the count chip renders only for nodes with children.
+Pure hypermedia: state is the native open attribute, the chevron rotation keys off .dz-tree-node[open], and each level indents via its dz-tree-children wrapper. The server emits depth-0 nodes open by default; the count chip renders only for nodes with children.

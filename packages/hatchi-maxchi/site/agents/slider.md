@@ -2,7 +2,9 @@
 
 Native <input type=range> — styled track + thumb, both themes, with a live value readout via a tiny delegated controller.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="hm-stack hm-measure">
@@ -11,20 +13,47 @@ Native <input type=range> — styled track + thumb, both themes, with a live val
 </div>
 ```
 
-## Contract modules (typed source of truth)
+## How to use it
 
-Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+### Seams
+
+- native <input type=range> is the value source; [data-dz-range-value] is the readout
+- each slider group is scoped so many coexist on one page
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| write the live value into [data-dz-range-value] on input | replace the native range with a div-based slider |
+
+### Pitfalls
+
+- the visible readout is aria-hidden — the range already announces to AT
+- do not invent a custom thumb/track in JS; style the native control
+
+### Keyboard / AT
+
+- Arrow keys adjust the native range (browser default)
+- focus ring is theme-aware on the track/thumb
+
+### Related parts
+
+- `field` — agents/field.md
+
+## DOM contract
+
+CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
 
 ### `contracts/slider.py`
 
-- **DOM root:** `[data-dz-slider]` (part `slider`)
+- **Required root:** `[data-dz-slider]` (part `slider`)
 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[data-dz-slider]` | `—` | — |
 | `[data-dz-range-value]` | `—` | — |
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: slider — native range group + live value readout."""
@@ -45,37 +74,10 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
-## Guidance (structured)
+## Notes
 
-### Seams
+The track + thumb are styled for both themes with a focus ring; the native range already announces its value to assistive tech, so the visible readout is aria-hidden. dz-slider.js writes the value into [data-dz-range-value] on input, scoped to each slider's own group so many coexist.
 
-- native <input type=range> is the value source; [data-dz-range-value] is the readout
-- each slider group is scoped so many coexist on one page
-
-### Pitfalls
-
-- the visible readout is aria-hidden — the range already announces to AT
-- do not invent a custom thumb/track in JS; style the native control
-
-### Keyboard / AT
-
-- Arrow keys adjust the native range (browser default)
-- focus ring is theme-aware on the track/thumb
-
-### Do / Don't
-
-| Do | Don't |
-|---|---|
-| write the live value into [data-dz-range-value] on input | replace the native range with a div-based slider |
-
-### Composes with
-
-- `field` (agents/field.md)
-
-## Guidance (prose; HTML from the registry notes field)
-
-The track + thumb are styled for both themes with a focus ring; the native range already announces its value to assistive tech, so the visible readout is <code>aria-hidden</code>. <code>dz-slider.js</code> writes the value into <code>[data-dz-range-value]</code> on input, scoped to each slider's own group so many coexist.
-
-## Controller files
+## Source files
 
 - `controllers/dz-slider.js`

@@ -2,7 +2,9 @@
 
 A measure-capped, centred column — reading width for prose and forms.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="center" data-measure="prose">
@@ -10,6 +12,6 @@ A measure-capped, centred column — reading width for prose and forms.
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-<code>margin-inline: auto</code> + <code>max-inline-size</code>. <code>data-dz-measure</code>: <code>prose</code> (65ch), <code>wide</code> (90ch), <code>full</code> (no cap, still a centring context). This is the published form of the measure the gallery's own chrome uses.
+margin-inline: auto + max-inline-size. data-dz-measure: prose (65ch), wide (90ch), full (no cap, still a centring context). This is the published form of the measure the gallery's own chrome uses.

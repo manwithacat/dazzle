@@ -2,7 +2,9 @@
 
 The personal worklist: filter chips over urgency-flagged items, each a drill link with title and meta.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -34,6 +36,6 @@ The personal worklist: filter chips over urgency-flagged items, each a drill lin
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Items carry <code>data-dz-urgency=&quot;overdue|due|soon|later&quot;</code> (the server clamps anything else to <code>later</code>) + a stable <code>data-dz-item-id</code>; the whole row is one link, leading with its icon. Chips render count THEN label (<code>data-dz-chip-id</code> anchors a filter exchange in Dazzle).
+Items carry data-dz-urgency="overdue|due|soon|later" (the server clamps anything else to later) + a stable data-dz-item-id; the whole row is one link, leading with its icon. Chips render count THEN label (data-dz-chip-id anchors a filter exchange in Dazzle).

@@ -2,7 +2,9 @@
 
 Distribution five-number summaries per bucket — a server-rendered SVG with the counts in the summary line.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="box-plot-region hm-measure-lg">
@@ -11,6 +13,6 @@ Distribution five-number summaries per bucket — a server-rendered SVG with the
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
 Schematic demo — real whisker/quartile geometry is server-computed. The summary line carries the bucket count.

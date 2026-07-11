@@ -2,7 +2,9 @@
 
 Inline composition — real button, toggle-group and menu markup nested in a role=toolbar bar. No client tree, no props: composition is HTML.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -19,6 +21,6 @@ Inline composition — real button, toggle-group and menu markup nested in a rol
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
 The dependency chips aggregate what the children need (here: Sprite, from the menu/button icons). Copy the whole thing — it is just nested markup.

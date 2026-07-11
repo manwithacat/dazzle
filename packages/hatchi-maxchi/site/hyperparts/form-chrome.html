@@ -33,7 +33,21 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-topbar { display:flex; align-items:center; gap:1rem; margin-bottom: 2rem; }
 .hm-comp { border-block-start: 1px solid var(--colour-border); padding-block: 2.5rem; }
 .hm-comp h2 { font-size: 1.25rem; margin: 0 0 .25rem; scroll-margin-top: 1rem; }
-.hm-comp .blurb { color: var(--colour-text-muted); margin: 0 0 1.25rem; font-size: var(--text-sm); }
+.hm-comp h3 { font-size: 1.05rem; margin: 1.75rem 0 .5rem; scroll-margin-top: 1rem;
+  letter-spacing: -.01em; }
+.hm-comp h4 { font-size: var(--text-sm); margin: 1.25rem 0 .4rem;
+  color: var(--colour-text); font-weight: var(--weight-semibold); }
+.hm-comp .blurb { color: var(--colour-text-muted); margin: 0 0 .75rem; font-size: var(--text-sm); }
+/* Linear reference sections (part pages) — no accordions; agent-scrapeable. */
+.hm-ref { margin-top: 1.25rem; }
+.hm-ref-lead { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0 0 .75rem; max-width: 46rem; line-height: 1.55; }
+.hm-ref-mod { font-family: var(--font-mono); font-weight: var(--weight-medium); }
+.hm-dialect { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0 0 1.25rem; padding: .55rem .75rem; max-width: 46rem;
+  border: 1px solid var(--colour-border); border-radius: var(--radius-md);
+  background: var(--colour-surface); line-height: 1.5; }
+.hm-dialect code { font-size: .9em; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -52,32 +66,23 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-setup-body { padding: 0 .9rem .75rem; font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 46rem; }
 .hm-setup-body code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
 .hm-setup-body a { color: var(--colour-brand); }
-.hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .75rem; }
+/* Notes prose + contract tables (always visible on part pages). */
+.hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0; max-width: 46rem; line-height: 1.55; }
 .hm-notes code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
-/* Agent Implementation Guidance — the per-Hyperpart notes, collapsed behind
-   the same disclosure treatment as the endpoint contract (primary audience:
-   coding agents; the visual gallery stays scannable). */
-.hm-guidance { margin-top: .75rem; border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
-.hm-guidance > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
-  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
-.hm-guidance > .hm-notes { margin: 0; padding: .6rem .75rem; background: var(--colour-surface);
-  border-top: 1px solid var(--colour-border);
-  border-radius: 0 0 var(--radius-md) var(--radius-md); }
-.hm-contract { margin-top: .75rem; border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
-.hm-contract > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
-  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
 .hm-contract-table { width: 100%; border-collapse: collapse; font-size: .75rem;
-  background: var(--colour-surface); }
+  background: var(--colour-surface); margin: 0 0 .75rem;
+  border: 1px solid var(--colour-border); border-radius: var(--radius-md); overflow: hidden; }
 .hm-contract-table th, .hm-contract-table td { text-align: left; vertical-align: top;
-  padding: .4rem .6rem; border-top: 1px solid var(--colour-border); }
+  padding: .45rem .65rem; border-top: 1px solid var(--colour-border); }
+.hm-contract-table thead th { border-top: 0; background: var(--colour-bg); }
 .hm-contract-table th { color: var(--colour-text-muted); font-weight: var(--weight-medium);
   text-transform: uppercase; letter-spacing: .04em; font-size: .625rem; }
 .hm-contract-table code { font-family: var(--font-mono); }
 .hm-verb { color: var(--colour-brand-text); font-weight: var(--weight-semibold); }
-.hm-contract > p { font-size: var(--text-sm); color: var(--colour-text-muted);
-  margin: 0; padding: .6rem .75rem; }
+.hm-contract-live { margin: .5rem 0 1rem; padding: .75rem;
+  border: 1px dashed var(--colour-border); border-radius: var(--radius-md);
+  background: var(--colour-surface); }
 .hm-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
   background: var(--colour-text); color: var(--colour-bg); padding: .5rem 1rem;
   border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); }
@@ -128,7 +133,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
-<section class="hm-comp" id="form-chrome"><h2>Form chrome<span class="hm-tag">forms</span><span class="hm-dep" data-dep="composite" title="Dependency class: Composite">Composite</span></h2><p class="blurb">The structural form pieces: titled sections, the validation-error summary, and the multi-section progress stepper.</p><div class="hm-preview"><div class="hm-stack hm-measure"><div class="form-errors" role="alert"><svg class="form-errors-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg><div class="form-errors-body"><h3 class="form-errors-title">Validation Error</h3><ul class="form-errors-list" role="list"><li>Name is required</li><li>Start date must be before end date</li></ul></div></div><ol class="form-stepper" role="list" aria-label="Form progress"><li class="form-stepper-item is-not-last" aria-current="step"><span class="form-stepper-circle is-active"><span>1</span></span><span class="form-stepper-label is-active">Details</span><span class="form-stepper-connector" aria-hidden="true"></span></li><li class="form-stepper-item is-not-last"><span class="form-stepper-circle"><span>2</span></span><span class="form-stepper-label">Schedule</span><span class="form-stepper-connector" aria-hidden="true"></span></li><li class="form-stepper-item"><span class="form-stepper-circle"><span>3</span></span><span class="form-stepper-label">Review</span></li></ol><section class="form-section"><h3 class="form-section-title">Contact details</h3><p class="form-section-note">Shown on invoices and receipts.</p><div class="form-field"><label class="form-label" for="hm-fc-name">Full name<span class="form-required" aria-hidden="true">*</span></label><input id="hm-fc-name" class="form-input" type="text" aria-required="true"></div></section></div></div><figure class="code" data-code data-language="html"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">html</span><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Form chrome"><code class="code__source">&lt;div class=&quot;hm-stack hm-measure&quot;&gt;
+<section class="hm-comp" id="form-chrome"><h2>Form chrome<span class="hm-tag">forms</span><span class="hm-dep" data-dep="composite" title="Dependency class: Composite">Composite</span></h2><p class="blurb">The structural form pieces: titled sections, the validation-error summary, and the multi-section progress stepper.</p><p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> attribute form. DOM contract Python below is dual-lock source (often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p><div class="hm-preview"><div class="hm-stack hm-measure"><div class="form-errors" role="alert"><svg class="form-errors-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg><div class="form-errors-body"><h3 class="form-errors-title">Validation Error</h3><ul class="form-errors-list" role="list"><li>Name is required</li><li>Start date must be before end date</li></ul></div></div><ol class="form-stepper" role="list" aria-label="Form progress"><li class="form-stepper-item is-not-last" aria-current="step"><span class="form-stepper-circle is-active"><span>1</span></span><span class="form-stepper-label is-active">Details</span><span class="form-stepper-connector" aria-hidden="true"></span></li><li class="form-stepper-item is-not-last"><span class="form-stepper-circle"><span>2</span></span><span class="form-stepper-label">Schedule</span><span class="form-stepper-connector" aria-hidden="true"></span></li><li class="form-stepper-item"><span class="form-stepper-circle"><span>3</span></span><span class="form-stepper-label">Review</span></li></ol><section class="form-section"><h3 class="form-section-title">Contact details</h3><p class="form-section-note">Shown on invoices and receipts.</p><div class="form-field"><label class="form-label" for="hm-fc-name">Full name<span class="form-required" aria-hidden="true">*</span></label><input id="hm-fc-name" class="form-input" type="text" aria-required="true"></div></section></div></div><section class="hm-ref" id="copy"><h3>Copy this</h3><figure class="code" data-code data-language="html"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">html</span><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Form chrome"><code class="code__source">&lt;div class=&quot;hm-stack hm-measure&quot;&gt;
   &lt;div class=&quot;form-errors&quot; role=&quot;alert&quot;&gt;
     &lt;svg class=&quot;form-errors-icon&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; fill=&quot;none&quot; viewBox=&quot;0 0 24 24&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; aria-hidden=&quot;true&quot;&gt;&lt;path stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; d=&quot;M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z&quot;/&gt;&lt;/svg&gt;
     &lt;div class=&quot;form-errors-body&quot;&gt;
@@ -152,7 +157,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
       &lt;input id=&quot;hm-fc-name&quot; class=&quot;form-input&quot; type=&quot;text&quot; aria-required=&quot;true&quot;&gt;
     &lt;/div&gt;
   &lt;/section&gt;
-&lt;/div&gt;</code></pre></figure><p class="hm-composed"><strong>Composed of:</strong> <a href="#field">Field</a></p><details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">Sections are real <code>&lt;section&gt;</code>s with an <code>h3</code> title + optional note; fields inside use the HM form primitives. The error summary is <code>role=&quot;alert&quot;</code> (the server re-renders it on a failed submit). The stepper here shows RENDERED states (<code>is-active</code>/<code>is-not-last</code>, <code>aria-current=&quot;step&quot;</code>) — the live navigation behaviour is the <code>wizard</code> Hyperpart (<code>wizard.js</code>; the dzWizard Alpine island retired in Tier F4d).</div></details></section>
+&lt;/div&gt;</code></pre></figure></section><section class="hm-ref" id="notes"><h3>Notes</h3><div class="hm-notes">Sections are real <code>&lt;section&gt;</code>s with an <code>h3</code> title + optional note; fields inside use the HM form primitives. The error summary is <code>role=&quot;alert&quot;</code> (the server re-renders it on a failed submit). The stepper here shows RENDERED states (<code>is-active</code>/<code>is-not-last</code>, <code>aria-current=&quot;step&quot;</code>) — the live navigation behaviour is the <code>wizard</code> Hyperpart (<code>wizard.js</code>; the dzWizard Alpine island retired in Tier F4d).</div></section><section class="hm-ref" id="composed"><h3>Composed of</h3><p class="hm-composed"><a href="field">Field</a></p></section></section>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Generated from the design-system sources by <code>site/build_site.py</code>.
 The demo above renders the exact snippet — copy it into any htmx4 app.

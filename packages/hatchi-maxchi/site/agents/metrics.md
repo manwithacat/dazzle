@@ -2,7 +2,9 @@
 
 The KPI strip: label + value tiles in a packing grid, optionally toned. The server stamps the tile count for e2e anchors.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="metrics-grid" data-tile-count="3">
@@ -21,6 +23,6 @@ The KPI strip: label + value tiles in a packing grid, optionally toned. The serv
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Each tile carries <code>data-dz-metric-key</code> (a stable anchor for tests/telemetry) and an optional <code>data-dz-tone</code>. In Dazzle one scope-aware GROUP BY query fills the whole strip — the tiles can never disagree with each other.
+Each tile carries data-dz-metric-key (a stable anchor for tests/telemetry) and an optional data-dz-tone. In Dazzle one scope-aware GROUP BY query fills the whole strip — the tiles can never disagree with each other.

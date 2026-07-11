@@ -2,7 +2,9 @@
 
 The identity panel: avatar or initials beside name and meta, an optional 3-up stats grid, and a bulleted facts list.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="profile-card-region hm-measure">
@@ -36,6 +38,6 @@ The identity panel: avatar or initials beside name and meta, an optional 3-up st
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-The avatar slot prefers an <code>&lt;img class=&quot;dz-profile-avatar&quot;&gt;</code> and falls back to an initials chip; empty stat values render an em-dash (absence is data). Stats are a real <code>&lt;dl&gt;</code>; the facts bullet is decorative markup, hidden from assistive tech.
+The avatar slot prefers an <img class="dz-profile-avatar"> and falls back to an initials chip; empty stat values render an em-dash (absence is data). Stats are a real <dl>; the facts bullet is decorative markup, hidden from assistive tech.

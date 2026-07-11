@@ -2,7 +2,9 @@
 
 A hairline divider on the border token — horizontal (`<hr>`) or vertical (`role=separator`).
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="hm-stack hm-measure">
@@ -19,6 +21,6 @@ A hairline divider on the border token — horizontal (`<hr>`) or vertical (`rol
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-The horizontal rule is a native <code>&lt;hr&gt;</code> (implicitly <code>role=separator</code>); the vertical divider is a zero-width element with an explicit <code>role=separator</code> + <code>aria-orientation=&quot;vertical&quot;</code>.
+The horizontal rule is a native <hr> (implicitly role=separator); the vertical divider is a zero-width element with an explicit role=separator + aria-orientation="vertical".

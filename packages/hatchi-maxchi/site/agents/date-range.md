@@ -2,7 +2,9 @@
 
 Two native date inputs driving one htmx exchange — the from/to filter bar for time-scoped regions.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="date-range-picker date-range-bar">
@@ -14,12 +16,14 @@ Two native date inputs driving one htmx exchange — the from/to filter bar for 
 </div>
 ```
 
-## Exchanges (the endpoint contract your server must satisfy)
+## Server exchange
+
+After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `GET /app/{region}?date_from=&date_to=` | either date input's change — hx-include sends both bounds | the re-rendered region body for the new range | innerHTML | — |
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Native <code>type=&quot;date&quot;</code> inputs — no picker JS. Each input fires the region's hx-get on change and <code>hx-include=&quot;closest .date-range-bar&quot;</code> sends BOTH bounds every time, so the server always sees the full range.
+Native type="date" inputs — no picker JS. Each input fires the region's hx-get on change and hx-include="closest .date-range-bar" sends BOTH bounds every time, so the server always sees the full range.

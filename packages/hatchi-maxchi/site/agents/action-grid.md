@@ -2,7 +2,9 @@
 
 Tone-tinted CTA cards with a count badge — the dashboard's 'what needs doing' surface. Cards with a URL are anchors; the grid packs intrinsically.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -24,6 +26,6 @@ Tone-tinted CTA cards with a count badge — the dashboard's 'what needs doing' 
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Tone tints the card surface via <code>data-dz-tone</code> and the count badge via <code>data-dz-tone-badge</code>. A URL makes the card an <code>&lt;a&gt;</code> (whole card = the target); without one it renders a static <code>&lt;div&gt;</code>. An icon SPACER holds the row height when a card has no icon.
+Tone tints the card surface via data-dz-tone and the count badge via data-dz-tone-badge. A URL makes the card an <a> (whole card = the target); without one it renders a static <div>. An icon SPACER holds the row height when a card has no icon.

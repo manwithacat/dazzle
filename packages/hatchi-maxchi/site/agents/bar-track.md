@@ -2,7 +2,9 @@
 
 Value-against-capacity rows with real progressbar semantics — the resource-usage sibling of the bar chart.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="bar-track-region hm-measure-lg">
@@ -21,6 +23,6 @@ Value-against-capacity rows with real progressbar semantics — the resource-usa
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Each track is a real <code>role=&quot;progressbar&quot;</code> with numeric aria values — the fill width is presentation, the aria is the content. Labels and fills both carry <code>title</code> for hover detail.
+Each track is a real role="progressbar" with numeric aria values — the fill width is presentation, the aria is the content. Labels and fills both carry title for hover detail.

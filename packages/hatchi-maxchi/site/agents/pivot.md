@@ -2,7 +2,9 @@
 
 Two group-bys crossed into a matrix — row labels × column buckets, empty intersections rendered as explicit nulls.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -34,6 +36,6 @@ Two group-bys crossed into a matrix — row labels × column buckets, empty inte
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-One scope-aware two-dimensional <code>GROUP BY</code> fills the whole matrix: dimension columns lead (status values render as badges, FK values as their label text), then measure columns — <code>class=&quot;is-measure&quot;</code> on the measure th/td pair drives the mono right-aligned numeric treatment. Empty intersections render <code>dz-pivot-null</code> em-dashes rather than blanks (absence is data). The scroll wrapper keeps wide matrices inside their card.
+One scope-aware two-dimensional GROUP BY fills the whole matrix: dimension columns lead (status values render as badges, FK values as their label text), then measure columns — class="is-measure" on the measure th/td pair drives the mono right-aligned numeric treatment. Empty intersections render dz-pivot-null em-dashes rather than blanks (absence is data). The scroll wrapper keeps wide matrices inside their card.

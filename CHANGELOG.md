@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `writeText` reject falls back to `execCommand`.
 
 ### Changed
+- **HM part pages linearized for agents + humans** — drop accordion
+  disclosures on `hyperparts/<id>.html`; fixed section order (Copy →
+  Server exchange → How to use → DOM contract → Notes → Files) matching
+  `agents/<id>.md`. Rename “Contract module (typed)” to plain **DOM
+  contract** with a short lead; dialect callout on every part page.
 - **HM gallery clean URLs** — generated navigational `href`s omit `.html`
   (GitHub Pages resolves them to the on-disk `*.html` files). Home is `./`
   / `../`; iframe embeds keep `.html` for `file://` reliability.

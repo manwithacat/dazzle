@@ -2,7 +2,9 @@
 
 Value-distribution buckets as a server-rendered SVG plus a mono summary line.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="histogram-region hm-measure-lg">
@@ -11,6 +13,6 @@ Value-distribution buckets as a server-rendered SVG plus a mono summary line.
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-The SVG body is SERVER-computed (this demo is schematic — the real geometry comes from <code>dazzle.render.svg.histogram_svg</code>) with the numeric story in <code>aria-label</code> and the mono summary line.
+The SVG body is SERVER-computed (this demo is schematic — the real geometry comes from dazzle.render.svg.histogram_svg) with the numeric story in aria-label and the mono summary line.

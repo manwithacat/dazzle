@@ -2,7 +2,9 @@
 
 Native <details> group; single-open via the HTML name= attribute — opening one closes its siblings, zero JS.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="accordion">
@@ -21,6 +23,6 @@ Native <details> group; single-open via the HTML name= attribute — opening one
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Exclusivity is the native <code>name</code> attribute on <code>&lt;details&gt;</code> — the browser closes the open sibling for you. No <code>aria-expanded</code> wiring: <code>&lt;details&gt;/&lt;summary&gt;</code> carry it.
+Exclusivity is the native name attribute on <details> — the browser closes the open sibling for you. No aria-expanded wiring: <details>/<summary> carry it.

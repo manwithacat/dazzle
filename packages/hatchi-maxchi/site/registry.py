@@ -266,8 +266,8 @@ HYPERPARTS: list[Hyperpart] = [
         "wire: search, sortable headers, filters, row selection (one page or "
         "every matching row), bulk actions, pagination, and deep-linkable "
         "URL-synced state. Optional extensions add column visibility, column "
-        "resize, and inline cell editing. The wiring lives in the Agent "
-        "Implementation Guidance below.",
+        "resize, and inline cell editing. See How to use it and the DOM "
+        "contract on this page for wiring.",
         # Full width (no hm-measure cap): a data table demos its column
         # behaviour — resize needs room to move, and real tables run wide.
         '<div class="hm-stack">'

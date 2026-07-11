@@ -95,8 +95,7 @@ _SVG_RE = re.compile(r"\{svg:([a-z0-9-]+)\}")
 
 
 def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
-    """Render a Hyperpart's hypermedia exchange contracts — the "endpoint
-    response contract" half a server must satisfy for the partial to work."""
+    """Always-visible server exchange table (no accordion — part pages are linear)."""
     if not hyperpart.exchanges:
         return ""
     rows = []
@@ -113,14 +112,16 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             "</tr>"
         )
     return (
-        '<details class="hm-contract"><summary>Endpoint contract</summary>'
+        '<section class="hm-ref" id="exchange">'
+        "<h3>Server exchange</h3>"
+        '<p class="hm-ref-lead">After the client affordance runs (here: user confirms), '
+        "htmx issues this request. Your server must return the response fragment — "
+        "not a toast, not JSON, unless the partial says otherwise. Dazzle renders "
+        "many of these automatically; a plain htmx app returns matching markup.</p>"
         '<table class="hm-contract-table"><thead><tr>'
         "<th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th>"
         f"</tr></thead><tbody>{''.join(rows)}</tbody></table>"
-        "<p>The partial above is only half the Hyperpart; the server must "
-        "satisfy this contract for it to work. In Dazzle the response is "
-        "rendered automatically — for any other htmx app, return matching "
-        "markup from your endpoint.</p></details>"
+        "</section>"
     )
 
 
@@ -210,16 +211,12 @@ def _fastapi_route_sources(mod) -> list[str]:  # type: ignore[no-untyped-def]
 
 
 def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
-    """Contract-module section — epistemic surface for agents + humans.
+    """Always-visible DOM / ingestion contract — tables + code, no accordion.
 
-    Always surfaces whatever the module actually defines:
-    - DOM_CONTRACT root + per-node attr constraints
-    - Pydantic ingestion schema (when present)
-    - executable ``render`` exemplar + live output (when present)
-    - FastAPI route handlers (when ``app`` is present)
-    - full module source when the module is DOM-only (no empty headings)
-
-    Contract modules are the typed source of truth (contracts/AUTHORING.md).
+    For humans: a short lead explains *why* this exists (CI stop-ship).
+    For agents: root/attrs and optional schema are the constrained surface;
+    Python blocks are the dual-lock source (often ``data-dz-*`` even when the
+    gallery partial is unprefixed).
     """
     if not hyperpart.contracts:
         return ""
@@ -235,13 +232,16 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
         exemplars = getattr(mod, "EXEMPLARS", ())
         fastapi_src = _fastapi_route_sources(mod)
 
-        parts: list[str] = [f"<h4><code>{_html.escape(ref)}</code></h4>"]
+        parts: list[str] = [f'<h4 class="hm-ref-mod"><code>{_html.escape(ref)}</code></h4>']
 
         if dc is not None:
             parts.append(
-                f'<p class="hm-contract-kind"><strong>DOM root:</strong> '
+                f'<p class="hm-ref-lead"><strong>Required in the DOM:</strong> root '
                 f"<code>{_html.escape(dc.root)}</code>"
-                f" · part <code>{_html.escape(dc.part)}</code></p>"
+                f" (part <code>{_html.escape(dc.part)}</code>). "
+                "Emit only these attributes — inventing extras is fine only if "
+                "controllers ignore them; omitting required ones fails CI "
+                "(<code>tests/test_contracts.py</code>).</p>"
             )
             drows = _dom_contract_rows(dc)
             if drows:
@@ -258,8 +258,8 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
                 )
             elif not model and not fastapi_src:
                 parts.append(
-                    '<p class="hm-contract-kind">Root-only DOM contract '
-                    "(no per-node attribute constraints).</p>"
+                    '<p class="hm-ref-lead">Root-only contract — the root selector '
+                    "must match; no per-node attribute list.</p>"
                 )
 
         if model is not None:
@@ -271,8 +271,9 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
                 for n, t, r in srows
             )
             parts.append(
-                f'<p class="hm-contract-kind"><strong>Ingestion model:</strong> '
-                f"<code>{_html.escape(model.__name__)}</code></p>"
+                f"<h4>Ingestion model <code>{_html.escape(model.__name__)}</code></h4>"
+                '<p class="hm-ref-lead">Server-side shape before render — one '
+                "normalisation boundary for producers.</p>"
                 f'<table class="hm-contract-table"><thead><tr>'
                 "<th>Field</th><th>Type</th><th>Required</th>"
                 f"</tr></thead><tbody>{body}</tbody></table>"
@@ -281,35 +282,32 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
         if render_fn and exemplars:
             live = render_fn(exemplars[0])
             parts.append(
-                '<details class="hm-contract" open><summary>Exemplar '
-                "(executable — runs in CI)</summary>"
+                "<h4>Exemplar <code>render()</code></h4>"
+                '<p class="hm-ref-lead">Executable in CI — model → conforming markup.</p>'
                 + render_code_block(
                     inspect.getsource(render_fn),
                     language="python",
                     aria_label=f"Exemplar render for {ref}",
                 )
-                + f'<div class="hm-contract-live">{live}</div></details>'
+                + f'<div class="hm-contract-live">{live}</div>'
             )
 
         if fastapi_src:
-            title = ""
             app = getattr(mod, "app", None)
-            if app is not None and getattr(app, "title", None):
-                title = f" — {_html.escape(app.title)}"
+            title = getattr(app, "title", None) if app is not None else None
+            h = f" — {_html.escape(title)}" if title else ""
             parts.append(
-                f'<details class="hm-contract" open><summary>FastAPI exemplar'
-                f"{title}</summary>"
+                f"<h4>FastAPI feed example{h}</h4>"
+                '<p class="hm-ref-lead">How a server feeds this seam (not the '
+                "gallery mock).</p>"
                 + render_code_block(
                     "\n\n".join(fastapi_src),
                     language="python",
                     aria_label=f"FastAPI exemplar for {ref}",
                 )
-                + "<p>How a server feeds this seam — the gallery mock is not a "
-                "substitute for this route contract.</p></details>"
             )
 
-        # DOM-only (or otherwise thin) modules: show full source so the
-        # section is never an empty path heading.
+        # Thin / DOM-only: show the whole module (usually a short DOM_CONTRACT).
         if model is None and not (render_fn and exemplars) and not fastapi_src:
             try:
                 full = inspect.getsource(mod)
@@ -317,31 +315,30 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
                 full = ""
             if full:
                 parts.append(
-                    '<details class="hm-contract" open><summary>Module source'
-                    "</summary>"
+                    "<h4>Module source</h4>"
+                    '<p class="hm-ref-lead">Source-token form (often '
+                    "<code>data-dz-*</code>). Gallery demos above are unprefixed.</p>"
                     + render_code_block(
                         full,
                         language="python",
                         aria_label=f"Module source {ref}",
                     )
-                    + "</details>"
                 )
 
         blocks.append("".join(parts))
 
     return (
-        '<details class="hm-contract" open><summary>Contract module (typed)</summary>'
-        + "".join(blocks)
-        + "<p>Typed source of truth: DOM contract, optional ingestion model, "
-        "executable exemplar, and FastAPI feed example — validated in CI "
-        "(<code>tests/test_contracts.py</code>). "
-        "See <code>contracts/AUTHORING.md</code>.</p></details>"
+        '<section class="hm-ref" id="dom-contract">'
+        "<h3>DOM contract</h3>"
+        '<p class="hm-ref-lead">Machine-checkable stop-ship for this part. '
+        "Agents: do not invent attrs or response shapes outside this module. "
+        "Humans: treat the table as the required surface; the Python is the "
+        "canonical definition CI runs against.</p>" + "".join(blocks) + "</section>"
     )
 
 
 def _guidance_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
-    """Structured Guidance block → part-page section. Prose notes render
-    separately (narrative); this is the typed, agent-parallel rendering."""
+    """How-to guidance — always visible linear sections (no accordion)."""
     g = hyperpart.guidance
     if g is None:
         return ""
@@ -349,11 +346,9 @@ def _guidance_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     def _ul(items) -> str:  # type: ignore[no-untyped-def]
         return "<ul>" + "".join(f"<li>{_html.escape(i)}</li>" for i in items) + "</ul>"
 
-    blocks = []
+    blocks = ['<section class="hm-ref" id="how-to"><h3>How to use it</h3>']
     if g.seams:
         blocks.append(f"<h4>Seams</h4>{_ul(g.seams)}")
-    if g.pitfalls:
-        blocks.append(f"<h4>Pitfalls</h4>{_ul(g.pitfalls)}")
     if g.do_dont:
         rows = "".join(
             f"<tr><td>{_html.escape(do)}</td><td>{_html.escape(dont)}</td></tr>"
@@ -363,14 +358,35 @@ def _guidance_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             '<h4>Do / Don\'t</h4><table class="hm-contract-table">'
             f"<thead><tr><th>Do</th><th>Don't</th></tr></thead><tbody>{rows}</tbody></table>"
         )
+    if g.pitfalls:
+        blocks.append(f"<h4>Pitfalls</h4>{_ul(g.pitfalls)}")
     if g.a11y_keys:
         blocks.append(f"<h4>Keyboard / AT</h4>{_ul(g.a11y_keys)}")
     if g.composes_with:
         links = " ".join(f'<a href="{pid}"><code>{pid}</code></a>' for pid in g.composes_with)
-        blocks.append(f"<h4>Composes with</h4><p>{links}</p>")
+        blocks.append(f"<h4>Related parts</h4><p>{links}</p>")
+    blocks.append("</section>")
+    return "".join(blocks)
+
+
+def _notes_html(hyperpart, prefix: str) -> str:  # type: ignore[no-untyped-def]
+    """Registry notes as an open section (not a disclosure)."""
+    if not hyperpart.notes:
+        return ""
     return (
-        '<details class="hm-guidance" open><summary>Structured guidance</summary>'
-        f'<div class="hm-notes">{"".join(blocks)}</div></details>'
+        '<section class="hm-ref" id="notes"><h3>Notes</h3>'
+        f'<div class="hm-notes">{apply_prefix(hyperpart.notes, prefix)}</div>'
+        "</section>"
+    )
+
+
+def _dialect_html() -> str:
+    return (
+        '<p class="hm-dialect"><strong>Markup dialect:</strong> demos on this page '
+        "are <strong>unprefixed</strong> (standalone HaTchi-MaXchi / copy-paste). "
+        "Dazzle apps use the <code>dz-</code> class and <code>data-dz-*</code> "
+        "attribute form. DOM contract Python below is dual-lock source "
+        "(often still <code>data-dz-*</code>). Match the CSS/JS bundle you load.</p>"
     )
 
 
@@ -445,16 +461,31 @@ def _guide_body() -> str:
     return "".join(sections)
 
 
+def _plain_notes(notes: str) -> str:
+    """Strip simple HTML from registry notes for agent markdown."""
+    text = re.sub(r"<br\s*/?>", "\n", notes, flags=re.I)
+    text = re.sub(r"</p\s*>", "\n\n", text, flags=re.I)
+    text = re.sub(r"<[^>]+>", "", text)
+    return _html.unescape(text).strip()
+
+
 def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-def]
-    """agents/<id>.md — the agent-optimised chunk: partial + exchanges +
-    contract schema + guidance in ONE fetchable file per part. Everything
-    here derives from drift-gated sources (registry + contract modules)."""
+    """agents/<id>.md — linear scrape target aligned with the part HTML page.
+
+    Order: identity → dialect → partial → exchange → how-to → DOM contract →
+    notes → files. Same sections as hyperparts/<id>.html so agents and humans
+    share one mental model.
+    """
     lines = [
         f"# {hyperpart.title} (`{hyperpart.id}`)",
         "",
         hyperpart.blurb,
         "",
-        "## Partial (copy-paste; the live demo renders this exact string)",
+        "> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). "
+        "DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` "
+        "(Dazzle dual-lock). Match the CSS/JS bundle you load.",
+        "",
+        "## Copy this",
         "",
         "```html",
         snippet_src.rstrip("\n"),
@@ -463,7 +494,10 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
     ]
     if hyperpart.exchanges:
         lines += [
-            "## Exchanges (the endpoint contract your server must satisfy)",
+            "## Server exchange",
+            "",
+            "After the client affordance runs, htmx issues this request. "
+            "Return the response fragment (not gallery mock toasts).",
             "",
             "| Request | Trigger | Response fragment | Swap | States |",
             "|---|---|---|---|---|",
@@ -475,16 +509,34 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
             )
             lines.append(row.replace("\n", " "))
         lines.append("")
+    g = hyperpart.guidance
+    if g is not None:
+        lines += ["## How to use it", ""]
+        for heading, items in (
+            ("Seams", g.seams),
+            ("Do / Don't", None),
+            ("Pitfalls", g.pitfalls),
+            ("Keyboard / AT", g.a11y_keys),
+        ):
+            if heading == "Do / Don't":
+                if g.do_dont:
+                    lines += ["### Do / Don't", "", "| Do | Don't |", "|---|---|"]
+                    lines += [f"| {do} | {dont} |" for do, dont in g.do_dont] + [""]
+                continue
+            if items:
+                lines += [f"### {heading}", ""] + [f"- {i}" for i in items] + [""]
+        if g.composes_with:
+            lines += ["### Related parts", ""]
+            lines += [f"- `{pid}` — agents/{pid}.md" for pid in g.composes_with] + [""]
     if hyperpart.contracts:
         import importlib
         import inspect
 
         lines += [
-            "## Contract modules (typed source of truth)",
+            "## DOM contract",
             "",
-            "Epistemic lock: do not invent attrs or response shapes that diverge "
-            "from these modules. CI validates exemplars against `DOM_CONTRACT` "
-            "(`tests/test_contracts.py`).",
+            "CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or "
+            "response shapes outside these modules.",
             "",
         ]
         for ref in hyperpart.contracts:
@@ -498,9 +550,7 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
             fastapi_src = _fastapi_route_sources(mod)
 
             if dc is not None:
-                lines += [
-                    f"- **DOM root:** `{dc.root}` (part `{dc.part}`)",
-                ]
+                lines += [f"- **Required root:** `{dc.root}` (part `{dc.part}`)"]
                 drows = _dom_contract_rows(dc)
                 if drows:
                     lines += [
@@ -511,13 +561,11 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
                     lines += [
                         f"| `{sel}` | `{attr}` | {constraint} |" for sel, attr, constraint in drows
                     ]
-                else:
-                    lines.append("- Root-only DOM contract (no per-node attribute constraints).")
                 lines.append("")
 
             if model is not None:
                 lines += [
-                    f"**Ingestion model:** `{model.__name__}`",
+                    f"#### Ingestion model `{model.__name__}`",
                     "",
                     "| Field | Type | Required |",
                     "|---|---|---|",
@@ -533,7 +581,7 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
                     rsrc = ""
                 if rsrc:
                     lines += [
-                        "**Exemplar `render()`** (executable — CI)",
+                        "#### Exemplar `render()`",
                         "",
                         "```python",
                         rsrc.rstrip("\n"),
@@ -544,11 +592,9 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
             if fastapi_src:
                 app = getattr(mod, "app", None)
                 title = getattr(app, "title", None) if app is not None else None
-                heading = f"**FastAPI exemplar** — {title}" if title else "**FastAPI exemplar**"
+                sub = f" — {title}" if title else ""
                 lines += [
-                    heading,
-                    "",
-                    "How a server feeds this seam (not the gallery mock):",
+                    f"#### FastAPI feed example{sub}",
                     "",
                     "```python",
                     "\n\n".join(s.rstrip("\n") for s in fastapi_src),
@@ -556,7 +602,6 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
                     "",
                 ]
 
-            # DOM-only / thin modules: full source so agents never get an empty heading.
             if model is None and not (render_fn and exemplars) and not fastapi_src:
                 try:
                     full = inspect.getsource(mod)
@@ -564,39 +609,18 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
                     full = ""
                 if full:
                     lines += [
-                        "**Module source**",
+                        "#### Module source",
                         "",
                         "```python",
                         full.rstrip("\n"),
                         "```",
                         "",
                     ]
-    g = hyperpart.guidance
-    if g is not None:
-        lines += ["## Guidance (structured)", ""]
-        for heading, items in (
-            ("Seams", g.seams),
-            ("Pitfalls", g.pitfalls),
-            ("Keyboard / AT", g.a11y_keys),
-        ):
-            if items:
-                lines += [f"### {heading}", ""] + [f"- {i}" for i in items] + [""]
-        if g.do_dont:
-            lines += ["### Do / Don't", "", "| Do | Don't |", "|---|---|"]
-            lines += [f"| {do} | {dont} |" for do, dont in g.do_dont] + [""]
-        if g.composes_with:
-            lines += ["### Composes with", ""]
-            lines += [f"- `{pid}` (agents/{pid}.md)" for pid in g.composes_with] + [""]
     if hyperpart.notes:
-        lines += [
-            "## Guidance (prose; HTML from the registry notes field)",
-            "",
-            hyperpart.notes,
-            "",
-        ]
+        lines += ["## Notes", "", _plain_notes(hyperpart.notes), ""]
     if hyperpart.controller:
         refs = [hyperpart.controller, *hyperpart.extensions]
-        lines += ["## Controller files", ""] + [f"- `{r}`" for r in refs] + [""]
+        lines += ["## Source files", ""] + [f"- `{r}`" for r in refs] + [""]
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
@@ -613,10 +637,11 @@ def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     if a["mock"]:
         parts.append(f"mock <code>{_html.escape(a['mock'])}</code>")
     return (
-        '<p class="hm-anatomy"><strong>One Hyperpart, {n} code items:</strong> '
-        "{parts}. Distributed by the build (CSS layered, JS bundled) but "
-        "bound by <code>HYPERPART: {id}</code> markers — <code>python "
-        "tools/hyperpart.py {id}</code> lists them.</p>"
+        '<section class="hm-ref" id="files"><h3>Source files</h3>'
+        '<p class="hm-ref-lead">One logical Hyperpart, {n} code items '
+        "(CSS layered, JS bundled). Bound by <code>HYPERPART: {id}</code> — "
+        "<code>python tools/hyperpart.py {id}</code> lists them.</p>"
+        '<p class="hm-anatomy">{parts}</p></section>'
     ).format(n=len(parts) + 1, parts=" · ".join(parts), id=_html.escape(hyperpart.id))
 
 
@@ -668,8 +693,13 @@ def _composed_of_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     for cid in hyperpart.composes:
         child = _BY_ID.get(cid)
         title = child.title if child else cid
-        links.append(f'<a href="#{cid}">{_html.escape(title)}</a>')
-    return f'<p class="hm-composed"><strong>Composed of:</strong> {" · ".join(links)}</p>'
+        # Sibling part pages (extensionless for GitHub Pages).
+        links.append(f'<a href="{cid}">{_html.escape(title)}</a>')
+    return (
+        '<section class="hm-ref" id="composed">'
+        f'<h3>Composed of</h3><p class="hm-composed">{" · ".join(links)}</p>'
+        "</section>"
+    )
 
 
 def _dependency_chips(hyperpart) -> str:  # type: ignore[no-untyped-def]
@@ -1164,7 +1194,21 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-topbar { display:flex; align-items:center; gap:1rem; margin-bottom: 2rem; }
 .hm-comp { border-block-start: 1px solid var(--colour-border); padding-block: 2.5rem; }
 .hm-comp h2 { font-size: 1.25rem; margin: 0 0 .25rem; scroll-margin-top: 1rem; }
-.hm-comp .blurb { color: var(--colour-text-muted); margin: 0 0 1.25rem; font-size: var(--text-sm); }
+.hm-comp h3 { font-size: 1.05rem; margin: 1.75rem 0 .5rem; scroll-margin-top: 1rem;
+  letter-spacing: -.01em; }
+.hm-comp h4 { font-size: var(--text-sm); margin: 1.25rem 0 .4rem;
+  color: var(--colour-text); font-weight: var(--weight-semibold); }
+.hm-comp .blurb { color: var(--colour-text-muted); margin: 0 0 .75rem; font-size: var(--text-sm); }
+/* Linear reference sections (part pages) — no accordions; agent-scrapeable. */
+.hm-ref { margin-top: 1.25rem; }
+.hm-ref-lead { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0 0 .75rem; max-width: 46rem; line-height: 1.55; }
+.hm-ref-mod { font-family: var(--font-mono); font-weight: var(--weight-medium); }
+.hm-dialect { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0 0 1.25rem; padding: .55rem .75rem; max-width: 46rem;
+  border: 1px solid var(--colour-border); border-radius: var(--radius-md);
+  background: var(--colour-surface); line-height: 1.5; }
+.hm-dialect code { font-size: .9em; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -1183,32 +1227,23 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-setup-body { padding: 0 .9rem .75rem; font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 46rem; }
 .hm-setup-body code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
 .hm-setup-body a { color: var(--colour-brand); }
-.hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .75rem; }
+/* Notes prose + contract tables (always visible on part pages). */
+.hm-notes { font-size: var(--text-sm); color: var(--colour-text-muted);
+  margin: 0; max-width: 46rem; line-height: 1.55; }
 .hm-notes code { background: var(--colour-bg); padding: .05rem .3rem; border-radius: var(--radius-sm); }
-/* Agent Implementation Guidance — the per-Hyperpart notes, collapsed behind
-   the same disclosure treatment as the endpoint contract (primary audience:
-   coding agents; the visual gallery stays scannable). */
-.hm-guidance { margin-top: .75rem; border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
-.hm-guidance > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
-  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
-.hm-guidance > .hm-notes { margin: 0; padding: .6rem .75rem; background: var(--colour-surface);
-  border-top: 1px solid var(--colour-border);
-  border-radius: 0 0 var(--radius-md) var(--radius-md); }
-.hm-contract { margin-top: .75rem; border: 1px solid var(--colour-border);
-  border-radius: var(--radius-md); background: var(--colour-brand-soft); }
-.hm-contract > summary { cursor: pointer; padding: .5rem .75rem; font-size: var(--text-sm);
-  font-weight: var(--weight-medium); color: var(--colour-brand-text); list-style-position: inside; }
 .hm-contract-table { width: 100%; border-collapse: collapse; font-size: .75rem;
-  background: var(--colour-surface); }
+  background: var(--colour-surface); margin: 0 0 .75rem;
+  border: 1px solid var(--colour-border); border-radius: var(--radius-md); overflow: hidden; }
 .hm-contract-table th, .hm-contract-table td { text-align: left; vertical-align: top;
-  padding: .4rem .6rem; border-top: 1px solid var(--colour-border); }
+  padding: .45rem .65rem; border-top: 1px solid var(--colour-border); }
+.hm-contract-table thead th { border-top: 0; background: var(--colour-bg); }
 .hm-contract-table th { color: var(--colour-text-muted); font-weight: var(--weight-medium);
   text-transform: uppercase; letter-spacing: .04em; font-size: .625rem; }
 .hm-contract-table code { font-family: var(--font-mono); }
 .hm-verb { color: var(--colour-brand-text); font-weight: var(--weight-semibold); }
-.hm-contract > p { font-size: var(--text-sm); color: var(--colour-text-muted);
-  margin: 0; padding: .6rem .75rem; }
+.hm-contract-live { margin: .5rem 0 1rem; padding: .75rem;
+  border: 1px dashed var(--colour-border); border-radius: var(--radius-md);
+  background: var(--colour-surface); }
 .hm-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
   background: var(--colour-text); color: var(--colour-bg); padding: .5rem 1rem;
   border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); }
@@ -1387,23 +1422,8 @@ window.addEventListener('storage', function (e) {{
         )
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         deps = _dependency_chips(c)
-        # The notes are written FOR coding agents (implementation guidance,
-        # traps, contracts-in-prose) — collapsed behind a disclosure like the
-        # endpoint contract, so the gallery scans visually and the depth is
-        # one click away.
-        notes = (
-            '<details class="hm-guidance">'
-            "<summary>Agent Implementation Guidance</summary>"
-            # notes prose references classes/attributes/events by name —
-            # transform it like the partial, or the guidance shows dz-*
-            # names against an unprefixed gallery.
-            f'<div class="hm-notes">{apply_prefix(c.notes, prefix)}</div></details>'
-            if c.notes
-            else ""
-        )
-        # Full-depth section → the part page (hyperparts/<id>.html). The iframe
-        # src is index-relative; the part page lives inside hyperparts/, so
-        # strip the directory for the standalone copy.
+        # Linear part page (no accordions): demo → copy → exchange → how-to
+        # → DOM contract → notes → files. Same order as agents/<id>.md.
         framed_live_part = framed_live.replace('src="hyperparts/', 'src="')
         part_sections.append(
             (
@@ -1412,16 +1432,18 @@ window.addEventListener('storage', function (e) {{
                     f'<section class="hm-comp" id="{c.id}">'
                     f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
                     f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
+                    f"{_dialect_html()}"
                     f'<div class="hm-preview">{framed_live_part}</div>'
-                    f"{snippet_block}"
+                    f'<section class="hm-ref" id="copy"><h3>Copy this</h3>'
+                    f"{snippet_block}</section>"
                     f"{apply_prefix(_exchanges_html(c), prefix)}"
-                    # Contract source is dual-lock truth (data-dz-*) — do not
-                    # strip the namespace; only the figure chrome is reprefixed.
-                    f"{_contracts_html_prefixed(c, prefix)}"
-                    f"{_composed_of_html(c)}"
-                    f"{_anatomy_html(c)}"
                     f"{apply_prefix(_guidance_html(c), prefix)}"
-                    f"{notes}</section>"
+                    # Contract Python keeps dual-lock names (data-dz-*).
+                    f"{_contracts_html_prefixed(c, prefix)}"
+                    f"{_notes_html(c, prefix)}"
+                    f"{_anatomy_html(c)}"
+                    f"{_composed_of_html(c)}"
+                    f"</section>"
                 ),
             )
         )

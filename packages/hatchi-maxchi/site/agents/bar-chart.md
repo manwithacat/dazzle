@@ -2,7 +2,9 @@
 
 Label / track / value rows — the workhorse categorical chart, server-computed and scope-safe.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="bar-chart-region hm-measure-lg">
@@ -32,6 +34,6 @@ Label / track / value rows — the workhorse categorical chart, server-computed 
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-In Dazzle every bar chart compiles to ONE scope-aware <code>GROUP BY</code> — the bucket list and the counts come from the same query, so they cannot disagree (the #847-class bug this design retired). Fill widths are server-computed percentages of the max bucket.
+In Dazzle every bar chart compiles to ONE scope-aware GROUP BY — the bucket list and the counts come from the same query, so they cannot disagree (the #847-class bug this design retired). Fill widths are server-computed percentages of the max bucket.

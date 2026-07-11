@@ -2,7 +2,9 @@
 
 A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept role=tablist). Each panel hx-gets its content the first time it is shown.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -20,26 +22,55 @@ A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept rol
 </div>
 ```
 
-## Exchanges (the endpoint contract your server must satisfy)
+## Server exchange
+
+After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `GET /app/{region}/{tab}` | a panel, the first time it is revealed (`intersect once`); an eager panel on `load` | the panel's content fragment (rows, a form, a chart — whatever the tab shows) | innerHTML of the panel itself (no hx-target) | loading populated error |
 
-## Contract modules (typed source of truth)
+## How to use it
 
-Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+### Seams
+
+- tabs are buttons with aria-current; panels toggle visibility scoped to .dz-tabs
+- hidden panels may carry intersect once lazy-load; first panel is eager
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| mark the active tab with aria-current and show its panel | fake tabs with links that reload the whole page for every panel |
+
+### Pitfalls
+
+- no role=tablist without the roving-tabindex/arrow-key contract — honest buttons
+- panel reveal is scoped to THIS root so multiple tab sets coexist
+
+### Keyboard / AT
+
+- Tab reaches each tab button; activation is Enter/Space (button default)
+- lazy panels load on first reveal via intersect once
+
+### Related parts
+
+- `button` — agents/button.md
+
+## DOM contract
+
+CI stop-ship (`tests/test_contracts.py`). Do not invent attrs or response shapes outside these modules.
 
 ### `contracts/tabs.py`
 
-- **DOM root:** `[data-dz-tabs]` (part `tabs`)
+- **Required root:** `[data-dz-tabs]` (part `tabs`)
 
 | Node | Attr | Constraint |
 |---|---|---|
 | `[data-dz-tabs]` | `—` | — |
 | `[data-dz-tab-target]` | `data-dz-tab-target` | present (any value) |
 
-**Module source**
+#### Module source
 
 ```python
 """HYPERPART: tabs — tablist root + panel targets."""
@@ -60,37 +91,10 @@ DOM_CONTRACT = DomContract(
 __all__ = ["DOM_CONTRACT"]
 ```
 
-## Guidance (structured)
+## Notes
 
-### Seams
+The tabs are <button>s with aria-current — no role=tablist without the roving-tabindex/arrow-key contract to back it (honest, like the menu). dz-tabs.js reveals the chosen panel scoped to its .dz-tabs root; showing a hidden panel triggers its intersect once lazy load. The first panel is eager (content inline).
 
-- tabs are buttons with aria-current; panels toggle visibility scoped to .dz-tabs
-- hidden panels may carry intersect once lazy-load; first panel is eager
-
-### Pitfalls
-
-- no role=tablist without the roving-tabindex/arrow-key contract — honest buttons
-- panel reveal is scoped to THIS root so multiple tab sets coexist
-
-### Keyboard / AT
-
-- Tab reaches each tab button; activation is Enter/Space (button default)
-- lazy panels load on first reveal via intersect once
-
-### Do / Don't
-
-| Do | Don't |
-|---|---|
-| mark the active tab with aria-current and show its panel | fake tabs with links that reload the whole page for every panel |
-
-### Composes with
-
-- `button` (agents/button.md)
-
-## Guidance (prose; HTML from the registry notes field)
-
-The tabs are <code>&lt;button&gt;</code>s with <code>aria-current</code> — no <code>role=tablist</code> without the roving-tabindex/arrow-key contract to back it (honest, like the menu). <code>dz-tabs.js</code> reveals the chosen panel scoped to its <code>.dz-tabs</code> root; showing a hidden panel triggers its <code>intersect once</code> lazy load. The first panel is eager (content inline).
-
-## Controller files
+## Source files
 
 - `controllers/dz-tabs.js`

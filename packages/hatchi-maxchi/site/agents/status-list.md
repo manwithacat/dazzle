@@ -2,7 +2,9 @@
 
 System / check states as an icon + title + caption list — tone rides data-dz-state per row, never colour alone.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
@@ -35,6 +37,6 @@ System / check states as an icon + title + caption list — tone rides data-dz-s
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Per-row state is <code>data-dz-state</code> on the entry (the pill repeats it as text for WCAG 1.4.1); a neutral row has no pill and an icon SPACER keeps the text column aligned. The wrapper's <code>data-dz-entry-count</code> is the server's row count — handy for e2e assertions without counting DOM.
+Per-row state is data-dz-state on the entry (the pill repeats it as text for WCAG 1.4.1); a neutral row has no pill and an icon SPACER keeps the text column aligned. The wrapper's data-dz-entry-count is the server's row count — handy for e2e assertions without counting DOM.

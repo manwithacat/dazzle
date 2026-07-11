@@ -2,7 +2,9 @@
 
 The shared tail of every multi-series chart: swatch + series-name chips and a sample/series summary line.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="hm-measure-lg">
@@ -14,6 +16,6 @@ The shared tail of every multi-series chart: swatch + series-name chips and a sa
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-Every SVG chart (line / area / radar / box-plot) ends with this pair instead of restyling it per chart: a <code>&lt;ul&gt;</code> of swatch + mono series-name items, and a mono summary line of bucket/series counts and the peak. The swatch background is the series colour the chart body uses for its strokes — inline, per series, server-assigned.
+Every SVG chart (line / area / radar / box-plot) ends with this pair instead of restyling it per chart: a <ul> of swatch + mono series-name items, and a mono summary line of bucket/series counts and the peak. The swatch background is the series colour the chart body uses for its strokes — inline, per series, server-assigned.

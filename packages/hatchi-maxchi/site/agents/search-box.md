@@ -2,7 +2,9 @@
 
 The FTS search region: a debounced search input, an aria-live results panel, and a coaching line that hides — via pure CSS — the moment the user types.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="search-box-region hm-measure">
@@ -16,12 +18,14 @@ The FTS search region: a debounced search input, an aria-live results panel, and
 </div>
 ```
 
-## Exchanges (the endpoint contract your server must satisfy)
+## Server exchange
+
+After the client affordance runs, htmx issues this request. Return the response fragment (not gallery mock toasts).
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
 | `GET /app/fts/{entity}?q=&html=1` | the input, debounced 250ms (and the native `search` event — Esc/clear on type=search) | the results fragment: a `dz-search-box-result-count` line + a `dz-search-box-result-list` of linked rows with `<mark>`-highlighted snippets; zero hits return the `--no-results` variant of the empty line (which the CSS toggle deliberately never hides). Empty queries aren't sent (min length 1) | innerHTML | — |
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-No JS beyond htmx: the 250ms debounce is <code>hx-trigger=&quot;input changed delay:250ms, search&quot;</code>, the results land in an <code>aria-live=&quot;polite&quot;</code> region, and the coaching line is hidden by <code>:has(input:not(:placeholder-shown))</code> — no client state. Results are server-rendered <code>dz-search-box-result</code> rows (title + per-field <code>&lt;mark&gt;</code>-highlighted snippets, count line above); the no-results state reuses <code>dz-search-box-empty</code> with the <code>--no-results</code> modifier.
+No JS beyond htmx: the 250ms debounce is hx-trigger="input changed delay:250ms, search", the results land in an aria-live="polite" region, and the coaching line is hidden by :has(input:not(:placeholder-shown)) — no client state. Results are server-rendered dz-search-box-result rows (title + per-field <mark>-highlighted snippets, count line above); the no-results state reuses dz-search-box-empty with the --no-results modifier.

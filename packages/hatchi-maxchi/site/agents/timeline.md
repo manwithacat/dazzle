@@ -2,7 +2,9 @@
 
 Dated events on a vertical line — bullets carry the attention contract, dates keep a fixed column so titles align.
 
-## Partial (copy-paste; the live demo renders this exact string)
+> **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
+
+## Copy this
 
 ```html
 <div class="timeline-region hm-measure-lg">
@@ -30,6 +32,6 @@ Dated events on a vertical line — bullets carry the attention contract, dates 
 </div>
 ```
 
-## Guidance (prose; HTML from the registry notes field)
+## Notes
 
-The bullet is an inline SVG on <code>currentColor</code>, toned by <code>dz-attn-tone-*</code> (critical/warning/notice/default) — the shared attention vocabulary. Overflowing timelines append a <code>dz-timeline-overflow</code> count line.
+The bullet is an inline SVG on currentColor, toned by dz-attn-tone-* (critical/warning/notice/default) — the shared attention vocabulary. Overflowing timelines append a dz-timeline-overflow count line.
