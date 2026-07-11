@@ -27,6 +27,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 - figure[data-dz-code] → div.dz-code__meta → pre.dz-code__pre > code.dz-code__source
 - meta flex row: optional .dz-code__lang, optional [data-dz-code-copy] (CSS margin-inline-start:auto keeps copy trailing)
 - build-time token spans (.dz-code__tok--*) for Python colour
+- surface uses light-dark() — follows [data-theme], not always-dark
 
 ### Do / Don't
 
@@ -83,7 +84,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Use the code Hyperpart for any fenced sample in docs or app chrome. Required nesting: figure.dz-code[data-dz-code] → div.dz-code__meta (optional lang + optional copy) → pre.dz-code__pre → code.dz-code__source. Copy is pushed trailing by CSS (margin-inline-start: auto on the button) — do not absolute-position it (nested part-page flex/min-width:0 chains left-shift absolute children). The gallery builder runs a stdlib Python highlighter (site/highlight.py) into dz-code__tok--* spans; copy uses textContent so spans never paste. Omit the lang span when there is no language; omit the copy button when display-only (keep the meta bar if a lang chip remains).
+Use the code Hyperpart for any fenced sample in docs or app chrome. Required nesting: figure.dz-code[data-dz-code] → div.dz-code__meta (optional lang + optional copy) → pre.dz-code__pre → code.dz-code__source. Copy is pushed trailing by CSS (margin-inline-start: auto on the button) — do not absolute-position it (nested part-page flex/min-width:0 chains left-shift absolute children). The gallery builder runs a stdlib Python highlighter (site/highlight.py) into dz-code__tok--* spans; copy uses textContent so spans never paste. Omit the lang span when there is no language; omit the copy button when display-only (keep the meta bar if a lang chip remains). Scheme: the surface follows the page theme via light-dark() (light code on light pages, dark on dark) — not always-dark, so dense docs stay scannable.
 
 ## Source files
 

@@ -1903,7 +1903,10 @@ HYPERPARTS: list[Hyperpart] = [
         "(<code>site/highlight.py</code>) into <code>dz-code__tok--*</code> spans; "
         "copy uses <code>textContent</code> so spans never paste. "
         "Omit the lang span when there is no language; omit the copy button when "
-        "display-only (keep the meta bar if a lang chip remains).",
+        "display-only (keep the meta bar if a lang chip remains). "
+        "<strong>Scheme:</strong> the surface follows the page theme via "
+        "<code>light-dark()</code> (light code on light pages, dark on dark) — "
+        "not always-dark, so dense docs stay scannable.",
         tags=("docs",),
         controller="controllers/dz-code.js",
         contracts=("contracts/code.py",),
@@ -1913,6 +1916,7 @@ HYPERPARTS: list[Hyperpart] = [
                 "meta flex row: optional .dz-code__lang, optional [data-dz-code-copy] "
                 "(CSS margin-inline-start:auto keeps copy trailing)",
                 "build-time token spans (.dz-code__tok--*) for Python colour",
+                "surface uses light-dark() — follows [data-theme], not always-dark",
             ),
             pitfalls=(
                 "do not absolute-position .dz-code__copy — it drifts left inside nested "

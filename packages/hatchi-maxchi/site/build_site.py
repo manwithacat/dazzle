@@ -351,6 +351,32 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     import importlib
     import inspect
 
+    n_mod = len(hyperpart.contracts)
+    if n_mod > 1:
+        names = ", ".join(f"<code>{_html.escape(r)}</code>" for r in hyperpart.contracts)
+        multi_lead = (
+            f'<p class="hm-ref-lead"><strong>{n_mod} dual-lock modules</strong> for this '
+            f"part ({names}). Read top-to-bottom: core root first, then extensions. "
+            "Each <em>Exemplar render()</em> live box is CI fixture output for that "
+            "module — not a second demo of the whole Hyperpart. "
+            "What the tables require is the emitted HTML; Python under "
+            f"<code>contracts/</code> is package-internal {_term('dual-lock')} "
+            "(not an app route). "
+            'Request/response wiring: <a href="#exchange">Server exchange</a>.</p>'
+        )
+    else:
+        multi_lead = (
+            '<p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — '
+            "the table is the required surface; Python under <code>contracts/</code> is "
+            f"the package-internal {_term('dual-lock')} CI runs "
+            "(<code>tests/test_contracts.py</code>), not an app route. "
+            "Standalone HTMX4: implement the API so responses match this markup. "
+            "Dazzle: the agent emits SSR that already satisfies it. "
+            "Do not invent attrs outside these tables. "
+            'For request/response wiring see <a href="#exchange">Server exchange</a>.'
+            "</p>"
+        )
+
     blocks: list[str] = []
     for ref in hyperpart.contracts:
         mod = importlib.import_module(ref.removesuffix(".py").replace("/", "."))
@@ -409,15 +435,35 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
 
         if render_fn and exemplars:
             live = render_fn(exemplars[0])
+            # Sample fields from EXEMPLARS[0] so humans know "Fix the door" is
+            # fixture data, not product chrome or a broken demo.
+            ex0 = exemplars[0]
+            sample_bits: list[str] = []
+            for attr in ("value", "label", "col", "kind"):
+                if hasattr(ex0, attr):
+                    sample_bits.append(
+                        f"<code>{_html.escape(attr)}</code>="
+                        f"<code>{_html.escape(str(getattr(ex0, attr)))}</code>"
+                    )
+            sample_line = (" Sample model: " + ", ".join(sample_bits) + ".") if sample_bits else ""
             parts.append(
                 "<h4>Exemplar <code>render()</code></h4>"
-                '<p class="hm-ref-lead">Executable in CI — model → conforming markup.</p>'
+                '<p class="hm-ref-lead">Executable in CI: the Python below is '
+                "<code>render()</code>; the boxed preview is "
+                "<code>render(EXEMPLARS[0])</code> — the first fixture the dual-lock "
+                "tests emit, not a separate widget and not gallery mock data."
+                f"{sample_line}</p>"
                 + render_code_block(
                     inspect.getsource(render_fn),
                     language="python",
                     aria_label=f"Exemplar render for {ref}",
                 )
-                + f'<div class="hm-contract-live">{live}</div>'
+                + '<div class="hm-contract-live">'
+                '<p class="hm-contract-live__label">'
+                "Live output of <code>render(EXEMPLARS[0])</code> — fixture markup "
+                "the dual-lock validates (sample field values only).</p>"
+                f'<div class="hm-contract-live__preview">{live}</div>'
+                "</div>"
             )
 
         if fastapi_src:
@@ -461,17 +507,7 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
 
         blocks.append("".join(parts))
 
-    return (
-        head + '<p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — '
-        "the table is the required surface; Python under <code>contracts/</code> is "
-        f"the package-internal {_term('dual-lock')} CI runs "
-        "(<code>tests/test_contracts.py</code>), not an app route. "
-        "Standalone HTMX4: implement the API so responses match this markup. "
-        "Dazzle: the agent emits SSR that already satisfies it. "
-        "Do not invent attrs outside these tables. "
-        'For request/response wiring see <a href="#exchange">Server exchange</a>.'
-        "</p>" + "".join(blocks) + "</section>"
-    )
+    return head + multi_lead + "".join(blocks) + "</section>"
 
 
 def _default_how_to_seams(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
@@ -1695,6 +1731,19 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-contract-live { margin: .5rem 0 1rem; padding: .75rem;
   border: 1px dashed var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); }
+.hm-contract-live__label {
+  margin: 0 0 .55rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  line-height: 1.4;
+}
+.hm-contract-live__label code { font-size: .9em; }
+.hm-contract-live__preview {
+  padding: .65rem .75rem;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+}
 .hm-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
   background: var(--colour-text); color: var(--colour-bg); padding: .5rem 1rem;
   border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); }

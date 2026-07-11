@@ -193,6 +193,19 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-contract-live { margin: .5rem 0 1rem; padding: .75rem;
   border: 1px dashed var(--colour-border); border-radius: var(--radius-md);
   background: var(--colour-surface); }
+.hm-contract-live__label {
+  margin: 0 0 .55rem;
+  font-size: var(--text-xs, .75rem);
+  color: var(--colour-text-muted);
+  line-height: 1.4;
+}
+.hm-contract-live__label code { font-size: .9em; }
+.hm-contract-live__preview {
+  padding: .65rem .75rem;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-sm);
+  background: var(--colour-bg);
+}
 .hm-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
   background: var(--colour-text); color: var(--colour-bg); padding: .5rem 1rem;
   border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-lg); }

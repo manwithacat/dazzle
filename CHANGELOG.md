@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM code Hyperpart is theme-aware** — surface and token colours use
+  `light-dark()` so light pages get a light code block (dense docs stay
+  scannable); dark theme keeps the elevated dark block.
+- **HM DOM-contract exemplars labeled for humans** — live
+  `render(EXEMPLARS[0])` previews show a caption + sample model fields so
+  fixture strings (e.g. “Fix the door”) are not mistaken for product UI;
+  multi-module parts get a top-to-bottom dual-lock map.
 - **HM part-page meta footer** — Markup dialect, Dogfood, Glossary, Stack
   (package semver + pinned htmx + Lucide), Links (repo, releases, CDN, agent
   pack, guide, monorepo path), and provenance in a single “About this page”

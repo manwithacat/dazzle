@@ -4,6 +4,12 @@
  * Syntax colour is build-time (span.dz-code__tok--*); this file owns surface,
  * meta bar (language + copy), and token colours from design tokens.
  *
+ * Scheme: theme-aware via light-dark() (follows [data-theme] / color-scheme).
+ * Light pages get a light code surface so dense doc pages stay scannable;
+ * dark pages keep the classic elevated dark block. Always-dark is a common
+ * docs convention — we deliberately follow the page theme instead so the
+ * code Hyperpart dogfoods the same scheme tokens as the rest of HM.
+ *
  * Contract (copy-paste structure — keep this exact nesting):
  *   <figure class="dz-code" data-dz-code data-dz-language="python">
  *     <div class="dz-code__meta">
@@ -32,8 +38,9 @@
   margin: 0;
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-md);
-  background: var(--neutral-900);
-  color: var(--neutral-100);
+  /* Page-theme surface — not a permanent “code is always night”. */
+  background: light-dark(var(--neutral-50), var(--neutral-900));
+  color: light-dark(var(--neutral-900), var(--neutral-100));
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -51,8 +58,8 @@
   box-sizing: border-box;
   padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-md);
   min-height: 2.25rem;
-  border-block-end: 1px solid var(--neutral-700);
-  background: var(--neutral-800);
+  border-block-end: 1px solid light-dark(var(--neutral-200), var(--neutral-700));
+  background: light-dark(var(--neutral-100), var(--neutral-800));
 }
 
 .dz-code__lang {
@@ -62,7 +69,7 @@
   font-weight: var(--weight-medium);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--neutral-400);
+  color: light-dark(var(--neutral-600), var(--neutral-400));
   user-select: none;
   white-space: nowrap;
 }
@@ -75,9 +82,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: var(--neutral-700);
-  color: var(--neutral-100);
-  border: 1px solid var(--neutral-600);
+  background: light-dark(var(--neutral-200), var(--neutral-700));
+  color: light-dark(var(--neutral-900), var(--neutral-100));
+  border: 1px solid light-dark(var(--neutral-300), var(--neutral-600));
   border-radius: var(--radius-sm);
   padding: 0.3rem 0.65rem;
   font-size: 0.75rem;
@@ -88,25 +95,25 @@
   transition: background 120ms var(--ease-default, ease);
 }
 
-/* Beat base.css `button` / `button:hover` on the dark meta bar. */
+/* Beat base.css `button` / `button:hover` on the meta bar. */
 .dz-code .dz-code__copy,
 .dz-code__meta .dz-code__copy {
-  background: var(--neutral-700);
-  color: var(--neutral-100);
-  border: 1px solid var(--neutral-600);
+  background: light-dark(var(--neutral-200), var(--neutral-700));
+  color: light-dark(var(--neutral-900), var(--neutral-100));
+  border: 1px solid light-dark(var(--neutral-300), var(--neutral-600));
 }
 
 .dz-code .dz-code__copy:hover,
 .dz-code .dz-code__copy:hover:not(:disabled),
 .dz-code__meta .dz-code__copy:hover,
 .dz-code__meta .dz-code__copy:hover:not(:disabled) {
-  background: var(--neutral-600);
-  color: var(--neutral-100);
+  background: light-dark(var(--neutral-300), var(--neutral-600));
+  color: light-dark(var(--neutral-900), var(--neutral-100));
 }
 
 .dz-code .dz-code__copy:active,
 .dz-code__meta .dz-code__copy:active {
-  background: var(--neutral-500);
+  background: light-dark(var(--neutral-400), var(--neutral-500));
 }
 
 .dz-code .dz-code__copy:focus-visible,
@@ -130,7 +137,7 @@
 
 .dz-code__copy-done {
   display: none;
-  color: var(--success-500);
+  color: var(--colour-success);
 }
 
 .dz-code__copy[data-copied] .dz-code__copy-idle {
@@ -172,37 +179,40 @@
   white-space: pre;
 }
 
-/* ── Syntax tokens (build-time spans; plain text when unhighlighted) ── */
+/* ── Syntax tokens (build-time spans; plain text when unhighlighted) ──
+ * Light mode: deeper hues for contrast on pale surfaces.
+ * Dark mode: lighter hues on the elevated dark block.
+ */
 
 .dz-code__tok--kw {
-  color: var(--brand-300);
+  color: light-dark(var(--brand-700), var(--brand-300));
 }
 
 .dz-code__tok--str {
-  color: var(--success-500);
+  color: light-dark(var(--success-600), var(--success-500));
 }
 
 .dz-code__tok--cmt {
-  color: var(--neutral-500);
+  color: light-dark(var(--neutral-500), var(--neutral-500));
   font-style: italic;
 }
 
 .dz-code__tok--num {
-  color: var(--warning-500);
+  color: light-dark(var(--warning-600), var(--warning-500));
 }
 
 .dz-code__tok--dec {
-  color: var(--brand-200);
+  color: light-dark(var(--brand-600), var(--brand-200));
 }
 
 .dz-code__tok--op {
-  color: var(--neutral-300);
+  color: light-dark(var(--neutral-600), var(--neutral-300));
 }
 
 .dz-code__tok--name {
-  color: var(--neutral-100);
+  color: light-dark(var(--neutral-900), var(--neutral-100));
 }
 
 .dz-code__tok--builtin {
-  color: var(--brand-200);
+  color: light-dark(var(--brand-600), var(--brand-200));
 }
