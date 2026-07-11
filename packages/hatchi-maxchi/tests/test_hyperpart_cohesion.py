@@ -169,6 +169,11 @@ def test_every_part_page_has_linear_skeleton() -> None:
         assert meta_marker in html, f"{h.id}: missing page meta footer"
         assert "hm-dogfood" in html, f"{h.id}: missing dogfood meta item"
         assert "Markup dialect" in html, f"{h.id}: missing dialect meta item"
+        assert "Source repository" in html, f"{h.id}: missing repo link in meta footer"
+        assert "htmx" in html.lower() and "4.0.0" in html, (
+            f"{h.id}: meta footer must surface the pinned htmx version"
+        )
+        assert f"agents/{h.id}.md" in html, f"{h.id}: missing agent-pack link"
         spine_pos = html.find('id="copy"')
         meta_pos = html.find(meta_marker)
         assert spine_pos != -1 and meta_pos != -1 and spine_pos < meta_pos, (

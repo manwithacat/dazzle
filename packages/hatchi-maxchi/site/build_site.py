@@ -15,6 +15,7 @@ Usage: python packages/hatchi-maxchi/site/build_site.py
 
 import argparse
 import html as _html
+import json
 import re
 import shutil
 import sys
@@ -89,9 +90,37 @@ from pretty import pretty_html  # noqa: E402
 from registry import GROUPS, HYPERPARTS  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
+_PKG = Path(__file__).resolve().parents[1]  # packages/hatchi-maxchi
+
+# Public project coordinates for the part-page meta footer (humans + agents).
+_HM_REPO = "https://github.com/manwithacat/hatchi-maxchi"
+_HM_PAGES = "https://manwithacat.github.io/hatchi-maxchi"
+_HM_MONOREPO = "https://github.com/manwithacat/dazzle/tree/main/packages/hatchi-maxchi"
+# Fallback when the monorepo vendor pin file is not present (standalone tree).
+_HTMX_PIN_FALLBACK = "4.0.0-beta4"
 
 _ICON_RE = re.compile(r"\{icon:([a-z0-9-]+)\}")
 _SVG_RE = re.compile(r"\{svg:([a-z0-9-]+)\}")
+
+
+def _hm_package_version() -> str:
+    """Semver from package.json (source of truth for standalone releases)."""
+    data = json.loads((_PKG / "package.json").read_text(encoding="utf-8"))
+    return str(data["version"])
+
+
+def _htmx_pinned_version() -> str:
+    """htmx core pin — prefer Dazzle ``HTMX_PINNED_VERSION`` when in monorepo."""
+    vendors = ROOT / "scripts" / "update_vendors.py"
+    if vendors.is_file():
+        m = re.search(
+            r'HTMX_PINNED_VERSION\s*=\s*"([^"]+)"',
+            vendors.read_text(encoding="utf-8"),
+        )
+        if m:
+            return m.group(1)
+    return _HTMX_PIN_FALLBACK
+
 
 # Human-facing ELI5 glosses for part-page terms (agents use prose + tables).
 # Avoid the substring "dz-" in tips — site build may run apply_prefix which
@@ -519,31 +548,73 @@ def _notes_html(hyperpart, prefix: str) -> str:  # type: ignore[no-untyped-def]
     )
 
 
-def _part_page_meta_footer(prefix: str) -> str:
-    """Boilerplate footer for part pages — dialect, dogfood, provenance.
+def _part_page_meta_footer(prefix: str, part_id: str) -> str:
+    """Boilerplate footer for part pages — dialect, dogfood, stack, links.
 
     Lives at the bottom on purpose: agents scrape ``agents/<id>.md`` (dialect
     still leads there). Humans on HTML should hit demo + contracts first; this
     meta is orientation, not the implementer spine.
     """
+    ver = _hm_package_version()
+    tag = f"v{ver}"
+    htmx = _htmx_pinned_version()
+    lucide = LUCIDE_VERSION
+
     dialect = (
-        f"Demos and Copy this are <strong>unprefixed</strong> (standalone HM / "
-        f"paste into any htmx4 app). Dazzle apps use the <code>dz-</code> class "
+        "Demos and Copy this are <strong>unprefixed</strong> (standalone HM / "
+        "paste into any htmx4 app). Dazzle apps use the <code>dz-</code> class "
         f"and <code>data-dz-*</code> form. {_term('dom-contract')} Python on this "
         f"page is {_term('dual-lock')} source (often still <code>data-dz-*</code>). "
-        f"Match the CSS/JS bundle you load — do not paste gallery markup into "
-        f"Dazzle without the package prefixer."
+        "Match the CSS/JS bundle you load — do not paste gallery markup into "
+        "Dazzle without the package prefixer."
     )
     dogfood = (
         f"The live demo, code snippets ({_term('partial')} + code Hyperpart), "
-        f"theme control (toggle-group), and breadcrumb are HaTchi-MaXchi. "
-        f"Page layout (<code>hm-*</code>) is gallery scaffolding on the same "
-        f"tokens — not a separate UI kit."
+        "theme control (toggle-group), and breadcrumb are HaTchi-MaXchi. "
+        "Page layout (<code>hm-*</code>) is gallery scaffolding on the same "
+        "tokens — not a separate UI kit."
     )
     glossary = (
         "Dotted terms (Hyperpart, affordance, Server exchange, DOM contract, …) "
         "explain on hover or keyboard focus — fundamental hypermedia, not a "
         "black box. Tips are non-critical; section prose and tables are the contract."
+    )
+    stack = (
+        f'<strong>HaTchi-MaXchi</strong> <a href="{_HM_REPO}/releases/tag/{tag}">'
+        f"<code>{_html.escape(tag)}</code></a> "
+        f"(from <code>package.json</code>; "
+        f'<a href="{_HM_REPO}/releases">all releases</a>). '
+        f"Controllers target <strong>htmx "
+        f'<a href="https://www.npmjs.com/package/htmx.org/v/{_html.escape(htmx)}">'
+        f"<code>{_html.escape(htmx)}</code></a></strong> "
+        f"(htmx-4 colon events / <code>detail.ctx</code> — see "
+        f'<a href="https://htmx.org">htmx.org</a>). '
+        f"Gallery demos use a static mock of those shapes, not the real library. "
+        f'<code>hx-swap="innerMorph"</code> needs htmx-4 morph support (or idiomorph '
+        f"on older stacks). Icons: Lucide "
+        f'<a href="https://lucide.dev"><code>{_html.escape(lucide)}</code></a>.'
+    )
+    links = (
+        '<ul class="hm-page-meta__link-list">'
+        f'<li><a href="{_HM_REPO}">Source repository</a></li>'
+        f'<li><a href="{_HM_REPO}/releases/latest">Latest release</a> '
+        f'(this build: <a href="{_HM_REPO}/releases/tag/{tag}">'
+        f"<code>{_html.escape(tag)}</code></a>)</li>"
+        f'<li><a href="https://cdn.jsdelivr.net/gh/manwithacat/hatchi-maxchi@{tag}/dist/">'
+        f"CDN dist @ {_html.escape(tag)}</a> (jsDelivr)</li>"
+        f'<li><a href="{_HM_PAGES}/">Live gallery</a> · '
+        f'<a href="../">All Hyperparts</a> · '
+        f'<a href="../guide">Guide</a></li>'
+        f'<li><a href="../agents/{_html.escape(part_id)}.md">'
+        f"Agent pack (<code>agents/{_html.escape(part_id)}.md</code>)</a></li>"
+        f'<li><a href="{_HM_REPO}/blob/main/AGENTS.md">AGENTS.md</a> · '
+        f'<a href="{_HM_REPO}/blob/main/README.md">README</a> · '
+        f'<a href="{_HM_REPO}/blob/main/LICENSE">MIT license</a></li>'
+        f'<li><a href="{_HM_MONOREPO}">Monorepo package path</a> '
+        f"(Dazzle source of truth)</li>"
+        f'<li><a href="https://www.npmjs.com/package/htmx.org/v/{_html.escape(htmx)}">'
+        f"htmx <code>{_html.escape(htmx)}</code></a> (pinned stack)</li>"
+        "</ul>"
     )
     provenance = (
         "Generated from the design-system sources by "
@@ -566,11 +637,22 @@ def _part_page_meta_footer(prefix: str) -> str:
         "<dt>Glossary</dt>"
         f"<dd>{glossary}</dd>"
         "</div>"
+        '<div class="hm-page-meta__item">'
+        "<dt>Stack</dt>"
+        f"<dd>{stack}</dd>"
+        "</div>"
+        '<div class="hm-page-meta__item">'
+        "<dt>Links</dt>"
+        f"<dd>{links}</dd>"
+        "</div>"
         "</dl>"
         f'<p class="hm-page-meta__provenance">{provenance}</p>'
         "</footer>"
     )
-    return apply_prefix(body, prefix)
+    # Do NOT apply_prefix: this prose deliberately names ``dz-`` / ``data-dz-*``
+    # (and external URLs). Gallery chrome classes here are already ``hm-*``.
+    del prefix  # reserved for call-site symmetry; unused on purpose
+    return body
 
 
 def _guide_body() -> str:
@@ -1565,6 +1647,19 @@ body { background: var(--colour-bg); color: var(--colour-text);
   line-height: 1.45;
 }
 .hm-page-meta__provenance code { font-size: .9em; }
+.hm-page-meta__link-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: .35rem;
+}
+.hm-page-meta__link-list a {
+  color: var(--colour-brand-text, var(--colour-brand));
+  text-decoration: underline;
+  text-underline-offset: .12em;
+}
+.hm-page-meta__link-list code { font-size: .9em; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -1942,7 +2037,7 @@ Every snippet is the live example — copy it into any htmx4 app.
   {theme_toggle}
 </div>
 {section}
-{_part_page_meta_footer(prefix)}
+{_part_page_meta_footer(prefix, c.id)}
 </main>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>
