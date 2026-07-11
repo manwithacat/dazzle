@@ -198,7 +198,7 @@ def test_money_field_selector_conforms_to_money_contract() -> None:
 
 def _emit_root_only_html(part_id: str) -> str:
     """Build HTML for a root-only part via the real Dazzle emission path."""
-    from dazzle.render.fragment import AppShell, Surface, Text
+    from dazzle.render.fragment import AppShell, Surface, Tabs, Text
     from dazzle.render.fragment.htmx import URL
     from dazzle.render.fragment.primitives.data import ConfirmCheckItem, ConfirmGate
     from dazzle.render.fragment.primitives.forms import (
@@ -234,6 +234,20 @@ def _emit_root_only_html(part_id: str) -> str:
                 primary_action_url="/confirm",
             )
         )
+    if part_id == "tabs":
+        return r.render(Tabs(tabs=(("one", Text("One")), ("two", Text("Two")))))
+    if part_id == "dialog":
+        # Real list-row peek:slide_over path emits data-dz-dialog-open on the chevron.
+        table = {
+            "columns": [{"key": "title", "label": "Title", "type": "text"}],
+            "entity_name": "Ticket",
+            "api_endpoint": "/tickets",
+            "table_id": "t-dialog",
+            "detail_url_template": "/app/ticket/{id}",
+            "peek_mode": "slide_over",
+        }
+        row = {"id": str(uuid.uuid4()), "title": "x"}
+        return render_data_table_rows(build_data_table(table, [row]))
     raise AssertionError(f"no fixture builder for root-only part {part_id!r}")
 
 

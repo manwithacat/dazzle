@@ -236,7 +236,10 @@ class _RenderLayoutMixin:
             f"{self._emit(panel, ctx)}</div>"  # type: ignore[arg-type]
             for i, (key, panel) in enumerate(t.tabs)
         )
-        return f'<div class="dz-tabs"><div class="dz-tabs__list">{tab_buttons}</div>{panels}</div>'
+        return (
+            f'<div class="dz-tabs" data-dz-tabs>'
+            f'<div class="dz-tabs__list">{tab_buttons}</div>{panels}</div>'
+        )
 
     def _emit_icon(self, i: Icon, ctx: RenderContext) -> str:
         return lucide_icon_html(i.name, cls=f"dz-icon dz-icon--size-{i.size}")
@@ -315,7 +318,7 @@ class _RenderLayoutMixin:
         )
 
         return (
-            f'<div class="dz-tabs" id="tabs-{rname}">'
+            f'<div class="dz-tabs" data-dz-tabs id="tabs-{rname}">'
             f'<div class="dz-tabs__list">{tab_buttons}</div>'
             f"{panels}"
             f"</div>"

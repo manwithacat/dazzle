@@ -415,7 +415,7 @@ class _RenderTablesMixin:
         attribute, keyed by `data-dz-tab-target` → panel id. Replaces the
         Alpine activeTab island (x-data/:class/x-show)."""
         multi = len(tabs) > 1
-        parts = ['<div class="dz-tabs">']
+        parts = ['<div class="dz-tabs" data-dz-tabs>']
         if multi:
             buttons = "".join(
                 f'<button type="button" class="dz-tabs__tab"'
