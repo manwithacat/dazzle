@@ -48,6 +48,20 @@ def delete_invoice(invoice_id: str) -> str:
     return ""
 ```
 
+## Morph / swap
+
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### Replace / `innerHTML` (reset OK)
+
+- `DELETE /app/invoices/{id}` → per the button's `hx-target`/`hx-swap` (row removal by default)
+
+### Identity rules
+
+- Morph participants need **stable** `id` / domain keys (not loop indexes).
+- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
+- Mark third-party widgets as explicit islands / morph-skip boundaries.
+
 ## How to use it
 
 ### Seams

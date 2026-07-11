@@ -48,6 +48,20 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 |---|---|---|---|---|
 | `GET /app/records/{id}?peek=1` | the opener button's click — the SAME click also fires the dz-dialog.js opener (`data-dz-dialog-open`), so the drawer shows while the body loads | the record's detail body HTML — swapped into the drawer's `dz-drawer__body` target | innerHTML | — |
 
+## Morph / swap
+
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### Replace / `innerHTML` (reset OK)
+
+- `GET /app/records/{id}?peek=1` → innerHTML
+
+### Identity rules
+
+- Morph participants need **stable** `id` / domain keys (not loop indexes).
+- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
+- Mark third-party widgets as explicit islands / morph-skip boundaries.
+
 ## How to use it
 
 No extended guidance authored yet — start from Copy this and the dependency chips.

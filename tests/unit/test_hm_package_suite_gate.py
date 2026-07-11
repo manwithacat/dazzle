@@ -23,6 +23,9 @@ NON_BROWSER = [
     "tests/test_css_parse_integrity.py",
     "tests/test_icon_contract.py",
     "tests/test_pretty.py",
+    "tests/test_morph_template_gates.py",
+    "tests/test_agent_didactics.py",
+    # tools/template_lint.py is exercised by test_morph_template_gates
 ]
 
 

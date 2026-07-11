@@ -10,6 +10,10 @@ package **stems** (`stems/INDEX.md`), not a parallel doctrine. Reconstruct from
 | [0002](0002-three-layers.md) | Three layers: recipe, surface, host | Accepted |
 | [0003](0003-composition-declared.md) | Composition is declared (and refusal is too) | Accepted |
 | [0004](0004-invention-ladder.md) | Invention ladder | Accepted |
+| [0005](0005-morphing-policy.md) | Morphing policy (htmx4) | Accepted |
+| [0006](0006-dom-identity-and-state.md) | DOM identity and DOM-carried state | Accepted |
+| [0007](0007-no-alpine-in-core.md) | No Alpine.js in HM core | Accepted |
+| [0008](0008-template-lint-posture.md) | Template lint posture | Accepted |
 
 **How agents should use these**
 

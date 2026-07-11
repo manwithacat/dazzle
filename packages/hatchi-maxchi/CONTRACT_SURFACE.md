@@ -16,14 +16,14 @@ blast radius (who embeds / refuses this part).
 | `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |
-| `combobox` | `combobox` | `[data-dz-combobox]` | [data-dz-combobox][name=present] | ComboboxField(field_id:str:req; label:str:req; name:str:req; options:list:req; placeholder:str:opt; selected:str:opt); ComboboxOption(label:str:req; value:str:req) |
+| `combobox` | `combobox` | `[data-dz-combobox]` | [data-dz-combobox][name=present] | ComboboxField(field_id:str:req; label:str:req; name:str:req; options:list[ComboboxOption]:req; placeholder:str:opt; selected:str:opt); ComboboxOption(label:str:req; value:str:req) |
 | `command` | `command` | `[data-dz-command]` | [data-dz-command][] | — |
 | `confirm` | `confirm` | `[hx-confirm]` | [hx-confirm][hx-confirm=present] | — |
 | `confirm_panel` | `confirm-panel` | `[data-dz-confirm-gate]` | [data-dz-confirm-gate][data-dz-required-count=present]; [data-dz-required="true"][data-dz-required=present] | — |
 | `dialog` | `dialog` | `[data-dz-dialog-open]` | [data-dz-dialog-open][data-dz-dialog-open=present] | — |
 | `grid` | `grid` | `[data-dz-grid]` | — | — |
 | `grid_cols` | `grid-cols` | `[data-dz-grid]` | [data-dz-grid-col-toggle][data-dz-grid-col-toggle=present]; [data-dz-col][data-dz-col=present]; [data-dz-grid-cols-reset][] | — |
-| `grid_edit` | `grid-edit` | `[data-dz-grid][data-dz-grid-edit-url]` | [data-dz-grid-edit][data-dz-edit-kind=one_of:text\|date\|bool\|select, data-dz-edit-label=present, data-dz-edit-options=json_pairs(when:data-dz-edit-kind=select), data-dz-edit-value=present] | GridEditCell(col:str:req; kind:Literal:req; label:str:req; options:list[tuple[str, str]] \| None:opt; value:str:req) |
+| `grid_edit` | `grid-edit` | `[data-dz-grid][data-dz-grid-edit-url]` | [data-dz-grid-edit][data-dz-edit-kind=one_of:text\|date\|bool\|select, data-dz-edit-label=present, data-dz-edit-options=json_pairs(when:data-dz-edit-kind=select), data-dz-edit-value=present] | GridEditCell(col:str:req; kind:Literal:req; label:str:req; options:list[tuple[str,str]]\|None:opt; value:str:req) |
 | `grid_resize` | `grid-resize` | `[data-dz-grid]` | [data-dz-grid-resize][data-dz-grid-resize=present]; col[data-dz-col], [data-dz-col][data-dz-col=present] | — |
 | `master_detail` | `master-detail` | `[data-dz-master-detail]` | [data-dz-master-detail][]; [data-dz-master-detail-list-body][]; [data-dz-master-detail-detail-body][] | — |
 | `money` | `money` | `[data-dz-money]` | [data-dz-money][data-dz-currency=present, data-dz-scale=present] | MoneyField(currency:str:opt; field_id:str:opt; major_display:str:opt; minor_value:int:opt; name:str:req; scale:int:opt) |
@@ -31,7 +31,7 @@ blast radius (who embeds / refuses this part).
 | `search_select` | `search-select` | `[data-dz-widget="search_select"]` | [data-dz-widget="search_select"][] | SearchResultRow(id:str:req; media_html:str:opt; name:str:req; results_target:str:req; secondary:str:opt; select_url:str:req); SearchSelectShell(blur_grace_ms:int:opt; confirm_hold_ms:int:opt; debounce_ms:int:opt; field_id:str:opt; field_name:str:req; initial_label:str:opt; initial_value:str:opt; input_id:str:opt; placeholder:str:opt; prompt:str:opt; results_id:str:opt; search_url:str:req) |
 | `slider` | `slider` | `[data-dz-slider]` | [data-dz-slider][]; [data-dz-range-value][] | — |
 | `tabs` | `tabs` | `[data-dz-tabs]` | [data-dz-tabs][]; [data-dz-tab-target][data-dz-tab-target=present] | — |
-| `tags` | `tags` | `[data-dz-tags]` | [data-dz-tags][name=present] | TagsField(field_id:str:req; label:str:req; name:str:req; placeholder:str:opt; tags:list:opt) |
+| `tags` | `tags` | `[data-dz-tags]` | [data-dz-tags][name=present] | TagsField(field_id:str:req; label:str:req; name:str:req; placeholder:str:opt; tags:list[str]:opt) |
 | `wizard` | `wizard` | `[data-dz-wizard]` | [data-dz-wizard][data-dz-step=present]; [data-dz-stage][data-dz-stage=present]; [data-dz-state][data-dz-state=one_of:complete\|current\|pending] | — |
 
 ## Related

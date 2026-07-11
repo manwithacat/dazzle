@@ -1,6 +1,6 @@
 # DAZZLE
 
-**A semantic substrate for AI-collaborative software.**
+**An agent-native, domain-first SaaS framework.**
 **Model your business. Ship your product. Pass your audit.**
 
 <!-- Versions & Compatibility -->
@@ -18,7 +18,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/manwithacat/dazzle.svg?style=social)](https://github.com/manwithacat/dazzle)
 
-Dazzle is a declarative framework for building SaaS applications — and a research project exploring what software architecture looks like when AI collaborators are treated as first-class readers and writers of the codebase. You describe your business in structured `.dsl` files: entities, roles, rules, workflows, events. The runtime executes that description directly. There is no code generation step, no scaffold to maintain, and no second source of truth.
+Dazzle is an **agent-native SaaS framework** built around domain-first declarations, server-rendered HTML fragments, and explicit HTMX interaction contracts. You describe your business in structured `.dsl` files — entities, roles, rules, workflows, events — and the runtime executes that description directly. There is no code generation step, no scaffold to maintain, and no second source of truth.
+
+It is optimised for applications where **correctness, inspectability, and change locality** matter more than unconstrained client-side composition: domain-heavy SaaS, workflow systems, operational tooling, and governance-heavy products. Rich client behaviour is allowed through **bounded JavaScript islands** with named lifecycle contracts — not a parallel SPA state graph.
+
+The same repository is also a working practice of **epistemic engineering**: deliberately shaping the representations from which human and artificial collaborators reconstruct organisational judgement (see [stems](stems/README.md) below).
 
 ```bash
 cd examples/simple_task && dazzle serve
@@ -36,11 +40,55 @@ copy-pasteable commands and explicit limits.
 
 ## The thesis
 
-Traditional software architecture is optimized for humans. Files, modules, conventions, and abstractions are arranged to fit a programmer's working memory.
+Modern coding agents can work on many kinds of software — including large client-heavy applications. The durable claim for Dazzle is not that other stacks are incomprehensible. It is that **Dazzle reduces the amount of inference** an agent (or a human reviewer) must perform to understand, modify, and verify a SaaS application.
 
-That optimization is no longer the only one that matters. An increasing share of software work — exploration, modification, review, refactor, test — happens with an AI collaborator in the loop. Codebases that scatter meaning across controllers, models, migrations, and templates burn context window on plumbing the model already understands. Codebases whose intent is encoded in a typed, inspectable graph let the model spend its attention on the actual problem.
+In a typical client-heavy codebase, behaviour is reconstructed from component trees, hooks, effects, client caches, routers, and build-time transforms. In Dazzle the target path is more direct:
 
-Dazzle is a bet that **semantic compression** — putting your application's meaning in one inspectable, machine-readable form — produces software that is easier to evolve, easier to audit, and easier to collaborate on with both humans and machines. The DSL is not a shortcut to a generated codebase. It *is* the codebase.
+```text
+Domain declaration (.dsl)
+  → frozen AppSpec IR
+  → server-side state
+  → rendered HTML fragment
+  → HTMX request / response
+  → DOM swap
+  → CI-verifiable result
+```
+
+That path is the product advantage: **make the correct change obvious, local, inspectable, and testable.**
+
+**Semantic compression** — putting application meaning in one inspectable, machine-readable form — is how Dazzle gets there. The DSL is not a shortcut to a generated codebase. It *is* the maintained artefact. API specs, UI surfaces, tests, and compliance evidence are projections of the same IR.
+
+---
+
+## Epistemic engineering and stems
+
+Prompt engineering optimises a single interaction. **Epistemic engineering** optimises the *representational environment* from which many interactions reconstruct understanding. When artificial reasoners join the team, organisational judgement cannot rely only on hallway culture and mentorship — it has to live in **explicit representations** that a competent reasoner can rebuild from.
+
+This repository treats a small set of those representations as first-class:
+
+| Term | Meaning in Dazzle |
+|------|-------------------|
+| **Stem** | A short conceptual claim from which large bodies of judgement reconstruct (not “more docs”) |
+| **Expression** | ADR, code path, test, playbook, or example that *points at* a stem |
+| **Agent didactics** | How stems and instructions are sequenced so reconstruction is reliable |
+| **Prior correction** | Grammar, agent guidance, and CI gates that pull against corpus defaults (next section) |
+
+**Stems** live in a deliberate hierarchy — different artefact classes have different authority:
+
+| Rank | Location | Role |
+|------|----------|------|
+| 1 | [`stems/`](stems/INDEX.md) | Framework stems — what must stay true across implementations |
+| 2 | [`AGENTS.md`](AGENTS.md) | Always-on didactics and commands |
+| 3 | [`docs/adr/`](docs/adr/INDEX.md) | Decision history (expressions of stems) |
+| 4 | Package stems (e.g. [`packages/hatchi-maxchi/stems/`](packages/hatchi-maxchi/stems/)) | Design-system / Hyperpart judgement |
+| 5 | [`examples/*/stems/`](examples/) | App **domain** stems (framework stems still win on framework questions) |
+| 6 | Guides / reference | Mechanics and tutorials |
+
+Agents (and humans onboarding): open [`stems/INDEX.md`](stems/INDEX.md) → the stem that matches the task → `AGENTS.md` commands → local code. Do not treat every Markdown file as equal weight.
+
+Framework stems today include DSL-first, agent-first, hypermedia SSR, the four-layer stack (`http → page → render → core`), authoring boundary, clean breaks, RBAC/scope separation, and [epistemic layout](stems/epistemic-layout.md). HaTchi-MaXchi adds Hyperpart-specific stems (composition, invention ladder, three layers). New example apps scaffold a local `stems/` so domain judgement has a place to live.
+
+Start here: **[stems/README.md](stems/README.md)** · catalogue: **[stems/INDEX.md](stems/INDEX.md)**.
 
 ---
 
@@ -70,7 +118,7 @@ Eleven stated positions, defended in the [ADRs](docs/adr/INDEX.md):
 2. **No code generation.** The runtime executes the IR directly. No regeneration drift, no generated files to maintain.
 3. **Anti-Turing by design.** The DSL has no arbitrary computation. Everything is statically inspectable, lintable, and verifiable.
 4. **PostgreSQL only.** One capable relational database plus disciplined semantics beats distributed-systems sprawl for the workloads Dazzle targets.
-5. **Server-rendered HTML + HTMX.** No SPA framework, no build toolchain, no client-state fragmentation.
+5. **Server-rendered HTML + HTMX.** The product surface is server-owned HTML and explicit fragment swaps — not an SPA client state graph. No frontend build toolchain for the default path. Bounded **JavaScript islands** are fine when they have a named purpose and lifecycle contract (HaTchi-MaXchi Hyperparts).
 6. **Fragments as the only escape hatch.** When the DSL can't express it, you reach for a *fragment* — a constrained, named, semantically-tagged piece of custom rendering. Not arbitrary frontend.
 7. **Append-oriented history.** Events, decisions, and grants are logged. Auditors don't need to spelunk; the trail is part of the substrate.
 8. **Provable RBAC (scoped, honestly).** Scope rules compile to a formal predicate algebra, statically validated against the FK graph; their meta-properties (least-privilege containment, deny-overrides precedence, …) are mechanically proved over the DSL by an SMT solver — `dazzle rbac prove`. The proof is of a *model* of the policy over a stated trust boundary (PostgreSQL, auth, the single query path are *trusted, not proven*); runtime conformance is *verified by test*, and grants you mint outside the declared classes fall outside the proof. The tool says which — `PROVED` / `VACUOUS` / `INFORMATIONAL` / `FAILED` — rather than a blanket green.
@@ -275,7 +323,7 @@ The DSL is parsed into a typed intermediate representation (AppSpec IR). The run
 
 This architecture is deliberately **anti-Turing**: the DSL has no arbitrary computation, which means Dazzle can statically validate, lint, measure fidelity, and reason about your application. What you declare is what runs.
 
-The frontend uses server-rendered HTML with HTMX — zero build toolchain, stable technology, and full visibility into what the runtime produces. Every built-in display mode — lists, kanban, charts, pivots, funnels, metrics, and more — is rendered with sample data, live previews, and its source DSL in the **[UX Catalogue](https://manwithacat.github.io/dazzle/reference/ux-catalogue/)**. For UX that the generated surfaces can't express, **fragments** provide a constrained escape hatch: named, semantically-tagged custom rendering that remains connected to the entity and surface graph.
+The frontend uses server-rendered HTML with HTMX — zero default build toolchain, stable technology, and full visibility into what the runtime produces. Generated HTML is a first-class, testable artefact, not an opaque side effect of a client bundle. Every built-in display mode — lists, kanban, charts, pivots, funnels, metrics, and more — is rendered with sample data, live previews, and its source DSL in the **[UX Catalogue](https://manwithacat.github.io/dazzle/reference/ux-catalogue/)**. For UX that the generated surfaces can't express, **fragments** and bounded **islands** provide constrained escape hatches that stay connected to the entity and surface graph.
 
 For the full architecture, see [docs/architecture/overview.md](docs/architecture/overview.md). For the event-semantics rationale, see [docs/architecture/hless-deep-dive.md](docs/architecture/hless-deep-dive.md).
 
@@ -283,7 +331,11 @@ For the full architecture, see [docs/architecture/overview.md](docs/architecture
 
 ## AI-assisted development
 
-Dazzle ships as both a runtime and an AI development environment. When used with Claude Code (via MCP), you get access to a growing set of tools that span the full lifecycle. The exact tool count, operations, and parameters drift with development — see the [MCP Tool Inventory](docs/reference/mcp-tools.md) for the live list, regenerated from the registry every build. As of the latest doc regen: **34 tools, 156 operations**. Broad lifecycle coverage:
+Dazzle ships as both a runtime and an AI development environment. The intent is not “better prompts for the same scattered architecture,” but a **smaller surface to inspect, modify, and verify**: domain model in `.dsl`, rendered HTML as a first-class artefact, HTMX contracts on the wire, stems for judgement reconstruction, and CI gates for drift.
+
+**Before inventing structure**, agents should reconstruct from the epistemic hierarchy: [`stems/INDEX.md`](stems/INDEX.md) → matching stem → [`AGENTS.md`](AGENTS.md) → local code. Package work (e.g. HaTchi-MaXchi) also reads that package’s `stems/` and agent curriculum.
+
+When used with Claude Code (via MCP), you get access to a growing set of tools that span the full lifecycle. The exact tool count, operations, and parameters drift with development — see the [MCP Tool Inventory](docs/reference/mcp-tools.md) for the live list, regenerated from the registry every build. As of the latest doc regen: **34 tools, 156 operations**. Broad lifecycle coverage:
 
 | Stage | What the tools do |
 |-------|------------------|
@@ -344,6 +396,16 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 
 ## Documentation
 
+### Epistemic layout (start here if you write with agents)
+
+- **[Framework stems](stems/README.md)** — compressed organisational judgement; catalogue in [`stems/INDEX.md`](stems/INDEX.md)
+- **[AGENTS.md](AGENTS.md)** — always-on agent curriculum and commands (reconstruct stems first)
+- **[HaTchi-MaXchi stems](packages/hatchi-maxchi/stems/)** — Hyperpart / design-system stems
+- **[Counter-prior catalogue](docs/counter-priors/INDEX.md)** — named corpus pathologies and the preferred shape
+- **[ADRs](docs/adr/INDEX.md)** — decision history (expressions of stems)
+
+### Product and evaluation
+
 - **[Evaluating Dazzle](EVALUATION.md)** — skeptical-evaluator walkthrough: see the claims demonstrated in ~30 min
 - **[Security & Compliance Claims](SECURITY_CLAIMS.md)** — claim-by-claim inventory: status, enforcement, tests, known gaps
 - **[Agent Workflow Guide](docs/guides/agent-workflow.md)** — end-to-end AI-agent spec-edit loop: spec change → DSL edit → validate → tests → human review → deploy
@@ -355,18 +417,19 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[RBAC Verification](docs/reference/rbac-verification.md)** — provable access control
 - **[Enterprise SSO & Provisioning](docs/reference/enterprise-sso.md)** — per-org OIDC / SAML 2.0 / SCIM (opt-in)
 - **[Autonomous Harness](docs/autonomous-harness.md)** — Claude Code slash commands + methodology
-- **[ADRs](docs/adr/INDEX.md)** — architectural decisions, defended
 - **[Research notes](docs/research/INDEX.md)** — reproducible empirical investigations (agent-era counter-priors, predicting task context from a code graph)
 - **[Architecture](docs/architecture/)** — system design, pipeline, MCP server
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app
-- **[Examples](examples/)** — runnable example applications
+- **[Examples](examples/)** — runnable example applications (each may carry `examples/<app>/stems/`)
 - **[Fixtures](fixtures/)** — framework-validation probes (`shapes_validation` for RBAC, `asset_registry` for `subtype_of:` TPT inheritance, `pra` for full parser/construct conformance, `component_showcase` for the UX catalogue)
 
 ---
 
 ## About this project
 
-Dazzle is a research project exploring what application substrates look like when AI collaborators are treated as first-class readers and writers. It is developed in the open, primarily by a single author, with heavy AI assistance — both in the framework itself and in the example apps built on top of it. Release cadence is high (every fix gets a unique version for deployment traceability) and pre-1.0 breaks are intentional rather than apologetic. If you're evaluating Dazzle for production use, talk to us first.
+Dazzle is an agent-native framework and a research project in how application substrates and **representational infrastructure** should look when AI collaborators are first-class readers and writers. The north star is simple: make the correct change **obvious, local, inspectable, and testable** — for humans and for agents that improve over time.
+
+It is developed in the open, primarily by a single author, with heavy AI assistance — both in the framework itself and in the example apps built on top of it. Release cadence is high (every fix gets a unique version for deployment traceability) and pre-1.0 breaks are intentional rather than apologetic. If you're evaluating Dazzle for production use, talk to us first.
 
 ## Contributing
 

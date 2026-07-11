@@ -30,6 +30,18 @@ Inline composition — real button, toggle-group and menu markup nested in a rol
 
 This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
 
+## Morph / swap
+
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+This L2 host has no declared hypermedia exchanges in the registry. If you add persistent region updates, prefer `innerMorph` / `outerMorph` with stable row/panel ids; use replacement for flash panes and full resets.
+
+### Identity rules
+
+- Morph participants need **stable** `id` / domain keys (not loop indexes).
+- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
+- Mark third-party widgets as explicit islands / morph-skip boundaries.
+
 ## How to use it
 
 No extended guidance authored yet — start from Copy this and the dependency chips.

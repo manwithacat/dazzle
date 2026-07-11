@@ -43,6 +43,13 @@ There is **no client state graph**. State lives on the server and in the DOM.
 Hyperparts are **not** React components, Server Components, or a prop/event tree.
 Composition is **declared host embedding** (and explicit refusal), not imports.
 
+**htmx4 / morph:** prefer morphing for *stable* surfaces (shells, tables, forms);
+replacement for disposable fragments. Stable IDs and DOM-carried state are
+load-bearing. **Alpine is not HM core** — delegated vanilla controllers only.
+Reconstruct: `stems/morph-safe-hypermedia.md` (decisions 0005–0008).
+Lint fixtures: `python packages/hatchi-maxchi/tools/template_lint.py`
+(`--compose grid`, `--file partial.html`).
+
 ## Two audiences (same Hyperpart, different entry)
 
 | Audience | Who | What the agent should do |
@@ -64,6 +71,7 @@ decisions. Decisions under `docs/decisions/` are **expressions** of the same ste
 | **Three layers** | L0 recipe → L1 surface → L2 host | `stems/three-layers.md` |
 | **Declared composition** | `composes` / `does_not_compose` / extensions | `stems/composition-declared.md` |
 | **Invention ladder** | Reuse → refuse+spike → promote → new part | `stems/invention-ladder.md` |
+| **Morph-safe hypermedia** | htmx4 morph for stable surfaces; DOM identity/state; no Alpine in core | `stems/morph-safe-hypermedia.md` |
 
 Monorepo framework stems (DSL-first, hypermedia SSR, …): `../../stems/` when
 working inside the Dazzle tree.

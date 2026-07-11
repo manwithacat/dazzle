@@ -129,6 +129,25 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 | `POST /app/{region}/bulk` | a bulk-action button (e.g. Delete), after the user approves its confirm dialog; the controller injects the selection on `htmx:configRequest` | the server RE-VALIDATES permissions and RE-SCOPES the action to the echoed query (never trusting the client `selected_ids` alone) and applies it. Two patterns: with `data-dz-grid-bulk-refresh` on the button (this demo), the response swaps NOTHING (JSON/204) and the controller re-fetches rows + footer via the normal GET; without it, put `hx-target` on the button and return the refreshed `<tr>` rows directly. When `all_matching_selected=true`, the action applies to the WHOLE matched query minus `excluded_ids` — the server re-runs the echoed query itself, and MUST strip `page`/`page_size` first (they window the display, not the matched set — re-running them verbatim would apply the action to one page only); `selected_ids` is informational (visible state) only. NB form encoding: with no exclusions the `excluded_ids` key is ABSENT from the POST (not sent empty) — default it to the empty list | innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer (its `data-dz-grid-total` re-stamps the matched total) | populated empty error |
 | `PUT /app/{entity}/{id}` | the inline-edit extension (dz-grid-edit.js): dblclick an editable cell's display span opens an in-cell editor; Enter (or a change, for bool/select/date) commits a raw fetch PUT to `{data-dz-grid-edit-url}/{rowId}` — NOT an htmx exchange | this is the entity's STANDARD update route, not a bespoke field endpoint: the body is a single-field JSON object (`{"plan": "Pro"}`), so an all-optional update schema + exclude-unset semantics make it a partial update, and the full update gate (permissions, scoping, validation) applies. Return 2xx JSON on success; any non-2xx keeps the editor open with the response text as its error. The controller then fires `dz-grid:refresh` on the tbody, so the committed value renders SERVER-side (badges/dates re-render; no client patching) | none (raw fetch) — the follow-up `dz-grid:refresh` re-fetches rows + footer via the tbody's normal GET | populated error |
 
+## Morph / swap
+
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### Morph (persistent region)
+
+- `GET /app/{region}/rows?q=&sort=&dir=&page=&page_size=` → innerMorph of the tbody (`[data-dz-grid-body]`) — idiomorph keys on each row's `id`, so a live selection follows its row across a re-sort — PLUS an out-of-band update of the pagination footer: append `<nav data-dz-grid-pagination data-dz-grid-total="N" hx-swap-oob="true">…</nav>` to the response (the stamped total feeds the all-matching affordance) (or target a wrapping region that contains both the tbody and the footer in one swap). The footer's current-page button carries `aria-current="page"` — the client reads it back as the authoritative (possibly server-clamped) page
+- `POST /app/{region}/bulk` → innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer (its `data-dz-grid-total` re-stamps the matched total)
+
+### No HTML swap (raw fetch / companion OOB)
+
+- `PUT /app/{entity}/{id}` → none (raw fetch) — the follow-up `dz-grid:refresh` re-fetches rows + footer via the tbody's normal GET
+
+### Identity rules
+
+- Morph participants need **stable** `id` / domain keys (not loop indexes).
+- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
+- Mark third-party widgets as explicit islands / morph-skip boundaries.
+
 ## How to use it
 
 ### Seams
@@ -146,6 +165,9 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 | keep selection state in the DOM (.checked on the row checkbox) | mirror selection into a JS array a tbody swap would orphan |
 | return full row fragments from the grid endpoint | return cell deltas the client must splice in |
 | use bare select for in-cell enum edit (current contract) | assume grid dogfoods combobox because both have 'select' UX |
+| innerMorph the tbody; give each row a stable `id` (morph key) + `data-dz-grid-row-id` (bulk anchor) | innerHTML-replace the tbody without stable row ids (selection follows DOM position, not the entity) |
+| use `hx-swap=none` + `dz-grid:refresh` for bulk when a full re-fetch is clearer than splicing | morph a flash/toast region that should fully reset |
+| park in-flight edit buffer on the grid root (outside the morph path) | store open-cell edit state only in a JS object the tbody morph drops |
 
 ### Pitfalls
 

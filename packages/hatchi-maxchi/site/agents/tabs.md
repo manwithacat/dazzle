@@ -37,6 +37,20 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 |---|---|---|---|---|
 | `GET /app/{region}/{tab}` | a panel, the first time it is revealed (`intersect once`); an eager panel on `load` | the panel's content fragment (rows, a form, a chart — whatever the tab shows) | innerHTML of the panel itself (no hx-target) | loading populated error |
 
+## Morph / swap
+
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### Replace / `innerHTML` (reset OK)
+
+- `GET /app/{region}/{tab}` → innerHTML of the panel itself (no hx-target)
+
+### Identity rules
+
+- Morph participants need **stable** `id` / domain keys (not loop indexes).
+- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
+- Mark third-party widgets as explicit islands / morph-skip boundaries.
+
 ## How to use it
 
 ### Seams

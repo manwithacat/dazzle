@@ -886,12 +886,83 @@ def _epistemic_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+def _morph_swap_section(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
+    """Agent pack: morph vs replace from declared exchanges (decision 0005).
+
+    Emitted for parts with exchanges and for L2 hosts (even without exchanges)
+    so agents do not invent Alpine state or blind morph rewrites.
+    """
+    from registry import effective_layer
+
+    layer = effective_layer(hyperpart)
+    exchanges = list(hyperpart.exchanges or ())
+    if not exchanges and layer != "L2":
+        return []
+
+    morph_ex = [e for e in exchanges if e.swap and re.search(r"morph", e.swap, re.I)]
+    none_ex = [
+        e
+        for e in exchanges
+        if e.swap and re.search(r"\bnone\b", e.swap, re.I) and e not in morph_ex
+    ]
+    replace_ex = [
+        e
+        for e in exchanges
+        if e.swap
+        and e not in morph_ex
+        and e not in none_ex
+        and not re.search(r"\bnone\b", e.swap, re.I)
+    ]
+
+    lines = [
+        "## Morph / swap",
+        "",
+        "Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. "
+        "Morph for **stable** surfaces; replacement for **disposable** fragments. "
+        "Gallery mocks may approximate morph with `innerHTML` — production follows "
+        "the swap column in **Server exchange**.",
+        "",
+    ]
+    if morph_ex:
+        lines += ["### Morph (persistent region)", ""]
+        for e in morph_ex:
+            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}")
+        lines.append("")
+    if replace_ex:
+        lines += ["### Replace / `innerHTML` (reset OK)", ""]
+        for e in replace_ex:
+            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}")
+        lines.append("")
+    if none_ex:
+        lines += ["### No HTML swap (raw fetch / companion OOB)", ""]
+        for e in none_ex:
+            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}")
+        lines.append("")
+    if layer == "L2" and not morph_ex and not replace_ex and not none_ex:
+        lines += [
+            "This L2 host has no declared hypermedia exchanges in the registry. "
+            "If you add persistent region updates, prefer `innerMorph` / `outerMorph` "
+            "with stable row/panel ids; use replacement for flash panes and full resets.",
+            "",
+        ]
+    lines += [
+        "### Identity rules",
+        "",
+        "- Morph participants need **stable** `id` / domain keys (not loop indexes).",
+        "- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — "
+        "not Alpine/`x-data` or a JS array a morph would orphan.",
+        "- Mark third-party widgets as explicit islands / morph-skip boundaries.",
+        "",
+    ]
+    return lines
+
+
 def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-def]
     """agents/<id>.md — linear scrape target aligned with the part HTML page.
 
-    Order: identity → dialect → partial → exchange → how-to → DOM contract →
-    notes → files. Same sections as hyperparts/<id>.html so agents and humans
-    share one mental model.
+    Order: identity → dialect → partial → exchange → morph/swap → how-to →
+    DOM contract → notes → files. Same sections as hyperparts/<id>.html so
+    agents and humans share one mental model.
     """
     lines = [
         f"# {hyperpart.title} (`{hyperpart.id}`)",
@@ -967,6 +1038,8 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
                 "```",
                 "",
             ]
+
+    lines += _morph_swap_section(hyperpart)
 
     lines += ["## How to use it", ""]
     g = hyperpart.guidance

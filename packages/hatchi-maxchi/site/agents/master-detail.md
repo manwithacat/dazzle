@@ -38,6 +38,20 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 |---|---|---|---|---|
 | `GET /app/master-detail/{id}` | a list item, on click | a detail card fragment — `<div class="dz-card dz-card-body">…` | innerHTML of the sibling `.dz-master-detail__detail` pane | loading populated error |
 
+## Morph / swap
+
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### Replace / `innerHTML` (reset OK)
+
+- `GET /app/master-detail/{id}` → innerHTML of the sibling `.dz-master-detail__detail` pane
+
+### Identity rules
+
+- Morph participants need **stable** `id` / domain keys (not loop indexes).
+- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
+- Mark third-party widgets as explicit islands / morph-skip boundaries.
+
 ## How to use it
 
 ### Seams
@@ -50,6 +64,7 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 | Do | Don't |
 |---|---|
 | hx-get the detail card into the detail pane on item activate | stash all detail payloads in data-* attributes on every list row |
+| replace (`innerHTML`) the detail pane — it is disposable content that should fully reset on each selection (decision 0005) | morph the detail pane by default when focus/edit state must not leak across selections (prefer explicit replace) |
 
 ### Pitfalls
 

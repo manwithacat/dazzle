@@ -746,6 +746,21 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                         "use bare select for in-cell enum edit (current contract)",
                         "assume grid dogfoods combobox because both have 'select' UX",
                     ),
+                    (
+                        "innerMorph the tbody; give each row a stable `id` (morph key) "
+                        "+ `data-dz-grid-row-id` (bulk anchor)",
+                        "innerHTML-replace the tbody without stable row ids "
+                        "(selection follows DOM position, not the entity)",
+                    ),
+                    (
+                        "use `hx-swap=none` + `dz-grid:refresh` for bulk when a full "
+                        "re-fetch is clearer than splicing",
+                        "morph a flash/toast region that should fully reset",
+                    ),
+                    (
+                        "park in-flight edit buffer on the grid root (outside the morph path)",
+                        "store open-cell edit state only in a JS object the tbody morph drops",
+                    ),
                 ),
                 a11y_keys=(
                     "Enter commits (text/date), Escape cancels an open editor",
@@ -2294,6 +2309,12 @@ def select(source: str, id: str) -> str:
                     (
                         "hx-get the detail card into the detail pane on item activate",
                         "stash all detail payloads in data-* attributes on every list row",
+                    ),
+                    (
+                        "replace (`innerHTML`) the detail pane — it is disposable content "
+                        "that should fully reset on each selection (decision 0005)",
+                        "morph the detail pane by default when focus/edit state must not "
+                        "leak across selections (prefer explicit replace)",
                     ),
                 ),
                 a11y_keys=(

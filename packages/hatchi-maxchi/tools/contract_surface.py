@@ -17,7 +17,9 @@ from __future__ import annotations
 import argparse
 import importlib
 import sys
+import types
 from pathlib import Path
+from typing import Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel
 
@@ -45,6 +47,64 @@ def _validator_label(v: object) -> str:
     return name
 
 
+def _ann_label(ann: object) -> str:
+    """Stable type label across Python versions (3.12–3.14).
+
+    Bare ``getattr(ann, "__name__")`` collapses ``list[tuple[str, str]] | None``
+    to ``Union`` on some interpreters (CI 3.14), which thrashs CONTRACT_SURFACE.md
+    without a real contract change.
+    """
+    if ann is None:
+        return "None"
+    if ann is type(None):
+        return "None"
+
+    origin = get_origin(ann)
+    args = get_args(ann)
+
+    # PEP 604 unions (X | Y) and typing.Union / Optional
+    if origin is Union or origin is types.UnionType or isinstance(ann, types.UnionType):
+        if not args and isinstance(ann, types.UnionType):
+            args = get_args(ann)
+        parts = sorted((_ann_label(a) for a in args), key=lambda s: (s == "None", s))
+        # Drop duplicate Nones; keep stable X|None form
+        seen: list[str] = []
+        for p in parts:
+            if p not in seen:
+                seen.append(p)
+        return "|".join(seen)
+
+    if origin is list:
+        return f"list[{_ann_label(args[0])}]" if args else "list"
+    if origin is tuple:
+        if not args:
+            return "tuple"
+        if len(args) == 2 and args[1] is Ellipsis:
+            return f"tuple[{_ann_label(args[0])},...]"
+        return "tuple[" + ",".join(_ann_label(a) for a in args) + "]"
+    if origin is dict:
+        if len(args) >= 2:
+            return f"dict[{_ann_label(args[0])},{_ann_label(args[1])}]"
+        return "dict"
+    if origin is set:
+        return f"set[{_ann_label(args[0])}]" if args else "set"
+    if origin is Literal:
+        return "Literal"
+
+    if isinstance(ann, type):
+        return ann.__name__
+
+    # ForwardRef / string annotations
+    text = str(ann)
+    text = text.replace("typing.", "").replace("types.", "")
+    text = text.replace("NoneType", "None")
+    # Collapse Optional[X] if it ever appears as a string
+    if text.startswith("Optional[") and text.endswith("]"):
+        inner = text[len("Optional[") : -1]
+        return f"{inner}|None"
+    return text
+
+
 def _model_fields(cls: type[BaseModel]) -> list[str]:
     # Pydantic v2
     fields = getattr(cls, "model_fields", None)
@@ -52,7 +112,7 @@ def _model_fields(cls: type[BaseModel]) -> list[str]:
         out = []
         for fname, finfo in fields.items():
             ann = getattr(finfo, "annotation", None)
-            ann_s = getattr(ann, "__name__", None) or str(ann)
+            ann_s = _ann_label(ann)
             req = "req" if finfo.is_required() else "opt"
             out.append(f"{fname}:{ann_s}:{req}")
         return sorted(out)

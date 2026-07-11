@@ -21,11 +21,16 @@ _REQUIRED = (
     "stems/three-layers.md",
     "stems/composition-declared.md",
     "stems/invention-ladder.md",
+    "stems/morph-safe-hypermedia.md",
     "docs/decisions/README.md",
     "docs/decisions/0001-hyperpart-not-component.md",
     "docs/decisions/0002-three-layers.md",
     "docs/decisions/0003-composition-declared.md",
     "docs/decisions/0004-invention-ladder.md",
+    "docs/decisions/0005-morphing-policy.md",
+    "docs/decisions/0006-dom-identity-and-state.md",
+    "docs/decisions/0007-no-alpine-in-core.md",
+    "docs/decisions/0008-template-lint-posture.md",
     "docs/agent/pick-a-surface.md",
     "docs/agent/compose-or-refuse.md",
     "docs/agent/mutate-a-primitive.md",
@@ -115,3 +120,22 @@ def test_agent_packs_carry_epistemic_one_liner() -> None:
         assert "**Layer:**" in md, pid
         assert "**Recipe:**" in md, pid
         assert "CONSUMER_MAP.md" in md, pid
+
+
+def test_agent_packs_document_morph_swap_for_morphing_hosts() -> None:
+    """Grid (and other morph exchangers) must teach morph vs replace (decision 0005)."""
+    grid = (PKG / "site" / "agents" / "grid.md").read_text(encoding="utf-8")
+    assert "## Morph / swap" in grid, "grid agent pack missing Morph / swap section"
+    assert "innerMorph" in grid
+    assert "morph-safe-hypermedia" in grid
+    assert "stable" in grid.lower()
+    # Do/Don't covers morph identity
+    assert "morph key" in grid.lower() or "data-dz-grid-row-id" in grid
+
+    pagination = (PKG / "site" / "agents" / "pagination.md").read_text(encoding="utf-8")
+    assert "## Morph / swap" in pagination
+    assert "innerMorph" in pagination
+
+    # L2 host without exchanges still gets identity rules
+    shell = (PKG / "site" / "agents" / "app-shell.md").read_text(encoding="utf-8")
+    assert "## Morph / swap" in shell

@@ -35,6 +35,20 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 |---|---|---|---|---|
 | `GET /app/{region}?page={n}&page_size={size}` | a page button, on click | the list body fragment for page n — the rows the region renders, with the current-page button marked `is-current` + `aria-current='page'` | innerMorph of the region's body (`#{region}-body`) | loading populated error |
 
+## Morph / swap
+
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### Morph (persistent region)
+
+- `GET /app/{region}?page={n}&page_size={size}` → innerMorph of the region's body (`#{region}-body`)
+
+### Identity rules
+
+- Morph participants need **stable** `id` / domain keys (not loop indexes).
+- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
+- Mark third-party widgets as explicit islands / morph-skip boundaries.
+
 ## How to use it
 
 No extended guidance authored yet — start from Copy this and the dependency chips.

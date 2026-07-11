@@ -41,6 +41,20 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 |---|---|---|---|---|
 | `GET /_dazzle/documents/{entity}/{id}/{field}/file` | PDF.js fetching document bytes (initial + Range requests as the user pages) | the file field's bytes — 200 whole-body or 206 partial with Content-Range; opaque 404 when the record is out of scope; 416 for unsatisfiable ranges | none (bytes consumed by the rendering engine) | — |
 
+## Morph / swap
+
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### No HTML swap (raw fetch / companion OOB)
+
+- `GET /_dazzle/documents/{entity}/{id}/{field}/file` → none (bytes consumed by the rendering engine)
+
+### Identity rules
+
+- Morph participants need **stable** `id` / domain keys (not loop indexes).
+- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
+- Mark third-party widgets as explicit islands / morph-skip boundaries.
+
 ## How to use it
 
 ### Seams
