@@ -87,10 +87,19 @@
           },
           {
             "field_name": "job_title",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 3,
-              "max_words": 8
+              "values": [
+                "Account Manager",
+                "Software Engineer",
+                "Operations Lead",
+                "Customer Success Manager",
+                "Finance Analyst",
+                "Product Designer",
+                "Sales Director",
+                "Support Specialist"
+              ],
+              "random_pick": true
             }
           },
           {
@@ -123,7 +132,8 @@
             "params": {
               "anchor": "today",
               "min_offset_days": -365,
-              "max_offset_days": 0
+              "max_offset_days": 0,
+              "not_before_field": "created_at"
             }
           }
         ]

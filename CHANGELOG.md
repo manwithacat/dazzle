@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.45] - 2026-07-11
+
+### Fixed
+- **TR-58 demo seed quality** — blueprint generator enforces ``created_at ≤
+  updated_at`` after independent ``date_relative`` draws; ``date_relative``
+  accepts ``not_before_field``; ``job_title`` / occupation fields no longer
+  emit lorem ipsum (``faker.job`` or static titles). Propose defaults and
+  contact_manager blueprint updated accordingly.
+
 ## [0.101.44] - 2026-07-11
 
 ### Fixed

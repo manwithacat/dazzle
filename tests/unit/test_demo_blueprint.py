@@ -533,3 +533,99 @@ class TestBlueprintDataGenerator:
         # No tenant_id in context → full pool is eligible.
         seen = {generator.generate_field_value(fk_pattern, {}) for _ in range(40)}
         assert seen == {"p-a1", "p-b1"}
+
+
+def test_created_at_not_after_updated_at_enforced() -> None:
+    """TR-58: independent date_relative draws must still yield created ≤ updated."""
+    entity = EntityBlueprint(
+        name="Contact",
+        row_count_default=40,
+        field_patterns=[
+            FieldPattern(
+                field_name="created_at",
+                strategy=FieldStrategy.DATE_RELATIVE,
+                params={"anchor": "today", "min_offset_days": -365, "max_offset_days": 0},
+            ),
+            FieldPattern(
+                field_name="updated_at",
+                strategy=FieldStrategy.DATE_RELATIVE,
+                params={"anchor": "today", "min_offset_days": -365, "max_offset_days": 0},
+            ),
+        ],
+    )
+    gen = BlueprintDataGenerator(
+        DemoDataBlueprint(
+            project_id="t",
+            domain_description="t",
+            entities=[entity],
+        ),
+        seed=42,
+    )
+    rows = gen.generate_entity(entity)
+    assert len(rows) == 40
+    for row in rows:
+        assert row["updated_at"][:10] >= row["created_at"][:10], row
+
+
+def test_job_title_free_text_lorem_is_not_lorem_ipsum() -> None:
+    """TR-58: free_text_lorem on job_title must not emit Latin filler."""
+    entity = EntityBlueprint(
+        name="Contact",
+        row_count_default=5,
+        field_patterns=[
+            FieldPattern(
+                field_name="job_title",
+                strategy=FieldStrategy.FREE_TEXT_LOREM,
+                params={"min_words": 3, "max_words": 8},
+            ),
+        ],
+    )
+    gen = BlueprintDataGenerator(
+        DemoDataBlueprint(
+            project_id="t",
+            domain_description="t",
+            entities=[entity],
+        ),
+        seed=7,
+    )
+    rows = gen.generate_entity(entity)
+    lorem_markers = ("lorem", "ipsum", "dolor", "sit amet", "consectetur")
+    for row in rows:
+        title = row["job_title"].lower()
+        assert not any(m in title for m in lorem_markers), row
+        assert len(row["job_title"].strip()) > 0
+
+
+def test_date_relative_not_before_field() -> None:
+    """date_relative not_before_field floors the sample at a sibling date."""
+    entity = EntityBlueprint(
+        name="Contact",
+        row_count_default=20,
+        field_patterns=[
+            FieldPattern(
+                field_name="created_at",
+                strategy=FieldStrategy.DATE_RELATIVE,
+                params={"anchor": "today", "min_offset_days": -10, "max_offset_days": -5},
+            ),
+            FieldPattern(
+                field_name="updated_at",
+                strategy=FieldStrategy.DATE_RELATIVE,
+                params={
+                    "anchor": "today",
+                    "min_offset_days": -365,
+                    "max_offset_days": 0,
+                    "not_before_field": "created_at",
+                },
+            ),
+        ],
+    )
+    gen = BlueprintDataGenerator(
+        DemoDataBlueprint(
+            project_id="t",
+            domain_description="t",
+            entities=[entity],
+        ),
+        seed=99,
+    )
+    for row in gen.generate_entity(entity):
+        assert row["updated_at"][:10] >= row["created_at"][:10], row

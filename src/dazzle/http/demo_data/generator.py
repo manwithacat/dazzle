@@ -115,6 +115,19 @@ class DemoDataGenerator:
             return self.faker.last_name()
         if name in ("company", "company_name", "organization"):
             return self.faker.company()
+        # TR-58: job titles must not fall through to generic sentence/lorem
+        if name in (
+            "job_title",
+            "jobtitle",
+            "occupation",
+            "role_title",
+            "position_title",
+            "job",
+            "position",
+        ):
+            if hasattr(self.faker, "job"):
+                return self.faker.job()
+            return "Account Manager"
 
         # Contact hints
         if name in ("email", "email_address"):

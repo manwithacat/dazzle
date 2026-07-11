@@ -570,7 +570,42 @@ def _infer_field_strategy(
     ):
         return "boolean_weighted", {"true_weight": 0.3}
 
-    # Date patterns
+    # Job / role titles (TR-58) — before generic "title" / date heuristics so
+    # job_title is not free_text_lorem. free_text_lorem still routes to faker.job
+    # for these names; propose a static_list of common titles for blueprints
+    # without Faker at generate time.
+    if any(
+        w in name_lower
+        for w in ("job_title", "jobtitle", "occupation", "role_title", "position_title")
+    ) or name_lower in ("job", "occupation", "position"):
+        return "static_list", {
+            "values": [
+                "Account Manager",
+                "Software Engineer",
+                "Operations Lead",
+                "Customer Success Manager",
+                "Finance Analyst",
+                "Product Designer",
+                "Sales Director",
+                "Support Specialist",
+            ],
+            "random_pick": True,
+        }
+
+    # Date patterns — updated_* after created_* so re-open order is coherent (TR-58)
+    if name_lower in ("updated_at", "updated", "date_updated", "updated_on"):
+        not_before = {
+            "updated_at": "created_at",
+            "updated": "created",
+            "date_updated": "date_created",
+            "updated_on": "created_on",
+        }.get(name_lower, "created_at")
+        return "date_relative", {
+            "anchor": "today",
+            "min_offset_days": -365,
+            "max_offset_days": 0,
+            "not_before_field": not_before,
+        }
     if any(w in name_lower for w in ["date", "created", "updated", "at"]):
         return "date_relative", {"anchor": "today", "min_offset_days": -365, "max_offset_days": 0}
 
@@ -590,10 +625,9 @@ def _infer_field_strategy(
     if any(w in name_lower for w in ["description", "notes", "comments", "text"]):
         return "free_text_lorem", {"min_words": 5, "max_words": 20}
 
-    # Title patterns
+    # Title patterns (issue title / subject — not job_title, handled above)
     if any(w in name_lower for w in ["title", "subject", "heading"]):
         return "free_text_lorem", {"min_words": 3, "max_words": 8}
-
     # Default to lorem text
     return "free_text_lorem", {"min_words": 2, "max_words": 5}
 

@@ -41,6 +41,34 @@ _DATE_LIKE_TOKENS = ("date", "time", "_at", "deadline", "due", "expires", "start
 _REF_LIKE_SUFFIXES = ("_id", "_by", "_to")
 _REF_LIKE_NAMES = ("created_by", "updated_by", "assigned_to", "assignee", "owner", "author", "user")
 
+# Common created/updated field name pairs (TR-58 seed-quality invariant).
+_CREATED_UPDATED_PAIRS: tuple[tuple[str, str], ...] = (
+    ("created_at", "updated_at"),
+    ("created", "updated"),
+    ("date_created", "date_updated"),
+    ("created_on", "updated_on"),
+)
+
+
+def _enforce_created_before_updated(row: dict[str, Any]) -> None:
+    """Mutate *row* so each known created/updated pair has created ≤ updated.
+
+    Compares ISO date or datetime strings lexicographically on the date
+    prefix (YYYY-MM-DD). If updated is earlier, set updated = created.
+    """
+    for created_key, updated_key in _CREATED_UPDATED_PAIRS:
+        if created_key not in row or updated_key not in row:
+            continue
+        created_val = row[created_key]
+        updated_val = row[updated_key]
+        if created_val is None or updated_val is None:
+            continue
+        created_s = str(created_val)
+        updated_s = str(updated_val)
+        # Date prefix comparison is safe for both date and datetime ISO forms.
+        if updated_s[:10] < created_s[:10]:
+            row[updated_key] = created_val
+
 
 def _looks_like_ref_field(field_name: str) -> bool:
     lower = field_name.lower()
@@ -225,6 +253,10 @@ class BlueprintDataGenerator:
             row[pattern.field_name] = value
             context[pattern.field_name] = value
 
+        # TR-58: independent date_relative draws can put updated_at *before*
+        # created_at. Enforce created ≤ updated for the common pair (and
+        # generic *_at siblings when both exist as comparable date strings).
+        _enforce_created_before_updated(row)
         return row
 
     def generate_field_value(self, pattern: FieldPattern, context: dict[str, Any]) -> Any:
@@ -343,6 +375,25 @@ class BlueprintDataGenerator:
             return f"PLAINTEXT:{plaintext}"
 
         elif strategy == FieldStrategy.FREE_TEXT_LOREM:
+            # TR-58: job_title / occupation fields must not emit lorem ipsum —
+            # faker.job() (or a short static list) reads as real demo data.
+            fname = pattern.field_name.lower()
+            if any(
+                tok in fname
+                for tok in ("job_title", "jobtitle", "occupation", "role_title", "position_title")
+            ) or fname in ("job", "occupation", "position", "role"):
+                if self.fake and hasattr(self.fake, "job"):
+                    return self.fake.job()
+                return random.choice(
+                    (
+                        "Account Manager",
+                        "Software Engineer",
+                        "Operations Lead",
+                        "Customer Success",
+                        "Finance Analyst",
+                    )
+                )
+
             min_words = params.get("min_words", 3)
             max_words = params.get("max_words", 10)
             word_count = random.randint(min_words, max_words)
@@ -389,8 +440,28 @@ class BlueprintDataGenerator:
             else:
                 base_date = date.today()
 
+            # Optional floor from a sibling field (e.g. updated_at not_before
+            # created_at). ISO date/datetime prefixes compare correctly.
+            not_before_field = params.get("not_before_field") or params.get("after_field")
+            floor: date | None = None
+            if not_before_field and context.get(not_before_field):
+                raw = str(context[not_before_field])[:10]
+                try:
+                    floor = date.fromisoformat(raw)
+                except ValueError:
+                    floor = None
+
             offset_days = random.randint(min_offset, max_offset)
             result_date = base_date + timedelta(days=offset_days)
+            if floor is not None and result_date < floor:
+                # Sample on/after the floor, still within the original window
+                # upper bound when possible; else clamp to floor.
+                upper = base_date + timedelta(days=max_offset)
+                if floor > upper:
+                    result_date = floor
+                else:
+                    span = (upper - floor).days
+                    result_date = floor + timedelta(days=random.randint(0, max(span, 0)))
             return result_date.isoformat()
 
         elif strategy == FieldStrategy.BOOLEAN_WEIGHTED:
