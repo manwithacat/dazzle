@@ -130,3 +130,24 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > preflight/dockerfile/compose, docuseal pack — removed v0.100.0/v0.101.0) had no map rows,
 > nothing to prune. STALE recompute (threshold ≤216): none — oldest numeric is rbac@217,
 > which crosses next cycle if unexercised.
+
+> **Capability-sweep cycle 256 (2026-07-11).** Sweep due (20 cycles since 236). Re-derived
+> inventory: `dazzle --help` (+ `qa` / `deploy` / `fitness` subtrees), MCP tool schemas
+> (`inspect api mcp-tools` → **35 tools**), `.claude/skills` + `.claude/commands` tree.
+> **No newly-built loop capability** since 236: the v0.101.36–0.101.42 arc (HM dual locks,
+> form→ingest #1577, root-only DOM #1578, prose Contract drift #1579, PersonaVariant
+> action_primary/defaults, dispatch_ctx split) added product/substrate surface and CI
+> gates, not CLI/MCP/skill entrypoints for the improve loop. NOT added (self-exercising
+> via `pytest -m gate` / unit dual-lock suite every commit): `hm_contract_registry`
+> schema parity + DOM_ONLY fixtures + `test_contract_prose_drift`. Operator-only still
+> EXEMPT: `deploy heroku`, auth/db/backup family, `/ship`/`/check`/`/bump`/etc. MCP
+> count 35 (was noted as 32 schema / 34 CLAUDE table in older notes) — no new
+> quality-coverage tools vs the existing map rows; long-standing tools without rows
+> (e.g. `sitespec`, `graph`, `knowledge`) remain out-of-scope the same way prior sweeps
+> treated non-quality operator/MCP surface. STALE recompute (threshold last-exercised
+> ≤236): **none** flip. Nearest: `dazzle rbac`@237 (lag 19 → STALE next cycle if still
+> unexercised), then `coverage`@238 (lag 18), `qa-trial` skill@239 (lag 17). OWNED-IDLE
+> never-exercised rows (`qa capture`/`login`/`taste-panel`/`component-vision`/
+> `property-vision`/`deploy plan`/`sentinel mutate`/`rhythm`/`story`/`test-design`/
+> `pulse`/`sentinel scan`/`fitness` CLI/`discovery`/`composition`/`sweep`/`nightly` +
+> standalone `/fuzz`/`/smells`/`/xproject`) stay OWNED-IDLE awaiting directed exercise.
