@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM every part page shares the full linear skeleton** — Server exchange,
+  How to use it, DOM contract, and Source files always render (explicit empty
+  states when N/A). Agent packs match. Dogfood: breadcrumb nav, toggle-group
+  theme, code Hyperpart snippets, demo partials; `hm-*` is gallery layout only.
 - **HM part-page glossary tooltips (human confidence)** — dotted terms
   (Hyperpart, affordance, Server exchange, DOM contract, dual-lock,
   dependency chips) show multi-line ELI5 tips on hover/focus. Agents stay

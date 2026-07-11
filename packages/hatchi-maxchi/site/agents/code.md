@@ -16,6 +16,10 @@ Fenced code surface with optional language chip and copy control — server-emit
 </figure>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
 ## How to use it
 
 ### Seams
@@ -83,4 +87,6 @@ Use the code Hyperpart for any fenced sample in docs or app chrome. Required nes
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/code.py`
 - `controllers/dz-code.js`

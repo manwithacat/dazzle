@@ -35,6 +35,10 @@ The SaaS/admin application frame: persistent left navigation, an optional sticky
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
 ## How to use it
 
 ### Seams
@@ -103,4 +107,6 @@ The shell root carries data-dz-sidebar="open|closed" — SERVER-rendered from th
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/app_shell.py`
 - `controllers/dz-app-shell.js`

@@ -19,6 +19,10 @@ Searchable enum single-select — a native <select> progressively enhanced into 
 </label>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
 ## How to use it
 
 ### Seams
@@ -92,4 +96,6 @@ Progressive enhancement: the server renders a real <select data-dz-combobox> wit
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/combobox.py`
 - `controllers/dz-combobox.js`

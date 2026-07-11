@@ -39,6 +39,28 @@ The 2FA enrolment/settings card: QR + manual secret, the big-digit code input, r
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
+## How to use it
+
+No extended guidance authored yet — start from Copy this and the dependency chips.
+
+### Seams
+
+- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- no Server exchange on this part — pure presentation or client chrome
+- no typed contracts/ module yet — the partial is the surface of record
+
+## DOM contract
+
+No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+
 ## Notes
 
 In Dazzle the enrolment flow is driven by ID-anchored vanilla JS (dz-2fa-setup.js/-settings.js against JSON endpoints): the QR image lands CLASSLESS in dz-auth-qr-container (the container styles it), recovery pills and status rows are JS-created (shown here with status badges; the Dazzle settings JS renders dz-button action controls in that slot), and the error/success alerts toggle via the native hidden attribute on stable ids. The code input reserves letter-spacing for six digits. Wrap full pages in dz-auth-page for the centered layout.
+
+## Source files
+
+- `site/registry.py` (partial + exchanges + guidance)

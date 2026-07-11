@@ -40,6 +40,28 @@ A detail view's companions: tabbed groups of related records — status cards, a
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
+## How to use it
+
+No extended guidance authored yet — start from Copy this and the dependency chips.
+
+### Seams
+
+- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- no Server exchange on this part — pure presentation or client chrome
+- no typed contracts/ module yet — the partial is the surface of record
+
+## DOM contract
+
+No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+
 ## Notes
 
 One dz-related-group per related entity. The tab strip IS the tabs Hyperpart (dz-tabs__tab + data-dz-tab-target, driven by dz-tabs.js) with a related-specific count chip; panels are native-hidden toggles. Three body shapes share the chrome: the status-card grid (shown), a compact dz-related-table, and a dz-related-file-list. In Dazzle these render from the detail view's related groups — the same shared cell core as list rows, so badges/dates match.
+
+## Source files
+
+- `site/registry.py` (partial + exchanges + guidance)

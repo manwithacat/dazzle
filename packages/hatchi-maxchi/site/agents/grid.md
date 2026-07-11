@@ -304,6 +304,11 @@ The tbody hydrates over the wire — hx-get on load fetches the rows, and innerM
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/grid.py`
+- `contracts/grid_edit.py`
+- `contracts/grid_cols.py`
+- `contracts/grid_resize.py`
 - `controllers/dz-grid.js`
 - `controllers/dz-grid-cols.js`
 - `controllers/dz-grid-resize.js`

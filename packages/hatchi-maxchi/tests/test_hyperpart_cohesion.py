@@ -136,6 +136,44 @@ def test_every_part_has_a_committed_page() -> None:
         )
 
 
+# Linear reference skeleton — every part page and agent pack shares the same
+# section order so humans/agents never hit a "thin" page missing the model.
+_LINEAR_SECTION_IDS = ("copy", "exchange", "how-to", "dom-contract", "files")
+_LINEAR_MD_HEADINGS = (
+    "## Copy this",
+    "## Server exchange",
+    "## How to use it",
+    "## DOM contract",
+    "## Source files",
+)
+
+
+def test_every_part_page_has_linear_skeleton() -> None:
+    """hyperparts/<id>.html always exposes the dual-audience section spine."""
+    for h in HYPERPARTS:
+        html = (PKG / "site" / "hyperparts" / f"{h.id}.html").read_text(encoding="utf-8")
+        for sid in _LINEAR_SECTION_IDS:
+            assert f'id="{sid}"' in html, (
+                f"{h.id}: part page missing section id={sid!r} — "
+                "run site/build_site.py (always-on skeleton)"
+            )
+        # Dogfood: theme is HM toggle-group; nav is HM breadcrumb; snippets use code Hyperpart.
+        assert "toggle-group" in html, f"{h.id}: theme toggle must dogfood toggle-group"
+        assert "breadcrumb" in html, f"{h.id}: part chrome must dogfood breadcrumb"
+        assert 'class="code"' in html or "class='code'" in html or "code__" in html, (
+            f"{h.id}: snippets must dogfood the code Hyperpart"
+        )
+        assert "hm-dogfood" in html, f"{h.id}: missing dogfood banner"
+
+
+def test_every_agent_pack_has_linear_skeleton() -> None:
+    """agents/<id>.md mirrors the HTML section order for scrape parity."""
+    for h in HYPERPARTS:
+        md = (PKG / "site" / "agents" / f"{h.id}.md").read_text(encoding="utf-8")
+        for heading in _LINEAR_MD_HEADINGS:
+            assert heading in md, f"{h.id}: agent pack missing {heading!r} — run site/build_site.py"
+
+
 # Controller-bearing parts with no atomic behaviour scenario yet. SHRINK-ONLY.
 # SHRINK-ONLY — empty means every controller-bearing part has an atomic scenario.
 PENDING_BEHAVIOUR = frozenset()

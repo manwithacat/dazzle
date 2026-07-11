@@ -31,6 +31,10 @@ Multi-stage form navigation: the stepper drives stage reveal — back freely, fo
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
 ## How to use it
 
 ### Seams
@@ -105,4 +109,6 @@ State-in-DOM: the root's data-dz-step is the current stage; stages toggle via th
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/wizard.py`
 - `controllers/dz-wizard.js`

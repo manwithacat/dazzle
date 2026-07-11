@@ -27,6 +27,28 @@ Bordered surface with a resting stacked shadow. Content classes (label / value /
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
+## How to use it
+
+No extended guidance authored yet — start from Copy this and the dependency chips.
+
+### Seams
+
+- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- no Server exchange on this part — pure presentation or client chrome
+- no typed contracts/ module yet — the partial is the surface of record
+
+## DOM contract
+
+No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+
 ## Notes
 
 A card is a surface, not a layout. One card in a full-width preview looks clumsy because the box stretches; real use is several cards in auto-grid (or a stack of content cards). Workspace dashboard cards add data-display for CLS height reservation — static KPI tiles omit it and size to content. Classes: dz-card + dz-card-body + dz-card-label / dz-card-value / dz-card-delta.
+
+## Source files
+
+- `site/registry.py` (partial + exchanges + guidance)

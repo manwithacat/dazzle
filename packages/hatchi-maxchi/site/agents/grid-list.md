@@ -28,6 +28,28 @@ A responsive grid of plain record cells — title plus label: value lines, 1 →
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
+## How to use it
+
+No extended guidance authored yet — start from Copy this and the dependency chips.
+
+### Seams
+
+- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- no Server exchange on this part — pure presentation or client chrome
+- no typed contracts/ module yet — the partial is the surface of record
+
+## DOM contract
+
+No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+
 ## Notes
 
 Cells are deliberately chrome-free — the surrounding card owns borders and title. The column count is a viewport response (1 column, then 2 at 40rem, 3 at 64rem). The is-clickable hover/cursor affordance is styled but currently a LEGACY reserve — the substrate grid emitter does not yet wire cell drill URLs (follow-up on the Dazzle side).
+
+## Source files
+
+- `site/registry.py` (partial + exchanges + guidance)

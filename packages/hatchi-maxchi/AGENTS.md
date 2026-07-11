@@ -44,10 +44,15 @@ paste `contracts/*.py` dual-lock modules into app routes.
   swap, states, optional `server_example`), controller/extension pointers,
   and wiring notes. Parse it; don't scrape the gallery HTML.
 - **Per-part agent pack**: `site/agents/<id>.md` (Pages: `agents/<id>.md`)
-  is the one-fetch scrape target — same linear sections as
-  `hyperparts/<id>.html`: Copy this → Server exchange → How to use it →
-  DOM contract → Notes → Source files. Prefer the `.md` when implementing;
-  the HTML page adds the live demo.
+  is the one-fetch scrape target — **same linear skeleton on every part**
+  as `hyperparts/<id>.html`: Copy this → Server exchange → How to use it →
+  DOM contract → Notes (if any) → Source files. Empty states are explicit
+  (“no server exchange”, “no typed dual-lock yet”) so a thin part never
+  looks incomplete. Prefer the `.md` when implementing; the HTML page adds
+  the live demo, glossary tooltips, and dogfood chrome.
+- **Dogfood:** demos are HM partials; snippets use the code Hyperpart; theme
+  control is toggle-group; part-page nav is breadcrumb. Gallery layout
+  classes (`hm-*`) are site scaffolding on the same tokens — not a second kit.
 - **DOM contract** (`contracts/<part>.py`) is CI stop-ship for required
   markup (root attrs / ingestion model). It is **package-internal**
   (`contracts._kit`) — not the FastAPI handler you write for a product.

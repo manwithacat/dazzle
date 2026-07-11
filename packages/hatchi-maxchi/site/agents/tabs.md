@@ -97,4 +97,6 @@ The tabs are <button>s with aria-current — no role=tablist without the roving-
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/tabs.py`
 - `controllers/dz-tabs.js`

@@ -109,4 +109,6 @@ The application renders the shell and CONTROLS ACCESS; PDF.js renders the docume
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/pdf.py`
 - `controllers/dz-pdf.js`

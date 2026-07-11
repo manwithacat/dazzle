@@ -87,4 +87,6 @@ In Dazzle the input's hx-get hits /app/command, which returns persona-scoped res
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/command.py`
 - `controllers/dz-command.js`

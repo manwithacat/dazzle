@@ -39,6 +39,28 @@ The in-card data table: an actions row with CSV export, a horizontally scrollabl
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
+## How to use it
+
+No extended guidance authored yet — start from Copy this and the dependency chips.
+
+### Seams
+
+- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- no Server exchange on this part — pure presentation or client chrome
+- no typed contracts/ module yet — the partial is the surface of record
+
+## DOM contract
+
+No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+
 ## Notes
 
 The CSV button is ALWAYS rendered in the actions row. The snippet omits its wiring: the real emitter adds data-dz-csv-endpoint/data-dz-csv-filename and an onclick that calls window.dz.downloadCsv(endpoint, filename) against the server export route. Sortable headers are dz-list-sort-link anchors carrying an hx-get with ?sort=<col>&dir=<asc|desc> — the server re-renders the region; the active column shows a text caret. Rows wired to a drill URL carry is-clickable; the overflow line reports what the page cut. For the full hypermedia table primitive (selection, filters, pagination) use the grid Hyperpart — this one is the lighter in-card region.
+
+## Source files
+
+- `site/registry.py` (partial + exchanges + guidance)

@@ -10,6 +10,10 @@ Multi-value chips + free create — a native text input carrying a comma-joined 
 <label class="field hm-measure" for="hm-tags-field"><span class="field__label">Labels</span><input id="hm-tags-field" name="labels" type="text" data-tags class="form-input" value="urgent,backend" placeholder="Add a label…"></label>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
 ## How to use it
 
 ### Seams
@@ -80,4 +84,6 @@ Progressive enhancement: the server renders a plain <input type="text" data-dz-t
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/tags.py`
 - `controllers/dz-tags.js`

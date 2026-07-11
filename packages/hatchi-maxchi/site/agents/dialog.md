@@ -23,6 +23,10 @@ Modal on the native <dialog> — one line of JS to open, close for free (Esc / b
 </dialog>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
 ## How to use it
 
 ### Seams
@@ -86,4 +90,6 @@ Opening is the only scripted behaviour (dz-dialog.js calls showModal() for a [da
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/dialog.py`
 - `controllers/dz-dialog.js`

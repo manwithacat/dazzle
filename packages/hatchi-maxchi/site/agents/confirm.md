@@ -117,4 +117,6 @@ dz-confirm.js intercepts htmx:confirm (a client affordance — no server round-t
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/confirm.py`
 - `controllers/dz-confirm.js`

@@ -36,6 +36,10 @@ The irreversible-action consent gate: a checklist of obligations that must be ti
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
 ## How to use it
 
 ### Seams
@@ -107,4 +111,6 @@ The gate is state-in-DOM: the primary anchor ships with aria-disabled="true" and
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/confirm_panel.py`
 - `controllers/dz-confirm-gate.js`

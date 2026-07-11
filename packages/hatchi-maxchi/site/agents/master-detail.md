@@ -108,4 +108,6 @@ The detail pane loads a card fragment via hx-get; dz-master-detail.js sets aria-
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/master_detail.py`
 - `controllers/dz-master-detail.js`

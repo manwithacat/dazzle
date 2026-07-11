@@ -41,6 +41,24 @@ When the client affordance finishes, htmx issues **this** request. Return the HT
 |---|---|---|---|---|
 | `GET /app/records/{id}?peek=1` | the opener button's click — the SAME click also fires the dz-dialog.js opener (`data-dz-dialog-open`), so the drawer shows while the body loads | the record's detail body HTML — swapped into the drawer's `dz-drawer__body` target | innerHTML | — |
 
+## How to use it
+
+No extended guidance authored yet — start from Copy this and the dependency chips.
+
+### Seams
+
+- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- implement Server exchange endpoints; return HTML fragments, not JSON
+- no typed contracts/ module yet — the partial is the surface of record
+
+## DOM contract
+
+No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+
 ## Notes
 
 Opened by the shared dz-dialog.js ([data-dz-dialog-open]); close is native (method=dialog submit, Esc, backdrop). Anchor the edge with data-dz-side="right|left"; the panel slides in via the native @starting-style transition, honouring prefers-reduced-motion. The second trigger shows the HYPERMEDIA drawer (the Dazzle row-peek contract): one button carries both an hx-get targeting the drawer body and data-dz-dialog-open — the exchange and the opener fire together. data-dz-width="sm|md|lg|xl|full" picks a width preset on viewports that can afford it.
+
+## Source files
+
+- `site/registry.py` (partial + exchanges + guidance)

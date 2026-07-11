@@ -89,4 +89,6 @@ State-in-DOM: dz-search-select.js flips aria-expanded on focusin/focusout (200ms
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/search_select.py`
 - `controllers/dz-search-select.js`

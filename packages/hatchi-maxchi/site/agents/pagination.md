@@ -28,6 +28,24 @@ When the client affordance finishes, htmx issues **this** request. Return the HT
 |---|---|---|---|---|
 | `GET /app/{region}?page={n}&page_size={size}` | a page button, on click | the list body fragment for page n — the rows the region renders, with the current-page button marked `is-current` + `aria-current='page'` | innerMorph of the region's body (`#{region}-body`) | loading populated error |
 
+## How to use it
+
+No extended guidance authored yet — start from Copy this and the dependency chips.
+
+### Seams
+
+- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- implement Server exchange endpoints; return HTML fragments, not JSON
+- no typed contracts/ module yet — the partial is the surface of record
+
+## DOM contract
+
+No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+
 ## Notes
 
 Each page button carries its own hx-get; here a mock htmx swaps a canned page into #hm-pag-body. In Dazzle the button hits the region endpoint (?page=N&page_size=…) and the server returns the repainted list body (via innerMorph) plus the moved is-current marker.
+
+## Source files
+
+- `site/registry.py` (partial + exchanges + guidance)

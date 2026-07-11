@@ -13,6 +13,10 @@ Native <input type=range> — styled track + thumb, both themes, with a live val
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
 ## How to use it
 
 ### Seams
@@ -80,4 +84,6 @@ The track + thumb are styled for both themes with a focus ring; the native range
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/slider.py`
 - `controllers/dz-slider.js`

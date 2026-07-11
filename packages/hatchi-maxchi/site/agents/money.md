@@ -14,6 +14,10 @@ Major-unit decimal input over a hidden minor-unit carrier — the form posts int
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
 ## How to use it
 
 ### Seams
@@ -88,4 +92,6 @@ State-in-DOM: the root's data-dz-scale is the conversion factor; dz-money.js kee
 
 ## Source files
 
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/money.py`
 - `controllers/dz-money.js`

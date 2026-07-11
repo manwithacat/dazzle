@@ -19,6 +19,28 @@ Actual vs target on qualitative bands — the KPI-with-context bar. All geometry
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
+## How to use it
+
+No extended guidance authored yet — start from Copy this and the dependency chips.
+
+### Seams
+
+- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- no Server exchange on this part — pure presentation or client chrome
+- no typed contracts/ module yet — the partial is the surface of record
+
+## DOM contract
+
+No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+
 ## Notes
 
 Bands, the actual bar, and the target tick are absolutely positioned by SERVER-computed inline percentages (per-row data, the same contract as the funnel widths); each carries a title with its numeric range. Band fills come from the server's reference-band colour map (target → var(--colour-brand), destructive → var(--colour-danger), plus fixed positive/warning/muted values) — saturated colours, because the band layer renders at 0.18 opacity. The value (and target, when set) renders as text beside the track; the mono summary line carries row count and scale.
+
+## Source files
+
+- `site/registry.py` (partial + exchanges + guidance)

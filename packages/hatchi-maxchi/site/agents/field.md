@@ -25,6 +25,20 @@ The label + control + help + error triad as one accessible unit. Error state der
 </div>
 ```
 
+## Server exchange
+
+This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+
+## How to use it
+
+No extended guidance authored yet — start from Copy this and the dependency chips.
+
+### Seams
+
+- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- no Server exchange on this part — pure presentation or client chrome
+- satisfy the DOM contract tables (CI stop-ship)
+
 ## DOM contract
 
 What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
@@ -58,3 +72,8 @@ __all__ = ["DOM_CONTRACT"]
 ## Notes
 
 Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch into the hex readout (contract: contracts/color.py).
+
+## Source files
+
+- `site/registry.py` (partial + exchanges + guidance)
+- `contracts/color.py`

@@ -161,9 +161,20 @@ def _term(key: str, label: str | None = None) -> str:
 
 
 def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
-    """Always-visible server exchange table + optional FastAPI-shaped examples."""
+    """Always-visible Server exchange section (every part page — same skeleton).
+
+    Parts with no exchanges still render the section so agents/humans never
+    wonder whether the page is incomplete. Empty state = pure client / presentation.
+    """
+    head = f'<section class="hm-ref" id="exchange"><h3>{_term("exchange")}</h3>'
     if not hyperpart.exchanges:
-        return ""
+        return (
+            head + f'<p class="hm-ref-lead">This {_term("hyperpart")} has <strong>no server '
+            "exchange</strong> — it is presentation or client chrome only. htmx does "
+            f"not issue a request on this part&#x27;s behalf. If you put an {_term('affordance')} "
+            "(<code>hx-*</code>) on a control that uses this markup, that action&#x27;s "
+            "exchange belongs to the action, not this part.</p></section>"
+        )
     rows = []
     examples: list[str] = []
     for e in hyperpart.exchanges:
@@ -193,9 +204,7 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
                 )
             )
     return (
-        '<section class="hm-ref" id="exchange">'
-        f"<h3>{_term('exchange')}</h3>"
-        f'<p class="hm-ref-lead">When the client {_term("affordance")} finishes '
+        head + f'<p class="hm-ref-lead">When the client {_term("affordance")} finishes '
         "(click, confirm, keystroke…), htmx issues <strong>this</strong> request. "
         "Your API must return the response fragment described below — usually HTML, "
         "not JSON (unless the partial says otherwise). Gallery mocks (toasts, "
@@ -296,13 +305,20 @@ def _fastapi_route_sources(mod) -> list[str]:  # type: ignore[no-untyped-def]
 def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     """Always-visible DOM / ingestion contract — tables + code, no accordion.
 
-    For humans: a short lead explains *why* this exists (CI stop-ship).
-    For agents: root/attrs and optional schema are the constrained surface;
-    Python blocks are the dual-lock source (often ``data-dz-*`` even when the
-    gallery partial is unprefixed).
+    Every part page includes this section. Empty state when no ``contracts/``
+    module is registered: treat Copy this as the surface.
     """
+    head = f'<section class="hm-ref" id="dom-contract"><h3>{_term("dom-contract")}</h3>'
     if not hyperpart.contracts:
-        return ""
+        return (
+            head + '<p class="hm-ref-lead">No typed dual-lock module in '
+            "<code>contracts/</code> for this part yet. Treat <strong>Copy this</strong> "
+            "as the required surface — preserve the root class and "
+            "<code>data-*</code> modifiers so the CSS/JS bundle matches. "
+            "Author <code>contracts/&lt;part&gt;.py</code> when CI should "
+            "stop-ship attribute drift "
+            "(see <code>contracts/AUTHORING.md</code>).</p></section>"
+        )
     import importlib
     import inspect
 
@@ -417,9 +433,7 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
         blocks.append("".join(parts))
 
     return (
-        '<section class="hm-ref" id="dom-contract">'
-        f"<h3>{_term('dom-contract')}</h3>"
-        '<p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — '
+        head + '<p class="hm-ref-lead">What the <strong>emitted HTML</strong> must satisfy — '
         "the table is the required surface; Python under <code>contracts/</code> is "
         f"the package-internal {_term('dual-lock')} CI runs "
         "(<code>tests/test_contracts.py</code>), not an app route. "
@@ -431,16 +445,47 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+def _default_how_to_seams(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
+    """Minimal seams when Guidance is not authored — still a full How-to section."""
+    seams = [
+        "copy the partial under Copy this; keep root class and data-* modifiers "
+        "so the CSS/JS bundle matches",
+    ]
+    if hyperpart.controller:
+        seams.append(
+            f"load the controller (`{hyperpart.controller}` — included in "
+            "hatchi-maxchi.js when you ship the bundle)"
+        )
+    if hyperpart.exchanges:
+        seams.append("implement Server exchange endpoints; return HTML fragments, not JSON")
+    else:
+        seams.append("no Server exchange on this part — pure presentation or client chrome")
+    if hyperpart.contracts:
+        seams.append("satisfy the DOM contract tables (CI stop-ship)")
+    else:
+        seams.append("no typed contracts/ module yet — the partial is the surface of record")
+    return seams
+
+
 def _guidance_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
-    """How-to guidance — always visible linear sections (no accordion)."""
-    g = hyperpart.guidance
-    if g is None:
-        return ""
+    """How-to guidance — always present on every part page (same skeleton)."""
 
     def _ul(items) -> str:  # type: ignore[no-untyped-def]
         return "<ul>" + "".join(f"<li>{_html.escape(i)}</li>" for i in items) + "</ul>"
 
+    g = hyperpart.guidance
     blocks = ['<section class="hm-ref" id="how-to"><h3>How to use it</h3>']
+    if g is None:
+        blocks.append(
+            '<p class="hm-ref-lead">No extended guidance authored yet — start from '
+            "Copy this and the dependency chips (Primitive = markup only; "
+            f"{_term('controller')} = load listed JS; Endpoint = implement "
+            f"{_term('exchange')}).</p>"
+        )
+        blocks.append(f"<h4>Seams</h4>{_ul(_default_how_to_seams(hyperpart))}")
+        blocks.append("</section>")
+        return "".join(blocks)
+
     if g.seams:
         blocks.append(f"<h4>Seams</h4>{_ul(g.seams)}")
     if g.do_dont:
@@ -593,10 +638,17 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
         "```",
         "",
     ]
-    if hyperpart.exchanges:
+    # Always emit Server exchange / How to use / DOM contract (same skeleton as HTML).
+    lines += ["## Server exchange", ""]
+    if not hyperpart.exchanges:
         lines += [
-            "## Server exchange",
+            "This Hyperpart has **no server exchange** — presentation or client "
+            "chrome only. If you put `hx-*` on a control that uses this markup, "
+            "that action's exchange belongs to the action, not this part.",
             "",
+        ]
+    else:
+        lines += [
             "When the client affordance finishes, htmx issues **this** request. "
             "Return the HTML fragment described (not gallery mock toasts). "
             "Dazzle often implements these from the app model; a standalone HTMX4 "
@@ -626,9 +678,18 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
                 "```",
                 "",
             ]
+
+    lines += ["## How to use it", ""]
     g = hyperpart.guidance
-    if g is not None:
-        lines += ["## How to use it", ""]
+    if g is None:
+        lines += [
+            "No extended guidance authored yet — start from Copy this and the dependency chips.",
+            "",
+            "### Seams",
+            "",
+        ]
+        lines += [f"- {s}" for s in _default_how_to_seams(hyperpart)] + [""]
+    else:
         for heading, items in (
             ("Seams", g.seams),
             ("Do / Don't", None),
@@ -645,13 +706,21 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
         if g.composes_with:
             lines += ["### Related parts", ""]
             lines += [f"- `{pid}` — agents/{pid}.md" for pid in g.composes_with] + [""]
-    if hyperpart.contracts:
+
+    lines += ["## DOM contract", ""]
+    if not hyperpart.contracts:
+        lines += [
+            "No typed dual-lock module in `contracts/` for this part yet. "
+            "Treat **Copy this** as the required surface — preserve root class and "
+            "`data-*` modifiers. Author `contracts/<part>.py` when CI should "
+            "stop-ship attribute drift (`contracts/AUTHORING.md`).",
+            "",
+        ]
+    else:
         import importlib
         import inspect
 
         lines += [
-            "## DOM contract",
-            "",
             "What emitted markup must satisfy (CI: `tests/test_contracts.py`). "
             "Do not invent attrs outside the tables. Python modules under "
             "`contracts/` are **package-internal dual-locks** "
@@ -742,31 +811,67 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
                     ]
     if hyperpart.notes:
         lines += ["## Notes", "", _plain_notes(hyperpart.notes), ""]
+    lines += ["## Source files", ""]
+    lines.append("- `site/registry.py` (partial + exchanges + guidance)")
+    for ref in hyperpart.contracts:
+        lines.append(f"- `{ref}`")
     if hyperpart.controller:
-        refs = [hyperpart.controller, *hyperpart.extensions]
-        lines += ["## Source files", ""] + [f"- `{r}`" for r in refs] + [""]
+        lines.append(f"- `{hyperpart.controller}`")
+        lines += [f"- `{e}`" for e in hyperpart.extensions]
+    lines.append("")
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
 def _anatomy_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
-    """A one-line 'this Hyperpart is one unit spread across N files' note,
-    for the interactive Hyperparts where the code is genuinely scattered."""
-    if not hyperpart.controller:
-        return ""
-    a = anatomy(hyperpart.id)
+    """Source files — always present so every part page shares one skeleton."""
     parts = ["<code>site/registry.py</code>"]
-    parts += [f"<code>{_html.escape(s)}</code>" for s in a["styles"]]
-    parts.append(f"<code>{_html.escape(a['controller'])}</code>")
-    parts += [f"<code>{_html.escape(e)}</code>" for e in a["extensions"]]
-    if a["mock"]:
-        parts.append(f"mock <code>{_html.escape(a['mock'])}</code>")
+    for ref in hyperpart.contracts:
+        parts.append(f"<code>{_html.escape(ref)}</code>")
+    if hyperpart.controller:
+        a = anatomy(hyperpart.id)
+        parts += [f"<code>{_html.escape(s)}</code>" for s in a["styles"]]
+        parts.append(f"<code>{_html.escape(a['controller'])}</code>")
+        parts += [f"<code>{_html.escape(e)}</code>" for e in a["extensions"]]
+        if a["mock"]:
+            parts.append(f"mock <code>{_html.escape(a['mock'])}</code>")
+        lead = (
+            "One logical Hyperpart, {n} code items "
+            "(CSS layered, JS bundled). Bound by <code>HYPERPART: {id}</code> — "
+            "<code>python tools/hyperpart.py {id}</code> lists them."
+        )
+    else:
+        lead = (
+            "Canonical registration in the registry. No dedicated controller — "
+            "CSS for this part lives in the layered bundle."
+        )
     return (
         '<section class="hm-ref" id="files"><h3>Source files</h3>'
-        '<p class="hm-ref-lead">One logical Hyperpart, {n} code items '
-        "(CSS layered, JS bundled). Bound by <code>HYPERPART: {id}</code> — "
-        "<code>python tools/hyperpart.py {id}</code> lists them.</p>"
-        '<p class="hm-anatomy">{parts}</p></section>'
-    ).format(n=len(parts) + 1, parts=" · ".join(parts), id=_html.escape(hyperpart.id))
+        f'<p class="hm-ref-lead">{lead}</p>'
+        f'<p class="hm-anatomy">{" · ".join(parts)}</p></section>'
+    ).format(n=len(parts), id=_html.escape(hyperpart.id))
+
+
+def _part_breadcrumb(part_id: str, title: str) -> str:
+    """Dogfood the breadcrumb Hyperpart for part-page chrome navigation."""
+    return (
+        '<nav class="dz-breadcrumb" aria-label="Breadcrumb"><ol>'
+        f'<li><a href="../#{_html.escape(part_id)}">Hyperparts</a></li>'
+        f'<li aria-current="page">{_html.escape(title)}</li>'
+        "</ol></nav>"
+    )
+
+
+def _dogfood_banner() -> str:
+    """Human-facing note: product UX on the page is HaTchi-MaXchi itself."""
+    return (
+        '<p class="hm-dogfood" role="note">'
+        "<strong>Dogfood:</strong> the live demo, code snippets "
+        f"({_term('partial')} + code Hyperpart), theme control (toggle-group), "
+        "and this breadcrumb are HaTchi-MaXchi. Page layout chrome "
+        "(<code>hm-*</code> grid/nav) is gallery scaffolding on the same tokens "
+        "— not a separate UI kit."
+        "</p>"
+    )
 
 
 # A copied sprite snippet is blank without the icon sheet — surface the
@@ -1391,6 +1496,19 @@ body { background: var(--colour-bg); color: var(--colour-text);
   color: var(--colour-text-muted);
   opacity: .92;
 }
+.hm-dogfood {
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+  margin: 0 0 1rem;
+  padding: .5rem .75rem;
+  max-width: 46rem;
+  border-inline-start: 3px solid var(--colour-brand);
+  background: var(--colour-brand-soft, var(--colour-surface));
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  line-height: 1.5;
+}
+.hm-dogfood code { font-size: .9em; }
+.hm-hero .breadcrumb { margin-bottom: .5rem; }
 .hm-preview { padding: 2rem; border: 1px solid var(--colour-border);
   border-radius: var(--radius-md); background: var(--colour-surface); margin-bottom: .75rem; }
 .hm-demo-row { display:flex; gap: 1rem; align-items:center; flex-wrap: wrap; }
@@ -1615,9 +1733,12 @@ window.addEventListener('storage', function (e) {{
                     f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
                     f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
                     f"{_dialect_html()}"
+                    f"{apply_prefix(_dogfood_banner(), prefix)}"
                     f'<div class="hm-preview">{framed_live_part}</div>'
                     f'<section class="hm-ref" id="copy"><h3>Copy this</h3>'
                     f"{snippet_block}</section>"
+                    # Linear skeleton on EVERY part (empty states when N/A):
+                    # exchange → how-to → DOM contract → notes → files.
                     f"{apply_prefix(_exchanges_html(c), prefix)}"
                     f"{apply_prefix(_guidance_html(c), prefix)}"
                     # Contract Python keeps dual-lock names (data-dz-*).
@@ -1759,7 +1880,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 <main class="hm-main">
 <div class="hm-topbar">
   <div class="hm-hero">
-    <p class="hm-more"><a href="../#{c.id}">← All Hyperparts</a></p>
+    {apply_prefix(_part_breadcrumb(c.id, c.title), prefix)}
     <h1>{_html.escape(c.title)}</h1>
   </div>
   {theme_toggle}
