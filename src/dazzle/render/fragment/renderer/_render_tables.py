@@ -1057,6 +1057,8 @@ class _RenderTablesMixin:
         # there. The legacy trailing space on the non-clickable `dz-list-row `
         # class is preserved as a class suffix.
         tbody_rows = []
+        pane = bool(getattr(lst, "master_detail_pane", False))
+        first_pane_link_done = False
         for i, row in enumerate(lst.rows):
             cells_html = "".join(
                 f"<td>{ctx.escape(cell)}</td>"
@@ -1079,17 +1081,31 @@ class _RenderTablesMixin:
                 else ""
             )
             url = lst.row_links[i] if lst.row_links else None
-            pane = bool(getattr(lst, "master_detail_pane", False))
             class_extra = " "
+            auto_load = False
             if url:
-                class_extra = " is-clickable dz-master-detail__item" if pane else " is-clickable"
+                if pane:
+                    class_extra = " is-clickable dz-master-detail__item"
+                    if not first_pane_link_done:
+                        auto_load = True
+                        first_pane_link_done = True
+                else:
+                    class_extra = " is-clickable"
             tbody_rows.append(
                 assemble_list_row(
                     archetype=ARCHETYPE_LIST_REGION,
                     cells_html=cells_html,
                     actions_cell=actions_cell,
                     class_extra=class_extra,
-                    drill_attrs=(drill_row_attrs(ctx.escape_attr(url), pane=pane) if url else ""),
+                    drill_attrs=(
+                        drill_row_attrs(
+                            ctx.escape_attr(url),
+                            pane=pane,
+                            auto_load=auto_load,
+                        )
+                        if url
+                        else ""
+                    ),
                 )
             )
         tbody = f"<tbody>{''.join(tbody_rows)}</tbody>"

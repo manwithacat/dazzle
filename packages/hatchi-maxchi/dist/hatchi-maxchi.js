@@ -264,10 +264,13 @@
  *
  * Contract:
  *   - root: `[data-master-detail]` (class `master-detail`)
+ *   - list body: `[data-master-detail-list-body]` (optional marker; Dazzle dual_pane)
+ *   - detail body: `[data-master-detail-detail-body]` (hx-get target pane marker)
  *   - item: `.master-detail__item` — click sets aria-current within root
  *
  * The detail pane is loaded by htmx (item hx-get swaps a card into
- * .master-detail__detail); this controller owns only selection state.
+ * .master-detail__detail / [data-master-detail-detail-body]); this
+ * controller owns only selection state.
  *
  * INSTANCE-ISOLATED — delegated on `document`, every query scoped to the
  * clicked item's OWN `[data-master-detail]` root so N instances stay

@@ -95,9 +95,10 @@ def render_master_detail_shell(
 ) -> str:
     """Emit the dual-pane master-detail Hyperpart shell for a workspace pair.
 
-    List body lazy-loads via the normal region endpoint. Detail pane starts empty
-    (prompt); list rows hx-get ``detail_endpoint_base?id=…`` into
-    ``.dz-master-detail__detail``.
+    List body lazy-loads via the normal region endpoint. Detail pane starts with
+    an empty prompt; the first list row uses ``hx-trigger="click, load once"`` so
+    it auto-fills the pane when the list fragment settles. Further rows hx-get
+    ``detail_endpoint_base?id=…`` into ``.dz-master-detail__detail`` on click.
     """
     import html as _html
 

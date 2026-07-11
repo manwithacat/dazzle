@@ -81,6 +81,12 @@ def test_pane_drill_row_attrs_target_detail_pane() -> None:
     assert "closest [data-dz-master-detail] .dz-master-detail__detail" in pane
     assert "hx-push-url" not in pane
     assert 'hx-target="body"' not in pane
+    assert "load once" not in pane
+    assert "aria-current" not in pane
+
+    auto = drill_row_attrs("/api/workspaces/c/regions/d?id=1", pane=True, auto_load=True)
+    assert "load once" in auto
+    assert 'aria-current="true"' in auto
 
 
 def test_workspace_typed_render_emits_master_detail_for_dual_pane() -> None:

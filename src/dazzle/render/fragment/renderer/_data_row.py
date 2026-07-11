@@ -56,7 +56,12 @@ ARCHETYPE_EMBEDDED = _RowArchetype("dz-table__row", "embedded")
 ARCHETYPE_LIST_REGION = _RowArchetype("dz-list-row", "region")
 
 
-def drill_row_attrs(url_attr: str, *, pane: bool = False) -> str:
+def drill_row_attrs(
+    url_attr: str,
+    *,
+    pane: bool = False,
+    auto_load: bool = False,
+) -> str:
     """The shared clickable-row block (#1511, design §3.2): the row owns a
     bare-click `hx-get` to the detail surface. `url_attr` is the
     already-escaped detail URL — empty means the row is not clickable.
@@ -68,6 +73,10 @@ def drill_row_attrs(url_attr: str, *, pane: bool = False) -> str:
     ``.dz-master-detail__detail`` pane; no push-url; row also needs
     ``dz-master-detail__item`` on the ``class`` (caller via class_extra).
 
+    ``auto_load=True`` (first pane row only): also fire on ``load once`` so
+    when the list fragment settles, the first item fills the detail pane
+    without a second click. Sets ``aria-current="true"`` for the controller.
+
     This is the single load-bearing composition rule: the *row* owns the bare
     click; every interactive sub-element (checkbox, edit cell, action button,
     peek chevron) must `event.stopPropagation()` so the capabilities coexist on
@@ -76,10 +85,12 @@ def drill_row_attrs(url_attr: str, *, pane: bool = False) -> str:
     if not url_attr:
         return ""
     if pane:
+        trigger = "click, load once" if auto_load else "click"
+        current = ' aria-current="true"' if auto_load else ""
         return (
-            f'hx-get="{url_attr}" hx-trigger="click" '
+            f'hx-get="{url_attr}" hx-trigger="{trigger}" '
             f'hx-target="closest [data-dz-master-detail] .dz-master-detail__detail" '
-            f'hx-swap="innerHTML" tabindex="0"'
+            f'hx-swap="innerHTML" tabindex="0"{current}'
         )
     # 2b preload-drill (#1491): `hx-preload="mouseover"` warms the detail GET on
     # hover (the vendored htmx-4 `preload` extension), so the click serves the
