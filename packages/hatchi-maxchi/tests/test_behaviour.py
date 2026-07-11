@@ -139,6 +139,32 @@ def test_palette_arrows_and_enter(page) -> None:  # type: ignore[no-untyped-def]
         f"document.querySelectorAll('{PALETTE} .command__item')[2].getAttribute('aria-selected')"
     )
     assert selected == "true"
+    # Enter activates the inert mock item — close, do not navigate (href=# scroll).
+    y_before = page.evaluate("window.scrollY")
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(100)
+    assert not page.evaluate(f"document.querySelector('{PALETTE}').open"), (
+        "Enter on a mock result must close the palette"
+    )
+    assert page.evaluate("window.scrollY") == y_before, (
+        "activating a mock result must not scroll the host page (no href=# jump)"
+    )
+
+
+def test_palette_click_result_closes_without_scroll(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery mocks are unwired — pick must close, not jump the page to top."""
+    goto_part(page, "command")
+    # Scroll down so a # navigation would be detectable.
+    page.evaluate("window.scrollTo(0, 400)")
+    page.wait_for_timeout(50)
+    _open_palette(page)
+    page.focus(f"{PALETTE} {INPUT}")
+    page.wait_for_timeout(200)
+    y_before = page.evaluate("window.scrollY")
+    page.locator(f"{PALETTE} .command__item").first.click()
+    page.wait_for_timeout(100)
+    assert not page.evaluate(f"document.querySelector('{PALETTE}').open")
+    assert page.evaluate("window.scrollY") == y_before
 
 
 def test_confirm_dialog_intercepts_hx_confirm(page) -> None:  # type: ignore[no-untyped-def]

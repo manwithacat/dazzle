@@ -665,8 +665,10 @@ HYPERPARTS: list[Hyperpart] = [
         'aria-label="Close command palette">{svg:x}</button></div>'
         '<div class="dz-command__results" id="dz-command-results" role="listbox" aria-label="Results"></div></dialog>',
         notes="In Dazzle the input's hx-get hits <code>/app/command</code>, which returns "
-        "persona-scoped results. Here a mock htmx returns a canned list so the demo works "
-        "with no server.",
+        "persona-scoped results as real links. The gallery mock returns "
+        "<code>&lt;button type=button class=dz-command__item&gt;</code> rows so picking "
+        "an option closes the palette without <code>href=#</code> scrolling the page "
+        "to the top mid-browse.",
         tags=("interactive", "htmx"),
         exchanges=(
             Exchange(

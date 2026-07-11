@@ -53,7 +53,7 @@ The hx-get palette — the htmx4 flagship. Press ⌘K.
 
 ## Guidance (prose; HTML from the registry notes field)
 
-In Dazzle the input's hx-get hits <code>/app/command</code>, which returns persona-scoped results. Here a mock htmx returns a canned list so the demo works with no server.
+In Dazzle the input's hx-get hits <code>/app/command</code>, which returns persona-scoped results as real links. The gallery mock returns <code>&lt;button type=button class=dz-command__item&gt;</code> rows so picking an option closes the palette without <code>href=#</code> scrolling the page to the top mid-browse.
 
 ## Controller files
 

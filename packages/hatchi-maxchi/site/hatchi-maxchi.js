@@ -6,13 +6,14 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 (function () {
   "use strict";
   var RESPONSES = {
+    // Mock: <button> not <a href="#"> — hash links scroll the gallery page to top.
     "/mock/command": '<div class="command__group">Workspaces</div>' +
-      '<a class="command__item" href="#" role="option">{i:layout-dashboard}<span>Operations Dashboard</span></a>' +
-      '<a class="command__item" href="#" role="option">{i:settings}<span>Platform Admin</span></a>' +
+      '<button type="button" class="command__item" role="option">{i:layout-dashboard}<span>Operations Dashboard</span></button>' +
+      '<button type="button" class="command__item" role="option">{i:settings}<span>Platform Admin</span></button>' +
       '<div class="command__group">Records</div>' +
-      '<a class="command__item" href="#" role="option">{i:receipt}<span>Invoices</span></a>' +
-      '<a class="command__item" href="#" role="option">{i:users}<span>Customers</span></a>' +
-      '<a class="command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>',
+      '<button type="button" class="command__item" role="option">{i:receipt}<span>Invoices</span></button>' +
+      '<button type="button" class="command__item" role="option">{i:users}<span>Customers</span></button>' +
+      '<button type="button" class="command__item" role="option">{i:triangle-alert}<span>Alerts</span></button>',
     "/mock/master-detail/inv-001": '<div class="card card-body"><div class="card-label">INV-001 · Acme</div><div class="card-value">£1,250.00</div><div class="card-delta">Paid · 2 days ago</div></div>',
     "/mock/master-detail/inv-002": '<div class="card card-body"><div class="card-label">INV-002 · Globex</div><div class="card-value">£3,400.00</div><div class="card-delta">Pending · due Friday</div></div>',
     "/mock/master-detail/inv-003": '<div class="card card-body"><div class="card-label">INV-003 · Initech</div><div class="card-value">£820.00</div><div class="card-delta">Overdue · 6 days</div></div>',
@@ -647,10 +648,30 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       var idx = selectedIndex(dlg);
       if (idx >= 0) {
         evt.preventDefault();
-        items(dlg)[idx].click();
+        activateItem(dlg, items(dlg)[idx]);
       }
     }
   });
+
+  // Result pick: real apps use <a href="/real/path"> (navigate away). Gallery
+  // mocks use <button> or href="#" — the latter must NOT scroll the host page
+  // to # (jumps to top mid-Hyperpart browse). Inert picks just close.
+  function isInertNav(el) {
+    if (!el) return true;
+    if (el.tagName === "BUTTON") return true;
+    var href = el.getAttribute("href");
+    return !href || href === "#" || href.charAt(0) === "#";
+  }
+
+  function activateItem(dlg, el) {
+    if (!el || !dlg) return;
+    if (isInertNav(el)) {
+      dlg.close();
+      return;
+    }
+    // Real destination — follow the link (page unloads or routes).
+    el.click();
+  }
 
   // Reset selection whenever htmx swaps new results in. Bound under BOTH
   // names: htmx-4 fires `htmx:after:swap`, htmx ≤2 fired `htmx:afterSwap` —
@@ -683,6 +704,15 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   document.addEventListener("click", function (evt) {
     var dlg = palette();
     if (!dlg || !dlg.open) return;
+    var item = evt.target.closest && evt.target.closest(".command__item");
+    if (item && dlg.contains(item)) {
+      if (isInertNav(item)) {
+        evt.preventDefault();
+        dlg.close();
+      }
+      // Real <a href="/…">: let the browser navigate.
+      return;
+    }
     if (
       evt.target === dlg ||
       (evt.target.closest && evt.target.closest("[data-hm-close-command]"))

@@ -444,13 +444,14 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
 (function () {
   "use strict";
   var RESPONSES = {
+    // Mock: <button> not <a href="#"> — hash links scroll the gallery page to top.
     "/mock/command": '<div class="dz-command__group">Workspaces</div>' +
-      '<a class="dz-command__item" href="#" role="option">{i:layout-dashboard}<span>Operations Dashboard</span></a>' +
-      '<a class="dz-command__item" href="#" role="option">{i:settings}<span>Platform Admin</span></a>' +
+      '<button type="button" class="dz-command__item" role="option">{i:layout-dashboard}<span>Operations Dashboard</span></button>' +
+      '<button type="button" class="dz-command__item" role="option">{i:settings}<span>Platform Admin</span></button>' +
       '<div class="dz-command__group">Records</div>' +
-      '<a class="dz-command__item" href="#" role="option">{i:receipt}<span>Invoices</span></a>' +
-      '<a class="dz-command__item" href="#" role="option">{i:users}<span>Customers</span></a>' +
-      '<a class="dz-command__item" href="#" role="option">{i:triangle-alert}<span>Alerts</span></a>',
+      '<button type="button" class="dz-command__item" role="option">{i:receipt}<span>Invoices</span></button>' +
+      '<button type="button" class="dz-command__item" role="option">{i:users}<span>Customers</span></button>' +
+      '<button type="button" class="dz-command__item" role="option">{i:triangle-alert}<span>Alerts</span></button>',
     "/mock/master-detail/inv-001": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-001 · Acme</div><div class="dz-card-value">£1,250.00</div><div class="dz-card-delta">Paid · 2 days ago</div></div>',
     "/mock/master-detail/inv-002": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-002 · Globex</div><div class="dz-card-value">£3,400.00</div><div class="dz-card-delta">Pending · due Friday</div></div>',
     "/mock/master-detail/inv-003": '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-003 · Initech</div><div class="dz-card-value">£820.00</div><div class="dz-card-delta">Overdue · 6 days</div></div>',
