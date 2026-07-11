@@ -488,11 +488,11 @@ EOF
 
 ### Task 5: Deferred tracks are GitHub issues (not this plan)
 
-Already filed or to file during plan write (not implementation):
+Filed (do not implement in this plan):
 
-1. Unify form `MoneyField`/`TagsField` with HM ingest seam models (approach B).
-2. Root-only Hyperpart DOM conformance from Dazzle emitters.
-3. Prose `Contract:` header ↔ `DOM_CONTRACT` attr-name drift gate.
+1. **#1577** — Unify form `MoneyField`/`TagsField` with HM ingest seam models (approach B).
+2. **#1578** — Root-only Hyperpart DOM conformance from Dazzle emitters.
+3. **#1579** — Prose `Contract:` header ↔ `DOM_CONTRACT` attr-name drift gate.
 
 No implementation steps here.
 

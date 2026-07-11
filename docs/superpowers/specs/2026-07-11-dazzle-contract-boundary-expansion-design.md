@@ -180,8 +180,8 @@ None remaining for phase 1–2. Deferred tracks are issues, not blockers.
 
 In monorepo practice these may ship as sequential commits on `main` with one bump each, equivalent to the PR plan.
 
-## GitHub issues to file
+## GitHub issues (filed)
 
-1. **Follow-on**: Unify Dazzle form `MoneyField`/`TagsField` with HM ingest seam models (approach B).
-2. **Follow-on**: Root-only Hyperpart DOM conformance from Dazzle emitters (when a stable render path exists).
-3. **Follow-on**: Controller prose `Contract:` header ↔ `DOM_CONTRACT` attr-name drift gate.
+1. **#1577** — Unify Dazzle form `MoneyField`/`TagsField` with HM ingest seam models (approach B).
+2. **#1578** — Root-only Hyperpart DOM conformance from Dazzle emitters (when a stable render path exists).
+3. **#1579** — Controller prose `Contract:` header ↔ `DOM_CONTRACT` attr-name drift gate.
