@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM composition model documented** — AGENTS.md: composes / composes_with /
+  extensions / contracts vs non-composition; grid-edit `kind=select` is a
+  bare native select, not combobox (explicit non-dogfood).
 - **HM combobox growing-list recipe (same Hyperpart)** —
   `data-dz-allow-create` for mutable catalogues (departments, queues, …);
   dual gallery demo (fixed priority + growing department). Not a new part.

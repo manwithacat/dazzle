@@ -19,6 +19,12 @@ must not block CI.
   hole no Dazzle layer covers). A part that ships alongside an unconverted Dazzle
   equivalent is decoration — it will be shadowed by unlayered Dazzle CSS.
 - **Controller only where the platform lacks a primitive** (registry.py doctrine).
+- **Composition is declared, not inferred**: parent `composes=(child, …)` when the
+  partial embeds the child; `guidance.composes_with` for soft agent links;
+  `extensions` for optional controllers on another part’s seams. Resembling
+  another part’s UX (e.g. grid-edit’s bare `<select>` vs combobox) is **not**
+  composition — document the non-use so agents don’t force dogfood. See
+  AGENTS.md › *Composition: who uses whom*.
 
 ## 1. Contract module FIRST — `contracts/<part>.py`
 

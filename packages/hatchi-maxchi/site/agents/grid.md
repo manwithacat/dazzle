@@ -133,6 +133,7 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 - column visibility: dz-grid-cols.js projects the hidden set onto [data-dz-col] cells after every swap — no per-cell bindings
 - column resize: dz-grid-resize.js rides the header cells
 - inline edit: dz-grid-edit.js reads the [data-dz-grid-edit] display span (kind/value/label/options) — contract in contracts/grid_edit.py
+- kind=select cells open a bare native <select> editor — NOT the combobox Hyperpart (dense row, morph-safe, commit-on-change PUT)
 - row identity: a row's id IS the idiomorph morph key and encodes data-dz-row-id (the bulk payload anchor)
 
 ### Do / Don't
@@ -141,12 +142,14 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 |---|---|
 | keep selection state in the DOM (.checked on the row checkbox) | mirror selection into a JS array a tbody swap would orphan |
 | return full row fragments from the grid endpoint | return cell deltas the client must splice in |
+| use bare select for in-cell enum edit (current contract) | assume grid dogfoods combobox because both have 'select' UX |
 
 ### Pitfalls
 
 - edit state in JS objects dies on morph — the typed buffer lives on the grid root (root._dzEdit) with before/after-swap hooks
 - select options must be JSON [[value,label],…] — producers with dicts/tuples/bare strings normalise at ONE boundary (#1573)
 - never patch committed values client-side — commit fires dz-grid:refresh so the server re-renders badges/dates
+- do not mount data-dz-combobox inside a grid cell expecting grid-edit to drive it — that is a future composition, not current seam
 
 ### Keyboard / AT
 

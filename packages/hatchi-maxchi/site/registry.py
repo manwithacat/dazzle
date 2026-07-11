@@ -611,6 +611,8 @@ HYPERPARTS: list[Hyperpart] = [
                 "column resize: dz-grid-resize.js rides the header cells",
                 "inline edit: dz-grid-edit.js reads the [data-dz-grid-edit] display "
                 "span (kind/value/label/options) — contract in contracts/grid_edit.py",
+                "kind=select cells open a bare native <select> editor — NOT the "
+                "combobox Hyperpart (dense row, morph-safe, commit-on-change PUT)",
                 "row identity: a row's id IS the idiomorph morph key and encodes "
                 "data-dz-row-id (the bulk payload anchor)",
             ),
@@ -621,6 +623,8 @@ HYPERPARTS: list[Hyperpart] = [
                 "dicts/tuples/bare strings normalise at ONE boundary (#1573)",
                 "never patch committed values client-side — commit fires "
                 "dz-grid:refresh so the server re-renders badges/dates",
+                "do not mount data-dz-combobox inside a grid cell expecting "
+                "grid-edit to drive it — that is a future composition, not current seam",
             ),
             do_dont=(
                 (
@@ -630,6 +634,10 @@ HYPERPARTS: list[Hyperpart] = [
                 (
                     "return full row fragments from the grid endpoint",
                     "return cell deltas the client must splice in",
+                ),
+                (
+                    "use bare select for in-cell enum edit (current contract)",
+                    "assume grid dogfoods combobox because both have 'select' UX",
                 ),
             ),
             a11y_keys=(
@@ -1669,7 +1677,7 @@ def select(source: str, id: str) -> str:
         "progressively enhanced into a type-to-filter combobox. Fixed lists "
         "by default; growing catalogues (add a missing value) use the same "
         "Hyperpart with data-dz-allow-create — not a separate part.",
-        '<div class="hm-stack hm-measure" data-gap="md">'
+        '<div class="hm-stack hm-measure" data-dz-gap="md">'
         '<label class="dz-field" for="hm-cb-field">'
         '<span class="dz-field__label">Priority (fixed list)</span>'
         '<select id="hm-cb-field" name="priority" '

@@ -82,6 +82,42 @@ section: return that HTML fragment (or the empty/OOB shape it describes). Dazzle
 often emits those routes from the app model; standalone HTMX4 apps write them
 explicitly. If Notes call something “gallery-only” / `MOCK_HTMX`, treat it as
 documentation of the demo, not a requirement.
+
+### Composition: who uses whom (and what is *not* composition)
+
+Hyperparts do **not** import each other at runtime like React components. What
+we have today:
+
+| Mechanism | Meaning | Enforced by |
+|---|---|---|
+| **`composes`** on a Hyperpart | Declares child parts this one embeds (inline in `partial` or via exchange). Drives “Composed of” on the part page + Composite dependency chip. | `test_composes_references_real_hyperparts` |
+| **`guidance.composes_with`** | Soft related-parts graph for agents (links). | Ids must exist (`test_guidance_composes_with_ids_are_real`) |
+| **`extensions`** | Optional controllers on another part’s seams (e.g. grid-edit rides grid). Absence must not break the parent. | Bundled + cohesion; contracts often pair by stem (`grid_edit.py` ↔ `dz-grid-edit.js`) |
+| **DOM / dual-lock contracts** | What markup a *producer* must emit. | `tests/test_contracts.py`, Dazzle `test_hm_contract_*` |
+| **Prose ↔ controller attrs** | Controller must implement contract attrs. | `test_contract_prose_drift` |
+
+**Not present yet:** a reverse **consumer** index (who depends on combobox?),
+or a gate that “grid select cells must enhance as combobox.” Related-looking
+UX is often a **local primitive**, not dogfooding.
+
+**Example — grid does *not* use combobox today.** Inline
+`kind=select` cells (`contracts/grid_edit.py` / `dz-grid-edit.js`) build a bare
+`<select class="dz-inline-edit-select">` for density, morph survival, and
+single-field PUT commits. That is intentional. To dogfood combobox inside
+grid later would be an explicit composition decision (list combobox in
+`composes` / `extensions` notes + dual-lock that the editor DOM satisfies
+combobox’s contract when mounted) — not assumed by “select-ish UI.”
+
+**When composing Hyperparts (recipe):**
+
+1. Declare **`composes=(…)`** if the parent’s partial embeds the child.
+2. Point agents via **`composes_with`**.
+3. Prefer **child’s contract module** as the child’s interface; parent contracts
+   name only parent seams.
+4. If parent only *resembles* a part (native control in a dense surface),
+   **document the non-composition** in seams/pitfalls so agents don’t “wire
+   combobox into the grid” by accident.
+
 - The snippets ship unprefixed by default. `build.py --prefix dz-`
   (or any prefix) renamespaces classes, data-attributes, and keyframes
   consistently — pick one and stay with it.
