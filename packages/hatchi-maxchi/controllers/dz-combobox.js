@@ -79,6 +79,12 @@
   // Commit a choice: write the native <select> value, sync the input
   // display + aria-selected, close, and fire `change` so the form and any
   // listeners react exactly as they did with the bare <select>.
+  //
+  // Do NOT focus() the input after close: the focusin handler opens the
+  // listbox, so a post-choose focus immediately re-opens the picker (user
+  // sees the value set but the menu stays up). Pointerdown on an option
+  // uses preventDefault so focus never left the input; Enter already has
+  // focus on the input.
   function choose(root, li) {
     var select = root.querySelector("select[data-dz-combobox]");
     var input = root.querySelector(".dz-combobox-input");
@@ -89,7 +95,8 @@
     });
     input.value = li.textContent;
     setOpen(root, false);
-    input.focus();
+    // Clear filter so a re-open shows the full list, not a stale query.
+    filter(root, "");
     select.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
@@ -294,10 +301,19 @@
     }
   });
 
-  document.addEventListener("click", function (evt) {
-    var li = evt.target.closest && evt.target.closest(".dz-combobox-option");
-    if (!li || li.hidden) return;
-    var root = li.closest(".dz-combobox");
-    if (root) choose(root, li);
-  });
+  // pointerdown (capture) so we can preventDefault and keep focus on the
+  // combobox input — otherwise the input blurs, then choose() would have
+  // needed a re-focus that re-opens the listbox (see choose() note).
+  document.addEventListener(
+    "pointerdown",
+    function (evt) {
+      var li = evt.target.closest && evt.target.closest(".dz-combobox-option");
+      if (!li || li.hidden) return;
+      var root = li.closest(".dz-combobox");
+      if (!root) return;
+      evt.preventDefault();
+      choose(root, li);
+    },
+    true,
+  );
 })();

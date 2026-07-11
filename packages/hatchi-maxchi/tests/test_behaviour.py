@@ -1796,14 +1796,29 @@ def test_combobox_enhances_and_selects(page) -> None:  # type: ignore[no-untyped
     root = preview.locator(".combobox[data-enhanced]")
     assert root.count() == 1
     assert root.get_attribute("data-open") == "true"
-    # Keyboard-select High (click on option then input.focus() re-opens listbox —
-    # the submit contract is the native <select> value, not the open state).
+    # Keyboard-select High: value commits and listbox stays closed.
     preview.locator(".combobox-input").fill("Hi")
     page.keyboard.press("ArrowDown")
     page.keyboard.press("Enter")
     page.wait_for_timeout(50)
     assert preview.locator("select[data-combobox]").input_value() == "high"
     assert preview.locator(".combobox-input").input_value() == "High"
+    assert root.get_attribute("data-open") is None
+
+
+def test_combobox_click_option_closes_listbox(page) -> None:  # type: ignore[no-untyped-def]
+    """Pointer pick must close the picker (not re-open via focusin)."""
+    goto_part(page, "combobox")
+    preview = page.locator(".hm-preview")
+    preview.locator("select[data-combobox]").dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    root = preview.locator(".combobox[data-enhanced]")
+    assert root.get_attribute("data-open") == "true"
+    preview.locator('.combobox-option[data-value="high"]').click()
+    page.wait_for_timeout(50)
+    assert preview.locator("select[data-combobox]").input_value() == "high"
+    assert preview.locator(".combobox-input").input_value() == "High"
+    assert root.get_attribute("data-open") is None
 
 
 def test_combobox_type_filters_options(page) -> None:  # type: ignore[no-untyped-def]
