@@ -9,6 +9,12 @@ equality — and the emitted DOM is locked by
 
 Seam models: ``GridEditCell``, ``ComboboxField``, ``TagsField``, ``MoneyField``.
 
+**Two layers (#1577):** form primitives in ``primitives/forms.py`` are the
+public product API (``required``, currency selector, symbol, …). These
+ingest models are the HM contract shape. Emission is
+``form primitive → *_from_form adapter → attr helper`` — HM contract
+attributes are assembled **only** in this module (sole-emitter gates).
+
 Source of truth: ``packages/hatchi-maxchi/contracts/<part>.py``.
 """
 
@@ -16,6 +22,7 @@ from __future__ import annotations
 
 import html as _html
 import json
+from collections.abc import Sequence
 from typing import Literal
 
 from pydantic import BaseModel, field_validator, model_validator
@@ -137,3 +144,115 @@ class MoneyField(BaseModel):
     major_display: str = "0.00"
     minor_value: int = 0
     field_id: str = "money-field"
+
+
+# ── Form → ingest adapters (#1577) ───────────────────────────────────
+# Form primitives stay the public API; emission builds these models then
+# uses the attr helpers below for HM contract attributes.
+
+
+def tags_from_form(
+    *,
+    name: str,
+    label: str = "",
+    placeholder: str = "",
+    initial_value: str = "",
+) -> TagsField:
+    """Map a form ``TagsField`` (or equivalent kwargs) to the HM seam model."""
+    return TagsField(
+        name=name,
+        field_id=f"field-{name}",
+        label=label or name,
+        tags=initial_value if initial_value else [],
+        placeholder=placeholder,
+    )
+
+
+def combobox_from_form(
+    *,
+    name: str,
+    label: str = "",
+    options: Sequence[tuple[str, str]] = (),
+    placeholder: str = "",
+    initial_value: str = "",
+) -> ComboboxField:
+    """Map a form ``WidgetCombobox`` to the HM combobox seam model."""
+    return ComboboxField(
+        name=name,
+        field_id=f"field-{name}",
+        label=label or name,
+        options=list(options),
+        selected=initial_value,
+        placeholder=placeholder,
+    )
+
+
+def money_from_form(
+    *,
+    name: str,
+    currency_code: str = "",
+    scale: str = "",
+    minor_initial: str = "",
+) -> MoneyField:
+    """Map core money root fields from a form ``MoneyField`` to the HM seam.
+
+    Product chrome (``symbol``, ``currency_fixed``, ``currency_options``,
+    ``required``, ``label``) stays on the form primitive — not on this model.
+    """
+    try:
+        scale_i = 2 if scale in ("", None) else int(scale)
+    except (TypeError, ValueError):
+        scale_i = 2
+    minor_i = 0
+    major = ""
+    if minor_initial:
+        try:
+            minor_i = int(minor_initial)
+            major = f"{minor_i / (10**scale_i):.{scale_i}f}"
+        except (TypeError, ValueError):
+            minor_i = 0
+            major = ""
+    return MoneyField(
+        name=name,
+        currency=currency_code or "GBP",
+        scale=scale_i,
+        # Empty when no minor seed — preserves blank edit form (not "0.00").
+        major_display=major,
+        minor_value=minor_i,
+        field_id=f"field-{name}",
+    )
+
+
+# ── Sole-emitter attr helpers (HM contract attributes only) ──────────
+
+
+def tags_marker_attrs(field: TagsField) -> str:
+    """Assemble ``name`` + ``data-dz-tags`` — the ONLY site for that marker."""
+    return f'name="{_html.escape(field.name, quote=True)}" data-dz-tags'
+
+
+def combobox_marker_attrs(field: ComboboxField) -> str:
+    """Assemble ``name`` + ``data-dz-combobox`` — the ONLY site for that marker."""
+    return f'name="{_html.escape(field.name, quote=True)}" data-dz-combobox'
+
+
+def money_root_attrs(field: MoneyField) -> str:
+    """Assemble money root ``data-dz-money`` / currency / scale attrs only."""
+    return (
+        f"data-dz-money "
+        f'data-dz-currency="{_html.escape(field.currency, quote=True)}" '
+        f'data-dz-scale="{field.scale}"'
+    )
+
+
+def combobox_options_html(field: ComboboxField, *, placeholder_html: str) -> str:
+    """Render ``<option>`` list from a typed combobox seam (incl. leading empty)."""
+    opts = [f'<option value="">{placeholder_html}</option>']
+    for o in field.options:
+        # Match form emission: selected when value equals selected (incl. "").
+        sel = " selected" if o.value == field.selected else ""
+        opts.append(
+            f'<option value="{_html.escape(o.value, quote=True)}"{sel}>'
+            f"{_html.escape(o.label)}</option>"
+        )
+    return "".join(opts)

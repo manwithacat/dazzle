@@ -47,18 +47,46 @@ def test_hydrated_badge_row_conforms_to_grid_edit_contract(options) -> None:
 
 
 def test_typed_path_is_sole_emitter() -> None:
-    """data-dz-edit-* attribute assembly is allowed ONLY in the typed
-    ingestion boundary (dazzle/render/fragment/ingest.py). A second
-    emission site would reopen the #1573 normalise-at-every-consumer hole."""
-    offenders = []
+    """HM contract attribute *assembly* is allowed ONLY in ingest.py.
+
+    Families (#1577): ``data-dz-edit-``, ``data-dz-tags``, ``data-dz-combobox``,
+    ``data-dz-money``. Docstrings and runtime readers (has_attr) are ignored;
+    HTML f-string / quoted assembly outside ingest fails.
+    """
+    import re
+
+    # Quoted/f-string assembly of contract markers (not bare identifier reads).
+    assembly = re.compile(
+        r"""(?x)
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money))
+        """
+    )
+    # Readers / docs that mention the attr without assembling HTML.
+    allow_name = {
+        "fidelity_scorer.py",  # has_attr reader
+        "forms.py",  # primitive docstrings
+        "form_field.py",  # routing comments
+    }
+    offenders: list[str] = []
     for p in (REPO_ROOT / "src" / "dazzle").rglob("*.py"):
         if p.name == "ingest.py" and p.parent.name == "fragment":
             continue
-        if "data-dz-edit-" in p.read_text(encoding="utf-8"):
-            offenders.append(str(p.relative_to(REPO_ROOT)))
+        if p.name in allow_name:
+            continue
+        text = p.read_text(encoding="utf-8")
+        for i, line in enumerate(text.splitlines(), 1):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            if assembly.search(line):
+                # has_attr / get_attr are readers, not emitters
+                if "has_attr" in line or "get_attr" in line:
+                    continue
+                offenders.append(f"{p.relative_to(REPO_ROOT)}:{i}")
     assert not offenders, (
-        f"data-dz-edit-* assembled outside the typed boundary: {offenders} — "
-        f"construct a GridEditCell and use edit_span_attrs() instead."
+        f"HM contract attrs assembled outside ingest.py: {offenders} — "
+        f"use the typed seam model + attr helper."
     )
 
 

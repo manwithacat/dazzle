@@ -24,6 +24,15 @@ import json
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
+from dazzle.render.fragment.ingest import (
+    combobox_from_form,
+    combobox_marker_attrs,
+    combobox_options_html,
+    money_from_form,
+    money_root_attrs,
+    tags_from_form,
+    tags_marker_attrs,
+)
 from dazzle.render.fragment.primitives import (
     AddCardRow,
     CardPicker,
@@ -374,37 +383,33 @@ class _RenderFormsMixin:
         )
 
     def _emit_money(self, m: MoneyField, ctx: RenderContext) -> str:
-        """Render a MoneyField — a major-unit text input + hidden
-        `{name}_minor` carrier, in fixed (symbol prefix + hidden currency)
-        or selector mode. State-in-DOM (Tier F4c): the delegated HM
-        `dz-money.js` keys off the root `data-dz-money` marker, reads the
-        scale from `data-dz-scale`, and keeps the hidden minor carrier in
-        sync on input/blur/currency-change. The edit-mode display value is
-        SERVER-computed from the minor carrier (no client init pass).
-        Replaces the Alpine `dzMoney` island."""
+        """Render a form MoneyField via HM ingest seam (#1577).
+
+        Core root attrs come from ``money_from_form`` → ``money_root_attrs``
+        (sole-emitter). Product chrome (symbol, currency selector, required)
+        stays on the form primitive.
+        """
+        seam = money_from_form(
+            name=m.name,
+            currency_code=m.currency_code,
+            scale=m.scale,
+            minor_initial=m.minor_initial,
+        )
         name = ctx.escape_attr(m.name)
         label_text = ctx.escape(m.label)
         minor_attr = ctx.escape_attr(m.minor_initial)
         required_attr = ' required aria-required="true"' if m.required else ""
-        # Edit mode: precompute the major-unit display from the minor
-        # carrier server-side ("1500" @ scale 2 -> "15.00").
-        display = ""
-        if m.minor_initial:
-            try:
-                display = f"{int(m.minor_initial) / (10 ** int(m.scale)):.{int(m.scale)}f}"
-            except (ValueError, TypeError):
-                display = ""
-        display_attr = ctx.escape_attr(display)
+        display_attr = ctx.escape_attr(seam.major_display)
+        root = money_root_attrs(seam)
+        fid = ctx.escape_attr(seam.field_id)
 
         if m.currency_fixed:
             return (
-                '<div class="dz-money" data-dz-money '
-                f'data-dz-currency="{ctx.escape_attr(m.currency_code)}" '
-                f'data-dz-scale="{ctx.escape_attr(m.scale)}">'
+                f'<div class="dz-money" {root}>'
                 '<div class="dz-form-money-group">'
                 f'<span class="dz-form-money-prefix" aria-hidden="true">'
                 f"{ctx.escape(m.symbol)}</span>"
-                f'<input type="text" inputmode="decimal" id="field-{name}" '
+                f'<input type="text" inputmode="decimal" id="{fid}" '
                 f'data-dazzle-field="{name}" '
                 f'value="{display_attr}" '
                 'class="dz-form-input dz-form-input-trailing" '
@@ -426,16 +431,14 @@ class _RenderFormsMixin:
             for code, opt_scale, opt_symbol in m.currency_options
         )
         return (
-            '<div class="dz-money" data-dz-money '
-            f'data-dz-currency="{ctx.escape_attr(m.currency_code)}" '
-            f'data-dz-scale="{ctx.escape_attr(m.scale)}">'
+            f'<div class="dz-money" {root}>'
             '<div class="dz-form-money-group">'
             f'<select name="{name}_currency" '
             'class="dz-form-money-select" '
             f'aria-label="Currency for {label_text}">'
             f"{currency_opts}"
             "</select>"
-            f'<input type="text" inputmode="decimal" id="field-{name}" '
+            f'<input type="text" inputmode="decimal" id="{fid}" '
             f'data-dazzle-field="{name}" '
             f'value="{display_attr}" '
             'class="dz-form-input dz-form-input-trailing" '
@@ -457,45 +460,48 @@ class _RenderFormsMixin:
         )
 
     def _emit_widget_combobox(self, c: WidgetCombobox, ctx: RenderContext) -> str:
-        # HM-native searchable single-select (HMC-018 slice 1): emit a real
-        # native <select data-dz-combobox> carrying the placeholder + all enum
-        # options. With JS off it is a fully usable select (submits, native
-        # required); controllers/dz-combobox.js progressively enhances it into
-        # a searchable role=combobox overlay on first interaction. No
-        # data-dz-widget hook — that was the retired TomSelect mount.
+        # HM-native searchable single-select via ingest seam (#1577):
+        # WidgetCombobox → ComboboxField → marker attrs + options HTML.
+        # Product chrome (required, data-dazzle-field, label) stays here.
+        seam = combobox_from_form(
+            name=c.name,
+            label=c.label,
+            options=c.options,
+            placeholder=c.placeholder,
+            initial_value=c.initial_value,
+        )
         name = ctx.escape_attr(c.name)
-        placeholder_html = ctx.escape(c.placeholder or "Select...")
+        placeholder_html = ctx.escape(seam.placeholder or "Select...")
         required_attr = ' required aria-required="true"' if c.required else ""
-        opts = [f'<option value="">{placeholder_html}</option>']
-        for value, label in c.options:
-            sel = " selected" if value == c.initial_value else ""
-            opts.append(
-                f'<option value="{ctx.escape_attr(value)}"{sel}>{ctx.escape(label)}</option>'
-            )
+        opts = combobox_options_html(seam, placeholder_html=placeholder_html)
         inner = (
-            f'<select id="field-{name}" name="{name}" data-dazzle-field="{name}" '
-            f'data-dz-combobox class="dz-form-input"{required_attr}>'
-            f"{''.join(opts)}</select>"
+            f'<select id="{ctx.escape_attr(seam.field_id)}" '
+            f'{combobox_marker_attrs(seam)} data-dazzle-field="{name}" '
+            f'class="dz-form-input"{required_attr}>'
+            f"{opts}</select>"
         )
         return self._widget_label(ctx.escape(c.label), name, inner)
 
     def _emit_tags_field(self, t: TagsField, ctx: RenderContext) -> str:
-        # HM-native multi-value chips (HMC-018 slice 2): emit a plain native
-        # <input type="text" data-dz-tags> carrying a COMMA-JOINED value. With
-        # JS off it is a usable comma-separated text field (the server splits
-        # on comma); controllers/dz-tags.js progressively enhances it into a
-        # chips UI on first interaction, keeping the native input as the
-        # submitted value. No data-dz-widget hook — that was the retired
-        # TomSelect mount.
+        # HM-native multi-value chips via ingest seam (#1577):
+        # form TagsField → ingest TagsField → marker attrs.
+        seam = tags_from_form(
+            name=t.name,
+            label=t.label,
+            placeholder=t.placeholder,
+            initial_value=t.initial_value,
+        )
         name = ctx.escape_attr(t.name)
+        joined = ",".join(seam.tags)
         placeholder_attr = (
-            f' placeholder="{ctx.escape_attr(t.placeholder)}"' if t.placeholder else ""
+            f' placeholder="{ctx.escape_attr(seam.placeholder)}"' if seam.placeholder else ""
         )
         required_attr = ' required aria-required="true"' if t.required else ""
         inner = (
-            f'<input id="field-{name}" name="{name}" type="text" '
-            f'data-dazzle-field="{name}" data-dz-tags '
-            f'class="dz-form-input" value="{ctx.escape_attr(t.initial_value)}"'
+            f'<input id="{ctx.escape_attr(seam.field_id)}" '
+            f'{tags_marker_attrs(seam)} type="text" '
+            f'data-dazzle-field="{name}" '
+            f'class="dz-form-input" value="{ctx.escape_attr(joined)}"'
             f"{placeholder_attr}{required_attr}>"
         )
         return self._widget_label(ctx.escape(t.label), name, inner)
