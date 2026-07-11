@@ -38,7 +38,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa taste-panel` | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI | **hm-convergence** | — | OWNED-IDLE |
-| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 295 | USED |
+| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 295 | STALE |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 310 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 311 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 312 | USED (API-billing-gated judgment) |
@@ -189,3 +189,20 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > little product value. Prefer first-exercise of remaining OWNED-IDLE when no STALE
 > (and after stamping lag-19s, bias next cycles to IDLE not re-rotation of the same
 > set). Operator EXEMPT still: `deploy heroku`, auth/db, `/ship`/`/check`/`/bump`.
+
+> **Capability-sweep cycle 316 (2026-07-11).** Sweep due (20 cycles since 296). Re-derived
+> inventory: `dazzle --help` (+ `qa` / `deploy` / quality subtrees), MCP tool schemas
+> (`dazzle inspect api mcp-tools` → **35 tools**, unchanged names), `.claude/skills` +
+> `.claude/commands` + `.agents/skills`. **No newly-built loop capability** since 296:
+> cycles 297–315 were pure USED re-stamp rotation (rbac→…→Tailwind@313, self-audit 314,
+> ux verify@315) with **zero product code** and no new CLI/MCP/skill entrypoints. Skills
+> tree still: dsl-authoring, phase-contract, qa-trial, spec-narrate (+ agents: ship/check/
+> bump/cimonitor/docs-update/smells). Commands: improve, fuzz, smells, xproject, issues,
+> ship, check, bump, cimonitor, docs-update. NOT added (operator/CI EXEMPT): auth/db/
+> backup family, `deploy heroku`, dual locks, `/ship`/`/check`/`/bump`. STALE recompute
+> (threshold last-exercised ≤296): **one flip** — `dazzle deploy plan`@295 (lag 21) USED→
+> **STALE**. Nearest lag risks: rbac@297 (19), rhythm@298 (18), coverage@300 (16),
+> qa-trial@301 (15). OWNED-IDLE never-exercised still ~**16**. Governance: third consecutive
+> sweep window with empty UNOWNED + empty TR backlog; next directed-explore should clear
+> the single STALE (`deploy plan`) then **first-exercise IDLE** rather than another full
+> USED re-rotation. Explore budget at sweep: 70/100.
