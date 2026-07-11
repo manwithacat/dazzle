@@ -82,3 +82,49 @@ def test_widget_combobox_conforms_to_combobox_contract() -> None:
     assert not violations, violations
     assert "data-dz-combobox" in html
     assert 'name="priority"' in html
+
+
+def test_tags_field_conforms_to_tags_contract() -> None:
+    """Real Dazzle TagsField form primitive emission must satisfy contracts/tags.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.forms import TagsField as FormTagsField
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    tags_mod = load_hm_module("contracts/tags.py")
+    kit = load_hm_module("contracts/_kit.py")
+    frag = FormTagsField(
+        name="labels",
+        label="Labels",
+        placeholder="Add a label…",
+        initial_value="urgent,backend",
+    )
+    html = FragmentRenderer().render(frag)
+    violations = kit.validate_dom(html, tags_mod.DOM_CONTRACT, require_root=False)
+    assert not violations, violations
+    assert "data-dz-tags" in html
+    assert 'name="labels"' in html
+
+
+def test_money_field_fixed_conforms_to_money_contract() -> None:
+    """Fixed-currency MoneyField emission must satisfy contracts/money.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.forms import MoneyField as FormMoneyField
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    money_mod = load_hm_module("contracts/money.py")
+    kit = load_hm_module("contracts/_kit.py")
+    frag = FormMoneyField(
+        name="amount",
+        label="Amount",
+        currency_code="GBP",
+        scale="2",
+        symbol="£",
+        currency_fixed=True,
+        minor_initial="1250",
+    )
+    html = FragmentRenderer().render(frag)
+    violations = kit.validate_dom(html, money_mod.DOM_CONTRACT, require_root=False)
+    assert not violations, violations
+    assert "data-dz-money" in html
+    assert 'data-dz-currency="GBP"' in html
+    assert 'data-dz-scale="2"' in html
