@@ -36,6 +36,17 @@ from build import (  # noqa: E402  (package build.py)
 from highlight import render_code_block  # noqa: E402
 from hyperpart import anatomy  # noqa: E402  (package tools/hyperpart.py)
 
+# GitHub Pages resolves extensionless paths to ``*.html`` when the file exists
+# (no Pages setting required). Emit clean ``href``s; keep ``*.html`` on disk
+# and on iframe ``src`` / static assets so ``file://`` and simple static
+# servers still resolve embeds.
+#
+# Examples (file stays ``confirm.html``):
+#   hyperparts/confirm.html  →  hyperparts/confirm
+#   guide.html               →  guide
+#   ../index.html#foo        →  ../#foo
+#   index.html               →  ./
+
 
 def _prefix_code_figure(figure: str, prefix: str) -> str:
     """Prefix code Hyperpart chrome + token *class names*; leave source text intact.
@@ -355,7 +366,7 @@ def _guidance_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     if g.a11y_keys:
         blocks.append(f"<h4>Keyboard / AT</h4>{_ul(g.a11y_keys)}")
     if g.composes_with:
-        links = " ".join(f'<a href="{pid}.html"><code>{pid}</code></a>' for pid in g.composes_with)
+        links = " ".join(f'<a href="{pid}"><code>{pid}</code></a>' for pid in g.composes_with)
         blocks.append(f"<h4>Composes with</h4><p>{links}</p>")
     return (
         '<details class="hm-guidance" open><summary>Structured guidance</summary>'
@@ -417,7 +428,7 @@ def _guide_body() -> str:
         + "</section>"
     )
     bp_links = " · ".join(
-        f'<a href="blueprints/{bp.id}.html">{_html.escape(bp.title)}</a>' for bp in BLUEPRINTS
+        f'<a href="blueprints/{bp.id}">{_html.escape(bp.title)}</a>' for bp in BLUEPRINTS
     )
     sections.append(
         '<section class="hm-comp" id="blueprints"><h2>5 · Composing '
@@ -1294,10 +1305,10 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
     # Blueprints: full-page motifs on their own sub-pages (the Blocks
     # analogue) — nav links out rather than anchoring.
     nav_parts.append('<div class="hm-nav-group">Learn</div>')
-    nav_parts.append('<a href="guide.html">Guide</a>')
+    nav_parts.append('<a href="guide">Guide</a>')
     nav_parts.append('<div class="hm-nav-group">Blueprints</div>')
     for bp in BLUEPRINTS:
-        nav_parts.append(f'<a href="blueprints/{bp.id}.html">{_html.escape(bp.title)}</a>')
+        nav_parts.append(f'<a href="blueprints/{bp.id}">{_html.escape(bp.title)}</a>')
 
     theme_js = (
         "function hmTheme(t){document.documentElement.setAttribute('data-theme',t);"
@@ -1423,7 +1434,7 @@ window.addEventListener('storage', function (e) {{
             f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
             f'<div class="hm-preview">{framed_live}</div>'
             f"{snippet_block}"
-            f'<p class="hm-more"><a href="hyperparts/{c.id}.html">Full reference: '
+            f'<p class="hm-more"><a href="hyperparts/{c.id}">Full reference: '
             f"contracts, guidance, anatomy →</a></p></section>"
         )
 
@@ -1544,7 +1555,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 <main class="hm-main">
 <div class="hm-topbar">
   <div class="hm-hero">
-    <p class="hm-more"><a href="../index.html#{c.id}">← All Hyperparts</a></p>
+    <p class="hm-more"><a href="../#{c.id}">← All Hyperparts</a></p>
     <h1>{_html.escape(c.title)}</h1>
   </div>
   {theme_toggle}
@@ -1568,8 +1579,8 @@ Dazzle without the package prefixer / dual-lock contract.
 
     # Contract modules that are extensions of a parent Hyperpart (no standalone
     # registry id) still need stable gallery URLs — agents deep-link
-    # ``/hyperparts/grid-edit.html`` from dual-lock inventories. Emit thin
-    # alias pages so GitHub Pages does not 404.
+    # ``/hyperparts/grid-edit`` (or legacy ``.html``) from dual-lock inventories.
+    # Emit thin alias pages so GitHub Pages does not 404.
     _CONTRACT_PAGE_ALIASES: dict[str, tuple[str, str]] = {
         # alias_id: (canonical_hyperpart_id, short_reason)
         "grid-edit": (
@@ -1599,8 +1610,8 @@ Dazzle without the package prefixer / dual-lock contract.
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{_html.escape(alias_id)} → {_html.escape(canonical_id)} — HaTchi-MaXchi</title>
-<meta http-equiv="refresh" content="0; url={canonical_id}.html">
-<link rel="canonical" href="{canonical_id}.html">
+<meta http-equiv="refresh" content="0; url={canonical_id}">
+<link rel="canonical" href="{canonical_id}">
 <link rel="stylesheet" href="../hatchi-maxchi.css">
 <style>{PAGE_CSS}</style>
 <script>{theme_js}</script>
@@ -1611,13 +1622,13 @@ Dazzle without the package prefixer / dual-lock contract.
 <main class="hm-main">
 <div class="hm-topbar">
   <div class="hm-hero">
-    <p class="hm-more"><a href="../index.html">← All Hyperparts</a></p>
+    <p class="hm-more"><a href="../">← All Hyperparts</a></p>
     <h1><code>{_html.escape(alias_id)}</code></h1>
   </div>
   {theme_toggle}
 </div>
 <p class="blurb">{_html.escape(reason)}</p>
-<p><a class="button" data-variant="primary" href="{canonical_id}.html">
+<p><a class="button" data-variant="primary" href="{canonical_id}">
 Open the <code>{_html.escape(canonical_id)}</code> Hyperpart →</a></p>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Alias page generated by <code>site/build_site.py</code> so dual-lock / agent
@@ -1654,7 +1665,7 @@ deep links resolve on GitHub Pages.
 <main class="hm-main">
 <div class="hm-topbar">
   <div class="hm-hero">
-    <p class="hm-more"><a href="index.html">← Gallery</a></p>
+    <p class="hm-more"><a href="./">← Gallery</a></p>
     <h1>The HaTchi-MaXchi Guide</h1>
     <p>Theory in five short sections — everything embedded below is a live,
     drift-gated artifact, not hand-typed documentation.</p>
@@ -1697,9 +1708,7 @@ Generated from the design-system sources by <code>site/build_site.py</code>.
             if bp.notes
             else ""
         )
-        composes = " · ".join(
-            f'<a href="../index.html#{cid}">{_html.escape(cid)}</a>' for cid in bp.composes
-        )
+        composes = " · ".join(f'<a href="../#{cid}">{_html.escape(cid)}</a>' for cid in bp.composes)
         # Standalone LIVE page — the blueprint rendered as a real page
         # (its own browsing context), so fixed positioning, dvh units and
         # media queries behave exactly as shipped. The doc page embeds it
@@ -1741,7 +1750,7 @@ window.addEventListener('storage', function (e) {{
 {sheet}
 <div class="hm-blueprint-page">
 <header class="hm-blueprint-head">
-<a href="../index.html">&larr; HaTchi-MaXchi</a>
+<a href="../">&larr; HaTchi-MaXchi</a>
 <h1>{_html.escape(bp.title)}</h1>
 <p class="hm-hero-def">{_html.escape(bp.blurb)}</p>
 <p class="hm-composed"><strong>Composed of:</strong> {composes}</p>
@@ -1750,7 +1759,7 @@ window.addEventListener('storage', function (e) {{
 <button type="button" data-bp-width="390">390</button>
 <button type="button" data-bp-width="834">834</button>
 <button type="button" data-bp-width="" aria-current="true">Full</button>
-<a class="hm-bp-open" href="{bp.id}-live.html" target="_blank" rel="noopener">Open full page &nearr;</a>
+<a class="hm-bp-open" href="{bp.id}-live" target="_blank" rel="noopener">Open full page &nearr;</a>
 </div>
 <div class="hm-bp-stage">
 <iframe class="hm-bp-frame" src="{bp.id}-live.html" title="{_html.escape(bp.title)} — live preview"></iframe>
@@ -1799,7 +1808,7 @@ document.addEventListener('click', function (e) {{
         "- [README]"
         "(https://github.com/manwithacat/hatchi-maxchi#readme):"
         " setup, theming, prefixing, releases\n"
-        "- [Guide](https://manwithacat.github.io/hatchi-maxchi/guide.html):"
+        "- [Guide](https://manwithacat.github.io/hatchi-maxchi/guide):"
         " the theory track — hypermedia model, tokens, Hyperpart anatomy,"
         " exchanges & contracts, Blueprints\n\n"
         "## Per-part agent files (one chunk per Hyperpart)\n\n"
@@ -1812,7 +1821,7 @@ document.addEventListener('click', function (e) {{
         "## Blueprints (full-page layout motifs)\n\n"
         + "".join(
             f"- [{bp.title}](https://manwithacat.github.io/hatchi-maxchi/"
-            f"blueprints/{bp.id}.html): {bp.blurb}\n"
+            f"blueprints/{bp.id}): {bp.blurb}\n"
             for bp in BLUEPRINTS
         )
         + "\n"

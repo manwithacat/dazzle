@@ -6,7 +6,8 @@ Fenced code surface with optional language chip and copy control — server-emit
 
 ```html
 <figure class="code" data-code data-language="python">
-  <div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div>
+  <button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button>
+  <span class="code__lang">python</span>
   <pre class="code__pre" tabindex="0" role="region" aria-label="Python example"><code class="code__source">def greet(name: str) -> str:
     """Return a friendly hello."""
     return f"Hello, {name}"

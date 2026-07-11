@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **HM code Hyperpart copy control** — absolute top-right copy (no flex meta
+  row), reset base `pre`/`button` styles inside the surface, clipboard
+  `writeText` reject falls back to `execCommand`.
+
+### Changed
+- **HM gallery clean URLs** — generated navigational `href`s omit `.html`
+  (GitHub Pages resolves them to the on-disk `*.html` files). Home is `./`
+  / `../`; iframe embeds keep `.html` for `file://` reliability.
+
 ### Added
 - **HaTchi-MaXchi `code` Hyperpart** — fenced code surface (language chip +
   copy control) with build-time Python highlighting (`site/highlight.py`).

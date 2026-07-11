@@ -123,14 +123,14 @@ body { background: var(--colour-bg); color: var(--colour-text);
 <main class="hm-main">
 <div class="hm-topbar">
   <div class="hm-hero">
-    <p class="hm-more"><a href="../index.html#diagram">← All Hyperparts</a></p>
+    <p class="hm-more"><a href="../#diagram">← All Hyperparts</a></p>
     <h1>Diagram</h1>
   </div>
   <div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup"><label><input type="radio" name="hm-theme" data-hm-theme="light" onclick="hmTheme('light')"><span>Light</span></label><label><input type="radio" name="hm-theme" data-hm-theme="dark" onclick="hmTheme('dark')"><span>Dark</span></label></div></div>
 </div>
 <section class="hm-comp" id="diagram"><h2>Diagram<span class="hm-tag">data</span><span class="hm-dep" data-dep="primitive" title="Dependency class: Primitive">Primitive</span></h2><p class="blurb">A horizontal-scroll wrapper for server-emitted Mermaid source — the library replaces the &lt;pre&gt; with rendered SVG.</p><div class="hm-preview"><div class="diagram-scroll"><pre class="mermaid diagram-source">erDiagram
   CUSTOMER ||--o{ ORDER : places
-  ORDER ||--|{ LINE_ITEM : contains</pre></div></div><figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Diagram"><code class="code__source">&lt;div class=&quot;diagram-scroll&quot;&gt;
+  ORDER ||--|{ LINE_ITEM : contains</pre></div></div><figure class="code" data-code data-language="html"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">html</span><pre class="code__pre" tabindex="0" role="region" aria-label="Code for Diagram"><code class="code__source">&lt;div class=&quot;diagram-scroll&quot;&gt;
   &lt;pre class=&quot;mermaid diagram-source&quot;&gt;erDiagram
   CUSTOMER ||--o{ ORDER : places
   ORDER ||--|{ LINE_ITEM : contains&lt;/pre&gt;

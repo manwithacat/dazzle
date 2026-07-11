@@ -121,16 +121,16 @@ body { background: var(--colour-bg); color: var(--colour-text);
 
 <div class="hm-blueprint-page">
 <header class="hm-blueprint-head">
-<a href="../index.html">&larr; HaTchi-MaXchi</a>
+<a href="../">&larr; HaTchi-MaXchi</a>
 <h1>Master–detail page</h1>
 <p class="hm-hero-def">The triage motif at page scale: a persistent record list beside a reading-measure detail pane. Selection is a hypermedia exchange — the item hx-gets its card into the pane; the composite wraps in a sidebar layout so the list docks beside the detail on wide screens and stacks above it on narrow ones.</p>
-<p class="hm-composed"><strong>Composed of:</strong> <a href="../index.html#sidebar-layout">sidebar-layout</a> · <a href="../index.html#master-detail">master-detail</a> · <a href="../index.html#center">center</a> · <a href="../index.html#stack">stack</a> · <a href="../index.html#cluster">cluster</a> · <a href="../index.html#badge">badge</a> · <a href="../index.html#card">card</a></p>
+<p class="hm-composed"><strong>Composed of:</strong> <a href="../#sidebar-layout">sidebar-layout</a> · <a href="../#master-detail">master-detail</a> · <a href="../#center">center</a> · <a href="../#stack">stack</a> · <a href="../#cluster">cluster</a> · <a href="../#badge">badge</a> · <a href="../#card">card</a></p>
 </header>
 <div class="hm-bp-toolbar" role="group" aria-label="Preview viewport">
 <button type="button" data-bp-width="390">390</button>
 <button type="button" data-bp-width="834">834</button>
 <button type="button" data-bp-width="" aria-current="true">Full</button>
-<a class="hm-bp-open" href="master-detail-live.html" target="_blank" rel="noopener">Open full page &nearr;</a>
+<a class="hm-bp-open" href="master-detail-live" target="_blank" rel="noopener">Open full page &nearr;</a>
 </div>
 <div class="hm-bp-stage">
 <iframe class="hm-bp-frame" src="master-detail-live.html" title="Master–detail page — live preview"></iframe>
@@ -149,7 +149,7 @@ document.addEventListener('click', function (e) {
 });
 </script>
 <details class="hm-contract"><summary>Page source — the whole page is the snippet</summary>
-<figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Page source for Master–detail page"><code class="code__source">&lt;div class=&quot;sidebar-layout&quot; style=&quot;--sidebar-width: 18rem&quot;&gt;
+<figure class="code" data-code data-language="html"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">html</span><pre class="code__pre" tabindex="0" role="region" aria-label="Page source for Master–detail page"><code class="code__source">&lt;div class=&quot;sidebar-layout&quot; style=&quot;--sidebar-width: 18rem&quot;&gt;
   &lt;div class=&quot;master-detail&quot;&gt;
     &lt;ul class=&quot;master-detail__list&quot; aria-label=&quot;Invoices&quot;&gt;
       &lt;li&gt;&lt;a class=&quot;master-detail__item&quot; href=&quot;#&quot; aria-current=&quot;true&quot; hx-get=&quot;/mock/master-detail/inv-001&quot; hx-target=&quot;next .master-detail__detail&quot;&gt;INV-001 · Acme&lt;/a&gt;&lt;/li&gt;

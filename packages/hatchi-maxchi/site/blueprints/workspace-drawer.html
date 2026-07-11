@@ -121,16 +121,16 @@ body { background: var(--colour-bg); color: var(--colour-text);
 
 <div class="hm-blueprint-page">
 <header class="hm-blueprint-head">
-<a href="../index.html">&larr; HaTchi-MaXchi</a>
+<a href="../">&larr; HaTchi-MaXchi</a>
 <h1>Workspace with drawer</h1>
 <p class="hm-hero-def">The app-shell motif: a sidebar of navigation, a content pane with a header cluster and a KPI grid, and a detail drawer on the native &lt;dialog&gt;. The sidebar wraps under the content on narrow screens — no media query anywhere on this page.</p>
-<p class="hm-composed"><strong>Composed of:</strong> <a href="../index.html#sidebar-layout">sidebar-layout</a> · <a href="../index.html#stack">stack</a> · <a href="../index.html#cluster">cluster</a> · <a href="../index.html#auto-grid">auto-grid</a> · <a href="../index.html#center">center</a> · <a href="../index.html#card">card</a> · <a href="../index.html#button">button</a> · <a href="../index.html#dialog">dialog</a></p>
+<p class="hm-composed"><strong>Composed of:</strong> <a href="../#sidebar-layout">sidebar-layout</a> · <a href="../#stack">stack</a> · <a href="../#cluster">cluster</a> · <a href="../#auto-grid">auto-grid</a> · <a href="../#center">center</a> · <a href="../#card">card</a> · <a href="../#button">button</a> · <a href="../#dialog">dialog</a></p>
 </header>
 <div class="hm-bp-toolbar" role="group" aria-label="Preview viewport">
 <button type="button" data-bp-width="390">390</button>
 <button type="button" data-bp-width="834">834</button>
 <button type="button" data-bp-width="" aria-current="true">Full</button>
-<a class="hm-bp-open" href="workspace-drawer-live.html" target="_blank" rel="noopener">Open full page &nearr;</a>
+<a class="hm-bp-open" href="workspace-drawer-live" target="_blank" rel="noopener">Open full page &nearr;</a>
 </div>
 <div class="hm-bp-stage">
 <iframe class="hm-bp-frame" src="workspace-drawer-live.html" title="Workspace with drawer — live preview"></iframe>
@@ -149,7 +149,7 @@ document.addEventListener('click', function (e) {
 });
 </script>
 <details class="hm-contract"><summary>Page source — the whole page is the snippet</summary>
-<figure class="code" data-code data-language="html"><div class="code__meta"><span class="code__lang">html</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div><pre class="code__pre" tabindex="0" role="region" aria-label="Page source for Workspace with drawer"><code class="code__source">&lt;div class=&quot;sidebar-layout&quot; style=&quot;--sidebar-width: 14rem&quot;&gt;
+<figure class="code" data-code data-language="html"><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button><span class="code__lang">html</span><pre class="code__pre" tabindex="0" role="region" aria-label="Page source for Workspace with drawer"><code class="code__source">&lt;div class=&quot;sidebar-layout&quot; style=&quot;--sidebar-width: 14rem&quot;&gt;
   &lt;nav class=&quot;stack&quot; data-gap=&quot;xs&quot; aria-label=&quot;Workspace&quot;&gt;&lt;button class=&quot;button&quot; data-variant=&quot;primary&quot;&gt;Dashboard&lt;/button&gt;&lt;button class=&quot;button&quot; data-variant=&quot;ghost&quot;&gt;Invoices&lt;/button&gt;&lt;button class=&quot;button&quot; data-variant=&quot;ghost&quot;&gt;Customers&lt;/button&gt;&lt;button class=&quot;button&quot; data-variant=&quot;ghost&quot;&gt;Reports&lt;/button&gt;&lt;button class=&quot;button&quot; data-variant=&quot;ghost&quot;&gt;Settings&lt;/button&gt;&lt;/nav&gt;
   &lt;main class=&quot;stack&quot; data-gap=&quot;lg&quot;&gt;
     &lt;div class=&quot;cluster&quot; data-justify=&quot;between&quot;&gt;

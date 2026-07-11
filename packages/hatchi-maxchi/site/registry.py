@@ -1851,13 +1851,12 @@ HYPERPARTS: list[Hyperpart] = [
         "server-emitted chrome for docs and samples. Syntax colour is build-time "
         "token spans (Python), not a browser highlighter.",
         '<figure class="dz-code" data-dz-code data-dz-language="python">'
-        '<div class="dz-code__meta">'
-        '<span class="dz-code__lang">python</span>'
         '<button type="button" class="dz-code__copy" data-dz-code-copy '
         'aria-label="Copy code to clipboard">'
         '<span class="dz-code__copy-idle">Copy</span>'
         '<span class="dz-code__copy-done">Copied</span>'
-        "</button></div>"
+        "</button>"
+        '<span class="dz-code__lang">python</span>'
         '<pre class="dz-code__pre" tabindex="0" role="region" aria-label="Python example">'
         '<code class="dz-code__source">'
         "def greet(name: str) -> str:\n"
@@ -2146,7 +2145,7 @@ HYPERPARTS: list[Hyperpart] = [
         "main per document — the Blueprint shows the true form). The full "
         "motif — routed "
         "navigation swapping the main slot — is the "
-        '<a href="blueprints/saas-shell.html">saas-shell Blueprint</a>.',
+        '<a href="blueprints/saas-shell">saas-shell Blueprint</a>.',
         tags=("composite", "shell"),
         controller="controllers/dz-app-shell.js",
         contracts=("contracts/app_shell.py",),
