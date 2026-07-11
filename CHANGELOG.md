@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.39] - 2026-07-11
+
+### Added
+- **#1579 prose Contract: ↔ DOM_CONTRACT drift gate** — HM
+  tests/test_contract_prose_drift.py pairs each contract module to its
+  controller, requires structured data-dz-* names to appear in controller
+  source / Contract: headers, and blocks prose inventing non-transient
+  attrs. Controller headers updated for command/color/money/search-select/
+  tabs/master-detail. HM **0.1.73**.
+
+### Agent Guidance
+- After editing a controller Contract: header or DOM_CONTRACT, run
+  pytest packages/hatchi-maxchi/tests/test_contract_prose_drift.py -q.
+  Runtime-only flags go in TRANSIENT_STATE_ATTRS; expand DOM_CONTRACT
+  for new structural attrs.
+
 ## [0.101.38] - 2026-07-11
 
 ### Added

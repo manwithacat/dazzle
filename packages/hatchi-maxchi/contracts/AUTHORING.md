@@ -36,6 +36,13 @@ Idiom rules (the gates can't fully see these — follow them):
 - **No hover-only affordances**; touch accommodations get tested (README › Touch input).
 - Keep the prose `Contract:` header in the controller and point it at the contract
   module — the module is the source of truth; the prose explains.
+- **Prose ↔ DOM_CONTRACT drift gate** (`tests/test_contract_prose_drift.py`, #1579):
+  every `data-dz-*` / `hx-confirm` name in `DOM_CONTRACT` must appear in the paired
+  controller source; when a formal `Contract:` block exists it must name those
+  attrs, and must not invent structural attrs absent from the contract (runtime
+  flags like `data-dz-open` live in `TRANSIENT_STATE_ATTRS`). Pairing is by stem
+  (`contracts/grid_edit.py` → `controllers/dz-grid-edit.js`) plus a small special
+  table (`confirm_panel` → `dz-confirm-gate.js`).
 
 ## 3. Registry entry
 

@@ -2,17 +2,18 @@
 /*
  * dz-money — major-unit money input with a hidden minor-unit carrier.
  *
- * Delegated from document; state lives in the DOM. The root
- * `[data-dz-money]` carries the scale (`data-dz-scale`, mutable when a
- * currency selector changes it); the visible decimal input is what the
- * user types; the hidden `*_minor` input is what the form posts. The
- * server precomputes the edit-mode display, so there is no init pass.
+ * Contract:
+ *   - root: `[data-dz-money]` with `data-dz-scale` and `data-dz-currency`
+ *           (scale is mutable when a currency selector changes it)
+ *   - display: visible `inputmode=decimal` input (user types major units)
+ *   - carrier: hidden `*_minor` input (form posts integer minor units)
  *
  *   input  → hidden minor = round(major × 10^scale)
  *   blur   → normalize display to toFixed(scale); empty clears minor
  *   change (currency <select>) → scale = option's data-scale, prefix
  *            symbol = option's data-symbol, re-normalize
  *
+ * Server precomputes the edit-mode display, so there is no init pass.
  * Replaces the Alpine `dzMoney` island (x-model/x-init bindings).
  */
 (function () {

@@ -7,25 +7,24 @@
  * (also marked `HYPERPART: command`). `python tools/hyperpart.py command`
  * lists every part.
  *
- * The palette itself is server-rendered markup (dialog.dz-command with an
- * hx-get input); this controller only owns the purely-client bits:
- *   - ⌘K / Ctrl-K opens the first .dz-command dialog on the page
- *   - Esc closes explicitly (the palette's input is type="search", whose
- *     native behaviour swallows the first Esc to clear its value — so
- *     relying on <dialog>'s built-in cancel needs TWO presses mid-query)
- *   - ArrowUp/ArrowDown move the active option: the active .dz-command__item
- *     gets [aria-selected] AND its id is named by the searchbox input's
- *     aria-activedescendant, so screen readers follow it (the input is a
- *     type=search searchbox with aria-controls → the listbox)
- *   - Enter activates the selected item (click — works for <a> and
- *     <button hx-*> items alike)
+ * Contract:
+ *   - root: `[data-dz-command]` on the palette `<dialog>` (class
+ *           `dz-command` is presentation). Server renders the dialog shell;
+ *           this controller owns open/close/keyboard only.
+ *   - open:  ⌘K / Ctrl-K opens the first `[data-dz-command]` dialog
+ *   - Esc:   closes explicitly (type=search swallows the first Esc)
+ *   - keys:  ArrowUp/Down move aria-selected + aria-activedescendant;
+ *            Enter activates the selected item
  * Results arrive via htmx swaps; selection resets on each swap.
  */
 (function () {
   "use strict";
 
   function palette() {
-    return document.querySelector("dialog.dz-command");
+    return (
+      document.querySelector("dialog[data-dz-command]") ||
+      document.querySelector("dialog.dz-command")
+    );
   }
 
   function items(dlg) {

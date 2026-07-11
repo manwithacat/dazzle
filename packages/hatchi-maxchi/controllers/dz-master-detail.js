@@ -2,15 +2,16 @@
 /*
  * dz-master-detail — selection state for the master-detail composite.
  *
- * The detail pane is loaded by htmx (the list item's hx-get swaps a card
- * fragment into .dz-master-detail__detail); this controller owns only the
- * selection marker (aria-current) on the list.
+ * Contract:
+ *   - root: `[data-dz-master-detail]` (class `dz-master-detail`)
+ *   - item: `.dz-master-detail__item` — click sets aria-current within root
  *
- * INSTANCE-ISOLATED — the reference pattern for composable controllers:
- * one delegated listener on `document`, but every DOM query is scoped to the
- * clicked item's OWN `.dz-master-detail` root. So N master-details on one
- * page each manage their own selection independently (unlike a global
- * `document.querySelector`, which would drive only the first).
+ * The detail pane is loaded by htmx (item hx-get swaps a card into
+ * .dz-master-detail__detail); this controller owns only selection state.
+ *
+ * INSTANCE-ISOLATED — delegated on `document`, every query scoped to the
+ * clicked item's OWN `[data-dz-master-detail]` root so N instances stay
+ * independent.
  */
 (function () {
   "use strict";
@@ -18,7 +19,9 @@
   document.addEventListener("click", function (evt) {
     var item = evt.target.closest(".dz-master-detail__item");
     if (!item) return;
-    var root = item.closest(".dz-master-detail");
+    var root =
+      item.closest("[data-dz-master-detail]") ||
+      item.closest(".dz-master-detail");
     if (!root) return;
     // clear the previous selection WITHIN THIS root only, then mark this one
     var current = root.querySelectorAll(

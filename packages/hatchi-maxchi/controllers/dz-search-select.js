@@ -2,13 +2,15 @@
 /*
  * dz-search-select — open/close for the typeahead combobox.
  *
- * Delegated from document; state lives in the DOM as `data-dz-open` on
- * the `.dz-search-select` ROOT (the CSS hides the results panel off the
- * attribute). The root — not the input — carries the state because the
- * select exchange OOB-replaces the input element (fragment_routes
- * `hx-swap-oob`), which would orphan any input-anchored state; nothing
- * ever swaps the root. `aria-expanded` on the combobox input is kept in
- * sync as the a11y mirror whenever the input still exists.
+ * Contract:
+ *   - root: `[data-dz-widget="search_select"]` (class `dz-search-select`)
+ *   - open:  runtime `data-dz-open` on the root (CSS hides results off it);
+ *            not part of the static DOM_CONTRACT seed
+ *
+ * The root — not the input — carries open state because the select
+ * exchange OOB-replaces the input (`hx-swap-oob`), which would orphan
+ * input-anchored state. `aria-expanded` on the combobox input stays in
+ * sync whenever the input still exists.
  *
  * Focus entering the input opens; focus leaving the widget closes after
  * a 200ms grace — result rows are htmx affordances (a click blurs the
@@ -25,11 +27,18 @@
     if (input) input.setAttribute("aria-expanded", open ? "true" : "false");
   }
 
+  function rootOf(el) {
+    return (
+      (el.closest && el.closest('[data-dz-widget="search_select"]')) ||
+      (el.closest && el.closest(".dz-search-select"))
+    );
+  }
+
   document.addEventListener("focusin", function (evt) {
     var input =
       evt.target.closest && evt.target.closest(".dz-search-select-input");
     if (!input) return;
-    var root = input.closest(".dz-search-select");
+    var root = rootOf(input);
     if (root) setOpen(root, true);
   });
 
@@ -37,7 +46,7 @@
     var input =
       evt.target.closest && evt.target.closest(".dz-search-select-input");
     if (!input) return;
-    var root = input.closest(".dz-search-select");
+    var root = rootOf(input);
     if (!root) return;
     setTimeout(function () {
       if (root.contains(document.activeElement)) return; // re-focused
