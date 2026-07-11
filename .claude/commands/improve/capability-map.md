@@ -206,3 +206,20 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > sweep window with empty UNOWNED + empty TR backlog; next directed-explore should clear
 > the single STALE (`deploy plan`) then **first-exercise IDLE** rather than another full
 > USED re-rotation. Explore budget at sweep: 70/100.
+
+> **Capability-sweep cycle 336 (2026-07-11).** Sweep due (20 cycles since 316). Re-derived
+> inventory: `dazzle --help` (+ quality subtrees), MCP tool schemas (`dazzle inspect api
+> mcp-tools` → **35 tools**, unchanged), `.claude/skills` + `.claude/commands` +
+> `.agents/skills`. **No newly-built loop capability** since 316: cycles 317–335 were pure
+> USED re-stamp rotation (deploy plan→…→Tailwind@334, self-audit 329, ux verify@335) plus
+> zero product code. Skills/commands tree unchanged (dsl-authoring, phase-contract,
+> qa-trial, spec-narrate; improve/fuzz/smells/xproject/issues/ship/check/bump/…). NOT added
+> (operator/CI EXEMPT): auth/db/backup, `deploy heroku`, `/ship`/`/check`/`/bump`. STALE
+> recompute (threshold last-exercised ≤316): **none** flip — post-316 directed-explore kept
+> every previously USED row inside the 20-cycle window (nearest: deploy plan@317 lag 19,
+> rbac@318 lag 18, rhythm@319 lag 17). OWNED-IDLE never-exercised still ~**16**. **Hard
+> governance finding:** fifth consecutive sweep window with empty UNOWNED + empty TR
+> backlog; the loop continues to spend almost all explore budget re-stamping STALE USED
+> capabilities. Prefer **first-exercise of remaining OWNED-IDLE** (discovery, qa login,
+> test-design, sentinel, composition, pulse, fitness CLI, taste/vision, …) when no STALE
+> queue, not another full USED re-rotation. Explore budget at sweep: 88/100.
