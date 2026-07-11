@@ -44,7 +44,12 @@ def test_hm_non_browser_suite_is_green() -> None:
         timeout=300,
         check=False,
     )
+    # Cap nested output: full pytest assertion diffs can dump multi-KB CSS
+    # (e.g. catalogue drift) and flood CI logs. Prefer the tail of stderr
+    # (failures) and a short stdout tail.
     assert proc.returncode == 0, (
         "HM package non-browser suite failed inside the monorepo gate sweep "
-        "(the stale-dist class). Output:\n" + proc.stdout[-4000:] + proc.stderr[-2000:]
+        "(the stale-dist class). Output:\n"
+        + (proc.stderr[-2000:] if proc.stderr else "")
+        + (proc.stdout[-1500:] if proc.stdout else "")
     )

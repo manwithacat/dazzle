@@ -30,6 +30,8 @@ def test_dual_lock_coverage_script_exits_zero() -> None:
 
 def test_committed_coverage_matches_generator() -> None:
     """Drift gate: regenerate --write only after intentional dual-lock changes."""
+    from tests.unit._text_drift import assert_text_matches
+
     assert COMMITTED.is_file(), "missing DUAL_LOCK_COVERAGE.md — run dual_lock_coverage.py --write"
     proc = subprocess.run(
         [sys.executable, str(SCRIPT)],
@@ -40,4 +42,8 @@ def test_committed_coverage_matches_generator() -> None:
     )
     assert proc.returncode == 0, proc.stderr
     # Normalize trailing newlines
-    assert proc.stdout.rstrip("\n") == COMMITTED.read_text(encoding="utf-8").rstrip("\n")
+    assert_text_matches(
+        proc.stdout.rstrip("\n"),
+        COMMITTED.read_text(encoding="utf-8").rstrip("\n"),
+        regenerate_hint="DUAL_LOCK_COVERAGE.md is stale — run: python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write",
+    )

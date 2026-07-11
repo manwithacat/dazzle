@@ -851,8 +851,10 @@ def _epistemic_one_liner(hyperpart) -> str:  # type: ignore[no-untyped-def]
     if getattr(hyperpart, "does_not_compose", None):
         others = ", ".join(f"`{nc.other}`" for nc in hyperpart.does_not_compose)
         refuse = f" · **Refuses:** {others}"
+    # No trailing-space hard breaks — pre-commit strips them and thrash the
+    # gallery byte-identity gate against committed site/agents/*.md.
     return (
-        f"> **Layer:** {layer_s} · **Recipe:** {recipe_s}{refuse}  \n"
+        f"> **Layer:** {layer_s} · **Recipe:** {recipe_s}{refuse}\n"
         f"> Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · "
         f"blast radius: `CONSUMER_MAP.md`"
     )
@@ -2338,7 +2340,10 @@ deep links resolve on GitHub Pages.
 </body>
 </html>
 """
-        (hp_dir / f"{alias_id}.html").write_text(alias_doc + "\n", encoding="utf-8")
+        # alias_doc already ends with a newline (closing of the f-string body).
+        # Extra "\n" produced a blank final line that pre-commit end-of-file-fixer
+        # strips, thrashing the gallery byte-identity gate.
+        (hp_dir / f"{alias_id}.html").write_text(alias_doc, encoding="utf-8")
 
     # ── Per-part agent files: one fetchable chunk per part (llms.txt lists them).
     ag_dir = out_dir / "agents"

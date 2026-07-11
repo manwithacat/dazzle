@@ -31,6 +31,8 @@ def test_consumer_map_script_exits_zero() -> None:
 
 
 def test_committed_consumer_map_matches_generator() -> None:
+    from tests.unit._text_drift import assert_text_matches
+
     assert COMMITTED.is_file(), "missing CONSUMER_MAP.md — run consumer_map.py --write"
     proc = subprocess.run(
         [sys.executable, str(SCRIPT)],
@@ -40,7 +42,11 @@ def test_committed_consumer_map_matches_generator() -> None:
         check=False,
     )
     assert proc.returncode == 0, proc.stderr
-    assert proc.stdout.rstrip("\n") == COMMITTED.read_text(encoding="utf-8").rstrip("\n")
+    assert_text_matches(
+        proc.stdout.rstrip("\n"),
+        COMMITTED.read_text(encoding="utf-8").rstrip("\n"),
+        regenerate_hint="CONSUMER_MAP.md is stale — run: python packages/hatchi-maxchi/tools/consumer_map.py --write",
+    )
 
 
 def test_non_composition_targets_are_real_and_not_also_composed() -> None:

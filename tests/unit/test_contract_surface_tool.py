@@ -30,6 +30,8 @@ def test_contract_surface_script_exits_zero() -> None:
 
 
 def test_committed_contract_surface_matches_generator() -> None:
+    from tests.unit._text_drift import assert_text_matches
+
     assert COMMITTED.is_file(), "missing CONTRACT_SURFACE.md — run contract_surface.py --write"
     proc = subprocess.run(
         [sys.executable, str(SCRIPT)],
@@ -39,4 +41,8 @@ def test_committed_contract_surface_matches_generator() -> None:
         check=False,
     )
     assert proc.returncode == 0, proc.stderr + proc.stdout
-    assert proc.stdout.rstrip("\n") == COMMITTED.read_text(encoding="utf-8").rstrip("\n")
+    assert_text_matches(
+        proc.stdout.rstrip("\n"),
+        COMMITTED.read_text(encoding="utf-8").rstrip("\n"),
+        regenerate_hint="CONTRACT_SURFACE.md is stale — run: python packages/hatchi-maxchi/tools/contract_surface.py --write",
+    )

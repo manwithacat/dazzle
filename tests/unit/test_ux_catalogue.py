@@ -63,10 +63,13 @@ def test_generated_page_is_current() -> None:
     from pathlib import Path
 
     from dazzle.testing.ux_catalogue import OUT_PATH, generate_catalogue_markdown
+    from tests.unit._text_drift import assert_text_matches
 
     committed = Path(OUT_PATH).read_text() if Path(OUT_PATH).exists() else ""
-    assert generate_catalogue_markdown() == committed, (
-        "docs/reference/ux-catalogue.md is stale — run: python scripts/gen_ux_catalogue.py"
+    assert_text_matches(
+        generate_catalogue_markdown(),
+        committed,
+        regenerate_hint="docs/reference/ux-catalogue.md is stale — run: python scripts/gen_ux_catalogue.py",
     )
 
 
@@ -74,8 +77,11 @@ def test_generated_css_is_current() -> None:
     from pathlib import Path
 
     from dazzle.testing.ux_catalogue import CSS_OUT_PATH, generate_catalogue_css
+    from tests.unit._text_drift import assert_text_matches
 
     committed = Path(CSS_OUT_PATH).read_text() if Path(CSS_OUT_PATH).exists() else ""
-    assert generate_catalogue_css() == committed, (
-        "docs/assets/dazzle-catalogue.css is stale — run: python scripts/gen_ux_catalogue.py"
+    assert_text_matches(
+        generate_catalogue_css(),
+        committed,
+        regenerate_hint="docs/assets/dazzle-catalogue.css is stale — run: python scripts/gen_ux_catalogue.py",
     )
