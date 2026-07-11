@@ -10,10 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **funnel + bar-chart → schema+DOM dual-lock** — HM `contracts/funnel.py`
+  (`Funnel`/`FunnelStage`, root `data-dz-funnel`) and `contracts/bar_chart.py`
+  (`BarChart`/`BarChartRow`, root `data-dz-bar-chart`) with ingest renders +
+  sole-emitters. Dual-lock coverage: **16 schema+DOM** / 14 DOM-only (schema
+  count includes nested stage/row models). Complexity baseline re-stamped for
+  intentional `ingest.py` growth (MI A→B).
 - **profile-card + sparkline → schema+DOM dual-lock** — HM
   `contracts/profile_card.py` (`ProfileCard`, root `data-dz-profile-card`) and
   `contracts/sparkline.py` (`Sparkline`, root `data-dz-sparkline`) with ingest
-  renders + sole-emitters. Dual-lock coverage: **14 schema+DOM** / 14 DOM-only.
+  renders + sole-emitters.
 - **activity-feed + timeline → schema+DOM dual-lock** — HM
   `contracts/activity_feed.py` (`ActivityRow`, root `data-dz-activity-row`) and
   `contracts/timeline.py` (`TimelineEvent`, root `data-dz-timeline-item`) with

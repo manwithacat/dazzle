@@ -103,9 +103,7 @@ def render(card: ProfileCard) -> str:
     if card.primary:
         text_inner += f'<h3 class="dz-profile-primary">{html.escape(card.primary)}</h3>'
     if card.secondary:
-        text_inner += (
-            f'<p class="dz-profile-secondary">{html.escape(card.secondary)}</p>'
-        )
+        text_inner += f'<p class="dz-profile-secondary">{html.escape(card.secondary)}</p>'
     identity_html = (
         f'<div class="dz-profile-identity">'
         f"{avatar_html}"

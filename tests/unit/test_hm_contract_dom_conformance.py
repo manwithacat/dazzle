@@ -68,8 +68,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -494,6 +494,49 @@ def test_sparkline_emission_conforms_to_sparkline_contract() -> None:
     assert "data-dz-sparkline" in html
     assert "dz-sparkline-svg" in html
     assert "dz-sparkline-value" in html
+
+
+def test_funnel_emission_conforms_to_funnel_contract() -> None:
+    """Real FragmentRenderer Funnel path satisfies contracts/funnel.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import Funnel as FunnelFrag
+    from dazzle.render.fragment.primitives.data import FunnelStage as StageFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    fn_mod = load_hm_module("contracts/funnel.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        FunnelFrag(
+            stages=(
+                StageFrag(label="Visited", count=100),
+                StageFrag(label="Signed up", count=40),
+            ),
+            total=100,
+        )
+    )
+    violations = kit.validate_dom(html, fn_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-funnel" in html
+    assert 'data-dz-funnel-step="0"' in html
+    assert "Visited" in html
+
+
+def test_bar_chart_emission_conforms_to_bar_chart_contract() -> None:
+    """Real FragmentRenderer BarChart path satisfies contracts/bar_chart.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import BarChart as BarFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    bc_mod = load_hm_module("contracts/bar_chart.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        BarFrag(label="Traffic", buckets=(("API", 126), ("Dashboard", 84)))
+    )
+    violations = kit.validate_dom(html, bc_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-bar-chart" in html
+    assert "dz-bar-chart-fill" in html
+    assert "126" in html
 
 
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────

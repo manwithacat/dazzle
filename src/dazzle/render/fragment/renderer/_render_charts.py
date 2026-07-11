@@ -19,10 +19,16 @@ from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
+from dazzle.render.fragment.ingest import BarChart as BarChartSeam
+from dazzle.render.fragment.ingest import BarChartRow as BarChartRowSeam
+from dazzle.render.fragment.ingest import Funnel as FunnelSeam
+from dazzle.render.fragment.ingest import FunnelStage as FunnelStageSeam
 from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
 from dazzle.render.fragment.ingest import Sparkline as SparklineSeam
 from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
 from dazzle.render.fragment.ingest import (
+    render_bar_chart,
+    render_funnel,
     render_kanban_card,
     render_sparkline,
     render_timeline_event,
@@ -90,45 +96,29 @@ class _RenderChartsMixin:
         def _emit(self, fragment: Fragment, ctx: RenderContext) -> str: ...
 
     def _emit_bar_chart(self, b: BarChart, ctx: RenderContext) -> str:
-        """Render a bar chart as label/track/fill/value rows — byte-equivalent
-        to the legacy `workspace/regions/bar_chart.html` template's
-        `bucketed_metrics` primary branch.
+        """Render a BarChart via HM dual-lock BarChart seam.
 
-        Phase 4B.4 wave 3: aligned with legacy template:
-          - Outer `dz-bar-chart-region` carries no aria-label (label is
-            owned by the surrounding region_card chrome)
-          - Bucket label wrapped in `render_status_badge(value, size='sm')`
-            via `_render_status_badge_html`
-          - No summary line (legacy summary appears in the items+group_by
-            branch, not the bucketed_metrics branch)
-          - No `<dl>` references block (Phase 4B-only addition with no
-            legacy equivalent in this branch)
+        Bucket labels still use status-badge HTML (product path); widths
+        are computed here and passed into the seam model.
         """
-        if not b.buckets:
-            return '<div class="dz-bar-chart-region"></div>'
-
-        # Late import to avoid circular dependency between renderer and
-        # workspace adapter (the helper lives in adapter for now; could
-        # be promoted to a shared module if more renderers need it).
         from dazzle.render.fragment.region import (
             _render_status_badge_html,
         )
 
+        if not b.buckets:
+            return render_bar_chart(BarChartSeam(rows=[]))
+
         max_val = max((c for _, c in b.buckets), default=1) or 1
-        rows = "".join(
-            f'<div class="dz-bar-chart-row">'
-            f'<span class="dz-bar-chart-label">'
-            f"{_render_status_badge_html(label, size='sm')}"
-            f"</span>"
-            f'<div class="dz-bar-chart-track">'
-            f'<div class="dz-bar-chart-fill" '
-            f'style="width: {int(count / max_val * 100)}%"></div>'
-            f"</div>"
-            f'<span class="dz-bar-chart-value">{count}</span>'
-            f"</div>"
+        rows = [
+            BarChartRowSeam(
+                label=str(label),
+                count=int(count),
+                width_pct=int(count / max_val * 100),
+                label_html=_render_status_badge_html(label, size="sm"),
+            )
             for label, count in b.buckets
-        )
-        return f'<div class="dz-bar-chart-region"><div class="dz-bar-chart-bars">{rows}</div></div>'
+        ]
+        return render_bar_chart(BarChartSeam(rows=rows))
 
     def _emit_timeline(self, t: Timeline, ctx: RenderContext) -> str:
         """Render a Timeline via HM dual-lock TimelineEvent seams.
@@ -695,43 +685,15 @@ class _RenderChartsMixin:
         )
 
     def _emit_funnel(self, f: Funnel, ctx: RenderContext) -> str:
-        """Render a Funnel matching legacy
-        `workspace/regions/funnel_chart.html` byte-for-byte: outer
-        `dz-funnel-chart-region`, `dz-funnel-stages` of `dz-funnel-stage-row`
-        items. Width is calculated from the first stage's count and
-        clamped to a 20% minimum. `data-dz-funnel-step` is the stage
-        index capped at 7.
-        """
-        if not f.stages:
-            return (
-                f'<div class="dz-funnel-chart-region">'
-                f'<p class="dz-empty-dense" role="status">'
-                f"{ctx.escape(f.empty_message)}</p>"
-                f"</div>"
+        """Render a Funnel via HM dual-lock Funnel seam."""
+        return render_funnel(
+            FunnelSeam(
+                stages=[
+                    FunnelStageSeam(label=stage.label, count=stage.count) for stage in f.stages
+                ],
+                total=f.total,
+                empty_message=f.empty_message,
             )
-
-        base = f.stages[0].count if f.stages[0].count > 0 else 1
-        items: list[str] = []
-        for i, stage in enumerate(f.stages):
-            pct = int(stage.count / base * 100)
-            width = pct if pct >= 20 else 20
-            step = i if i < 8 else 7
-            items.append(
-                f'<div class="dz-funnel-stage-row">'
-                f'<div class="dz-funnel-stage" '
-                f'data-dz-funnel-step="{step}" '
-                f'style="width: {width}%;">'
-                f'<span class="dz-funnel-stage-label">{ctx.escape(stage.label)}</span> '
-                f'<span class="dz-funnel-stage-count">({stage.count})</span>'
-                f"</div>"
-                f"</div>"
-            )
-
-        return (
-            f'<div class="dz-funnel-chart-region">'
-            f'<div class="dz-funnel-stages">{"".join(items)}</div>'
-            f'<p class="dz-funnel-summary">{f.total} total</p>'
-            f"</div>"
         )
 
     def _emit_heatmap(self, h: Heatmap, ctx: RenderContext) -> str:

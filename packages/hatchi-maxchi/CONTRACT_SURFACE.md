@@ -9,13 +9,14 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 29 |
+| Modules | 31 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
 | `action_grid` | `action-grid` | `[data-dz-action-card]` | [data-dz-action-card][data-dz-action-card=present, data-dz-tone=one_of:neutral\|positive\|warning\|destructive\|accent] | ActionCard(count:int\|None:opt; icon_html:str:opt; label:str:req; tone:Literal:opt; url:str:opt) |
 | `activity_feed` | `activity-feed` | `[data-dz-activity-row]` | [data-dz-activity-row][data-dz-activity-row=present] | ActivityRow(actor:str:opt; description:str:req; time_str:str:req) |
 | `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
+| `bar_chart` | `bar-chart` | `[data-dz-bar-chart]` | [data-dz-bar-chart][data-dz-bar-chart=present] | BarChart(rows:list[BarChartRow]:opt); BarChartRow(count:int:opt; label:str:req; label_html:str:opt; width_pct:int:opt) |
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |
 | `combobox` | `combobox` | `[data-dz-combobox]` | [data-dz-combobox][name=present] | ComboboxField(field_id:str:req; label:str:req; name:str:req; options:list[ComboboxOption]:req; placeholder:str:opt; selected:str:opt); ComboboxOption(label:str:req; value:str:req) |
@@ -23,6 +24,7 @@ blast radius (who embeds / refuses this part).
 | `confirm` | `confirm` | `[hx-confirm]` | [hx-confirm][hx-confirm=present] | — |
 | `confirm_panel` | `confirm-panel` | `[data-dz-confirm-gate]` | [data-dz-confirm-gate][data-dz-required-count=present]; [data-dz-required="true"][data-dz-required=present] | — |
 | `dialog` | `dialog` | `[data-dz-dialog-open]` | [data-dz-dialog-open][data-dz-dialog-open=present] | — |
+| `funnel` | `funnel` | `[data-dz-funnel]` | [data-dz-funnel][data-dz-funnel=present] | Funnel(empty_message:str:opt; stages:list[FunnelStage]:opt; total:int:opt); FunnelStage(count:int:opt; label:str:req) |
 | `grid` | `grid` | `[data-dz-grid]` | — | — |
 | `grid_cols` | `grid-cols` | `[data-dz-grid]` | [data-dz-grid-col-toggle][data-dz-grid-col-toggle=present]; [data-dz-col][data-dz-col=present]; [data-dz-grid-cols-reset][] | — |
 | `grid_edit` | `grid-edit` | `[data-dz-grid][data-dz-grid-edit-url]` | [data-dz-grid-edit][data-dz-edit-kind=one_of:text\|date\|bool\|select, data-dz-edit-label=present, data-dz-edit-options=json_pairs(when:data-dz-edit-kind=select), data-dz-edit-value=present] | GridEditCell(col:str:req; kind:Literal:req; label:str:req; options:list[tuple[str,str]]\|None:opt; value:str:req) |

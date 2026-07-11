@@ -12,7 +12,7 @@ Label / track / value rows — the workhorse categorical chart, server-computed 
 ## Copy this
 
 ```html
-<div class="bar-chart-region hm-measure-lg">
+<div class="bar-chart-region hm-measure-lg" data-bar-chart>
   <div class="bar-chart-bars">
     <div class="bar-chart-row">
       <span class="bar-chart-label">API</span>
@@ -51,16 +51,62 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/bar_chart.py`
+
+- **Required root:** `[data-dz-bar-chart]` (part `bar-chart`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-bar-chart]` | `data-dz-bar-chart` | present (any value) |
+
+#### Ingestion model `BarChartRow`
+
+| Field | Type | Required |
+|---|---|---|
+| `label` | `string` | yes |
+| `count` | `integer` | no |
+| `width_pct` | `integer` | no |
+| `label_html` | `string` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(chart: BarChart) -> str:
+    """Model → bar chart region."""
+    if not chart.rows:
+        return '<div class="dz-bar-chart-region" data-dz-bar-chart></div>'
+
+    rows_html = "".join(
+        f'<div class="dz-bar-chart-row">'
+        f'<span class="dz-bar-chart-label">'
+        f"{(row.label_html if row.label_html.strip() else html.escape(row.label))}"
+        f"</span>"
+        f'<div class="dz-bar-chart-track">'
+        f'<div class="dz-bar-chart-fill" '
+        f'style="width: {max(0, min(100, row.width_pct))}%"></div>'
+        f"</div>"
+        f'<span class="dz-bar-chart-value">{row.count}</span>'
+        f"</div>"
+        for row in chart.rows
+    )
+    return (
+        f'<div class="dz-bar-chart-region" data-dz-bar-chart>'
+        f'<div class="dz-bar-chart-bars">{rows_html}</div>'
+        f"</div>"
+    )
+```
 
 ## Notes
 
-In Dazzle every bar chart compiles to ONE scope-aware GROUP BY — the bucket list and the counts come from the same query, so they cannot disagree (the #847-class bug this design retired). Fill widths are server-computed percentages of the max bucket.
+Dual-lock root is data-dz-bar-chart (contracts/bar_chart.py). In Dazzle every bar chart compiles to ONE scope-aware GROUP BY — the bucket list and the counts come from the same query, so they cannot disagree (the #847-class bug this design retired). Fill widths are server-computed percentages of the max bucket.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/bar_chart.py`

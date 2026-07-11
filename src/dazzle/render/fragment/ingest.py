@@ -10,7 +10,8 @@ equality — and the emitted DOM is locked by
 Seam models: ``GridEditCell``, ``ComboboxField``, ``TagsField``,
 ``MoneyField``, ``SearchResultRow``, ``SearchSelectShell``, ``ActionCard``,
 ``StatusListEntry``, ``QueueRow``, ``MetricTile``, ``KanbanCard``,
-``ActivityRow``, ``TimelineEvent``, ``ProfileCard``, ``Sparkline``.
+``ActivityRow``, ``TimelineEvent``, ``ProfileCard``, ``Sparkline``,
+``Funnel``, ``FunnelStage``, ``BarChart``, ``BarChartRow``.
 
 **Two layers (#1577):** form primitives in ``primitives/forms.py`` are the
 public product API (``required``, currency selector, symbol, …). These
@@ -397,6 +398,56 @@ class Sparkline(BaseModel):
     empty_message: str = "—"
 
 
+# ── Funnel seam copy (contracts/funnel.py) ───────────────────────────
+
+
+class FunnelStage(BaseModel):
+    """One funnel stage — dual-lock nested unit."""
+
+    label: str
+    count: int = 0
+
+    @field_validator("label")
+    @classmethod
+    def _label_nonempty(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("FunnelStage requires a non-empty label")
+        return v
+
+
+class Funnel(BaseModel):
+    """Conversion funnel — dual-lock unit for funnel Hyperpart."""
+
+    stages: list[FunnelStage] = Field(default_factory=list)
+    total: int = 0
+    empty_message: str = "No data available."
+
+
+# ── Bar-chart seam copy (contracts/bar_chart.py) ─────────────────────
+
+
+class BarChartRow(BaseModel):
+    """One bar row — dual-lock nested unit."""
+
+    label: str
+    count: int = 0
+    width_pct: int = 0
+    label_html: str = ""
+
+    @field_validator("label")
+    @classmethod
+    def _label_nonempty(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("BarChartRow requires a non-empty label")
+        return v
+
+
+class BarChart(BaseModel):
+    """Bar chart — dual-lock unit for bar-chart Hyperpart."""
+
+    rows: list[BarChartRow] = Field(default_factory=list)
+
+
 # ── Form → ingest adapters (#1577) ───────────────────────────────────
 # Form primitives stay the public API; emission builds these models then
 # uses the attr helpers below for HM contract attributes.
@@ -693,6 +744,16 @@ def sparkline_root_attrs(_s: Sparkline) -> str:
     return "data-dz-sparkline"
 
 
+def funnel_root_attrs(_f: Funnel) -> str:
+    """Assemble funnel dual-lock root — sole emitter site."""
+    return "data-dz-funnel"
+
+
+def bar_chart_root_attrs(_c: BarChart) -> str:
+    """Assemble bar-chart dual-lock root — sole emitter site."""
+    return "data-dz-bar-chart"
+
+
 def render_metric_tile(tile: MetricTile) -> str:
     """Model → one metric tile (matches HM contracts/metrics.py)."""
     label = _html.escape(tile.label)
@@ -930,6 +991,69 @@ def render_sparkline(s: Sparkline) -> str:
         f"</svg>"
     )
     return f'<div class="dz-sparkline-region" {root_attrs}>{headline}{svg}</div>'
+
+
+def render_funnel(f: Funnel) -> str:
+    """Model → funnel chart (matches HM contracts/funnel.py)."""
+    root_attrs = funnel_root_attrs(f)
+    if not f.stages:
+        return (
+            f'<div class="dz-funnel-chart-region" {root_attrs}>'
+            f'<p class="dz-empty-dense" role="status">'
+            f"{_html.escape(f.empty_message)}</p>"
+            f"</div>"
+        )
+
+    base = f.stages[0].count if f.stages[0].count > 0 else 1
+    items: list[str] = []
+    for i, stage in enumerate(f.stages):
+        pct = int(stage.count / base * 100)
+        width = pct if pct >= 20 else 20
+        step = i if i < 8 else 7
+        items.append(
+            f'<div class="dz-funnel-stage-row">'
+            f'<div class="dz-funnel-stage" '
+            f'data-dz-funnel-step="{step}" '
+            f'style="width: {width}%;">'
+            f'<span class="dz-funnel-stage-label">{_html.escape(stage.label)}</span> '
+            f'<span class="dz-funnel-stage-count">({stage.count})</span>'
+            f"</div>"
+            f"</div>"
+        )
+
+    total = f.total if f.total else f.stages[0].count
+    return (
+        f'<div class="dz-funnel-chart-region" {root_attrs}>'
+        f'<div class="dz-funnel-stages">{"".join(items)}</div>'
+        f'<p class="dz-funnel-summary">{total} total</p>'
+        f"</div>"
+    )
+
+
+def render_bar_chart(chart: BarChart) -> str:
+    """Model → bar chart (matches HM contracts/bar_chart.py)."""
+    root_attrs = bar_chart_root_attrs(chart)
+    if not chart.rows:
+        return f'<div class="dz-bar-chart-region" {root_attrs}></div>'
+
+    rows_html = "".join(
+        f'<div class="dz-bar-chart-row">'
+        f'<span class="dz-bar-chart-label">'
+        f"{(row.label_html if row.label_html.strip() else _html.escape(row.label))}"
+        f"</span>"
+        f'<div class="dz-bar-chart-track">'
+        f'<div class="dz-bar-chart-fill" '
+        f'style="width: {max(0, min(100, row.width_pct))}%"></div>'
+        f"</div>"
+        f'<span class="dz-bar-chart-value">{row.count}</span>'
+        f"</div>"
+        for row in chart.rows
+    )
+    return (
+        f'<div class="dz-bar-chart-region" {root_attrs}>'
+        f'<div class="dz-bar-chart-bars">{rows_html}</div>'
+        f"</div>"
+    )
 
 
 def render_search_result_row(row: SearchResultRow) -> str:

@@ -2871,7 +2871,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "Stage-by-stage narrowing — each bar's width is the stage's share, "
             "with a total summary line.",
-            '<div class="dz-funnel-chart-region hm-measure-lg">'
+            '<div class="dz-funnel-chart-region hm-measure-lg" data-dz-funnel>'
             '<div class="dz-funnel-stages">'
             '<div class="dz-funnel-stage-row">'
             '<div class="dz-funnel-stage" data-dz-funnel-step="0" style="width: 100%;">'
@@ -2888,11 +2888,13 @@ def select(source: str, id: str) -> str:
             "</div>"
             '<p class="dz-funnel-summary">1,204 total</p>'
             "</div>",
-            notes="Widths are SERVER-computed percentages on inline style — the "
-            "one place inline style is the contract (a per-row datum, like the "
-            "progress knob). <code>data-dz-funnel-step</code> tones the stages "
-            "in sequence.",
+            notes="Dual-lock root is <code>data-dz-funnel</code> "
+            "(<code>contracts/funnel.py</code>). Widths are SERVER-computed "
+            "percentages on inline style — the one place inline style is the "
+            "contract (a per-row datum, like the progress knob). "
+            "<code>data-dz-funnel-step</code> tones the stages in sequence.",
             tags=("data", "chart"),
+            contracts=("contracts/funnel.py",),
         ),
         Hyperpart(
             "bar-chart",
@@ -2900,7 +2902,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "Label / track / value rows — the workhorse categorical chart, "
             "server-computed and scope-safe.",
-            '<div class="dz-bar-chart-region hm-measure-lg">'
+            '<div class="dz-bar-chart-region hm-measure-lg" data-dz-bar-chart>'
             '<div class="dz-bar-chart-bars">'
             '<div class="dz-bar-chart-row">'
             '<span class="dz-bar-chart-label">API</span>'
@@ -2918,12 +2920,14 @@ def select(source: str, id: str) -> str:
             '<div class="dz-bar-chart-fill" style="width: 23%"></div></div>'
             '<span class="dz-bar-chart-value">35</span></div>'
             "</div></div>",
-            notes="In Dazzle every bar chart compiles to ONE scope-aware "
-            "<code>GROUP BY</code> — the bucket list and the counts come from "
-            "the same query, so they cannot disagree (the #847-class bug this "
-            "design retired). Fill widths are server-computed percentages of "
-            "the max bucket.",
+            notes="Dual-lock root is <code>data-dz-bar-chart</code> "
+            "(<code>contracts/bar_chart.py</code>). In Dazzle every bar chart "
+            "compiles to ONE scope-aware <code>GROUP BY</code> — the bucket "
+            "list and the counts come from the same query, so they cannot "
+            "disagree (the #847-class bug this design retired). Fill widths "
+            "are server-computed percentages of the max bucket.",
             tags=("data", "chart"),
+            contracts=("contracts/bar_chart.py",),
         ),
         Hyperpart(
             "chart-legend",

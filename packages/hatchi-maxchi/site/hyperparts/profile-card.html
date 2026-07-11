@@ -309,9 +309,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
     <span class="code__tok--kw">if</span> <span class="code__tok--name">card</span><span class="code__tok--op">.</span><span class="code__tok--name">primary</span><span class="code__tok--op">:</span>
         <span class="code__tok--name">text_inner</span> <span class="code__tok--op">+=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;h3 class=&quot;dz-profile-primary&quot;&gt;{html.escape(card.primary)}&lt;/h3&gt;&#x27;</span>
     <span class="code__tok--kw">if</span> <span class="code__tok--name">card</span><span class="code__tok--op">.</span><span class="code__tok--name">secondary</span><span class="code__tok--op">:</span>
-        <span class="code__tok--name">text_inner</span> <span class="code__tok--op">+=</span> <span class="code__tok--op">(</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;p class=&quot;dz-profile-secondary&quot;&gt;{html.escape(card.secondary)}&lt;/p&gt;&#x27;</span>
-        <span class="code__tok--op">)</span>
+        <span class="code__tok--name">text_inner</span> <span class="code__tok--op">+=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;p class=&quot;dz-profile-secondary&quot;&gt;{html.escape(card.secondary)}&lt;/p&gt;&#x27;</span>
     <span class="code__tok--name">identity_html</span> <span class="code__tok--op">=</span> <span class="code__tok--op">(</span>
         <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-profile-identity&quot;&gt;&#x27;</span>
         <span class="code__tok--name">f</span><span class="code__tok--str">&quot;{avatar_html}&quot;</span>

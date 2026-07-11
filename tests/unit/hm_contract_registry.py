@@ -92,6 +92,30 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "Sparkline",
     ),
+    (
+        "contracts/funnel.py",
+        "Funnel",
+        "dazzle.render.fragment.ingest",
+        "Funnel",
+    ),
+    (
+        "contracts/funnel.py",
+        "FunnelStage",
+        "dazzle.render.fragment.ingest",
+        "FunnelStage",
+    ),
+    (
+        "contracts/bar_chart.py",
+        "BarChart",
+        "dazzle.render.fragment.ingest",
+        "BarChart",
+    ),
+    (
+        "contracts/bar_chart.py",
+        "BarChartRow",
+        "dazzle.render.fragment.ingest",
+        "BarChartRow",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.
