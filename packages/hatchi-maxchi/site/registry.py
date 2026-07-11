@@ -2561,27 +2561,29 @@ def select(source: str, id: str) -> str:
             "packs intrinsically.",
             '<div class="dz-action-grid-region">'
             '<div class="dz-action-grid">'
-            '<a class="dz-action-card" data-dz-tone="warning" href="#">'
+            '<a class="dz-action-card" data-dz-action-card data-dz-tone="warning" href="#">'
             '<div class="dz-action-card-row">'
             '<span class="dz-action-card-icon">{svg:triangle-alert}</span>'
             '<span class="dz-action-card-count" data-dz-tone-badge="warning">3</span></div>'
             '<span class="dz-action-card-label">Overdue invoices</span></a>'
-            '<a class="dz-action-card" data-dz-tone="accent" href="#">'
+            '<a class="dz-action-card" data-dz-action-card data-dz-tone="accent" href="#">'
             '<div class="dz-action-card-row">'
             '<span class="dz-action-card-icon">{svg:receipt}</span>'
             '<span class="dz-action-card-count" data-dz-tone-badge="accent">12</span></div>'
             '<span class="dz-action-card-label">Awaiting approval</span></a>'
-            '<div class="dz-action-card" data-dz-tone="neutral">'
+            '<div class="dz-action-card" data-dz-action-card data-dz-tone="neutral">'
             '<div class="dz-action-card-row">'
             '<span class="dz-action-card-icon-spacer"></span></div>'
             '<span class="dz-action-card-label">Nothing else today</span></div>'
             "</div></div>",
             notes="Tone tints the card surface via <code>data-dz-tone</code> and "
-            "the count badge via <code>data-dz-tone-badge</code>. A URL makes "
-            "the card an <code>&lt;a&gt;</code> (whole card = the target); "
+            "the count badge via <code>data-dz-tone-badge</code>. Dual-lock root "
+            "is <code>data-dz-action-card</code> (<code>contracts/action_grid.py</code>). "
+            "A URL makes the card an <code>&lt;a&gt;</code> (whole card = the target); "
             "without one it renders a static <code>&lt;div&gt;</code>. An icon "
             "SPACER holds the row height when a card has no icon.",
             tags=("data",),
+            contracts=("contracts/action_grid.py",),
         ),
         Hyperpart(
             "queue",

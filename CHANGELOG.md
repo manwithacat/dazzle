@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **action-grid → schema+DOM dual-lock** — HM `contracts/action_grid.py`
+  (`ActionCard` + `DOM_CONTRACT` root `data-dz-action-card` + `render`) with
+  ingest copy + `render_action_card` / `action_card_root_attrs` sole-emitter.
+  Dashboard `ActionCard` dataclass still public API; FragmentRenderer maps
+  Lucide icon → `icon_html` then the seam render. Dual-lock coverage:
+  **6 schema+DOM** / 14 DOM-only.
 - **search_select → schema+DOM dual-lock** — HM `SearchResultRow` +
   `SearchSelectShell` copied into `dazzle.render.fragment.ingest` (schema-parity
   gated). Form emission uses `search_select_shell_from_form` /
@@ -17,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/_dazzle/fragments/search` maps API hits through `SearchResultRow` +
   `render_search_result_row` (HM-faithful anatomy: `role=option`,
   `data-dz-result-id`, optional media, body wrapper). Registry:
-  `CONTRACT_MODELS` (was DOM-only). Dual-lock coverage: 5 schema+DOM.
+  `CONTRACT_MODELS` (was DOM-only).
 
 ## [0.103.0] - 2026-07-11
 

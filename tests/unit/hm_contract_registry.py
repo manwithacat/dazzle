@@ -38,6 +38,12 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "SearchSelectShell",
     ),
+    (
+        "contracts/action_grid.py",
+        "ActionCard",
+        "dazzle.render.fragment.ingest",
+        "ActionCard",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.

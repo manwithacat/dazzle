@@ -27,6 +27,8 @@ from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
+from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
+from dazzle.render.fragment.ingest import render_action_card
 from dazzle.render.fragment.primitives import (
     KPI,
     ActionCard,
@@ -588,33 +590,22 @@ class _RenderTablesMixin:
         )
 
     def _emit_action_card(self, a: ActionCard, ctx: RenderContext) -> str:
-        """Render an ActionCard as the dashboard CTA card shape.
+        """Render an ActionCard via the HM dual-lock seam (ingest ActionCard).
 
-        Mirrors the legacy `workspace/regions/action_grid.html` rendering
-        so dual-path validation (Phase 4B.3) compares clean: anchor wrapper
-        when `url` is set, plain `<div>` otherwise; tone tint via
-        `data-dz-tone`; optional icon (Lucide) and count badge.
+        Product API remains the frozen dataclass; emission maps icon name →
+        trusted HTML then ``render_action_card`` so markup matches
+        ``contracts/action_grid.py`` (schema + DOM dual-lock).
         """
-        tone = ctx.escape_attr(a.tone)
-        label = ctx.escape(a.label)
-        icon_html = (
-            lucide_icon_html(a.icon, cls="dz-action-card-icon")
-            if a.icon
-            else '<span class="dz-action-card-icon-spacer"></span>'
+        icon_html = lucide_icon_html(a.icon, cls="dz-action-card-icon") if a.icon else ""
+        return render_action_card(
+            ActionCardSeam(
+                label=a.label,
+                tone=a.tone,
+                url=a.url,
+                count=a.count,
+                icon_html=icon_html,
+            )
         )
-        count_html = (
-            f'<span class="dz-action-card-count" data-dz-tone-badge="{tone}">{a.count}</span>'
-            if a.count is not None
-            else ""
-        )
-        body = (
-            f'<div class="dz-action-card-row">{icon_html}{count_html}</div>'
-            f'<span class="dz-action-card-label">{label}</span>'
-        )
-        if a.url:
-            href = ctx.escape_attr(a.url)
-            return f'<a href="{href}" class="dz-action-card" data-dz-tone="{tone}">{body}</a>'
-        return f'<div class="dz-action-card" data-dz-tone="{tone}">{body}</div>'
 
     def _emit_profile_card(self, p: ProfileCard, ctx: RenderContext) -> str:
         """Render a ProfileCard matching the legacy

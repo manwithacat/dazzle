@@ -56,9 +56,9 @@ def test_typed_path_is_sole_emitter() -> None:
     """HM contract attribute *assembly* is allowed ONLY in ingest.py.
 
     Families (#1577): ``data-dz-edit-``, ``data-dz-tags``, ``data-dz-combobox``,
-    ``data-dz-money``, ``data-dz-widget="search_select"`` (+ search-select
-    timing knobs). Docstrings and runtime readers (has_attr) are ignored;
-    HTML f-string / quoted assembly outside ingest fails.
+    ``data-dz-money``, ``data-dz-action-card``, ``data-dz-widget="search_select"``
+    (+ search-select timing knobs). Docstrings and runtime readers (has_attr)
+    are ignored; HTML f-string / quoted assembly outside ingest fails.
     """
     import re
 
@@ -67,8 +67,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -241,6 +241,40 @@ def test_search_result_row_conforms_to_result_contract() -> None:
     assert 'data-dz-result-id="co-aurora"' in html
     assert "dz-search-result-body" in html
     assert "Aurora Energy Ltd" in html
+
+
+def test_action_card_emission_conforms_to_action_grid_contract() -> None:
+    """Real FragmentRenderer ActionCard path satisfies contracts/action_grid.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import ActionCard as ActionCardFrag
+    from dazzle.render.fragment.primitives.data import ActionGrid
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    ag_mod = load_hm_module("contracts/action_grid.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        ActionGrid(
+            cards=(
+                ActionCardFrag(
+                    label="Overdue invoices",
+                    tone="warning",
+                    url="/app/invoices?status=overdue",
+                    count=3,
+                    icon="triangle-alert",
+                ),
+                ActionCardFrag(label="Nothing else today", tone="neutral"),
+            )
+        )
+    )
+    # Grid furniture wraps cards — validate each card root in fragment mode
+    # and assert the dual-lock marker is present on every card.
+    violations = kit.validate_dom(html, ag_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert html.count("data-dz-action-card") == 2
+    assert 'data-dz-tone="warning"' in html
+    assert 'data-dz-tone="neutral"' in html
+    assert "dz-action-card-icon-spacer" in html
+    assert "Overdue invoices" in html
 
 
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────

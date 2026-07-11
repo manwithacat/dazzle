@@ -8,7 +8,7 @@ equality — and the emitted DOM is locked by
 ``tests/unit/test_hm_contract_dom_conformance.py``.
 
 Seam models: ``GridEditCell``, ``ComboboxField``, ``TagsField``,
-``MoneyField``, ``SearchResultRow``, ``SearchSelectShell``.
+``MoneyField``, ``SearchResultRow``, ``SearchSelectShell``, ``ActionCard``.
 
 **Two layers (#1577):** form primitives in ``primitives/forms.py`` are the
 public product API (``required``, currency selector, symbol, …). These
@@ -190,6 +190,40 @@ class SearchSelectShell(BaseModel):
     confirm_hold_ms: int = 1500
 
 
+# ── Action-grid seam copy (contracts/action_grid.py) ─────────────────
+# Schema-parity gated. Product API stays the frozen dataclass in
+# primitives/data.py; emission maps through this model then render.
+
+
+ActionCardTone = Literal["neutral", "positive", "warning", "destructive", "accent"]
+
+
+class ActionCard(BaseModel):
+    """One CTA tile the action-grid region emits.
+
+    Map dashboard action specs into this shape:
+
+    - ``label`` → primary line (required)
+    - ``tone`` → surface tint via ``data-dz-tone``
+    - ``url`` → non-empty makes the card an ``<a>``; empty → static ``<div>``
+    - ``count`` → ``None`` omits badge; ``0`` still renders a badge
+    - ``icon_html`` → trusted HTML for the icon slot; empty → spacer
+    """
+
+    label: str
+    tone: ActionCardTone = "neutral"
+    url: str = ""
+    count: int | None = None
+    icon_html: str = ""
+
+    @field_validator("label")
+    @classmethod
+    def _label_nonempty(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("ActionCard requires a non-empty label")
+        return v
+
+
 # ── Form → ingest adapters (#1577) ───────────────────────────────────
 # Form primitives stay the public API; emission builds these models then
 # uses the attr helpers below for HM contract attributes.
@@ -347,6 +381,39 @@ def search_select_root_attrs(shell: SearchSelectShell) -> str:
         f'data-dz-blur-grace-ms="{shell.blur_grace_ms}" '
         f'data-dz-confirm-hold-ms="{shell.confirm_hold_ms}"'
     )
+
+
+def action_card_root_attrs(card: ActionCard) -> str:
+    """Assemble action-card dual-lock root + tone — sole emitter site."""
+    return f'data-dz-action-card data-dz-tone="{_html.escape(card.tone, quote=True)}"'
+
+
+def render_action_card(card: ActionCard) -> str:
+    """Model → one action card (search-select pattern; matches HM render).
+
+    Byte-faithful to ``packages/hatchi-maxchi/contracts/action_grid.py``
+    ``render`` so dual-lock DOM + gallery exemplars stay one shape.
+    """
+    tone = _html.escape(card.tone, quote=True)
+    label = _html.escape(card.label)
+    if card.icon_html.strip():
+        icon_html = card.icon_html
+    else:
+        icon_html = '<span class="dz-action-card-icon-spacer"></span>'
+    count_html = ""
+    if card.count is not None:
+        count_html = (
+            f'<span class="dz-action-card-count" data-dz-tone-badge="{tone}">{card.count}</span>'
+        )
+    body = (
+        f'<div class="dz-action-card-row">{icon_html}{count_html}</div>'
+        f'<span class="dz-action-card-label">{label}</span>'
+    )
+    root_attrs = action_card_root_attrs(card)
+    if card.url:
+        href = _html.escape(card.url, quote=True)
+        return f'<a href="{href}" class="dz-action-card" {root_attrs}>{body}</a>'
+    return f'<div class="dz-action-card" {root_attrs}>{body}</div>'
 
 
 def render_search_result_row(row: SearchResultRow) -> str:

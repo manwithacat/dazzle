@@ -129,7 +129,7 @@ def render_md(rows: list[dict[str, str]]) -> str:
             "1. **deferred → DOM-only** — promotable queue drained (confirm, pdf, wizard, "
             "master_detail via dual_pane_flow). Empty deferred is success.",
             "2. **DOM-only → schema+DOM** when an ingest model is shared with Dazzle "
-            "(pattern: money / combobox / tags / grid_edit / search_select). Root-only "
+            "(pattern: money / combobox / tags / grid_edit / search_select / action_grid). Root-only "
             "parts stay DOM-only until a real ingest model lands.",
             "3. **CSS-only Hyperparts** (no contract file) are out of this table — "
             "gallery/registry expansion is a separate queue from dual-locks.",

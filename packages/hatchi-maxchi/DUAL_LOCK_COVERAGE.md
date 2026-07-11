@@ -10,8 +10,8 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 |--------|------:|
 | Component CSS modules | 63 |
 | Controllers | 20 |
-| Contract modules | 20 |
-| Dual-lock schema+DOM | 5 |
+| Contract modules | 21 |
+| Dual-lock schema+DOM | 6 |
 | Dual-lock DOM-only | 14 |
 | Dual-lock deferred | 0 |
 | Contract with no dual-lock row | 1 |
@@ -22,6 +22,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 
 | Part | Contract | Controller | DOM_CONTRACT | Model | render() | Dual-lock |
 |------|----------|------------|--------------|-------|----------|-----------|
+| `action_grid` | `action_grid.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `app_shell` | `app_shell.py` | `dz-app-shell.js` | yes | no | no | **DOM-only** |
 | `code` | `code.py` | `dz-code.js` | yes | no | no | **none** |
 | `color` | `color.py` | `dz-color.js` | yes | no | no | **DOM-only** |
@@ -46,7 +47,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 ## Priority notes (Phase B)
 
 1. **deferred → DOM-only** — promotable queue drained (confirm, pdf, wizard, master_detail via dual_pane_flow). Empty deferred is success.
-2. **DOM-only → schema+DOM** when an ingest model is shared with Dazzle (pattern: money / combobox / tags / grid_edit / search_select). Root-only parts stay DOM-only until a real ingest model lands.
+2. **DOM-only → schema+DOM** when an ingest model is shared with Dazzle (pattern: money / combobox / tags / grid_edit / search_select / action_grid). Root-only parts stay DOM-only until a real ingest model lands.
 3. **CSS-only Hyperparts** (no contract file) are out of this table — gallery/registry expansion is a separate queue from dual-locks.
 
 ## Plan

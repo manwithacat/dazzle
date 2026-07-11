@@ -9,10 +9,11 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 20 |
+| Modules | 21 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
+| `action_grid` | `action-grid` | `[data-dz-action-card]` | [data-dz-action-card][data-dz-action-card=present, data-dz-tone=one_of:neutral\|positive\|warning\|destructive\|accent] | ActionCard(count:int\|None:opt; icon_html:str:opt; label:str:req; tone:Literal:opt; url:str:opt) |
 | `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |
