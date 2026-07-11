@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.41] - 2026-07-11
+
+### Changed
+- **Extract _build_dispatch_ctx** into http/runtime/dispatch_ctx.py
+  (table/form/detail helpers). Entry complexity ~135 → 4; keeps
+  page_routes import stable for build_service and tests.
+
+### Added
+- **Base grid root-only dual lock** — Region+DzTableMount fixture for
+  data-dz-grid; prose Contract reverse check enabled for grid (siblings +
+  TRANSIENT cover the fuller controller surface).
+
 ## [0.101.40] - 2026-07-11
 
 ### Added
