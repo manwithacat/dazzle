@@ -177,12 +177,41 @@ HYPERPARTS: list[Hyperpart] = [
         "card",
         "Card",
         "Data",
-        "Bordered surface with a resting stacked shadow; tabular KPIs — "
-        "semantic content classes, no inline styles.",
+        "Bordered surface with a resting stacked shadow. Content classes "
+        "(label / value / delta) build KPI tiles; compose several in "
+        "auto-grid so each card keeps a natural width instead of stretching "
+        "full-bleed across the preview.",
+        # Three tiles in auto-grid — a lone card in .hm-preview reads as a
+        # full-width slab and hides the unit's intended scale (KPI tile, not
+        # a page panel). auto-grid is the layout Hyperpart; card is the skin.
+        '<div class="dz-auto-grid" style="--dz-grid-min: 11rem">'
         '<div class="dz-card dz-card-body">'
         '<div class="dz-card-label">Total Revenue</div>'
         '<div class="dz-card-value">£1,250.00</div>'
-        '<div class="dz-card-delta">{svg:trending-up} +12.5% this month</div></div>',
+        '<div class="dz-card-delta">{svg:trending-up} +12.5% this month</div>'
+        "</div>"
+        '<div class="dz-card dz-card-body">'
+        '<div class="dz-card-label">Open invoices</div>'
+        '<div class="dz-card-value">18</div>'
+        '<div class="dz-card-delta">{svg:trending-down} −3 vs last week</div>'
+        "</div>"
+        '<div class="dz-card dz-card-body">'
+        '<div class="dz-card-label">Avg. days to pay</div>'
+        '<div class="dz-card-value">24</div>'
+        '<div class="dz-card-delta">{svg:trending-up} +2 days</div>'
+        "</div>"
+        "</div>",
+        notes="A card is a <strong>surface</strong>, not a layout. One card "
+        "in a full-width preview looks clumsy because the box stretches; real "
+        "use is several cards in <code>auto-grid</code> (or a stack of "
+        "content cards). Workspace dashboard cards add "
+        "<code>data-display</code> for CLS height reservation — static KPI "
+        "tiles omit it and size to content. Classes: "
+        "<code>dz-card</code> + <code>dz-card-body</code> + "
+        "<code>dz-card-label</code> / <code>dz-card-value</code> / "
+        "<code>dz-card-delta</code>.",
+        tags=("layout",),
+        composes=("auto-grid",),
     ),
     Hyperpart(
         "pagination",

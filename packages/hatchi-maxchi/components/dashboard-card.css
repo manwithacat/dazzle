@@ -214,6 +214,13 @@
 .dz-card-body {
   padding-inline: var(--space-md);
   padding-block-end: var(--space-md);
+  /* No default min-height: static / gallery cards (KPI tiles, content) must
+   * size to content. Workspace HTMX regions always set data-display and use
+   * the reservation rules below for CLS (#962). */
+}
+
+/* CLS reservation — only when a workspace DisplayMode is declared. */
+.dz-card-body[data-display] {
   min-height: 280px; /* default — matches LIST / TABBED_LIST shape */
 }
 

@@ -9060,6 +9060,8 @@ margin-block-start: 0.125rem;
 .dz-card-body {
 padding-inline: var(--space-md);
 padding-block-end: var(--space-md);
+}
+.dz-card-body[data-display] {
 min-height: 280px;
 }
 .dz-card-body[data-display="summary"],
