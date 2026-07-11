@@ -1668,7 +1668,8 @@ def select(source: str, id: str) -> str:
         "Searchable enum single-select — a native <select> progressively "
         "enhanced into a type-to-filter combobox. JS off: a fully usable "
         "select. JS on: a searchable role=combobox overlay; the native "
-        "select stays as the submitted value.",
+        "select stays as the submitted value. After a pick, focus leaves the "
+        "text field by default (committed select UX).",
         '<label class="dz-field hm-measure" for="hm-cb-field">'
         '<span class="dz-field__label">Priority</span>'
         '<select id="hm-cb-field" name="priority" '
@@ -1692,7 +1693,14 @@ def select(source: str, id: str) -> str:
         "Typing filters (substring, case-insensitive); Up/Down move "
         "<code>aria-activedescendant</code>; Enter/click selects (writes the "
         "native select + fires <code>change</code>); Esc closes; focus "
-        "leaving the widget closes after a 200ms grace.",
+        "leaving the widget closes after a 200ms grace. "
+        "<strong>After select:</strong> "
+        "<code>data-dz-focus-after-select</code> on the native "
+        "<code>&lt;select&gt;</code> controls post-commit focus — "
+        "<code>blur</code> (default, no I-beam / free-text mode), "
+        "<code>keep</code> (caret stays for re-filter), "
+        "<code>select</code> (keep focus + select-all so the next keystroke "
+        "replaces the label as a filter).",
         tags=("forms",),
         controller="controllers/dz-combobox.js",
         contracts=("contracts/combobox.py",),
@@ -1700,15 +1708,23 @@ def select(source: str, id: str) -> str:
             seams=(
                 "server renders a real <select data-dz-combobox> — progressive enhancement",
                 "native select stays as the submitted value after the overlay mounts",
+                "data-dz-focus-after-select=blur|keep|select on the <select> "
+                "(default blur — leave text-editing mode after a pick)",
             ),
             pitfalls=(
                 "pointerdown on the bare select must enhance first and swallow the native menu",
                 "state is data-dz-open on the root — not a JS open flag a morph would drop",
+                "default after-select is blur; without it the overlay input keeps "
+                "focus and looks like free-text edit (I-beam caret)",
             ),
             do_dont=(
                 (
                     "filter options client-side from the server-rendered <option> list",
                     "replace the select with a div and invent a new submit contract",
+                ),
+                (
+                    "use focus-after-select=keep/select only when continued typing is intentional",
+                    "leave enum picks stuck in free-text focus by accident",
                 ),
             ),
             a11y_keys=(

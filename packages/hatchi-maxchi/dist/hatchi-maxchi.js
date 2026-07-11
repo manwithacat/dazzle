@@ -2492,15 +2492,29 @@
     return chosen ? chosen.textContent : "";
   }
 
+  // After a commit: default is to *blur* the overlay input so the control
+  // feels like a closed select (not a free-text field with an I-beam).
+  // Controllable on the native <select> (or enhanced root):
+  //   data-focus-after-select="blur"   (default) — leave text-editing mode
+  //   data-focus-after-select="keep"   — keep focus for immediate re-filter
+  //   data-focus-after-select="select" — keep focus + select-all the label
+  //                                        (next keystroke replaces filter)
+  function focusAfterSelect(root, select) {
+    var raw =
+      (select && select.getAttribute("data-focus-after-select")) ||
+      root.getAttribute("data-focus-after-select") ||
+      "blur";
+    return String(raw).toLowerCase();
+  }
+
   // Commit a choice: write the native <select> value, sync the input
   // display + aria-selected, close, and fire `change` so the form and any
   // listeners react exactly as they did with the bare <select>.
   //
-  // Do NOT focus() the input after close: the focusin handler opens the
-  // listbox, so a post-choose focus immediately re-opens the picker (user
-  // sees the value set but the menu stays up). Pointerdown on an option
-  // uses preventDefault so focus never left the input; Enter already has
-  // focus on the input.
+  // Pointerdown on an option uses preventDefault so focus never left the
+  // input mid-click (avoids a blur/re-focus reopen race). After commit we
+  // apply focus-after-select (default blur) so enum picks don't leave the
+  // field in free-text edit mode with an I-beam caret.
   function choose(root, li) {
     var select = root.querySelector("select[data-combobox]");
     var input = root.querySelector(".combobox-input");
@@ -2514,6 +2528,28 @@
     // Clear filter so a re-open shows the full list, not a stale query.
     filter(root, "");
     select.dispatchEvent(new Event("change", { bubbles: true }));
+
+    var mode = focusAfterSelect(root, select);
+    if (mode === "keep" || mode === "focus") {
+      // Leave caret in the input; listbox stays closed until they type/arrow.
+      return;
+    }
+    if (mode === "select" || mode === "select-all") {
+      // Keep focus and highlight the label so the next keystroke re-filters.
+      try {
+        input.focus();
+        input.select();
+      } catch (e) {
+        /* ignore */
+      }
+      return;
+    }
+    // default "blur" — committed select UX
+    try {
+      input.blur();
+    } catch (e2) {
+      /* ignore */
+    }
   }
 
   function filter(root, query) {

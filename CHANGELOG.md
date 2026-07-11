@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM combobox post-select focus is controllable** —
+  `data-dz-focus-after-select=blur|keep|select` on the native `<select>`
+  (default `blur` so enum picks leave free-text / I-beam mode).
 - **HM gallery mock ≠ contract (agent anti-pattern)** — AGENTS.md table +
   Server exchange callout + agent-pack banner: do not reimplement toasts /
   `/mock/*`; implement the exchange response fragment instead.

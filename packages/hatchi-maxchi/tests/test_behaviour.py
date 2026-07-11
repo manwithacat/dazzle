@@ -1838,6 +1838,8 @@ def test_combobox_enhances_and_selects(page) -> None:  # type: ignore[no-untyped
     assert preview.locator("select[data-combobox]").input_value() == "high"
     assert preview.locator(".combobox-input").input_value() == "High"
     assert root.get_attribute("data-open") is None
+    # Default focus-after-select=blur — leave free-text / I-beam mode.
+    assert not preview.locator(".combobox-input").evaluate("el => el === document.activeElement")
 
 
 def test_combobox_click_option_closes_listbox(page) -> None:  # type: ignore[no-untyped-def]
@@ -1853,6 +1855,21 @@ def test_combobox_click_option_closes_listbox(page) -> None:  # type: ignore[no-
     assert preview.locator("select[data-combobox]").input_value() == "high"
     assert preview.locator(".combobox-input").input_value() == "High"
     assert root.get_attribute("data-open") is None
+    assert not preview.locator(".combobox-input").evaluate("el => el === document.activeElement")
+
+
+def test_combobox_focus_after_select_keep(page) -> None:  # type: ignore[no-untyped-def]
+    """data-focus-after-select=keep leaves the overlay input focused for re-filter."""
+    goto_part(page, "combobox")
+    preview = page.locator(".hm-preview")
+    sel = preview.locator("select[data-combobox]")
+    sel.evaluate("el => el.setAttribute('data-focus-after-select', 'keep')")
+    sel.dispatch_event("pointerdown")
+    page.wait_for_timeout(100)
+    preview.locator('.combobox-option[data-value="high"]').click()
+    page.wait_for_timeout(50)
+    assert preview.locator("select[data-combobox]").input_value() == "high"
+    assert preview.locator(".combobox-input").evaluate("el => el === document.activeElement")
 
 
 def test_combobox_type_filters_options(page) -> None:  # type: ignore[no-untyped-def]

@@ -1,6 +1,6 @@
 # Combobox (`combobox`)
 
-Searchable enum single-select — a native <select> progressively enhanced into a type-to-filter combobox. JS off: a fully usable select. JS on: a searchable role=combobox overlay; the native select stays as the submitted value.
+Searchable enum single-select — a native <select> progressively enhanced into a type-to-filter combobox. JS off: a fully usable select. JS on: a searchable role=combobox overlay; the native select stays as the submitted value. After a pick, focus leaves the text field by default (committed select UX).
 
 > **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
 
@@ -31,17 +31,20 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - server renders a real <select data-dz-combobox> — progressive enhancement
 - native select stays as the submitted value after the overlay mounts
+- data-dz-focus-after-select=blur|keep|select on the <select> (default blur — leave text-editing mode after a pick)
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
 | filter options client-side from the server-rendered <option> list | replace the select with a div and invent a new submit contract |
+| use focus-after-select=keep/select only when continued typing is intentional | leave enum picks stuck in free-text focus by accident |
 
 ### Pitfalls
 
 - pointerdown on the bare select must enhance first and swallow the native menu
 - state is data-dz-open on the root — not a JS open flag a morph would drop
+- default after-select is blur; without it the overlay input keeps focus and looks like free-text edit (I-beam caret)
 
 ### Keyboard / AT
 
@@ -94,7 +97,7 @@ def render(field: ComboboxField) -> str:
 
 ## Notes
 
-Progressive enhancement: the server renders a real <select data-dz-combobox> with all its options (placeholder first) — usable and submittable with no JS, native required intact. On first interaction dz-combobox.js builds a sibling overlay: a role="combobox" input + a role="listbox" of the options, hiding the native select (kept in the DOM as the submitted value). State is in the DOM — data-dz-open on the root (CSS hides the listbox off it), aria-expanded mirrored on the input. Typing filters (substring, case-insensitive); Up/Down move aria-activedescendant; Enter/click selects (writes the native select + fires change); Esc closes; focus leaving the widget closes after a 200ms grace.
+Progressive enhancement: the server renders a real <select data-dz-combobox> with all its options (placeholder first) — usable and submittable with no JS, native required intact. On first interaction dz-combobox.js builds a sibling overlay: a role="combobox" input + a role="listbox" of the options, hiding the native select (kept in the DOM as the submitted value). State is in the DOM — data-dz-open on the root (CSS hides the listbox off it), aria-expanded mirrored on the input. Typing filters (substring, case-insensitive); Up/Down move aria-activedescendant; Enter/click selects (writes the native select + fires change); Esc closes; focus leaving the widget closes after a 200ms grace. After select: data-dz-focus-after-select on the native <select> controls post-commit focus — blur (default, no I-beam / free-text mode), keep (caret stays for re-filter), select (keep focus + select-all so the next keystroke replaces the label as a filter).
 
 ## Source files
 

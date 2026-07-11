@@ -2,6 +2,12 @@
 
 Server renders a real <select data-dz-combobox> with options; the controller
 enhances on first interaction. The native select remains the submit value.
+
+Optional on the <select>:
+  data-dz-focus-after-select = blur | keep | select
+    blur   (default) — after a pick, blur the overlay input (committed select UX)
+    keep   — keep focus for immediate re-filter typing
+    select — keep focus and select-all the label (next keystroke replaces filter)
 """
 
 import html
