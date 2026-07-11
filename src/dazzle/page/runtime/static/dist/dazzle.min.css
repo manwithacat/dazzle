@@ -1368,6 +1368,10 @@ color: var(--colour-text-muted);
 background: var(--colour-bg);
 color: var(--colour-text);
 }
+.dz-button[data-dz-variant="ghost"]:active {
+background: var(--colour-surface-muted);
+color: var(--colour-text);
+}
 .dz-button[data-dz-variant="outline"] {
 background: var(--colour-surface);
 color: var(--colour-text);
@@ -1376,6 +1380,9 @@ border: 1px solid var(--colour-border);
 .dz-button[data-dz-variant="outline"]:hover {
 background: var(--colour-bg);
 }
+.dz-button[data-dz-variant="outline"]:active {
+background: var(--colour-surface-muted);
+}
 .dz-button[data-dz-variant="destructive"] {
 background: var(--colour-surface);
 color: var(--colour-danger);
@@ -1383,6 +1390,9 @@ border: 1px solid var(--colour-danger);
 }
 .dz-button[data-dz-variant="destructive"]:hover {
 background: var(--colour-danger-soft);
+}
+.dz-button[data-dz-variant="destructive"]:active {
+background: color-mix(in oklch, var(--colour-danger) 16%, var(--colour-surface));
 }
 .dz-button[data-dz-variant="primary"] {
 background: var(--colour-brand);

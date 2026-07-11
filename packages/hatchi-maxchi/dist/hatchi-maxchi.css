@@ -1987,6 +1987,13 @@ dialog.alert-dialog::backdrop {
   color: var(--colour-text);
 }
 
+/* Subtle press: one step past hover via tokens — no translate/shadow
+   (primary owns the physical press). */
+.button[data-variant="ghost"]:active {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
 .button[data-variant="outline"] {
   background: var(--colour-surface);
   color: var(--colour-text);
@@ -1997,6 +2004,10 @@ dialog.alert-dialog::backdrop {
   background: var(--colour-bg);
 }
 
+.button[data-variant="outline"]:active {
+  background: var(--colour-surface-muted);
+}
+
 .button[data-variant="destructive"] {
   background: var(--colour-surface);
   color: var(--colour-danger);
@@ -2005,6 +2016,11 @@ dialog.alert-dialog::backdrop {
 
 .button[data-variant="destructive"]:hover {
   background: var(--colour-danger-soft);
+}
+
+.button[data-variant="destructive"]:active {
+  /* Token mix — deeper wash than danger-soft, not a brightness filter. */
+  background: color-mix(in oklch, var(--colour-danger) 16%, var(--colour-surface));
 }
 
 .button[data-variant="primary"] {
