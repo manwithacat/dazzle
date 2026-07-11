@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.40] - 2026-07-11
+
+### Added
+- **PersonaVariant action_primary wiring** — CREATE-mode targets resolve to
+  list-header CTA route + label (persona_create_urls / persona_create_labels);
+  request-time _apply_persona_overrides applies them (read_only still wins).
+  Closes silent no-op for fieldtest_hub / simple_task DSL (EX-048 partial).
+- **Root-only dual locks for tabs + dialog** — data-dz-tabs on all tab
+  emitters; dialog fixture via peek: slide_over row chevron.
+
+### Agent Guidance
+- Prefer action_primary: <create_surface> for persona-specific New CTAs;
+  EDIT/VIEW targets are recorded but do not override the list create button.
+
 ## [0.101.39] - 2026-07-11
 
 ### Added
