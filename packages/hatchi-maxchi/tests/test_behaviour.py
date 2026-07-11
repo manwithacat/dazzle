@@ -1788,29 +1788,32 @@ def test_wizard_submit_jumps_to_first_invalid_stage(page) -> None:  # type: igno
 def test_combobox_enhances_and_selects(page) -> None:  # type: ignore[no-untyped-def]
     """Native <select data-combobox> upgrades on interaction; pick writes select."""
     goto_part(page, "combobox")
+    # Scope to the gallery preview — contract sections also render live exemplars.
+    preview = page.locator(".hm-preview")
     # pointerdown on bare select enhances + opens (and swallows the native menu)
-    page.locator("select[data-combobox]").dispatch_event("pointerdown")
+    preview.locator("select[data-combobox]").dispatch_event("pointerdown")
     page.wait_for_timeout(100)
-    root = page.locator(".combobox[data-enhanced]")
+    root = preview.locator(".combobox[data-enhanced]")
     assert root.count() == 1
     assert root.get_attribute("data-open") == "true"
     # Keyboard-select High (click on option then input.focus() re-opens listbox —
     # the submit contract is the native <select> value, not the open state).
-    page.locator(".combobox-input").fill("Hi")
+    preview.locator(".combobox-input").fill("Hi")
     page.keyboard.press("ArrowDown")
     page.keyboard.press("Enter")
     page.wait_for_timeout(50)
-    assert page.locator("select[data-combobox]").input_value() == "high"
-    assert page.locator(".combobox-input").input_value() == "High"
+    assert preview.locator("select[data-combobox]").input_value() == "high"
+    assert preview.locator(".combobox-input").input_value() == "High"
 
 
 def test_combobox_type_filters_options(page) -> None:  # type: ignore[no-untyped-def]
     goto_part(page, "combobox")
-    page.locator("select[data-combobox]").dispatch_event("pointerdown")
+    preview = page.locator(".hm-preview")
+    preview.locator("select[data-combobox]").dispatch_event("pointerdown")
     page.wait_for_timeout(80)
-    page.fill(".combobox-input", "ur")
+    preview.locator(".combobox-input").fill("ur")
     page.wait_for_timeout(50)
-    visible = page.locator(".combobox-option:not([hidden])")
+    visible = preview.locator(".combobox-option:not([hidden])")
     # "Urgent" matches; empty placeholder is not an option row
     labels = [t.strip() for t in visible.all_text_contents() if t.strip() != "No matches"]
     assert labels == ["Urgent"], labels
@@ -1819,27 +1822,29 @@ def test_combobox_type_filters_options(page) -> None:  # type: ignore[no-untyped
 def test_tags_seed_and_add_chip(page) -> None:  # type: ignore[no-untyped-def]
     """Native data-tags input upgrades; seeds from comma value; Enter adds chip."""
     goto_part(page, "tags")
-    page.locator("input[data-tags]").dispatch_event("pointerdown")
+    preview = page.locator(".hm-preview")
+    preview.locator("input[data-tags]").dispatch_event("pointerdown")
     page.wait_for_timeout(100)
-    root = page.locator(".tags[data-enhanced]")
+    root = preview.locator(".tags[data-enhanced]")
     assert root.count() == 1
-    chips = page.locator(".tags-chip")
+    chips = preview.locator(".tags-chip")
     assert chips.count() == 2  # seeded from "urgent,backend"
-    page.fill(".tags-entry", "frontend")
+    preview.locator(".tags-entry").fill("frontend")
     page.keyboard.press("Enter")
     page.wait_for_timeout(50)
     assert chips.count() == 3
-    assert page.locator("input[data-tags]").input_value() == "urgent,backend,frontend"
+    assert preview.locator("input[data-tags]").input_value() == "urgent,backend,frontend"
 
 
 def test_tags_remove_chip(page) -> None:  # type: ignore[no-untyped-def]
     goto_part(page, "tags")
-    page.locator("input[data-tags]").dispatch_event("pointerdown")
+    preview = page.locator(".hm-preview")
+    preview.locator("input[data-tags]").dispatch_event("pointerdown")
     page.wait_for_timeout(100)
-    page.locator('button[aria-label="Remove urgent"]').click()
+    preview.locator('button[aria-label="Remove urgent"]').click()
     page.wait_for_timeout(50)
-    assert page.locator(".tags-chip").count() == 1
-    assert page.locator("input[data-tags]").input_value() == "backend"
+    assert preview.locator(".tags-chip").count() == 1
+    assert preview.locator("input[data-tags]").input_value() == "backend"
 
 
 def test_app_shell_sidebar_toggle(page) -> None:  # type: ignore[no-untyped-def]
