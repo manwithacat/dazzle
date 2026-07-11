@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.102.0] - 2026-07-11
+
+### Changed
+- **Improve-loop capability coverage** — capability-map stamps and re-exercise of
+  core CLI/MCP quality surfaces (ux verify, rbac, rhythm, coverage, story,
+  process, fragment-audit, compliance, policy, test_intelligence, semantics,
+  conformance, dsl, deploy plan, fitness engine harness path, Tailwind
+  reservoir metric) through cycles 315–340. Self-audit and capability-sweep
+  cadence maintained; no new CLI/MCP/skill entrypoints. Explore budget advanced
+  to ~92/100 (resets on this release via ``dazzle-updated``).
+
+### Fixed
+- Includes the product fixes already noted under **0.101.43–0.101.45** (TR-57
+  workspace CTA title, TR-50 already_signed trial token state, TR-58 demo seed
+  dates / job titles) for the first published tag after those landings.
+
 ## [0.101.45] - 2026-07-11
 
 ### Fixed

@@ -550,25 +550,24 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  * (also marked `HYPERPART: command`). `python tools/hyperpart.py command`
  * lists every part.
  *
- * The palette itself is server-rendered markup (dialog.command with an
- * hx-get input); this controller only owns the purely-client bits:
- *   - ⌘K / Ctrl-K opens the first .command dialog on the page
- *   - Esc closes explicitly (the palette's input is type="search", whose
- *     native behaviour swallows the first Esc to clear its value — so
- *     relying on <dialog>'s built-in cancel needs TWO presses mid-query)
- *   - ArrowUp/ArrowDown move the active option: the active .command__item
- *     gets [aria-selected] AND its id is named by the searchbox input's
- *     aria-activedescendant, so screen readers follow it (the input is a
- *     type=search searchbox with aria-controls → the listbox)
- *   - Enter activates the selected item (click — works for <a> and
- *     <button hx-*> items alike)
+ * Contract:
+ *   - root: `[data-command]` on the palette `<dialog>` (class
+ *           `command` is presentation). Server renders the dialog shell;
+ *           this controller owns open/close/keyboard only.
+ *   - open:  ⌘K / Ctrl-K opens the first `[data-command]` dialog
+ *   - Esc:   closes explicitly (type=search swallows the first Esc)
+ *   - keys:  ArrowUp/Down move aria-selected + aria-activedescendant;
+ *            Enter activates the selected item
  * Results arrive via htmx swaps; selection resets on each swap.
  */
 (function () {
   "use strict";
 
   function palette() {
-    return document.querySelector("dialog.command");
+    return (
+      document.querySelector("dialog[data-command]") ||
+      document.querySelector("dialog.command")
+    );
   }
 
   function items(dlg) {
@@ -698,15 +697,16 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 /*
  * master-detail — selection state for the master-detail composite.
  *
- * The detail pane is loaded by htmx (the list item's hx-get swaps a card
- * fragment into .master-detail__detail); this controller owns only the
- * selection marker (aria-current) on the list.
+ * Contract:
+ *   - root: `[data-master-detail]` (class `master-detail`)
+ *   - item: `.master-detail__item` — click sets aria-current within root
  *
- * INSTANCE-ISOLATED — the reference pattern for composable controllers:
- * one delegated listener on `document`, but every DOM query is scoped to the
- * clicked item's OWN `.master-detail` root. So N master-details on one
- * page each manage their own selection independently (unlike a global
- * `document.querySelector`, which would drive only the first).
+ * The detail pane is loaded by htmx (item hx-get swaps a card into
+ * .master-detail__detail); this controller owns only selection state.
+ *
+ * INSTANCE-ISOLATED — delegated on `document`, every query scoped to the
+ * clicked item's OWN `[data-master-detail]` root so N instances stay
+ * independent.
  */
 (function () {
   "use strict";
@@ -714,7 +714,9 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   document.addEventListener("click", function (evt) {
     var item = evt.target.closest(".master-detail__item");
     if (!item) return;
-    var root = item.closest(".master-detail");
+    var root =
+      item.closest("[data-master-detail]") ||
+      item.closest(".master-detail");
     if (!root) return;
     // clear the previous selection WITHIN THIS root only, then mark this one
     var current = root.querySelectorAll(
@@ -818,39 +820,41 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 /*
  * tabs — activate a tab + reveal its panel.
  *
- * Delegated from document; a click on a `.tabs__tab` marks it
- * `aria-current="true"` and hides its siblings' panels, all scoped to the
- * clicked tab's OWN `.tabs` root (every query via `closest`), so N tab
- * groups on one page stay independent. Revealing a `hidden` panel is what
- * triggers its `hx-trigger="intersect once"` lazy load (a display:none panel
- * has no intersection; showing it makes htmx fetch it once).
+ * Contract:
+ *   - root:   `[data-tabs]` (class `tabs` is presentation)
+ *   - tab:    `.tabs__tab` with `data-tab-target` = panel id
+ *   - panel:  `.tabs__panel` — revealed when its id matches the target
  *
- * Replaces the per-tab inline `onclick` handler the legacy tabbed list used —
- * one delegated listener, no inline script (CSP-friendlier), instance-safe.
+ * Delegated from document; a click on a tab marks it `aria-current="true"`
+ * and hides sibling panels, scoped to the tab's OWN `[data-tabs]` root
+ * so N groups stay independent. Revealing a `hidden` panel triggers
+ * `hx-trigger="intersect once"` lazy load.
  */
 (function () {
   "use strict";
 
+  function tabsRoot(el) {
+    return (
+      (el.closest && el.closest("[data-tabs]")) ||
+      (el.closest && el.closest(".tabs"))
+    );
+  }
+
   document.addEventListener("click", function (evt) {
     var tab = evt.target.closest(".tabs__tab");
     if (!tab) return;
-    var root = tab.closest(".tabs");
+    var root = tabsRoot(tab);
     if (!root) return;
 
-    // Ownership filter: querySelectorAll is descendant-scoped, so a
-    // NESTED .tabs group (e.g. a related-tables strip inside a
-    // tabbed_list region panel) would have its tabs/panels collected by
-    // the OUTER root's click. Only touch elements whose closest .tabs
-    // is this root.
+    // Ownership filter: only touch elements whose closest tabs root is this one.
     var tabs = root.querySelectorAll(".tabs__tab");
     for (var i = 0; i < tabs.length; i++)
-      if (tabs[i].closest(".tabs") === root)
-        tabs[i].removeAttribute("aria-current");
+      if (tabsRoot(tabs[i]) === root) tabs[i].removeAttribute("aria-current");
     tab.setAttribute("aria-current", "true");
 
     var panels = root.querySelectorAll(".tabs__panel");
     for (var j = 0; j < panels.length; j++)
-      if (panels[j].closest(".tabs") === root) panels[j].hidden = true;
+      if (tabsRoot(panels[j]) === root) panels[j].hidden = true;
 
     var targetId = tab.getAttribute("data-tab-target");
     var panel = targetId
@@ -2602,13 +2606,15 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 /*
  * search-select — open/close for the typeahead combobox.
  *
- * Delegated from document; state lives in the DOM as `data-open` on
- * the `.search-select` ROOT (the CSS hides the results panel off the
- * attribute). The root — not the input — carries the state because the
- * select exchange OOB-replaces the input element (fragment_routes
- * `hx-swap-oob`), which would orphan any input-anchored state; nothing
- * ever swaps the root. `aria-expanded` on the combobox input is kept in
- * sync as the a11y mirror whenever the input still exists.
+ * Contract:
+ *   - root: `[data-widget="search_select"]` (class `search-select`)
+ *   - open:  runtime `data-open` on the root (CSS hides results off it);
+ *            not part of the static DOM_CONTRACT seed
+ *
+ * The root — not the input — carries open state because the select
+ * exchange OOB-replaces the input (`hx-swap-oob`), which would orphan
+ * input-anchored state. `aria-expanded` on the combobox input stays in
+ * sync whenever the input still exists.
  *
  * Focus entering the input opens; focus leaving the widget closes after
  * a 200ms grace — result rows are htmx affordances (a click blurs the
@@ -2625,11 +2631,18 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     if (input) input.setAttribute("aria-expanded", open ? "true" : "false");
   }
 
+  function rootOf(el) {
+    return (
+      (el.closest && el.closest('[data-widget="search_select"]')) ||
+      (el.closest && el.closest(".search-select"))
+    );
+  }
+
   document.addEventListener("focusin", function (evt) {
     var input =
       evt.target.closest && evt.target.closest(".search-select-input");
     if (!input) return;
-    var root = input.closest(".search-select");
+    var root = rootOf(input);
     if (root) setOpen(root, true);
   });
 
@@ -2637,7 +2650,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     var input =
       evt.target.closest && evt.target.closest(".search-select-input");
     if (!input) return;
-    var root = input.closest(".search-select");
+    var root = rootOf(input);
     if (!root) return;
     setTimeout(function () {
       if (root.contains(document.activeElement)) return; // re-focused
@@ -3236,17 +3249,18 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 /*
  * money — major-unit money input with a hidden minor-unit carrier.
  *
- * Delegated from document; state lives in the DOM. The root
- * `[data-money]` carries the scale (`data-scale`, mutable when a
- * currency selector changes it); the visible decimal input is what the
- * user types; the hidden `*_minor` input is what the form posts. The
- * server precomputes the edit-mode display, so there is no init pass.
+ * Contract:
+ *   - root: `[data-money]` with `data-scale` and `data-currency`
+ *           (scale is mutable when a currency selector changes it)
+ *   - display: visible `inputmode=decimal` input (user types major units)
+ *   - carrier: hidden `*_minor` input (form posts integer minor units)
  *
  *   input  → hidden minor = round(major × 10^scale)
  *   blur   → normalize display to toFixed(scale); empty clears minor
  *   change (currency <select>) → scale = option's data-scale, prefix
  *            symbol = option's data-symbol, re-normalize
  *
+ * Server precomputes the edit-mode display, so there is no init pass.
  * Replaces the Alpine `dzMoney` island (x-model/x-init bindings).
  */
 (function () {
@@ -3436,10 +3450,13 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 /*
  * color — mirror a colour input's value into its hex readout.
  *
- * Delegated from document: `input` on `.form-color-input` writes the
- * value into the sibling `.form-color-hex` span. The server SSRs the
- * initial readout, so no init pass. Replaces the last Alpine straggler
- * (an inline `x-data { value }` scope on the colour group).
+ * Contract:
+ *   - root: `[data-color-group]` (also class `form-color-group`)
+ *   - input: `.form-color-input` — on `input`, copy value into the
+ *            sibling `.form-color-hex` span
+ *
+ * Server SSRs the initial readout, so no init pass. Replaces the last
+ * Alpine straggler (an inline `x-data { value }` scope on the colour group).
  */
 (function () {
   "use strict";
@@ -3448,7 +3465,9 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     var input =
       evt.target.closest && evt.target.closest(".form-color-input");
     if (!input) return;
-    var group = input.closest(".form-color-group");
+    var group =
+      input.closest("[data-color-group]") ||
+      input.closest(".form-color-group");
     var hex = group && group.querySelector(".form-color-hex");
     if (hex) hex.textContent = input.value;
   });

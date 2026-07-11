@@ -29,7 +29,10 @@ from dazzle.core.condition_eval import evaluate_condition
 from dazzle.core.ir import SurfaceMode
 from dazzle.core.ir.integrations import MappingTriggerType
 from dazzle.core.strings import to_api_plural
-from dazzle.http.runtime.dispatch_ctx import _build_dispatch_ctx
+
+# Re-export for stable import path (build_service / fidelity / experience_routes).
+# `as` form keeps mypy explicit re-export after the dispatch_ctx extract.
+from dazzle.http.runtime.dispatch_ctx import _build_dispatch_ctx as _build_dispatch_ctx
 from dazzle.http.runtime.htmx import HtmxDetails, is_peek_request
 from dazzle.http.runtime.usage_signal import (
     USAGE_KIND_ACTION,
