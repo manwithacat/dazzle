@@ -9,6 +9,7 @@ import pytest
 from dazzle.page.runtime.dual_pane_master_detail import (
     detect_dual_pane_master_detail_pair,
     master_detail_item_endpoint,
+    master_detail_pane_id,
     render_master_detail_shell,
 )
 from dazzle.page.runtime.workspace_renderer import (
@@ -68,6 +69,7 @@ def test_render_master_detail_shell_has_contract_markers() -> None:
     assert "data-dz-master-detail" in html
     assert "data-dz-master-detail-list-body" in html
     assert "data-dz-master-detail-detail-body" in html
+    assert f'id="{master_detail_pane_id("contact_detail")}"' in html
     assert "hx-get=" in html
     assert "Select an item" in html
 
@@ -77,14 +79,24 @@ def test_pane_drill_row_attrs_target_detail_pane() -> None:
     assert 'hx-target="body"' in full
     assert "hx-push-url" in full
 
-    pane = drill_row_attrs("/api/workspaces/c/regions/d?id=1", pane=True)
-    assert "closest [data-dz-master-detail] .dz-master-detail__detail" in pane
+    pane = drill_row_attrs(
+        "/api/workspaces/c/regions/d?id=1",
+        pane=True,
+        pane_target="#dz-md-detail-contact_detail",
+    )
+    assert 'hx-target="#dz-md-detail-contact_detail"' in pane
+    assert "closest" not in pane  # cousin pane is not reachable via closest
     assert "hx-push-url" not in pane
     assert 'hx-target="body"' not in pane
     assert "load once" not in pane
     assert "aria-current" not in pane
 
-    auto = drill_row_attrs("/api/workspaces/c/regions/d?id=1", pane=True, auto_load=True)
+    auto = drill_row_attrs(
+        "/api/workspaces/c/regions/d?id=1",
+        pane=True,
+        auto_load=True,
+        pane_target="#dz-md-detail-contact_detail",
+    )
     assert "load once" in auto
     assert 'aria-current="true"' in auto
 

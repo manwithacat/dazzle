@@ -420,6 +420,7 @@ class WorkspaceRouteBuilder:
                 from dazzle.page.runtime.dual_pane_master_detail import (
                     detect_dual_pane_master_detail_pair,
                     master_detail_item_endpoint,
+                    master_detail_pane_id,
                 )
 
                 _md_pair = detect_dual_pane_master_detail_pair(
@@ -428,10 +429,12 @@ class WorkspaceRouteBuilder:
                 )
                 if _md_pair is not None:
                     _detail_ep = master_detail_item_endpoint(ws_name, _md_pair.detail_region)
+                    _pane_sel = f"#{master_detail_pane_id(_md_pair.detail_region)}"
                     for _rctx in _ws_region_ctxs:
                         if getattr(_rctx.ctx_region, "name", None) == _md_pair.list_region:
                             _rctx.detail_url_template = _detail_ep
                             _rctx.master_detail_pane = True
+                            _rctx.master_detail_target = _pane_sel
                             break
 
                 # Batch endpoint: collect all region contexts (already built above)

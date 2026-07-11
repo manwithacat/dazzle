@@ -445,6 +445,7 @@ def _build_list_adapter_ctx(
         adapter_ctx["detail_url_template"] = getattr(ctx, "detail_url_template", "") or ""
         # dual_pane master-detail: pane-target drill instead of body swap.
         adapter_ctx["master_detail_pane"] = bool(getattr(ctx, "master_detail_pane", False))
+        adapter_ctx["master_detail_target"] = str(getattr(ctx, "master_detail_target", "") or "")
     elif display_upper == "KANBAN":
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns

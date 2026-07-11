@@ -578,6 +578,8 @@ class ListRegion:
     # dual_pane_flow master-detail: when True, row links target the sibling
     # detail pane (not body) and rows get ``dz-master-detail__item``.
     master_detail_pane: bool = False
+    # CSS selector for the detail pane (``#dz-md-detail-<region>``).
+    master_detail_target: str = ""
 
     def __post_init__(self) -> None:
         for i, row in enumerate(self.rows):

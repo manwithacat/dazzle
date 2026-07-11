@@ -79,3 +79,7 @@ class WorkspaceRegionContext:
     # When True, ``detail_url_template`` points at the DETAIL region endpoint
     # with ``?id={id}`` and list rows emit pane-target HTMX attrs.
     master_detail_pane: bool = False
+    # CSS id selector for the detail pane (e.g. ``#dz-md-detail-contact_detail``).
+    # Required when ``master_detail_pane`` is True — htmx cannot reach a cousin
+    # pane via ``closest`` alone.
+    master_detail_target: str = ""

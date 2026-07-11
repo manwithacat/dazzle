@@ -1058,6 +1058,7 @@ class _RenderTablesMixin:
         # class is preserved as a class suffix.
         tbody_rows = []
         pane = bool(getattr(lst, "master_detail_pane", False))
+        pane_target = ctx.escape_attr(str(getattr(lst, "master_detail_target", "") or ""))
         first_pane_link_done = False
         for i, row in enumerate(lst.rows):
             cells_html = "".join(
@@ -1102,6 +1103,7 @@ class _RenderTablesMixin:
                             ctx.escape_attr(url),
                             pane=pane,
                             auto_load=auto_load,
+                            pane_target=pane_target,
                         )
                         if url
                         else ""

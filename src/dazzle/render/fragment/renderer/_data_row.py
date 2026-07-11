@@ -61,6 +61,7 @@ def drill_row_attrs(
     *,
     pane: bool = False,
     auto_load: bool = False,
+    pane_target: str = "",
 ) -> str:
     """The shared clickable-row block (#1511, design §3.2): the row owns a
     bare-click `hx-get` to the detail surface. `url_attr` is the
@@ -69,9 +70,11 @@ def drill_row_attrs(
     Default: full-page swap into ``body`` (standalone list / non-paired
     workspace regions).
 
-    ``pane=True`` (dual_pane_flow master-detail): swap into the sibling
-    ``.dz-master-detail__detail`` pane; no push-url; row also needs
-    ``dz-master-detail__item`` on the ``class`` (caller via class_extra).
+    ``pane=True`` (dual_pane_flow master-detail): swap into the detail pane
+    identified by ``pane_target`` (CSS id selector, already escaped); no
+    push-url; row also needs ``dz-master-detail__item`` on the ``class``
+    (caller via class_extra). Do **not** use ``closest A B`` — htmx/Element.closest
+    cannot resolve a cousin pane under the master-detail root.
 
     ``auto_load=True`` (first pane row only): also fire on ``load once`` so
     when the list fragment settles, the first item fills the detail pane
@@ -87,9 +90,10 @@ def drill_row_attrs(
     if pane:
         trigger = "click, load once" if auto_load else "click"
         current = ' aria-current="true"' if auto_load else ""
+        target = pane_target or "#dz-md-detail"
         return (
             f'hx-get="{url_attr}" hx-trigger="{trigger}" '
-            f'hx-target="closest [data-dz-master-detail] .dz-master-detail__detail" '
+            f'hx-target="{target}" '
             f'hx-swap="innerHTML" tabindex="0"{current}'
         )
     # 2b preload-drill (#1491): `hx-preload="mouseover"` warms the detail GET on

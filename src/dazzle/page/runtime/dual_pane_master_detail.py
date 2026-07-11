@@ -80,6 +80,16 @@ def master_detail_item_endpoint(workspace_name: str, detail_region: str) -> str:
     return f"/api/workspaces/{workspace_name}/regions/{detail_region}?id={{id}}"
 
 
+def master_detail_pane_id(detail_region: str) -> str:
+    """Stable DOM id for the detail pane (list rows hx-target this).
+
+    Must not use htmx ``closest A B`` — Element.closest cannot reach a cousin
+    pane under the master-detail root. Id targeting is multi-instance-safe
+    because region names are unique within a workspace page.
+    """
+    return f"dz-md-detail-{detail_region}"
+
+
 def render_master_detail_shell(
     *,
     list_region: str,
@@ -107,7 +117,7 @@ def render_master_detail_shell(
 
     trigger = "load" if eager else "intersect once"
     list_body_id = f"region-{list_region}-{list_card_id}"
-    detail_pane_id = f"region-{detail_region}-{detail_card_id}"
+    detail_pane_id = master_detail_pane_id(detail_region)
 
     return (
         f'<div id="card-master-detail-{esc(card_id)}" '
