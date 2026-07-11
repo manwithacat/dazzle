@@ -1130,8 +1130,37 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
-    "/mock/typeahead": '<div class="dz-search-result-row" hx-get="/mock/typeahead/select" hx-target="#hm-ss-results" hx-swap="innerHTML"><div class="dz-search-result-name">Aurora Energy Ltd</div><div class="dz-search-result-secondary">Company no. 09182736</div></div><div class="dz-search-result-row" hx-get="/mock/typeahead/select" hx-target="#hm-ss-results" hx-swap="innerHTML"><div class="dz-search-result-name">Aurora Foods plc</div></div>',
-    "/mock/typeahead/select": '<div class="dz-select-result-confirm">Selected: Aurora Energy Ltd</div>',
+    // search-select: FIXED result-row anatomy (name / secondary / optional media).
+    // Domain maps into slots — not a new widget per entity. Path-only match
+    // (query string ignored) so `?id=` select URLs still resolve.
+    "/mock/typeahead":
+      '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="co-aurora" '
+      + 'hx-get="/mock/typeahead/select?id=co-aurora" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Aurora Energy Ltd</div>'
+      + '<div class="dz-search-result-secondary">Company no. 09182736 · Utilities</div></div></div>'
+      + '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="co-foods" '
+      + 'hx-get="/mock/typeahead/select?id=co-foods" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Aurora Foods plc</div>'
+      + '<div class="dz-search-result-secondary">Company no. 10448291 · FMCG</div></div></div>'
+      + '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="user-jd" '
+      + 'hx-get="/mock/typeahead/select?id=user-jd" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-media" aria-hidden="true">JD</div>'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Jordan Dias</div>'
+      + '<div class="dz-search-result-secondary">jordan@acme.example · Ops lead</div></div></div>'
+      + '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="user-ak" '
+      + 'hx-get="/mock/typeahead/select?id=user-ak" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-media" aria-hidden="true">AK</div>'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Aisha Khan</div>'
+      + '<div class="dz-search-result-secondary">aisha@acme.example · Finance</div></div></div>'
+      + '<div class="dz-search-result-row" role="option" tabindex="-1" data-dz-result-id="sku-42" '
+      + 'hx-get="/mock/typeahead/select?id=sku-42" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="dz-search-result-media" aria-hidden="true">SP</div>'
+      + '<div class="dz-search-result-body"><div class="dz-search-result-name">Sensor pack · SP-42</div>'
+      + '<div class="dz-search-result-secondary">SKU · In stock (14)</div></div></div>',
+    "/mock/typeahead/select":
+      '<div class="dz-select-result-confirm" role="status">'
+      + "Selected — hidden FK filled server-side; form posts the id, not this label."
+      + "</div>",
     "/mock/search": '<div class="dz-search-box-result-count">2 results</div><ul class="dz-search-box-result-list" role="list"><li class="dz-search-box-result"><a href="#" class="dz-search-box-result-link"><span class="dz-search-box-result-title">Aurora <mark>Substation</mark></span><ul class="dz-search-box-result-snippets"><li class="dz-search-box-result-snippet"><span class="dz-search-box-result-snippet-field">Region:</span><span class="dz-search-box-result-snippet-text">North grid, <mark>substation</mark> cluster A</span></li></ul></a></li><li class="dz-search-box-result"><a href="#" class="dz-search-box-result-link"><span class="dz-search-box-result-title">Beacon <mark>Substation</mark></span></a></li></ul>',
     "/mock/drawer/detail": '<h3>Aurora Substation</h3><p>Region: North · Load: 82%</p><p>Commissioned 2019; last inspection 14 June. Two open work orders.</p>',
     "/mock/shell/dashboard": '<div class="dz-stack" data-dz-gap="md"><h1>Dashboard</h1><div class="dz-auto-grid" style="--dz-grid-min: 10rem"><div class="dz-card dz-card-body"><div class="dz-card-label">Outstanding</div><div class="dz-card-value">£12,450</div></div><div class="dz-card dz-card-body"><div class="dz-card-label">Paid</div><div class="dz-card-value">£48,900</div></div></div></div>',
@@ -1306,12 +1335,17 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
 
   function doGet(el) {
     var url = el.getAttribute("hx-get");
+    var path = url.split("?")[0];
     var body;
-    if (url.split("?")[0] === "/mock/grid/rows") {
+    if (path === "/mock/grid/rows") {
       // the grid rows are computed from the sort/dir query (server owns ORDER BY)
       body = renderGridRows(url);
     } else {
-      body = expand(RESPONSES[url] || '<div class="dz-command__empty">No results.</div>');
+      // Prefer exact URL, then path (search-select select rows carry ?id=).
+      body = expand(
+        RESPONSES[url] || RESPONSES[path] ||
+        '<div class="dz-command__empty">No results.</div>'
+      );
     }
     var sel = el.getAttribute("hx-target");
     var target = null;

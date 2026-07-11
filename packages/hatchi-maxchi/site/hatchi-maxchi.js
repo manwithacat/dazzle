@@ -20,8 +20,37 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     "/mock/pagination/2": '<div class="hm-pag-row">INV-004 · Umbrella</div><div class="hm-pag-row">INV-005 · Stark</div><div class="hm-pag-row">INV-006 · Wonka</div>',
     "/mock/pagination/3": '<div class="hm-pag-row">INV-007 · Tyrell</div><div class="hm-pag-row">INV-008 · Cyberdyne</div><div class="hm-pag-row">INV-009 · Soylent</div>',
     "/mock/pagination/9": '<div class="hm-pag-row">INV-025 · Hooli</div><div class="hm-pag-row">INV-026 · Pied Piper</div><div class="hm-pag-row">INV-027 · Aviato</div>',
-    "/mock/typeahead": '<div class="search-result-row" hx-get="/mock/typeahead/select" hx-target="#hm-ss-results" hx-swap="innerHTML"><div class="search-result-name">Aurora Energy Ltd</div><div class="search-result-secondary">Company no. 09182736</div></div><div class="search-result-row" hx-get="/mock/typeahead/select" hx-target="#hm-ss-results" hx-swap="innerHTML"><div class="search-result-name">Aurora Foods plc</div></div>',
-    "/mock/typeahead/select": '<div class="select-result-confirm">Selected: Aurora Energy Ltd</div>',
+    // search-select: FIXED result-row anatomy (name / secondary / optional media).
+    // Domain maps into slots — not a new widget per entity. Path-only match
+    // (query string ignored) so `?id=` select URLs still resolve.
+    "/mock/typeahead":
+      '<div class="search-result-row" role="option" tabindex="-1" data-result-id="co-aurora" '
+      + 'hx-get="/mock/typeahead/select?id=co-aurora" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="search-result-body"><div class="search-result-name">Aurora Energy Ltd</div>'
+      + '<div class="search-result-secondary">Company no. 09182736 · Utilities</div></div></div>'
+      + '<div class="search-result-row" role="option" tabindex="-1" data-result-id="co-foods" '
+      + 'hx-get="/mock/typeahead/select?id=co-foods" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="search-result-body"><div class="search-result-name">Aurora Foods plc</div>'
+      + '<div class="search-result-secondary">Company no. 10448291 · FMCG</div></div></div>'
+      + '<div class="search-result-row" role="option" tabindex="-1" data-result-id="user-jd" '
+      + 'hx-get="/mock/typeahead/select?id=user-jd" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="search-result-media" aria-hidden="true">JD</div>'
+      + '<div class="search-result-body"><div class="search-result-name">Jordan Dias</div>'
+      + '<div class="search-result-secondary">jordan@acme.example · Ops lead</div></div></div>'
+      + '<div class="search-result-row" role="option" tabindex="-1" data-result-id="user-ak" '
+      + 'hx-get="/mock/typeahead/select?id=user-ak" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="search-result-media" aria-hidden="true">AK</div>'
+      + '<div class="search-result-body"><div class="search-result-name">Aisha Khan</div>'
+      + '<div class="search-result-secondary">aisha@acme.example · Finance</div></div></div>'
+      + '<div class="search-result-row" role="option" tabindex="-1" data-result-id="sku-42" '
+      + 'hx-get="/mock/typeahead/select?id=sku-42" hx-target="#hm-ss-results" hx-swap="innerHTML">'
+      + '<div class="search-result-media" aria-hidden="true">SP</div>'
+      + '<div class="search-result-body"><div class="search-result-name">Sensor pack · SP-42</div>'
+      + '<div class="search-result-secondary">SKU · In stock (14)</div></div></div>',
+    "/mock/typeahead/select":
+      '<div class="select-result-confirm" role="status">'
+      + "Selected — hidden FK filled server-side; form posts the id, not this label."
+      + "</div>",
     "/mock/search": '<div class="search-box-result-count">2 results</div><ul class="search-box-result-list" role="list"><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Aurora <mark>Substation</mark></span><ul class="search-box-result-snippets"><li class="search-box-result-snippet"><span class="search-box-result-snippet-field">Region:</span><span class="search-box-result-snippet-text">North grid, <mark>substation</mark> cluster A</span></li></ul></a></li><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Beacon <mark>Substation</mark></span></a></li></ul>',
     "/mock/drawer/detail": '<h3>Aurora Substation</h3><p>Region: North · Load: 82%</p><p>Commissioned 2019; last inspection 14 June. Two open work orders.</p>',
     "/mock/shell/dashboard": '<div class="stack" data-gap="md"><h1>Dashboard</h1><div class="auto-grid" style="--grid-min: 10rem"><div class="card card-body"><div class="card-label">Outstanding</div><div class="card-value">£12,450</div></div><div class="card card-body"><div class="card-label">Paid</div><div class="card-value">£48,900</div></div></div></div>',
@@ -196,12 +225,17 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
 
   function doGet(el) {
     var url = el.getAttribute("hx-get");
+    var path = url.split("?")[0];
     var body;
-    if (url.split("?")[0] === "/mock/grid/rows") {
+    if (path === "/mock/grid/rows") {
       // the grid rows are computed from the sort/dir query (server owns ORDER BY)
       body = renderGridRows(url);
     } else {
-      body = expand(RESPONSES[url] || '<div class="command__empty">No results.</div>');
+      // Prefer exact URL, then path (search-select select rows carry ?id=).
+      body = expand(
+        RESPONSES[url] || RESPONSES[path] ||
+        '<div class="command__empty">No results.</div>'
+      );
     }
     var sel = el.getAttribute("hx-target");
     var target = null;

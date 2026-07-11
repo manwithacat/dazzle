@@ -1503,72 +1503,174 @@ HYPERPARTS: list[Hyperpart] = [
         "search-select",
         "Search select",
         "Forms",
-        "The FK typeahead: a debounced combobox whose results panel opens "
-        "on focus and closes on blur — state is one aria-expanded "
-        "attribute; selection is an htmx exchange per row.",
-        '<div class="dz-search-select hm-measure" data-dz-widget="search_select">'
+        "The FK typeahead: debounced remote search into a listbox, then a "
+        "per-row select exchange that fills a hidden id. Domain data maps "
+        "into a fixed result-row anatomy (name / secondary / optional media) "
+        "— do not invent a new combobox per entity.",
+        # Gallery: open with sample rows so the fixed anatomy is visible
+        # without typing (mock re-fetches the same family on keyup).
+        '<div class="dz-search-select hm-measure" data-dz-widget="search_select" '
+        'data-dz-open="true">'
         '<input type="hidden" name="company" id="hm-ss-field" value="">'
         '<input type="text" id="hm-ss-input" class="dz-search-select-input" '
-        'placeholder="Search companies…" autocomplete="off" role="combobox" '
-        'aria-expanded="false" aria-controls="hm-ss-results" '
+        'placeholder="Search companies, people, SKUs…" autocomplete="off" '
+        'role="combobox" aria-expanded="true" aria-controls="hm-ss-results" '
         'aria-autocomplete="list" aria-haspopup="listbox" '
         'hx-get="/mock/typeahead" '
         'hx-trigger="keyup changed delay:300ms" '
         'hx-target="#hm-ss-results" hx-params="q">'
         '<div id="hm-ss-results" role="listbox" '
-        'aria-label="Company suggestions" class="dz-search-select-results">'
-        '<div class="dz-search-select-prompt" role="option" aria-disabled="true">'
-        "Type at least 3 characters to search..."
-        "</div></div></div>",
-        notes="State-in-DOM: <code>dz-search-select.js</code> flips "
-        "<code>aria-expanded</code> on focusin/focusout (200ms blur grace "
-        "— result rows are htmx affordances, so the click must land before "
-        "the panel hides) and CSS hides the panel off the attribute. Each "
-        "result row carries its own <code>hx-get</code> to a select "
-        "endpoint that swaps the panel with a confirmation and fills the "
-        "hidden FK input server-side. The form posts the hidden input, "
-        "never the visible text.",
+        'aria-label="Suggestions" class="dz-search-select-results">'
+        # text-only company
+        '<div class="dz-search-result-row" role="option" tabindex="-1" '
+        'data-dz-result-id="co-aurora" '
+        'hx-get="/mock/typeahead/select?id=co-aurora" hx-target="#hm-ss-results" '
+        'hx-swap="innerHTML">'
+        '<div class="dz-search-result-body">'
+        '<div class="dz-search-result-name">Aurora Energy Ltd</div>'
+        '<div class="dz-search-result-secondary">Company no. 09182736 · Utilities'
+        "</div></div></div>"
+        # person + initials media
+        '<div class="dz-search-result-row" role="option" tabindex="-1" '
+        'data-dz-result-id="user-jd" '
+        'hx-get="/mock/typeahead/select?id=user-jd" hx-target="#hm-ss-results" '
+        'hx-swap="innerHTML">'
+        '<div class="dz-search-result-media" aria-hidden="true">JD</div>'
+        '<div class="dz-search-result-body">'
+        '<div class="dz-search-result-name">Jordan Dias</div>'
+        '<div class="dz-search-result-secondary">jordan@acme.example · Ops lead'
+        "</div></div></div>"
+        # SKU + media chip
+        '<div class="dz-search-result-row" role="option" tabindex="-1" '
+        'data-dz-result-id="sku-42" '
+        'hx-get="/mock/typeahead/select?id=sku-42" hx-target="#hm-ss-results" '
+        'hx-swap="innerHTML">'
+        '<div class="dz-search-result-media" aria-hidden="true">SP</div>'
+        '<div class="dz-search-result-body">'
+        '<div class="dz-search-result-name">Sensor pack · SP-42</div>'
+        '<div class="dz-search-result-secondary">SKU · In stock (14)'
+        "</div></div></div>"
+        "</div></div>",
+        notes="<strong>One Hyperpart, two surfaces.</strong> (1) <em>Shell</em> — "
+        "hidden FK + typeahead + listbox; <code>dz-search-select.js</code> only "
+        "opens/closes (<code>data-dz-open</code> / <code>aria-expanded</code>, "
+        "200ms blur grace so a row click lands). (2) <em>Result rows</em> — the "
+        "search exchange returns a <strong>fixed</strong> micro-pattern: "
+        "<code>.dz-search-result-row</code> → optional "
+        "<code>.dz-search-result-media</code> → <code>.dz-search-result-body</code> "
+        "with <code>.dz-search-result-name</code> + optional "
+        "<code>.dz-search-result-secondary</code>. Map company / user / SKU / "
+        "image-heavy records into those slots — do <em>not</em> invent a new "
+        "picker per data shape. Each row&#x27;s <code>hx-get</code> is the select "
+        "exchange (confirm fragment + hidden id filled server-side). The form "
+        "posts the hidden input, never the visible text. See "
+        "<code>contracts/search_select.py</code> (<code>SearchResultRow</code> + "
+        "<code>render_result_row</code>).",
         tags=("forms", "htmx"),
         controller="controllers/dz-search-select.js",
         contracts=("contracts/search_select.py",),
         guidance=Guidance(
             seams=(
-                "visible typeahead text is NOT the submit value — a hidden FK input is",
-                "each result row carries its own hx-get to a select endpoint",
+                "shell: hidden FK + typeahead input + listbox panel "
+                "(`data-dz-widget=search_select`)",
+                "search exchange returns N× fixed result-row fragments "
+                "(or `.dz-search-result-empty`) — map domain fields into "
+                "name / secondary / media slots",
+                "each row carries its own hx-get to the select exchange",
+                "select exchange: confirm line (+ OOB hidden FK / label) — "
+                "never client-side write of the id",
             ),
             pitfalls=(
                 "200ms blur grace — result rows are htmx affordances; the click must land first",
                 "form posts the hidden input, never the visible text",
+                "do not invent a new combobox Hyperpart for 'users vs companies' — "
+                "same row anatomy, different field mapping",
+                "media is optional free HTML inside `.dz-search-result-media` "
+                "(img, initials, icon) — keep primary text in `.dz-search-result-name`",
             ),
             do_dont=(
+                (
+                    "map any record to SearchResultRow "
+                    "(id, name, secondary?, media_html?) and render_result_row",
+                    "build a bespoke listbox DOM per entity or return JSON for the client to paint",
+                ),
                 (
                     "swap the panel with a confirmation fragment that fills the hidden FK server-side",
                     "copy the visible label into a hidden field from client JS",
                 ),
             ),
             a11y_keys=(
-                "aria-expanded flips on focusin/focusout for the results panel",
-                "result rows are activatable links/buttons inside the panel",
+                "aria-expanded / data-dz-open flip on focusin/focusout for the results panel",
+                "result rows are role=option with their own activatable hx-get",
+                "media slot is aria-hidden when decorative (initials/icon)",
             ),
-            composes_with=("field", "search-box"),
+            composes_with=("field", "search-box", "avatar"),
         ),
         exchanges=(
             Exchange(
                 method="GET",
                 endpoint="/app/fragments/search?source={source}&q=",
                 trigger="keyup on the combobox, debounced (`delay:{n}ms`)",
-                response="result rows — each a `dz-search-result-row` div "
-                "carrying its own hx-get to the select endpoint — or the "
-                "`dz-search-result-empty` prompt",
-                swap="innerHTML",
+                response="HTML fragment: zero-or-more `.dz-search-result-row` "
+                "options (fixed anatomy: optional media + name + optional "
+                "secondary; each row hx-gets the select endpoint) OR one "
+                "`.dz-search-result-empty` prompt — never JSON",
+                swap="innerHTML into the listbox",
+                states=("prompt/min-chars", "results", "empty", "error"),
+                server_example="""# Search exchange — map domain → fixed row anatomy.
+# Do NOT invent a new picker per entity shape.
+from fastapi import FastAPI, Query
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+
+@app.get("/app/fragments/search", response_class=HTMLResponse)
+def search(source: str, q: str = Query("")) -> str:
+    # rows = query_domain(source, q)
+    # return "".join(render_result_row(SearchResultRow(
+    #     id=r.id, name=r.title, secondary=r.meta,
+    #     media_html=r.avatar_html or "",
+    #     select_url=f"/app/fragments/select?source={source}&id={r.id}",
+    #     results_target="#search-results-company",
+    # )) for r in rows)
+    return (
+        '<div class="dz-search-result-row" role="option" '
+        'hx-get="/app/fragments/select?source=companies&id=1" '
+        'hx-target="#search-results-company" hx-swap="innerHTML">'
+        '<div class="dz-search-result-body">'
+        '<div class="dz-search-result-name">Acme Ltd</div>'
+        '<div class="dz-search-result-secondary">Co. 123</div>'
+        "</div></div>"
+    )
+""",
             ),
             Exchange(
                 method="GET",
                 endpoint="/app/fragments/select?source={source}&id={id}",
-                trigger="a click on a result row",
-                response="the `dz-select-result-confirm` line replacing the "
-                "panel contents (the hidden FK input is set alongside)",
-                swap="innerHTML",
+                trigger="click / activate on a result row",
+                response="confirm fragment replacing the listbox "
+                "(`dz-select-result-confirm`) and server-side fill of the "
+                "hidden FK (and usually the typeahead label via OOB)",
+                swap="innerHTML (listbox) + OOB for hidden/input as needed",
+                states=("selected",),
+                server_example="""# Select exchange — fill the hidden FK server-side.
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+
+@app.get("/app/fragments/select", response_class=HTMLResponse)
+def select(source: str, id: str) -> str:
+    # label = load_label(source, id)
+    return (
+        f'<div class="dz-select-result-confirm" role="status">'
+        f"Selected {id}</div>"
+        # + OOB: <input type=hidden name=… value=id hx-swap-oob>
+        # + OOB: typeahead value=label hx-swap-oob
+    )
+""",
             ),
         ),
     ),
