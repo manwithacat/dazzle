@@ -120,6 +120,7 @@ optional follow-on if API credits are intentional (not required for D exit).
 - CSS classify (Phase C): `scripts/hm_css_classify.py`
 - Taste ship policy: `docs/reference/taste.md` (ship floor vs advisory)
 - Subscription scores: `scripts/hm_subscription_vision.py`, `src/dazzle/qa/subscription_vision.py`
+- HM Pages vision (subscription): `scripts/hm_pages_vision.py` → `.dazzle/hm-pages-vision/`
 - Fleet visual findings (subscription): `.claude/commands/improve/strategies/visual_tier2_subagent.md`
 - Improve lane: `.claude/commands/improve/lanes/hm-convergence.md`
 - Vision: `src/dazzle/qa/taste_panel.py`, `component_vision.py`, `property_vision.py`

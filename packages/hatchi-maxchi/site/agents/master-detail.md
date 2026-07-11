@@ -6,12 +6,12 @@ Exchange composition — a list item hx-gets its detail card into the detail pan
 
 ```html
 <div class="master-detail" data-master-detail>
-  <ul class="master-detail__list" aria-label="Invoices">
+  <ul class="master-detail__list" aria-label="Invoices" data-master-detail-list-body>
     <li><a class="master-detail__item" href="#" aria-current="true" hx-get="/mock/master-detail/inv-001" hx-target="next .master-detail__detail">INV-001 · Acme</a></li>
     <li><a class="master-detail__item" href="#" hx-get="/mock/master-detail/inv-002" hx-target="next .master-detail__detail">INV-002 · Globex</a></li>
     <li><a class="master-detail__item" href="#" hx-get="/mock/master-detail/inv-003" hx-target="next .master-detail__detail">INV-003 · Initech</a></li>
   </ul>
-  <div class="master-detail__detail">
+  <div class="master-detail__detail" data-master-detail-detail-body>
     <div class="card card-body">
       <div class="card-label">INV-001 · Acme</div>
       <div class="card-value">£1,250.00</div>

@@ -27,6 +27,7 @@ Two playbooks — both bill cognition to the **host harness subscription**
 |-------|---------|-------|----------------|
 | Example-app fleet | `dazzle qa capture` | Subagent **Reads** PNGs → findings JSON | `.claude/commands/improve/strategies/visual_tier2_subagent.md` |
 | HM dual-lock exemplars | `scripts/hm_visual_smoke.py` | Subagent **Reads** PNG → taste dimension scores | `scripts/hm_subscription_vision.py` |
+| HM GitHub Pages gallery | `scripts/hm_pages_vision.py --capture` | Subagent **Reads** PNGs → findings + scores | `scripts/hm_pages_vision.py` |
 
 ```bash
 # Dual-lock smoke → subscription scores

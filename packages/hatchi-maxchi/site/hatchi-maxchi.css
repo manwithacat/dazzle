@@ -4333,11 +4333,19 @@ dialog.command::backdrop {
 .master-detail {
   display: grid;
   grid-template-columns: 14rem 1fr;
-  gap: var(--space-md);
+  gap: 0;
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-md);
   overflow: hidden;
   min-height: 12rem;
+  background: var(--colour-surface);
+}
+/* Workspace dual_pane pair: wider list column for tabular rows. */
+.master-detail-pair .master-detail {
+  grid-template-columns: minmax(18rem, 2fr) minmax(20rem, 3fr);
+  min-height: 22rem;
+  /* Outer card-wrapper already participates in the dashboard grid. */
+  border-radius: var(--radius-lg);
 }
 .master-detail__list {
   list-style: none;
@@ -4345,25 +4353,91 @@ dialog.command::backdrop {
   padding: var(--space-xs);
   border-inline-end: 1px solid var(--colour-border);
   background: var(--colour-surface);
+  min-width: 0;
+  overflow: auto;
+  max-height: min(70vh, 40rem);
 }
-.master-detail__item {
+.master-detail-pair .master-detail__list {
+  padding: 0;
+}
+/* Nested dashboard card chrome: flatten so the pair reads as one unit. */
+.master-detail-pair .master-detail__list .card {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.master-detail-pair .master-detail__list .card-header {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--colour-border);
+}
+.master-detail-pair .master-detail__list .card-body {
+  padding: 0;
+}
+/* Gallery / link items (anchor or button). */
+a.master-detail__item,
+button.master-detail__item {
   display: block;
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-sm);
   color: var(--colour-text);
   text-decoration: none;
   font-size: var(--text-sm);
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: start;
+  cursor: pointer;
 }
-.master-detail__item:hover {
+a.master-detail__item:hover,
+button.master-detail__item:hover {
   background: var(--colour-bg);
 }
-.master-detail__item[aria-current="true"] {
+a.master-detail__item[aria-current="true"],
+button.master-detail__item[aria-current="true"] {
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand-text);
+  font-weight: var(--weight-medium);
+}
+/* Workspace list table rows (tr) — keep table-row display. */
+tr.master-detail__item {
+  cursor: pointer;
+}
+tr.master-detail__item:hover > td {
+  background: var(--colour-bg);
+}
+tr.master-detail__item[aria-current="true"] > td {
   background: var(--colour-brand-soft);
   color: var(--colour-brand-text);
   font-weight: var(--weight-medium);
 }
 .master-detail__detail {
   padding: var(--space-md);
+  min-width: 0;
+  overflow: auto;
+  max-height: min(70vh, 40rem);
+}
+.master-detail-pair .master-detail__detail {
+  padding: var(--space-md) var(--space-lg);
+}
+.master-detail__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: 10rem;
+  color: var(--colour-text-muted, var(--colour-text));
+  opacity: 0.85;
+}
+.master-detail__empty .empty-state-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+.master-detail__empty .empty-state-description {
+  margin: 0;
+  font-size: var(--text-sm);
 }
 
 }
