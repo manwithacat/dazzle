@@ -383,6 +383,23 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **Clean worktree**: Every push must leave `git status` clean. After shipping, check for untracked or modified files (especially `dist/`) and commit them before moving on.
 - **Bump on every fix**: Run the bump workflow (patch level) after bug fixes before pushing. Every push gets a unique version for deployment traceability.
 - **Agent Guidance in CHANGELOG**: When a release introduces new patterns, conventions, ADRs, or breaking changes that affect how agents should work, add a `### Agent Guidance` section to that version's changelog entry. Keep entries concise — one bullet per topic, stating the rule and where to look.
+- **Commit attribution (read before `git commit`)**:
+  - **Author / Committer** must be the human account owner (`James Barlow` /
+    `332269+manwithacat@users.noreply.github.com` via **global** git config).
+    Do **not** set **local** `user.name` / `user.email` on this repo — a prior
+    Claude Code session left `Claude Code <noreply@anthropic.com>` in
+    `.git/config`, so GitHub listed Claude as the primary author on agent
+    commits even when Grok did the work.
+  - **Agent recognition** is the trailer only:
+    `Co-Authored-By: Grok Build <grok@x.ai>` when Grok Build is the acting
+    harness (primary agent/tool for this machine **from 2026-07-10**).
+    Use `Co-Authored-By: Claude <noreply@anthropic.com>` only when Claude Code
+    actually produced the commit.
+  - GitHub’s “X and Y” UI = **Author** + **Co-Authored-By**. Wrong local
+    `user.*` → wrong primary face. Verify with `git var GIT_AUTHOR_IDENT`
+    before the first ship in a session if attribution looks wrong.
+  - Do **not** rewrite published history to fix past Claude-authored commits
+    unless the operator explicitly requests a history rewrite.
 
 ## Workflows
 
