@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.44] - 2026-07-11
+
+### Fixed
+- **TR-50 `*_already_signed` trial scenarios were persona fiction** — harness
+  now accepts ``signing_token_state = "already_signed"``: seeds a normal token
+  then pre-signs via production ``POST /api/sign/...`` so re-open hits the
+  #1571 completion page + signed-copy path. Verifier expects ``status=signed``.
+  Wired on ``sla_waiver_already_signed`` and ``engagement_letter_already_signed``.
+  qa-trial skill Rule 8 documents the key (mirrors TR-51 ``expired``).
+
 ## [0.101.43] - 2026-07-11
 
 ### Fixed

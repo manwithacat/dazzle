@@ -89,6 +89,10 @@ def verify_signing_outcome(
     # moment the persona attempts a signature against the expired link.
     if active_doc is not None and getattr(active_doc, "token_state", "fresh") == "expired":
         expected = "token_expired"
+    elif active_doc is not None and getattr(active_doc, "token_state", "fresh") == "already_signed":
+        # TR-50: harness pre-signed the row; re-open must leave status=signed
+        # (persona may open the link / download; must not un-sign or re-seed pending).
+        expected = "signed"
     elif active_doc is not None and getattr(active_doc, "validator_reject", False):
         # #1382: the project signing_validator is armed to reject this row, so the
         # expectation is fixed by the seeding — the persona's sign attempt must be

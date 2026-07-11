@@ -137,6 +137,8 @@ authority gap.
 [[scenario]]
 name = "engagement_letter_already_signed"
 login_persona = "user"
+# TR-50: harness pre-signs the seeded row so re-open is real, not persona fiction.
+signing_token_state = "already_signed"
 time_budget_seconds = 400
 max_steps = 25
 user_identity = """

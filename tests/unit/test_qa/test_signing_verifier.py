@@ -120,6 +120,27 @@ def test_expired_seed_fails_if_row_was_mutated():
     assert outcome.functional["status"] == "fail"
 
 
+def test_already_signed_seed_expects_signed_without_persona_sign():
+    """TR-50: pre-signed seed fixes expectation to signed even if persona
+    only opens the link (no sign_document invocation)."""
+    doc = SeededDoc("SlaWaiver", "abc", "tok", "http://x", "a@b.com", token_state="already_signed")
+    outcome = verify_signing_outcome(
+        action_sink={
+            "invoked": ["read_inbox", "open_signing_link"],
+            "requests": [
+                {"method": "GET", "url": "http://x/sign/SlaWaiver/abc?token=tok", "status": 200},
+            ],
+            "active_doc": doc,
+        },
+        seeded_docs=[doc],
+        db_reader=MagicMock(return_value={"id": "abc", "status": "signed"}),
+        pdf_validator=MagicMock(),
+    )
+    assert outcome.expected_outcome_inferred == "signed"
+    assert outcome.functional["status"] == "pass"
+    assert outcome.functional["final_row_status"] == "signed"
+
+
 def test_validator_reject_seed_overrides_inference_and_expects_untouched_row():
     """#1382: with validator_reject the expectation is fixed by the seeding —
     even when the persona attempted a signature, the verifier must expect the

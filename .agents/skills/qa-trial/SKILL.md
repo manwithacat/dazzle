@@ -118,6 +118,24 @@ signing_token_state = "expired"   # default: "fresh"
 
 The harness then mints an already-expired token, the signing page renders the real "Invalid or expired link" response, and the post-trial verifier expects the document row to stay untouched (any sign/decline attempt must be rejected). Without this key, a `*_token_expired` scenario silently tests the happy path: the persona gets a valid token and the expiry narrative is pure fiction (TR-51).
 
+### Rule 8: `signing_token_state = "already_signed"` for re-open scenarios (TR-50)
+
+If the persona's identity says they *already signed* and they are re-opening the
+link for a copy or confirmation, set:
+
+```toml
+signing_token_state = "already_signed"   # default: "fresh"
+```
+
+The harness seeds a normal token, then immediately signs the row through the
+production `POST /api/sign/...` path (stub signature PNG). Re-open hits the real
+#1571 completion page + signed-copy download instead of a still-pending form.
+Without this key, `*_already_signed` scenarios are pure fiction: the fixture is
+still `status=sent`, so observations become fixture artifacts (TR-50).
+
+Mutually exclusive with `signing_validator_reject` and with
+`signing_token_state = "expired"`.
+
 ## Template
 
 See `templates/trial-toml-template.toml` for a blank form to fill in. Copy it to your project root, edit, then:

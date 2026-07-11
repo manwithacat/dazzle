@@ -232,6 +232,41 @@ def test_seed_expired_token_state_mints_already_expired(tmp_path: Path):
     assert mint.call_args.kwargs["expires_hours"] < 0
 
 
+def test_seed_already_signed_posts_production_sign(tmp_path: Path):
+    """TR-50: token_state='already_signed' seeds then POSTs /api/sign/..."""
+    entity = MagicMock(signable=True)
+    entity.name = "SlaWaiver"
+    entity.fields = []
+    app_spec = MagicMock()
+    app_spec.domain.entities = [entity]
+
+    seed_resp = MagicMock()
+    seed_resp.raise_for_status = MagicMock()
+    seed_resp.json.return_value = {"created": {"signable_row": {"id": "row-id-3"}}}
+    sign_resp = MagicMock()
+    sign_resp.raise_for_status = MagicMock()
+    sign_resp.status_code = 200
+
+    with (
+        patch("dazzle.cli.qa.mint_token", return_value="tok-fresh") as mint,
+        patch("httpx.post", side_effect=[seed_resp, sign_resp]) as mock_post,
+        patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
+    ):
+        docs = _seed_signable_rows(
+            app_spec=app_spec,
+            base_url="http://localhost:3000",
+            signatory_email="a@b.com",
+            token_state="already_signed",
+        )
+    assert docs[0].token_state == "already_signed"
+    assert mint.call_args.kwargs["expires_hours"] == 72
+    assert mock_post.call_count == 2
+    sign_call = mock_post.call_args_list[1]
+    assert "/api/sign/SlaWaiver/row-id-3" in sign_call[0][0]
+    assert sign_call[1]["json"]["token"] == "tok-fresh"
+    assert "signature_png_b64" in sign_call[1]["json"]
+
+
 def test_expired_token_actually_fails_verification(tmp_path: Path):
     """End-to-end at the token layer: a token minted with negative
     expires_hours must be rejected by verify_token as expired."""

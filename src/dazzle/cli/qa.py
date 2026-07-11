@@ -715,6 +715,11 @@ def _seed_signable_rows(
     ``token_state="expired"`` mints already-expired tokens so *_token_expired*
     scenarios exercise the real "Invalid or expired link" page (TR-51).
 
+    ``token_state="already_signed"`` (TR-50) seeds a normal token then immediately
+    signs the row via the production ``POST /api/sign/...`` path (stub signature
+    PNG), so ``*_already_signed`` scenarios re-open a genuinely signed document
+    with completion page + signed-copy download instead of a pending form.
+
     ``signable_ids`` (#1382) maps entity name → a pre-generated UUID to insert
     the row under (so it matches the armed ``DAZZLE_QA_SIGNING_REJECT_IDS``).
     ``validator_reject`` stamps each :class:`SeededDoc` so the verifier expects
@@ -724,6 +729,13 @@ def _seed_signable_rows(
     (one per signable entity) ready to write into the mock inbox.
     """
     import httpx
+
+    # Same stub PNG as dazzle.qa.signing_tools (persona sign_document tool).
+    # Duplicated here so seed-time pre-sign does not import the tools module.
+    _stub_sig = (
+        "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAFklEQVR4nGP8"
+        "//8/A27AhEeOYeRKAwCl4wMRx3ocVQAAAABJRU5ErkJggg=="
+    )
 
     signable_ids = signable_ids or {}
 
@@ -773,6 +785,22 @@ def _seed_signable_rows(
         # two-week-old email link.
         expires_hours = -1 if token_state == "expired" else 72
         token = mint_token(record_id=row_id, email=effective_email, expires_hours=expires_hours)
+
+        if token_state == "already_signed":
+            # TR-50: pre-sign through the real API so the row is status=signed
+            # with signed_document artifact (#1571 completion page works).
+            sign_url = f"{base_url}/api/sign/{entity.name}/{row_id}"
+            sign_resp = httpx.post(
+                sign_url,
+                json={
+                    "token": token,
+                    "signature_png_b64": _stub_sig,
+                    "signatory_name": effective_email,
+                },
+                timeout=30.0,
+            )
+            sign_resp.raise_for_status()
+
         docs.append(
             SeededDoc(
                 entity=entity.name,
@@ -1330,30 +1358,35 @@ def qa_trial(
     typer.echo(f"Trial scenario: {scenario_name} (as persona {login_persona})")
     typer.echo(f"LLM driver: {resolved_driver} ({billing_note})")
 
-    # Optional per-scenario signing-token state (TR-51). "expired" seeds an
-    # already-expired token so *_token_expired scenarios exercise the real
-    # "Invalid or expired link" page instead of a fresh, signable token.
+    # Optional per-scenario signing-token state (TR-51 / TR-50).
+    # "expired" → already-expired token (Invalid or expired link page).
+    # "already_signed" → production pre-sign so re-open hits completion page.
     signing_token_state = str(chosen.get("signing_token_state", "fresh"))
-    if signing_token_state not in ("fresh", "expired"):
+    if signing_token_state not in ("fresh", "expired", "already_signed"):
         typer.echo(
             f"Scenario '{scenario_name}': signing_token_state must be "
-            f"'fresh' or 'expired', got {signing_token_state!r}.",
+            f"'fresh', 'expired', or 'already_signed', got {signing_token_state!r}.",
             err=True,
         )
         raise typer.Exit(code=2)
     if signing_token_state == "expired":
         typer.echo("Signing trial harness: seeding an EXPIRED token per scenario config.")
+    if signing_token_state == "already_signed":
+        typer.echo(
+            "Signing trial harness: pre-signing the seeded row so re-open "
+            "exercises the already-signed completion path (TR-50)."
+        )
 
     # Optional per-scenario validator-reject arming (#1382). When true, the
     # seeded row's id is pre-armed in DAZZLE_QA_SIGNING_REJECT_IDS so the
     # project signing_validator rejects the signature — the *_validator_rejected
     # scenarios exercise the authority-check path instead of silently signing.
     signing_validator_reject = bool(chosen.get("signing_validator_reject", False))
-    if signing_validator_reject and signing_token_state == "expired":
+    if signing_validator_reject and signing_token_state in ("expired", "already_signed"):
         typer.echo(
-            f"Scenario '{scenario_name}': signing_validator_reject and "
-            "signing_token_state='expired' are mutually exclusive (an expired "
-            "token never reaches the validator).",
+            f"Scenario '{scenario_name}': signing_validator_reject is mutually "
+            f"exclusive with signing_token_state={signing_token_state!r} "
+            "(expired tokens never reach the validator; already_signed is pre-signed).",
             err=True,
         )
         raise typer.Exit(code=2)

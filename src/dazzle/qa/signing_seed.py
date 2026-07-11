@@ -20,16 +20,19 @@ from pathlib import Path
 class SeededDoc:
     """A document pre-seeded into the mock inbox for a trial run.
 
-    ``token_state`` records how the token was minted (TR-51):
+    ``token_state`` records how the token was minted / the row was prepared:
 
     - ``"fresh"`` — normal 72h-valid token; the persona can sign/decline.
     - ``"expired"`` — minted already-expired so the scenario exercises the
       "Invalid or expired link" page. The verifier reads this to expect
       the row to stay untouched instead of inferring from sign attempts.
+    - ``"already_signed"`` (TR-50) — fresh token, then the harness pre-signs
+      via ``POST /api/sign/...`` so re-open hits the signed completion page
+      (#1571). Verifier expects the row to stay ``signed``.
 
     The state is harness-internal — it is deliberately NOT written to the
-    mock inbox, so the persona discovers expiry the way a real signer
-    would: by opening the link.
+    mock inbox, so the persona discovers expiry / already-signed the way a
+    real signer would: by opening the link.
 
     ``validator_reject`` (#1382) records that this row's id was armed in
     ``DAZZLE_QA_SIGNING_REJECT_IDS`` before boot, so the project-side
