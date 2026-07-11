@@ -10,12 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **metrics + kanban → schema+DOM dual-lock** — HM `contracts/metrics.py`
+  (`MetricTile`, root `data-dz-metric-key`) and `contracts/kanban.py`
+  (`KanbanCard`, root `data-dz-kanban-card`) with ingest renders + sole-emitters.
+  Dual-lock coverage: **10 schema+DOM** / 14 DOM-only.
 - **status-list + queue → schema+DOM dual-lock** — HM `contracts/status_list.py`
   (`StatusListEntry`, root `data-dz-status-entry`) and `contracts/queue.py`
   (`QueueRow`, root `data-dz-queue-row`) with ingest renders + sole-emitters.
   FragmentRenderer maps product dataclasses through the seams. Gallery status
-  vocabulary fixed to `positive` (not `success`). Dual-lock coverage:
-  **8 schema+DOM** / 14 DOM-only.
+  vocabulary fixed to `positive` (not `success`).
 - **action-grid → schema+DOM dual-lock** — HM `contracts/action_grid.py`
   (`ActionCard` + `DOM_CONTRACT` root `data-dz-action-card` + `render`) with
   ingest copy + `render_action_card` / `action_card_root_attrs` sole-emitter.

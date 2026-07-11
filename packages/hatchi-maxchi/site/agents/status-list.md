@@ -91,9 +91,7 @@ def render(entry: StatusListEntry) -> str:
         icon_html = '<span class="dz-status-list-icon-spacer" aria-hidden="true"></span>'
     caption_html = ""
     if entry.caption:
-        caption_html = (
-            f'<div class="dz-status-list-caption">{html.escape(entry.caption)}</div>'
-        )
+        caption_html = f'<div class="dz-status-list-caption">{html.escape(entry.caption)}</div>'
     pill_html = ""
     if entry.state != "neutral":
         pill_html = f'<span class="dz-status-list-pill">{html.escape(entry.state)}</span>'

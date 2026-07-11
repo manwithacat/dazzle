@@ -68,8 +68,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -334,6 +334,73 @@ def test_queue_region_emission_conforms_to_queue_contract() -> None:
     violations = kit.validate_dom(html, q_mod.DOM_CONTRACT, require_root=True)
     assert not violations, violations
     assert html.count("data-dz-queue-row") == 2
+    assert 'data-dz-attn="critical"' in html
+    assert "Refund request" in html
+
+
+def test_metric_tile_emission_conforms_to_metrics_contract() -> None:
+    """Real FragmentRenderer MetricsGrid path satisfies contracts/metrics.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import MetricsGrid
+    from dazzle.render.fragment.primitives.data import MetricTile as TileFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    m_mod = load_hm_module("contracts/metrics.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        MetricsGrid(
+            tiles=(
+                TileFrag(label="Outstanding", value="£12,450"),
+                TileFrag(
+                    label="Paid this month",
+                    value="£48,900",
+                    tone="positive",
+                    delta_direction="up",
+                    delta_sentiment="positive_up",
+                    delta_value="12%",
+                    delta_pct=12.0,
+                    delta_period_label="last month",
+                ),
+            )
+        )
+    )
+    violations = kit.validate_dom(html, m_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert 'data-dz-metric-key="outstanding"' in html
+    assert 'data-dz-tone="positive"' in html
+    assert "data-dz-delta-direction=" in html
+
+
+def test_kanban_region_emission_conforms_to_kanban_contract() -> None:
+    """Real FragmentRenderer KanbanRegion path satisfies contracts/kanban.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import KanbanCard as CardFrag
+    from dazzle.render.fragment.primitives.data import KanbanColumn, KanbanRegion
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    k_mod = load_hm_module("contracts/kanban.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        KanbanRegion(
+            columns=(
+                KanbanColumn(
+                    label="Open",
+                    cards=(
+                        CardFrag(
+                            title="Refund request — Acme",
+                            fields=(("Amount", "£1,250"),),
+                            attention_level="critical",
+                            attention_message="SLA breaches at 16:00",
+                        ),
+                        CardFrag(title="KYC review — Globex"),
+                    ),
+                ),
+            )
+        )
+    )
+    violations = kit.validate_dom(html, k_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert html.count("data-dz-kanban-card") == 2
     assert 'data-dz-attn="critical"' in html
     assert "Refund request" in html
 

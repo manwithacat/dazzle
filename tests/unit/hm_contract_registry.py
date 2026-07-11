@@ -56,6 +56,18 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "QueueRow",
     ),
+    (
+        "contracts/metrics.py",
+        "MetricTile",
+        "dazzle.render.fragment.ingest",
+        "MetricTile",
+    ),
+    (
+        "contracts/kanban.py",
+        "KanbanCard",
+        "dazzle.render.fragment.ingest",
+        "KanbanCard",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.

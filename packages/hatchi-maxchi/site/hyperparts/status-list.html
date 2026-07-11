@@ -298,9 +298,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
         <span class="code__tok--name">icon_html</span> <span class="code__tok--op">=</span> <span class="code__tok--str">&#x27;&lt;span class=&quot;dz-status-list-icon-spacer&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&#x27;</span>
     <span class="code__tok--name">caption_html</span> <span class="code__tok--op">=</span> <span class="code__tok--str">&quot;&quot;</span>
     <span class="code__tok--kw">if</span> <span class="code__tok--name">entry</span><span class="code__tok--op">.</span><span class="code__tok--name">caption</span><span class="code__tok--op">:</span>
-        <span class="code__tok--name">caption_html</span> <span class="code__tok--op">=</span> <span class="code__tok--op">(</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-status-list-caption&quot;&gt;{html.escape(entry.caption)}&lt;/div&gt;&#x27;</span>
-        <span class="code__tok--op">)</span>
+        <span class="code__tok--name">caption_html</span> <span class="code__tok--op">=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-status-list-caption&quot;&gt;{html.escape(entry.caption)}&lt;/div&gt;&#x27;</span>
     <span class="code__tok--name">pill_html</span> <span class="code__tok--op">=</span> <span class="code__tok--str">&quot;&quot;</span>
     <span class="code__tok--kw">if</span> <span class="code__tok--name">entry</span><span class="code__tok--op">.</span><span class="code__tok--name">state</span> <span class="code__tok--op">!=</span> <span class="code__tok--str">&quot;neutral&quot;</span><span class="code__tok--op">:</span>
         <span class="code__tok--name">pill_html</span> <span class="code__tok--op">=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;span class=&quot;dz-status-list-pill&quot;&gt;{html.escape(entry.state)}&lt;/span&gt;&#x27;</span>

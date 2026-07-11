@@ -28,10 +28,12 @@ from typing import TYPE_CHECKING
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
+from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
 from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
 from dazzle.render.fragment.ingest import (
     render_action_card,
+    render_metric_tile,
     render_queue_row,
     render_status_list_entry,
 )
@@ -679,62 +681,23 @@ class _RenderTablesMixin:
         )
 
     def _emit_metric_tile(self, m: MetricTile, ctx: RenderContext) -> str:
-        """Render a MetricTile matching the legacy
-        `workspace/regions/metrics.html` HTML shape: dz-metric-tile
-        wrapper with snake-cased data-dz-metric-key, optional data-dz-tone,
-        label + already-formatted value, and a delta block when
-        delta_direction is set.
+        """Render a MetricTile via HM dual-lock MetricTile seam.
 
-        The delta tone is computed from (direction, sentiment):
-            - up + positive_up   = good (positive)
-            - down + positive_down = good (positive)
-            - down + positive_up = bad (destructive)
-            - up + positive_down = bad (destructive)
-            - flat or anything else = neutral
+        Product API remains the frozen dataclass; emission maps through
+        ``render_metric_tile`` so markup matches ``contracts/metrics.py``.
         """
-        key_attr = m.label.lower().replace(" ", "_")
-        tone_attr = f' data-dz-tone="{ctx.escape_attr(m.tone)}"' if m.tone else ""
-
-        delta_html = ""
-        if m.delta_direction:
-            is_good = (m.delta_direction == "up" and m.delta_sentiment == "positive_up") or (
-                m.delta_direction == "down" and m.delta_sentiment == "positive_down"
+        return render_metric_tile(
+            MetricTileSeam(
+                label=m.label,
+                value=m.value,
+                metric_key=m.label.lower().replace(" ", "_"),
+                tone=m.tone,
+                delta_direction=m.delta_direction,
+                delta_sentiment=m.delta_sentiment,
+                delta_value=m.delta_value,
+                delta_pct=m.delta_pct,
+                delta_period_label=m.delta_period_label,
             )
-            is_bad = (m.delta_direction == "down" and m.delta_sentiment == "positive_up") or (
-                m.delta_direction == "up" and m.delta_sentiment == "positive_down"
-            )
-            delta_tone = "positive" if is_good else ("destructive" if is_bad else "neutral")
-            arrow = (
-                "↑" if m.delta_direction == "up" else ("↓" if m.delta_direction == "down" else "→")
-            )
-            sign = "+" if m.delta_direction == "up" else ""
-            pct_html = (
-                f'<span class="dz-metric-delta-pct">({m.delta_pct}%)</span>' if m.delta_pct else ""
-            )
-            # Legacy always emits the period span when delta_direction
-            # is set, even with an empty label (rendered as "vs ").
-            period_html = (
-                f'<span class="dz-metric-delta-period">vs {ctx.escape(m.delta_period_label)}</span>'
-            )
-            delta_html = (
-                f'<div class="dz-metric-delta" '
-                f'data-dz-delta-tone="{delta_tone}" '
-                f'data-dz-delta-direction="{ctx.escape_attr(m.delta_direction)}" '
-                f'data-dz-delta-sentiment="{ctx.escape_attr(m.delta_sentiment)}">'
-                f'<span aria-hidden="true">{arrow}</span>'
-                f'<span class="dz-metric-delta-value">{sign}{ctx.escape(m.delta_value)}</span>'
-                f"{pct_html}"
-                f"{period_html}"
-                f"</div>"
-            )
-
-        return (
-            f'<div class="dz-metric-tile" '
-            f'data-dz-metric-key="{ctx.escape_attr(key_attr)}"{tone_attr}>'
-            f'<div class="dz-metric-label">{ctx.escape(m.label)}</div>'
-            f'<div class="dz-metric-value">{ctx.escape(m.value)}</div>'
-            f"{delta_html}"
-            f"</div>"
         )
 
     def _emit_metrics_grid(self, g: MetricsGrid, ctx: RenderContext) -> str:

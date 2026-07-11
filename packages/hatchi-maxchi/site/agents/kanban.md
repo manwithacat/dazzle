@@ -17,14 +17,14 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
   <div class="kanban-column">
     <div class="kanban-column-head"><span class="badge" data-tone="neutral">Open</span><span class="kanban-column-count">2</span></div>
     <div class="kanban-stack">
-      <div class="kanban-card">
+      <div class="kanban-card" data-kanban-card>
         <div class="kanban-card-body">
           <h4 class="kanban-card-title">Refund request — Acme</h4>
           <p class="kanban-card-field">£1,250 · assigned to Ada</p>
           <p class="kanban-card-attn" data-attn="critical">SLA breaches at 16:00</p>
         </div>
       </div>
-      <div class="kanban-card">
+      <div class="kanban-card" data-kanban-card>
         <div class="kanban-card-body">
           <h4 class="kanban-card-title">KYC review — Globex</h4>
           <p class="kanban-card-field">due tomorrow</p>
@@ -35,7 +35,7 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
   <div class="kanban-column">
     <div class="kanban-column-head"><span class="badge" data-tone="info">In progress</span><span class="kanban-column-count">1</span></div>
     <div class="kanban-stack">
-      <div class="kanban-card">
+      <div class="kanban-card" data-kanban-card>
         <div class="kanban-card-body">
           <h4 class="kanban-card-title">Chargeback — Initech</h4>
           <p class="kanban-card-field">evidence uploaded</p>
@@ -64,16 +64,58 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/kanban.py`
+
+- **Required root:** `[data-dz-kanban-card]` (part `kanban`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-kanban-card]` | `data-dz-kanban-card` | present (any value) |
+
+#### Ingestion model `KanbanCard`
+
+| Field | Type | Required |
+|---|---|---|
+| `title` | `string` | yes |
+| `fields_html` | `string` | no |
+| `attention_level` | `string` | no |
+| `attention_message` | `string` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(card: KanbanCard) -> str:
+    """Model → one kanban card."""
+    title = html.escape(card.title)
+    attn_html = ""
+    if card.attention_level:
+        level = html.escape(card.attention_level, quote=True)
+        msg = html.escape(card.attention_message)
+        attn_html = (
+            f'<p class="dz-kanban-card-attn" data-dz-attn="{level}">{msg}</p>'
+        )
+    return (
+        f'<div class="dz-kanban-card" data-dz-kanban-card>'
+        f'<div class="dz-kanban-card-body">'
+        f'<h4 class="dz-kanban-card-title">{title}</h4>'
+        f"{card.fields_html}"
+        f"{attn_html}"
+        f"</div>"
+        f"</div>"
+    )
+```
 
 ## Notes
 
-Cards are SERVER-rendered — a drag-and-drop extension is a future controller on these seams, not a client state graph. Attention text carries data-dz-attn="<level>" (critical/warning/notice — the same attn contract the timeline's bullets and the queue's rows use). An overflowing board renders a dz-kanban-load-all button whose hx-get re-fetches the region at full page size.
+Cards are SERVER-rendered — dual-lock root is data-dz-kanban-card (contracts/kanban.py). A drag-and-drop extension is a future controller on these seams, not a client state graph. Attention text carries data-dz-attn (critical/warning/notice — the same attn contract the timeline's bullets and the queue's rows use). An overflowing board renders a dz-kanban-load-all button whose hx-get re-fetches the region at full page size.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/kanban.py`

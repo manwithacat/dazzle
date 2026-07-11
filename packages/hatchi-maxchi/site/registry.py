@@ -2644,13 +2644,13 @@ def select(source: str, id: str) -> str:
             '<span class="dz-badge" data-dz-tone="neutral">Open</span>'
             '<span class="dz-kanban-column-count">2</span></div>'
             '<div class="dz-kanban-stack">'
-            '<div class="dz-kanban-card">'
+            '<div class="dz-kanban-card" data-dz-kanban-card>'
             '<div class="dz-kanban-card-body">'
             '<h4 class="dz-kanban-card-title">Refund request — Acme</h4>'
             '<p class="dz-kanban-card-field">£1,250 · assigned to Ada</p>'
             '<p class="dz-kanban-card-attn" data-dz-attn="critical">SLA breaches at 16:00</p>'
             "</div></div>"
-            '<div class="dz-kanban-card">'
+            '<div class="dz-kanban-card" data-dz-kanban-card>'
             '<div class="dz-kanban-card-body">'
             '<h4 class="dz-kanban-card-title">KYC review — Globex</h4>'
             '<p class="dz-kanban-card-field">due tomorrow</p>'
@@ -2660,7 +2660,7 @@ def select(source: str, id: str) -> str:
             '<span class="dz-badge" data-dz-tone="info">In progress</span>'
             '<span class="dz-kanban-column-count">1</span></div>'
             '<div class="dz-kanban-stack">'
-            '<div class="dz-kanban-card">'
+            '<div class="dz-kanban-card" data-dz-kanban-card>'
             '<div class="dz-kanban-card-body">'
             '<h4 class="dz-kanban-card-title">Chargeback — Initech</h4>'
             '<p class="dz-kanban-card-field">evidence uploaded</p>'
@@ -2673,14 +2673,16 @@ def select(source: str, id: str) -> str:
             '<div class="dz-kanban-stack">'
             '<p class="dz-kanban-empty">Nothing here yet.</p>'
             "</div></div></div>",
-            notes="Cards are SERVER-rendered — a drag-and-drop extension is a "
-            "future controller on these seams, not a client state graph. "
-            "Attention text carries <code>data-dz-attn=&quot;&lt;level&gt;&quot;</code> "
-            "(critical/warning/notice — the same attn contract the timeline's "
-            "bullets and the queue's rows use). An overflowing board renders a "
-            "<code>dz-kanban-load-all</code> button whose <code>hx-get</code> "
-            "re-fetches the region at full page size.",
+            notes="Cards are SERVER-rendered — dual-lock root is "
+            "<code>data-dz-kanban-card</code> (<code>contracts/kanban.py</code>). "
+            "A drag-and-drop extension is a future controller on these seams, not "
+            "a client state graph. Attention text carries "
+            "<code>data-dz-attn</code> (critical/warning/notice — the same attn "
+            "contract the timeline's bullets and the queue's rows use). An "
+            "overflowing board renders a <code>dz-kanban-load-all</code> button "
+            "whose <code>hx-get</code> re-fetches the region at full page size.",
             tags=("data",),
+            contracts=("contracts/kanban.py",),
         ),
         Hyperpart(
             "timeline",
@@ -2822,11 +2824,12 @@ def select(source: str, id: str) -> str:
             '<div class="dz-metric-label">Overdue</div>'
             '<div class="dz-metric-value">3</div></div>'
             "</div>",
-            notes="Each tile carries <code>data-dz-metric-key</code> (a stable "
-            "anchor for tests/telemetry) and an optional <code>data-dz-tone</code>. "
-            "In Dazzle one scope-aware GROUP BY query fills the whole strip — "
-            "the tiles can never disagree with each other.",
+            notes="Each tile carries <code>data-dz-metric-key</code> (dual-lock "
+            "root; <code>contracts/metrics.py</code>) and an optional "
+            "<code>data-dz-tone</code>. In Dazzle one scope-aware GROUP BY query "
+            "fills the whole strip — the tiles can never disagree with each other.",
             tags=("data", "chart"),
+            contracts=("contracts/metrics.py",),
         ),
         Hyperpart(
             "sparkline",

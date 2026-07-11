@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
+from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
+from dazzle.render.fragment.ingest import render_kanban_card
 from dazzle.render.fragment.primitives import (
     BarChart,
     BoxPlot,
@@ -723,24 +725,15 @@ class _RenderChartsMixin:
                         f"{value_html}"
                         f"</p>"
                     )
-                attn_html = ""
-                if card.attention_level:
-                    attn_html = (
-                        f'<p class="dz-kanban-card-attn" '
-                        f'data-dz-attn="{ctx.escape_attr(card.attention_level)}">'
-                        f"{ctx.escape(card.attention_message)}</p>"
-                    )
-                # Trailing space inside `class="dz-kanban-card "` mirrors
-                # legacy `class="dz-kanban-card{% if action_url %} is-clickable{% endif %}"`
-                # Jinja whitespace artifact when action_url is empty.
                 cards_html.append(
-                    f'<div class="dz-kanban-card">'
-                    f'<div class="dz-kanban-card-body">'
-                    f'<h4 class="dz-kanban-card-title">{ctx.escape(card.title)}</h4>'
-                    f"{fields_html}"
-                    f"{attn_html}"
-                    f"</div>"
-                    f"</div>"
+                    render_kanban_card(
+                        KanbanCardSeam(
+                            title=card.title,
+                            fields_html=fields_html,
+                            attention_level=card.attention_level,
+                            attention_message=card.attention_message,
+                        )
+                    )
                 )
             stack_inner = "".join(cards_html)
             if not col.cards:

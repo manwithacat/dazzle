@@ -9,7 +9,7 @@ equality — and the emitted DOM is locked by
 
 Seam models: ``GridEditCell``, ``ComboboxField``, ``TagsField``,
 ``MoneyField``, ``SearchResultRow``, ``SearchSelectShell``, ``ActionCard``,
-``StatusListEntry``, ``QueueRow``.
+``StatusListEntry``, ``QueueRow``, ``MetricTile``, ``KanbanCard``.
 
 **Two layers (#1577):** form primitives in ``primitives/forms.py`` are the
 public product API (``required``, currency selector, symbol, …). These
@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import html as _html
 import json
+import re
 from collections.abc import Sequence
 from typing import Literal
 
@@ -265,6 +266,64 @@ class QueueRow(BaseModel):
     def _title_nonempty(cls, v: str) -> str:
         if not (v or "").strip():
             raise ValueError("QueueRow requires a non-empty title")
+        return v
+
+
+# ── Metrics seam copy (contracts/metrics.py) ─────────────────────────
+
+
+MetricTone = Literal["", "positive", "warning", "destructive", "accent", "neutral"]
+MetricDeltaDir = Literal["", "up", "down", "flat"]
+MetricDeltaSent = Literal["", "positive_up", "positive_down"]
+
+
+def _metric_slug_key(label: str) -> str:
+    return re.sub(r"_+", "_", label.lower().replace(" ", "_")).strip("_") or "metric"
+
+
+class MetricTile(BaseModel):
+    """One KPI tile — dual-lock unit for the metrics Hyperpart."""
+
+    label: str
+    value: str
+    metric_key: str = ""
+    tone: MetricTone = ""
+    delta_direction: MetricDeltaDir = ""
+    delta_sentiment: MetricDeltaSent = ""
+    delta_value: str = ""
+    delta_pct: float = 0.0
+    delta_period_label: str = ""
+
+    @field_validator("label")
+    @classmethod
+    def _label_nonempty(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("MetricTile requires a non-empty label")
+        return v
+
+    @model_validator(mode="after")
+    def _default_key(self) -> MetricTile:
+        if not self.metric_key:
+            self.metric_key = _metric_slug_key(self.label)
+        return self
+
+
+# ── Kanban seam copy (contracts/kanban.py) ───────────────────────────
+
+
+class KanbanCard(BaseModel):
+    """One board card — dual-lock unit for the kanban Hyperpart."""
+
+    title: str
+    fields_html: str = ""
+    attention_level: str = ""
+    attention_message: str = ""
+
+    @field_validator("title")
+    @classmethod
+    def _title_nonempty(cls, v: str) -> str:
+        if not (v or "").strip():
+            raise ValueError("KanbanCard requires a non-empty title")
         return v
 
 
@@ -526,6 +585,88 @@ def render_queue_row(row: QueueRow) -> str:
         f"{row.date_html}"
         f"</div>"
         f"{row.actions_html}"
+        f"</div>"
+    )
+
+
+def metric_tile_root_attrs(tile: MetricTile) -> str:
+    """Assemble metric-tile dual-lock root (+ optional tone) — sole emitter site."""
+    key = _html.escape(tile.metric_key, quote=True)
+    base = f'data-dz-metric-key="{key}"'
+    if tile.tone:
+        return f'{base} data-dz-tone="{_html.escape(tile.tone, quote=True)}"'
+    return base
+
+
+def kanban_card_root_attrs(_card: KanbanCard) -> str:
+    """Assemble kanban-card dual-lock root — sole emitter site."""
+    return "data-dz-kanban-card"
+
+
+def render_metric_tile(tile: MetricTile) -> str:
+    """Model → one metric tile (matches HM contracts/metrics.py)."""
+    label = _html.escape(tile.label)
+    value = _html.escape(tile.value)
+    root_attrs = metric_tile_root_attrs(tile)
+
+    delta_html = ""
+    if tile.delta_direction:
+        is_good = (tile.delta_direction == "up" and tile.delta_sentiment == "positive_up") or (
+            tile.delta_direction == "down" and tile.delta_sentiment == "positive_down"
+        )
+        is_bad = (tile.delta_direction == "down" and tile.delta_sentiment == "positive_up") or (
+            tile.delta_direction == "up" and tile.delta_sentiment == "positive_down"
+        )
+        delta_tone = "positive" if is_good else ("destructive" if is_bad else "neutral")
+        arrow = (
+            "↑"
+            if tile.delta_direction == "up"
+            else ("↓" if tile.delta_direction == "down" else "→")
+        )
+        sign = "+" if tile.delta_direction == "up" else ""
+        pct_html = (
+            f'<span class="dz-metric-delta-pct">({tile.delta_pct}%)</span>'
+            if tile.delta_pct
+            else ""
+        )
+        period_html = f'<span class="dz-metric-delta-period">vs {_html.escape(tile.delta_period_label)}</span>'
+        delta_html = (
+            f'<div class="dz-metric-delta" '
+            f'data-dz-delta-tone="{delta_tone}" '
+            f'data-dz-delta-direction="{_html.escape(tile.delta_direction, quote=True)}" '
+            f'data-dz-delta-sentiment="{_html.escape(tile.delta_sentiment, quote=True)}">'
+            f'<span aria-hidden="true">{arrow}</span>'
+            f'<span class="dz-metric-delta-value">{sign}{_html.escape(tile.delta_value)}</span>'
+            f"{pct_html}"
+            f"{period_html}"
+            f"</div>"
+        )
+
+    return (
+        f'<div class="dz-metric-tile" {root_attrs}>'
+        f'<div class="dz-metric-label">{label}</div>'
+        f'<div class="dz-metric-value">{value}</div>'
+        f"{delta_html}"
+        f"</div>"
+    )
+
+
+def render_kanban_card(card: KanbanCard) -> str:
+    """Model → one kanban card (matches HM contracts/kanban.py)."""
+    title = _html.escape(card.title)
+    attn_html = ""
+    if card.attention_level:
+        level = _html.escape(card.attention_level, quote=True)
+        msg = _html.escape(card.attention_message)
+        attn_html = f'<p class="dz-kanban-card-attn" data-dz-attn="{level}">{msg}</p>'
+    root_attrs = kanban_card_root_attrs(card)
+    return (
+        f'<div class="dz-kanban-card" {root_attrs}>'
+        f'<div class="dz-kanban-card-body">'
+        f'<h4 class="dz-kanban-card-title">{title}</h4>'
+        f"{card.fields_html}"
+        f"{attn_html}"
+        f"</div>"
         f"</div>"
     )
 
