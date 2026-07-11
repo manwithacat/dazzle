@@ -155,6 +155,14 @@ async def fetch_region_items(
                     filters = {}
                 filters[field_name] = param_val
 
+        # dual_pane master-detail: DETAIL region fragment for one selected row.
+        # List rows hx-get ``?id=<pk>`` into ``.dz-master-detail__detail``.
+        item_id = request.query_params.get("id")
+        if item_id:
+            if filters is None:
+                filters = {}
+            filters["id"] = item_id
+
         date_field = ctx.ctx_region.date_field if hasattr(ctx.ctx_region, "date_field") else ""
         if date_field:
             date_from = request.query_params.get("date_from")

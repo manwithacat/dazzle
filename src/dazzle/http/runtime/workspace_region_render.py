@@ -443,6 +443,8 @@ def _build_list_adapter_ctx(
         adapter_ctx["row_action_routes"] = getattr(ctx, "row_action_routes", None) or {}
         # #1303 — per-row drill-to-detail URL template (empty = no row links).
         adapter_ctx["detail_url_template"] = getattr(ctx, "detail_url_template", "") or ""
+        # dual_pane master-detail: pane-target drill instead of body swap.
+        adapter_ctx["master_detail_pane"] = bool(getattr(ctx, "master_detail_pane", False))
     elif display_upper == "KANBAN":
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns

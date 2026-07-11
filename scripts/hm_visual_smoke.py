@@ -192,6 +192,21 @@ def _collect_dazzle_emit_sections() -> list[tuple[str, str]]:
             _render_form_step_body(SimpleNamespace(transitions=[]), SimpleNamespace(form=form)),
         )
     )
+    from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
+
+    out.append(
+        (
+            "dazzle-master-detail",
+            render_master_detail_shell(
+                list_region="contact_list",
+                list_title="Contacts",
+                list_endpoint="/api/workspaces/contacts/regions/contact_list",
+                detail_region="contact_detail",
+                detail_title="Detail",
+                detail_endpoint_base="/api/workspaces/contacts/regions/contact_detail",
+            ),
+        )
+    )
     return out
 
 

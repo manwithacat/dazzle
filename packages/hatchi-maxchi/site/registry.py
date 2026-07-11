@@ -1823,7 +1823,8 @@ HYPERPARTS: list[Hyperpart] = [
         "Exchange composition — a list item hx-gets its detail card into the "
         "detail pane. The canonical htmx composite; two can coexist on a page.",
         '<div class="dz-master-detail" data-dz-master-detail>'
-        '<ul class="dz-master-detail__list" aria-label="Invoices">'
+        '<ul class="dz-master-detail__list" aria-label="Invoices" '
+        "data-dz-master-detail-list-body>"
         '<li><a class="dz-master-detail__item" href="#" aria-current="true" '
         'hx-get="/mock/master-detail/inv-001" hx-target="next .dz-master-detail__detail">'
         "INV-001 · Acme</a></li>"
@@ -1833,7 +1834,7 @@ HYPERPARTS: list[Hyperpart] = [
         '<li><a class="dz-master-detail__item" href="#" '
         'hx-get="/mock/master-detail/inv-003" hx-target="next .dz-master-detail__detail">'
         "INV-003 · Initech</a></li></ul>"
-        '<div class="dz-master-detail__detail">'
+        '<div class="dz-master-detail__detail" data-dz-master-detail-detail-body>'
         '<div class="dz-card dz-card-body"><div class="dz-card-label">INV-001 · Acme</div>'
         '<div class="dz-card-value">£1,250.00</div>'
         '<div class="dz-card-delta">Paid · 2 days ago</div></div></div></div>',

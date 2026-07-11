@@ -46,14 +46,13 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/grid_resize.py", "grid_resize", True),
     ("contracts/pdf.py", "pdf", True),  # render_pdf_viewer_component (#1582)
     ("contracts/wizard.py", "wizard", True),  # experience form multi-section (#1582)
+    ("contracts/master_detail.py", "master_detail", True),  # dual_pane_flow shell (#1580 C)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
 # Keep as inventory so the drain is greppable; add a DOM_ONLY_CONTRACTS row
 # when a stable emission site exists.
-DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
-    ("contracts/master_detail.py", "no stable Dazzle emission site yet — needs product decision"),
-]
+DOM_ONLY_DEFERRED: list[tuple[str, str]] = []
 
 
 def load_hm_module(rel: str):

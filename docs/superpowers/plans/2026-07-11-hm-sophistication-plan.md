@@ -29,8 +29,8 @@ Raise the sophistication of (1) HM as a design system and (2) Dazzle tools that 
 | Controllers (`dz-*.js`) | 19 |
 | Formal contract modules | 19 |
 | Schema + DOM dual-lock (`CONTRACT_MODELS`) | 4 (grid_edit, combobox, tags, money) |
-| Root-only dual-lock (`DOM_ONLY_CONTRACTS`) | 14 (incl. confirm, pdf, wizard) |
-| Root-only deferred (contract exists, no DOM lock fixture) | 1 (master_detail — product decision) |
+| Root-only dual-lock (`DOM_ONLY_CONTRACTS`) | 15 (incl. confirm, pdf, wizard, master_detail) |
+| Root-only deferred (contract exists, no DOM lock fixture) | 0 (drained) |
 
 Reservoir metric (`scripts/hm_tailwind_reservoir.py`): **GRANDTOTAL 0** — migration thermometer is drained; remaining work is *quality locks* and *tooling depth*, not Tailwind drain.
 
@@ -103,7 +103,7 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 | Phase | Status | Issue | Notes |
 |-------|--------|------:|-------|
 | A | **Done** | #1581 | Plan + coverage generator + map + gate test |
-| B | **Done** (promotable set) | #1582 | confirm/pdf/wizard → DOM-only; master_detail deferred on product |
+| B | **Done** | #1582 | confirm/pdf/wizard/master_detail dual-locks; dual_pane_flow emits Hyperpart |
 | C | **Partial** | #1583 | Reservoir `--suggest` shipped; classifier/stylelint optional |
 | D | **Partial** | #1584 | Subscription smoke → `.dazzle/hm-visual-*`; vision API optional only |
 
@@ -121,3 +121,4 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 - Contract authoring: `packages/hatchi-maxchi/contracts/AUTHORING.md`
 - Contract scaffold: `packages/hatchi-maxchi/tools/scaffold_contract.py`
 - Subscription visual smoke: `scripts/hm_visual_smoke.py`
+- dual_pane → master-detail: `src/dazzle/page/runtime/dual_pane_master_detail.py`

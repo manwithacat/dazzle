@@ -1079,13 +1079,17 @@ class _RenderTablesMixin:
                 else ""
             )
             url = lst.row_links[i] if lst.row_links else None
+            pane = bool(getattr(lst, "master_detail_pane", False))
+            class_extra = " "
+            if url:
+                class_extra = " is-clickable dz-master-detail__item" if pane else " is-clickable"
             tbody_rows.append(
                 assemble_list_row(
                     archetype=ARCHETYPE_LIST_REGION,
                     cells_html=cells_html,
                     actions_cell=actions_cell,
-                    class_extra=" is-clickable" if url else " ",
-                    drill_attrs=drill_row_attrs(ctx.escape_attr(url)) if url else "",
+                    class_extra=class_extra,
+                    drill_attrs=(drill_row_attrs(ctx.escape_attr(url), pane=pane) if url else ""),
                 )
             )
         tbody = f"<tbody>{''.join(tbody_rows)}</tbody>"

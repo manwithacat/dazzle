@@ -319,6 +319,20 @@ def _emit_root_only_html(part_id: str) -> str:
             action_url="/api/tickets",
         )
         return _render_form_step_body(SimpleNamespace(transitions=[]), SimpleNamespace(form=form))
+    if part_id == "master_detail":
+        # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
+        from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
+
+        return render_master_detail_shell(
+            list_region="contact_list",
+            list_title="Contacts",
+            list_endpoint="/api/workspaces/contacts/regions/contact_list",
+            detail_region="contact_detail",
+            detail_title="Contact detail",
+            detail_endpoint_base="/api/workspaces/contacts/regions/contact_detail",
+            card_id="fixture",
+            eager=True,
+        )
     raise AssertionError(f"no fixture builder for root-only part {part_id!r}")
 
 
@@ -337,8 +351,10 @@ def test_root_only_dazzle_emission_conforms(hm_path: str, part_id: str, require_
 
 
 def test_root_only_deferred_inventory_is_documented() -> None:
-    """Deferred root-only modules stay inventored (not silently forgotten)."""
-    assert DOM_ONLY_DEFERRED, "expected deferred inventory for undrained root-only parts"
+    """Deferred root-only modules stay inventored (not silently forgotten).
+
+    Empty deferred is success: every root-only contract has a DOM fixture.
+    """
     # Every deferred path must exist on disk under packages/hatchi-maxchi/
     for rel, _why in DOM_ONLY_DEFERRED:
         assert (REPO_ROOT / "packages" / "hatchi-maxchi" / rel).is_file(), rel

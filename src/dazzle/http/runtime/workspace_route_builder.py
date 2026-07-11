@@ -415,6 +415,25 @@ class WorkspaceRouteBuilder:
                         tags=["Workspaces"],
                     )(_make_region_route(_region_ctx))
 
+                # dual_pane_flow → master-detail: list rows target the DETAIL
+                # region fragment (?id=) instead of full-page entity drill.
+                from dazzle.page.runtime.dual_pane_master_detail import (
+                    detect_dual_pane_master_detail_pair,
+                    master_detail_item_endpoint,
+                )
+
+                _md_pair = detect_dual_pane_master_detail_pair(
+                    getattr(workspace, "stage", "") or "",
+                    list(ws_ctx.regions),
+                )
+                if _md_pair is not None:
+                    _detail_ep = master_detail_item_endpoint(ws_name, _md_pair.detail_region)
+                    for _rctx in _ws_region_ctxs:
+                        if getattr(_rctx.ctx_region, "name", None) == _md_pair.list_region:
+                            _rctx.detail_url_template = _detail_ep
+                            _rctx.master_detail_pane = True
+                            break
+
                 # Batch endpoint: collect all region contexts (already built above)
                 _batch_ctxs = list(_ws_region_ctxs)
 

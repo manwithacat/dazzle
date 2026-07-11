@@ -12,8 +12,8 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Controllers | 19 |
 | Contract modules | 19 |
 | Dual-lock schema+DOM | 4 |
-| Dual-lock DOM-only | 14 |
-| Dual-lock deferred | 1 |
+| Dual-lock DOM-only | 15 |
+| Dual-lock deferred | 0 |
 | Contract with no dual-lock row | 0 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
@@ -33,7 +33,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `grid_cols` | `grid_cols.py` | `dz-grid-cols.js` | yes | no | no | **DOM-only** |
 | `grid_edit` | `grid_edit.py` | `dz-grid-edit.js` | yes | yes | yes | **schema+DOM** |
 | `grid_resize` | `grid_resize.py` | `dz-grid-resize.js` | yes | no | no | **DOM-only** |
-| `master_detail` | `master_detail.py` | `dz-master-detail.js` | yes | no | no | **deferred** |
+| `master_detail` | `master_detail.py` | `dz-master-detail.js` | yes | no | no | **DOM-only** |
 | `money` | `money.py` | `dz-money.js` | yes | yes | yes | **schema+DOM** |
 | `pdf` | `pdf.py` | `dz-pdf.js` | yes | no | no | **DOM-only** |
 | `search_select` | `search_select.py` | `dz-search-select.js` | yes | no | no | **DOM-only** |
@@ -44,7 +44,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 
 ## Priority notes (Phase B)
 
-1. **deferred → DOM-only** when a stable Dazzle emission fixture exists (remaining: master_detail — needs product decision on emission site). Promoted: confirm, pdf, wizard.
+1. **deferred → DOM-only** — promotable queue drained (confirm, pdf, wizard, master_detail via dual_pane_flow). Empty deferred is success.
 2. **DOM-only → schema+DOM** when an ingest model is shared with Dazzle (pattern: money / combobox / tags / grid_edit). No additional model-bearing contracts exist yet — root-only parts stay DOM-only until a real ingest model lands.
 3. **CSS-only Hyperparts** (no contract file) are out of this table — gallery/registry expansion is a separate queue from dual-locks.
 

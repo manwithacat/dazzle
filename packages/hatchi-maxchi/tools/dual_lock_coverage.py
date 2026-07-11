@@ -126,9 +126,8 @@ def render_md(rows: list[dict[str, str]]) -> str:
             "",
             "## Priority notes (Phase B)",
             "",
-            "1. **deferred → DOM-only** when a stable Dazzle emission fixture exists "
-            "(remaining: master_detail — needs product decision on emission site). "
-            "Promoted: confirm, pdf, wizard.",
+            "1. **deferred → DOM-only** — promotable queue drained (confirm, pdf, wizard, "
+            "master_detail via dual_pane_flow). Empty deferred is success.",
             "2. **DOM-only → schema+DOM** when an ingest model is shared with Dazzle "
             "(pattern: money / combobox / tags / grid_edit). No additional model-bearing "
             "contracts exist yet — root-only parts stay DOM-only until a real ingest model lands.",

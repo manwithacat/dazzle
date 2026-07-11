@@ -74,3 +74,8 @@ class WorkspaceRegionContext:
     # way (empty when the region set `drill: none`). The task_inbox builder
     # looks up each source's template by entity name.
     entity_detail_urls: dict[str, str] = field(default_factory=dict)
+    # dual_pane_flow master-detail: list rows hx-get into the sibling detail
+    # pane (``.dz-master-detail__detail``) instead of full-page body drill.
+    # When True, ``detail_url_template`` points at the DETAIL region endpoint
+    # with ``?id={id}`` and list rows emit pane-target HTMX attrs.
+    master_detail_pane: bool = False

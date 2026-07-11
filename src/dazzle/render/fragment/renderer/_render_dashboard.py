@@ -71,6 +71,9 @@ class _RenderDashboardMixin:
             ' data-grid-editable="true"' if g.edit_enabled else ' data-grid-editable="false"'
         )
         cards_html = "".join(self._emit(c, ctx) for c in g.cards)
+        # Trust contract: leading_html is built by render_master_detail_shell
+        # (escaped region names/titles); not author-supplied raw markup.
+        leading = getattr(g, "leading_html", "") or ""
         return (
             f'<div class="dz-dashboard-grid" '
             f"data-grid-container "
@@ -78,6 +81,7 @@ class _RenderDashboardMixin:
             f'aria-label="Dashboard card grid"'
             f"{editable_attr}"
             f"{sse_attrs}>"
+            f"{leading}"
             f"{cards_html}"
             f"</div>"
         )

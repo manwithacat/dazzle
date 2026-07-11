@@ -326,6 +326,7 @@ class _BuildersTablesMixin:
             row_action_label=row_action_label,
             row_actions=tuple(row_actions_list) if row_action_spec is not None else (),
             row_links=row_links,
+            master_detail_pane=bool(ctx.get("master_detail_pane")),
         )
 
         # If we have chrome, wrap the body in a Stack that also contains

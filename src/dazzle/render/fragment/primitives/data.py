@@ -575,6 +575,9 @@ class ListRegion:
     # row) when the entry is set — the htmx-idiomatic shape the standalone
     # list uses (#1029), not a cell ``<a>`` which would break ``<td>`` nesting.
     row_links: tuple[str | None, ...] = ()
+    # dual_pane_flow master-detail: when True, row links target the sibling
+    # detail pane (not body) and rows get ``dz-master-detail__item``.
+    master_detail_pane: bool = False
 
     def __post_init__(self) -> None:
         for i, row in enumerate(self.rows):
@@ -1775,6 +1778,10 @@ class DashboardGrid:
     cards: tuple[DashboardCard, ...] = ()
     sse_url: str = ""
     edit_enabled: bool = False
+    # dual_pane master-detail shell HTML (pre-escaped production string from
+    # ``render_master_detail_shell``). Emitted first inside the grid so the
+    # pair spans the full row; remaining unpaired regions stay as cards.
+    leading_html: str = ""
 
 
 @dataclass(frozen=True, slots=True)

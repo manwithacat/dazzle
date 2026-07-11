@@ -56,10 +56,17 @@ ARCHETYPE_EMBEDDED = _RowArchetype("dz-table__row", "embedded")
 ARCHETYPE_LIST_REGION = _RowArchetype("dz-list-row", "region")
 
 
-def drill_row_attrs(url_attr: str) -> str:
+def drill_row_attrs(url_attr: str, *, pane: bool = False) -> str:
     """The shared clickable-row block (#1511, design §3.2): the row owns a
-    bare-click `hx-get` to the detail surface (full-page swap). `url_attr` is the
+    bare-click `hx-get` to the detail surface. `url_attr` is the
     already-escaped detail URL — empty means the row is not clickable.
+
+    Default: full-page swap into ``body`` (standalone list / non-paired
+    workspace regions).
+
+    ``pane=True`` (dual_pane_flow master-detail): swap into the sibling
+    ``.dz-master-detail__detail`` pane; no push-url; row also needs
+    ``dz-master-detail__item`` on the ``class`` (caller via class_extra).
 
     This is the single load-bearing composition rule: the *row* owns the bare
     click; every interactive sub-element (checkbox, edit cell, action button,
@@ -68,6 +75,12 @@ def drill_row_attrs(url_attr: str) -> str:
     """
     if not url_attr:
         return ""
+    if pane:
+        return (
+            f'hx-get="{url_attr}" hx-trigger="click" '
+            f'hx-target="closest [data-dz-master-detail] .dz-master-detail__detail" '
+            f'hx-swap="innerHTML" tabindex="0"'
+        )
     # 2b preload-drill (#1491): `hx-preload="mouseover"` warms the detail GET on
     # hover (the vendored htmx-4 `preload` extension), so the click serves the
     # cached prefetch — perceived-instant drill. The extension dedups per row

@@ -895,9 +895,42 @@ def render_workspace_content_typed(
 
     ws_title = workspace.title or workspace.name.replace("_", " ").title()
 
+    # dual_pane_flow LIST+DETAIL → HM master-detail composite (full-width shell).
+    from dazzle.page.runtime.dual_pane_master_detail import (
+        detect_dual_pane_master_detail_pair,
+        render_master_detail_shell,
+    )
+
+    md_pair = detect_dual_pane_master_detail_pair(workspace.stage, list(workspace.regions))
+    md_region_names: set[str] = set()
+    leading_html = ""
+    if md_pair is not None:
+        md_region_names = {md_pair.list_region, md_pair.detail_region}
+        list_r = next(r for r in workspace.regions if r.name == md_pair.list_region)
+        detail_r = next(r for r in workspace.regions if r.name == md_pair.detail_region)
+        list_title = list_r.title or list_r.name.replace("_", " ").title()
+        detail_title = detail_r.title or detail_r.name.replace("_", " ").title()
+        leading_html = render_master_detail_shell(
+            list_region=md_pair.list_region,
+            list_title=list_title,
+            list_endpoint=f"/api/workspaces/{workspace.name}/regions/{md_pair.list_region}",
+            detail_region=md_pair.detail_region,
+            detail_title=detail_title,
+            detail_endpoint_base=(
+                f"/api/workspaces/{workspace.name}/regions/{md_pair.detail_region}"
+            ),
+            card_id="md-0",
+            eager=True,
+            list_card_id="md-list",
+            detail_card_id="md-detail",
+        )
+
     # ── DashboardCard list ──────────────────────────────────────────
     cards: list[DashboardCard] = []
     for index, r in enumerate(workspace.regions):
+        if r.name in md_region_names:
+            # Emitted inside the master-detail shell, not as free cards.
+            continue
         card_id = f"card-{index}"
         eager = index < (fold_count or 0)
         notice_dict = r.notice or {}
@@ -974,6 +1007,7 @@ def render_workspace_content_typed(
             cards=tuple(cards),
             sse_url=workspace.sse_url or "",
             edit_enabled=can_edit_layout,
+            leading_html=leading_html,
         )
     )
     inner_pieces.append(AddCardRow(picker=picker))
