@@ -96,7 +96,9 @@ TRANSIENT_STATE_ATTRS: frozenset[str] = frozenset(
 
 # Thin DOM_CONTRACT roots whose controller prose documents a larger surface —
 # reverse (prose ⊆ contract) is skipped until the structured contract grows.
-_THIN_ROOT_SKIP_REVERSE: frozenset[str] = frozenset({"grid"})
+# Base grid prose is covered by TRANSIENT_STATE_ATTRS + sibling contracts
+# (grid_edit/cols/resize), so reverse is enabled (empty skip set).
+_THIN_ROOT_SKIP_REVERSE: frozenset[str] = frozenset()
 
 _ATTR_RE = re.compile(r"data-dz-[\w-]+|data-hm-[\w-]+|hx-confirm\b")
 _CONTRACT_BLOCK_RE = re.compile(r"\*\s*Contract:\s*\n(.*?)(?:\*/)", re.S)

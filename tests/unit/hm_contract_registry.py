@@ -40,6 +40,7 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/confirm_panel.py", "confirm_panel", True),
     ("contracts/tabs.py", "tabs", True),
     ("contracts/dialog.py", "dialog", True),
+    ("contracts/grid.py", "grid", True),
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
@@ -48,7 +49,6 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
 DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
     ("contracts/wizard.py", "page-layer experience_renderer only"),
     ("contracts/pdf.py", "page-layer pdf_viewer_renderer (not Fragment)"),
-    ("contracts/grid.py", "root-only thin; covered by grid_edit dual lock"),
     ("contracts/grid_cols.py", "needs full data-table chrome fixture"),
     ("contracts/grid_resize.py", "needs full data-table chrome fixture"),
     ("contracts/master_detail.py", "no stable Dazzle emission site yet"),

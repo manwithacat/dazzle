@@ -236,6 +236,21 @@ def _emit_root_only_html(part_id: str) -> str:
         )
     if part_id == "tabs":
         return r.render(Tabs(tabs=(("one", Text("One")), ("two", Text("Two")))))
+    if part_id == "grid":
+        from dazzle.render.fragment.primitives.containers import DzTableMount, Region
+
+        return r.render(
+            Region(
+                kind="list",
+                body=Text("rows"),
+                data_table="Ticket",
+                mount=DzTableMount(
+                    table_id="grid-fixture",
+                    endpoint="/api/tickets",
+                    entity_name="Ticket",
+                ),
+            )
+        )
     if part_id == "dialog":
         # Real list-row peek:slide_over path emits data-dz-dialog-open on the chevron.
         table = {
