@@ -151,3 +151,25 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > `property-vision`/`deploy plan`/`sentinel mutate`/`rhythm`/`story`/`test-design`/
 > `pulse`/`sentinel scan`/`fitness` CLI/`discovery`/`composition`/`sweep`/`nightly` +
 > standalone `/fuzz`/`/smells`/`/xproject`) stay OWNED-IDLE awaiting directed exercise.
+
+> **Capability-sweep cycle 276 (2026-07-11).** Sweep due (20 cycles since 256). Re-derived
+> inventory: `dazzle --help` (+ `qa`/`deploy` subtrees), MCP tool schemas (**35 tools**,
+> unchanged), `.claude/skills` + `.claude/commands` + `.agents/skills`. **No newly-built
+> loop capability** since 256: cycles 257–275 were un-STALE directed-explore (rbac,
+> coverage, process, fragment-audit, compliance, policy, test_intelligence, semantics,
+> conformance, dsl, fitness engine, Tailwind reservoir, ux verify) plus product fixes
+> TR-56/57/58/50 and first exercise of `deploy plan` (OWNED-IDLE→USED@275). Product
+> work (workspace CTA, already_signed token state, demo seed dates/job titles) extended
+> existing surfaces — no new CLI/MCP/skill entrypoints. NOT added (still CI self-
+> exercising / operator EXEMPT): dual-lock gates, `deploy heroku`, auth/db family,
+> `/ship`/`/check`/`/bump`. STALE recompute (threshold last-exercised ≤256): **none**
+> flip — the post-256 directed-explore rotation kept every previously USED row inside
+> the 20-cycle window. Nearest risk: `dazzle rbac`@257 (lag 19 → STALE next cycle if
+> idle). Remaining OWNED-IDLE never-exercised (18 after deploy plan graduated):
+> `qa capture`/`login`/`taste-panel`/`component-vision`/`property-vision`,
+> `sentinel mutate`/`scan`, `rhythm`/`story`/`test-design`/`pulse`/`fitness` CLI,
+> `discovery`/`composition`/`sweep`/`nightly`, standalone `/fuzz`/`/smells`/`/xproject`.
+> Governance note: cycles 257–274 were almost pure capability-coverage bookkeeping;
+> product findings (TR-*) only landed when rule 6 had no STALE queue — healthy, but
+> the next explore budget should prefer OWNED-IDLE first-exercise over re-stamping
+> recently USED rows once the queue is clear again.
