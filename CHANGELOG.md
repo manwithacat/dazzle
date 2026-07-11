@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.36] - 2026-07-11
+
+### Added
+- **Dazzle↔HM dual locks for combobox / tags / money** — shared
+  `tests/unit/hm_contract_registry.py` drives schema parity across all
+  model-bearing contract modules; ingest seam copies
+  (`ComboboxField`, `TagsField`, `MoneyField`) live only on
+  `dazzle.render.fragment.ingest` (form primitives keep their public names).
+  DOM conformance fixtures validate real `FragmentRenderer` emission against
+  HM `DOM_CONTRACT`s. Design/plan under `docs/superpowers/specs|plans/2026-07-11-dazzle-contract-boundary-expansion*`.
+  Deferred: #1577 (primitive unify), #1578 (root-only DOM), #1579 (prose Contract drift).
+
+### Fixed
+- **Money selector-mode root** now emits `data-dz-currency` (HM money
+  `DOM_CONTRACT` requires it on every `[data-dz-money]` root; fixed path already did).
+
+### Agent Guidance
+- Adding a model-bearing Hyperpart dual lock: one row in `CONTRACT_MODELS` +
+  ingest seam copy + DOM fixture — not a new gate file.
+
 ## [0.101.35] - 2026-07-11
 
 ### Fixed
