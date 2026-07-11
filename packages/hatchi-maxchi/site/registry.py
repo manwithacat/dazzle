@@ -1851,12 +1851,14 @@ HYPERPARTS: list[Hyperpart] = [
         "server-emitted chrome for docs and samples. Syntax colour is build-time "
         "token spans (Python), not a browser highlighter.",
         '<figure class="dz-code" data-dz-code data-dz-language="python">'
+        '<div class="dz-code__meta">'
+        '<span class="dz-code__lang">python</span>'
         '<button type="button" class="dz-code__copy" data-dz-code-copy '
         'aria-label="Copy code to clipboard">'
         '<span class="dz-code__copy-idle">Copy</span>'
         '<span class="dz-code__copy-done">Copied</span>'
         "</button>"
-        '<span class="dz-code__lang">python</span>'
+        "</div>"
         '<pre class="dz-code__pre" tabindex="0" role="region" aria-label="Python example">'
         '<code class="dz-code__source">'
         "def greet(name: str) -> str:\n"
@@ -1864,29 +1866,38 @@ HYPERPARTS: list[Hyperpart] = [
         '    return f"Hello, {name}"\n'
         "</code></pre></figure>",
         notes="Use the code Hyperpart for any fenced sample in docs or app chrome. "
+        "<strong>Required nesting:</strong> <code>figure.dz-code[data-dz-code]</code> → "
+        "<code>div.dz-code__meta</code> (optional lang + optional copy) → "
+        "<code>pre.dz-code__pre</code> → <code>code.dz-code__source</code>. "
+        "Copy is pushed trailing by CSS (<code>margin-inline-start: auto</code> on the "
+        "button) — do <em>not</em> absolute-position it (nested part-page flex/"
+        "<code>min-width:0</code> chains left-shift absolute children). "
         "The gallery builder runs a stdlib Python highlighter "
-        "(<code>site/highlight.py</code>) that wraps tokens in "
-        "<code>dz-code__tok--*</code> spans; copy always uses "
-        "<code>textContent</code> so spans never reach the clipboard. "
-        "Omit <code>data-dz-language</code> to hide the language chip; omit "
-        "the copy button when the block is display-only.",
+        "(<code>site/highlight.py</code>) into <code>dz-code__tok--*</code> spans; "
+        "copy uses <code>textContent</code> so spans never paste. "
+        "Omit the lang span when there is no language; omit the copy button when "
+        "display-only (keep the meta bar if a lang chip remains).",
         tags=("docs",),
         controller="controllers/dz-code.js",
         contracts=("contracts/code.py",),
         guidance=Guidance(
             seams=(
-                "data-dz-code root marks the fenced surface",
-                "data-dz-language optional chip; data-dz-code-copy optional control",
+                "figure[data-dz-code] → div.dz-code__meta → pre.dz-code__pre > code.dz-code__source",
+                "meta flex row: optional .dz-code__lang, optional [data-dz-code-copy] "
+                "(CSS margin-inline-start:auto keeps copy trailing)",
                 "build-time token spans (.dz-code__tok--*) for Python colour",
             ),
             pitfalls=(
+                "do not absolute-position .dz-code__copy — it drifts left inside nested "
+                "min-width:0 containers (Hyperpart detail pages); use the meta flex row",
+                "do not put copy/lang as direct children of the figure without .dz-code__meta",
                 "do not ship a browser syntax engine for static docs — highlight at build",
                 "copy must read textContent (not innerHTML) so spans never paste",
             ),
             do_dont=(
                 (
-                    "emit figure.dz-code from the server/docs builder",
-                    "paste Prism/Shiki client bundles just for gallery colour",
+                    "emit figure > .dz-code__meta > (lang? + copy?) > pre > code",
+                    "absolute-position the copy control or invent a one-off toolbar",
                 ),
             ),
             a11y_keys=(

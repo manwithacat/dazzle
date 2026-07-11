@@ -3797,11 +3797,11 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
   function sourceFor(btn) {
     var root = btn.closest("[data-code]");
     if (!root) return null;
-    // Prefer the dedicated source node; never use a bare "code" match that
-    // could collide with the unprefixed root class name `.code` in gallery CSS.
+    // Prefer the dedicated source node (inside pre, never the meta bar).
+    // Avoid bare "code" / ".code" collisions with the unprefixed root class.
     return (
       root.querySelector(".code__source") ||
-      root.querySelector("[class$='code__source']") ||
+      root.querySelector(".code__pre code") ||
       root.querySelector("pre code")
     );
   }

@@ -40,8 +40,9 @@ def test_render_code_block_structure_and_copy_text() -> None:
     assert "dz-code__tok--kw" in block
     assert ">def<" in block
     assert ">return<" in block
-    # Copy is a direct child of the figure — not nested under a meta flex row.
-    assert "dz-code__meta" not in block
+    # Hyperpart contract: meta bar wraps lang + copy; pre follows.
+    assert "dz-code__meta" in block
+    assert block.index("dz-code__meta") < block.index("dz-code__copy")
     assert block.index("dz-code__copy") < block.index("dz-code__pre")
     # Spans split identifiers; plain contiguous source is not required in HTML
     assert "f" in block

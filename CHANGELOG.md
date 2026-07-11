@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- **HM code Hyperpart copy control** — absolute top-right copy (no flex meta
-  row), reset base `pre`/`button` styles inside the surface, clipboard
-  `writeText` reject falls back to `execCommand`.
+- **HM code Hyperpart copy control** — restore `div.dz-code__meta` flex row
+  (lang + trailing copy via `margin-inline-start: auto`). Absolute positioning
+  drifted left on nested Hyperpart detail pages (`min-width: 0` chains).
+  Clipboard `writeText` reject still falls back to `execCommand`. Agents must
+  emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
 - **HM part pages linearized for agents + humans** — drop accordion

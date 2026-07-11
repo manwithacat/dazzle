@@ -8,8 +8,7 @@ Fenced code surface with optional language chip and copy control — server-emit
 
 ```html
 <figure class="code" data-code data-language="python">
-  <button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button>
-  <span class="code__lang">python</span>
+  <div class="code__meta"><span class="code__lang">python</span><button type="button" class="code__copy" data-code-copy aria-label="Copy code to clipboard"><span class="code__copy-idle">Copy</span><span class="code__copy-done">Copied</span></button></div>
   <pre class="code__pre" tabindex="0" role="region" aria-label="Python example"><code class="code__source">def greet(name: str) -> str:
     """Return a friendly hello."""
     return f"Hello, {name}"
@@ -21,18 +20,20 @@ Fenced code surface with optional language chip and copy control — server-emit
 
 ### Seams
 
-- data-dz-code root marks the fenced surface
-- data-dz-language optional chip; data-dz-code-copy optional control
+- figure[data-dz-code] → div.dz-code__meta → pre.dz-code__pre > code.dz-code__source
+- meta flex row: optional .dz-code__lang, optional [data-dz-code-copy] (CSS margin-inline-start:auto keeps copy trailing)
 - build-time token spans (.dz-code__tok--*) for Python colour
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
-| emit figure.dz-code from the server/docs builder | paste Prism/Shiki client bundles just for gallery colour |
+| emit figure > .dz-code__meta > (lang? + copy?) > pre > code | absolute-position the copy control or invent a one-off toolbar |
 
 ### Pitfalls
 
+- do not absolute-position .dz-code__copy — it drifts left inside nested min-width:0 containers (Hyperpart detail pages); use the meta flex row
+- do not put copy/lang as direct children of the figure without .dz-code__meta
 - do not ship a browser syntax engine for static docs — highlight at build
 - copy must read textContent (not innerHTML) so spans never paste
 
@@ -78,7 +79,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Use the code Hyperpart for any fenced sample in docs or app chrome. The gallery builder runs a stdlib Python highlighter (site/highlight.py) that wraps tokens in dz-code__tok--* spans; copy always uses textContent so spans never reach the clipboard. Omit data-dz-language to hide the language chip; omit the copy button when the block is display-only.
+Use the code Hyperpart for any fenced sample in docs or app chrome. Required nesting: figure.dz-code[data-dz-code] → div.dz-code__meta (optional lang + optional copy) → pre.dz-code__pre → code.dz-code__source. Copy is pushed trailing by CSS (margin-inline-start: auto on the button) — do not absolute-position it (nested part-page flex/min-width:0 chains left-shift absolute children). The gallery builder runs a stdlib Python highlighter (site/highlight.py) into dz-code__tok--* spans; copy uses textContent so spans never paste. Omit the lang span when there is no language; omit the copy button when display-only (keep the meta bar if a lang chip remains).
 
 ## Source files
 

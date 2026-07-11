@@ -185,8 +185,9 @@ def render_code_block(
     body = highlight_source(source, lang if highlight else None)
     label = aria_label or (f"{lang} code" if lang else "Code")
     lang_attr = f' data-dz-language="{html.escape(lang, quote=True)}"' if lang else ""
-    # Lang chip only when labelled — an empty flex/absolute peer used to sit
-    # under the copy control and confuse hit-testing / layout.
+    # Meta bar is part of the Hyperpart contract: lang (optional) + copy.
+    # Copy uses margin-inline-start:auto so it stays trailing without absolute
+    # positioning (absolute drifted left on nested part-page containers).
     lang_chip = f'<span class="dz-code__lang">{html.escape(lang)}</span>' if lang else ""
     copy_btn = ""
     if copy:
@@ -197,11 +198,12 @@ def render_code_block(
             '<span class="dz-code__copy-done">Copied</span>'
             "</button>"
         )
-    # Copy is a direct child of the figure (absolute top-right), not nested in
-    # a meta flex row with the language chip — that layout broke the control.
+    meta = (
+        f'<div class="dz-code__meta">{lang_chip}{copy_btn}</div>' if (lang_chip or copy_btn) else ""
+    )
     return (
         f'<figure class="dz-code" data-dz-code{lang_attr}>'
-        f"{copy_btn}{lang_chip}"
+        f"{meta}"
         f'<pre class="dz-code__pre" tabindex="0" role="region" '
         f'aria-label="{html.escape(label, quote=True)}">'
         f'<code class="dz-code__source">{body}</code></pre></figure>'

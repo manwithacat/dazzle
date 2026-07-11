@@ -2,99 +2,79 @@
  *
  * Server-emitted fenced code surface — chrome for docs and in-app samples.
  * Syntax colour is build-time (span.dz-code__tok--*); this file owns surface,
- * language chip, copy control, and token colours from design tokens.
+ * meta bar (language + copy), and token colours from design tokens.
  *
- * Contract:
+ * Contract (copy-paste structure — keep this exact nesting):
  *   <figure class="dz-code" data-dz-code data-dz-language="python">
- *     <button type="button" class="dz-code__copy" data-dz-code-copy …>…</button>
- *     <span class="dz-code__lang">python</span>   <!-- omit when no language -->
+ *     <div class="dz-code__meta">
+ *       <span class="dz-code__lang">python</span>   <!-- omit when no language -->
+ *       <button type="button" class="dz-code__copy" data-dz-code-copy …>…</button>
+ *     </div>
  *     <pre class="dz-code__pre" tabindex="0" role="region" aria-label="…">
  *       <code class="dz-code__source">…</code>
  *     </pre>
  *   </figure>
  *
- * Copy is position:absolute on the figure (not a flex peer of the lang chip) so
- * base button/pre styles and meta layout cannot push it off or cover it.
- * data-dz-language is optional; data-dz-code-copy is optional.
+ * Layout: flex meta row — lang at start, copy pushed to the end with
+ * margin-inline-start: auto. Do NOT absolute-position the copy control
+ * (containing-block / min-width:0 chains on nested part pages left-shift it).
+ *
+ * data-dz-language is optional; data-dz-code-copy is optional (omit the button).
  */
 
 .dz-code {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   max-width: 100%;
+  width: 100%;
   margin: 0;
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-md);
   background: var(--neutral-900);
   color: var(--neutral-100);
-  /* Do not clip the absolutely-positioned copy control */
-  overflow: visible;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-/* Kill base.css `pre { background/border/padding }` inside this surface —
- * those unprefixed element rules otherwise paint a light slab over the dark
- * figure and can steal hit-testing depending on stacking. */
-.dz-code .dz-code__pre,
-.dz-code pre {
-  margin: 0;
-  padding: var(--space-md) 4rem var(--space-md) var(--space-lg);
-  overflow-x: auto;
-  max-width: 100%;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.6;
-  tab-size: 4;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  color: inherit;
+/* Meta bar: language chip + copy. Always a full-width flex row. */
+.dz-code__meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+  gap: var(--space-sm);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-md);
+  min-height: 2.25rem;
+  border-block-end: 1px solid var(--neutral-700);
+  background: var(--neutral-800);
 }
 
-.dz-code .dz-code__source,
-.dz-code code {
-  font-family: inherit;
-  font-size: inherit;
-  color: inherit;
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  white-space: pre;
-}
-
-/* Language chip — top-left, does not participate in copy hit area */
 .dz-code__lang {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.75rem;
-  z-index: 1;
+  flex: 0 1 auto;
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: var(--weight-medium);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--neutral-400);
-  pointer-events: none;
   user-select: none;
+  white-space: nowrap;
 }
 
-/* Room for the chip so the first line of source is not covered */
-.dz-code[data-dz-language] .dz-code__pre,
-.dz-code[data-dz-language] pre {
-  padding-top: 2rem;
-}
-
-/* Copy — absolute top-right (gallery-proven pattern). High specificity so
- * base `button` / `button:hover` cannot bleach it on the dark surface. */
-.dz-code > .dz-code__copy,
-.dz-code .dz-code__copy {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.4rem;
-  z-index: 2;
+/* Push copy to the trailing edge whether or not a lang chip is present. */
+.dz-code__copy {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  position: static; /* never absolute — see header comment */
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  margin: 0;
   background: var(--neutral-700);
   color: var(--neutral-100);
   border: 1px solid var(--neutral-600);
@@ -108,21 +88,29 @@
   transition: background 120ms var(--ease-default, ease);
 }
 
-.dz-code > .dz-code__copy:hover,
+/* Beat base.css `button` / `button:hover` on the dark meta bar. */
+.dz-code .dz-code__copy,
+.dz-code__meta .dz-code__copy {
+  background: var(--neutral-700);
+  color: var(--neutral-100);
+  border: 1px solid var(--neutral-600);
+}
+
 .dz-code .dz-code__copy:hover,
-.dz-code > .dz-code__copy:hover:not(:disabled),
-.dz-code .dz-code__copy:hover:not(:disabled) {
+.dz-code .dz-code__copy:hover:not(:disabled),
+.dz-code__meta .dz-code__copy:hover,
+.dz-code__meta .dz-code__copy:hover:not(:disabled) {
   background: var(--neutral-600);
   color: var(--neutral-100);
 }
 
-.dz-code > .dz-code__copy:active,
-.dz-code .dz-code__copy:active {
+.dz-code .dz-code__copy:active,
+.dz-code__meta .dz-code__copy:active {
   background: var(--neutral-500);
 }
 
-.dz-code > .dz-code__copy:focus-visible,
-.dz-code .dz-code__copy:focus-visible {
+.dz-code .dz-code__copy:focus-visible,
+.dz-code__meta .dz-code__copy:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
 }
@@ -151,6 +139,37 @@
 
 .dz-code__copy[data-copied] .dz-code__copy-done {
   display: inline-flex;
+}
+
+/* Kill base.css `pre { background/border/padding }` inside this surface. */
+.dz-code .dz-code__pre,
+.dz-code pre {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-md) var(--space-lg);
+  overflow-x: auto;
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  tab-size: 4;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.dz-code .dz-code__source,
+.dz-code code {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  white-space: pre;
 }
 
 /* ── Syntax tokens (build-time spans; plain text when unhighlighted) ── */
