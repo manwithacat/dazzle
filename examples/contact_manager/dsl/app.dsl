@@ -85,6 +85,7 @@ surface contact_list "Contact List":
     field first_name "First Name"
     field last_name "Last Name"
     field email "Email"
+    field phone "Phone"
     field company "Company"
     field is_favorite "Favorite"
 
