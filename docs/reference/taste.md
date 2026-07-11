@@ -5,9 +5,27 @@ Canonical, agent-readable definition of Dazzle's visual taste — the
 HTMX substrate). Consumed by: framework CSS/token authors (now), the
 authoring agent and the improve loop (follow-ons).
 
-Enforced by: the blind taste panel (`dazzle qa taste-panel` — scriptable
-exit code, the Phase 2–4 convergence gate), the opt-in `composition analyze`
-taste focus (`focus=["taste"]`), and the per-rule gates listed below.
+**Ship floor vs advisory taste (2026-07-11, epic #1580 Phase D):**
+
+| Path | Role | Blocks CI / ship? |
+|------|------|-------------------|
+| Dual-locks + `pytest -m gate` + package suite | Structural / DOM regression floor | **Yes** |
+| Subscription visual smoke (`scripts/hm_visual_smoke.py`) + host **Read** of PNGs | Cognitive review without metered APIs | **No** (`ship_gate: false` in manifest) |
+| Pixel-diff of fleet captures (subscription) | Deterministic visual regression when used | Only when the **change author** opts in as a gate |
+| `dazzle qa taste-panel` / `component-vision` | Blind LLM aesthetic parity (metered) | **No** unless a human sets a threshold *and* API credits are intentional |
+
+CI stays deterministic. Vision scores never block green solely because a model
+scored low. Subscription default after dual-lock work:
+
+```bash
+python scripts/hm_visual_smoke.py --dazzle-emit
+# → .dazzle/hm-visual-smoke/ + .dazzle/hm-visual-last.json (gitignored)
+# Dispatch a host-harness subagent to Read full_page.png
+```
+
+Also enforced by: the opt-in `composition analyze` taste focus (`focus=["taste"]`),
+and the per-rule gates listed below. The blind taste panel remains available for
+parity campaigns when credits exist — not the default ship gate.
 
 - Spec: `docs/superpowers/specs/2026-07-02-taste-house-aesthetic-design.md`
 - Baseline: `dev_docs/taste/baseline-2026-07-02.md` (all six dimensions
@@ -157,7 +175,12 @@ Composition note: `composition analyze focus=["taste"]` runs the
 theme-agnostic five; `dark_mode_integrity` must be requested by name
 against known-dark captures (composition captures carry no theme info).
 
-## The parity gate
+## The parity campaign (advisory unless human-thresholded)
+
+Metered blind-panel runs measure fleet parity vs references. They feed improve
+backlog and Phase 2–4 taste *campaigns*; they are **not** a default CI ship
+gate (see table above). Prefer `hm_visual_smoke.py` + host Read for day-to-day
+agent review.
 
 ```
 # capture references (third-party pixels stay gitignored)
@@ -167,7 +190,7 @@ python scripts/taste/capture_references.py
 dazzle qa capture --app <app> --url <URL> --above-fold --manifest fleet.json
 dazzle qa capture --app <app> --url <URL> --above-fold --dark --manifest fleet-dark.json
 
-# run the blind panel (exit 0 = parity on every dimension)
+# run the blind panel (exit 0 = parity on every dimension) — requires API credits
 dazzle qa taste-panel --manifest fleet-merged.json --judges 3 --noise-runs 2
 ```
 

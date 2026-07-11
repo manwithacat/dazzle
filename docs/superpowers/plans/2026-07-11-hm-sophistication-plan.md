@@ -105,9 +105,10 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 | A | **Done** | #1581 | Plan + coverage generator + map + gate test |
 | B | **Done** | #1582 | confirm/pdf/wizard/master_detail dual-locks; dual_pane_flow emits Hyperpart |
 | C | **Done** | #1583 | `--suggest` + `hm_css_classify.py` (load-bearing + token literals) |
-| D | **Partial** | #1584 | Subscription smoke → `.dazzle/hm-visual-*`; vision API optional only |
+| D | **Done** | #1584 | Subscription smoke + last-run pointer; taste.md ship-vs-advisory policy |
 
-**Epic:** #1580
+**Epic:** #1580 — phases A–D complete. Metered vision score persistence remains
+optional follow-on if API credits are intentional (not required for D exit).
 
 ## Related paths
 
@@ -117,6 +118,7 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 - Dual-lock registry: `tests/unit/hm_contract_registry.py`
 - Reservoir: `scripts/hm_tailwind_reservoir.py`
 - CSS classify (Phase C): `scripts/hm_css_classify.py`
+- Taste ship policy: `docs/reference/taste.md` (ship floor vs advisory)
 - Improve lane: `.claude/commands/improve/lanes/hm-convergence.md`
 - Vision: `src/dazzle/qa/taste_panel.py`, `component_vision.py`, `property_vision.py`
 - Contract authoring: `packages/hatchi-maxchi/contracts/AUTHORING.md`
