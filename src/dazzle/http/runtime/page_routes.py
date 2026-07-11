@@ -302,14 +302,14 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
     ``read_only``, ``defaults``, ``focus``). Adding a new field is a
     3-step extension:
 
-    1. Add the dict to ``TableContext`` in ``template_context.py``.
+    1. Add the dict to ``TableContext`` in ``render/context.py``.
     2. Populate it in ``_compile_list_surface`` from ``ux.persona_variants``.
     3. Apply its resolution semantics inside this helper.
 
     The first two steps are mechanical; only the resolution semantics
     are field-specific (hide → set ``column.hidden=True``,
     ``empty_message`` → swap the base string, ``read_only`` → suppress
-    mutation affordances, etc.).
+    mutation affordances, ``action_primary`` → CREATE CTA route/label).
 
     Mutates ``req_table`` in place. Safe to call with empty dicts or
     empty user_roles — it's a no-op in both cases. Designed to be
@@ -321,8 +321,16 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
     persona_empty = getattr(req_table, "persona_empty_messages", None) or {}
     persona_hide = getattr(req_table, "persona_hide", None) or {}
     persona_read_only = getattr(req_table, "persona_read_only", None) or set()
+    persona_create_urls = getattr(req_table, "persona_create_urls", None) or {}
+    persona_create_labels = getattr(req_table, "persona_create_labels", None) or {}
 
-    if not persona_empty and not persona_hide and not persona_read_only:
+    if (
+        not persona_empty
+        and not persona_hide
+        and not persona_read_only
+        and not persona_create_urls
+        and not persona_create_labels
+    ):
         return
 
     for role in user_roles:
@@ -348,11 +356,22 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
                         col.hidden = True
             matched = True
 
+        # action_primary → list-header CREATE CTA (route + optional label).
+        # Compiled only for CREATE-mode targets; EDIT/VIEW stay unapplied.
+        # Applied *before* read_only so a read_only persona still ends with
+        # create suppressed (read_only wins).
+        if normalised in persona_create_urls:
+            req_table.create_url = persona_create_urls[normalised]
+            matched = True
+        if normalised in persona_create_labels:
+            req_table.create_label = persona_create_labels[normalised]
+            matched = True
+
         # Read-only persona declaration (cycle 244). Suppresses every
         # mutation affordance on the table: Create button, bulk-action
         # bar, and inline-edit. Distinct from ``_should_suppress_mutations``
         # which gates on ``permit:`` rules — this is an explicit DSL
-        # persona-variant declaration and takes precedence.
+        # persona-variant declaration and takes precedence over action_primary.
         if normalised in persona_read_only:
             req_table.create_url = None
             req_table.bulk_actions = False
@@ -1672,6 +1691,8 @@ def _build_dispatch_ctx(
             # adapter can emit a Create link required by the UX
             # contract checker (rbac:<Entity>:<persona>:create).
             "create_url": getattr(table, "create_url", "") or "",
+            # Persona action_primary / surface title override for the CTA label.
+            "create_label": getattr(table, "create_label", "") or "",
             # #1487: the entity's declared display title for the "New <Entity>"
             # create CTA (so it reads "New Curriculum Plan", not the raw class
             # name). Empty → adapter humanises entity_name.

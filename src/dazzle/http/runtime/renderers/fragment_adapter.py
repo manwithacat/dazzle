@@ -131,6 +131,7 @@ class FragmentSurfaceAdapter:
         entity_name = (getattr(surface, "entity_ref", "") or "").strip()
         entity_title = str(ctx.get("entity_title", "") or "")
         create_url = str(ctx.get("create_url", "") or "").strip()
+        create_label = str(ctx.get("create_label", "") or "").strip()
         page_size = int(ctx.get("page_size", 20) or 20)
         endpoint = str(ctx.get("endpoint", "") or "").strip()
         region_name = str(ctx.get("region_name", "") or "").strip()
@@ -287,6 +288,7 @@ class FragmentSurfaceAdapter:
                     href=URL(create_url),
                     entity_name=entity_name,
                     entity_title=entity_title,
+                    label=create_label,
                 )
             )
         header: Fragment = (

@@ -845,6 +845,7 @@ def _compile_list_surface(
     app_prefix: str,
     enums: list[ir.EnumSpec] | None = None,
     entities_with_create_surface: frozenset[str] | None = None,
+    surfaces_by_name: dict[str, ir.SurfaceSpec] | None = None,
 ) -> PageContext:
     """Compile a LIST mode surface to a PageContext with table context."""
     ux = surface.ux
@@ -878,8 +879,8 @@ def _compile_list_surface(
         )
 
     # Per-persona PersonaVariant overrides (cycle 240 pilot + cycle 243
-    # extension). Collect both `empty_message` and `hide` from every
-    # variant and ship them as dicts to the TableContext; the per-request
+    # extension + action_primary). Collect overrides from every variant
+    # and ship them as dicts to the TableContext; the per-request
     # resolver in page_routes.py looks up the current user's persona and
     # applies the overrides before rendering. This is the canonical
     # compile-dict-then-resolve-per-request pattern and is the
@@ -888,6 +889,10 @@ def _compile_list_surface(
     persona_empty_messages: dict[str, str] = {}
     persona_hide: dict[str, list[str]] = {}
     persona_read_only: set[str] = set()
+    persona_action_primary: dict[str, str] = {}
+    persona_create_urls: dict[str, str] = {}
+    persona_create_labels: dict[str, str] = {}
+    _surfaces = surfaces_by_name or {}
     if ux and ux.persona_variants:
         for _variant in ux.persona_variants:
             if _variant.empty_message:
@@ -896,6 +901,20 @@ def _compile_list_surface(
                 persona_hide[_variant.persona] = list(_variant.hide)
             if _variant.read_only:
                 persona_read_only.add(_variant.persona)
+            if _variant.action_primary:
+                persona_action_primary[_variant.persona] = _variant.action_primary
+                # Resolve CREATE-mode targets to a concrete list-header CTA
+                # route + label (surface title). EDIT/VIEW targets stay as
+                # names only — they need a record id the list header lacks.
+                target = _surfaces.get(_variant.action_primary)
+                if target is not None and target.mode == SurfaceMode.CREATE:
+                    t_entity = target.entity_ref or entity_name
+                    t_slug = app_paths.entity_slug(t_entity)
+                    persona_create_urls[_variant.persona] = app_paths.create_path(
+                        app_prefix, t_slug
+                    )
+                    if target.title:
+                        persona_create_labels[_variant.persona] = target.title
 
     table_id = f"dt-{surface.name}"
 
@@ -955,6 +974,9 @@ def _compile_list_surface(
             persona_empty_messages=persona_empty_messages,
             persona_hide=persona_hide,
             persona_read_only=persona_read_only,
+            persona_action_primary=persona_action_primary,
+            persona_create_urls=persona_create_urls,
+            persona_create_labels=persona_create_labels,
             search_first=search_first,
             table_id=table_id,
             inline_editable=inline_editable,
@@ -1338,6 +1360,7 @@ def compile_surface_to_context(
     poly_refs: list[tuple[str, str, str, str, ir.EntitySpec]] | None = None,
     enums: list[ir.EnumSpec] | None = None,
     entities_with_create_surface: frozenset[str] | None = None,
+    surfaces_by_name: dict[str, ir.SurfaceSpec] | None = None,
 ) -> PageContext:
     """
     Convert a Surface IR to a PageContext for template rendering.
@@ -1372,6 +1395,7 @@ def compile_surface_to_context(
             app_prefix,
             enums,
             entities_with_create_surface=entities_with_create_surface,
+            surfaces_by_name=surfaces_by_name,
         )
     elif surface.mode in (SurfaceMode.CREATE, SurfaceMode.EDIT):
         return _compile_form_surface(
@@ -1615,6 +1639,7 @@ def compile_appspec_to_templates(
                                 )
 
     _route_surfaces: dict[str, ir.SurfaceSpec] = {}
+    _surfaces_by_name: dict[str, ir.SurfaceSpec] = {s.name: s for s in appspec.surfaces}
 
     for surface in appspec.surfaces:
         entity: ir.EntitySpec | None = None
@@ -1630,6 +1655,7 @@ def compile_appspec_to_templates(
             poly_refs=_poly_refs.get(entity_name),
             enums=list(appspec.enums) if appspec.enums else None,
             entities_with_create_surface=_entities_with_create_surface,
+            surfaces_by_name=_surfaces_by_name,
         )
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items
