@@ -282,6 +282,17 @@ def _emit_root_only_html(part_id: str) -> str:
         }
         row = {"id": str(uuid.uuid4()), "title": "x"}
         return render_data_table_rows(build_data_table(table, [row]))
+    if part_id == "confirm":
+        # Real list-row delete affordance emits hx-confirm (contracts/confirm.py root).
+        table = {
+            "columns": [{"key": "title", "label": "Title", "type": "text"}],
+            "entity_name": "Ticket",
+            "api_endpoint": "/tickets",
+            "table_id": "t-confirm",
+            "detail_url_template": "/app/ticket/{id}",
+        }
+        row = {"id": str(uuid.uuid4()), "title": "x"}
+        return render_data_table_rows(build_data_table(table, [row]))
     raise AssertionError(f"no fixture builder for root-only part {part_id!r}")
 
 

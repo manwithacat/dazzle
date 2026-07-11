@@ -38,6 +38,7 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/app_shell.py", "app_shell", True),
     ("contracts/command.py", "command", True),
     ("contracts/confirm_panel.py", "confirm_panel", True),
+    ("contracts/confirm.py", "confirm", True),  # list-row delete hx-confirm (#1582)
     ("contracts/tabs.py", "tabs", True),
     ("contracts/dialog.py", "dialog", True),
     ("contracts/grid.py", "grid", True),
@@ -52,7 +53,6 @@ DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
     ("contracts/wizard.py", "page-layer experience_renderer only"),
     ("contracts/pdf.py", "page-layer pdf_viewer_renderer (not Fragment)"),
     ("contracts/master_detail.py", "no stable Dazzle emission site yet"),
-    ("contracts/confirm.py", "hx-confirm attribute path, not data-dz root"),
 ]
 
 

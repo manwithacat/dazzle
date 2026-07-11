@@ -80,14 +80,28 @@ Reservoir metric (`scripts/hm_tailwind_reservoir.py`): **GRANDTOTAL 0** — migr
 - Prefer monorepo edits in `packages/hatchi-maxchi/`; subtree sync remains the publish path.
 - Update this plan’s “Progress” section when a phase exits.
 
+## Cost model (subscription-first)
+
+Prefer **in-subscription** paths over metered vision/LLM APIs:
+
+| Task | Preferred | Avoid (unless credits intentional) |
+|------|-----------|-------------------------------------|
+| Screenshots | Playwright (`dazzle qa capture`, `scripts/hm_visual_smoke.py`) | — |
+| Visual judgment | Host-harness subagent **Read**s PNGs | `dazzle qa component-vision` / `taste-panel` |
+| Regression | Dual-locks + gate suite + pixel-diff of captures | Vision score deltas as ship gates |
+| Explore fleet UX | `visual_tier2_subagent` strategy | API-bound visual scrape CLIs |
+
+`scripts/hm_visual_smoke.py` renders dual-locked exemplars with local HM dist +
+Playwright full-page PNG — no Anthropic/OpenAI call.
+
 ## Progress
 
 | Phase | Status | Issue | Notes |
 |-------|--------|------:|-------|
-| A | **Done** | #1581 | Plan + `tools/dual_lock_coverage.py` + `DUAL_LOCK_COVERAGE.md` |
-| B | **Next** | #1582 | Deferred → DOM-only; contract scaffold |
+| A | **Done** | #1581 | Plan + coverage generator + map + gate test |
+| B | **In progress** | #1582 | `confirm` → DOM-only dual-lock; scaffold tool; visual smoke |
 | C | Not started | #1583 | Reservoir port suggestions |
-| D | Not started | #1584 | Taste closed-loop |
+| D | Not started | #1584 | Taste closed-loop (subscription Read path first) |
 
 **Epic:** #1580
 
@@ -101,3 +115,5 @@ Reservoir metric (`scripts/hm_tailwind_reservoir.py`): **GRANDTOTAL 0** — migr
 - Improve lane: `.claude/commands/improve/lanes/hm-convergence.md`
 - Vision: `src/dazzle/qa/taste_panel.py`, `component_vision.py`, `property_vision.py`
 - Contract authoring: `packages/hatchi-maxchi/contracts/AUTHORING.md`
+- Contract scaffold: `packages/hatchi-maxchi/tools/scaffold_contract.py`
+- Subscription visual smoke: `scripts/hm_visual_smoke.py`

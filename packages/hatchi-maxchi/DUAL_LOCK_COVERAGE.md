@@ -12,8 +12,8 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Controllers | 19 |
 | Contract modules | 19 |
 | Dual-lock schema+DOM | 4 |
-| Dual-lock DOM-only | 11 |
-| Dual-lock deferred | 4 |
+| Dual-lock DOM-only | 12 |
+| Dual-lock deferred | 3 |
 | Contract with no dual-lock row | 0 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
@@ -26,7 +26,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `color` | `color.py` | `dz-color.js` | yes | no | no | **DOM-only** |
 | `combobox` | `combobox.py` | `dz-combobox.js` | yes | yes | yes | **schema+DOM** |
 | `command` | `command.py` | `dz-command.js` | yes | no | no | **DOM-only** |
-| `confirm` | `confirm.py` | `dz-confirm.js` | yes | no | no | **deferred** |
+| `confirm` | `confirm.py` | `dz-confirm.js` | yes | no | no | **DOM-only** |
 | `confirm_panel` | `confirm_panel.py` | `—` | yes | no | no | **DOM-only** |
 | `dialog` | `dialog.py` | `dz-dialog.js` | yes | no | no | **DOM-only** |
 | `grid` | `grid.py` | `dz-grid.js` | yes | no | no | **DOM-only** |
