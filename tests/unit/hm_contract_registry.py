@@ -1,7 +1,12 @@
-"""Shared HM↔Dazzle contract-model registry for dual-lock gates.
+"""Shared HM↔Dazzle contract registries for dual-lock gates.
 
-Adding a model-bearing contract = one row here + an ingest seam copy +
-a DOM fixture — not a new gate file.
+**Model-bearing** (schema parity + DOM): one ``CONTRACT_MODELS`` row +
+ingest seam copy + DOM fixture.
+
+**Root-only** (DOM only, #1578): one ``DOM_ONLY_CONTRACTS`` row + a fixture
+callable in ``test_hm_contract_dom_conformance`` — no fake Pydantic model,
+no schema parity. Root-only modules without a stable Dazzle emission path
+are listed in ``DOM_ONLY_DEFERRED`` (inventory only).
 """
 
 from __future__ import annotations
@@ -21,6 +26,33 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
     ("contracts/combobox.py", "ComboboxField", "dazzle.render.fragment.ingest", "ComboboxField"),
     ("contracts/tags.py", "TagsField", "dazzle.render.fragment.ingest", "TagsField"),
     ("contracts/money.py", "MoneyField", "dazzle.render.fragment.ingest", "MoneyField"),
+]
+
+# Root-only Hyperparts with a stable Dazzle emission path.
+# (hm_rel_path, part_id, require_root)
+# Fixture builders live in test_hm_contract_dom_conformance (keyed by part_id).
+DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
+    ("contracts/slider.py", "slider", True),
+    ("contracts/color.py", "color", True),
+    ("contracts/search_select.py", "search_select", True),
+    ("contracts/app_shell.py", "app_shell", True),
+    ("contracts/command.py", "command", True),
+    ("contracts/confirm_panel.py", "confirm_panel", True),
+]
+
+# Root-only modules without a simple FragmentRenderer / page fixture yet.
+# Keep as inventory so the drain is greppable; add a DOM_ONLY_CONTRACTS row
+# when a stable emission site exists.
+DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
+    ("contracts/dialog.py", "needs detail-row / data-dz-dialog-open fixture"),
+    ("contracts/tabs.py", "no Dazzle data-dz-tabs emitter yet"),
+    ("contracts/wizard.py", "page-layer experience_renderer only"),
+    ("contracts/pdf.py", "page-layer pdf_viewer_renderer (not Fragment)"),
+    ("contracts/grid.py", "root-only thin; covered by grid_edit dual lock"),
+    ("contracts/grid_cols.py", "needs full data-table chrome fixture"),
+    ("contracts/grid_resize.py", "needs full data-table chrome fixture"),
+    ("contracts/master_detail.py", "no stable Dazzle emission site yet"),
+    ("contracts/confirm.py", "hx-confirm attribute path, not data-dz root"),
 ]
 
 

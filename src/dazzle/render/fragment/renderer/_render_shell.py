@@ -272,8 +272,10 @@ class _RenderShellMixin:
             # there is no Esc key. dz-command.js provides the cross-browser
             # backdrop/close handlers. input/close/results stay DOM-order
             # siblings so `next .dz-command__results` resolves.
+            # HM command DOM_CONTRACT root is [data-dz-command] (#1578).
             parts.append(
-                '<dialog class="dz-command" aria-label="Command palette" closedby="any">'
+                '<dialog class="dz-command" data-dz-command '
+                'aria-label="Command palette" closedby="any">'
                 '<div class="dz-command__bar">'
                 '<input class="dz-command__input" type="search" name="q" '
                 'placeholder="Search workspaces and records…" autocomplete="off" '

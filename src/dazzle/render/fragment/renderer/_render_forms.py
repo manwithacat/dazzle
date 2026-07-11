@@ -513,8 +513,9 @@ class _RenderFormsMixin:
         # State-in-DOM (Tier F4e): the hex readout SSRs the initial value
         # and dz-color.js mirrors future input — the x-data island retired
         # with the Alpine runtime.
+        # HM color DOM_CONTRACT root is [data-dz-color-group] (#1578).
         inner = (
-            f'<div class="dz-form-color-group">'
+            f'<div class="dz-form-color-group" data-dz-color-group>'
             f'<input type="color" id="field-{name}" name="{name}" '
             f'class="dz-form-color-input" value="{init_attr}"{required_attr}>'
             '<span class="dz-form-color-hex" aria-hidden="true">'

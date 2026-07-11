@@ -6,12 +6,18 @@ against contracts/grid_edit.py's DOM_CONTRACT (fragment mode — the grid
 root is page furniture, validated in HM's own exemplar tests)."""
 
 import uuid
+from pathlib import Path
 
 import pytest
 
 from dazzle.http.runtime.handlers.list_handlers import build_data_table
 from dazzle.render.fragment.renderer._data_row import render_data_table_rows
-from tests.unit.hm_contract_registry import REPO_ROOT, load_hm_module
+from tests.unit.hm_contract_registry import (
+    DOM_ONLY_CONTRACTS,
+    DOM_ONLY_DEFERRED,
+    REPO_ROOT,
+    load_hm_module,
+)
 
 pytestmark = pytest.mark.gate
 
@@ -183,3 +189,75 @@ def test_money_field_selector_conforms_to_money_contract() -> None:
     assert 'data-dz-currency="USD"' in html
     assert 'data-dz-scale="2"' in html
     assert 'name="fee_currency"' in html
+
+
+# ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────
+# No Pydantic models — validate real Dazzle emission against DOM_CONTRACT
+# with require_root=True so empty-attr nodes can't soft-pass.
+
+
+def _emit_root_only_html(part_id: str) -> str:
+    """Build HTML for a root-only part via the real Dazzle emission path."""
+    from dazzle.render.fragment import AppShell, Surface, Text
+    from dazzle.render.fragment.htmx import URL
+    from dazzle.render.fragment.primitives.data import ConfirmCheckItem, ConfirmGate
+    from dazzle.render.fragment.primitives.forms import (
+        ColorField,
+        SearchSelect,
+        SliderField,
+    )
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    r = FragmentRenderer()
+    if part_id == "slider":
+        return r.render(SliderField(name="vol", label="Volume", initial_value="40"))
+    if part_id == "color":
+        return r.render(ColorField(name="accent", label="Accent", initial_value="#3b82f6"))
+    if part_id == "search_select":
+        return r.render(
+            SearchSelect(name="owner", label="Owner", endpoint=URL("/api/owners"), min_chars=1)
+        )
+    if part_id == "app_shell":
+        return r.render(AppShell(body=Surface(header=Text("h"), body=Text("b"))))  # type: ignore[arg-type]
+    if part_id == "command":
+        return r.render(
+            AppShell(
+                body=Surface(header=Text("h"), body=Text("b")),
+                command_endpoint="/app/command",
+            )
+        )  # type: ignore[arg-type]
+    if part_id == "confirm_panel":
+        return r.render(
+            ConfirmGate(
+                state="off",
+                confirmations=(ConfirmCheckItem(title="I understand", required=True),),
+                primary_action_url="/confirm",
+            )
+        )
+    raise AssertionError(f"no fixture builder for root-only part {part_id!r}")
+
+
+@pytest.mark.parametrize(
+    ("hm_path", "part_id", "require_root"),
+    DOM_ONLY_CONTRACTS,
+    ids=[row[1] for row in DOM_ONLY_CONTRACTS],
+)
+def test_root_only_dazzle_emission_conforms(hm_path: str, part_id: str, require_root: bool) -> None:
+    """#1578: stable Dazzle emitters must satisfy root-only HM DOM_CONTRACTs."""
+    pytest.importorskip("fastapi")
+    mod = load_hm_module(hm_path)
+    html = _emit_root_only_html(part_id)
+    violations = _KIT.validate_dom(html, mod.DOM_CONTRACT, require_root=require_root)
+    assert not violations, violations
+
+
+def test_root_only_deferred_inventory_is_documented() -> None:
+    """Deferred root-only modules stay inventored (not silently forgotten)."""
+    assert DOM_ONLY_DEFERRED, "expected deferred inventory for undrained root-only parts"
+    # Every deferred path must exist on disk under packages/hatchi-maxchi/
+    for rel, _why in DOM_ONLY_DEFERRED:
+        assert (REPO_ROOT / "packages" / "hatchi-maxchi" / rel).is_file(), rel
+    # Covered and deferred sets are disjoint by part stem
+    covered = {Path(p).stem for p, _, _ in DOM_ONLY_CONTRACTS}
+    deferred = {Path(p).stem for p, _ in DOM_ONLY_DEFERRED}
+    assert covered.isdisjoint(deferred), covered & deferred
