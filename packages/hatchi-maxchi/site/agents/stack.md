@@ -4,6 +4,8 @@ Vertical rhythm: children flow top-to-bottom with one gap token. The workhorse �
 
 > **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
 
+> **Demo vs contract:** Live gallery behaviour may use `/mock/*` or flash toasts. Those are **offline demos only** — implement **Server exchange** + **DOM contract**, not the mock. See AGENTS.md › Gallery demos.
+
 ## Copy this
 
 ```html

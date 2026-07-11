@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM gallery mock ≠ contract (agent anti-pattern)** — AGENTS.md table +
+  Server exchange callout + agent-pack banner: do not reimplement toasts /
+  `/mock/*`; implement the exchange response fragment instead.
 - **HM search-select confirm hold** — rename to `data-dz-confirm-hold-ms`
   (alias `…-dwell-ms`); unify blur-grace + hold on one cancellable timer
   and mark result-row `pointerdown` as selecting so blur cannot race the

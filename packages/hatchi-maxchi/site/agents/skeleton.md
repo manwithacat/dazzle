@@ -4,6 +4,8 @@ Loading placeholder with a lifecycle-driven sheen (TASTE-9) — drop it into a s
 
 > **Dialect:** Partial below is **unprefixed** (gallery / standalone HM). DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` (Dazzle dual-lock). Match the CSS/JS bundle you load.
 
+> **Demo vs contract:** Live gallery behaviour may use `/mock/*` or flash toasts. Those are **offline demos only** — implement **Server exchange** + **DOM contract**, not the mock. See AGENTS.md › Gallery demos.
+
 ## Copy this
 
 ```html

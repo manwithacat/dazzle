@@ -225,7 +225,8 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
                 '<p class="hm-ref-lead">HTMX4 / standalone HM: return HTML fragments. '
                 "Dazzle often emits this for you from the model; agents building a "
                 "plain FastAPI app should match this shape. "
-                "Not a dual-lock module — application code.</p>"
+                "Not a dual-lock module — application code. "
+                "Not a gallery mock.</p>"
                 + render_code_block(
                     e.server_example.strip() + "\n",
                     language="python",
@@ -235,11 +236,19 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     return (
         head + f'<p class="hm-ref-lead">When the client {_term("affordance")} finishes '
         "(click, confirm, keystroke…), htmx issues <strong>this</strong> request. "
-        "Your API must return the response fragment described below — usually HTML, "
-        "not JSON (unless the partial says otherwise). Gallery mocks (toasts, "
-        "<code>/mock/*</code>) are not the contract. Dazzle often renders these "
-        "routes from the app model; a standalone HTMX4 app implements them "
-        "explicitly.</p>"
+        "Your API must return the <strong>response fragment</strong> in the table — "
+        "usually HTML, not JSON (unless the partial says otherwise). "
+        "Dazzle often renders these routes from the app model; a standalone HTMX4 "
+        "app implements them explicitly.</p>"
+        '<p class="hm-ref-lead hm-ref-lead--warn" role="note">'
+        "<strong>Do not reimplement the gallery.</strong> "
+        "Flash toasts (e.g. “Deleted (demo).”), <code>/mock/*</code> paths, and "
+        "other static-site scaffolding are <em>demo-only</em> "
+        "(<code>MOCK_HTMX</code> in <code>site/build_site.py</code>). "
+        "They are not Hyperpart surface and not a product API. "
+        "If an agent is stuck “making the toast work,” stop — implement the "
+        "exchange row below instead."
+        "</p>"
         '<table class="hm-contract-table"><thead><tr>'
         "<th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th>"
         f"</tr></thead><tbody>{''.join(rows)}</tbody></table>" + "".join(examples) + "</section>"
@@ -615,6 +624,15 @@ def _part_page_meta_footer(prefix: str, part_id: str) -> str:
         "explain on hover or keyboard focus — fundamental hypermedia, not a "
         "black box. Tips are non-critical; section prose and tables are the contract."
     )
+    mock_vs_contract = (
+        "The live demo runs on a <strong>static mock</strong> "
+        "(<code>/mock/*</code>, flash toasts like “Deleted (demo).”). "
+        "That scaffolding is offline-gallery only — not a Hyperpart, not an API "
+        "to reimplement. Production implements the "
+        f'<a href="#exchange">{_term("exchange")}</a> response fragment '
+        "(and optional FastAPI example). Agents: if Notes say “gallery-only” or "
+        "<code>MOCK_HTMX</code>, do not invent a toast service for it."
+    )
     stack = (
         f'<strong>HaTchi-MaXchi</strong> <a href="{_HM_REPO}/releases/tag/{tag}">'
         f"<code>{_html.escape(tag)}</code></a> "
@@ -672,6 +690,10 @@ def _part_page_meta_footer(prefix: str, part_id: str) -> str:
         '<div class="hm-page-meta__item">'
         "<dt>Glossary</dt>"
         f"<dd>{glossary}</dd>"
+        "</div>"
+        '<div class="hm-page-meta__item hm-mock-vs-contract">'
+        "<dt>Demo vs contract</dt>"
+        f"<dd>{mock_vs_contract}</dd>"
         "</div>"
         '<div class="hm-page-meta__item">'
         "<dt>Stack</dt>"
@@ -790,6 +812,10 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
         "DOM contract Python often uses the **source token** `data-dz-*` / `dz-*` "
         "(Dazzle dual-lock). Match the CSS/JS bundle you load.",
         "",
+        "> **Demo vs contract:** Live gallery behaviour may use `/mock/*` or flash "
+        "toasts. Those are **offline demos only** — implement **Server exchange** "
+        "+ **DOM contract**, not the mock. See AGENTS.md › Gallery demos.",
+        "",
         "## Copy this",
         "",
         "```html",
@@ -809,9 +835,17 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
     else:
         lines += [
             "When the client affordance finishes, htmx issues **this** request. "
-            "Return the HTML fragment described (not gallery mock toasts). "
+            "Return the **response fragment** in the table (usually HTML, not JSON). "
             "Dazzle often implements these from the app model; a standalone HTMX4 "
             "app implements them explicitly.",
+            "",
+            "> **Do not reimplement the gallery.** Flash toasts (e.g. confirm’s "
+            "> “Deleted (demo).”), `/mock/*` paths, and other static-site "
+            "> scaffolding are **demo-only** (`MOCK_HTMX` in `site/build_site.py`). "
+            "> They are not Hyperpart surface and not a product API. If you are "
+            "> stuck making a toast or mock URL work, stop — implement the "
+            "> exchange row below instead. See AGENTS.md › *Gallery demos are not "
+            "> the product API*.",
             "",
             "| Request | Trigger | Response fragment | Swap | States |",
             "|---|---|---|---|---|",
@@ -1616,6 +1650,13 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-ref { margin-top: 1.25rem; }
 .hm-ref-lead { font-size: var(--text-sm); color: var(--colour-text-muted);
   margin: 0 0 .75rem; max-width: 46rem; line-height: 1.55; }
+.hm-ref-lead--warn {
+  color: var(--colour-text);
+  border-inline-start: 3px solid var(--colour-warning, var(--colour-brand));
+  padding: .55rem .75rem;
+  background: var(--colour-warning-soft, var(--colour-surface));
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
 .hm-ref-mod { font-family: var(--font-mono); font-weight: var(--weight-medium); }
 /* Glossary terms — human confidence on agent-primary pages (non-critical).
    Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */

@@ -59,10 +59,29 @@ paste `contracts/*.py` dual-lock modules into app routes.
   markup (root attrs / ingestion model). It is **package-internal**
   (`contracts._kit`) — not the FastAPI handler you write for a product.
   **Server exchange** (and optional `server_example` FastAPI snippets on
-  the part page) is what a standalone HTMX4 API implements. Gallery mocks
-  are not contracts.
+  the part page) is what a standalone HTMX4 API implements.
 - **Dialect:** gallery partials are unprefixed; Dazzle dual-lock is
   `dz-` / `data-dz-*`. Match the CSS/JS bundle you load.
+
+### Gallery demos are not the product API (anti-pattern)
+
+The static gallery uses a **mock htmx** (`MOCK_HTMX` in `site/build_site.py`)
+so demos work offline. That mock invents scaffolding that **is not** Hyperpart
+surface and **must not** be reimplemented in an app:
+
+| Gallery-only (ignore for production) | Real contract (implement this) |
+|---|---|
+| `/mock/*` endpoints | **Server exchange** table + optional `server_example` |
+| Flash toasts (e.g. confirm’s “Deleted (demo).”) | Exchange **response fragment** (row delete, empty-state, confirm hold, …) |
+| Canned HTML strings in the mock map | Markup that satisfies **DOM contract** / `Copy this` |
+| `hm-toast`, demo-only chrome | Your app’s real success/error UX (if any) |
+
+**Agent trap:** spending turns inventing a toast API, a `/mock/…` route, or
+“how do I make the gallery toast appear?” — stop. Read the **Server exchange**
+section: return that HTML fragment (or the empty/OOB shape it describes). Dazzle
+often emits those routes from the app model; standalone HTMX4 apps write them
+explicitly. If Notes call something “gallery-only” / `MOCK_HTMX`, treat it as
+documentation of the demo, not a requirement.
 - The snippets ship unprefixed by default. `build.py --prefix dz-`
   (or any prefix) renamespaces classes, data-attributes, and keyframes
   consistently — pick one and stay with it.

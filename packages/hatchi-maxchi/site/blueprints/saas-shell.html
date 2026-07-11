@@ -42,6 +42,13 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-ref { margin-top: 1.25rem; }
 .hm-ref-lead { font-size: var(--text-sm); color: var(--colour-text-muted);
   margin: 0 0 .75rem; max-width: 46rem; line-height: 1.55; }
+.hm-ref-lead--warn {
+  color: var(--colour-text);
+  border-inline-start: 3px solid var(--colour-warning, var(--colour-brand));
+  padding: .55rem .75rem;
+  background: var(--colour-warning-soft, var(--colour-surface));
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
 .hm-ref-mod { font-family: var(--font-mono); font-weight: var(--weight-medium); }
 /* Glossary terms — human confidence on agent-primary pages (non-critical).
    Product data-tooltip is nowrap; these wrap for short ELI5 paragraphs. */
