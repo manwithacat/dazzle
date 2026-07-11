@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.101.38] - 2026-07-11
+
+### Added
+- **#1578 root-only Hyperpart DOM conformance** — `DOM_ONLY_CONTRACTS`
+  registry drives fixtures for slider, color, search_select, app_shell,
+  command, confirm_panel (real FragmentRenderer emission, `require_root=True`).
+  Deferred inventory for dialog/tabs/wizard/pdf/grid chrome/master_detail.
+
+### Fixed
+- **Color field** emits `data-dz-color-group` (HM color `DOM_CONTRACT` root).
+- **Command palette** dialog emits `data-dz-command` (HM command root).
+
+### Agent Guidance
+- Root-only dual lock: add a `DOM_ONLY_CONTRACTS` row + fixture builder —
+  no schema parity model. Keep `DOM_ONLY_DEFERRED` current when skipping.
+
 ## [0.101.37] - 2026-07-11
 
 ### Changed
