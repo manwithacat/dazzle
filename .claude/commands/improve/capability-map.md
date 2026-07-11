@@ -173,3 +173,19 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > product findings (TR-*) only landed when rule 6 had no STALE queue — healthy, but
 > the next explore budget should prefer OWNED-IDLE first-exercise over re-stamping
 > recently USED rows once the queue is clear again.
+
+> **Capability-sweep cycle 296 (2026-07-11).** Sweep due (20 cycles since 276). Re-derived
+> inventory: `dazzle --help` (+ `qa`/`deploy`), MCP **35 tools** (unchanged), `.claude`
+> skills/commands. **No newly-built loop capability** since 276. Graduations since 276:
+> `rhythm` OWNED-IDLE→USED@278, `story` OWNED-IDLE→USED@289; remaining never-exercised
+> OWNED-IDLE ~**16** (`qa capture`/`login`/`taste-panel`/`component-vision`/
+> `property-vision`, `sentinel mutate`/`scan`, `test-design`/`pulse`/`fitness` CLI,
+> `discovery`/`composition`/`sweep`/`nightly`, `/fuzz`/`/smells`/`/xproject`). Product
+> fixes: **none** in the 277–295 window (pure un-STALE rotation + self-audit 284).
+> STALE recompute (threshold ≤276): **none** flip — lag-max among USED is rbac@277
+> (lag 19). Explore budget mid-run ~53/100. **Hard governance finding:** the loop has
+> now spent ~40 cycles almost exclusively re-stamping STALE USED capabilities; with
+> product TR backlog empty and no new UNOWNED, rule 6 is correctly busy but delivers
+> little product value. Prefer first-exercise of remaining OWNED-IDLE when no STALE
+> (and after stamping lag-19s, bias next cycles to IDLE not re-rotation of the same
+> set). Operator EXEMPT still: `deploy heroku`, auth/db, `/ship`/`/check`/`/bump`.
