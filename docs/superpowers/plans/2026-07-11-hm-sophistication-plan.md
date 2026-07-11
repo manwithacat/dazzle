@@ -111,7 +111,9 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 | C | **Done** | #1583 | `--suggest` + `hm_css_classify.py` (load-bearing + token literals) |
 | D | **Done** | #1584 | Subscription smoke + last-run pointer; taste.md ship-vs-advisory policy |
 
-**Epic:** #1580 — phases A–D complete. Metered vision score persistence remains
+**Epic:** #1580 — phases A–D complete.
+
+**Follow-on (2026-07-11):** `search_select` promoted DOM-only → schema+DOM (ingest `SearchResultRow`/`SearchSelectShell` + fragment search route). Dual-lock schema+DOM count: 5. Metered vision score persistence remains
 optional follow-on if API credits are intentional (not required for D exit).
 
 ## Related paths

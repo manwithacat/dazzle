@@ -13,6 +13,7 @@ from starlette.responses import Response
 
 from dazzle.core import ir
 from dazzle.core.http_client import async_retrying_request
+from dazzle.render.fragment.ingest import SearchResultRow, render_search_result_list
 
 logger = logging.getLogger(__name__)
 
@@ -125,47 +126,44 @@ def create_fragment_router(
             secondary_key = source_config.get("secondary_key", "")
             field_name = request.query_params.get("field_name", source)
 
-            # Phase 4 (v0.67.62): inline-render with stdlib html.escape.
-            import html as _html_mod
-
             # #1547: propagate the widget's field name so the selection
             # round-trip targets the field-keyed ids.
+            # Schema+DOM dual-lock: map each hit into SearchResultRow and
+            # emit via the shared HM-faithful renderer (ingest seam).
             from urllib.parse import quote_plus as _qp
 
             select_endpoint = (
                 f"/_dazzle/fragments/select?source={source}&field_name={_qp(field_name)}"
             )
+            results_target = f"#search-results-{field_name}"
             if items:
-                rows: list[str] = []
+                model_rows: list[SearchResultRow] = []
                 for item in items:
                     val = item.get(value_key)
-                    val_attr = _html_mod.escape(str(val), quote=True)
-                    display = _html_mod.escape(str(item.get(display_key, "")), quote=False)
-                    secondary_html = ""
+                    secondary = ""
                     if secondary_key:
                         sec = item.get(secondary_key)
                         if sec:
-                            secondary_html = (
-                                f'<div class="dz-search-result-secondary">'
-                                f"{_html_mod.escape(str(sec), quote=False)}</div>"
-                            )
-                    href = f"{_html_mod.escape(select_endpoint, quote=True)}&amp;id={val_attr}"
-                    rows.append(
-                        f'<div class="dz-search-result-row" '
-                        f'hx-get="{href}" '
-                        f'hx-target="#search-results-{_html_mod.escape(field_name, quote=True)}" '
-                        f'hx-swap="innerHTML">'
-                        f'<div class="dz-search-result-name">{display}</div>'
-                        f"{secondary_html}"
-                        f"</div>"
+                            secondary = str(sec)
+                    model_rows.append(
+                        SearchResultRow(
+                            id=str(val),
+                            name=str(item.get(display_key, "")),
+                            secondary=secondary,
+                            select_url=f"{select_endpoint}&id={val}",
+                            results_target=results_target,
+                        )
                     )
-                html = "".join(rows)
+                html = render_search_result_list(model_rows)
             else:
-                if q:
-                    msg = f'No results found for "{_html_mod.escape(str(q), quote=False)}"'
-                else:
-                    msg = f"Type at least {min_chars} characters to search..."
-                html = f'<div class="dz-search-result-empty">{msg}</div>'
+                html = render_search_result_list([], empty_q=str(q) if q else "")
+                if not q:
+                    # Preserve the request's min_chars in the empty prompt
+                    # (HM default is 3; Dazzle passes the query param).
+                    html = (
+                        f'<div class="dz-search-result-empty">'
+                        f"Type at least {int(min_chars)} characters to search...</div>"
+                    )
             return _html(html)
 
         except Exception as e:

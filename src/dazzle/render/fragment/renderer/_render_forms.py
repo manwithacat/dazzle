@@ -30,6 +30,8 @@ from dazzle.render.fragment.ingest import (
     combobox_options_html,
     money_from_form,
     money_root_attrs,
+    search_select_root_attrs,
+    search_select_shell_from_form,
     tags_from_form,
     tags_marker_attrs,
 )
@@ -319,19 +321,17 @@ class _RenderFormsMixin:
         )
 
     def _emit_search_select(self, s: SearchSelect, ctx: RenderContext) -> str:
-        """Render a SearchSelect (`source:` typeahead) reproducing the legacy
-        `_render_search_select` DOM contract the fidelity scorer keys off:
-        `search-input-{name}` + `search-results-{name}` ids, `hx-indicator`,
-        a `delay:` debounce in `hx-trigger`, an empty-state prompt, and
-        `aria-invalid` error wiring. Open/close is state-in-DOM (Tier
-        F4b): the input SSRs `aria-expanded="false"`, the delegated HM
-        `dz-search-select.js` flips it on focusin/focusout (with the
-        200ms blur grace so a result-row click lands first), and CSS
-        hides the results panel off the attribute. Replaces the Alpine
-        `{ open }` island."""
-        name = ctx.escape_attr(s.name)
-        label_text = ctx.escape(s.label)
-        placeholder = ctx.escape_attr(s.placeholder or f"Search {s.label}...")
+        """Render a SearchSelect (`source:` typeahead) via the HM shell seam.
+
+        Core root attrs + ids/debounce/prompt come from
+        ``search_select_shell_from_form`` → ``search_select_root_attrs``
+        (schema+DOM dual-lock). Product chrome (spinner, required, min_chars
+        hx-vals, aria-label on the listbox) stays on the form primitive.
+
+        Fidelity scorer keys: ``search-input-{name}`` + ``search-results-{name}``
+        ids, ``hx-indicator``, ``delay:`` debounce, empty-state prompt.
+        Open/close is state-in-DOM via ``dz-search-select.js``.
+        """
         # #1547: the endpoint is per-SOURCE; the emitter is the only
         # place field name and endpoint meet. URL params survive
         # hx-params="q", so the search endpoint can key its result rows
@@ -339,28 +339,45 @@ class _RenderFormsMixin:
         from urllib.parse import quote_plus as _qp
 
         sep = "&" if "?" in str(s.endpoint) else "?"
-        endpoint = ctx.escape_attr(f"{s.endpoint}{sep}field_name={_qp(str(s.name))}")
-        init_id = ctx.escape_attr(s.initial_value)
-        init_display = ctx.escape_attr(s.initial_label or s.initial_value)
+        search_url = f"{s.endpoint}{sep}field_name={_qp(str(s.name))}"
+        shell = search_select_shell_from_form(
+            name=s.name,
+            search_url=search_url,
+            label=s.label,
+            placeholder=s.placeholder,
+            debounce_ms=s.debounce_ms,
+            min_chars=s.min_chars,
+            initial_value=s.initial_value,
+            initial_label=s.initial_label or s.initial_value,
+        )
+        name = ctx.escape_attr(shell.field_name)
+        label_text = ctx.escape(s.label)
+        placeholder = ctx.escape_attr(shell.placeholder)
+        endpoint = ctx.escape_attr(shell.search_url)
+        init_id = ctx.escape_attr(shell.initial_value)
+        init_display = ctx.escape_attr(shell.initial_label)
+        field_id = ctx.escape_attr(shell.field_id)
+        input_id = ctx.escape_attr(shell.input_id)
+        results_id = ctx.escape_attr(shell.results_id)
+        root = search_select_root_attrs(shell)
         required_attr = ' required aria-required="true"' if s.required else ""
         hx_min_chars = f" hx-vals='{{\"min_chars\": {s.min_chars}}}'" if s.min_chars else ""
         return (
-            '<div class="dz-search-select" '
-            'data-dz-widget="search_select">'
-            f'<input type="hidden" name="{name}" id="field-{name}" '
+            f'<div class="dz-search-select" {root}>'
+            f'<input type="hidden" name="{name}" id="{field_id}" '
             f'data-dazzle-field="{name}" value="{init_id}"{required_attr}>'
             '<input type="text" '
-            f'id="search-input-{name}" '
+            f'id="{input_id}" '
             'class="dz-search-select-input" '
             f'placeholder="{placeholder}" '
             'autocomplete="off" role="combobox" '
             'aria-expanded="false" '
-            f'aria-controls="search-results-{name}" '
+            f'aria-controls="{results_id}" '
             'aria-autocomplete="list" aria-haspopup="listbox" '
             f'value="{init_display}" '
             f'hx-get="{endpoint}" '
-            f'hx-trigger="keyup changed delay:{s.debounce_ms}ms" '
-            f'hx-target="#search-results-{name}" '
+            f'hx-trigger="keyup changed delay:{shell.debounce_ms}ms" '
+            f'hx-target="#{results_id}" '
             f'hx-indicator="#search-spinner-{name}" '
             f'hx-params="q"{hx_min_chars}>'
             f'<span id="search-spinner-{name}" '
@@ -373,12 +390,12 @@ class _RenderFormsMixin:
             '<path class="dz-spinner-head" fill="currentColor" '
             'd="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>'
             "</svg></span>"
-            f'<div id="search-results-{name}" '
+            f'<div id="{results_id}" '
             'role="listbox" '
             f'aria-label="{label_text} suggestions" '
             'class="dz-search-select-results">'
             '<div class="dz-search-select-prompt" role="option" aria-disabled="true">'
-            f"Type at least {s.min_chars} characters to search..."
+            f"{ctx.escape(shell.prompt)}"
             "</div></div></div>"
         )
 

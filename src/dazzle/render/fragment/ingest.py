@@ -7,7 +7,8 @@ copies are locked to the HM contract modules by
 equality — and the emitted DOM is locked by
 ``tests/unit/test_hm_contract_dom_conformance.py``.
 
-Seam models: ``GridEditCell``, ``ComboboxField``, ``TagsField``, ``MoneyField``.
+Seam models: ``GridEditCell``, ``ComboboxField``, ``TagsField``,
+``MoneyField``, ``SearchResultRow``, ``SearchSelectShell``.
 
 **Two layers (#1577):** form primitives in ``primitives/forms.py`` are the
 public product API (``required``, currency selector, symbol, …). These
@@ -146,6 +147,49 @@ class MoneyField(BaseModel):
     field_id: str = "money-field"
 
 
+# ── Search-select seam copies (contracts/search_select.py) ───────────
+# Schema-parity gated. Result rows map any domain record into slots;
+# the shell is the SSR seed for the typeahead widget.
+
+
+class SearchResultRow(BaseModel):
+    """One listbox option the search exchange emits.
+
+    Map *any* domain record into this shape:
+
+    - ``id`` → select-exchange query param (FK to store)
+    - ``name`` → primary line (required for AT + scan)
+    - ``secondary`` → optional meta (company no., email, SKU, …)
+    - ``media_html`` → optional leading 2rem slot (initials span, ``<img>``,
+      icon ``<svg>``). Empty string = text-only row.
+    - ``select_url`` / ``results_target`` → the row's own ``hx-get`` wiring
+    """
+
+    id: str
+    name: str
+    secondary: str = ""
+    media_html: str = ""
+    select_url: str
+    results_target: str  # e.g. "#search-results-company"
+
+
+class SearchSelectShell(BaseModel):
+    """SSR seed for the typeahead widget (before any search)."""
+
+    field_name: str
+    field_id: str = "field"
+    input_id: str = "search-input"
+    results_id: str = "search-results"
+    search_url: str
+    placeholder: str = "Search…"
+    prompt: str = "Type at least 3 characters to search..."
+    initial_value: str = ""
+    initial_label: str = ""
+    debounce_ms: int = 300
+    blur_grace_ms: int = 200
+    confirm_hold_ms: int = 1500
+
+
 # ── Form → ingest adapters (#1577) ───────────────────────────────────
 # Form primitives stay the public API; emission builds these models then
 # uses the attr helpers below for HM contract attributes.
@@ -259,3 +303,86 @@ def combobox_options_html(field: ComboboxField, *, placeholder_html: str) -> str
             f"{_html.escape(o.label)}</option>"
         )
     return "".join(opts)
+
+
+def search_select_shell_from_form(
+    *,
+    name: str,
+    search_url: str,
+    label: str = "",
+    placeholder: str = "",
+    debounce_ms: int = 300,
+    min_chars: int = 0,
+    initial_value: str = "",
+    initial_label: str = "",
+    blur_grace_ms: int = 200,
+    confirm_hold_ms: int = 1500,
+) -> SearchSelectShell:
+    """Map a form ``SearchSelect`` (or equivalent kwargs) to the HM shell seam."""
+    prompt = (
+        f"Type at least {min_chars} characters to search..."
+        if min_chars
+        else "Type at least 3 characters to search..."
+    )
+    return SearchSelectShell(
+        field_name=name,
+        field_id=f"field-{name}",
+        input_id=f"search-input-{name}",
+        results_id=f"search-results-{name}",
+        search_url=search_url,
+        placeholder=placeholder or (f"Search {label}..." if label else "Search…"),
+        prompt=prompt,
+        initial_value=initial_value,
+        initial_label=initial_label,
+        debounce_ms=debounce_ms,
+        blur_grace_ms=blur_grace_ms,
+        confirm_hold_ms=confirm_hold_ms,
+    )
+
+
+def search_select_root_attrs(shell: SearchSelectShell) -> str:
+    """Assemble search-select root widget + timing knobs — sole emitter site."""
+    return (
+        f'data-dz-widget="search_select" '
+        f'data-dz-blur-grace-ms="{shell.blur_grace_ms}" '
+        f'data-dz-confirm-hold-ms="{shell.confirm_hold_ms}"'
+    )
+
+
+def render_search_result_row(row: SearchResultRow) -> str:
+    """Model → one listbox option (search-exchange fragment unit).
+
+    Byte-faithful to ``packages/hatchi-maxchi/contracts/search_select.py``
+    ``render_result_row`` so dual-lock DOM + gallery exemplars stay one shape.
+    """
+    media = ""
+    if row.media_html.strip():
+        media = f'<div class="dz-search-result-media">{row.media_html}</div>'
+    secondary = ""
+    if row.secondary:
+        secondary = f'<div class="dz-search-result-secondary">{_html.escape(row.secondary)}</div>'
+    return (
+        f'<div class="dz-search-result-row" role="option" '
+        f'tabindex="-1" '
+        f'data-dz-result-id="{_html.escape(row.id, quote=True)}" '
+        f'hx-get="{_html.escape(row.select_url, quote=True)}" '
+        f'hx-target="{_html.escape(row.results_target, quote=True)}" '
+        f'hx-swap="innerHTML">'
+        f"{media}"
+        f'<div class="dz-search-result-body">'
+        f'<div class="dz-search-result-name">{_html.escape(row.name)}</div>'
+        f"{secondary}"
+        f"</div></div>"
+    )
+
+
+def render_search_result_list(rows: list[SearchResultRow], *, empty_q: str = "") -> str:
+    """Search exchange body: N rows, or the empty prompt."""
+    if not rows:
+        msg = (
+            f'No results found for "{_html.escape(empty_q)}"'
+            if empty_q
+            else "Type at least 3 characters to search..."
+        )
+        return f'<div class="dz-search-result-empty">{msg}</div>'
+    return "".join(render_search_result_row(r) for r in rows)

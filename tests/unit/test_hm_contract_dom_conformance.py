@@ -56,16 +56,20 @@ def test_typed_path_is_sole_emitter() -> None:
     """HM contract attribute *assembly* is allowed ONLY in ingest.py.
 
     Families (#1577): ``data-dz-edit-``, ``data-dz-tags``, ``data-dz-combobox``,
-    ``data-dz-money``. Docstrings and runtime readers (has_attr) are ignored;
+    ``data-dz-money``, ``data-dz-widget="search_select"`` (+ search-select
+    timing knobs). Docstrings and runtime readers (has_attr) are ignored;
     HTML f-string / quoted assembly outside ingest fails.
     """
     import re
 
     # Quoted/f-string assembly of contract markers (not bare identifier reads).
+    # search_select: only the typeahead widget marker + its timing knobs
+    # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|blur-grace-ms|confirm-hold-ms))
+        | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
     # Readers / docs that mention the attr without assembling HTML.
@@ -191,6 +195,54 @@ def test_money_field_selector_conforms_to_money_contract() -> None:
     assert 'name="fee_currency"' in html
 
 
+def test_search_select_conforms_to_shell_contract() -> None:
+    """Real Dazzle SearchSelect emission must satisfy contracts/search_select.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.htmx import URL
+    from dazzle.render.fragment.primitives.forms import SearchSelect
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    ss_mod = load_hm_module("contracts/search_select.py")
+    kit = load_hm_module("contracts/_kit.py")
+    frag = SearchSelect(
+        name="owner",
+        label="Owner",
+        endpoint=URL("/api/owners"),
+        min_chars=1,
+        placeholder="Find an owner…",
+    )
+    html = FragmentRenderer().render(frag)
+    violations = kit.validate_dom(html, ss_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert 'data-dz-widget="search_select"' in html
+    assert "data-dz-blur-grace-ms=" in html
+    assert "data-dz-confirm-hold-ms=" in html
+    assert 'id="search-input-owner"' in html
+    assert 'id="search-results-owner"' in html
+
+
+def test_search_result_row_conforms_to_result_contract() -> None:
+    """Ingest SearchResultRow renderer satisfies DOM_CONTRACT_RESULT_ROW."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.ingest import SearchResultRow, render_search_result_row
+
+    ss_mod = load_hm_module("contracts/search_select.py")
+    kit = load_hm_module("contracts/_kit.py")
+    row = SearchResultRow(
+        id="co-aurora",
+        name="Aurora Energy Ltd",
+        secondary="Company no. 09182736",
+        select_url="/_dazzle/fragments/select?source=companies&id=co-aurora",
+        results_target="#search-results-company",
+    )
+    html = render_search_result_row(row)
+    violations = kit.validate_dom(html, ss_mod.DOM_CONTRACT_RESULT_ROW, require_root=True)
+    assert not violations, violations
+    assert 'data-dz-result-id="co-aurora"' in html
+    assert "dz-search-result-body" in html
+    assert "Aurora Energy Ltd" in html
+
+
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────
 # No Pydantic models — validate real Dazzle emission against DOM_CONTRACT
 # with require_root=True so empty-attr nodes can't soft-pass.
@@ -199,11 +251,9 @@ def test_money_field_selector_conforms_to_money_contract() -> None:
 def _emit_root_only_html(part_id: str) -> str:
     """Build HTML for a root-only part via the real Dazzle emission path."""
     from dazzle.render.fragment import AppShell, Surface, Tabs, Text
-    from dazzle.render.fragment.htmx import URL
     from dazzle.render.fragment.primitives.data import ConfirmCheckItem, ConfirmGate
     from dazzle.render.fragment.primitives.forms import (
         ColorField,
-        SearchSelect,
         SliderField,
     )
     from dazzle.render.fragment.renderer import FragmentRenderer
@@ -213,10 +263,6 @@ def _emit_root_only_html(part_id: str) -> str:
         return r.render(SliderField(name="vol", label="Volume", initial_value="40"))
     if part_id == "color":
         return r.render(ColorField(name="accent", label="Accent", initial_value="#3b82f6"))
-    if part_id == "search_select":
-        return r.render(
-            SearchSelect(name="owner", label="Owner", endpoint=URL("/api/owners"), min_chars=1)
-        )
     if part_id == "app_shell":
         return r.render(AppShell(body=Surface(header=Text("h"), body=Text("b"))))  # type: ignore[arg-type]
     if part_id == "command":

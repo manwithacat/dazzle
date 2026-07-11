@@ -387,19 +387,16 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
   - **Author / Committer** must be the human account owner (`James Barlow` /
     `332269+manwithacat@users.noreply.github.com` via **global** git config).
     Do **not** set **local** `user.name` / `user.email` on this repo — a prior
-    Claude Code session left `Claude Code <noreply@anthropic.com>` in
-    `.git/config`, so GitHub listed Claude as the primary author on agent
-    commits even when Grok did the work.
-  - **Agent recognition** is the trailer only:
-    `Co-Authored-By: Grok Build <grok@x.ai>` when Grok Build is the acting
-    harness (primary agent/tool for this machine **from 2026-07-10**).
-    Use `Co-Authored-By: Claude <noreply@anthropic.com>` only when Claude Code
-    actually produced the commit.
-  - GitHub’s “X and Y” UI = **Author** + **Co-Authored-By**. Wrong local
+    coding-agent session left a harness identity in `.git/config`, so the host
+    listed that harness as the primary author even when another agent did the work.
+  - **Agent recognition** is the trailer only (`Co-Authored-By: …`). Use the
+    trailer for the **acting harness** (the one producing this commit). Concrete
+    trailer strings live in **Capability Mapping** below (not repeated here).
+  - Host UI that shows “X and Y” = **Author** + **Co-Authored-By**. Wrong local
     `user.*` → wrong primary face. Verify with `git var GIT_AUTHOR_IDENT`
     before the first ship in a session if attribution looks wrong.
-  - Do **not** rewrite published history to fix past Claude-authored commits
-    unless the operator explicitly requests a history rewrite.
+  - Do **not** rewrite published history to fix past mis-attributed agent
+    commits unless the operator explicitly requests a history rewrite.
 
 ## Workflows
 
@@ -432,6 +429,7 @@ the degradation in your report.
 | scheduled-loop | re-run a playbook on a cadence | /loop + session cron | external scheduler (CI cron) | headless CI mode |
 | web-search | consult current docs when knowledge may be stale | WebSearch tool | built-in browse | built-in search |
 | model-tiering | mechanical work → cheapest tier; judgment work → session tier | pins in .claude/CLAUDE.md | single model — n/a | per-subagent model field |
+| commit-trailer | `Co-Authored-By` for the acting harness only; human stays Author | `Co-Authored-By: Claude <noreply@anthropic.com>` | (none standard) | `Co-Authored-By: Grok Build <grok@x.ai>` |
 
 Model policy: mechanical work (lint, fixed-signature scrapes, format churn) runs on the
 cheapest available tier; judgment work (root-cause, design, review) runs at the session

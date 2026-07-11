@@ -5,11 +5,15 @@ from __future__ import annotations
 import pytest
 
 from dazzle.render.fragment.ingest import (
+    SearchResultRow,
     combobox_from_form,
     combobox_marker_attrs,
     combobox_options_html,
     money_from_form,
     money_root_attrs,
+    render_search_result_row,
+    search_select_root_attrs,
+    search_select_shell_from_form,
     tags_from_form,
     tags_marker_attrs,
 )
@@ -87,3 +91,38 @@ def test_money_from_form_jpy_scale_zero() -> None:
     )
     assert field.scale == 0
     assert field.major_display == "1500"
+
+
+def test_search_select_shell_from_form_ids_and_timing() -> None:
+    shell = search_select_shell_from_form(
+        name="owner",
+        search_url="/_dazzle/fragments/search?source=users&field_name=owner",
+        label="Owner",
+        min_chars=2,
+        debounce_ms=250,
+    )
+    assert shell.field_id == "field-owner"
+    assert shell.input_id == "search-input-owner"
+    assert shell.results_id == "search-results-owner"
+    assert shell.debounce_ms == 250
+    assert "at least 2" in shell.prompt
+    attrs = search_select_root_attrs(shell)
+    assert 'data-dz-widget="search_select"' in attrs
+    assert "data-dz-blur-grace-ms=" in attrs
+    assert "data-dz-confirm-hold-ms=" in attrs
+
+
+def test_render_search_result_row_slots() -> None:
+    row = SearchResultRow(
+        id="u-1",
+        name="Ada",
+        secondary="ada@example.com",
+        media_html='<span aria-hidden="true">A</span>',
+        select_url="/select?id=u-1",
+        results_target="#search-results-owner",
+    )
+    html = render_search_result_row(row)
+    assert 'data-dz-result-id="u-1"' in html
+    assert "dz-search-result-media" in html
+    assert "dz-search-result-secondary" in html
+    assert "Ada" in html

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **search_select → schema+DOM dual-lock** — HM `SearchResultRow` +
+  `SearchSelectShell` copied into `dazzle.render.fragment.ingest` (schema-parity
+  gated). Form emission uses `search_select_shell_from_form` /
+  `search_select_root_attrs` (blur/confirm timing knobs on the widget root);
+  `/_dazzle/fragments/search` maps API hits through `SearchResultRow` +
+  `render_search_result_row` (HM-faithful anatomy: `role=option`,
+  `data-dz-result-id`, optional media, body wrapper). Registry:
+  `CONTRACT_MODELS` (was DOM-only). Dual-lock coverage: 5 schema+DOM.
+
 ## [0.103.0] - 2026-07-11
 
 ### Fixed

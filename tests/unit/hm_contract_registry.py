@@ -26,6 +26,18 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
     ("contracts/combobox.py", "ComboboxField", "dazzle.render.fragment.ingest", "ComboboxField"),
     ("contracts/tags.py", "TagsField", "dazzle.render.fragment.ingest", "TagsField"),
     ("contracts/money.py", "MoneyField", "dazzle.render.fragment.ingest", "MoneyField"),
+    (
+        "contracts/search_select.py",
+        "SearchResultRow",
+        "dazzle.render.fragment.ingest",
+        "SearchResultRow",
+    ),
+    (
+        "contracts/search_select.py",
+        "SearchSelectShell",
+        "dazzle.render.fragment.ingest",
+        "SearchSelectShell",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.
@@ -34,7 +46,6 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
 DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/slider.py", "slider", True),
     ("contracts/color.py", "color", True),
-    ("contracts/search_select.py", "search_select", True),
     ("contracts/app_shell.py", "app_shell", True),
     ("contracts/command.py", "command", True),
     ("contracts/confirm_panel.py", "confirm_panel", True),
