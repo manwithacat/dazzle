@@ -28,7 +28,37 @@ A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept rol
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/tabs.py`
+
+- **DOM root:** `[data-dz-tabs]` (part `tabs`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-tabs]` | `—` | — |
+| `[data-dz-tab-target]` | `data-dz-tab-target` | present (any value) |
+
+**Module source**
+
+```python
+"""HYPERPART: tabs — tablist root + panel targets."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node, Present
+
+DOM_CONTRACT = DomContract(
+    part="tabs",
+    root="[data-dz-tabs]",
+    nodes=(
+        Node("[data-dz-tabs]", attrs={}),
+        Node("[data-dz-tab-target]", attrs={"data-dz-tab-target": Present()}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

@@ -21,7 +21,33 @@ The hx-get palette — the htmx4 flagship. Press ⌘K.
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/command.py`
+
+- **DOM root:** `[data-dz-command]` (part `command`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-command]` | `—` | — |
+
+**Module source**
+
+```python
+"""HYPERPART: command — palette dialog root contract."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="command",
+    root="[data-dz-command]",
+    nodes=(Node("[data-dz-command]", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

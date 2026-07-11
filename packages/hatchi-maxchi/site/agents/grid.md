@@ -120,21 +120,149 @@ A server-rendered data table on a real <table>, all HTML over the wire: search, 
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/grid.py`
 
+- **DOM root:** `[data-dz-grid]` (part `grid`)
+- Root-only DOM contract (no per-node attribute constraints).
+
+**Module source**
+
+```python
+"""HYPERPART: grid — root contract (thin). The base grid's structural
+root attributes; the data-bearing seams live in extension contracts
+(grid_edit). Root-only: no ingestion model, no exemplars."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract
+
+DOM_CONTRACT = DomContract(
+    part="grid",
+    root="[data-dz-grid]",
+    nodes=(),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
+
 ### `contracts/grid_edit.py`
+
+- **DOM root:** `[data-dz-grid][data-dz-grid-edit-url]` (part `grid-edit`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-grid-edit]` | `data-dz-edit-kind` | one of ['text', 'date', 'bool', 'select'] |
+| `[data-dz-grid-edit]` | `data-dz-edit-value` | present (any value) |
+| `[data-dz-grid-edit]` | `data-dz-edit-label` | present (any value) |
+| `[data-dz-grid-edit]` | `data-dz-edit-options` | JSON [[value, label], …]; required when {'data-dz-edit-kind': 'select'} |
+
+**Ingestion model:** `GridEditCell`
 
 | Field | Type | Required |
 |---|---|---|
 | `col` | `string` | yes |
-| `kind` | `string in ['text', 'date', 'bool', 'select']` | yes |
+| `kind` | `string ∈ ['text', 'date', 'bool', 'select']` | yes |
 | `value` | `string` | yes |
 | `label` | `string` | yes |
 | `options` | `array | null` | no |
 
+**Exemplar `render()`** (executable — CI)
+
+```python
+def render(cell: GridEditCell) -> str:
+    """Model → conforming display-span fragment (the seam the controller reads)."""
+    opts = ""
+    if cell.kind == "select" and cell.options is not None:
+        pairs = json.dumps([[v, label] for v, label in cell.options])
+        opts = f' data-dz-edit-options="{html.escape(pairs, quote=True)}"'
+    return (
+        f'<span class="dz-tr-cell-display" '
+        f'data-dz-grid-edit="{html.escape(cell.col, quote=True)}" '
+        f'data-dz-edit-kind="{cell.kind}" '
+        f'data-dz-edit-value="{html.escape(cell.value, quote=True)}" '
+        f'data-dz-edit-label="{html.escape(cell.label, quote=True)}"{opts}>'
+        f"{html.escape(cell.value)}</span>"
+    )
+```
+
+**FastAPI exemplar** — grid-edit exemplar — how a server feeds the inline-edit seam
+
+How a server feeds this seam (not the gallery mock):
+
+```python
+@app.get("/rows", response_class=HTMLResponse)
+def rows() -> str:
+    """A tbody fragment: what a real endpoint returns to fill the grid.
+    Mirrors Dazzle's shape: the grid ROOT (with data-dz-grid-edit-url)
+    is page furniture; this endpoint returns rows whose editable cells
+    carry the seam spans."""
+    cells = "".join(f"<td>{render(c)}</td>" for c in EXEMPLARS[:3])
+    return f'<tr id="row-1">{cells}</tr>'
+```
+
 ### `contracts/grid_cols.py`
 
+- **DOM root:** `[data-dz-grid]` (part `grid-cols`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-grid-col-toggle]` | `data-dz-grid-col-toggle` | present (any value) |
+| `[data-dz-col]` | `data-dz-col` | present (any value) |
+| `[data-dz-grid-cols-reset]` | `—` | — |
+
+**Module source**
+
+```python
+"""HYPERPART: grid (extension: dz-grid-cols) — column visibility seam."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node, Present
+
+DOM_CONTRACT = DomContract(
+    part="grid-cols",
+    root="[data-dz-grid]",
+    nodes=(
+        Node("[data-dz-grid-col-toggle]", attrs={"data-dz-grid-col-toggle": Present()}),
+        Node("[data-dz-col]", attrs={"data-dz-col": Present()}),
+        Node("[data-dz-grid-cols-reset]", attrs={}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
+
 ### `contracts/grid_resize.py`
+
+- **DOM root:** `[data-dz-grid]` (part `grid-resize`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-grid-resize]` | `data-dz-grid-resize` | present (any value) |
+| `col[data-dz-col], [data-dz-col]` | `data-dz-col` | present (any value) |
+
+**Module source**
+
+```python
+"""HYPERPART: grid (extension: dz-grid-resize) — column resize seam."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node, Present
+
+DOM_CONTRACT = DomContract(
+    part="grid-resize",
+    root="[data-dz-grid]",
+    nodes=(
+        Node("[data-dz-grid-resize]", attrs={"data-dz-grid-resize": Present()}),
+        Node("col[data-dz-col], [data-dz-col]", attrs={"data-dz-col": Present()}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

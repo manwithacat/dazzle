@@ -23,7 +23,33 @@ The FK typeahead: a debounced combobox whose results panel opens on focus and cl
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/search_select.py`
+
+- **DOM root:** `[data-dz-widget="search_select"]` (part `search-select`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-widget="search_select"]` | `—` | — |
+
+**Module source**
+
+```python
+"""HYPERPART: search-select — typeahead open/close + hidden FK submit."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="search-select",
+    root='[data-dz-widget="search_select"]',
+    nodes=(Node('[data-dz-widget="search_select"]', attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

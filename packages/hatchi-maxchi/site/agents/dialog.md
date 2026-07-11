@@ -23,7 +23,33 @@ Modal on the native <dialog> — one line of JS to open, close for free (Esc / b
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/dialog.py`
+
+- **DOM root:** `[data-dz-dialog-open]` (part `dialog`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-dialog-open]` | `data-dz-dialog-open` | present (any value) |
+
+**Module source**
+
+```python
+"""HYPERPART: dialog — native <dialog> open trigger contract."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node, Present
+
+DOM_CONTRACT = DomContract(
+    part="dialog",
+    root="[data-dz-dialog-open]",
+    nodes=(Node("[data-dz-dialog-open]", attrs={"data-dz-dialog-open": Present()}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

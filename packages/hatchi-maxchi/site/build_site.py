@@ -75,11 +75,103 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+def _contract_pydantic_model(mod):  # type: ignore[no-untyped-def]
+    """First Pydantic BaseModel defined in *mod* (not re-exported)."""
+    return next(
+        (
+            v
+            for v in vars(mod).values()
+            if isinstance(v, type)
+            and hasattr(v, "model_json_schema")
+            and v.__module__ == mod.__name__
+        ),
+        None,
+    )
+
+
+def _validator_label(validator: object) -> str:
+    """Human-readable constraint from a contracts._kit validator instance."""
+    name = type(validator).__name__
+    if name == "Present":
+        return "present (any value)"
+    if name == "OneOf":
+        values = getattr(validator, "values", ())
+        return f"one of {list(values)}"
+    if name == "JsonPairs":
+        when = getattr(validator, "required_when", None)
+        base = "JSON [[value, label], …]"
+        if when:
+            return f"{base}; required when {when}"
+        return base
+    return name
+
+
+def _schema_field_rows(model) -> list[tuple[str, str, str]]:  # type: ignore[no-untyped-def]
+    """(field, type, required|optional) rows from a Pydantic model JSON schema."""
+    schema = model.model_json_schema()
+    req = set(schema.get("required", ()))
+    rows: list[tuple[str, str, str]] = []
+    for name, prop in schema.get("properties", {}).items():
+        typ = (
+            prop.get("type")
+            or " | ".join(a.get("type", "?") for a in prop.get("anyOf", ()))
+            or "object"
+        )
+        enum = prop.get("enum")
+        if enum:
+            typ = f"{typ} ∈ {enum}"
+        rows.append((name, str(typ), "required" if name in req else "optional"))
+    return rows
+
+
+def _dom_contract_rows(dc) -> list[tuple[str, str, str]]:  # type: ignore[no-untyped-def]
+    """(selector, attr, constraint) rows from a DomContract."""
+    rows: list[tuple[str, str, str]] = []
+    for node in dc.nodes:
+        if not node.attrs:
+            rows.append((node.selector, "—", "—"))
+            continue
+        for attr, validator in node.attrs.items():
+            rows.append((node.selector, attr, _validator_label(validator)))
+    return rows
+
+
+def _fastapi_route_sources(mod) -> list[str]:  # type: ignore[no-untyped-def]
+    """Source of each FastAPI route endpoint defined on mod.app (if any)."""
+    import inspect
+
+    app = getattr(mod, "app", None)
+    if app is None:
+        return []
+    chunks: list[str] = []
+    seen: set[int] = set()
+    for route in getattr(app, "routes", ()):
+        endpoint = getattr(route, "endpoint", None)
+        if endpoint is None or getattr(endpoint, "__module__", None) != mod.__name__:
+            continue
+        key = id(endpoint)
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            chunks.append(inspect.getsource(endpoint))
+        except (OSError, TypeError):
+            continue
+    return chunks
+
+
 def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
-    """Contract-module section: ingestion model schema table + exemplar
-    source (inspect.getsource — the page IS the snippet) + live output.
-    Contract modules are the typed source of truth for a part's ingestion
-    shape and DOM contract (contracts/AUTHORING.md)."""
+    """Contract-module section — epistemic surface for agents + humans.
+
+    Always surfaces whatever the module actually defines:
+    - DOM_CONTRACT root + per-node attr constraints
+    - Pydantic ingestion schema (when present)
+    - executable ``render`` exemplar + live output (when present)
+    - FastAPI route handlers (when ``app`` is present)
+    - full module source when the module is DOM-only (no empty headings)
+
+    Contract modules are the typed source of truth (contracts/AUTHORING.md).
+    """
     if not hyperpart.contracts:
         return ""
     import importlib
@@ -88,55 +180,98 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     blocks: list[str] = []
     for ref in hyperpart.contracts:
         mod = importlib.import_module(ref.removesuffix(".py").replace("/", "."))
-        rows = ""
-        model = next(
-            (
-                v
-                for v in vars(mod).values()
-                if isinstance(v, type)
-                and hasattr(v, "model_json_schema")
-                and v.__module__ == mod.__name__
-            ),
-            None,
-        )
-        if model is not None:
-            schema = model.model_json_schema()
-            req = set(schema.get("required", ()))
-            for name, prop in schema.get("properties", {}).items():
-                typ = (
-                    prop.get("type")
-                    or " | ".join(a.get("type", "?") for a in prop.get("anyOf", ()))
-                    or "object"
-                )
-                enum = prop.get("enum")
-                if enum:
-                    typ += f" ∈ {enum}"
-                rows += (
-                    f"<tr><td><code>{_html.escape(name)}</code></td>"
-                    f"<td><code>{_html.escape(str(typ))}</code></td>"
-                    f"<td>{'required' if name in req else 'optional'}</td></tr>"
-                )
-        exemplar_html = ""
+        model = _contract_pydantic_model(mod)
+        dc = getattr(mod, "DOM_CONTRACT", None)
         render_fn = getattr(mod, "render", None)
         exemplars = getattr(mod, "EXEMPLARS", ())
+        fastapi_src = _fastapi_route_sources(mod)
+
+        parts: list[str] = [f"<h4><code>{_html.escape(ref)}</code></h4>"]
+
+        if dc is not None:
+            parts.append(
+                f'<p class="hm-contract-kind"><strong>DOM root:</strong> '
+                f"<code>{_html.escape(dc.root)}</code>"
+                f" · part <code>{_html.escape(dc.part)}</code></p>"
+            )
+            drows = _dom_contract_rows(dc)
+            if drows:
+                body = "".join(
+                    f"<tr><td><code>{_html.escape(sel)}</code></td>"
+                    f"<td><code>{_html.escape(attr)}</code></td>"
+                    f"<td>{_html.escape(constraint)}</td></tr>"
+                    for sel, attr, constraint in drows
+                )
+                parts.append(
+                    '<table class="hm-contract-table"><thead><tr>'
+                    "<th>Node</th><th>Attr</th><th>Constraint</th>"
+                    f"</tr></thead><tbody>{body}</tbody></table>"
+                )
+            elif not model and not fastapi_src:
+                parts.append(
+                    '<p class="hm-contract-kind">Root-only DOM contract '
+                    "(no per-node attribute constraints).</p>"
+                )
+
+        if model is not None:
+            srows = _schema_field_rows(model)
+            body = "".join(
+                f"<tr><td><code>{_html.escape(n)}</code></td>"
+                f"<td><code>{_html.escape(t)}</code></td>"
+                f"<td>{_html.escape(r)}</td></tr>"
+                for n, t, r in srows
+            )
+            parts.append(
+                f'<p class="hm-contract-kind"><strong>Ingestion model:</strong> '
+                f"<code>{_html.escape(model.__name__)}</code></p>"
+                f'<table class="hm-contract-table"><thead><tr>'
+                "<th>Field</th><th>Type</th><th>Required</th>"
+                f"</tr></thead><tbody>{body}</tbody></table>"
+            )
+
         if render_fn and exemplars:
             src = _html.escape(inspect.getsource(render_fn))
             live = render_fn(exemplars[0])
-            exemplar_html = (
-                '<details class="hm-contract"><summary>Exemplar (executable — '
-                "runs in CI)</summary><pre><code>" + src + "</code></pre>"
-                '<div class="hm-contract-live">' + live + "</div></details>"
+            parts.append(
+                '<details class="hm-contract" open><summary>Exemplar '
+                "(executable — runs in CI)</summary><pre><code>" + src + "</code></pre>"
+                f'<div class="hm-contract-live">{live}</div></details>'
             )
-        blocks.append(
-            f"<h4><code>{_html.escape(ref)}</code></h4>"
-            + (f'<table class="hm-contract-table">{rows}</table>' if rows else "")
-            + exemplar_html
-        )
+
+        if fastapi_src:
+            code = _html.escape("\n\n".join(fastapi_src))
+            title = ""
+            app = getattr(mod, "app", None)
+            if app is not None and getattr(app, "title", None):
+                title = f" — {_html.escape(app.title)}"
+            parts.append(
+                f'<details class="hm-contract" open><summary>FastAPI exemplar'
+                f"{title}</summary><pre><code>{code}</code></pre>"
+                "<p>How a server feeds this seam — the gallery mock is not a "
+                "substitute for this route contract.</p></details>"
+            )
+
+        # DOM-only (or otherwise thin) modules: show full source so the
+        # section is never an empty path heading.
+        if model is None and not (render_fn and exemplars) and not fastapi_src:
+            try:
+                full = inspect.getsource(mod)
+            except (OSError, TypeError):
+                full = ""
+            if full:
+                parts.append(
+                    '<details class="hm-contract" open><summary>Module source'
+                    "</summary><pre><code>" + _html.escape(full) + "</code></pre></details>"
+                )
+
+        blocks.append("".join(parts))
+
     return (
-        '<details class="hm-contract"><summary>Contract module (typed)</summary>'
+        '<details class="hm-contract" open><summary>Contract module (typed)</summary>'
         + "".join(blocks)
-        + "<p>The typed source of truth: ingestion model + DOM contract + "
-        "executable exemplar, validated in CI (<code>tests/test_contracts.py</code>). "
+        + "<p>Typed source of truth: DOM contract, optional ingestion model, "
+        "executable exemplar, and FastAPI feed example — validated in CI "
+        "(<code>tests/test_contracts.py</code>). "
         "See <code>contracts/AUTHORING.md</code>.</p></details>"
     )
 
@@ -279,35 +414,100 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
         lines.append("")
     if hyperpart.contracts:
         import importlib
+        import inspect
 
-        lines += ["## Contract modules (typed source of truth)", ""]
+        lines += [
+            "## Contract modules (typed source of truth)",
+            "",
+            "Epistemic lock: do not invent attrs or response shapes that diverge "
+            "from these modules. CI validates exemplars against `DOM_CONTRACT` "
+            "(`tests/test_contracts.py`).",
+            "",
+        ]
         for ref in hyperpart.contracts:
             lines.append(f"### `{ref}`")
-            mod = importlib.import_module(ref.removesuffix(".py").replace("/", "."))
-            model = next(
-                (
-                    v
-                    for v in vars(mod).values()
-                    if isinstance(v, type)
-                    and hasattr(v, "model_json_schema")
-                    and v.__module__ == mod.__name__
-                ),
-                None,
-            )
-            if model is not None:
-                schema = model.model_json_schema()
-                req = set(schema.get("required", ()))
-                lines += ["", "| Field | Type | Required |", "|---|---|---|"]
-                for name, prop in schema.get("properties", {}).items():
-                    typ = (
-                        prop.get("type")
-                        or " | ".join(a.get("type", "?") for a in prop.get("anyOf", ()))
-                        or "object"
-                    )
-                    if prop.get("enum"):
-                        typ += f" in {prop['enum']}"
-                    lines.append(f"| `{name}` | `{typ}` | {'yes' if name in req else 'no'} |")
             lines.append("")
+            mod = importlib.import_module(ref.removesuffix(".py").replace("/", "."))
+            model = _contract_pydantic_model(mod)
+            dc = getattr(mod, "DOM_CONTRACT", None)
+            render_fn = getattr(mod, "render", None)
+            exemplars = getattr(mod, "EXEMPLARS", ())
+            fastapi_src = _fastapi_route_sources(mod)
+
+            if dc is not None:
+                lines += [
+                    f"- **DOM root:** `{dc.root}` (part `{dc.part}`)",
+                ]
+                drows = _dom_contract_rows(dc)
+                if drows:
+                    lines += [
+                        "",
+                        "| Node | Attr | Constraint |",
+                        "|---|---|---|",
+                    ]
+                    lines += [
+                        f"| `{sel}` | `{attr}` | {constraint} |" for sel, attr, constraint in drows
+                    ]
+                else:
+                    lines.append("- Root-only DOM contract (no per-node attribute constraints).")
+                lines.append("")
+
+            if model is not None:
+                lines += [
+                    f"**Ingestion model:** `{model.__name__}`",
+                    "",
+                    "| Field | Type | Required |",
+                    "|---|---|---|",
+                ]
+                for name, typ, req in _schema_field_rows(model):
+                    lines.append(f"| `{name}` | `{typ}` | {'yes' if req == 'required' else 'no'} |")
+                lines.append("")
+
+            if render_fn and exemplars:
+                try:
+                    rsrc = inspect.getsource(render_fn)
+                except (OSError, TypeError):
+                    rsrc = ""
+                if rsrc:
+                    lines += [
+                        "**Exemplar `render()`** (executable — CI)",
+                        "",
+                        "```python",
+                        rsrc.rstrip("\n"),
+                        "```",
+                        "",
+                    ]
+
+            if fastapi_src:
+                app = getattr(mod, "app", None)
+                title = getattr(app, "title", None) if app is not None else None
+                heading = f"**FastAPI exemplar** — {title}" if title else "**FastAPI exemplar**"
+                lines += [
+                    heading,
+                    "",
+                    "How a server feeds this seam (not the gallery mock):",
+                    "",
+                    "```python",
+                    "\n\n".join(s.rstrip("\n") for s in fastapi_src),
+                    "```",
+                    "",
+                ]
+
+            # DOM-only / thin modules: full source so agents never get an empty heading.
+            if model is None and not (render_fn and exemplars) and not fastapi_src:
+                try:
+                    full = inspect.getsource(mod)
+                except (OSError, TypeError):
+                    full = ""
+                if full:
+                    lines += [
+                        "**Module source**",
+                        "",
+                        "```python",
+                        full.rstrip("\n"),
+                        "```",
+                        "",
+                    ]
     g = hyperpart.guidance
     if g is not None:
         lines += ["## Guidance (structured)", ""]

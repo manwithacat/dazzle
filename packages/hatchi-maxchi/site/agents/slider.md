@@ -13,7 +13,37 @@ Native <input type=range> — styled track + thumb, both themes, with a live val
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/slider.py`
+
+- **DOM root:** `[data-dz-slider]` (part `slider`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-slider]` | `—` | — |
+| `[data-dz-range-value]` | `—` | — |
+
+**Module source**
+
+```python
+"""HYPERPART: slider — native range group + live value readout."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="slider",
+    root="[data-dz-slider]",
+    nodes=(
+        Node("[data-dz-slider]", attrs={}),
+        Node("[data-dz-range-value]", attrs={}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

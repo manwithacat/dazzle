@@ -25,7 +25,33 @@ The label + control + help + error triad as one accessible unit. Error state der
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/color.py`
+
+- **DOM root:** `[data-dz-color-group]` (part `color`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-color-group]` | `—` | — |
+
+**Module source**
+
+```python
+"""HYPERPART: field (extension: dz-color) — colour input group."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="color",
+    root="[data-dz-color-group]",
+    nodes=(Node("[data-dz-color-group]", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (prose; HTML from the registry notes field)
 

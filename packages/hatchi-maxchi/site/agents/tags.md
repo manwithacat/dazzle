@@ -10,7 +10,17 @@ Multi-value chips + free create — a native text input carrying a comma-joined 
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/tags.py`
+
+- **DOM root:** `[data-dz-tags]` (part `tags`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-tags]` | `name` | present (any value) |
+
+**Ingestion model:** `TagsField`
 
 | Field | Type | Required |
 |---|---|---|
@@ -19,6 +29,21 @@ Multi-value chips + free create — a native text input carrying a comma-joined 
 | `label` | `string` | yes |
 | `tags` | `array` | no |
 | `placeholder` | `string` | no |
+
+**Exemplar `render()`** (executable — CI)
+
+```python
+def render(field: TagsField) -> str:
+    joined = ",".join(field.tags)
+    return (
+        f'<label class="dz-field" for="{html.escape(field.field_id, quote=True)}">'
+        f'<span class="dz-field__label">{html.escape(field.label)}</span>'
+        f'<input id="{html.escape(field.field_id, quote=True)}" '
+        f'name="{html.escape(field.name, quote=True)}" type="text" data-dz-tags '
+        f'class="dz-form-input" value="{html.escape(joined, quote=True)}" '
+        f'placeholder="{html.escape(field.placeholder, quote=True)}"></label>'
+    )
+```
 
 ## Guidance (structured)
 

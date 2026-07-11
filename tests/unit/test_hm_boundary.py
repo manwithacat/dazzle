@@ -50,6 +50,12 @@ SANCTIONED = {
     # Reservoir metric names the HM package to measure the delegation drain +
     # recognise HM-generated served files (the marker). Governance, not consumption.
     "scripts/hm_tailwind_reservoir.py",
+    # Subscription vision / visual smoke / CSS classifier: operator tools that
+    # measure the HM package (gallery pages, CSS sources). Governance +
+    # measurement, not runtime consumption of HM internals.
+    "scripts/hm_pages_vision.py",
+    "scripts/hm_visual_smoke.py",
+    "scripts/hm_css_classify.py",
     # Design-context facade names the HM families path in *generated doc prose*
     # (the hm-design-context.md pointer to the vernacular). Reference, not consumption.
     "src/dazzle/core/design_context.py",

@@ -36,7 +36,40 @@ The irreversible-action consent gate: a checklist of obligations that must be ti
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/confirm_panel.py`
+
+- **DOM root:** `[data-dz-confirm-gate]` (part `confirm-panel`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-confirm-gate]` | `data-dz-required-count` | present (any value) |
+| `[data-dz-required="true"]` | `data-dz-required` | present (any value) |
+
+**Module source**
+
+```python
+"""HYPERPART: confirm-panel — irreversible-action consent gate."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node, Present
+
+DOM_CONTRACT = DomContract(
+    part="confirm-panel",
+    root="[data-dz-confirm-gate]",
+    nodes=(
+        Node(
+            "[data-dz-confirm-gate]",
+            attrs={"data-dz-required-count": Present()},
+        ),
+        Node('[data-dz-required="true"]', attrs={"data-dz-required": Present()}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

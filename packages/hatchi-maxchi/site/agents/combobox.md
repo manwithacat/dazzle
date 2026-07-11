@@ -19,12 +19,43 @@ Searchable enum single-select — a native <select> progressively enhanced into 
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/combobox.py`
+
+- **DOM root:** `[data-dz-combobox]` (part `combobox`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-combobox]` | `name` | present (any value) |
+
+**Ingestion model:** `ComboboxOption`
 
 | Field | Type | Required |
 |---|---|---|
 | `value` | `string` | yes |
 | `label` | `string` | yes |
+
+**Exemplar `render()`** (executable — CI)
+
+```python
+def render(field: ComboboxField) -> str:
+    opts = []
+    for o in field.options:
+        sel = " selected" if o.value == field.selected and o.value != "" else ""
+        # bare-string producer shape lands as value==label after validator
+        opts.append(
+            f'<option value="{html.escape(o.value, quote=True)}"{sel}>'
+            f"{html.escape(o.label)}</option>"
+        )
+    return (
+        f'<label class="dz-field" for="{html.escape(field.field_id, quote=True)}">'
+        f'<span class="dz-field__label">{html.escape(field.label)}</span>'
+        f'<select id="{html.escape(field.field_id, quote=True)}" '
+        f'name="{html.escape(field.name, quote=True)}" data-dz-combobox '
+        f'class="dz-form-input">{"".join(opts)}</select></label>'
+    )
+```
 
 ## Guidance (structured)
 

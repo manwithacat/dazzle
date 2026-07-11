@@ -31,7 +31,42 @@ Multi-stage form navigation: the stepper drives stage reveal — back freely, fo
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/wizard.py`
+
+- **DOM root:** `[data-dz-wizard]` (part `wizard`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-wizard]` | `data-dz-step` | present (any value) |
+| `[data-dz-stage]` | `data-dz-stage` | present (any value) |
+| `[data-dz-state]` | `data-dz-state` | one of ['complete', 'current', 'pending'] |
+
+**Module source**
+
+```python
+"""HYPERPART: wizard — multi-stage form with data-dz-step state."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node, OneOf, Present
+
+DOM_CONTRACT = DomContract(
+    part="wizard",
+    root="[data-dz-wizard]",
+    nodes=(
+        Node("[data-dz-wizard]", attrs={"data-dz-step": Present()}),
+        Node("[data-dz-stage]", attrs={"data-dz-stage": Present()}),
+        Node(
+            "[data-dz-state]",
+            attrs={"data-dz-state": OneOf("complete", "current", "pending")},
+        ),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

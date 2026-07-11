@@ -32,7 +32,44 @@ The hx-pdf viewing shell: server-authorized bytes, lazy PDF.js rendering, toolba
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/pdf.py`
+
+- **DOM root:** `[data-dz-pdf]` (part `pdf`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-pdf]` | `data-dz-pdf-src` | present (any value) |
+| `[data-dz-pdf]` | `data-dz-pdf-lib` | present (any value) |
+| `[data-dz-pdf-viewer]` | `—` | — |
+
+**Module source**
+
+```python
+"""HYPERPART: pdf — progressive PDF shell (access + lazy PDF.js)."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node, Present
+
+DOM_CONTRACT = DomContract(
+    part="pdf",
+    root="[data-dz-pdf]",
+    nodes=(
+        Node(
+            "[data-dz-pdf]",
+            attrs={
+                "data-dz-pdf-src": Present(),
+                "data-dz-pdf-lib": Present(),
+            },
+        ),
+        Node("[data-dz-pdf-viewer]", attrs={}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

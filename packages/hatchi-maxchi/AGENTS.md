@@ -19,6 +19,15 @@ on the server and in the DOM.
   (`exchanges` — method, endpoint shape, trigger, response fragment,
   swap, states), controller/extension pointers, and wiring notes. Parse
   it; don't scrape the gallery HTML.
+- **Per-part agent pack**: `site/agents/<id>.md` (also on Pages under
+  `agents/`) is the one-fetch epistemic unit — partial, exchanges,
+  contract module (DOM_CONTRACT + schema + FastAPI exemplar when
+  present), structured guidance. Prefer it over HTML when implementing.
+- **Contract modules** (`contracts/<part>.py`) stop emission drift:
+  `DOM_CONTRACT` is what controllers require; Pydantic models +
+  `render()` + optional FastAPI `app` routes show how a server feeds the
+  seam. Gallery mocks (toasts, `/mock/*` JSON) are **not** contracts —
+  they only make the static demo clickable.
 - The [gallery](https://manwithacat.github.io/hatchi-maxchi/) renders
   the same strings live. Each component's **Agent Implementation
   Guidance** disclosure is written for you: it names the seams, the

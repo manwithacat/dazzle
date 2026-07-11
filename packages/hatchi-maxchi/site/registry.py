@@ -716,8 +716,17 @@ HYPERPARTS: list[Hyperpart] = [
         '<button class="dz-button" data-dz-variant="destructive" hx-delete="/mock/noop" '
         'hx-confirm="Delete this invoice? This cannot be undone.">Delete invoice</button>',
         notes="dz-confirm.js intercepts <code>htmx:confirm</code> (a client affordance — no "
-        "server round-trip). On approval it issues the underlying request. No per-button "
-        "wiring — any element with <code>hx-confirm</code> gets the designed dialog.",
+        "server round-trip of its own). The dialog <em>message</em> is the "
+        "<code>hx-confirm</code> attribute value (here: "
+        "&quot;Delete this invoice? This cannot be undone.&quot;). On approval the controller "
+        "issues the underlying request — no per-button wiring; any element with "
+        "<code>hx-confirm</code> gets the designed dialog. "
+        "<strong>Gallery-only toast:</strong> after confirm, this static site flashes "
+        "<code>Deleted (demo).</code> — that string is hard-coded in the site's "
+        "<code>MOCK_HTMX</code> shim (<code>site/build_site.py</code>), not in the "
+        "Hyperpart, not in <code>contracts/confirm.py</code>, and not returned by a "
+        "server. Production: your <code>DELETE</code> endpoint returns the Exchange "
+        "response fragment (row removal / empty-state); there is no toast API.",
         tags=("interactive", "htmx"),
         exchanges=(
             Exchange(
@@ -725,7 +734,8 @@ HYPERPARTS: list[Hyperpart] = [
                 endpoint="/app/invoices/{id}",
                 trigger="the button, after the user approves the designed confirm dialog",
                 response="the server deletes the resource and returns the replacement markup "
-                "for the affected region (e.g. the row's removal, or an empty-state)",
+                "for the affected region (e.g. the row's removal, or an empty-state). "
+                "Not a toast — the gallery's 'Deleted (demo).' toast is MOCK_HTMX only",
                 swap="per the button's `hx-target`/`hx-swap` (row removal by default)",
             ),
         ),
@@ -734,11 +744,14 @@ HYPERPARTS: list[Hyperpart] = [
         guidance=Guidance(
             seams=(
                 "any element with hx-confirm gets the designed dialog via htmx:confirm",
+                "dialog message text IS the hx-confirm attribute value",
                 "on approval the controller issues the underlying request — no per-button wiring",
             ),
             pitfalls=(
                 "hx-confirm is a client affordance — it needs no Exchange of its own",
                 "do not re-implement confirm with window.confirm (loses the designed dialog)",
+                "gallery toast 'Deleted (demo).' is MOCK_HTMX scaffolding in site/build_site.py — "
+                "not Hyperpart surface; production returns the DELETE fragment from the Exchange",
             ),
             do_dont=(
                 (

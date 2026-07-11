@@ -35,7 +35,37 @@ The SaaS/admin application frame: persistent left navigation, an optional sticky
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/app_shell.py`
+
+- **DOM root:** `[data-dz-sidebar]` (part `app-shell`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-sidebar]` | `data-dz-sidebar` | one of ['open', 'closed'] |
+| `[data-dz-sidebar-toggle]` | `—` | — |
+
+**Module source**
+
+```python
+"""HYPERPART: app-shell — DOM contract for the sidebar shell controller."""
+
+from __future__ import annotations
+
+from contracts._kit import DomContract, Node, OneOf
+
+DOM_CONTRACT = DomContract(
+    part="app-shell",
+    root="[data-dz-sidebar]",
+    nodes=(
+        Node("[data-dz-sidebar]", attrs={"data-dz-sidebar": OneOf("open", "closed")}),
+        Node("[data-dz-sidebar-toggle]", attrs={}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Guidance (structured)
 

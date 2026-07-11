@@ -14,7 +14,18 @@ Major-unit decimal input over a hidden minor-unit carrier — the form posts int
 
 ## Contract modules (typed source of truth)
 
+Epistemic lock: do not invent attrs or response shapes that diverge from these modules. CI validates exemplars against `DOM_CONTRACT` (`tests/test_contracts.py`).
+
 ### `contracts/money.py`
+
+- **DOM root:** `[data-dz-money]` (part `money`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-money]` | `data-dz-scale` | present (any value) |
+| `[data-dz-money]` | `data-dz-currency` | present (any value) |
+
+**Ingestion model:** `MoneyField`
 
 | Field | Type | Required |
 |---|---|---|
@@ -24,6 +35,23 @@ Major-unit decimal input over a hidden minor-unit carrier — the form posts int
 | `major_display` | `string` | no |
 | `minor_value` | `integer` | no |
 | `field_id` | `string` | no |
+
+**Exemplar `render()`** (executable — CI)
+
+```python
+def render(field: MoneyField) -> str:
+    fid = html.escape(field.field_id, quote=True)
+    name = html.escape(field.name, quote=True)
+    return (
+        f'<div class="dz-money" data-dz-money '
+        f'data-dz-currency="{html.escape(field.currency, quote=True)}" '
+        f'data-dz-scale="{field.scale}">'
+        f'<input id="{fid}" name="{name}" inputmode="decimal" '
+        f'value="{html.escape(field.major_display, quote=True)}" class="dz-form-input">'
+        f'<input type="hidden" name="{name}_minor" value="{field.minor_value}">'
+        f"</div>"
+    )
+```
 
 ## Guidance (structured)
 

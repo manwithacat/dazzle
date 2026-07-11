@@ -1784,6 +1784,13 @@ dialog.dz-alert-dialog::backdrop {
   color: var(--colour-text);
 }
 
+/* Subtle press: one step past hover via tokens — no translate/shadow
+   (primary owns the physical press). */
+.dz-button[data-dz-variant="ghost"]:active {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
 .dz-button[data-dz-variant="outline"] {
   background: var(--colour-surface);
   color: var(--colour-text);
@@ -1794,6 +1801,10 @@ dialog.dz-alert-dialog::backdrop {
   background: var(--colour-bg);
 }
 
+.dz-button[data-dz-variant="outline"]:active {
+  background: var(--colour-surface-muted);
+}
+
 .dz-button[data-dz-variant="destructive"] {
   background: var(--colour-surface);
   color: var(--colour-danger);
@@ -1802,6 +1813,11 @@ dialog.dz-alert-dialog::backdrop {
 
 .dz-button[data-dz-variant="destructive"]:hover {
   background: var(--colour-danger-soft);
+}
+
+.dz-button[data-dz-variant="destructive"]:active {
+  /* Token mix — deeper wash than danger-soft, not a brightness filter. */
+  background: color-mix(in oklch, var(--colour-danger) 16%, var(--colour-surface));
 }
 
 .dz-button[data-dz-variant="primary"] {
@@ -2439,6 +2455,13 @@ dialog.dz-alert-dialog::backdrop {
 .dz-card-body {
   padding-inline: var(--space-md);
   padding-block-end: var(--space-md);
+  /* No default min-height: static / gallery cards (KPI tiles, content) must
+   * size to content. Workspace HTMX regions always set data-display and use
+   * the reservation rules below for CLS (#962). */
+}
+
+/* CLS reservation — only when a workspace DisplayMode is declared. */
+.dz-card-body[data-display] {
   min-height: 280px; /* default — matches LIST / TABBED_LIST shape */
 }
 
@@ -6909,11 +6932,19 @@ dialog.dz-command::backdrop {
 .dz-master-detail {
   display: grid;
   grid-template-columns: 14rem 1fr;
-  gap: var(--space-md);
+  gap: 0;
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-md);
   overflow: hidden;
   min-height: 12rem;
+  background: var(--colour-surface);
+}
+/* Workspace dual_pane pair: wider list column for tabular rows. */
+.dz-master-detail-pair .dz-master-detail {
+  grid-template-columns: minmax(18rem, 2fr) minmax(20rem, 3fr);
+  min-height: 22rem;
+  /* Outer card-wrapper already participates in the dashboard grid. */
+  border-radius: var(--radius-lg);
 }
 .dz-master-detail__list {
   list-style: none;
@@ -6921,25 +6952,91 @@ dialog.dz-command::backdrop {
   padding: var(--space-xs);
   border-inline-end: 1px solid var(--colour-border);
   background: var(--colour-surface);
+  min-width: 0;
+  overflow: auto;
+  max-height: min(70vh, 40rem);
 }
-.dz-master-detail__item {
+.dz-master-detail-pair .dz-master-detail__list {
+  padding: 0;
+}
+/* Nested dashboard card chrome: flatten so the pair reads as one unit. */
+.dz-master-detail-pair .dz-master-detail__list .dz-card {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.dz-master-detail-pair .dz-master-detail__list .dz-card-header {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--colour-border);
+}
+.dz-master-detail-pair .dz-master-detail__list .dz-card-body {
+  padding: 0;
+}
+/* Gallery / link items (anchor or button). */
+a.dz-master-detail__item,
+button.dz-master-detail__item {
   display: block;
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-sm);
   color: var(--colour-text);
   text-decoration: none;
   font-size: var(--text-sm);
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: start;
+  cursor: pointer;
 }
-.dz-master-detail__item:hover {
+a.dz-master-detail__item:hover,
+button.dz-master-detail__item:hover {
   background: var(--colour-bg);
 }
-.dz-master-detail__item[aria-current="true"] {
+a.dz-master-detail__item[aria-current="true"],
+button.dz-master-detail__item[aria-current="true"] {
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand-text);
+  font-weight: var(--weight-medium);
+}
+/* Workspace list table rows (tr) — keep table-row display. */
+tr.dz-master-detail__item {
+  cursor: pointer;
+}
+tr.dz-master-detail__item:hover > td {
+  background: var(--colour-bg);
+}
+tr.dz-master-detail__item[aria-current="true"] > td {
   background: var(--colour-brand-soft);
   color: var(--colour-brand-text);
   font-weight: var(--weight-medium);
 }
 .dz-master-detail__detail {
   padding: var(--space-md);
+  min-width: 0;
+  overflow: auto;
+  max-height: min(70vh, 40rem);
+}
+.dz-master-detail-pair .dz-master-detail__detail {
+  padding: var(--space-md) var(--space-lg);
+}
+.dz-master-detail__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: 10rem;
+  color: var(--colour-text-muted, var(--colour-text));
+  opacity: 0.85;
+}
+.dz-master-detail__empty .dz-empty-state-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+.dz-master-detail__empty .dz-empty-state-description {
+  margin: 0;
+  font-size: var(--text-sm);
 }
 /* --- hatchi-maxchi/components/htmx-states.css --- */
 /*

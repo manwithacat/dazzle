@@ -13430,7 +13430,7 @@
   "dazzle/http/runtime/workspace_region_fetch.py": {
     "functions": {
       "RegionItemsResult": 1,
-      "fetch_region_items": 46
+      "fetch_region_items": 48
     },
     "mi_rank": "A"
   },
@@ -13464,7 +13464,7 @@
       "_build_card_adapter_ctx": 13,
       "_build_chart_adapter_ctx": 27,
       "_build_dashboard_adapter_ctx": 14,
-      "_build_list_adapter_ctx": 13,
+      "_build_list_adapter_ctx": 14,
       "_build_specialty_adapter_ctx": 15,
       "_overlays_to_series": 5,
       "_pick_display_key": 4,
@@ -13475,10 +13475,10 @@
   },
   "dazzle/http/runtime/workspace_route_builder.py": {
     "functions": {
-      "WorkspaceRouteBuilder": 21,
+      "WorkspaceRouteBuilder": 22,
       "WorkspaceRouteBuilder.__init__": 3,
       "WorkspaceRouteBuilder._init_workspace_entity_routes": 9,
-      "WorkspaceRouteBuilder.init_workspace_routes": 47,
+      "WorkspaceRouteBuilder.init_workspace_routes": 51,
       "_workspace_route_methods": 5
     },
     "mi_rank": "A"
@@ -16499,6 +16499,19 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/page/runtime/dual_pane_master_detail.py": {
+    "functions": {
+      "DualPaneMasterDetailPair": 1,
+      "_display_upper": 2,
+      "_name_of": 2,
+      "_source_of": 2,
+      "detect_dual_pane_master_detail_pair": 15,
+      "master_detail_item_endpoint": 1,
+      "master_detail_pane_id": 1,
+      "render_master_detail_shell": 2
+    },
+    "mi_rank": "A"
+  },
   "dazzle/page/runtime/experience_persistence.py": {
     "functions": {
       "ExperienceProgress": 1,
@@ -16689,7 +16702,7 @@
       "build_catalog": 3,
       "build_workspace_context": 80,
       "migrate_v1_to_v2": 9,
-      "render_workspace_content_typed": 14
+      "render_workspace_content_typed": 22
     },
     "mi_rank": "A"
   },
@@ -17270,6 +17283,18 @@
       "_has_audit_fields": 2,
       "infer_expected_outcome": 5,
       "verify_signing_outcome": 15
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/qa/subscription_vision.py": {
+    "functions": {
+      "SubscriptionScore": 3,
+      "SubscriptionScore.mean": 2,
+      "build_subscription_score_prompt": 3,
+      "load_scores": 3,
+      "parse_subscription_scores": 25,
+      "scores_from_smoke_manifest": 7,
+      "write_scores": 3
     },
     "mi_rank": "A"
   },
@@ -18174,7 +18199,7 @@
   "dazzle/render/fragment/region/_builders_tables.py": {
     "functions": {
       "_BuildersTablesMixin": 49,
-      "_BuildersTablesMixin._build_list": 70,
+      "_BuildersTablesMixin._build_list": 71,
       "_BuildersTablesMixin._build_pivot_table": 35,
       "_BuildersTablesMixin._build_queue": 52,
       "_BuildersTablesMixin._build_tabbed_list": 34,
@@ -18269,7 +18294,7 @@
       "_render_cell_display": 33,
       "_render_table_row": 45,
       "assemble_list_row": 7,
-      "drill_row_attrs": 2,
+      "drill_row_attrs": 6,
       "render_data_row": 2,
       "render_data_table_rows": 2,
       "slideover_content_id": 1,
@@ -18326,7 +18351,7 @@
       "_RenderDashboardMixin._emit_cohort_strip_region": 11,
       "_RenderDashboardMixin._emit_dashboard_card": 11,
       "_RenderDashboardMixin._emit_dashboard_grid": 1,
-      "_RenderDashboardMixin._emit_dashboard_grid_impl": 4,
+      "_RenderDashboardMixin._emit_dashboard_grid_impl": 5,
       "_RenderDashboardMixin._emit_day_timeline_region": 6,
       "_RenderDashboardMixin._emit_entity_card_region": 7,
       "_RenderDashboardMixin._emit_task_inbox_region": 11
@@ -18434,7 +18459,7 @@
   },
   "dazzle/render/fragment/renderer/_render_tables.py": {
     "functions": {
-      "_RenderTablesMixin": 7,
+      "_RenderTablesMixin": 8,
       "_RenderTablesMixin._emit": 1,
       "_RenderTablesMixin._emit_action_card": 4,
       "_RenderTablesMixin._emit_action_grid": 3,
@@ -18445,7 +18470,7 @@
       "_RenderTablesMixin._emit_detail_grid": 2,
       "_RenderTablesMixin._emit_grid_region": 6,
       "_RenderTablesMixin._emit_kpi": 2,
-      "_RenderTablesMixin._emit_list_region": 13,
+      "_RenderTablesMixin._emit_list_region": 16,
       "_RenderTablesMixin._emit_metric_tile": 15,
       "_RenderTablesMixin._emit_metrics_grid": 2,
       "_RenderTablesMixin._emit_pivot_table": 4,
