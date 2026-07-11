@@ -68,8 +68,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -454,6 +454,46 @@ def test_timeline_emission_conforms_to_timeline_contract() -> None:
     assert html.count("data-dz-timeline-item") == 2
     assert "Payment failed" in html
     assert "dz-timeline-field" in html
+
+
+def test_profile_card_emission_conforms_to_profile_card_contract() -> None:
+    """Real FragmentRenderer ProfileCard path satisfies contracts/profile_card.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import ProfileCard as CardFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    pc_mod = load_hm_module("contracts/profile_card.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        CardFrag(
+            primary="Maya Reyes",
+            secondary="Operations lead",
+            initials="MR",
+            stats=(("Open work orders", "7"), ("On call", "")),
+            facts=("Certified for HV switching",),
+        )
+    )
+    violations = kit.validate_dom(html, pc_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-profile-card" in html
+    assert "Maya Reyes" in html
+    assert "dz-profile-stat-value" in html
+
+
+def test_sparkline_emission_conforms_to_sparkline_contract() -> None:
+    """Real FragmentRenderer Sparkline path satisfies contracts/sparkline.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import Sparkline as SparkFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    sp_mod = load_hm_module("contracts/sparkline.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(SparkFrag(points=(("a", 10.0), ("b", 20.0), ("c", 15.0))))
+    violations = kit.validate_dom(html, sp_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-sparkline" in html
+    assert "dz-sparkline-svg" in html
+    assert "dz-sparkline-value" in html
 
 
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────

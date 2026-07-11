@@ -20,8 +20,13 @@ from typing import TYPE_CHECKING
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
+from dazzle.render.fragment.ingest import Sparkline as SparklineSeam
 from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
-from dazzle.render.fragment.ingest import render_kanban_card, render_timeline_event
+from dazzle.render.fragment.ingest import (
+    render_kanban_card,
+    render_sparkline,
+    render_timeline_event,
+)
 from dazzle.render.fragment.primitives import (
     BarChart,
     BoxPlot,
@@ -476,68 +481,8 @@ class _RenderChartsMixin:
         )
 
     def _emit_sparkline(self, s: Sparkline, ctx: RenderContext) -> str:
-        """Render a Sparkline matching legacy
-        `workspace/regions/sparkline.html` byte-for-byte: outer
-        `dz-sparkline-region`, headline showing the latest bucket
-        (value + label), and a tiny 180×32 SVG with area fill +
-        polyline. Single-point series omit the SVG entirely (matches
-        legacy `{% if count > 1 %}` guard). Empty series renders the
-        `dz-sparkline-empty` div with the empty message.
-        """
-        if not s.points:
-            return (
-                f'<div class="dz-sparkline-region">'
-                f'<div class="dz-sparkline-empty">{ctx.escape(s.empty_message)}</div>'
-                f"</div>"
-            )
-
-        last_label, last_value = s.points[-1]
-        # Match Jinja's `{{ value }}` rendering — int repr for whole values.
-        last_value_str = str(int(last_value)) if last_value == int(last_value) else str(last_value)
-        max_val = max(v for _, v in s.points)
-        if max_val <= 0:
-            max_val = 1
-        max_val_str = str(int(max_val)) if max_val == int(max_val) else str(max_val)
-        count = len(s.points)
-
-        headline = (
-            f'<div class="dz-sparkline-headline">'
-            f'<span class="dz-sparkline-value">{ctx.escape(last_value_str)}</span>'
-            f'<span class="dz-sparkline-bucket-label">{ctx.escape(last_label)}</span>'
-            f"</div>"
-        )
-
-        if count <= 1:
-            return f'<div class="dz-sparkline-region">{headline}</div>'
-
-        # 180×32 viewBox with 2px top/bottom padding (no left/right padding).
-        w = 180
-        h = 32
-        pt = 2
-        pb = 2
-        plot_h = h - pt - pb
-        step = w / (count - 1)
-        pts = []
-        for i, (_, v) in enumerate(s.points):
-            x = round(i * step, 2)
-            y = round(pt + plot_h - (v / max_val * plot_h), 2)
-            pts.append(f"{x},{y}")
-        pts_str = " ".join(pts)
-
-        svg = (
-            f'<svg xmlns="http://www.w3.org/2000/svg" '
-            f'viewBox="0 0 {w} {h}" '
-            f'class="dz-sparkline-svg" role="img" '
-            f'aria-label="Sparkline — {count} points, latest '
-            f'{last_value_str}, peak {max_val_str}">'
-            f'<polygon points="0,{h} {pts_str} {w},{h}" '
-            f'fill="var(--colour-brand)" fill-opacity="0.15" stroke="none" />'
-            f'<polyline points="{pts_str}" fill="none" '
-            f'stroke="var(--colour-brand)" stroke-width="1.25" '
-            f'stroke-linejoin="round" stroke-linecap="round" />'
-            f"</svg>"
-        )
-        return f'<div class="dz-sparkline-region">{headline}{svg}</div>'
+        """Render a Sparkline via HM dual-lock Sparkline seam."""
+        return render_sparkline(SparklineSeam(points=list(s.points), empty_message=s.empty_message))
 
     def _emit_tree(self, t: Tree, ctx: RenderContext) -> str:
         """Render a Tree matching legacy `workspace/regions/tree.html`

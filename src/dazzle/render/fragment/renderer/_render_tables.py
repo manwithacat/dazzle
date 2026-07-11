@@ -30,12 +30,14 @@ from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
 from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
 from dazzle.render.fragment.ingest import ActivityRow as ActivityRowSeam
 from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
+from dazzle.render.fragment.ingest import ProfileCard as ProfileCardSeam
 from dazzle.render.fragment.ingest import QueueRow as QueueRowSeam
 from dazzle.render.fragment.ingest import StatusListEntry as StatusListEntrySeam
 from dazzle.render.fragment.ingest import (
     render_action_card,
     render_activity_row,
     render_metric_tile,
+    render_profile_card,
     render_queue_row,
     render_status_list_entry,
 )
@@ -618,68 +620,16 @@ class _RenderTablesMixin:
         )
 
     def _emit_profile_card(self, p: ProfileCard, ctx: RenderContext) -> str:
-        """Render a ProfileCard matching the legacy
-        `workspace/regions/profile_card.html` HTML shape: identity row
-        (avatar or initials + name + meta), optional 3-up stats grid,
-        optional bulleted facts list.
-        """
-        # Identity row: avatar wins over initials
-        if p.avatar_url:
-            avatar_html = (
-                f'<img src="{ctx.escape_attr(p.avatar_url)}" '
-                f'alt="{ctx.escape_attr(p.primary)}" '
-                f'class="dz-profile-avatar" />'
+        """Render a ProfileCard via HM dual-lock ProfileCard seam."""
+        return render_profile_card(
+            ProfileCardSeam(
+                primary=p.primary,
+                secondary=p.secondary,
+                avatar_url=p.avatar_url,
+                initials=p.initials,
+                stats=list(p.stats),
+                facts=list(p.facts),
             )
-        elif p.initials:
-            avatar_html = (
-                f'<span class="dz-profile-initials" aria-hidden="true">'
-                f"{ctx.escape(p.initials)}</span>"
-            )
-        else:
-            avatar_html = ""
-
-        text_inner = ""
-        if p.primary:
-            text_inner += f'<h3 class="dz-profile-primary">{ctx.escape(p.primary)}</h3>'
-        if p.secondary:
-            text_inner += f'<p class="dz-profile-secondary">{ctx.escape(p.secondary)}</p>'
-        identity_html = (
-            f'<div class="dz-profile-identity">'
-            f"{avatar_html}"
-            f'<div class="dz-profile-text">{text_inner}</div>'
-            f"</div>"
-        )
-
-        # Stats grid — em-dash for empty values (matches legacy `stat.value or "—"`)
-        stats_html = ""
-        if p.stats:
-            stat_rows = "".join(
-                f'<div class="dz-profile-stat">'
-                f'<dt class="dz-profile-stat-label">{ctx.escape(label)}</dt>'
-                f'<dd class="dz-profile-stat-value">{ctx.escape(value) if value else "—"}</dd>'
-                f"</div>"
-                for label, value in p.stats
-            )
-            stats_html = f'<dl class="dz-profile-stats">{stat_rows}</dl>'
-
-        # Facts list — bullet decoration via CSS, not literal text
-        facts_html = ""
-        if p.facts:
-            fact_items = "".join(
-                f'<li class="dz-profile-fact">'
-                f'<span class="dz-profile-fact-bullet" aria-hidden="true">·</span>'
-                f'<span class="dz-profile-fact-text">{ctx.escape(fact)}</span>'
-                f"</li>"
-                for fact in p.facts
-            )
-            facts_html = f'<ul class="dz-profile-facts">{fact_items}</ul>'
-
-        # Phase 4B.4 wave 4: outer dz-profile-card-region wrapper
-        # for byte-equivalence with the legacy template.
-        return (
-            f'<div class="dz-profile-card-region">'
-            f'<div class="dz-profile-card">{identity_html}{stats_html}{facts_html}</div>'
-            f"</div>"
         )
 
     def _emit_metric_tile(self, m: MetricTile, ctx: RenderContext) -> str:

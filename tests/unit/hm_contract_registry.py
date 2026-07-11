@@ -80,6 +80,18 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "TimelineEvent",
     ),
+    (
+        "contracts/profile_card.py",
+        "ProfileCard",
+        "dazzle.render.fragment.ingest",
+        "ProfileCard",
+    ),
+    (
+        "contracts/sparkline.py",
+        "Sparkline",
+        "dazzle.render.fragment.ingest",
+        "Sparkline",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.

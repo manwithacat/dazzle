@@ -10,7 +10,7 @@ equality — and the emitted DOM is locked by
 Seam models: ``GridEditCell``, ``ComboboxField``, ``TagsField``,
 ``MoneyField``, ``SearchResultRow``, ``SearchSelectShell``, ``ActionCard``,
 ``StatusListEntry``, ``QueueRow``, ``MetricTile``, ``KanbanCard``,
-``ActivityRow``, ``TimelineEvent``.
+``ActivityRow``, ``TimelineEvent``, ``ProfileCard``, ``Sparkline``.
 
 **Two layers (#1577):** form primitives in ``primitives/forms.py`` are the
 public product API (``required``, currency selector, symbol, …). These
@@ -29,7 +29,7 @@ import re
 from collections.abc import Sequence
 from typing import Literal
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 Kind = Literal["text", "date", "bool", "select"]
 
@@ -365,6 +365,38 @@ class TimelineEvent(BaseModel):
         return v
 
 
+# ── Profile-card seam copy (contracts/profile_card.py) ───────────────
+
+
+class ProfileCard(BaseModel):
+    """Identity panel — dual-lock unit for profile-card."""
+
+    primary: str = ""
+    secondary: str = ""
+    avatar_url: str = ""
+    initials: str = ""
+    stats: list[tuple[str, str]] = Field(default_factory=list)
+    facts: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _identity_required(self) -> ProfileCard:
+        if not (self.primary or self.avatar_url or self.initials):
+            raise ValueError(
+                "ProfileCard requires at least one of primary, avatar_url, or initials"
+            )
+        return self
+
+
+# ── Sparkline seam copy (contracts/sparkline.py) ─────────────────────
+
+
+class Sparkline(BaseModel):
+    """Compact time-series — dual-lock unit for sparkline."""
+
+    points: list[tuple[str, float]] = Field(default_factory=list)
+    empty_message: str = "—"
+
+
 # ── Form → ingest adapters (#1577) ───────────────────────────────────
 # Form primitives stay the public API; emission builds these models then
 # uses the attr helpers below for HM contract attributes.
@@ -651,6 +683,16 @@ def timeline_item_root_attrs(_evt: TimelineEvent) -> str:
     return "data-dz-timeline-item"
 
 
+def profile_card_root_attrs(_card: ProfileCard) -> str:
+    """Assemble profile-card dual-lock root — sole emitter site."""
+    return "data-dz-profile-card"
+
+
+def sparkline_root_attrs(_s: Sparkline) -> str:
+    """Assemble sparkline dual-lock root — sole emitter site."""
+    return "data-dz-sparkline"
+
+
 def render_metric_tile(tile: MetricTile) -> str:
     """Model → one metric tile (matches HM contracts/metrics.py)."""
     label = _html.escape(tile.label)
@@ -773,6 +815,121 @@ def render_timeline_event(evt: TimelineEvent) -> str:
         f"</div>"
         f"</li>"
     )
+
+
+def render_profile_card(card: ProfileCard) -> str:
+    """Model → profile card (matches HM contracts/profile_card.py)."""
+    if card.avatar_url:
+        avatar_html = (
+            f'<img src="{_html.escape(card.avatar_url, quote=True)}" '
+            f'alt="{_html.escape(card.primary, quote=True)}" '
+            f'class="dz-profile-avatar" />'
+        )
+    elif card.initials:
+        avatar_html = (
+            f'<span class="dz-profile-initials" aria-hidden="true">'
+            f"{_html.escape(card.initials)}</span>"
+        )
+    else:
+        avatar_html = ""
+
+    text_inner = ""
+    if card.primary:
+        text_inner += f'<h3 class="dz-profile-primary">{_html.escape(card.primary)}</h3>'
+    if card.secondary:
+        text_inner += f'<p class="dz-profile-secondary">{_html.escape(card.secondary)}</p>'
+    identity_html = (
+        f'<div class="dz-profile-identity">'
+        f"{avatar_html}"
+        f'<div class="dz-profile-text">{text_inner}</div>'
+        f"</div>"
+    )
+
+    stats_html = ""
+    if card.stats:
+        stat_rows = "".join(
+            f'<div class="dz-profile-stat">'
+            f'<dt class="dz-profile-stat-label">{_html.escape(label)}</dt>'
+            f'<dd class="dz-profile-stat-value">'
+            f"{_html.escape(value) if value else '—'}</dd>"
+            f"</div>"
+            for label, value in card.stats
+        )
+        stats_html = f'<dl class="dz-profile-stats">{stat_rows}</dl>'
+
+    facts_html = ""
+    if card.facts:
+        fact_items = "".join(
+            f'<li class="dz-profile-fact">'
+            f'<span class="dz-profile-fact-bullet" aria-hidden="true">·</span>'
+            f'<span class="dz-profile-fact-text">{_html.escape(fact)}</span>'
+            f"</li>"
+            for fact in card.facts
+        )
+        facts_html = f'<ul class="dz-profile-facts">{fact_items}</ul>'
+
+    root_attrs = profile_card_root_attrs(card)
+    return (
+        f'<div class="dz-profile-card-region">'
+        f'<div class="dz-profile-card" {root_attrs}>'
+        f"{identity_html}{stats_html}{facts_html}"
+        f"</div>"
+        f"</div>"
+    )
+
+
+def render_sparkline(s: Sparkline) -> str:
+    """Model → sparkline region (matches HM contracts/sparkline.py)."""
+    root_attrs = sparkline_root_attrs(s)
+    if not s.points:
+        return (
+            f'<div class="dz-sparkline-region" {root_attrs}>'
+            f'<div class="dz-sparkline-empty">{_html.escape(s.empty_message)}</div>'
+            f"</div>"
+        )
+
+    last_label, last_value = s.points[-1]
+    last_value_str = str(int(last_value)) if last_value == int(last_value) else str(last_value)
+    max_val = max(v for _, v in s.points)
+    if max_val <= 0:
+        max_val = 1.0
+    max_val_str = str(int(max_val)) if max_val == int(max_val) else str(max_val)
+    count = len(s.points)
+
+    headline = (
+        f'<div class="dz-sparkline-headline">'
+        f'<span class="dz-sparkline-value">{_html.escape(last_value_str)}</span>'
+        f'<span class="dz-sparkline-bucket-label">{_html.escape(last_label)}</span>'
+        f"</div>"
+    )
+
+    if count <= 1:
+        return f'<div class="dz-sparkline-region" {root_attrs}>{headline}</div>'
+
+    w, h, pt, pb = 180, 32, 2, 2
+    plot_h = h - pt - pb
+    step = w / (count - 1)
+    pts = []
+    for i, (_, v) in enumerate(s.points):
+        x = round(i * step, 2)
+        y = round(pt + plot_h - (v / max_val * plot_h), 2)
+        pts.append(f"{x},{y}")
+    pts_str = " ".join(pts)
+
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'viewBox="0 0 {w} {h}" '
+        f'class="dz-sparkline-svg" role="img" '
+        f'aria-label="Sparkline — {count} points, latest '
+        f'{_html.escape(last_value_str)}, peak {_html.escape(max_val_str)}">'
+        f'<polygon points="0,{h} {pts_str} {w},{h}" '
+        f'fill="var(--colour-brand)" fill-opacity="0.15" stroke="none" />'
+        f'<polyline points="{pts_str}" fill="none" '
+        f'stroke="var(--colour-brand)" stroke-width="1.25" '
+        f'stroke-linejoin="round" stroke-linecap="round" />'
+        f"</svg>"
+    )
+    return f'<div class="dz-sparkline-region" {root_attrs}>{headline}{svg}</div>'
 
 
 def render_search_result_row(row: SearchResultRow) -> str:

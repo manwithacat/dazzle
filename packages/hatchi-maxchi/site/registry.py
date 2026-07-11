@@ -2842,7 +2842,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "A headline number with its recent shape — the smallest chart: a "
             "current value, its bucket label, and an area glyph.",
-            '<div class="dz-sparkline-region">'
+            '<div class="dz-sparkline-region" data-dz-sparkline>'
             '<div class="dz-sparkline-headline">'
             '<span class="dz-sparkline-value">184ms</span>'
             '<span class="dz-sparkline-bucket-label">this hour</span></div>'
@@ -2856,12 +2856,14 @@ def select(source: str, id: str) -> str:
             '144,14 162,6 180,9" fill="none" stroke="var(--colour-brand)" '
             'stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/>'
             "</svg></div>",
-            notes="The SVG is server-rendered with a numeric summary in "
-            "<code>aria-label</code> (points / latest / peak) — the glyph is "
-            "decoration; the numbers are the content. An empty series renders "
-            "<code>dz-sparkline-empty</code>; a single point renders the "
-            "headline alone.",
+            notes="Dual-lock root is <code>data-dz-sparkline</code> "
+            "(<code>contracts/sparkline.py</code>). The SVG is server-rendered "
+            "with a numeric summary in <code>aria-label</code> (points / latest "
+            "/ peak) — the glyph is decoration; the numbers are the content. An "
+            "empty series renders <code>dz-sparkline-empty</code>; a single "
+            "point renders the headline alone.",
             tags=("data", "chart"),
+            contracts=("contracts/sparkline.py",),
         ),
         Hyperpart(
             "funnel",
@@ -3165,7 +3167,7 @@ def select(source: str, id: str) -> str:
             "The identity panel: avatar or initials beside name and meta, an "
             "optional 3-up stats grid, and a bulleted facts list.",
             '<div class="dz-profile-card-region hm-measure">'
-            '<div class="dz-profile-card">'
+            '<div class="dz-profile-card" data-dz-profile-card>'
             '<div class="dz-profile-identity">'
             '<span class="dz-profile-initials" aria-hidden="true">MR</span>'
             '<div class="dz-profile-text">'
@@ -3191,12 +3193,14 @@ def select(source: str, id: str) -> str:
             '<span class="dz-profile-fact-bullet" aria-hidden="true">·</span>'
             '<span class="dz-profile-fact-text">Joined March 2024</span></li>'
             "</ul></div></div>",
-            notes="The avatar slot prefers an <code>&lt;img "
-            "class=&quot;dz-profile-avatar&quot;&gt;</code> and falls back to "
-            "an initials chip; empty stat values render an em-dash (absence is "
-            "data). Stats are a real <code>&lt;dl&gt;</code>; the facts bullet "
-            "is decorative markup, hidden from assistive tech.",
+            notes="Dual-lock root is <code>data-dz-profile-card</code> "
+            "(<code>contracts/profile_card.py</code>). The avatar slot prefers "
+            "an <code>&lt;img class=&quot;dz-profile-avatar&quot;&gt;</code> and "
+            "falls back to an initials chip; empty stat values render an "
+            "em-dash (absence is data). Stats are a real <code>&lt;dl&gt;</code>; "
+            "the facts bullet is decorative markup, hidden from assistive tech.",
             tags=("data",),
+            contracts=("contracts/profile_card.py",),
         ),
         Hyperpart(
             "grid-list",

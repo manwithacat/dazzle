@@ -10,10 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **profile-card + sparkline → schema+DOM dual-lock** — HM
+  `contracts/profile_card.py` (`ProfileCard`, root `data-dz-profile-card`) and
+  `contracts/sparkline.py` (`Sparkline`, root `data-dz-sparkline`) with ingest
+  renders + sole-emitters. Dual-lock coverage: **14 schema+DOM** / 14 DOM-only.
 - **activity-feed + timeline → schema+DOM dual-lock** — HM
   `contracts/activity_feed.py` (`ActivityRow`, root `data-dz-activity-row`) and
   `contracts/timeline.py` (`TimelineEvent`, root `data-dz-timeline-item`) with
-  ingest renders + sole-emitters. Dual-lock coverage: **12 schema+DOM** / 14 DOM-only.
+  ingest renders + sole-emitters.
 - **metrics + kanban → schema+DOM dual-lock** — HM `contracts/metrics.py`
   (`MetricTile`, root `data-dz-metric-key`) and `contracts/kanban.py`
   (`KanbanCard`, root `data-dz-kanban-card`) with ingest renders + sole-emitters.

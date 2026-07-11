@@ -13,7 +13,7 @@ The identity panel: avatar or initials beside name and meta, an optional 3-up st
 
 ```html
 <div class="profile-card-region hm-measure">
-  <div class="profile-card">
+  <div class="profile-card" data-profile-card>
     <div class="profile-identity">
       <span class="profile-initials" aria-hidden="true">MR</span>
       <div class="profile-text">
@@ -55,16 +55,101 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/profile_card.py`
+
+- **Required root:** `[data-dz-profile-card]` (part `profile-card`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-profile-card]` | `data-dz-profile-card` | present (any value) |
+
+#### Ingestion model `ProfileCard`
+
+| Field | Type | Required |
+|---|---|---|
+| `primary` | `string` | no |
+| `secondary` | `string` | no |
+| `avatar_url` | `string` | no |
+| `initials` | `string` | no |
+| `stats` | `array` | no |
+| `facts` | `array` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(card: ProfileCard) -> str:
+    """Model → profile card (with region wrapper matching Dazzle emit)."""
+    if card.avatar_url:
+        avatar_html = (
+            f'<img src="{html.escape(card.avatar_url, quote=True)}" '
+            f'alt="{html.escape(card.primary, quote=True)}" '
+            f'class="dz-profile-avatar" />'
+        )
+    elif card.initials:
+        avatar_html = (
+            f'<span class="dz-profile-initials" aria-hidden="true">'
+            f"{html.escape(card.initials)}</span>"
+        )
+    else:
+        avatar_html = ""
+
+    text_inner = ""
+    if card.primary:
+        text_inner += f'<h3 class="dz-profile-primary">{html.escape(card.primary)}</h3>'
+    if card.secondary:
+        text_inner += (
+            f'<p class="dz-profile-secondary">{html.escape(card.secondary)}</p>'
+        )
+    identity_html = (
+        f'<div class="dz-profile-identity">'
+        f"{avatar_html}"
+        f'<div class="dz-profile-text">{text_inner}</div>'
+        f"</div>"
+    )
+
+    stats_html = ""
+    if card.stats:
+        stat_rows = "".join(
+            f'<div class="dz-profile-stat">'
+            f'<dt class="dz-profile-stat-label">{html.escape(label)}</dt>'
+            f'<dd class="dz-profile-stat-value">'
+            f"{html.escape(value) if value else '—'}</dd>"
+            f"</div>"
+            for label, value in card.stats
+        )
+        stats_html = f'<dl class="dz-profile-stats">{stat_rows}</dl>'
+
+    facts_html = ""
+    if card.facts:
+        fact_items = "".join(
+            f'<li class="dz-profile-fact">'
+            f'<span class="dz-profile-fact-bullet" aria-hidden="true">·</span>'
+            f'<span class="dz-profile-fact-text">{html.escape(fact)}</span>'
+            f"</li>"
+            for fact in card.facts
+        )
+        facts_html = f'<ul class="dz-profile-facts">{fact_items}</ul>'
+
+    return (
+        f'<div class="dz-profile-card-region">'
+        f'<div class="dz-profile-card" data-dz-profile-card>'
+        f"{identity_html}{stats_html}{facts_html}"
+        f"</div>"
+        f"</div>"
+    )
+```
 
 ## Notes
 
-The avatar slot prefers an <img class="dz-profile-avatar"> and falls back to an initials chip; empty stat values render an em-dash (absence is data). Stats are a real <dl>; the facts bullet is decorative markup, hidden from assistive tech.
+Dual-lock root is data-dz-profile-card (contracts/profile_card.py). The avatar slot prefers an <img class="dz-profile-avatar"> and falls back to an initials chip; empty stat values render an em-dash (absence is data). Stats are a real <dl>; the facts bullet is decorative markup, hidden from assistive tech.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/profile_card.py`

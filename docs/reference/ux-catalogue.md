@@ -262,7 +262,7 @@ cat_line:
 Compact trend tile — the same daily series as a headline + tiny SVG.
 
 <div class="dz-catalogue-preview" markdown="0">
-<div data-dz-region data-dz-region-name="cat_sparkline" id="region-cat_sparkline"><div class="dz-sparkline-region"><div class="dz-sparkline-headline"><span class="dz-sparkline-value">6</span><span class="dz-sparkline-bucket-label">2026-06-25</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" class="dz-sparkline-svg" role="img" aria-label="Sparkline — 5 points, latest 6, peak 8"><polygon points="0,32 0.0,19.5 45.0,12.5 90.0,16.0 135.0,2.0 180.0,9.0 180,32" fill="var(--colour-brand)" fill-opacity="0.15" stroke="none" /><polyline points="0.0,19.5 45.0,12.5 90.0,16.0 135.0,2.0 180.0,9.0" fill="none" stroke="var(--colour-brand)" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round" /></svg></div></div>
+<div data-dz-region data-dz-region-name="cat_sparkline" id="region-cat_sparkline"><div class="dz-sparkline-region" data-dz-sparkline><div class="dz-sparkline-headline"><span class="dz-sparkline-value">6</span><span class="dz-sparkline-bucket-label">2026-06-25</span></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" class="dz-sparkline-svg" role="img" aria-label="Sparkline — 5 points, latest 6, peak 8"><polygon points="0,32 0.0,19.5 45.0,12.5 90.0,16.0 135.0,2.0 180.0,9.0 180,32" fill="var(--colour-brand)" fill-opacity="0.15" stroke="none" /><polyline points="0.0,19.5 45.0,12.5 90.0,16.0 135.0,2.0 180.0,9.0" fill="none" stroke="var(--colour-brand)" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round" /></svg></div></div>
 </div>
 
 ```dsl
