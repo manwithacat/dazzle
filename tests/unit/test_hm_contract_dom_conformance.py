@@ -53,13 +53,14 @@ def test_hydrated_badge_row_conforms_to_grid_edit_contract(options) -> None:
 
 
 def test_typed_path_is_sole_emitter() -> None:
-    """HM contract attribute *assembly* is allowed ONLY in ingest.py.
+    """HM contract attribute *assembly* is allowed ONLY under ``ingest/``.
 
     Families (#1577): ``data-dz-edit-``, ``data-dz-tags``, ``data-dz-combobox``,
     ``data-dz-money``, ``data-dz-action-card``, ``data-dz-status-entry``,
     ``data-dz-queue-row``, ``data-dz-widget="search_select"`` (+ search-select
-    timing knobs). Docstrings and runtime readers (has_attr) are ignored;
-    HTML f-string / quoted assembly outside ingest fails.
+    timing knobs and workspace dual-lock roots). Docstrings and runtime
+    readers (has_attr) are ignored; HTML f-string / quoted assembly outside
+    the ``fragment/ingest`` package fails.
     """
     import re
 
@@ -80,9 +81,14 @@ def test_typed_path_is_sole_emitter() -> None:
         "form_field.py",  # routing comments
     }
     offenders: list[str] = []
+    ingest_pkg = REPO_ROOT / "src" / "dazzle" / "render" / "fragment" / "ingest"
     for p in (REPO_ROOT / "src" / "dazzle").rglob("*.py"):
-        if p.name == "ingest.py" and p.parent.name == "fragment":
+        # Sole-emitters live in the ingest package (models are pure data).
+        try:
+            p.relative_to(ingest_pkg)
             continue
+        except ValueError:
+            pass
         if p.name in allow_name:
             continue
         text = p.read_text(encoding="utf-8")

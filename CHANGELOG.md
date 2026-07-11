@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Split `dazzle.render.fragment.ingest` into a package** — `models.py`
+  (Pydantic seam models) + `emit.py` (adapters / sole-emitters / renderers)
+  with a stable facade `__init__.py`. Restores maintainability after dual-lock
+  growth (MI A→B on the monolith). Sole-emitter gate allowlists the whole
+  package.
 - **funnel + bar-chart → schema+DOM dual-lock** — HM `contracts/funnel.py`
   (`Funnel`/`FunnelStage`, root `data-dz-funnel`) and `contracts/bar_chart.py`
   (`BarChart`/`BarChartRow`, root `data-dz-bar-chart`) with ingest renders +

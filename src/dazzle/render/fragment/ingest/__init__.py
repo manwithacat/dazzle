@@ -1,0 +1,151 @@
+"""Typed ingestion boundary for HM Hyperpart seams.
+
+Runtime copies of the HaTchi-MaXchi contract models (the wheel cannot ship
+``packages/``, so no runtime import crosses the dist-only boundary). The
+copies are locked to the HM contract modules by
+``tests/unit/test_hm_contract_schema_parity.py`` — field-for-field schema
+equality — and the emitted DOM is locked by
+``tests/unit/test_hm_contract_dom_conformance.py``.
+
+**Two layers (#1577):** form primitives in ``primitives/forms.py`` are the
+public product API. These ingest models are the HM contract shape. Emission
+is ``form primitive → *_from_form adapter → attr helper`` — HM contract
+attributes are assembled **only** in this package (sole-emitter gates).
+
+Split layout (complexity hygiene):
+
+- ``models`` — Pydantic seam models
+- ``emit`` — adapters, attr helpers, HTML renderers
+
+Source of truth: ``packages/hatchi-maxchi/contracts/<part>.py``.
+"""
+
+from __future__ import annotations
+
+from dazzle.render.fragment.ingest.emit import (
+    action_card_root_attrs,
+    activity_row_root_attrs,
+    bar_chart_root_attrs,
+    combobox_from_form,
+    combobox_marker_attrs,
+    combobox_options_html,
+    edit_span_attrs,
+    funnel_root_attrs,
+    kanban_card_root_attrs,
+    metric_tile_root_attrs,
+    money_from_form,
+    money_root_attrs,
+    profile_card_root_attrs,
+    queue_row_root_attrs,
+    render_action_card,
+    render_activity_row,
+    render_bar_chart,
+    render_funnel,
+    render_kanban_card,
+    render_metric_tile,
+    render_profile_card,
+    render_queue_row,
+    render_search_result_list,
+    render_search_result_row,
+    render_sparkline,
+    render_status_list_entry,
+    render_timeline_event,
+    search_select_root_attrs,
+    search_select_shell_from_form,
+    sparkline_root_attrs,
+    status_list_entry_root_attrs,
+    tags_from_form,
+    tags_marker_attrs,
+    timeline_item_root_attrs,
+)
+from dazzle.render.fragment.ingest.models import (
+    ActionCard,
+    ActionCardTone,
+    ActivityRow,
+    BarChart,
+    BarChartRow,
+    ComboboxField,
+    ComboboxOption,
+    Funnel,
+    FunnelStage,
+    GridEditCell,
+    KanbanCard,
+    Kind,
+    MetricDeltaDir,
+    MetricDeltaSent,
+    MetricTile,
+    MetricTone,
+    MoneyField,
+    ProfileCard,
+    QueueRow,
+    SearchResultRow,
+    SearchSelectShell,
+    Sparkline,
+    StatusListEntry,
+    StatusListState,
+    TagsField,
+    TimelineEvent,
+)
+
+__all__ = [
+    "ActionCard",
+    "ActionCardTone",
+    "ActivityRow",
+    "BarChart",
+    "BarChartRow",
+    "ComboboxField",
+    "ComboboxOption",
+    "Funnel",
+    "FunnelStage",
+    "GridEditCell",
+    "KanbanCard",
+    "Kind",
+    "MetricDeltaDir",
+    "MetricDeltaSent",
+    "MetricTile",
+    "MetricTone",
+    "MoneyField",
+    "ProfileCard",
+    "QueueRow",
+    "SearchResultRow",
+    "SearchSelectShell",
+    "Sparkline",
+    "StatusListEntry",
+    "StatusListState",
+    "TagsField",
+    "TimelineEvent",
+    "action_card_root_attrs",
+    "activity_row_root_attrs",
+    "bar_chart_root_attrs",
+    "combobox_from_form",
+    "combobox_marker_attrs",
+    "combobox_options_html",
+    "edit_span_attrs",
+    "funnel_root_attrs",
+    "kanban_card_root_attrs",
+    "metric_tile_root_attrs",
+    "money_from_form",
+    "money_root_attrs",
+    "profile_card_root_attrs",
+    "queue_row_root_attrs",
+    "render_action_card",
+    "render_activity_row",
+    "render_bar_chart",
+    "render_funnel",
+    "render_kanban_card",
+    "render_metric_tile",
+    "render_profile_card",
+    "render_queue_row",
+    "render_search_result_list",
+    "render_search_result_row",
+    "render_sparkline",
+    "render_status_list_entry",
+    "render_timeline_event",
+    "search_select_root_attrs",
+    "search_select_shell_from_form",
+    "sparkline_root_attrs",
+    "status_list_entry_root_attrs",
+    "tags_from_form",
+    "tags_marker_attrs",
+    "timeline_item_root_attrs",
+]

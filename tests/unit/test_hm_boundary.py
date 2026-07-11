@@ -46,7 +46,10 @@ SANCTIONED = {
     # to packages/hatchi-maxchi/contracts/ by the schema-parity + DOM-
     # conformance gates. The docstring pointer to the contract source of
     # truth is load-bearing (spec 2026-07-10-hyperpart-contract-modules).
-    "src/dazzle/render/fragment/ingest.py",
+    # Package split (models + emit + facade) after dual-lock growth.
+    "src/dazzle/render/fragment/ingest/__init__.py",
+    "src/dazzle/render/fragment/ingest/models.py",
+    "src/dazzle/render/fragment/ingest/emit.py",
     # Reservoir metric names the HM package to measure the delegation drain +
     # recognise HM-generated served files (the marker). Governance, not consumption.
     "scripts/hm_tailwind_reservoir.py",
