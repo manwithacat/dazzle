@@ -338,12 +338,16 @@ HYPERPARTS: list[Hyperpart] = [
         '<div class="dz-bulk-actions">'
         '<span aria-live="polite" aria-atomic="true">'
         "<span data-dz-bulk-count-target>0</span> selected</span>"
-        # All-matching escalation (GMail idiom): promote the page selection to
-        # the WHOLE matched query. The total is mirrored from the footer's
-        # server-stamped data-dz-grid-total; CSS hides the button once the
-        # mode is active (its job is done — the header select-all exits it).
-        '<button type="button" class="dz-bulk-matching" data-dz-grid-select-all-matching>'
-        "Select all <span data-dz-grid-matching-total>…</span> matching</button>"
+        # All-matching escalation (Gmail idiom): promote the *page* selection
+        # to the whole *result set* for the current query (search + filters +
+        # sort scope) — including rows on other pages. "Results" = rows that
+        # match that query (footer data-dz-grid-total), not "visually similar".
+        # CSS hides the button once the mode is active.
+        '<button type="button" class="dz-bulk-matching" data-dz-grid-select-all-matching '
+        'title="Select every row that matches the current search and filters '
+        '(including other pages) — not only the rows on this page" '
+        'aria-label="Select all results matching current search and filters">'
+        "Select all <span data-dz-grid-matching-total>…</span> results</button>"
         # Two-request bulk pattern: the POST applies the action (JSON/204
         # response, nothing swapped); data-dz-grid-bulk-refresh tells the
         # controller to re-fetch rows + footer for the current query after the
@@ -464,8 +468,10 @@ HYPERPARTS: list[Hyperpart] = [
         "<code>[data-dz-grid-bulk-action]</code> Delete button (behind its confirm dialog) "
         "sends the action + selected ids + the <em>current query</em> — so the server "
         "re-scopes and re-validates rather than trusting client ids (§15). "
-        "<strong>Select all matching</strong> escalates a page selection to the whole "
-        "matched query (state on the root: <code>data-dz-grid-all-matching</code> + a "
+        "<strong>Select all N results</strong> escalates a page selection to the whole "
+        "result set for the current query — search + filters + sort scope, including "
+        "rows on other pages (not “visually similar” rows). State on the root: "
+        "<code>data-dz-grid-all-matching</code> + a "
         "<code>data-dz-grid-excluded</code> JSON list of unchecked exceptions) — rows on "
         "other pages arrive selected, the count shows the server-stamped matched total "
         "(the footer's <code>data-dz-grid-total</code>), and a bulk action sends "

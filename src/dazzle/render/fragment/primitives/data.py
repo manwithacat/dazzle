@@ -1796,7 +1796,7 @@ class BulkActionToolbar:
     injects action + selected/excluded ids + all-matching + the query echo
     on config-request, and `data-dz-grid-bulk-refresh` re-fetches rows +
     footer after the POST settles); Clear is `[data-dz-grid-clear]`; the
-    "Select all N matching" escalation rides `[data-dz-grid-select-all-matching]`
+    "Select all N results" escalation rides `[data-dz-grid-select-all-matching]`
     with the total mirrored from the footer's `data-dz-grid-total`.
     Visibility stays CSS-driven via `[data-dz-bulk-count]` on the grid root
     (written by dz-grid.js's sync()); the count text is mirrored to

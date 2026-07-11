@@ -1108,7 +1108,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       targets[t].textContent = String(count);
     }
     // Mirror the matched total into the escalation affordance's label
-    // ("Select all N matching") whenever the footer knows it.
+    // ("Select all N results") whenever the footer knows the matched total.
     var mirror = root.querySelector("[data-grid-matching-total]");
     if (mirror && total !== null) mirror.textContent = String(total);
     var all = root.querySelector("[data-grid-select-all]");

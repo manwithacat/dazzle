@@ -65,7 +65,7 @@ if TYPE_CHECKING:
 # to `{endpoint}/bulk` (the C0b route) behind an hx-confirm dialog, with
 # `data-dz-grid-bulk-refresh` re-fetching rows + footer after the POST
 # settles (two-request pattern — the response is JSON, nothing swaps).
-# "Select all N matching" escalates a page selection to the whole matched
+# "Select all N results" escalates a page selection to the whole matched
 # query (total mirrored from the footer's data-dz-grid-total). Visibility
 # stays CSS-driven via `[data-dz-bulk-count]` on the grid root (#978 /
 # ADR-0022; written by dz-grid.js's sync()).
@@ -216,8 +216,11 @@ class _RenderInteractiveMixin:
         endpoint = ctx.escape_attr(b.endpoint)
         return (
             '<div class="dz-bulk-actions">'
-            '<button type="button" class="dz-bulk-matching" data-dz-grid-select-all-matching>'
-            "Select all <span data-dz-grid-matching-total>…</span> matching</button>"
+            '<button type="button" class="dz-bulk-matching" data-dz-grid-select-all-matching '
+            'title="Select every row that matches the current search and filters '
+            '(including other pages) — not only the rows on this page" '
+            'aria-label="Select all results matching current search and filters">'
+            "Select all <span data-dz-grid-matching-total>…</span> results</button>"
             '<button type="button" class="dz-bulk-delete" '
             'data-dz-grid-bulk-action="delete" data-dz-grid-bulk-refresh '
             # hx-swap=none: the two-request pattern swaps NOTHING on the POST
