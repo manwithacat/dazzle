@@ -17,11 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emit figure → meta → pre → code (documented in code Hyperpart guidance).
 
 ### Changed
+- **HM search-select confirm hold** — rename to `data-dz-confirm-hold-ms`
+  (alias `…-dwell-ms`); unify blur-grace + hold on one cancellable timer
+  and mark result-row `pointerdown` as selecting so blur cannot race the
+  select swap. Gallery sets hold=1800ms.
 - **HM search-select timing + demo clarity** — `data-dz-blur-grace-ms`
-  (default 200) vs `data-dz-confirm-dwell-ms` (default 1500) so select
-  confirm feedback stays visible; gallery shell is production-shaped
-  (closed until focus; `load` seeds mock rows). Optional media variance
-  documented as intentional.
+  (default 200) vs confirm hold (default 1500) so select confirm feedback
+  stays visible; gallery shell is production-shaped (closed until focus;
+  `load` seeds mock rows). Optional media variance documented as intentional.
 - **HM search-select: fixed result-row anatomy + richer demo** — domain maps
   into name / secondary / optional media slots (`SearchResultRow` +
   `render_result_row`); agents must not invent a picker per entity. Gallery

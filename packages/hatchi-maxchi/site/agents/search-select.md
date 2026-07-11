@@ -7,7 +7,7 @@ The FK typeahead: debounced remote search into a listbox, then a per-row select 
 ## Copy this
 
 ```html
-<div class="search-select hm-measure" data-widget="search_select" data-blur-grace-ms="200" data-confirm-dwell-ms="1800">
+<div class="search-select hm-measure" data-widget="search_select" data-blur-grace-ms="200" data-confirm-hold-ms="1800">
   <input type="hidden" name="company" id="hm-ss-field" value="">
   <input type="text" id="hm-ss-input" class="search-select-input" placeholder="Search companies, people, SKUs…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="hm-ss-results" aria-autocomplete="list" aria-haspopup="listbox" hx-get="/mock/typeahead" hx-trigger="load, keyup changed delay:300ms" hx-target="#hm-ss-results" hx-params="q">
   <div id="hm-ss-results" role="listbox" aria-label="Suggestions" class="search-select-results">
@@ -86,7 +86,7 @@ def select(source: str, id: str) -> str:
 ### Seams
 
 - shell: hidden FK + typeahead input + listbox panel (`data-dz-widget=search_select`)
-- data-dz-blur-grace-ms (default 200) — blur→close delay so row clicks land; data-dz-confirm-dwell-ms (default 1500) — hold panel open after .dz-select-result-confirm paints
+- data-dz-blur-grace-ms (default 200) — blur→close delay so row clicks land; data-dz-confirm-hold-ms (default 1500, alias confirm-dwell-ms) — auto-dismiss hold after .dz-select-result-confirm paints
 - search exchange returns N× fixed result-row fragments (or `.dz-search-result-empty`) — map domain into name / secondary / optional media (omit media for text-only rows)
 - each row carries its own hx-get to the select exchange
 - select exchange: confirm line (+ OOB hidden FK / label) — never client-side write of the id
@@ -96,12 +96,12 @@ def select(source: str, id: str) -> str:
 | Do | Don't |
 |---|---|
 | map any record to SearchResultRow (id, name, secondary?, media_html?) and render_result_row | build a bespoke listbox DOM per entity or return JSON for the client to paint |
-| set data-dz-confirm-dwell-ms when the confirm line is user-facing | rely on blur grace alone to show select feedback |
+| set data-dz-confirm-hold-ms when the confirm line is user-facing | rely on blur grace alone to show select feedback |
 | swap the panel with a confirmation fragment that fills the hidden FK server-side | copy the visible label into a hidden field from client JS |
 
 ### Pitfalls
 
-- blur grace is NOT confirm dwell — without confirm-dwell the select feedback is hidden as soon as focus leaves (~200ms)
+- blur grace is NOT confirm hold — without confirm-hold-ms the select feedback is hidden as soon as focus leaves (~200ms)
 - form posts the hidden input, never the visible text
 - do not invent a new combobox Hyperpart for 'users vs companies' — same row anatomy, different field mapping; missing media is valid
 - media is optional free HTML inside `.dz-search-result-media` (img, initials, icon) — keep primary text in `.dz-search-result-name`
@@ -150,7 +150,7 @@ def render(row: SearchResultRow) -> str:
 
 ## Notes
 
-One Hyperpart, two surfaces. (1) Shell — hidden FK + typeahead + listbox; dz-search-select.js opens/closes (data-dz-open / aria-expanded). Timing knobs on the root: data-dz-blur-grace-ms (default 200) — wait after blur so a result-row click can land; data-dz-confirm-dwell-ms (default 1500) — how long to keep the panel open after a select exchange paints .dz-select-result-confirm (0 closes with blur and the confirm may never be seen). (2) Result rows — fixed micro-pattern: optional .dz-search-result-media + name + optional secondary. Different shapes in one list are intentional: media is optional — a company row without a badge and a person row with initials are the same Hyperpart. Map domain fields into slots; do not invent a picker per entity. Form posts the hidden input, never the visible text. contracts/search_select.py (SearchResultRow + render_result_row).
+One Hyperpart, two surfaces. (1) Shell — hidden FK + typeahead + listbox; dz-search-select.js opens/closes (data-dz-open / aria-expanded). Timing knobs on the root: data-dz-blur-grace-ms (default 200) — wait after blur so a result-row click can land; data-dz-confirm-hold-ms (default 1500; alias data-dz-confirm-dwell-ms) — how long to keep the panel open after a select exchange paints .dz-select-result-confirm (auto-dismiss hold; 0 = no hold). (2) Result rows — fixed micro-pattern: optional .dz-search-result-media + name + optional secondary. Different shapes in one list are intentional: media is optional — a company row without a badge and a person row with initials are the same Hyperpart. Map domain fields into slots; do not invent a picker per entity. Form posts the hidden input, never the visible text. contracts/search_select.py (SearchResultRow + render_result_row).
 
 ## Source files
 

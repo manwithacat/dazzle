@@ -1625,12 +1625,12 @@ def test_related_tables_tab_strip_rides_dz_tabs(page) -> None:  # type: ignore[n
 
 
 def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # type: ignore[no-untyped-def]
-    """F4b: open state is data-dz-open / aria-expanded on the widget.
+    """F4b: open state is data-open / aria-expanded on the widget.
 
     Focus opens the panel; a result-row click (which blurs the input) must
     land its htmx select exchange within the blur grace. After select, the
-    confirm fragment stays visible for data-dz-confirm-dwell-ms (default
-    ~1.5s) — not hidden by the 200ms blur grace alone.
+    confirm fragment stays visible for data-confirm-hold-ms (gallery: 1800)
+    — not hidden by the 200ms blur grace alone.
     """
     goto_part(page, "search-select")
     root = "#search-select .search-select"
@@ -1651,10 +1651,12 @@ def test_search_select_opens_on_focus_and_survives_row_click(page) -> None:  # t
     page.wait_for_timeout(300)
     # Select exchange landed within blur grace...
     assert "Selected" in page.inner_text(panel)
-    # ...and confirm-dwell keeps the panel open past the blur grace.
+    # ...and confirm-hold keeps the panel open well past blur grace.
     assert page.is_visible(panel)
-    # After confirm dwell (gallery sets 1800ms) the panel closes.
-    page.wait_for_timeout(2000)
+    page.wait_for_timeout(1000)  # still inside 1800ms hold
+    assert page.is_visible(panel), "confirm-hold must keep panel open at ~1.3s"
+    # After confirm hold (gallery sets 1800ms) the panel auto-dismisses.
+    page.wait_for_timeout(1200)
     assert page.is_hidden(panel)
     page.reload()
 

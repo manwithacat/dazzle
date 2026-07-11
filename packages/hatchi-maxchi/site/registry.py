@@ -1513,7 +1513,7 @@ HYPERPARTS: list[Hyperpart] = [
         # rows on `load` (and keyup); open only on focus. Confirm dwell keeps
         # the select feedback visible after a row click.
         '<div class="dz-search-select hm-measure" data-dz-widget="search_select" '
-        'data-dz-blur-grace-ms="200" data-dz-confirm-dwell-ms="1800">'
+        'data-dz-blur-grace-ms="200" data-dz-confirm-hold-ms="1800">'
         '<input type="hidden" name="company" id="hm-ss-field" value="">'
         '<input type="text" id="hm-ss-input" class="dz-search-select-input" '
         'placeholder="Search companies, people, SKUs…" autocomplete="off" '
@@ -1532,16 +1532,16 @@ HYPERPARTS: list[Hyperpart] = [
         "opens/closes (<code>data-dz-open</code> / <code>aria-expanded</code>). "
         "<strong>Timing knobs on the root:</strong> "
         "<code>data-dz-blur-grace-ms</code> (default 200) — wait after blur so a "
-        "result-row click can land; <code>data-dz-confirm-dwell-ms</code> "
-        "(default 1500) — how long to keep the panel open after a select "
-        "exchange paints <code>.dz-select-result-confirm</code> (0 closes with "
-        "blur and the confirm may never be seen). (2) <em>Result rows</em> — "
-        "fixed micro-pattern: optional <code>.dz-search-result-media</code> + "
-        "name + optional secondary. <strong>Different shapes in one list are "
-        "intentional:</strong> media is optional — a company row without a badge "
-        "and a person row with initials are the same Hyperpart. Map domain "
-        "fields into slots; do not invent a picker per entity. Form posts the "
-        "hidden input, never the visible text. "
+        "result-row click can land; <code>data-dz-confirm-hold-ms</code> "
+        "(default 1500; alias <code>data-dz-confirm-dwell-ms</code>) — how long "
+        "to keep the panel open after a select exchange paints "
+        "<code>.dz-select-result-confirm</code> (auto-dismiss hold; 0 = no hold). "
+        "(2) <em>Result rows</em> — fixed micro-pattern: optional "
+        "<code>.dz-search-result-media</code> + name + optional secondary. "
+        "<strong>Different shapes in one list are intentional:</strong> media is "
+        "optional — a company row without a badge and a person row with initials "
+        "are the same Hyperpart. Map domain fields into slots; do not invent a "
+        "picker per entity. Form posts the hidden input, never the visible text. "
         "<code>contracts/search_select.py</code> "
         "(<code>SearchResultRow</code> + <code>render_result_row</code>).",
         tags=("forms", "htmx"),
@@ -1552,8 +1552,9 @@ HYPERPARTS: list[Hyperpart] = [
                 "shell: hidden FK + typeahead input + listbox panel "
                 "(`data-dz-widget=search_select`)",
                 "data-dz-blur-grace-ms (default 200) — blur→close delay so row "
-                "clicks land; data-dz-confirm-dwell-ms (default 1500) — hold "
-                "panel open after .dz-select-result-confirm paints",
+                "clicks land; data-dz-confirm-hold-ms (default 1500, alias "
+                "confirm-dwell-ms) — auto-dismiss hold after "
+                ".dz-select-result-confirm paints",
                 "search exchange returns N× fixed result-row fragments "
                 "(or `.dz-search-result-empty`) — map domain into "
                 "name / secondary / optional media (omit media for text-only rows)",
@@ -1562,7 +1563,7 @@ HYPERPARTS: list[Hyperpart] = [
                 "never client-side write of the id",
             ),
             pitfalls=(
-                "blur grace is NOT confirm dwell — without confirm-dwell the "
+                "blur grace is NOT confirm hold — without confirm-hold-ms the "
                 "select feedback is hidden as soon as focus leaves (~200ms)",
                 "form posts the hidden input, never the visible text",
                 "do not invent a new combobox Hyperpart for 'users vs companies' — "
@@ -1577,7 +1578,7 @@ HYPERPARTS: list[Hyperpart] = [
                     "build a bespoke listbox DOM per entity or return JSON for the client to paint",
                 ),
                 (
-                    "set data-dz-confirm-dwell-ms when the confirm line is user-facing",
+                    "set data-dz-confirm-hold-ms when the confirm line is user-facing",
                     "rely on blur grace alone to show select feedback",
                 ),
                 (

@@ -2205,47 +2205,65 @@
  *
  * Contract:
  *   - root: `[data-widget="search_select"]` (class `search-select`)
- *   - open:  runtime `data-open` on the root (CSS hides results off it);
- *            not part of the static DOM_CONTRACT seed
- *   - data-blur-grace-ms (default 200): after focus leaves the widget,
- *     wait this long before closing so a result-row click (which blurs the
- *     input first) can land its htmx request
- *   - data-confirm-dwell-ms (default 1500): after a select exchange paints
+ *   - open:  runtime `data-open` on the root (CSS hides results off it)
+ *
+ * Timing (attrs on the root; namespaced form is `data-*`, gallery may strip):
+ *   - data-blur-grace-ms (default 200): after focus leaves, wait before
+ *     closing so a result-row click (blur-then-click) can fire htmx.
+ *   - data-confirm-hold-ms (default 1500): after a select exchange paints
  *     `.select-result-confirm`, keep the panel open this long so the
- *     confirmation is readable; then close. 0 = close as soon as focus leaves
- *     (confirm may never be seen — prefer >0 when the confirm is the UX)
+ *     confirmation is readable; then close. 0 = no hold (close with blur).
+ *     Alias: data-confirm-dwell-ms (same meaning).
  *
- * The root — not the input — carries open state because the select
- * exchange OOB-replaces the input (`hx-swap-oob`), which would orphan
- * input-anchored state. `aria-expanded` on the combobox input stays in
- * sync whenever the input still exists.
+ * All close paths share one timer (scheduleClose). Select hold always
+ * cancels a pending blur-grace close — the previous race left blur on a
+ * raw setTimeout that clearCloseTimer could not cancel.
  *
- * Focus entering the input opens; focus leaving the widget closes after
- * blur-grace — unless a confirm fragment is showing, in which case
- * confirm-dwell owns the close.
+ * pointerdown on a result row marks "selecting" so blur-grace will not
+ * close before the swap; after:swap then starts the confirm hold.
  */
 (function () {
   "use strict";
 
   var DEFAULT_BLUR_GRACE_MS = 200;
-  var DEFAULT_CONFIRM_DWELL_MS = 1500;
+  var DEFAULT_CONFIRM_HOLD_MS = 1500;
 
   /** @type {WeakMap<Element, number>} */
   var closeTimers = new WeakMap();
+  /** @type {WeakMap<Element, boolean>} */
+  var selecting = new WeakMap();
 
-  function readMs(root, attr, fallback) {
-    var raw = root.getAttribute(attr);
-    if (raw === null || raw === "") return fallback;
-    var n = parseInt(raw, 10);
-    return isNaN(n) || n < 0 ? fallback : n;
+  function readMs(root, attrs, fallback) {
+    var list = typeof attrs === "string" ? [attrs] : attrs;
+    for (var i = 0; i < list.length; i++) {
+      var raw = root.getAttribute(list[i]);
+      if (raw === null || raw === "") continue;
+      var n = parseInt(raw, 10);
+      if (!isNaN(n) && n >= 0) return n;
+    }
+    return fallback;
   }
 
   function blurGraceMs(root) {
-    return readMs(root, "data-blur-grace-ms", DEFAULT_BLUR_GRACE_MS);
+    return readMs(
+      root,
+      ["data-blur-grace-ms", "data-blur-grace-ms"],
+      DEFAULT_BLUR_GRACE_MS
+    );
   }
 
-  function confirmDwellMs(root) {
-    return readMs(root, "data-confirm-dwell-ms", DEFAULT_CONFIRM_DWELL_MS);
+  function confirmHoldMs(root) {
+    // hold = preferred; dwell = documented alias
+    return readMs(
+      root,
+      [
+        "data-confirm-hold-ms",
+        "data-confirm-hold-ms",
+        "data-confirm-dwell-ms",
+        "data-confirm-dwell-ms",
+      ],
+      DEFAULT_CONFIRM_HOLD_MS
+    );
   }
 
   function setOpen(root, open) {
@@ -2267,10 +2285,12 @@
     clearCloseTimer(root);
     if (ms <= 0) {
       setOpen(root, false);
+      selecting.delete(root);
       return;
     }
     var id = setTimeout(function () {
       closeTimers.delete(root);
+      selecting.delete(root);
       setOpen(root, false);
     }, ms);
     closeTimers.set(root, id);
@@ -2284,20 +2304,55 @@
   }
 
   function resultsOf(root) {
-    return root.querySelector(".search-select-results");
+    return (
+      root.querySelector(".search-select-results") ||
+      root.querySelector(".search-select-results")
+    );
   }
 
   function hasConfirm(root) {
     var results = resultsOf(root);
-    return !!(results && results.querySelector(".select-result-confirm"));
+    if (!results) return false;
+    return !!(
+      results.querySelector(".select-result-confirm") ||
+      results.querySelector(".select-result-confirm")
+    );
   }
+
+  function isResultRow(el) {
+    return !!(
+      el &&
+      el.closest &&
+      (el.closest(".search-result-row") || el.closest(".search-result-row"))
+    );
+  }
+
+  // Mark selecting on pointerdown so blur-grace will not close before swap.
+  document.addEventListener(
+    "pointerdown",
+    function (evt) {
+      var row = isResultRow(evt.target);
+      if (!row) return;
+      var root = rootOf(evt.target);
+      if (!root) return;
+      selecting.set(root, true);
+      clearCloseTimer(root);
+      setOpen(root, true);
+    },
+    true
+  );
 
   document.addEventListener("focusin", function (evt) {
     var input =
       evt.target.closest && evt.target.closest(".search-select-input");
+    if (!input) {
+      input =
+        evt.target.closest && evt.target.closest(".search-select-input");
+    }
     if (!input) return;
     var root = rootOf(input);
     if (!root) return;
+    selecting.delete(root);
     clearCloseTimer(root);
     setOpen(root, true);
   });
@@ -2305,40 +2360,57 @@
   document.addEventListener("focusout", function (evt) {
     var input =
       evt.target.closest && evt.target.closest(".search-select-input");
+    if (!input) {
+      input =
+        evt.target.closest && evt.target.closest(".search-select-input");
+    }
     if (!input) return;
     var root = rootOf(input);
     if (!root) return;
-    var grace = blurGraceMs(root);
-    setTimeout(function () {
-      if (root.contains(document.activeElement)) return; // re-focused
-      // Select exchange just painted a confirm — dwell owns the close.
-      if (hasConfirm(root)) return;
-      setOpen(root, false);
-    }, grace);
+    // Row interaction in progress — after:swap owns the hold timer.
+    if (selecting.get(root)) return;
+    // Confirm already showing — keep hold timer; do not replace with blur grace.
+    if (hasConfirm(root)) return;
+    scheduleClose(root, blurGraceMs(root));
   });
 
-  // After a select (or any swap into the listbox), if confirm is present
-  // hold the panel open for confirm-dwell so the message is readable.
   function onAfterSwap(evt) {
     var target = evt.target;
-    if (!target || !target.closest) return;
-    if (!target.classList || !target.classList.contains("search-select-results")) {
-      // htmx may fire on the swapped content's parent; also accept when
-      // the event target is inside the results panel.
-      target = target.closest(".search-select-results");
-      if (!target) return;
+    if (!target || !target.closest) {
+      // some runtimes put the swap root on detail.elt / detail.target
+      var d = evt.detail || {};
+      target = d.elt || d.target || (d.ctx && d.ctx.target) || null;
     }
-    var root = rootOf(target);
+    if (!target || !target.closest) return;
+
+    var results =
+      (target.classList &&
+        (target.classList.contains("search-select-results") ||
+          target.classList.contains("search-select-results")) &&
+        target) ||
+      target.closest(".search-select-results") ||
+      target.closest(".search-select-results");
+    if (!results) return;
+
+    var root = rootOf(results);
     if (!root) return;
-    if (!target.querySelector(".select-result-confirm")) return;
+    if (
+      !results.querySelector(".select-result-confirm") &&
+      !results.querySelector(".select-result-confirm")
+    ) {
+      selecting.delete(root);
+      return;
+    }
+    selecting.delete(root);
     clearCloseTimer(root);
     setOpen(root, true);
-    scheduleClose(root, confirmDwellMs(root));
+    scheduleClose(root, confirmHoldMs(root));
   }
 
-  // htmx-4 colon names + legacy camelCase (gallery mock / dual-bind)
   document.addEventListener("htmx:after:swap", onAfterSwap);
   document.addEventListener("htmx:afterSwap", onAfterSwap);
+  document.addEventListener("htmx:after:settle", onAfterSwap);
+  document.addEventListener("htmx:afterSettle", onAfterSwap);
 })();
 
 /* ── controllers/combobox.js ── */
