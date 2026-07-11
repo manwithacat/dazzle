@@ -3,7 +3,7 @@
 # Usage: make <target>
 # Run 'make help' to see all available targets
 
-.PHONY: help install dev-install lint format type-check security test test-fast test-integration test-all coverage clean build examples ci pre-commit
+.PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core sync-ci-type sync-ci-test pre-commit
 
 # Default target
 help:
@@ -13,11 +13,14 @@ help:
 	@echo "Setup:"
 	@echo "  install          Install DAZZLE in development mode"
 	@echo "  dev-install      Install with all dev dependencies + pre-commit hooks"
+	@echo "  sync-ci-type     uv sync --frozen with CI type-check extras (Python 3.12)"
+	@echo "  sync-ci-test     uv sync --frozen with CI python-tests extras (Python 3.12)"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  lint             Run ruff linter"
 	@echo "  format           Run ruff formatter"
-	@echo "  type-check       Run mypy type checker"
+	@echo "  type-check       Run mypy type checker (current venv)"
+	@echo "  type-check-ci    mypy after CI-matching extras (prefer before release)"
 	@echo "  security         Run bandit + pip-audit security checks"
 	@echo "  spell            Run codespell spell checker"
 	@echo ""
@@ -33,8 +36,10 @@ help:
 	@echo "  build            Build Python package (sdist + wheel)"
 	@echo "  examples         Validate and build example projects"
 	@echo ""
-	@echo "CI/CD:"
-	@echo "  ci               Run all CI checks locally"
+	@echo "CI/CD (local concordance — see docs/contributing/local-ci-concordance.md):"
+	@echo "  ci-fast          Tier 0: ruff fix + mypy + gate suite + mkdocs (~2–3 min)"
+	@echo "  ci-core          Tier 1: CI lint/type/unit/security/docs mirror (no Postgres/e2e)"
+	@echo "  ci               Legacy umbrella (lint + format-check + type-check + security + test-all + examples)"
 	@echo "  pre-commit       Run pre-commit on all files"
 	@echo ""
 	@echo "Maintenance:"
@@ -71,13 +76,24 @@ format-check:
 	uv run ruff format --check src/ tests/
 
 type-check:
-	uv run mypy src/dazzle --ignore-missing-imports
+	uv run mypy src/dazzle
+
+# CI type-check job uses Python 3.12 + maximal extras (pitch/i18n/viewport/…).
+# A thin local venv lies — missing stubs flip warn_return_any / unused-ignores.
+type-check-ci: sync-ci-type
+	bash scripts/ci_local.sh type-check
+
+sync-ci-type:
+	bash scripts/ci_local.sh sync-type
+
+sync-ci-test:
+	bash scripts/ci_local.sh sync-test
 
 security:
 	@echo "=== Bandit Security Check ==="
-	bandit -c pyproject.toml -r src/
+	bandit -c pyproject.toml -r src/ --severity-level medium
 	@echo ""
-	@echo "=== Dependency Vulnerability Scan ==="
+	@echo "=== Dependency Vulnerability Scan (soft — use make ci-core for hard-fail) ==="
 	pip-audit --strict --desc on || true
 
 spell:
@@ -184,9 +200,21 @@ examples:
 # CI/CD
 # =============================================================================
 
+# Tier 0 — what `/ship` runs by default (fast; not full GitHub CI).
+ci-fast:
+	bash scripts/ci_local.sh tier0
+
+# Tier 1 — mirrors CI lint + type-check + python-tests + security-tests + docs.
+# Still omits Postgres services, Playwright walks, guide/contracts matrices.
+# Run before tagged releases (especially minor/major).
+ci-core:
+	bash scripts/ci_local.sh tier1
+
+# Legacy umbrella — broader/sloppier than ci-core (soft pip-audit, no frozen extras).
+# Prefer ci-core for concordance; keep for older muscle memory.
 ci: lint format-check type-check security test-all examples
 	@echo ""
-	@echo "=== All CI Checks Passed! ==="
+	@echo "=== Legacy make ci finished. Prefer 'make ci-core' for GitHub concordance. ==="
 
 pre-commit:
 	pre-commit run --all-files

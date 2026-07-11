@@ -290,23 +290,20 @@ git commit --no-verify
 
 ### CI/GitHub Actions
 
-Runs on push to main/develop and pull requests:
+Runs on push to main/develop and pull requests (see `.github/workflows/ci.yml`).
+**Local mirrors:** `make ci-fast` (Tier 0) and `make ci-core` (Tier 1) — full
+mapping in [Local CI concordance](local-ci-concordance.md).
 
 | Job | Runs | Description |
 |-----|------|-------------|
-| `python-tests` | All PRs | Unit tests (Python 3.12) |
-| `lint` | All PRs | Ruff, Bandit, DSL validation |
-| `js-lint` | All PRs | ESLint |
-| `js-test` | All PRs | Vitest |
-| `js-typecheck` | All PRs | TypeScript checker |
-| `type-check` | All PRs | mypy on core modules |
-| `integration` | After lint | Integration tests |
-| `runtime-e2e` | After lint | runtime serve tests |
-| `semantic-e2e` | After lint | Semantic DOM tests |
-| `example-e2e` | After lint | P0 examples (simple_task, contact_manager) |
-| `example-e2e-extended` | main only | P1/P2 examples (warnings only) |
+| `python-tests` | All PRs | Non-e2e tests (Python 3.12 / 3.13 / 3.14 matrix) |
+| `lint` | All PRs | Ruff, CSS gates, bandit, coverage gate |
+| `type-check` | All PRs | `mypy src/dazzle` with full extras on 3.12 |
+| `security-tests` | All PRs | JWT fuzz, RBAC matrix, pip-audit hard-fail |
+| `integration` | After core | Integration tests |
+| `e2e-smoke` / `e2e-runtime` | After core | Example validate + Postgres e2e |
+| `guide-walks` / `contracts-gate` / `interaction-walks` | After core | UX walkers |
 | `homebrew-validation` | All PRs | Formula validation (macOS) |
-| `gap-analysis` | Separate workflow | Test gap analysis across examples |
 
 ---
 

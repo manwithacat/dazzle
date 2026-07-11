@@ -131,6 +131,7 @@ nav:
   - Contributing:
       - Dev Setup: contributing/dev-setup.md
       - Testing: contributing/testing.md
+      - Local CI concordance: contributing/local-ci-concordance.md
       - Adding a Feature: contributing/adding-a-feature.md
   - Counter-Priors:
       - Index: counter-priors/INDEX.md

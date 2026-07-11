@@ -3,61 +3,82 @@ name: ship
 description: Commit, verify, tag, and push with the repo's pre-flight gate suite (lint, type, drift gates, docs build)
 ---
 
-Commit all current changes and push to the remote. Follow these steps exactly:
+Commit all current changes and push to the remote. Follow these steps exactly.
+
+Local ↔ CI concordance is documented in
+`docs/contributing/local-ci-concordance.md`. The single runner is
+`scripts/ci_local.sh` (Makefile: `ci-fast` / `ci-core`).
 
 ## 1. Pre-flight checks
 
 - Run `git status` (never use `-uall`) and `git diff --stat` to understand what changed.
-- If the worktree is already clean and there is nothing to commit, say so and stop.
-- Run `ruff check src/ tests/ --fix && ruff format src/ tests/` to auto-fix lint issues.
-- Run `mypy src/dazzle` to catch type errors. **This lint + type pair must stay identical across `/ship`, `/check`, and CI** — change one, change all three. CI runs exactly `mypy src/dazzle` (`.github/workflows/ci.yml`), so use that bare form here too — the old `--ignore-missing-imports --exclude 'eject'` flags were **no-ops** (`pyproject.toml` `[tool.mypy]` already sets `ignore_missing_imports = true`, and there is no `eject` path under `src/dazzle`). The real local↔CI mypy divergence is the **installed extras**, not the command: CI installs the `dev,llm,mcp,mobile,postgres,pitch,i18n,viewport,perf,lsp` superset, and a thinner local env makes `warn_unused_ignores` / `warn_return_any` fire differently — sync extras before trusting a local green. (`/ship` deliberately runs the fast drift/policy gates below instead of `/check`'s full unit-test pass; that difference is by design, not drift.)
-- **Run drift + policy gates** — fast (~1 min, no DB), catches the recurring Python ↔ htmx/Alpine boundary regressions (#949 / #963 / #966 / #968 class) plus CI-class violations that ruff/mypy don't see (bare excepts, abandoned shims, parser-regex sneaks, etc.):
+- If the worktree is already clean and there is nothing to commit, say so and stop
+  (unless the user asked to **bump + ship a release** of already-committed work —
+  then proceed to version bump / gates / tag / push with an empty tree is fine only
+  when they explicitly want a version bump of clean history).
 
-  ```bash
-  pytest tests/unit -m gate -q
-  ```
+### Gate tier (required)
 
-  **The `gate` marker is the single source of truth for this set** — no file list to
-  rot. Every fast, DB-free structural/regression gate carries
-  `pytestmark = pytest.mark.gate` (the marker is registered in `pyproject.toml`
-  `[tool.pytest.ini_options]`), so `-m gate` selects exactly them (~345 tests, ~1 min,
-  no Postgres). `tests/unit/test_gate_marker_complete.py` keeps it honest: the
-  high-churn gate families (`*drift*`, `test_no_*`, `*ratchet*`) **must** carry the
-  marker or that meta-gate fails in CI — which closes the #1466 class (a ratchet gate
-  that matched no glob, slipped the local pre-flight, and only went red in CI,
-  v0.86.10→.11).
+Decide the tier from the ship arguments / intent:
 
-  **Adding a gate:** give the test file `pytestmark = pytest.mark.gate` (merge into a
-  list — `pytestmark = [pytest.mark.gate, pytest.mark.asyncio]` — if it already has a
-  `pytestmark`) and it runs here automatically. Keep gates **fast and DB-free** —
-  anything needing Postgres/Playwright belongs only in CI's full suite, never this
-  pre-flight. A ratchet failure (complexity CC>15 / MI drop; deferred-import or swallow
-  count grew) means: refactor (often extract a helper), or regenerate the baseline
-  (`dazzle fitness code --write-baseline`, or the gate's own baseline fixture) if the
-  increase is genuinely justified. This set mirrors the structural/regression gates in
-  CI's `Python Tests` job so a red badge is caught locally first.
+| Situation | Tier | Command |
+|-----------|------|---------|
+| Default `/ship`, patch with no version bump | **Tier 0** (ship-fast) | `make ci-fast` |
+| `/ship minor`, `/ship major`, or any commit that changes `pyproject.toml` `version =` | **Tier 1** (ci-core) | `make ci-core` |
+| Operator asked for maximum local confidence | Tier 1 | `make ci-core` |
 
-  If a drift gate fails, **fix the regression** — or, if it's a deliberate API-surface change, regenerate the baseline with `--write` and add a CHANGELOG entry under Added/Changed/Removed. Never bypass.
+```bash
+# Tier 0 — default (~2–3 min, no DB)
+make ci-fast
+# → bash scripts/ci_local.sh tier0
+#    ruff check --fix + format
+#    mypy src/dazzle
+#    pytest tests/unit -m gate
+#    mkdocs build --strict
 
-  Pre-ship gap that motivated keeping the policy gates in here (v0.65.11 → v0.65.12): the chaos-monkey work added 3 `except Exception: pass` patterns to `src/dazzle/testing/fuzz_runtime/runner.py`; the pre-ship cycle ran only drift gates and missed `test_no_bare_except_pass.py`.
+# Tier 1 — before release tags (~full non-e2e CI mirror)
+make ci-core
+# → bash scripts/ci_local.sh tier1
+#    uv sync --frozen (CI extras, Python 3.12)
+#    scripts/build_dist.py
+#    ruff check + format --check
+#    mypy src/dazzle
+#    CSS clip/raw-ramp + dazzle coverage --fail-on-uncovered
+#    bandit + pip-audit (hard-fail)
+#    JWT fuzz + shapes RBAC matrix
+#    pytest -n auto --dist loadgroup -m "not e2e"
+#    mkdocs build --strict
+```
 
-- **Run the spec-drift strict guard** if the project opts in via `[spec] strict = true` in `dazzle.toml` (#1106 Prop 3):
+**Do not** re-expand these steps ad-hoc in the agent transcript — call the
+Makefile / script so extras lists and command strings stay one source of truth
+with `.github/workflows/ci.yml`. If you change CI, update `scripts/ci_local.sh`
+constants in the same change.
+
+**mypy command** is always `mypy src/dazzle` (same as CI type-check job). The
+local↔CI divergence is **installed extras**, not flags: Tier 1 syncs the
+type-check extras superset (`dev,llm,mcp,mobile,postgres,pitch,i18n,viewport,perf,lsp`).
+Tier 0 may warn if the active interpreter ≠ 3.12 — for release tags, prefer
+Tier 1.
+
+**Gate marker** (`pytest -m gate`): every fast, DB-free structural gate must
+carry `pytestmark = pytest.mark.gate` (see `tests/unit/test_gate_marker_complete.py`).
+Ratchet failures → refactor or regenerate baseline (`dazzle fitness code
+--write-baseline`); never bypass.
+
+### Optional project guards (still ship-owned)
+
+- **Spec strict** (only if `[spec] strict = true` in the project's `dazzle.toml`):
 
   ```bash
   dazzle spec status --fail-on-strict
   ```
 
-  Fails when a DSL entity isn't named in any row of the `## Domain map` table in `SPEC.md`. Substring prose mentions don't satisfy this — the entity has to appear in a table row, optionally pointing at a `docs/specs/<topic>.md` design doc. Fix by adding the row (and, if the entity introduces a new domain concept, the design doc) before re-running. The guard only fires when the project opts in via the manifest flag; framework-injected entities (AIJob, DeployHistory, FeedbackReport, SystemHealth, SystemMetric) are excluded by default.
+- If tier0/tier1 or spec-strict fails, **fix before committing**. Do NOT ship red.
 
-- **Build the docs** — catches broken links and nav rot before they ship. This is the gate SP3's `../../ROADMAP.md` link slipped past (a repo-root file — `mkdocs` only resolves links inside `docs/`, so that link is unreachable and `--strict` rejects it):
-
-  ```bash
-  mkdocs build --strict
-  ```
-
-  `--strict` turns broken internal links, missing nav entries, and unrecognised link targets into errors — the build must pass clean (exit 0, no warnings). Links to repo-root files (`README.md`, `ROADMAP.md`, `CHANGELOG.md`) and to non-`docs/` paths (`benchmarks/`, `examples/`) must be GitHub blob/tree URLs, not `../../` relative paths — `mkdocs` only resolves links inside `docs/`. The docs toolchain is pinned in `requirements-docs.txt` — run `pip install -r requirements-docs.txt` so a local build matches CI (a stale `pymdown-extensions` is what made #1203 look like a repo bug).
-
-- If lint, type, drift, policy, spec-strict, or docs-build errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails any of these checks.
+Tier 0 is **not** full GitHub CI: Postgres services, Playwright walks,
+guide-walk matrix, and multi-version python-tests still only run on Actions.
+See the concordance doc for Tier 2.
 
 ## 2. Commit
 
@@ -72,6 +93,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - Check if `pyproject.toml` was modified in this commit by running `git diff HEAD~1 HEAD -- pyproject.toml`.
 - If the `version = "X.Y.Z"` line changed, extract the new version and create a lightweight tag: `git tag vX.Y.Z`.
 - The tag MUST be created AFTER the commit so it points to the correct commit (not the parent).
+- **Release tags require Tier 1 green** (`make ci-core`) in this session (or operator-confirmed) before `git push origin vX.Y.Z`.
 
 ## 4. Push
 
@@ -112,4 +134,4 @@ Both are best-effort — a failure here never blocks the ship; note it and conti
 ## 6. Final verification
 
 - Run `git status` one last time to confirm the worktree is clean.
-- Report the final state: commit SHA, branch, and worktree status.
+- Report the final state: commit SHA, branch, worktree status, and which gate tier ran.
