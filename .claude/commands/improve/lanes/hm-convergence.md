@@ -150,6 +150,11 @@ Sub-strategies, pick the highest-leverage:
 5. **taste_gate** (optional, credits-permitting only) — `dazzle qa taste-panel` is an
    *aesthetic-quality* pass vs `dev_docs/taste/`, NOT the regression gate, and is
    billing-blocked by default. Skip unless credits are known-available.
+6. **dual_lock_visual_smoke** (subscription default) — after dual-lock expansion or
+   contract changes, run `python scripts/hm_visual_smoke.py --dazzle-emit`. Output
+   lands in gitignored `.dazzle/hm-visual-smoke/` (+ `.dazzle/hm-visual-last.json`
+   pointer). Dispatch a host-harness subagent to **Read** `full_page.png`; file
+   improve rows for real defects. Never treat vision scores as a ship gate.
 
 ## Owns (capability-map)
 

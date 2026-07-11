@@ -5,6 +5,12 @@
 `packages/hatchi-maxchi/DUAL_LOCK_COVERAGE.md`. Sophistication plan:
 `docs/superpowers/plans/2026-07-11-hm-sophistication-plan.md` (epic #1580).
 
+**Visual smoke (subscription, never a ship gate):** after dual-locking a part,
+`python scripts/hm_visual_smoke.py --dazzle-emit` writes PNGs under
+`.dazzle/hm-visual-smoke/` for host-harness **Read** review. Metered
+`component-vision` / `taste-panel` are optional when API credits exist — they
+must not block CI.
+
 ## 0. Should this be a new Hyperpart at all?
 
 - **Compose first**: if existing parts + Layout primitives express it, write a

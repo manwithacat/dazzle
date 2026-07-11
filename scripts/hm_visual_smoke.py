@@ -13,12 +13,20 @@ calls a metered vision LLM.
 Usage (from monorepo root):
 
     # dual-locked exemplars that ship render()
-    python scripts/hm_visual_smoke.py --out /tmp/hm-visual
+    # default out: .dazzle/hm-visual-smoke/ (gitignored) + last-run pointer
+    python scripts/hm_visual_smoke.py
 
     # also include Dazzle dual-lock emission HTML (requires package)
+    python scripts/hm_visual_smoke.py --dazzle-emit
+
+    # custom output directory
     python scripts/hm_visual_smoke.py --out /tmp/hm-visual --dazzle-emit
 
 Requires: playwright + chromium (``playwright install chromium``).
+
+Phase D policy: this path is the **default** taste capture. Metered
+``dazzle qa component-vision`` / ``taste-panel`` are optional only when API
+credits are intentional — they never gate CI/ship.
 """
 
 from __future__ import annotations
@@ -204,7 +212,7 @@ def main(argv: list[str] | None = None) -> int:
         "--out",
         type=Path,
         default=None,
-        help="output directory (default: dev_docs/hm_visual_smoke_<ts>/)",
+        help="output directory (default: .dazzle/hm-visual-smoke/ — gitignored)",
     )
     ap.add_argument(
         "--dazzle-emit",
@@ -221,7 +229,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    out = args.out or (REPO / "dev_docs" / f"hm_visual_smoke_{ts}")
+    # Default under .dazzle/ so improve agents can re-Read the last run without
+    # polluting git (both .dazzle/ and dev_docs/ are gitignored).
+    out = args.out or (REPO / ".dazzle" / "hm-visual-smoke")
     out.mkdir(parents=True, exist_ok=True)
 
     sections = _collect_exemplar_sections()
@@ -249,17 +259,40 @@ def main(argv: list[str] | None = None) -> int:
         "html": str(html_path),
         "full_page_png": str(png_path),
         "parts": [name for name, _ in sections],
+        "dazzle_emit": bool(args.dazzle_emit),
         "billing": "subscription-playwright-only",
+        "ship_gate": False,
         "review_hint": (
             "Dispatch a host-harness subagent to Read full_page_png (and "
             "optional crops). Do NOT call dazzle qa component-vision / taste-panel "
-            "unless API credits are intentionally available."
+            "unless API credits are intentionally available. Dual-locks + gate "
+            "suite remain the only ship-blocking visual floor."
         ),
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    # Stable last-run pointer for improve backlog / cycle tooling (gitignored).
+    last_path = REPO / ".dazzle" / "hm-visual-last.json"
+    last_path.parent.mkdir(parents=True, exist_ok=True)
+    last_path.write_text(
+        json.dumps(
+            {
+                "created_at": ts,
+                "out": str(out),
+                "full_page_png": str(png_path),
+                "parts": manifest["parts"],
+                "dazzle_emit": manifest["dazzle_emit"],
+                "billing": manifest["billing"],
+                "ship_gate": False,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     print(f"wrote {html_path}")
     print(f"wrote {png_path}")
     print(f"wrote {out / 'manifest.json'}")
+    print(f"wrote {last_path.relative_to(REPO)}")
     print(f"parts: {', '.join(manifest['parts'])}")
     return 0
 

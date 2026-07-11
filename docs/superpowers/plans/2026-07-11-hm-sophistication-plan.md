@@ -67,11 +67,15 @@ Reservoir metric (`scripts/hm_tailwind_reservoir.py`): **GRANDTOTAL 0** — migr
 ### Phase D — Taste closed-loop (optional, billing-aware)
 
 **Deliverables**
-1. Run component-vision on dual-locked exemplars only (stable HTML).
-2. Persist scores to gitignored improve state; alert on large drops.
-3. Document: vision never blocks ship without human threshold.
+1. Subscription default: `scripts/hm_visual_smoke.py` on dual-locked exemplars +
+   Dazzle emission (`--dazzle-emit`); host-harness **Read** of PNGs.
+2. Persist last-run pointer under gitignored `.dazzle/hm-visual-last.json`
+   (and PNG/manifest under `.dazzle/hm-visual-smoke/`).
+3. Document: vision never blocks ship without human threshold; dual-locks + gate
+   suite remain the floor. Metered `component-vision` / `taste-panel` only when
+   credits are intentional.
 
-**Exit:** Taste tools feed improve backlog when credits exist; CI stays deterministic.
+**Exit:** Taste tools feed improve backlog on the subscription path; CI stays deterministic.
 
 ## Working agreements
 
@@ -99,9 +103,9 @@ Playwright full-page PNG — no Anthropic/OpenAI call.
 | Phase | Status | Issue | Notes |
 |-------|--------|------:|-------|
 | A | **Done** | #1581 | Plan + coverage generator + map + gate test |
-| B | **Mostly done** | #1582 | confirm/pdf/wizard → DOM-only; scaffold; visual smoke; master_detail deferred |
-| C | **Partial** | #1583 | Reservoir `--suggest` / `port_suggestions` (drain thermometer already 0) |
-| D | Not started | #1584 | Taste closed-loop (subscription Read path first) |
+| B | **Done** (promotable set) | #1582 | confirm/pdf/wizard → DOM-only; master_detail deferred on product |
+| C | **Partial** | #1583 | Reservoir `--suggest` shipped; classifier/stylelint optional |
+| D | **Partial** | #1584 | Subscription smoke → `.dazzle/hm-visual-*`; vision API optional only |
 
 **Epic:** #1580
 
