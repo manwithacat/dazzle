@@ -95,6 +95,9 @@ SIGNALS: dict[str, object] = {
     "bar-track": r"display:\s*bar_track",
     "histogram": r"display:\s*histogram",
     "box-plot": r"display:\s*box_plot",
+    # Dual-lock chart fleet (ops_dashboard regions)
+    "radar": r"display:\s*radar",
+    "time-series": r"display:\s*(line|area)_chart",
     "progress-region": r"display:\s*progress",
     "profile-card": r"display:\s*profile_card",
     "task-inbox": r"display:\s*task_inbox",
@@ -107,6 +110,9 @@ SIGNALS: dict[str, object] = {
     "alert": "exempt:no Dazzle emitter yet (form errors are form-chrome dz-form-errors; the banner is a CSS-only different contract)",
     # HM gallery / agent-pack snippets (build_site code Hyperpart); not a DSL surface.
     "code": "exempt:HM gallery + agent-pack snippets (no Dazzle DSL emitter yet)",
+    # shadcn parity placeholders (HMC-031/034) — gallery surfaces; no DSL emitter yet
+    "switch": "exempt:no Dazzle form-field emitter yet (gallery progressive-enhance shell)",
+    "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",
 }
 
 # ── the ratchet: recorded adoption debt (#164) ──────────────────────
