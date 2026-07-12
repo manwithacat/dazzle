@@ -1,0 +1,135 @@
+/* HYPERPART: navigation-menu */
+/*
+ * Top navigation mega-menu — horizontal site/product nav (distinct from
+ * menubar File/Edit/View and from app-shell's sidebar). Each trigger is a
+ * native details/summary; open panel is a multi-column mega list.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-039). No JS single-open controller yet;
+ * browser allows multiple details open. Compose with link lists / item.
+ */
+
+.dz-navigation-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  border-bottom: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  padding-inline: var(--space-sm);
+}
+
+.dz-navigation-menu__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dz-navigation-menu__item {
+  position: relative;
+}
+
+.dz-navigation-menu__link,
+.dz-navigation-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-height: 2.75rem;
+  padding-inline: var(--space-md);
+  border: none;
+  background: transparent;
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  list-style: none;
+}
+
+.dz-navigation-menu__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.dz-navigation-menu__item[open] > .dz-navigation-menu__trigger,
+.dz-navigation-menu__link:hover,
+.dz-navigation-menu__trigger:hover,
+.dz-navigation-menu__link[aria-current="page"] {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
+.dz-navigation-menu__link:focus-visible,
+.dz-navigation-menu__trigger:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+}
+
+.dz-navigation-menu__caret {
+  font-size: 0.65em;
+  opacity: 0.7;
+}
+
+.dz-navigation-menu__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 30;
+  min-width: 16rem;
+  max-width: min(36rem, 90vw);
+  margin-top: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-md, 0 4px 16px color-mix(in oklab, #000 12%, transparent));
+}
+
+.dz-navigation-menu__panel[data-dz-layout="mega"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(10rem, 1fr));
+  gap: var(--space-md) var(--space-lg);
+  min-width: 24rem;
+}
+
+.dz-navigation-menu__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.dz-navigation-menu__group-title {
+  margin: 0 0 var(--space-2xs);
+  padding-inline: var(--space-xs);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--weight-semibold, 600);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
+}
+
+.dz-navigation-menu__panel a {
+  display: block;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.dz-navigation-menu__panel a:hover {
+  background: var(--colour-surface-muted);
+}
+
+.dz-navigation-menu__panel a small {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: normal;
+  color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
+}

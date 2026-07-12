@@ -192,7 +192,12 @@ _MAP: list[tuple[str, str, str, str]] = [
         "field",
         "Label is part of field triad, not standalone",
     ),
-    ("marker", "gap", "", "shadcn New — map/marker chrome"),
+    (
+        "marker",
+        "parity",
+        "marker",
+        "Gallery Hyperpart — map pin chrome + label; host owns projection",
+    ),
     (
         "menubar",
         "parity",
@@ -219,9 +224,9 @@ _MAP: list[tuple[str, str, str, str]] = [
     ),
     (
         "navigation-menu",
-        "gap",
-        "app-shell",
-        "Top nav mega-menu; app-shell covers sidebar nav only",
+        "parity",
+        "navigation-menu",
+        "Gallery Hyperpart — top mega-nav via native details; distinct from app-shell",
     ),
     ("pagination", "parity", "pagination", "Gallery Hyperpart"),
     ("popover", "parity", "popover", "Gallery"),

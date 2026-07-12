@@ -2322,6 +2322,71 @@ def select(source: str, id: str) -> str:
             "prefer append-at-end + optional host scrollIntoView.",
             tags=("media", "chat", "interactive"),
         ),
+        Hyperpart(
+            "navigation-menu",
+            "Navigation menu",
+            "Navigation",
+            "Top product/site nav with optional mega-menu panels — horizontal, "
+            "not the app-shell sidebar. Triggers use native details.",
+            '<nav class="dz-navigation-menu" data-dz-navigation-menu aria-label="Product">'
+            '<ul class="dz-navigation-menu__list">'
+            '<li class="dz-navigation-menu__item">'
+            '<a class="dz-navigation-menu__link" href="#" aria-current="page">Home</a></li>'
+            '<li class="dz-navigation-menu__item">'
+            "<details>"
+            '<summary class="dz-navigation-menu__trigger">Product '
+            '<span class="dz-navigation-menu__caret" aria-hidden="true">▾</span></summary>'
+            '<div class="dz-navigation-menu__panel" data-dz-layout="mega">'
+            '<div class="dz-navigation-menu__group">'
+            '<p class="dz-navigation-menu__group-title">Build</p>'
+            '<a href="#">DSL apps<small>Ship CRUD + workflows</small></a>'
+            '<a href="#">Hyperparts<small>Gallery + contracts</small></a>'
+            "</div>"
+            '<div class="dz-navigation-menu__group">'
+            '<p class="dz-navigation-menu__group-title">Operate</p>'
+            '<a href="#">Deploy<small>Plan + target</small></a>'
+            '<a href="#">Observability<small>Pulse + fitness</small></a>'
+            "</div></div></details></li>"
+            '<li class="dz-navigation-menu__item">'
+            "<details>"
+            '<summary class="dz-navigation-menu__trigger">Resources '
+            '<span class="dz-navigation-menu__caret" aria-hidden="true">▾</span></summary>'
+            '<div class="dz-navigation-menu__panel">'
+            '<div class="dz-navigation-menu__group">'
+            '<a href="#">Docs</a>'
+            '<a href="#">Changelog</a>'
+            '<a href="#">Community</a>'
+            "</div></div></details></li>"
+            '<li class="dz-navigation-menu__item">'
+            '<a class="dz-navigation-menu__link" href="#">Pricing</a></li>'
+            "</ul></nav>",
+            notes="PLACEHOLDER — shadcn parity (HMC-039). Distinct from "
+            "menubar (app chrome) and app-shell (sidebar). Mega layout via "
+            "<code>data-dz-layout=mega</code>. Single-open across items deferred.",
+            tags=("navigation", "interactive"),
+        ),
+        Hyperpart(
+            "marker",
+            "Marker",
+            "Data",
+            "Map pin chrome + optional label — host owns map projection / placement.",
+            '<div class="hm-demo-row" style="gap:2rem;align-items:flex-end;padding:1.5rem;'
+            'background:var(--colour-surface-muted);border-radius:var(--radius-md)">'
+            '<span class="dz-marker" data-dz-marker>'
+            '<span class="dz-marker__pin" aria-hidden="true"></span>'
+            '<span class="dz-marker__label">HQ</span></span>'
+            '<span class="dz-marker" data-dz-marker data-dz-tone="success" data-dz-size="lg">'
+            '<span class="dz-marker__pin" aria-hidden="true"></span>'
+            '<span class="dz-marker__label">Depot</span></span>'
+            '<span class="dz-marker" data-dz-marker data-dz-tone="danger">'
+            '<span class="dz-marker__pin" aria-hidden="true"></span>'
+            '<span class="dz-marker__label">Alert</span></span>'
+            "</div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-043). No map SDK. "
+            "Position with host CSS (absolute over a map/plan). Tones via "
+            "<code>data-dz-tone</code>.",
+            tags=("media",),
+        ),
         # ── Navigation / Data ────────────────────────────────────────────
         Hyperpart(
             "breadcrumb",

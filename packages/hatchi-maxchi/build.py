@@ -62,6 +62,8 @@ CSS_SOURCES = [
     ("components", "components/bubble.css"),
     ("components", "components/message.css"),
     ("components", "components/message-scroller.css"),
+    ("components", "components/navigation-menu.css"),
+    ("components", "components/marker.css"),
     ("components", "components/table.css"),
     ("components", "components/layout.css"),
     ("components", "components/app-shell.css"),

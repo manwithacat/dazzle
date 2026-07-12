@@ -1,0 +1,87 @@
+/* HYPERPART: marker */
+/*
+ * Map / location marker chrome — pin silhouette + optional label.
+ * Pure presentation; host supplies map projection / absolute position.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-043). No map SDK; compose over a host
+ * map canvas or static plan. data-dz-tone for status pins.
+ */
+
+.dz-marker {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
+  max-width: 12rem;
+  color: var(--colour-brand);
+  font-size: var(--text-xs, 0.75rem);
+  text-align: center;
+  cursor: default;
+}
+
+.dz-marker__pin {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50% 50% 50% 0;
+  background: currentColor;
+  transform: rotate(-45deg);
+  box-shadow: 0 1px 3px color-mix(in oklab, #000 25%, transparent);
+}
+
+.dz-marker__pin::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--colour-surface);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* Keep ::after positioned relative to the pin box */
+.dz-marker__pin {
+  position: relative;
+}
+
+.dz-marker__label {
+  margin-top: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+  background: var(--colour-surface);
+  border: 1px solid var(--colour-border);
+  color: var(--colour-text);
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  box-shadow: var(--shadow-sm, 0 1px 2px color-mix(in oklab, #000 8%, transparent));
+}
+
+.dz-marker[data-dz-tone="success"] {
+  color: var(--colour-success, #1a7f37);
+}
+
+.dz-marker[data-dz-tone="warning"] {
+  color: var(--colour-warning, #b45309);
+}
+
+.dz-marker[data-dz-tone="danger"] {
+  color: var(--colour-danger, #c0392b);
+}
+
+.dz-marker[data-dz-size="lg"] .dz-marker__pin {
+  width: 2rem;
+  height: 2rem;
+}
+
+.dz-marker[data-dz-size="lg"] .dz-marker__pin::after {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.dz-marker:focus-within .dz-marker__label,
+.dz-marker:hover .dz-marker__label {
+  border-color: currentColor;
+}

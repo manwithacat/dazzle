@@ -14,12 +14,12 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 
 | Status | Count |
 |--------|------:|
-| **parity** | 34 |
+| **parity** | 36 |
 | **partial** | 27 |
-| **gap** (placeholders) | 2 |
+| **gap** (placeholders) | 0 |
 | **n/a** | 1 |
 | **total shadcn** | 64 |
-| HM Hyperparts (registry) | 84 |
+| HM Hyperparts (registry) | 86 |
 
 ## Mapping
 
@@ -60,12 +60,12 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `item` | **parity** | `item` | Gallery Hyperpart — media + title + description + actions row |
 | `kbd` | **parity** | `kbd` | Gallery Hyperpart; styles in hm-core.css (.dz-kbd) |
 | `label` | **partial** | `field` | Label is part of field triad, not standalone |
-| `marker` | **gap** | `—` | shadcn New — map/marker chrome |
+| `marker` | **parity** | `marker` | Gallery Hyperpart — map pin chrome + label; host owns projection |
 | `menubar` | **parity** | `menubar` | Gallery Hyperpart — horizontal File/Edit/View via native details |
 | `message` | **parity** | `message` | Gallery Hyperpart — chat message row (media + meta + bubble) |
 | `message-scroller` | **parity** | `message-scroller` | Gallery Hyperpart — chat transcript scroller; composes message |
 | `native-select` | **partial** | `field,combobox` | Native select via forms; combobox enhances |
-| `navigation-menu` | **gap** | `app-shell` | Top nav mega-menu; app-shell covers sidebar nav only |
+| `navigation-menu` | **parity** | `navigation-menu` | Gallery Hyperpart — top mega-nav via native details; distinct from app-shell |
 | `pagination` | **parity** | `pagination` | Gallery Hyperpart |
 | `popover` | **parity** | `popover` | Gallery |
 | `progress` | **parity** | `progress,progress-region` | Bar + stage chips |
@@ -97,8 +97,6 @@ Playbook: `.claude/commands/improve/strategies/shadcn_parity.md`.
 
 | # | shadcn | suggested Hyperpart id | notes |
 |--:|--------|------------------------|-------|
-| 1 | `marker` | `marker` | shadcn New — map/marker chrome |
-| 2 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
 
 ## Status definitions
 

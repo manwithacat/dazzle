@@ -58,6 +58,8 @@
 - [Bubble](https://manwithacat.github.io/hatchi-maxchi/agents/bubble.md): Chat bubble shell — rounded content for inbound/outbound speech. Compose inside message rows.
 - [Message](https://manwithacat.github.io/hatchi-maxchi/agents/message.md): Chat message row — media + author/time meta + bubble. Outbound rows reverse with data-dz-from=out.
 - [Message scroller](https://manwithacat.github.io/hatchi-maxchi/agents/message-scroller.md): Chat transcript viewport — scrollable stack of message rows. Document order is chronological (newest last).
+- [Navigation menu](https://manwithacat.github.io/hatchi-maxchi/agents/navigation-menu.md): Top product/site nav with optional mega-menu panels — horizontal, not the app-shell sidebar. Triggers use native details.
+- [Marker](https://manwithacat.github.io/hatchi-maxchi/agents/marker.md): Map pin chrome + optional label — host owns map projection / placement.
 - [Breadcrumb](https://manwithacat.github.io/hatchi-maxchi/agents/breadcrumb.md): CSS-generated chevrons; clean list markup.
 - [Accordion](https://manwithacat.github.io/hatchi-maxchi/agents/accordion.md): Native <details> group; single-open via the HTML name= attribute — opening one closes its siblings, zero JS.
 - [Tabs](https://manwithacat.github.io/hatchi-maxchi/agents/tabs.md): A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept role=tablist). Each panel hx-gets its content the first time it is shown.
