@@ -95,22 +95,17 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
             f'data-dz-grid-goto="{p}">{p}</button>'
         )
 
-    return (
-        # data-dz-grid-total: the server-authoritative matched total the HM
-        # grid primitive reads (all-matching selection count) — convergence C0a.
-        # C1 GATE: the controller's matchedTotal() reads this off the element
-        # carrying `data-dz-grid-pagination` — when C1 adds that marker, it MUST
-        # land on this same element (or the total silently degrades to the
-        # visible-row count).
-        f'<div class="dz-pagination" data-dz-grid-pagination data-dz-grid-total="{total}">'
-        '<span class="dz-pagination-summary">'
-        '<span class="dz-bulk-summary-selected">'
-        f"<span data-dz-bulk-count-target>0</span> of {total} selected"
-        "</span>"
-        f'<span class="dz-bulk-summary-rows">{total} {rows_label}</span>'
-        "</span>"
-        f'<div class="dz-pagination-pages">{"".join(buttons)}</div>'
-        "</div>"
+    # Dual-lock sole-emitter (contracts/pagination.py) — roots
+    # data-dz-pagination + data-dz-grid-pagination + data-dz-grid-total.
+    from dazzle.render.fragment.ingest import Pagination as PaginationSeam
+    from dazzle.render.fragment.ingest import render_pagination
+
+    return render_pagination(
+        PaginationSeam(
+            total=total,
+            pages_html="".join(buttons),
+            rows_label=rows_label,
+        )
     )
 
 

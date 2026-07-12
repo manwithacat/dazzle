@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -726,6 +726,33 @@ def test_progress_emission_conforms_to_progress_contract() -> None:
     assert 'data-dz-stage-tone="active"' in html
     assert 'data-dz-stage-tone="empty"' in html
     assert "1 of 3 complete" in html
+
+
+def test_pagination_emission_conforms_to_pagination_contract() -> None:
+    """Real FragmentRenderer Pagination path satisfies contracts/pagination.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.htmx import URL
+    from dazzle.render.fragment.primitives.data import Pagination as PagFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    pag_mod = load_hm_module("contracts/pagination.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        PagFrag(
+            region_name="tickets",
+            endpoint=URL("/api/tickets"),
+            total=42,
+            page=1,
+            page_size=10,
+        )
+    )
+    violations = kit.validate_dom(html, pag_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-pagination" in html
+    assert "data-dz-grid-pagination" in html
+    assert 'data-dz-grid-total="42"' in html
+    assert "dz-pagination-page" in html
+    assert "42 rows" in html
 
 
 def test_radar_emission_conforms_to_radar_contract() -> None:

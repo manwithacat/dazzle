@@ -338,8 +338,12 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<div class="hm-pag-row">INV-002 · Globex</div>'
             '<div class="hm-pag-row">INV-003 · Initech</div>'
             "</div>"
-            '<nav class="dz-pagination" aria-label="Pagination">'
-            '<span class="dz-pagination-summary">42 rows</span>'
+            '<div class="dz-pagination" data-dz-pagination data-dz-grid-pagination '
+            'data-dz-grid-total="42" aria-label="Pagination">'
+            '<span class="dz-pagination-summary">'
+            '<span class="dz-bulk-summary-selected">'
+            "<span data-dz-bulk-count-target>0</span> of 42 selected</span>"
+            '<span class="dz-bulk-summary-rows">42 rows</span></span>'
             '<div class="dz-pagination-pages">'
             '<button class="dz-pagination-page" disabled aria-label="Previous page">‹</button>'
             '<button class="dz-pagination-page is-current" aria-current="page">1</button>'
@@ -352,12 +356,14 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             'hx-target="#hm-pag-body" hx-swap="innerHTML">9</button>'
             '<button class="dz-pagination-page" hx-get="/mock/pagination/2" '
             'hx-target="#hm-pag-body" hx-swap="innerHTML" aria-label="Next page">›</button>'
-            "</div></nav></div>",
-            notes="Each page button carries its own <code>hx-get</code>; here a mock htmx swaps "
-            "a canned page into <code>#hm-pag-body</code>. In Dazzle the button hits the region "
-            "endpoint (<code>?page=N&amp;page_size=…</code>) and the server returns the repainted "
-            "list body (via <code>innerMorph</code>) plus the moved <code>is-current</code> marker.",
+            "</div></div></div>",
+            notes="Dual-lock root is <code>data-dz-pagination</code> "
+            "(<code>contracts/pagination.py</code>) plus "
+            "<code>data-dz-grid-pagination</code> / <code>data-dz-grid-total</code> "
+            "for grid selection. Each page button carries its own <code>hx-get</code>; "
+            "here a mock htmx swaps a canned page into <code>#hm-pag-body</code>.",
             tags=("htmx",),
+            contracts=("contracts/pagination.py",),
             exchanges=(
                 Exchange(
                     method="GET",

@@ -230,6 +230,12 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "TimeSeriesLayer",
     ),
+    (
+        "contracts/pagination.py",
+        "Pagination",
+        "dazzle.render.fragment.ingest",
+        "Pagination",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.

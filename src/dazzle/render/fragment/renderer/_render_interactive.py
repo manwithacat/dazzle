@@ -239,14 +239,14 @@ class _RenderInteractiveMixin:
         )
 
     def _emit_pagination(self, p: Pagination, ctx: RenderContext) -> str:
-        """Render a Pagination matching legacy `table_pagination.html`
-        byte-equivalent shape (Phase 2 of #1029).
+        """Render Pagination via HM dual-lock Pagination seam.
 
-        Wraps the LIST adapter's table when total > page_size; emits
-        the row-summary on the left and bounded page-button row on
-        the right. Each button is htmx-driven; sort/filter/search
-        state preserved via the opaque `extra_query` carried on the
-        primitive."""
+        Page buttons stay host-built (htmx endpoints); dual-lock roots
+        data-dz-pagination + data-dz-grid-pagination + data-dz-grid-total.
+        """
+        from dazzle.render.fragment.ingest import Pagination as PaginationSeam
+        from dazzle.render.fragment.ingest import render_pagination
+
         if p.total <= p.page_size:
             return ""
         total_pages = (p.total + p.page_size - 1) // p.page_size
@@ -274,20 +274,12 @@ class _RenderInteractiveMixin:
                 f"</button>"
             )
         rows_label = "row" if p.total == 1 else "rows"
-        return (
-            # data-dz-grid-total: the server-authoritative matched total the HM
-            # grid primitive reads (all-matching selection) — convergence C0a.
-            # C1 GATE: `data-dz-grid-pagination` must land on THIS element
-            # (matchedTotal() reads the total off the marker's carrier).
-            f'<div class="dz-pagination" data-dz-grid-total="{p.total}">'
-            f'<span class="dz-pagination-summary">'
-            f'<span class="dz-bulk-summary-selected">'
-            f"<span data-dz-bulk-count-target>0</span> of {p.total} selected"
-            f"</span>"
-            f'<span class="dz-bulk-summary-rows">{p.total} {rows_label}</span>'
-            f"</span>"
-            f'<div class="dz-pagination-pages">{"".join(page_html_parts)}</div>'
-            f"</div>"
+        return render_pagination(
+            PaginationSeam(
+                total=p.total,
+                pages_html="".join(page_html_parts),
+                rows_label=rows_label,
+            )
         )
 
     def _emit_search_box(self, s: SearchBox, ctx: RenderContext) -> str:

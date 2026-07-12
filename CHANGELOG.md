@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **pagination → schema+DOM dual-lock** — HM `contracts/pagination.py`
+  (`Pagination`, roots `data-dz-pagination` + `data-dz-grid-pagination` +
+  `data-dz-grid-total`); page buttons stay host-trusted htmx HTML.
 - **shadcn parity placeholders: item + hover-card** — list-row anatomy
   Hyperpart and CSS hover/focus preview card. Catalogue gaps 9→7.
 - **shadcn parity placeholders: toggle + aspect-ratio** — gallery Hyperparts

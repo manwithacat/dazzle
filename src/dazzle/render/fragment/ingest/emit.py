@@ -27,6 +27,7 @@ from dazzle.render.fragment.ingest.models import (
     KanbanCard,
     MetricTile,
     MoneyField,
+    Pagination,
     PivotTable,
     ProfileCard,
     Progress,
@@ -874,6 +875,10 @@ def time_series_root_attrs(_t: TimeSeries) -> str:
     return "data-dz-time-series"
 
 
+def pagination_root_attrs(p: Pagination) -> str:
+    return f'data-dz-pagination data-dz-grid-pagination data-dz-grid-total="{int(p.total)}"'
+
+
 def render_histogram(h: Histogram) -> str:
     """Model → histogram region (matches HM contracts/histogram.py)."""
     root_attrs = histogram_root_attrs(h)
@@ -984,6 +989,27 @@ def render_progress(p: Progress) -> str:
         f"</div>"
         f'<div class="dz-progress-stages">{chips_html}</div>'
         f"{summary_html}"
+        f"</div>"
+    )
+
+
+def render_pagination(p: Pagination) -> str:
+    """Model → pagination footer (matches HM contracts/pagination.py)."""
+    if p.total <= 0 and not p.pages_html:
+        return ""
+    if not p.pages_html:
+        return ""
+    root_attrs = pagination_root_attrs(p)
+    label = p.rows_label or ("row" if p.total == 1 else "rows")
+    return (
+        f'<div class="dz-pagination" {root_attrs}>'
+        f'<span class="dz-pagination-summary">'
+        f'<span class="dz-bulk-summary-selected">'
+        f"<span data-dz-bulk-count-target>0</span> of {p.total} selected"
+        f"</span>"
+        f'<span class="dz-bulk-summary-rows">{p.total} {label}</span>'
+        f"</span>"
+        f'<div class="dz-pagination-pages">{p.pages_html}</div>'
         f"</div>"
     )
 

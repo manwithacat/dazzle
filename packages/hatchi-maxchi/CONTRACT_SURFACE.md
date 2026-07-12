@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 40 |
+| Modules | 41 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -38,6 +38,7 @@ blast radius (who embeds / refuses this part).
 | `master_detail` | `master-detail` | `[data-dz-master-detail]` | [data-dz-master-detail][]; [data-dz-master-detail-list-body][]; [data-dz-master-detail-detail-body][] | — |
 | `metrics` | `metrics` | `[data-dz-metric-key]` | [data-dz-metric-key][data-dz-metric-key=present] | MetricTile(delta_direction:Literal:opt; delta_pct:float:opt; delta_period_label:str:opt; delta_sentiment:Literal:opt; delta_value:str:opt; label:str:req; metric_key:str:opt; tone:Literal:opt; value:str:req) |
 | `money` | `money` | `[data-dz-money]` | [data-dz-money][data-dz-currency=present, data-dz-scale=present] | MoneyField(currency:str:opt; field_id:str:opt; major_display:str:opt; minor_value:int:opt; name:str:req; scale:int:opt) |
+| `pagination` | `pagination` | `[data-dz-pagination]` | [data-dz-pagination][data-dz-grid-pagination=present, data-dz-grid-total=present, data-dz-pagination=present] | Pagination(pages_html:str:opt; rows_label:str:opt; total:int:opt) |
 | `pdf` | `pdf` | `[data-dz-pdf]` | [data-dz-pdf][data-dz-pdf-lib=present, data-dz-pdf-src=present]; [data-dz-pdf-viewer][] | — |
 | `pivot` | `pivot` | `[data-dz-pivot]` | [data-dz-pivot][data-dz-pivot=present] | PivotTable(dim_headers:list[str]:opt; empty_message:str:opt; measure_headers:list[str]:opt; rows:list[list[str]]:opt) |
 | `profile_card` | `profile-card` | `[data-dz-profile-card]` | [data-dz-profile-card][data-dz-profile-card=present] | ProfileCard(avatar_url:str:opt; facts:list[str]:opt; initials:str:opt; primary:str:opt; secondary:str:opt; stats:list[tuple[str,str]]:opt) |

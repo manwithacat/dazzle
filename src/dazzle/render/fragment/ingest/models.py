@@ -563,6 +563,17 @@ class Progress(BaseModel):
     total: int = 0
 
 
+# ── Pagination seam copy (contracts/pagination.py) ───────────────────
+
+
+class Pagination(BaseModel):
+    """List/table pagination footer — dual-lock unit for pagination."""
+
+    total: int = 0
+    pages_html: str = ""
+    rows_label: str = "rows"
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

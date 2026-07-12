@@ -18,10 +18,10 @@ The footer beneath a data table — a summary and page buttons. Each button hx-g
     <div class="hm-pag-row">INV-002 · Globex</div>
     <div class="hm-pag-row">INV-003 · Initech</div>
   </div>
-  <nav class="pagination" aria-label="Pagination">
-    <span class="pagination-summary">42 rows</span>
+  <div class="pagination" data-pagination data-grid-pagination data-grid-total="42" aria-label="Pagination">
+    <span class="pagination-summary"><span class="bulk-summary-selected"><span data-bulk-count-target>0</span> of 42 selected</span><span class="bulk-summary-rows">42 rows</span></span>
     <div class="pagination-pages"><button class="pagination-page" disabled aria-label="Previous page">‹</button><button class="pagination-page is-current" aria-current="page">1</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML">2</button><button class="pagination-page" hx-get="/mock/pagination/3" hx-target="#hm-pag-body" hx-swap="innerHTML">3</button><span class="pagination-ellipsis" aria-hidden="true">…</span><button class="pagination-page" hx-get="/mock/pagination/9" hx-target="#hm-pag-body" hx-swap="innerHTML">9</button><button class="pagination-page" hx-get="/mock/pagination/2" hx-target="#hm-pag-body" hx-swap="innerHTML" aria-label="Next page">›</button></div>
-  </nav>
+  </div>
 </div>
 ```
 
@@ -57,16 +57,59 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - implement Server exchange endpoints; return HTML fragments, not JSON
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/pagination.py`
+
+- **Required root:** `[data-dz-pagination]` (part `pagination`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-pagination]` | `data-dz-pagination` | present (any value) |
+| `[data-dz-pagination]` | `data-dz-grid-pagination` | present (any value) |
+| `[data-dz-pagination]` | `data-dz-grid-total` | present (any value) |
+
+#### Ingestion model `Pagination`
+
+| Field | Type | Required |
+|---|---|---|
+| `total` | `integer` | no |
+| `pages_html` | `string` | no |
+| `rows_label` | `string` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(p: Pagination) -> str:
+    """Model → pagination footer. Empty total + empty pages → \"\"."""
+    if p.total <= 0 and not p.pages_html:
+        return ""
+    if not p.pages_html:
+        return ""
+    label = p.rows_label or ("row" if p.total == 1 else "rows")
+    return (
+        f'<div class="dz-pagination" data-dz-pagination data-dz-grid-pagination '
+        f'data-dz-grid-total="{p.total}">'
+        f'<span class="dz-pagination-summary">'
+        f'<span class="dz-bulk-summary-selected">'
+        f"<span data-dz-bulk-count-target>0</span> of {p.total} selected"
+        f"</span>"
+        f'<span class="dz-bulk-summary-rows">{p.total} {label}</span>'
+        f"</span>"
+        f'<div class="dz-pagination-pages">{p.pages_html}</div>'
+        f"</div>"
+    )
+```
 
 ## Notes
 
-Each page button carries its own hx-get; here a mock htmx swaps a canned page into #hm-pag-body. In Dazzle the button hits the region endpoint (?page=N&page_size=…) and the server returns the repainted list body (via innerMorph) plus the moved is-current marker.
+Dual-lock root is data-dz-pagination (contracts/pagination.py) plus data-dz-grid-pagination / data-dz-grid-total for grid selection. Each page button carries its own hx-get; here a mock htmx swaps a canned page into #hm-pag-body.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/pagination.py`
