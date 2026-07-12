@@ -1279,7 +1279,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "The FTS search region: a debounced search input, an aria-live "
             "results panel, and a coaching line that hides — via pure CSS — "
             "the moment the user types.",
-            '<div class="dz-search-box-region hm-measure">'
+            '<div class="dz-search-box-region hm-measure" data-dz-search-box>'
             '<div class="dz-search-box-input-row">'
             '<label for="hm-search-input" class="visually-hidden">Search records</label>'
             '<input id="hm-search-input" type="search" name="q" '
@@ -1294,7 +1294,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             'role="region" aria-live="polite">'
             '<div class="dz-search-box-empty">Type a title or keyword</div>'
             "</div></div>",
-            notes="No JS beyond htmx: the 250ms debounce is "
+            notes="Dual-lock root is <code>data-dz-search-box</code> "
+            "(<code>contracts/search_box.py</code>). No JS beyond htmx: the "
+            "250ms debounce is "
             "<code>hx-trigger=&quot;input changed delay:250ms, search&quot;</code>, "
             "the results land in an <code>aria-live=&quot;polite&quot;</code> "
             "region, and the coaching line is hidden by "
@@ -1304,6 +1306,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<code>&lt;mark&gt;</code>-highlighted snippets, count line above); "
             "the no-results state reuses <code>dz-search-box-empty</code> with "
             "the <code>--no-results</code> modifier.",
+            contracts=("contracts/search_box.py",),
             tags=("forms", "htmx"),
             exchanges=(
                 Exchange(

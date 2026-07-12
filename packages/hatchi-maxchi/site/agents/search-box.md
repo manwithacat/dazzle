@@ -12,7 +12,7 @@ The FTS search region: a debounced search input, an aria-live results panel, and
 ## Copy this
 
 ```html
-<div class="search-box-region hm-measure">
+<div class="search-box-region hm-measure" data-search-box>
   <div class="search-box-input-row">
     <label for="hm-search-input" class="visually-hidden">Search records</label>
     <input id="hm-search-input" type="search" name="q" class="search-box-input" placeholder="Search records…" autocomplete="off" hx-get="/mock/search" hx-trigger="input changed delay:250ms, search" hx-target="#hm-search-results" hx-swap="innerHTML">
@@ -55,16 +55,69 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - implement Server exchange endpoints; return HTML fragments, not JSON
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/search_box.py`
+
+- **Required root:** `[data-dz-search-box]` (part `search-box`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-search-box]` | `data-dz-search-box` | present (any value) |
+
+#### Ingestion model `SearchBox`
+
+| Field | Type | Required |
+|---|---|---|
+| `name` | `string` | no |
+| `label` | `string` | no |
+| `placeholder` | `string` | no |
+| `coaching_message` | `string` | no |
+| `endpoint` | `string` | no |
+| `results_html` | `string` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(s: SearchBox) -> str:
+    """Model → search-box region."""
+    results_id = f"dz-search-results-{html.escape(s.name, quote=True)}"
+    endpoint = html.escape(s.endpoint, quote=True)
+    placeholder = html.escape(s.placeholder or "Search…", quote=True)
+    label_text = html.escape(s.label or s.placeholder or "Search")
+    coaching = html.escape(s.coaching_message or "Type a title or keyword")
+    results_body = s.results_html.strip() or (
+        f'<div class="dz-search-box-empty">{coaching}</div>'
+    )
+    return (
+        f'<div class="dz-search-box-region" data-dz-search-box>'
+        f'<div class="dz-search-box-input-row">'
+        f'<label for="{results_id}-input" class="visually-hidden">{label_text}</label>'
+        f'<input id="{results_id}-input" type="search" name="q" '
+        f'class="dz-search-box-input" placeholder="{placeholder}" '
+        f'autocomplete="off" '
+        f'hx-get="{endpoint}" '
+        f'hx-trigger="input changed delay:250ms, search" '
+        f'hx-target="#{results_id}" '
+        f'hx-swap="innerHTML">'
+        f"</div>"
+        f'<div id="{results_id}" class="dz-search-box-results" '
+        f'role="region" aria-live="polite">'
+        f"{results_body}"
+        f"</div>"
+        f"</div>"
+    )
+```
 
 ## Notes
 
-No JS beyond htmx: the 250ms debounce is hx-trigger="input changed delay:250ms, search", the results land in an aria-live="polite" region, and the coaching line is hidden by :has(input:not(:placeholder-shown)) — no client state. Results are server-rendered dz-search-box-result rows (title + per-field <mark>-highlighted snippets, count line above); the no-results state reuses dz-search-box-empty with the --no-results modifier.
+Dual-lock root is data-dz-search-box (contracts/search_box.py). No JS beyond htmx: the 250ms debounce is hx-trigger="input changed delay:250ms, search", the results land in an aria-live="polite" region, and the coaching line is hidden by :has(input:not(:placeholder-shown)) — no client state. Results are server-rendered dz-search-box-result rows (title + per-field <mark>-highlighted snippets, count line above); the no-results state reuses dz-search-box-empty with the --no-results modifier.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/search_box.py`

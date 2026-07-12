@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -753,6 +753,32 @@ def test_pagination_emission_conforms_to_pagination_contract() -> None:
     assert 'data-dz-grid-total="42"' in html
     assert "dz-pagination-page" in html
     assert "42 rows" in html
+
+
+def test_search_box_emission_conforms_to_search_box_contract() -> None:
+    """Real FragmentRenderer SearchBox path satisfies contracts/search_box.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.htmx import URL
+    from dazzle.render.fragment.primitives.data import SearchBox as SearchFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    sb_mod = load_hm_module("contracts/search_box.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        SearchFrag(
+            name="records",
+            fts_endpoint=URL("/mock/search"),
+            placeholder="Search records…",
+            coaching_message="Type a title or keyword",
+            label="Search records",
+        )
+    )
+    violations = kit.validate_dom(html, sb_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-search-box" in html
+    assert "dz-search-box-input" in html
+    assert 'aria-live="polite"' in html
+    assert "Type a title or keyword" in html
 
 
 def test_radar_emission_conforms_to_radar_contract() -> None:

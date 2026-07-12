@@ -17863,12 +17863,14 @@
       "render_progress": 3,
       "render_queue_row": 4,
       "render_radar": 6,
+      "render_search_box": 6,
       "render_search_result_list": 4,
       "render_search_result_row": 3,
       "render_sparkline": 8,
       "render_status_list_entry": 4,
       "render_time_series": 17,
       "render_timeline_event": 2,
+      "search_box_root_attrs": 1,
       "search_select_root_attrs": 1,
       "search_select_shell_from_form": 4,
       "sparkline_root_attrs": 1,
@@ -17878,7 +17880,7 @@
       "time_series_root_attrs": 1,
       "timeline_item_root_attrs": 1
     },
-    "mi_rank": "B"
+    "mi_rank": "C"
   },
   "dazzle/render/fragment/ingest/models.py": {
     "functions": {
@@ -17926,6 +17928,7 @@
       "QueueRow._title_nonempty": 3,
       "Radar": 1,
       "RadarAxis": 1,
+      "SearchBox": 1,
       "SearchResultRow": 1,
       "SearchSelectShell": 1,
       "Sparkline": 1,

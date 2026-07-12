@@ -283,42 +283,18 @@ class _RenderInteractiveMixin:
         )
 
     def _emit_search_box(self, s: SearchBox, ctx: RenderContext) -> str:
-        """Render a SearchBox: accessible label + search input wired to
-        HTMX with 250ms debounce, results panel with
-        `aria-live="polite"`, and a coaching message hidden by PURE CSS
-        once the user types (`.dz-search-box-region:has(input:not(
-        :placeholder-shown))` — the Alpine `q` island retired in Tier
-        F3; the first result swap replaces the coaching line anyway).
-        """
-        results_id = f"dz-search-results-{ctx.escape_attr(s.name)}"
-        endpoint = ctx.escape_attr(str(s.fts_endpoint))
-        # A non-empty placeholder is LOAD-BEARING: the coaching-line CSS
-        # toggle keys off :placeholder-shown, which never matches an empty
-        # placeholder (coaching would be permanently hidden).
-        placeholder = ctx.escape_attr(s.placeholder or "Search…")
-        coaching = ctx.escape(s.coaching_message)
-        # Label uses placeholder as fallback when no explicit label is
-        # supplied — matches the legacy template's `title or _placeholder`.
-        label_text = ctx.escape(s.label or s.placeholder)
-        return (
-            f'<div class="dz-search-box-region">'
-            f'<div class="dz-search-box-input-row">'
-            f'<label for="{results_id}-input" class="visually-hidden">{label_text}</label>'
-            f'<input id="{results_id}-input" type="search" name="q" '
-            f'class="dz-search-box-input" placeholder="{placeholder}" '
-            f'autocomplete="off" '
-            f'hx-get="{endpoint}" '
-            f'hx-trigger="input changed delay:250ms, search" '
-            f'hx-target="#{results_id}" '
-            f'hx-swap="innerHTML">'
-            f"</div>"
-            f'<div id="{results_id}" class="dz-search-box-results" '
-            f'role="region" aria-live="polite">'
-            f'<div class="dz-search-box-empty">'
-            f"{coaching}"
-            f"</div>"
-            f"</div>"
-            f"</div>"
+        """Render a SearchBox via HM dual-lock SearchBox seam."""
+        from dazzle.render.fragment.ingest import SearchBox as SearchBoxSeam
+        from dazzle.render.fragment.ingest import render_search_box
+
+        return render_search_box(
+            SearchBoxSeam(
+                name=s.name,
+                label=s.label or "",
+                placeholder=s.placeholder or "Search…",
+                coaching_message=s.coaching_message,
+                endpoint=str(s.fts_endpoint),
+            )
         )
 
     def _emit_confirm_gate(self, c: ConfirmGate, ctx: RenderContext) -> str:

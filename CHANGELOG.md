@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **search-box → schema+DOM dual-lock** — HM `contracts/search_box.py`
+  (`SearchBox`, root `data-dz-search-box`); HTMX endpoint/coaching stay on the
+  seam model; sole-emitter owns the region chrome.
 - **pagination → schema+DOM dual-lock** — HM `contracts/pagination.py`
   (`Pagination`, roots `data-dz-pagination` + `data-dz-grid-pagination` +
   `data-dz-grid-total`); page buttons stay host-trusted htmx HTML.

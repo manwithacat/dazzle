@@ -34,6 +34,7 @@ from dazzle.render.fragment.ingest.models import (
     ProgressStage,
     QueueRow,
     Radar,
+    SearchBox,
     SearchResultRow,
     SearchSelectShell,
     Sparkline,
@@ -879,6 +880,10 @@ def pagination_root_attrs(p: Pagination) -> str:
     return f'data-dz-pagination data-dz-grid-pagination data-dz-grid-total="{int(p.total)}"'
 
 
+def search_box_root_attrs(_s: SearchBox) -> str:
+    return "data-dz-search-box"
+
+
 def render_histogram(h: Histogram) -> str:
     """Model → histogram region (matches HM contracts/histogram.py)."""
     root_attrs = histogram_root_attrs(h)
@@ -1010,6 +1015,35 @@ def render_pagination(p: Pagination) -> str:
         f'<span class="dz-bulk-summary-rows">{p.total} {label}</span>'
         f"</span>"
         f'<div class="dz-pagination-pages">{p.pages_html}</div>'
+        f"</div>"
+    )
+
+
+def render_search_box(s: SearchBox) -> str:
+    """Model → search-box region (matches HM contracts/search_box.py)."""
+    root_attrs = search_box_root_attrs(s)
+    results_id = f"dz-search-results-{_html.escape(s.name, quote=True)}"
+    endpoint = _html.escape(s.endpoint, quote=True)
+    placeholder = _html.escape(s.placeholder or "Search…", quote=True)
+    label_text = _html.escape(s.label or s.placeholder or "Search")
+    coaching = _html.escape(s.coaching_message or "Type a title or keyword")
+    results_body = s.results_html.strip() or (f'<div class="dz-search-box-empty">{coaching}</div>')
+    return (
+        f'<div class="dz-search-box-region" {root_attrs}>'
+        f'<div class="dz-search-box-input-row">'
+        f'<label for="{results_id}-input" class="visually-hidden">{label_text}</label>'
+        f'<input id="{results_id}-input" type="search" name="q" '
+        f'class="dz-search-box-input" placeholder="{placeholder}" '
+        f'autocomplete="off" '
+        f'hx-get="{endpoint}" '
+        f'hx-trigger="input changed delay:250ms, search" '
+        f'hx-target="#{results_id}" '
+        f'hx-swap="innerHTML">'
+        f"</div>"
+        f'<div id="{results_id}" class="dz-search-box-results" '
+        f'role="region" aria-live="polite">'
+        f"{results_body}"
+        f"</div>"
         f"</div>"
     )
 

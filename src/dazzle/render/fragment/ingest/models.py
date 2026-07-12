@@ -574,6 +574,20 @@ class Pagination(BaseModel):
     rows_label: str = "rows"
 
 
+# ── Search-box seam copy (contracts/search_box.py) ───────────────────
+
+
+class SearchBox(BaseModel):
+    """FTS search region shell — dual-lock unit for search-box."""
+
+    name: str = "q"
+    label: str = ""
+    placeholder: str = "Search…"
+    coaching_message: str = "Type a title or keyword"
+    endpoint: str = ""
+    results_html: str = ""
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

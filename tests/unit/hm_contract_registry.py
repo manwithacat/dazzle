@@ -236,6 +236,12 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "Pagination",
     ),
+    (
+        "contracts/search_box.py",
+        "SearchBox",
+        "dazzle.render.fragment.ingest",
+        "SearchBox",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.
