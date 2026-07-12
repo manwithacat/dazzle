@@ -340,22 +340,36 @@
  * INSTANCE-ISOLATED — one delegated listener, but the trigger addresses
  * its OWN dialog by id (getElementById), so N dialogs coexist without a
  * shared global handle (contrast command.js's page-level singleton).
+ *
+ * open timing: showModal is deferred with setTimeout(0) so the opening
+ * click is not also treated as a light-dismiss on closedby="any" (a
+ * microtask is still too early in Chromium — open-and-instantly-close).
  */
 (function () {
   "use strict";
 
+  function openAttr(el) {
+    return (
+      el.getAttribute("data-dialog-open") || el.getAttribute("data-dialog-open")
+    );
+  }
+
   document.addEventListener("click", function (evt) {
-    var trigger = evt.target.closest("[data-dialog-open]");
+    var trigger =
+      (evt.target.closest && evt.target.closest("[data-dialog-open]")) ||
+      (evt.target.closest && evt.target.closest("[data-dialog-open]"));
     if (!trigger) return;
-    var id = trigger.getAttribute("data-dialog-open");
+    var id = openAttr(trigger);
     if (!id) return;
     var dlg = document.getElementById(id);
     // Guard: only drive a real <dialog> (showModal is dialog-only). A
     // missing id or wrong element type is a no-op, not a throw.
-    if (dlg && typeof dlg.showModal === "function") {
-      evt.preventDefault();
-      dlg.showModal();
-    }
+    if (!dlg || typeof dlg.showModal !== "function") return;
+    evt.preventDefault();
+    // Macrotask: past closedby="any" handling for this click.
+    setTimeout(function () {
+      if (!dlg.open) dlg.showModal();
+    }, 0);
   });
 })();
 

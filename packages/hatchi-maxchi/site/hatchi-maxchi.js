@@ -52,7 +52,51 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       + "Selected — hidden FK filled server-side; form posts the id, not this label."
       + "</div>",
     "/mock/search": '<div class="search-box-result-count">2 results</div><ul class="search-box-result-list" role="list"><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Aurora <mark>Substation</mark></span><ul class="search-box-result-snippets"><li class="search-box-result-snippet"><span class="search-box-result-snippet-field">Region:</span><span class="search-box-result-snippet-text">North grid, <mark>substation</mark> cluster A</span></li></ul></a></li><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Beacon <mark>Substation</mark></span></a></li></ul>',
-    "/mock/drawer/detail": '<h3>Aurora Substation</h3><p>Region: North · Load: 82%</p><p>Commissioned 2019; last inspection 14 June. Two open work orders.</p>',
+    // Composed peek fragment for the drawer Hyperpart demo (card + badge +
+    // field-like meta + alert + actions). Server returns the body only —
+    // not the drawer chrome (open/focus stay on the host dialog).
+    "/mock/drawer/detail":
+      '<div class="stack" data-gap="md">' +
+      '<div class="hm-demo-row" style="justify-content:space-between;align-items:flex-start;' +
+      'gap:var(--space-sm);flex-wrap:wrap">' +
+      "<div>" +
+      '<p class="form-label" style="margin:0 0 0.25rem">Asset</p>' +
+      '<h3 style="margin:0;font-size:var(--text-lg)">Aurora Substation</h3>' +
+      "</div>" +
+      '<span class="badge" data-tone="success">' +
+      '<span class="badge-icon">{i:circle-check}</span>Online</span>' +
+      "</div>" +
+      '<div class="card card-body">' +
+      '<div class="auto-grid" style="--grid-min:7rem;gap:var(--space-md)">' +
+      '<div><div class="card-label">Region</div>' +
+      '<div class="card-value" style="font-size:var(--text-base)">North</div></div>' +
+      '<div><div class="card-label">Load</div>' +
+      '<div class="card-value" style="font-size:var(--text-base)">82%</div></div>' +
+      '<div><div class="card-label">Open WOs</div>' +
+      '<div class="card-value" style="font-size:var(--text-base)">2</div></div>' +
+      "</div></div>" +
+      '<div class="stack" data-gap="xs">' +
+      '<div class="form-field" style="margin:0">' +
+      '<span class="form-label">Commissioned</span>' +
+      '<p class="form-hint" style="margin:0">2019 · last inspection 14 June</p>' +
+      "</div>" +
+      '<div class="form-field" style="margin:0">' +
+      '<span class="form-label">Primary contact</span>' +
+      '<p class="form-hint" style="margin:0">Maya Reyes · Operations</p>' +
+      "</div></div>" +
+      '<div class="alert" data-tone="warning" role="status">' +
+      '<span class="alert__icon">{i:triangle-alert}</span>' +
+      '<div class="alert__body">' +
+      '<div class="alert__title">Two open work orders</div>' +
+      '<div class="alert__description">' +
+      "Peek stays partial — use Open full page for the complete record shell." +
+      "</div></div></div>" +
+      '<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">' +
+      '<button type="button" class="button" data-variant="outline">{i:clipboard-list} ' +
+      "Work orders</button>" +
+      '<button type="button" class="button" data-variant="ghost">{i:map-pin} Map</button>' +
+      "</div></div>",
+
     "/mock/shell/dashboard": '<div class="stack" data-gap="md"><h1>Dashboard</h1><div class="auto-grid" style="--grid-min: 10rem"><div class="card card-body"><div class="card-label">Outstanding</div><div class="card-value">£12,450</div></div><div class="card card-body"><div class="card-label">Paid</div><div class="card-value">£48,900</div></div></div></div>',
     "/mock/shell/invoices": '<div class="stack" data-gap="md"><h1>Invoices</h1><p class="hm-demo-muted">The routed workspace swapped — the shell, sidebar state, and scroll position persist; only the main slot changed.</p></div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
@@ -840,22 +884,36 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
  * INSTANCE-ISOLATED — one delegated listener, but the trigger addresses
  * its OWN dialog by id (getElementById), so N dialogs coexist without a
  * shared global handle (contrast command.js's page-level singleton).
+ *
+ * open timing: showModal is deferred with setTimeout(0) so the opening
+ * click is not also treated as a light-dismiss on closedby="any" (a
+ * microtask is still too early in Chromium — open-and-instantly-close).
  */
 (function () {
   "use strict";
 
+  function openAttr(el) {
+    return (
+      el.getAttribute("data-dialog-open") || el.getAttribute("data-dialog-open")
+    );
+  }
+
   document.addEventListener("click", function (evt) {
-    var trigger = evt.target.closest("[data-dialog-open]");
+    var trigger =
+      (evt.target.closest && evt.target.closest("[data-dialog-open]")) ||
+      (evt.target.closest && evt.target.closest("[data-dialog-open]"));
     if (!trigger) return;
-    var id = trigger.getAttribute("data-dialog-open");
+    var id = openAttr(trigger);
     if (!id) return;
     var dlg = document.getElementById(id);
     // Guard: only drive a real <dialog> (showModal is dialog-only). A
     // missing id or wrong element type is a no-op, not a throw.
-    if (dlg && typeof dlg.showModal === "function") {
-      evt.preventDefault();
-      dlg.showModal();
-    }
+    if (!dlg || typeof dlg.showModal !== "function") return;
+    evt.preventDefault();
+    // Macrotask: past closedby="any" handling for this click.
+    setTimeout(function () {
+      if (!dlg.open) dlg.showModal();
+    }, 0);
   });
 })();
 

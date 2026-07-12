@@ -1377,7 +1377,51 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       + "Selected — hidden FK filled server-side; form posts the id, not this label."
       + "</div>",
     "/mock/search": '<div class="dz-search-box-result-count">2 results</div><ul class="dz-search-box-result-list" role="list"><li class="dz-search-box-result"><a href="#" class="dz-search-box-result-link"><span class="dz-search-box-result-title">Aurora <mark>Substation</mark></span><ul class="dz-search-box-result-snippets"><li class="dz-search-box-result-snippet"><span class="dz-search-box-result-snippet-field">Region:</span><span class="dz-search-box-result-snippet-text">North grid, <mark>substation</mark> cluster A</span></li></ul></a></li><li class="dz-search-box-result"><a href="#" class="dz-search-box-result-link"><span class="dz-search-box-result-title">Beacon <mark>Substation</mark></span></a></li></ul>',
-    "/mock/drawer/detail": '<h3>Aurora Substation</h3><p>Region: North · Load: 82%</p><p>Commissioned 2019; last inspection 14 June. Two open work orders.</p>',
+    // Composed peek fragment for the drawer Hyperpart demo (card + badge +
+    // field-like meta + alert + actions). Server returns the body only —
+    // not the drawer chrome (open/focus stay on the host dialog).
+    "/mock/drawer/detail":
+      '<div class="dz-stack" data-dz-gap="md">' +
+      '<div class="hm-demo-row" style="justify-content:space-between;align-items:flex-start;' +
+      'gap:var(--space-sm);flex-wrap:wrap">' +
+      "<div>" +
+      '<p class="dz-form-label" style="margin:0 0 0.25rem">Asset</p>' +
+      '<h3 style="margin:0;font-size:var(--text-lg)">Aurora Substation</h3>' +
+      "</div>" +
+      '<span class="dz-badge" data-dz-tone="success">' +
+      '<span class="dz-badge-icon">{i:circle-check}</span>Online</span>' +
+      "</div>" +
+      '<div class="dz-card dz-card-body">' +
+      '<div class="dz-auto-grid" style="--dz-grid-min:7rem;gap:var(--space-md)">' +
+      '<div><div class="dz-card-label">Region</div>' +
+      '<div class="dz-card-value" style="font-size:var(--text-base)">North</div></div>' +
+      '<div><div class="dz-card-label">Load</div>' +
+      '<div class="dz-card-value" style="font-size:var(--text-base)">82%</div></div>' +
+      '<div><div class="dz-card-label">Open WOs</div>' +
+      '<div class="dz-card-value" style="font-size:var(--text-base)">2</div></div>' +
+      "</div></div>" +
+      '<div class="dz-stack" data-dz-gap="xs">' +
+      '<div class="dz-form-field" style="margin:0">' +
+      '<span class="dz-form-label">Commissioned</span>' +
+      '<p class="dz-form-hint" style="margin:0">2019 · last inspection 14 June</p>' +
+      "</div>" +
+      '<div class="dz-form-field" style="margin:0">' +
+      '<span class="dz-form-label">Primary contact</span>' +
+      '<p class="dz-form-hint" style="margin:0">Maya Reyes · Operations</p>' +
+      "</div></div>" +
+      '<div class="dz-alert" data-dz-tone="warning" role="status">' +
+      '<span class="dz-alert__icon">{i:triangle-alert}</span>' +
+      '<div class="dz-alert__body">' +
+      '<div class="dz-alert__title">Two open work orders</div>' +
+      '<div class="dz-alert__description">' +
+      "Peek stays partial — use Open full page for the complete record shell." +
+      "</div></div></div>" +
+      '<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">' +
+      '<button type="button" class="dz-button" data-dz-variant="outline">{i:clipboard-list} ' +
+      "Work orders</button>" +
+      '<button type="button" class="dz-button" data-dz-variant="ghost">{i:map-pin} Map</button>' +
+      "</div></div>",
+
     "/mock/shell/dashboard": '<div class="dz-stack" data-dz-gap="md"><h1>Dashboard</h1><div class="dz-auto-grid" style="--dz-grid-min: 10rem"><div class="dz-card dz-card-body"><div class="dz-card-label">Outstanding</div><div class="dz-card-value">£12,450</div></div><div class="dz-card dz-card-body"><div class="dz-card-label">Paid</div><div class="dz-card-value">£48,900</div></div></div></div>',
     "/mock/shell/invoices": '<div class="dz-stack" data-dz-gap="md"><h1>Invoices</h1><p class="hm-demo-muted">The routed workspace swapped — the shell, sidebar state, and scroll position persist; only the main slot changed.</p></div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',

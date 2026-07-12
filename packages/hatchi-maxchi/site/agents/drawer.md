@@ -1,6 +1,6 @@
 # Drawer (`drawer`)
 
-Edge-anchored panel on the native <dialog> — a drawer with a modal's guarantees (focus trap, inert background, Esc, backdrop). Built on the dialog: shares its opener, adds a side + slide. No drawer-specific JS.
+Edge-anchored panel on the native <dialog> — a drawer with a modal's guarantees (focus trap, inert background, Esc, backdrop). Built on the dialog: shares its opener, adds a side + slide. No drawer-specific JS. Body is a composition host — nest field, badge, card, controls, …
 
 > **Layer:** L1 surface · **Recipe:** `overlay-dialog` — modal / drawer overlay
 > Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
@@ -13,27 +13,62 @@ Edge-anchored panel on the native <dialog> — a drawer with a modal's guarantee
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
-<button class="button" data-variant="outline" data-dialog-open="hm-drawer-demo">Open filters</button>
-<dialog class="drawer" id="hm-drawer-demo" data-side="right" aria-labelledby="hm-drawer-demo-title" closedby="any">
+<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">
+  <button type="button" class="button" data-variant="outline" data-dialog-open="hm-drawer-demo">Open filters</button>
+  <button type="button" class="button" data-variant="outline" hx-get="/mock/drawer/detail" hx-target="#hm-drawer-lazy-body" hx-swap="innerHTML" data-dialog-open="hm-drawer-lazy">Open record</button>
+</div>
+<dialog class="drawer" id="hm-drawer-demo" data-side="right" data-width="md" aria-labelledby="hm-drawer-demo-title" closedby="any">
   <form method="dialog">
     <div class="drawer__header">
       <h2 class="drawer__title" id="hm-drawer-demo-title">Filters</h2>
       <button type="submit" class="drawer__close" aria-label="Close drawer"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
     </div>
-    <div class="drawer__body" tabindex="0" aria-label="Drawer content">
-      <p>Drawer content scrolls independently of the page — filters, a record preview, or a quick form live here.</p>
+    <div class="drawer__body" tabindex="0" aria-label="Filter controls">
+      <div class="stack" data-gap="md">
+        <p class="hm-demo-muted" style="margin:0">Compose field, toggle-group, and selection controls inside the scrollable body — the drawer is a host, not a special form type.</p>
+        <div class="form-field">
+          <label class="form-label" for="hm-drawer-q">Search</label>
+          <input class="form-input" id="hm-drawer-q" type="search" name="q" placeholder="Name, id, or region…" aria-describedby="hm-drawer-q-hint">
+          <p class="form-hint" id="hm-drawer-q-hint">Matches title and secondary fields on the list exchange.</p>
+        </div>
+        <fieldset class="toggle-group" role="radiogroup" aria-label="Result density">
+          <legend class="form-label" style="margin-bottom:var(--space-xs)">Density</legend>
+          <label><input type="radio" name="hm-drawer-density" value="comfortable" checked><span>Comfortable</span></label>
+          <label><input type="radio" name="hm-drawer-density" value="compact"><span>Compact</span></label>
+        </fieldset>
+        <fieldset class="stack" data-gap="xs" style="border:0;padding:0;margin:0">
+          <legend class="form-label">Status</legend>
+          <label class="hm-inline"><input type="checkbox" class="checkbox" name="status" value="active" checked> Active</label>
+          <label class="hm-inline"><input type="checkbox" class="checkbox" name="status" value="trial"> Trialing</label>
+          <label class="hm-inline"><input type="checkbox" class="checkbox" name="status" value="churned"> Churned</label>
+        </fieldset>
+        <div class="hm-demo-row" style="justify-content:space-between;align-items:center;gap:var(--space-sm)">
+          <label class="hm-inline"><input type="checkbox" class="switch" name="mine" value="1"> Only my records</label>
+          <span class="badge" data-tone="neutral"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-filter"/></svg></span>3 filters</span>
+        </div>
+        <div class="alert" data-tone="info" role="status">
+          <span class="alert__icon"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg></span>
+          <div class="alert__body">
+            <div class="alert__title">Server owns the query</div>
+            <div class="alert__description">Apply posts filter params on the list exchange — this form is method=dialog only so the gallery can close without a backend.</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="drawer__footer"><button type="submit" class="button" data-variant="ghost">Reset</button><button type="submit" class="button" data-variant="primary" value="apply">Apply</button></div>
+    <div class="drawer__footer"><button type="submit" class="button" data-variant="ghost" value="reset">Reset</button><button type="submit" class="button" data-variant="primary" value="apply">Apply</button></div>
   </form>
 </dialog>
-<button class="button" data-variant="outline" hx-get="/mock/drawer/detail" hx-target="#hm-drawer-lazy-body" hx-swap="innerHTML" data-dialog-open="hm-drawer-lazy">Open record</button>
-<dialog class="drawer" id="hm-drawer-lazy" data-width="md" closedby="any" aria-label="Record detail">
+<dialog class="drawer" id="hm-drawer-lazy" data-width="md" data-side="right" closedby="any" aria-labelledby="hm-drawer-lazy-title">
   <header class="drawer__header">
-    <h2 class="drawer__title">Record detail</h2>
+    <h2 class="drawer__title" id="hm-drawer-lazy-title">Record detail</h2>
     <form method="dialog"><button type="submit" class="drawer__close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></form>
   </header>
-  <div id="hm-drawer-lazy-body" class="drawer__body">
-    <p>Loading…</p>
+  <div id="hm-drawer-lazy-body" class="drawer__body" tabindex="0" aria-label="Record detail body" aria-live="polite">
+    <p class="hm-demo-muted">Open record to load a composed peek fragment…</p>
+  </div>
+  <div class="drawer__footer">
+    <form method="dialog" style="display:contents"><button type="submit" class="button" data-variant="ghost">Close</button></form>
+    <button type="button" class="button" data-variant="primary">Open full page</button>
   </div>
 </dialog>
 ```
@@ -46,7 +81,7 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 
 | Request | Trigger | Response fragment | Swap | States |
 |---|---|---|---|---|
-| `GET /app/records/{id}?peek=1` | the opener button's click — the SAME click also fires the dz-dialog.js opener (`data-dz-dialog-open`), so the drawer shows while the body loads | the record's detail body HTML — swapped into the drawer's `dz-drawer__body` target | innerHTML | — |
+| `GET /app/records/{id}?peek=1` | the opener button's click — the SAME click also fires the dz-dialog.js opener (`data-dz-dialog-open`), so the drawer shows while the body loads | composed detail fragment (card, badge, meta stack, actions) swapped into the drawer's body target | innerHTML | — |
 
 ## Morph / swap
 
@@ -64,13 +99,40 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- implement Server exchange endpoints; return HTML fragments, not JSON
-- no typed contracts/ module yet — the partial is the surface of record
+- addressing: data-dz-dialog-open + dialog.dz-drawer (shares dz-dialog.js)
+- body is a composition host — nest field, toggle-group, controls, badge, card, alert
+- hypermedia peek: hx-get + data-dz-dialog-open on the same click
+- data-dz-side / data-dz-width for placement presets
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| compose existing Hyperparts inside drawer__body | rebuild field/badge chrome as one-off drawer-only markup |
+| pair hx-get target with the scrollable body id | swap the entire dialog element (loses open state / focus trap) |
+
+### Pitfalls
+
+- do not invent a second open protocol — same addressing as dialog
+- footer forms: avoid nested <form> inside method=dialog bodies
+- lazy body starts empty/skeleton; exchange fills #…-body, not the whole dialog
+
+### Keyboard / AT
+
+- native dialog focus trap + Esc/backdrop; body may be tabindex=0 for scroll
+- label the body (aria-label) when it is the live region for peek loads
+
+### Related parts
+
+- `dialog` — agents/dialog.md
+- `field` — agents/field.md
+- `toggle-group` — agents/toggle-group.md
+- `badge` — agents/badge.md
+- `card` — agents/card.md
+- `button` — agents/button.md
+- `alert` — agents/alert.md
 
 ## DOM contract
 
@@ -78,7 +140,7 @@ No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this**
 
 ## Notes
 
-Opened by the shared dz-dialog.js ([data-dz-dialog-open]); close is native (method=dialog submit, Esc, backdrop). Anchor the edge with data-dz-side="right|left"; the panel slides in via the native @starting-style transition, honouring prefers-reduced-motion. The second trigger shows the HYPERMEDIA drawer (the Dazzle row-peek contract): one button carries both an hx-get targeting the drawer body and data-dz-dialog-open — the exchange and the opener fire together. data-dz-width="sm|md|lg|xl|full" picks a width preset on viewports that can afford it.
+Opened by shared dz-dialog.js ([data-dz-dialog-open]); close is native. Composition host: body nests field, toggle-group, checkbox/switch, badge, alert (filters demo) or server-swapped card + badge + menu actions (record peek). Second trigger is the hypermedia peek contract: one click fires hx-get into the body and showModal. data-dz-side / data-dz-width for placement.
 
 ## Source files
 

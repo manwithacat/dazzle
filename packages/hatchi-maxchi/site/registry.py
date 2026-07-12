@@ -1146,49 +1146,150 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "Overlays",
             "Edge-anchored panel on the native <dialog> — a drawer with a modal's "
             "guarantees (focus trap, inert background, Esc, backdrop). Built on the "
-            "dialog: shares its opener, adds a side + slide. No drawer-specific JS.",
-            '<button class="dz-button" data-dz-variant="outline" data-dz-dialog-open="hm-drawer-demo">'
-            "Open filters</button>"
-            '<dialog class="dz-drawer" id="hm-drawer-demo" data-dz-side="right" '
-            'aria-labelledby="hm-drawer-demo-title" closedby="any">'
-            '<form method="dialog">'
-            '<div class="dz-drawer__header">'
-            '<h2 class="dz-drawer__title" id="hm-drawer-demo-title">Filters</h2>'
-            '<button type="submit" class="dz-drawer__close" aria-label="Close drawer">{svg:x}</button>'
-            "</div>"
-            '<div class="dz-drawer__body" tabindex="0" aria-label="Drawer content">'
-            "<p>Drawer content scrolls independently of the page — filters, a record "
-            "preview, or a quick form live here.</p></div>"
-            '<div class="dz-drawer__footer">'
-            '<button type="submit" class="dz-button" data-dz-variant="ghost">Reset</button>'
-            '<button type="submit" class="dz-button" data-dz-variant="primary" value="apply">Apply</button>'
-            "</div></form></dialog>"
-            '<button class="dz-button" data-dz-variant="outline" '
+            "dialog: shares its opener, adds a side + slide. No drawer-specific JS. "
+            "Body is a composition host — nest field, badge, card, controls, …",
+            # Demo A: composed filter form (field + toggle-group + controls + badge)
+            '<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">'
+            '<button type="button" class="dz-button" data-dz-variant="outline" '
+            'data-dz-dialog-open="hm-drawer-demo">Open filters</button>'
+            '<button type="button" class="dz-button" data-dz-variant="outline" '
             'hx-get="/mock/drawer/detail" hx-target="#hm-drawer-lazy-body" '
             'hx-swap="innerHTML" data-dz-dialog-open="hm-drawer-lazy">'
             "Open record</button>"
+            "</div>"
+            '<dialog class="dz-drawer" id="hm-drawer-demo" data-dz-side="right" '
+            'data-dz-width="md" aria-labelledby="hm-drawer-demo-title" closedby="any">'
+            '<form method="dialog">'
+            '<div class="dz-drawer__header">'
+            '<h2 class="dz-drawer__title" id="hm-drawer-demo-title">Filters</h2>'
+            '<button type="submit" class="dz-drawer__close" aria-label="Close drawer">'
+            "{svg:x}</button>"
+            "</div>"
+            '<div class="dz-drawer__body" tabindex="0" aria-label="Filter controls">'
+            '<div class="dz-stack" data-dz-gap="md">'
+            '<p class="hm-demo-muted" style="margin:0">'
+            "Compose field, toggle-group, and selection controls inside the scrollable "
+            "body — the drawer is a host, not a special form type."
+            "</p>"
+            # field
+            '<div class="dz-form-field">'
+            '<label class="dz-form-label" for="hm-drawer-q">Search</label>'
+            '<input class="dz-form-input" id="hm-drawer-q" type="search" '
+            'name="q" placeholder="Name, id, or region…" '
+            'aria-describedby="hm-drawer-q-hint">'
+            '<p class="dz-form-hint" id="hm-drawer-q-hint">'
+            "Matches title and secondary fields on the list exchange."
+            "</p></div>"
+            # toggle-group (view density)
+            '<fieldset class="dz-toggle-group" role="radiogroup" '
+            'aria-label="Result density">'
+            '<legend class="dz-form-label" style="margin-bottom:var(--space-xs)">'
+            "Density</legend>"
+            '<label><input type="radio" name="hm-drawer-density" value="comfortable" checked>'
+            "<span>Comfortable</span></label>"
+            '<label><input type="radio" name="hm-drawer-density" value="compact">'
+            "<span>Compact</span></label>"
+            "</fieldset>"
+            # status checkboxes
+            '<fieldset class="dz-stack" data-dz-gap="xs" style="border:0;padding:0;margin:0">'
+            '<legend class="dz-form-label">Status</legend>'
+            '<label class="hm-inline"><input type="checkbox" class="dz-checkbox" '
+            'name="status" value="active" checked> Active</label>'
+            '<label class="hm-inline"><input type="checkbox" class="dz-checkbox" '
+            'name="status" value="trial"> Trialing</label>'
+            '<label class="hm-inline"><input type="checkbox" class="dz-checkbox" '
+            'name="status" value="churned"> Churned</label>'
+            "</fieldset>"
+            # switch + badge
+            '<div class="hm-demo-row" style="justify-content:space-between;'
+            'align-items:center;gap:var(--space-sm)">'
+            '<label class="hm-inline"><input type="checkbox" class="dz-switch" '
+            'name="mine" value="1"> Only my records</label>'
+            '<span class="dz-badge" data-dz-tone="neutral">'
+            '<span class="dz-badge-icon">{svg:filter}</span>3 filters</span>'
+            "</div>"
+            # alert tip
+            '<div class="dz-alert" data-dz-tone="info" role="status">'
+            '<span class="dz-alert__icon">{svg:info}</span>'
+            '<div class="dz-alert__body">'
+            '<div class="dz-alert__title">Server owns the query</div>'
+            '<div class="dz-alert__description">'
+            "Apply posts filter params on the list exchange — this form is "
+            "method=dialog only so the gallery can close without a backend."
+            "</div></div></div>"
+            "</div></div>"
+            '<div class="dz-drawer__footer">'
+            '<button type="submit" class="dz-button" data-dz-variant="ghost" value="reset">'
+            "Reset</button>"
+            '<button type="submit" class="dz-button" data-dz-variant="primary" value="apply">'
+            "Apply</button>"
+            "</div></form></dialog>"
+            # Demo B: hypermedia peek — body filled by mock exchange
             '<dialog class="dz-drawer" id="hm-drawer-lazy" data-dz-width="md" '
-            'closedby="any" aria-label="Record detail">'
+            'data-dz-side="right" closedby="any" aria-labelledby="hm-drawer-lazy-title">'
             '<header class="dz-drawer__header">'
-            '<h2 class="dz-drawer__title">Record detail</h2>'
+            '<h2 class="dz-drawer__title" id="hm-drawer-lazy-title">Record detail</h2>'
             '<form method="dialog">'
             '<button type="submit" class="dz-drawer__close" aria-label="Close">{svg:x}</button>'
             "</form></header>"
-            '<div id="hm-drawer-lazy-body" class="dz-drawer__body">'
-            "<p>Loading…</p></div>"
+            '<div id="hm-drawer-lazy-body" class="dz-drawer__body" tabindex="0" '
+            'aria-label="Record detail body" aria-live="polite">'
+            '<p class="hm-demo-muted">Open record to load a composed peek fragment…</p>'
+            "</div>"
+            '<div class="dz-drawer__footer">'
+            '<form method="dialog" style="display:contents">'
+            '<button type="submit" class="dz-button" data-dz-variant="ghost">Close</button>'
+            "</form>"
+            '<button type="button" class="dz-button" data-dz-variant="primary">Open full page</button>'
+            "</div>"
             "</dialog>",
-            notes="Opened by the shared <code>dz-dialog.js</code> "
-            "(<code>[data-dz-dialog-open]</code>); close is native (method=dialog submit, Esc, "
-            "backdrop). Anchor the edge with <code>data-dz-side=&quot;right|left&quot;</code>; the "
-            "panel slides in via the native <code>@starting-style</code> transition, honouring "
-            "<code>prefers-reduced-motion</code>. The second trigger shows the "
-            "HYPERMEDIA drawer (the Dazzle row-peek contract): one button "
-            "carries both an <code>hx-get</code> targeting the drawer body and "
-            "<code>data-dz-dialog-open</code> — the exchange and the opener "
-            "fire together. <code>data-dz-width=&quot;sm|md|lg|xl|full&quot;</code> "
-            "picks a width preset on viewports that can afford it.",
-            tags=("interactive",),
-            composes=("dialog", "button"),
+            notes="Opened by shared <code>dz-dialog.js</code> "
+            "(<code>[data-dz-dialog-open]</code>); close is native. "
+            "<strong>Composition host:</strong> body nests field, toggle-group, "
+            "checkbox/switch, badge, alert (filters demo) or server-swapped card + "
+            "badge + menu actions (record peek). Second trigger is the hypermedia "
+            "peek contract: one click fires <code>hx-get</code> into the body "
+            "<em>and</em> <code>showModal</code>. "
+            "<code>data-dz-side</code> / <code>data-dz-width</code> for placement.",
+            tags=("interactive", "htmx"),
+            composes=("dialog", "button", "field", "badge", "card", "alert", "toggle-group"),
+            # Opener is shared dz-dialog.js (owned by dialog Hyperpart) — not re-declared.
+            guidance=Guidance(
+                seams=(
+                    "addressing: data-dz-dialog-open + dialog.dz-drawer (shares dz-dialog.js)",
+                    "body is a composition host — nest field, toggle-group, controls, badge, card, alert",
+                    "hypermedia peek: hx-get + data-dz-dialog-open on the same click",
+                    "data-dz-side / data-dz-width for placement presets",
+                ),
+                pitfalls=(
+                    "do not invent a second open protocol — same addressing as dialog",
+                    "footer forms: avoid nested <form> inside method=dialog bodies",
+                    "lazy body starts empty/skeleton; exchange fills #…-body, not the whole dialog",
+                ),
+                do_dont=(
+                    (
+                        "compose existing Hyperparts inside drawer__body",
+                        "rebuild field/badge chrome as one-off drawer-only markup",
+                    ),
+                    (
+                        "pair hx-get target with the scrollable body id",
+                        "swap the entire dialog element (loses open state / focus trap)",
+                    ),
+                ),
+                a11y_keys=(
+                    "native dialog focus trap + Esc/backdrop; body may be tabindex=0 for scroll",
+                    "label the body (aria-label) when it is the live region for peek loads",
+                ),
+                composes_with=(
+                    "dialog",
+                    "field",
+                    "toggle-group",
+                    "badge",
+                    "card",
+                    "button",
+                    "alert",
+                ),
+            ),
             exchanges=(
                 Exchange(
                     method="GET",
@@ -1196,11 +1297,12 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     trigger="the opener button's click — the SAME click also fires "
                     "the dz-dialog.js opener (`data-dz-dialog-open`), so the drawer "
                     "shows while the body loads",
-                    response="the record's detail body HTML — swapped into the "
-                    "drawer's `dz-drawer__body` target",
+                    response="composed detail fragment (card, badge, meta stack, actions) "
+                    "swapped into the drawer's body target",
                     swap="innerHTML",
                 ),
             ),
+            mock="/mock/drawer/detail",
         ),
         # ── Forms ────────────────────────────────────────────────────────
         Hyperpart(
