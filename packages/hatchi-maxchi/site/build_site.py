@@ -1426,15 +1426,23 @@ def mock_htmx_icon_names(mock_src: str | None = None) -> frozenset[str]:
 
 
 def build_mock_icon_map_js(names: frozenset[str] | None = None) -> str:
-    """JS preamble: ``window.__HM_ICONS__`` for mock-htmx ``{i:}`` expand."""
+    """JS preamble: ``window.__HM_ICONS__`` for mock-htmx ``{i:}`` expand.
+
+    Emits the same shape as product ``{svg:name}`` (``svg.dz-icon``, no
+    ``--size-sm``). Parents (``.badge-icon``, ``.alert__icon``, ``.button``)
+    own size — a forced size-sm wrapper fought badge-icon's 0.875em box.
+    """
     icon_names = sorted(mock_htmx_icon_names() if names is None else names)
     parts = ["window.__HM_ICONS__ = {"]
     for name in icon_names:
         inner = ICONS[name].replace("'", "\\'")
+        # class="dz-icon" matches sprite_use_html / {svg:} — apply_prefix strips
+        # to class="icon" for the gallery dialect.
         parts.append(
-            f'\'{name}\':\'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
-            f'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
-            f'stroke-linejoin="round">{inner}</svg>\','
+            f'\'{name}\':\'<svg class="dz-icon" xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+            f'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            f"{inner}</svg>',"
         )
     parts.append("};\n")
     return "".join(parts)
@@ -1447,7 +1455,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
 
    Icons in canned HTML: use the i-token form only (NOT svg:/icon: tokens).
    Runtime expand() looks up window.__HM_ICONS__, which build_site derives
-   from every i-token below — unknown names fail the build. Product
+   from every i-token below — unknown names fail the build. Expand emits
+   the same shape as product {svg:} (svg.icon, no --size-sm wrapper) so
+   parents like .badge-icon / .alert__icon size the glyph. Product
    partials keep svg:/icon: tokens + sprite sheet. */
 (function () {
   "use strict";
@@ -1640,7 +1650,8 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       'justify-content:center;background:var(--colour-bg);' +
       'border:1px dashed var(--colour-border)">' +
       '<div class="dz-stack" data-dz-gap="xs" style="text-align:center;padding:var(--space-md)">' +
-      '<span class="dz-icon dz-icon--size-lg" aria-hidden="true">{i:map-pin}</span>' +
+      // Size via font-size (icon is 1em) — do not nest size-sm inside size-lg
+      '<div aria-hidden="true" style="font-size:1.5rem;line-height:1">{i:map-pin}</div>' +
       "<div><strong>Aurora Substation</strong></div>" +
       '<div class="hm-demo-muted">North grid · cluster A</div>' +
       "</div></div>" +
@@ -1843,10 +1854,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     nav.innerHTML = renderGridFooter(url);
   }
 
-  // icon placeholders resolved from a tiny inline map (built by the site gen)
+  // icon placeholders: same shape as product {svg:} — svg.icon only.
+  // Parents (.badge-icon, .alert__icon, .button) own size. Never wrap with
+  // --size-sm: that forced 1rem and fought badge-icon's 0.875em box (composed
+  // drawer badges looked larger/misaligned vs the raw Badge gallery).
   function icon(name) { return window.__HM_ICONS__ ? (window.__HM_ICONS__[name] || "") : ""; }
   function expand(h) { return h.replace(/\\{i:([a-z0-9-]+)\\}/g, function (_, n) {
-    return '<span class="dz-icon dz-icon--size-sm">' + icon(n) + '</span>'; }); }
+    return icon(n); }); }
 
   function fire(el, name, detail) {
     var evt = new CustomEvent(name, { bubbles: true, cancelable: true, detail: detail });

@@ -134,6 +134,9 @@ def test_mock_icon_map_js_includes_every_i_token() -> None:
     for name in names:
         assert f"'{name}':" in js, f"__HM_ICONS__ missing {name}"
         assert "<svg" in js
+    # Same shape as product {svg:} — class on the svg, no size-sm wrapper string
+    assert 'class="dz-icon"' in js or "class='dz-icon'" in js or 'class="dz-icon"' in js
+    assert "icon--size-sm" not in js
 
 
 def test_committed_gallery_js_carries_full_mock_icon_map() -> None:

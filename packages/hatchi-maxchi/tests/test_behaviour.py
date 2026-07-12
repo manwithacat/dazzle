@@ -2134,6 +2134,72 @@ def test_drawer_peek_body_scrolls_independently(page) -> None:  # type: ignore[n
     assert metrics["overflowY"] in ("auto", "scroll", "overlay")
 
 
+def test_drawer_composed_badge_icon_matches_raw_badge(page) -> None:  # type: ignore[no-untyped-def]
+    """Composed peek badges must size icons like the raw Badge gallery.
+
+    Mock {i:} used to wrap icons in .icon--size-sm (1rem), fighting
+    .badge-icon { width/height: 0.875em }. Product {svg:} emits bare svg.icon
+    sized by the parent — mock must match.
+    """
+    goto_part(page, "badge")
+    raw = page.evaluate(
+        """() => {
+          const b = document.querySelector('.hm-preview .badge[data-tone="success"]');
+          const svg = b && b.querySelector('svg');
+          const wrap = b && b.querySelector('.badge-icon');
+          if (!svg || !wrap) return null;
+          const sr = svg.getBoundingClientRect();
+          const wr = wrap.getBoundingClientRect();
+          return {
+            svgW: Math.round(sr.width * 10) / 10,
+            svgH: Math.round(sr.height * 10) / 10,
+            wrapW: Math.round(wr.width * 10) / 10,
+            nestedSizeSm: !!b.querySelector('.icon--size-sm, .dz-icon--size-sm'),
+            svgParent: svg.parentElement && svg.parentElement.className,
+          };
+        }"""
+    )
+    assert raw is not None, "raw success badge missing from Badge gallery"
+    assert not raw["nestedSizeSm"], "raw badge must not nest --size-sm"
+
+    goto_part(page, "drawer")
+    page.click('#drawer [data-dialog-open="hm-drawer-lazy"]')
+    page.wait_for_timeout(250)
+    page.wait_for_selector('#hm-drawer-lazy-body .badge[data-tone="success"]', timeout=3000)
+    composed = page.evaluate(
+        """() => {
+          const b = document.querySelector('#hm-drawer-lazy-body .badge[data-tone="success"]');
+          const svg = b && b.querySelector('svg');
+          const wrap = b && b.querySelector('.badge-icon');
+          if (!svg || !wrap) return null;
+          const sr = svg.getBoundingClientRect();
+          const wr = wrap.getBoundingClientRect();
+          return {
+            svgW: Math.round(sr.width * 10) / 10,
+            svgH: Math.round(sr.height * 10) / 10,
+            wrapW: Math.round(wr.width * 10) / 10,
+            nestedSizeSm: !!b.querySelector('.icon--size-sm, .dz-icon--size-sm'),
+            svgParent: svg.parentElement && svg.parentElement.className,
+            html: b.outerHTML.slice(0, 200),
+          };
+        }"""
+    )
+    assert composed is not None, "composed Online badge missing from drawer peek"
+    assert not composed["nestedSizeSm"], (
+        f"composed badge must not nest --size-sm (mock expand regression): {composed['html']}"
+    )
+    assert composed["svgParent"] and "badge-icon" in composed["svgParent"], (
+        f"svg should be direct child of .badge-icon like raw gallery, parent={composed['svgParent']!r}"
+    )
+    # Sizes should match raw within a pixel (same 0.875em contract)
+    assert abs(composed["svgW"] - raw["svgW"]) <= 1.5, (
+        f"composed badge svg width {composed['svgW']} vs raw {raw['svgW']}"
+    )
+    assert abs(composed["svgH"] - raw["svgH"]) <= 1.5, (
+        f"composed badge svg height {composed['svgH']} vs raw {raw['svgH']}"
+    )
+
+
 def test_drawer_record_actions_load_panels(page) -> None:  # type: ignore[no-untyped-def]
     """Work orders / Show on map are independent actions with real fragments.
 

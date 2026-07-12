@@ -175,11 +175,15 @@ parts for page motifs—prefer a Blueprint over a new part when possible.
 
 | Where | Token | Expand | Fail mode |
 |-------|--------|--------|-----------|
-| Hyperpart partials, blueprints, Copy this | `{svg:name}` / `{icon:name}` | Build-time → sprite `<use href="#i-…">` | Unknown name **fails the build** |
-| `MOCK_HTMX` canned responses only | `{i:name}` | Runtime from `window.__HM_ICONS__` | Missing map entry → **empty icon span** (silent) |
+| Hyperpart partials, blueprints, Copy this | `{svg:name}` / `{icon:name}` | Build-time → sprite `<svg class="icon">` / `icon--size-sm` | Unknown name **fails the build** |
+| `MOCK_HTMX` canned responses only | `{i:name}` | Runtime from `window.__HM_ICONS__` → same **`svg.icon`** shape as `{svg:}` | Missing map entry → **empty** (silent) |
 
 **Why two?** Mock swaps return a fragment without the gallery symbol sheet, so
 runtime needs inline SVGs. Product markup always has the sheet (or ships it).
+
+**Sizing:** `{i:}` must **not** wrap icons in `--size-sm`. Parents own size
+(`.badge-icon` 0.875em, `.alert__icon` 1.125rem, `.button` via 1em + gap). A
+forced size-sm made composed badges disagree with the raw Badge gallery.
 
 **When editing `MOCK_HTMX`:** use `{i:lucide-name}` only; `build_site` derives
 `__HM_ICONS__` from every `{i:}` token and fails on unknowns. Do **not** hardcode
