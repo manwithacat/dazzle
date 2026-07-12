@@ -1376,6 +1376,50 @@ dialog.dz-alert-dialog::backdrop {
     display: block;
   }
 }
+/* --- hatchi-maxchi/components/aspect-ratio.css --- */
+/* HYPERPART: aspect-ratio */
+/*
+ * Media frame that locks width/height ratio. Child fills the box
+ * (object-fit cover for images/video).
+ *
+ * PLACEHOLDER — shadcn parity (HMC-036). Pure CSS; data-dz-ratio selects
+ * common ratios. Custom ratios can set style="aspect-ratio: …" on the root.
+ */
+
+.dz-aspect-ratio {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--colour-surface-muted);
+  aspect-ratio: 16 / 9; /* default */
+}
+
+.dz-aspect-ratio[data-dz-ratio="1/1"] {
+  aspect-ratio: 1 / 1;
+}
+
+.dz-aspect-ratio[data-dz-ratio="4/3"] {
+  aspect-ratio: 4 / 3;
+}
+
+.dz-aspect-ratio[data-dz-ratio="16/9"] {
+  aspect-ratio: 16 / 9;
+}
+
+.dz-aspect-ratio[data-dz-ratio="21/9"] {
+  aspect-ratio: 21 / 9;
+}
+
+.dz-aspect-ratio > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 /* --- hatchi-maxchi/components/badge.css --- */
 /*
  * badge.css — status / state / enum badge component.
@@ -13321,6 +13365,63 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 .dz-attn-bullet.dz-attn-tone-warning  { color: var(--colour-warning); }
 .dz-attn-bullet.dz-attn-tone-notice   { color: var(--colour-brand); }
 .dz-attn-bullet.dz-attn-tone-default  { color: var(--colour-brand); }
+/* --- hatchi-maxchi/components/toggle.css --- */
+/* HYPERPART: toggle */
+/*
+ * Single pressable control — toolbar-style on/off for a mode (Bold, Italic).
+ * State is aria-pressed on the button (DOM). Pair with toggle-group for
+ * exclusive segments; use switch for form boolean fields.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-032). No controller yet: server sets
+ * aria-pressed; a follow-up can flip on click with a tiny document-level
+ * listener. Token-only styling.
+ */
+
+.dz-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: 2rem;
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.dz-toggle:hover {
+  background: var(--colour-surface-muted);
+}
+
+.dz-toggle[aria-pressed="true"] {
+  background: var(--colour-brand-soft);
+  border-color: color-mix(in oklab, var(--colour-brand) 40%, var(--colour-border));
+  color: var(--colour-brand-text);
+}
+
+.dz-toggle:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+}
+
+.dz-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dz-toggle[data-dz-size="sm"] {
+  min-height: 1.75rem;
+  padding-inline: var(--space-xs);
+  font-size: var(--text-xs);
+}
 /* --- hatchi-maxchi/components/touch-targets.css --- */
 /*
  * touch-targets.css — mobile touch hit-area enforcement (#958 cycle 1).

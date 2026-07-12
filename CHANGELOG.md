@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **shadcn parity placeholders: toggle + aspect-ratio** — gallery Hyperparts
+  for pressable toolbar toggles (`aria-pressed`) and media frames
+  (`data-dz-ratio` CSS presets). Catalogue gaps 11→9.
 - **shadcn parity placeholders: switch + kbd** — gallery Hyperparts for
   on/off switch (`data-dz-switch` over native checkbox + `components/switch.css`)
   and keyboard key chips (styles already in hm-core). Gaps 13→11 on the

@@ -110,9 +110,11 @@ SIGNALS: dict[str, object] = {
     "alert": "exempt:no Dazzle emitter yet (form errors are form-chrome dz-form-errors; the banner is a CSS-only different contract)",
     # HM gallery / agent-pack snippets (build_site code Hyperpart); not a DSL surface.
     "code": "exempt:HM gallery + agent-pack snippets (no Dazzle DSL emitter yet)",
-    # shadcn parity placeholders (HMC-031/034) — gallery surfaces; no DSL emitter yet
+    # shadcn parity placeholders — gallery surfaces; no DSL emitter yet
     "switch": "exempt:no Dazzle form-field emitter yet (gallery progressive-enhance shell)",
-    "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",  # cimonitor re-trigger
+    "toggle": "exempt:no Dazzle emitter yet (gallery aria-pressed button shell)",
+    "aspect-ratio": "exempt:no Dazzle emitter yet (gallery CSS media frame)",
+    "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",
 }
 
 # ── the ratchet: recorded adoption debt (#164) ──────────────────────

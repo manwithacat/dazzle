@@ -2046,6 +2046,25 @@ def select(source: str, id: str) -> str:
             tags=("form", "interactive"),
         ),
         Hyperpart(
+            "toggle",
+            "Toggle",
+            "Forms",
+            "Single pressable mode control (Bold / Italic toolbar style). State is "
+            "aria-pressed on the button — pair with toggle-group for exclusive segments.",
+            '<div class="hm-demo-row" role="group" aria-label="Text style">'
+            '<button type="button" class="dz-toggle" data-dz-toggle aria-pressed="true">'
+            "<strong>B</strong> Bold</button>"
+            '<button type="button" class="dz-toggle" data-dz-toggle aria-pressed="false">'
+            "<em>I</em> Italic</button>"
+            '<button type="button" class="dz-toggle" data-dz-toggle aria-pressed="false" '
+            'data-dz-size="sm"><span style="text-decoration:underline">U</span></button>'
+            "</div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-032). Distinct from switch "
+            "(form boolean) and toggle-group (exclusive radios). Server sets "
+            "aria-pressed; click-to-flip controller deferred.",
+            tags=("form", "interactive"),
+        ),
+        Hyperpart(
             "kbd",
             "Keyboard key",
             "Primitives",
@@ -2060,6 +2079,29 @@ def select(source: str, id: str) -> str:
             "hm-core.css (.dz-kbd); this registry entry makes the surface "
             "discoverable in the gallery. No dual-lock needed (pure presentation).",
             tags=("docs",),
+        ),
+        Hyperpart(
+            "aspect-ratio",
+            "Aspect ratio",
+            "Primitives",
+            "Media frame that locks width/height — images and embeds fill with object-fit cover.",
+            '<div class="hm-demo-row" style="gap: var(--space-md); align-items: flex-start;">'
+            '<div class="dz-aspect-ratio" data-dz-ratio="1/1" style="width: 6rem;" '
+            'aria-label="1:1 frame">'
+            '<span style="display:grid;place-items:center;background:var(--colour-brand-soft);'
+            'color:var(--colour-brand-text);font-size:var(--text-xs);">1:1</span></div>'
+            '<div class="dz-aspect-ratio" data-dz-ratio="16/9" style="width: 10rem;" '
+            'aria-label="16:9 frame">'
+            '<span style="display:grid;place-items:center;background:var(--colour-brand-soft);'
+            'color:var(--colour-brand-text);font-size:var(--text-xs);">16:9</span></div>'
+            '<div class="dz-aspect-ratio" data-dz-ratio="4/3" style="width: 8rem;" '
+            'aria-label="4:3 frame">'
+            '<span style="display:grid;place-items:center;background:var(--colour-brand-soft);'
+            'color:var(--colour-brand-text);font-size:var(--text-xs);">4:3</span></div>'
+            "</div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-036). Pure CSS aspect-ratio + "
+            "data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). No controller.",
+            tags=("layout", "media"),
         ),
         # ── Navigation / Data ────────────────────────────────────────────
         Hyperpart(

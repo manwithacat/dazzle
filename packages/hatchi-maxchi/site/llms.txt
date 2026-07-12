@@ -48,7 +48,9 @@
 - [Date range](https://manwithacat.github.io/hatchi-maxchi/agents/date-range.md): Two native date inputs driving one htmx exchange — the from/to filter bar for time-scoped regions.
 - [Toggle group](https://manwithacat.github.io/hatchi-maxchi/agents/toggle-group.md): Segmented control on native radios.
 - [Switch](https://manwithacat.github.io/hatchi-maxchi/agents/switch.md): On/off control — progressive enhancement over a native checkbox. State is the checkbox's checked attribute (DOM), not a JS store.
+- [Toggle](https://manwithacat.github.io/hatchi-maxchi/agents/toggle.md): Single pressable mode control (Bold / Italic toolbar style). State is aria-pressed on the button — pair with toggle-group for exclusive segments.
 - [Keyboard key](https://manwithacat.github.io/hatchi-maxchi/agents/kbd.md): Shortcut chip for docs and command chrome — <kbd class=dz-kbd>.
+- [Aspect ratio](https://manwithacat.github.io/hatchi-maxchi/agents/aspect-ratio.md): Media frame that locks width/height — images and embeds fill with object-fit cover.
 - [Breadcrumb](https://manwithacat.github.io/hatchi-maxchi/agents/breadcrumb.md): CSS-generated chevrons; clean list markup.
 - [Accordion](https://manwithacat.github.io/hatchi-maxchi/agents/accordion.md): Native <details> group; single-open via the HTML name= attribute — opening one closes its siblings, zero JS.
 - [Tabs](https://manwithacat.github.io/hatchi-maxchi/agents/tabs.md): A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept role=tablist). Each panel hx-gets its content the first time it is shown.

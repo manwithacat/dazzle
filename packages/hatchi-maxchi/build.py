@@ -53,6 +53,8 @@ CSS_SOURCES = [
     ("components", "components/pagination.css"),
     ("components", "components/skeleton.css"),
     ("components", "components/switch.css"),
+    ("components", "components/toggle.css"),
+    ("components", "components/aspect-ratio.css"),
     ("components", "components/table.css"),
     ("components", "components/layout.css"),
     ("components", "components/app-shell.css"),

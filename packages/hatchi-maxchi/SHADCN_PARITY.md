@@ -14,12 +14,12 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 
 | Status | Count |
 |--------|------:|
-| **parity** | 25 |
+| **parity** | 27 |
 | **partial** | 27 |
-| **gap** (placeholders) | 11 |
+| **gap** (placeholders) | 9 |
 | **n/a** | 1 |
 | **total shadcn** | 64 |
-| HM Hyperparts (registry) | 75 |
+| HM Hyperparts (registry) | 77 |
 
 ## Mapping
 
@@ -28,7 +28,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `accordion` | **parity** | `accordion` | Gallery Hyperpart; dual-lock optional |
 | `alert` | **parity** | `alert` | Feedback surface |
 | `alert-dialog` | **partial** | `confirm,confirm-panel,dialog` | HM splits native confirm vs confirm-gate vs dialog — map job, not name |
-| `aspect-ratio` | **gap** | `—` | No media aspect wrapper Hyperpart |
+| `aspect-ratio` | **parity** | `aspect-ratio` | Gallery Hyperpart — CSS aspect-ratio + data-dz-ratio presets |
 | `attachment` | **partial** | `form:file-upload,pdf` | File upload + PDF viewer exist; no dedicated attachment chip list |
 | `avatar` | **parity** | `avatar` | Gallery |
 | `badge` | **parity** | `badge` | Gallery + tone system |
@@ -85,7 +85,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `tabs` | **parity** | `tabs` | DOM-only dual-lock |
 | `textarea` | **partial** | `field,form` | Native textarea via field triad |
 | `toast` | **partial** | `fragments` | Toast stack exists; dual-lock not first-class |
-| `toggle` | **gap** | `toggle-group` | Single toggle button not extracted; group exists |
+| `toggle` | **parity** | `toggle` | Gallery Hyperpart — button + aria-pressed; distinct from switch/toggle-group |
 | `toggle-group` | **parity** | `toggle-group` | Gallery |
 | `tooltip` | **parity** | `tooltip` | Gallery |
 | `typography` | **partial** | `layout` | Prose via layout/text primitives; no Typography Hyperpart |
@@ -97,17 +97,15 @@ Playbook: `.claude/commands/improve/strategies/shadcn_parity.md`.
 
 | # | shadcn | suggested Hyperpart id | notes |
 |--:|--------|------------------------|-------|
-| 1 | `aspect-ratio` | `aspect-ratio` | No media aspect wrapper Hyperpart |
-| 2 | `bubble` | `bubble` | Chat bubble — shadcn New; no HM chat message surface |
-| 3 | `carousel` | `carousel` | No carousel / media strip Hyperpart |
-| 4 | `hover-card` | `hover-card` | Popover exists; hover-intent card not first-class |
-| 5 | `item` | `item` | Generic list Item (media+title+actions) — no HM item primitive |
-| 6 | `marker` | `marker` | shadcn New — map/marker chrome |
-| 7 | `menubar` | `menubar` | Horizontal app menubar |
-| 8 | `message` | `message` | Chat message row — shadcn New; no HM messaging surface |
-| 9 | `message-scroller` | `message-scroller` | Chat transcript scroller — shadcn New |
-| 10 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
-| 11 | `toggle` | `toggle` | Single toggle button not extracted; group exists |
+| 1 | `bubble` | `bubble` | Chat bubble — shadcn New; no HM chat message surface |
+| 2 | `carousel` | `carousel` | No carousel / media strip Hyperpart |
+| 3 | `hover-card` | `hover-card` | Popover exists; hover-intent card not first-class |
+| 4 | `item` | `item` | Generic list Item (media+title+actions) — no HM item primitive |
+| 5 | `marker` | `marker` | shadcn New — map/marker chrome |
+| 6 | `menubar` | `menubar` | Horizontal app menubar |
+| 7 | `message` | `message` | Chat message row — shadcn New; no HM messaging surface |
+| 8 | `message-scroller` | `message-scroller` | Chat transcript scroller — shadcn New |
+| 9 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
 
 ## Status definitions
 

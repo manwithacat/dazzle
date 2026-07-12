@@ -60,7 +60,12 @@ _MAP: list[tuple[str, str, str, str]] = [
         "confirm,confirm-panel,dialog",
         "HM splits native confirm vs confirm-gate vs dialog — map job, not name",
     ),
-    ("aspect-ratio", "gap", "", "No media aspect wrapper Hyperpart"),
+    (
+        "aspect-ratio",
+        "parity",
+        "aspect-ratio",
+        "Gallery Hyperpart — CSS aspect-ratio + data-dz-ratio presets",
+    ),
     (
         "attachment",
         "partial",
@@ -289,9 +294,9 @@ _MAP: list[tuple[str, str, str, str]] = [
     ),
     (
         "toggle",
-        "gap",
-        "toggle-group",
-        "Single toggle button not extracted; group exists",
+        "parity",
+        "toggle",
+        "Gallery Hyperpart — button + aria-pressed; distinct from switch/toggle-group",
     ),
     ("toggle-group", "parity", "toggle-group", "Gallery"),
     ("tooltip", "parity", "tooltip", "Gallery"),
