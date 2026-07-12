@@ -13,21 +13,22 @@ provider = "session"
 allow_registration = true
 
 # LLM cognition driver — how dev-time agents (`dazzle qa trial`, spec
-# analysis) and local `llm_intent` testing reach a Claude model.
+# analysis) and local `llm_intent` testing reach a model.
 #
-#   "claude-cli"    = Claude Code CLI, billed to your Claude subscription.
-#                     No API key needed — install https://claude.com/claude-code
-#                     and sign in once with `claude`. Development only.
-#   "anthropic-api" = metered Anthropic API via ANTHROPIC_API_KEY.
-#                     Required when you deploy.
-#   "auto"          = anthropic-api if ANTHROPIC_API_KEY is set, else claude-cli.
+# Subscription (development only — never production):
+#   "claude-cli"    = Claude Code CLI → Claude subscription
+#   "grok-cli"      = Grok Build CLI → Grok subscription (`grok login`)
+# Metered (deploy path):
+#   "anthropic-api" = Anthropic API via ANTHROPIC_API_KEY
+# Auto:
+#   "auto"          = anthropic-api if ANTHROPIC_API_KEY is set, else the
+#                     first available subscription CLI (claude-cli, then grok-cli)
 #
 # Ready to deploy? Create a key at https://console.anthropic.com/settings/keys,
-# set ANTHROPIC_API_KEY in the deployment environment, and switch this to
-# "anthropic-api". Full dev → deploy path: docs/reference/llm-drivers.md
-# (`dazzle doctor` checks this for you).
+# set ANTHROPIC_API_KEY, and switch to "anthropic-api". Full path:
+# docs/reference/llm-drivers.md (`dazzle doctor` checks this for you).
 [llm]
-driver = "claude-cli"
+driver = "auto"
 
 # Environment profiles — select via: dazzle <command> --env <name>
 # Or set DAZZLE_ENV=<name> for CI/CD.

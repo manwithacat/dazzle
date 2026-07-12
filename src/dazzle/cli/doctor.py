@@ -133,6 +133,13 @@ def doctor_command() -> None:
                     f"({API_KEY_CONSOLE_URL}), set ANTHROPIC_API_KEY, and switch "
                     '[llm] driver = "anthropic-api". See docs/reference/llm-drivers.md.'
                 )
+            elif resolved == "grok-cli":
+                _ok("driver: grok-cli (Grok subscription via Grok Build CLI)")
+                typer.echo(
+                    "       Development billing only. To deploy: create an API key "
+                    f"({API_KEY_CONSOLE_URL}), set ANTHROPIC_API_KEY, and switch "
+                    '[llm] driver = "anthropic-api". See docs/reference/llm-drivers.md.'
+                )
             else:
                 _ok("driver: anthropic-api (ANTHROPIC_API_KEY set — deploy-ready)")
     except ImportError:

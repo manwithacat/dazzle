@@ -337,22 +337,23 @@ class LLMConfig:
     """LLM cognition driver configuration.
 
     Controls how dev-time agents (``dazzle qa trial``, spec analysis)
-    and local ``llm_intent`` testing reach a Claude model:
+    and local ``llm_intent`` testing reach a model:
 
-        - "claude-cli": Claude Code CLI — billed to the developer's
-          Claude subscription, no API key. Development only; the
-          runtime refuses it under DAZZLE_ENV=production.
+        - "claude-cli": Claude Code CLI — Claude subscription (dev only).
+        - "grok-cli": Grok Build CLI — Grok subscription (dev only).
         - "anthropic-api": metered Anthropic API (ANTHROPIC_API_KEY).
           Required for deployed apps.
         - "auto" (default when the section is absent): anthropic-api
-          if ANTHROPIC_API_KEY is set, else claude-cli if installed.
+          if ANTHROPIC_API_KEY is set, else the first available
+          subscription CLI (claude-cli, then grok-cli).
 
+    Subscription drivers are refused under DAZZLE_ENV=production.
     Resolution order and the dev → deploy path are documented in
-    docs/reference/llm-drivers.md. New projects from ``dazzle init``
-    pin "claude-cli" so trying Dazzle never requires API credit.
+    docs/reference/llm-drivers.md.
     """
 
-    driver: str = "auto"  # "auto" | "claude-cli" | "anthropic-api"
+    # "auto" | "claude-cli" | "grok-cli" | "anthropic-api"
+    driver: str = "auto"
 
 
 @dataclass

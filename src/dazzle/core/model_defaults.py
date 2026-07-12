@@ -22,6 +22,11 @@ are the only places to update.
 DEFAULT_JUDGMENT_MODEL = "claude-sonnet-4-6"
 DEFAULT_MECHANICAL_MODEL = "claude-haiku-4-5-20251001"
 
+# Grok Build CLI / xAI model defaults (subscription driver: grok-cli).
+# Keep undated aliases where the CLI accepts them so pins track the
+# current Grok tier without a dated retirement cliff.
+DEFAULT_GROK_JUDGMENT_MODEL = "grok-4.5"
+
 # USD per million tokens (input, output) — current Anthropic lineup,
 # verified 2026-06-11. Consumers derive their own units from this; do
 # not duplicate prices elsewhere.

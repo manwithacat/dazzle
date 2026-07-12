@@ -16,9 +16,11 @@ from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 from dazzle.core.model_defaults import ANTHROPIC_PRICING_PER_MTOK, DEFAULT_JUDGMENT_MODEL
 from dazzle.llm.driver import (
+    DRIVER_CLAUDE_CLI,
+    DRIVER_GROK_CLI,
     PRODUCTION_NEEDS_API_KEY_MSG,
-    call_claude_cli,
-    claude_cli_available,
+    call_subscription_cli,
+    pick_available_subscription_driver,
 )
 
 if TYPE_CHECKING:
@@ -53,7 +55,8 @@ class LLMProvider(StrEnum):
 
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
-    CLAUDE_CLI = "claude_cli"  # Fallback using Claude CLI (subscription)
+    CLAUDE_CLI = "claude_cli"  # Claude Code CLI (subscription)
+    GROK_CLI = "grok_cli"  # Grok Build CLI (subscription)
 
 
 class Completion(NamedTuple):
@@ -112,6 +115,8 @@ class LLMAPIClient:
         # Get API key
         self.api_key: str | None = None
         self._use_cli_fallback = False
+        # Concrete subscription driver when using CLI fallback (claude-cli / grok-cli).
+        self._cli_driver: str | None = None
 
         if api_key:
             self.api_key = api_key
@@ -125,25 +130,36 @@ class LLMAPIClient:
                 self.api_key = os.environ.get("OPENAI_API_KEY")
             elif provider == LLMProvider.CLAUDE_CLI:
                 self._use_cli_fallback = True
-
-        # If no API key found, try Claude CLI fallback
-        if not self.api_key and not self._use_cli_fallback:
-            if claude_cli_available():
-                logger.info("No API key found, using Claude CLI fallback (subscription-based)")
+                self._cli_driver = DRIVER_CLAUDE_CLI
+            elif provider == LLMProvider.GROK_CLI:
                 self._use_cli_fallback = True
-                self.provider = LLMProvider.CLAUDE_CLI
+                self._cli_driver = DRIVER_GROK_CLI
+
+        # If no API key found, try any available subscription CLI.
+        if not self.api_key and not self._use_cli_fallback:
+            picked = pick_available_subscription_driver()
+            if picked is not None:
+                logger.info(
+                    "No API key found, using subscription CLI fallback (%s)",
+                    picked,
+                )
+                self._use_cli_fallback = True
+                self._cli_driver = picked
+                self.provider = (
+                    LLMProvider.GROK_CLI if picked == DRIVER_GROK_CLI else LLMProvider.CLAUDE_CLI
+                )
             else:
                 raise ValueError(
                     f"API key not found for {provider}.\n"
                     f"Options:\n"
                     f"  1. Set {api_key_env or 'ANTHROPIC_API_KEY'} environment variable\n"
-                    f"  2. Install the Claude Code CLI: https://claude.com/claude-code\n"
-                    f"     (Uses your Claude subscription, no API key needed)"
+                    f"  2. Install Claude Code CLI (claude.com/claude-code) or Grok Build "
+                    f"CLI (`grok login`) for subscription-based local cognition\n"
                 )
 
         # Subscription billing is a development convenience, never a
         # production dependency — a deployed app must not run its
-        # cognition on a developer's personal Claude subscription.
+        # cognition on a developer's personal subscription.
         if self._use_cli_fallback and os.environ.get("DAZZLE_ENV") == "production":
             raise RuntimeError(PRODUCTION_NEEDS_API_KEY_MSG)
 
@@ -152,6 +168,10 @@ class LLMAPIClient:
             self.model = model
         elif provider == LLMProvider.OPENAI:
             self.model = "gpt-4-turbo"
+        elif self._cli_driver == DRIVER_GROK_CLI or provider == LLMProvider.GROK_CLI:
+            from dazzle.core.model_defaults import DEFAULT_GROK_JUDGMENT_MODEL
+
+            self.model = DEFAULT_GROK_JUDGMENT_MODEL
         else:
             # Anthropic API and Claude CLI both speak Claude model IDs.
             self.model = DEFAULT_JUDGMENT_MODEL
@@ -204,8 +224,11 @@ class LLMAPIClient:
         cost to compute anyway).
         """
         if self._use_cli_fallback:
-            text, _tokens = call_claude_cli(
-                user_prompt, system_prompt=system_prompt, model=self.model
+            text, _tokens = call_subscription_cli(
+                self._cli_driver or DRIVER_CLAUDE_CLI,
+                user_prompt,
+                system_prompt=system_prompt,
+                model=self.model,
             )
             return Completion(text, 0, 0)
         elif self.provider == LLMProvider.ANTHROPIC:
@@ -242,8 +265,11 @@ class LLMAPIClient:
 
         # Call LLM
         if self._use_cli_fallback:
-            response_text, _tokens = call_claude_cli(
-                user_prompt, system_prompt=system_prompt, model=self.model
+            response_text, _tokens = call_subscription_cli(
+                self._cli_driver or DRIVER_CLAUDE_CLI,
+                user_prompt,
+                system_prompt=system_prompt,
+                model=self.model,
             )
         elif self.provider == LLMProvider.ANTHROPIC:
             response_text = self._call_anthropic(system_prompt, user_prompt).text

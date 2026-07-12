@@ -61,7 +61,7 @@
 | [Perf Findings Schema](perf-findings-schema.md) | The JSON schema emitted by `dazzle perf report --format json` (FindingsReport). |
 | [Implicitness Audit](implicitness-audit.md) | A working doc on identifying implicit behaviour in Dazzle, written after a runtime post-mortem. |
 | [Onboarding Guides](guides.md) | The `guide` construct: terse, in-fiction, per-persona onboarding overlays — authored by the agent, validated by a fast quality-bar gate plus an e2e guide-walk oracle. |
-| [LLM Drivers](llm-drivers.md) | Subscription-billed (`claude-cli`) vs metered (`anthropic-api`) cognition: resolution order, the dev → deploy path, and the production guard. |
+| [LLM Drivers](llm-drivers.md) | Subscription CLIs (`claude-cli`, `grok-cli`) vs metered (`anthropic-api`) cognition: resolution order, the dev → deploy path, and the production guard. |
 | [Framework UX-Maturity Rubric](ux-maturity.md) | Scores the framework, not a screen: does Dazzle make the data-right UI the DEFAULT? The 0-4 capability ladder, 13 criteria, evidence/attribution, and the `dazzle ux maturity` scan + `/ux-maturity` command. |
 | [DB Artifacts](db-artifacts.md) | Every database artifact the framework manages, in one registry: class, creator, boot-entry, owner, RLS posture, baseline membership, and boot-DDL gating. |
 | [RBAC Proof Model & Trust Boundary](rbac-proof-model.md) | The normative proof-obligation model for "provable RBAC": the effective-decision composition, the safety/availability/over-approximation theorem, assumption set A (the trust boundary), the proof→test→assumed trust chain, the per-property evidence-class table (Proof/Enumeration/Test), and the ReBAC declared-classes stance. |

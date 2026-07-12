@@ -92,18 +92,27 @@ def synthesize_verdict(
     )
     user_msg = "Write the verdict now. One paragraph, in character."
 
-    if llm_driver == "claude-cli":
-        try:
-            from dazzle.llm.driver import call_claude_cli
+    from dazzle.llm.driver import is_subscription_driver
 
-            text, _tokens = call_claude_cli(
+    if is_subscription_driver(llm_driver):
+        try:
+            from dazzle.core.model_defaults import DEFAULT_GROK_JUDGMENT_MODEL
+            from dazzle.llm.driver import DRIVER_GROK_CLI, call_subscription_cli
+
+            default_model = (
+                DEFAULT_GROK_JUDGMENT_MODEL
+                if llm_driver == DRIVER_GROK_CLI
+                else DEFAULT_JUDGMENT_MODEL
+            )
+            text, _tokens = call_subscription_cli(
+                llm_driver,
                 user_msg,
                 system_prompt=prompt,
-                model=model or DEFAULT_JUDGMENT_MODEL,
+                model=model or default_model,
             )
             return text.strip()
         except Exception:
-            logger.debug("ignored exception in verdict fallback (claude-cli)", exc_info=True)
+            logger.debug("ignored exception in verdict fallback (%s)", llm_driver, exc_info=True)
             return ""
 
     try:

@@ -1230,17 +1230,19 @@ def qa_trial(
         True, "--headless/--headed", help="Run browser headless (default) or visible"
     ),
     model: str | None = typer.Option(
-        None, "--model", help="Override LLM model (default: Claude Sonnet)"
+        None,
+        "--model",
+        help="Override LLM model (default: Claude Sonnet or Grok 4.5 per driver)",
     ),
     llm_driver: str | None = typer.Option(
         None,
         "--llm-driver",
         help=(
-            "How the trial persona reaches the model: 'claude-cli' "
-            "(Claude Code CLI, billed to your Claude subscription — no API "
-            "key) or 'anthropic-api' (metered, ANTHROPIC_API_KEY). Default: "
-            "DAZZLE_LLM_DRIVER env, then [llm] driver in dazzle.toml, then "
-            "auto-detect. See docs/reference/llm-drivers.md."
+            "How the trial persona reaches the model: 'claude-cli' (Claude "
+            "subscription via Claude Code CLI), 'grok-cli' (Grok subscription "
+            "via Grok Build CLI), or 'anthropic-api' (metered ANTHROPIC_API_KEY). "
+            "Default: DAZZLE_LLM_DRIVER env, then [llm] driver in dazzle.toml, "
+            "then auto-detect. See docs/reference/llm-drivers.md."
         ),
     ),
     fresh_db: bool = typer.Option(
@@ -1350,11 +1352,14 @@ def qa_trial(
         typer.echo(f"LLM driver: {exc}", err=True)
         raise typer.Exit(code=2) from exc
 
-    billing_note = (
-        "Claude subscription via Claude Code CLI"
-        if resolved_driver == "claude-cli"
-        else "Anthropic API (metered)"
-    )
+    from dazzle.llm.driver import is_subscription_driver
+
+    if resolved_driver == "claude-cli":
+        billing_note = "Claude subscription via Claude Code CLI"
+    elif resolved_driver == "grok-cli":
+        billing_note = "Grok subscription via Grok Build CLI"
+    else:
+        billing_note = "Anthropic API (metered)"
     typer.echo(f"Trial scenario: {scenario_name} (as persona {login_persona})")
     typer.echo(f"LLM driver: {resolved_driver} ({billing_note})")
 
@@ -1559,9 +1564,10 @@ def qa_trial(
                         observer=observer_inner,
                         executor=executor_inner,
                         model=model,
-                        # Native tool use needs the SDK; the claude-cli
-                        # driver carries tools over the text protocol.
-                        use_tool_calls=resolved_driver != "claude-cli",
+                        # Native tool use needs the Anthropic SDK;
+                        # subscription CLIs (claude-cli / grok-cli) use
+                        # the text protocol instead.
+                        use_tool_calls=not is_subscription_driver(resolved_driver),
                         llm_driver=resolved_driver,
                     )
                     mission_inner = build_trial_mission(
