@@ -1,0 +1,80 @@
+/* HYPERPART: message */
+/*
+ * Chat message row — optional media (avatar) + column of meta + bubble.
+ * data-dz-from="in|out" mirrors bubble orientation (flex reverse for out).
+ *
+ * PLACEHOLDER — shadcn parity (HMC-041). Compose bubble Hyperpart inside.
+ * No JS controller; live updates are OOB/fragment swaps.
+ */
+
+.dz-message {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.dz-message[data-dz-from="out"] {
+  flex-direction: row-reverse;
+}
+
+.dz-message__media {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand-text);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+}
+
+.dz-message__media > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dz-message__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  max-width: min(36rem, calc(100% - 3rem));
+}
+
+.dz-message[data-dz-from="out"] .dz-message__body {
+  align-items: flex-end;
+}
+
+.dz-message[data-dz-from="in"] .dz-message__body {
+  align-items: flex-start;
+}
+
+.dz-message__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-xs);
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
+}
+
+.dz-message[data-dz-from="out"] .dz-message__meta {
+  flex-direction: row-reverse;
+}
+
+.dz-message__author {
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-message__time {
+  font-variant-numeric: tabular-nums;
+}

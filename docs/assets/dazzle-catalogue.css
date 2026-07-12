@@ -1700,6 +1700,52 @@ dialog.dz-alert-dialog::backdrop {
   margin-block-start: var(--space-sm);
   font-family: var(--font-mono);
 }
+/* --- hatchi-maxchi/components/bubble.css --- */
+/* HYPERPART: bubble */
+/*
+ * Chat bubble — rounded content shell for inbound/outbound speech.
+ * Orientation via data-dz-from="in|out". Tone via data-dz-tone when needed.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-040). Compose inside message rows.
+ * No JS controller.
+ */
+
+.dz-bubble {
+  display: inline-block;
+  max-width: min(36rem, 100%);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.dz-bubble[data-dz-from="out"] {
+  background: var(--colour-brand-soft, var(--colour-brand));
+  color: var(--colour-brand-text, var(--colour-text));
+}
+
+.dz-bubble[data-dz-from="in"] {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
+.dz-bubble[data-dz-tone="danger"] {
+  background: color-mix(in oklab, var(--colour-danger, #c0392b) 18%, var(--colour-surface));
+  color: var(--colour-text);
+}
+
+.dz-bubble p {
+  margin: 0;
+}
+
+.dz-bubble p + p {
+  margin-top: var(--space-2xs);
+}
 /* --- hatchi-maxchi/components/bullet.css --- */
 /* HYPERPART: bullet */
 /* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
@@ -8226,6 +8272,137 @@ button.dz-item:hover {
 .dz-menubar__panel a:hover,
 .dz-menubar__panel button:hover {
   background: var(--colour-surface-muted);
+}
+/* --- hatchi-maxchi/components/message-scroller.css --- */
+/* HYPERPART: message-scroller */
+/*
+ * Chat transcript scroller — vertical stack of message rows with
+ * max-height + overflow. Newest-at-bottom is document order (append
+ * messages at the end; scrollHeight is host/controller concern).
+ *
+ * PLACEHOLDER — shadcn parity (HMC-042). Compose message Hyperparts inside.
+ * Auto-scroll-to-bottom controller deferred.
+ */
+
+.dz-message-scroller {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  width: 100%;
+  max-height: min(28rem, 70vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-md);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+}
+
+.dz-message-scroller[data-dz-size="sm"] {
+  max-height: 14rem;
+  padding: var(--space-sm);
+  gap: var(--space-sm);
+}
+
+.dz-message-scroller[data-dz-size="lg"] {
+  max-height: min(40rem, 80vh);
+}
+
+.dz-message-scroller:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+}
+
+/* Empty / loading affordance when no message children yet */
+.dz-message-scroller__empty {
+  margin: auto;
+  padding: var(--space-lg);
+  color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
+  font-size: var(--text-sm);
+  text-align: center;
+}
+/* --- hatchi-maxchi/components/message.css --- */
+/* HYPERPART: message */
+/*
+ * Chat message row — optional media (avatar) + column of meta + bubble.
+ * data-dz-from="in|out" mirrors bubble orientation (flex reverse for out).
+ *
+ * PLACEHOLDER — shadcn parity (HMC-041). Compose bubble Hyperpart inside.
+ * No JS controller; live updates are OOB/fragment swaps.
+ */
+
+.dz-message {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.dz-message[data-dz-from="out"] {
+  flex-direction: row-reverse;
+}
+
+.dz-message__media {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand-text);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+}
+
+.dz-message__media > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dz-message__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  max-width: min(36rem, calc(100% - 3rem));
+}
+
+.dz-message[data-dz-from="out"] .dz-message__body {
+  align-items: flex-end;
+}
+
+.dz-message[data-dz-from="in"] .dz-message__body {
+  align-items: flex-start;
+}
+
+.dz-message__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-xs);
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
+}
+
+.dz-message[data-dz-from="out"] .dz-message__meta {
+  flex-direction: row-reverse;
+}
+
+.dz-message__author {
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.dz-message__time {
+  font-variant-numeric: tabular-nums;
 }
 /* --- hatchi-maxchi/components/metrics.css --- */
 /* HYPERPART: metrics */

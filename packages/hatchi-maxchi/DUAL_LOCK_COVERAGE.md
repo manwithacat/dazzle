@@ -8,7 +8,7 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 
 | Metric | Count |
 |--------|------:|
-| Component CSS modules | 70 |
+| Component CSS modules | 73 |
 | Controllers | 20 |
 | Contract modules | 56 |
 | Dual-lock schema+DOM | 41 |

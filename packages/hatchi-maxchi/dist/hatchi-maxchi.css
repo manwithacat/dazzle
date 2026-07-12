@@ -5437,6 +5437,192 @@ button.item:hover {
 }
 
 }
+/* ── components/bubble.css ── */
+@layer components {
+/* HYPERPART: bubble */
+/*
+ * Chat bubble — rounded content shell for inbound/outbound speech.
+ * Orientation via data-from="in|out". Tone via data-tone when needed.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-040). Compose inside message rows.
+ * No JS controller.
+ */
+
+.bubble {
+  display: inline-block;
+  max-width: min(36rem, 100%);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.bubble[data-from="out"] {
+  background: var(--colour-brand-soft, var(--colour-brand));
+  color: var(--colour-brand-text, var(--colour-text));
+}
+
+.bubble[data-from="in"] {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
+.bubble[data-tone="danger"] {
+  background: color-mix(in oklab, var(--colour-danger, #c0392b) 18%, var(--colour-surface));
+  color: var(--colour-text);
+}
+
+.bubble p {
+  margin: 0;
+}
+
+.bubble p + p {
+  margin-top: var(--space-2xs);
+}
+
+}
+/* ── components/message.css ── */
+@layer components {
+/* HYPERPART: message */
+/*
+ * Chat message row — optional media (avatar) + column of meta + bubble.
+ * data-from="in|out" mirrors bubble orientation (flex reverse for out).
+ *
+ * PLACEHOLDER — shadcn parity (HMC-041). Compose bubble Hyperpart inside.
+ * No JS controller; live updates are OOB/fragment swaps.
+ */
+
+.message {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.message[data-from="out"] {
+  flex-direction: row-reverse;
+}
+
+.message__media {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand-text);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+}
+
+.message__media > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.message__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  max-width: min(36rem, calc(100% - 3rem));
+}
+
+.message[data-from="out"] .message__body {
+  align-items: flex-end;
+}
+
+.message[data-from="in"] .message__body {
+  align-items: flex-start;
+}
+
+.message__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2xs) var(--space-xs);
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
+}
+
+.message[data-from="out"] .message__meta {
+  flex-direction: row-reverse;
+}
+
+.message__author {
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+}
+
+.message__time {
+  font-variant-numeric: tabular-nums;
+}
+
+}
+/* ── components/message-scroller.css ── */
+@layer components {
+/* HYPERPART: message-scroller */
+/*
+ * Chat transcript scroller — vertical stack of message rows with
+ * max-height + overflow. Newest-at-bottom is document order (append
+ * messages at the end; scrollHeight is host/controller concern).
+ *
+ * PLACEHOLDER — shadcn parity (HMC-042). Compose message Hyperparts inside.
+ * Auto-scroll-to-bottom controller deferred.
+ */
+
+.message-scroller {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  width: 100%;
+  max-height: min(28rem, 70vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-md);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+}
+
+.message-scroller[data-size="sm"] {
+  max-height: 14rem;
+  padding: var(--space-sm);
+  gap: var(--space-sm);
+}
+
+.message-scroller[data-size="lg"] {
+  max-height: min(40rem, 80vh);
+}
+
+.message-scroller:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+}
+
+/* Empty / loading affordance when no message children yet */
+.message-scroller__empty {
+  margin: auto;
+  padding: var(--space-lg);
+  color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+}
 /* ── components/table.css ── */
 @layer components {
 /* HYPERPART: grid */

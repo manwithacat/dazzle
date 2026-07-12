@@ -118,6 +118,9 @@ SIGNALS: dict[str, object] = {
     "hover-card": "exempt:no Dazzle emitter yet (gallery CSS hover panel)",
     "carousel": "exempt:no Dazzle emitter yet (gallery media strip shell)",
     "menubar": "exempt:no Dazzle emitter yet (gallery native-details menubar)",
+    "bubble": "exempt:no Dazzle emitter yet (gallery chat bubble shell)",
+    "message": "exempt:no Dazzle emitter yet (gallery chat message row)",
+    "message-scroller": "exempt:no Dazzle emitter yet (gallery chat transcript scroller)",
     "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",
 }
 

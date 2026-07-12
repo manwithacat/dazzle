@@ -1,0 +1,45 @@
+/* HYPERPART: bubble */
+/*
+ * Chat bubble — rounded content shell for inbound/outbound speech.
+ * Orientation via data-dz-from="in|out". Tone via data-dz-tone when needed.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-040). Compose inside message rows.
+ * No JS controller.
+ */
+
+.dz-bubble {
+  display: inline-block;
+  max-width: min(36rem, 100%);
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-sm);
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.dz-bubble[data-dz-from="out"] {
+  background: var(--colour-brand-soft, var(--colour-brand));
+  color: var(--colour-brand-text, var(--colour-text));
+}
+
+.dz-bubble[data-dz-from="in"] {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
+.dz-bubble[data-dz-tone="danger"] {
+  background: color-mix(in oklab, var(--colour-danger, #c0392b) 18%, var(--colour-surface));
+  color: var(--colour-text);
+}
+
+.dz-bubble p {
+  margin: 0;
+}
+
+.dz-bubble p + p {
+  margin-top: var(--space-2xs);
+}

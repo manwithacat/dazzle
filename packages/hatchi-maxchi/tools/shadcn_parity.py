@@ -77,9 +77,9 @@ _MAP: list[tuple[str, str, str, str]] = [
     ("breadcrumb", "parity", "breadcrumb", "Gallery"),
     (
         "bubble",
-        "gap",
-        "",
-        "Chat bubble — shadcn New; no HM chat message surface",
+        "parity",
+        "bubble",
+        "Gallery Hyperpart — chat bubble shell; data-dz-from in|out",
     ),
     ("button", "parity", "button", "Gallery + data-dz-variant"),
     (
@@ -201,15 +201,15 @@ _MAP: list[tuple[str, str, str, str]] = [
     ),
     (
         "message",
-        "gap",
-        "",
-        "Chat message row — shadcn New; no HM messaging surface",
+        "parity",
+        "message",
+        "Gallery Hyperpart — chat message row (media + meta + bubble)",
     ),
     (
         "message-scroller",
-        "gap",
-        "",
-        "Chat transcript scroller — shadcn New",
+        "parity",
+        "message-scroller",
+        "Gallery Hyperpart — chat transcript scroller; composes message",
     ),
     (
         "native-select",

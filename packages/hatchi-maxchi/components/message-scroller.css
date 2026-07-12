@@ -1,0 +1,49 @@
+/* HYPERPART: message-scroller */
+/*
+ * Chat transcript scroller — vertical stack of message rows with
+ * max-height + overflow. Newest-at-bottom is document order (append
+ * messages at the end; scrollHeight is host/controller concern).
+ *
+ * PLACEHOLDER — shadcn parity (HMC-042). Compose message Hyperparts inside.
+ * Auto-scroll-to-bottom controller deferred.
+ */
+
+.dz-message-scroller {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  width: 100%;
+  max-height: min(28rem, 70vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-md);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+}
+
+.dz-message-scroller[data-dz-size="sm"] {
+  max-height: 14rem;
+  padding: var(--space-sm);
+  gap: var(--space-sm);
+}
+
+.dz-message-scroller[data-dz-size="lg"] {
+  max-height: min(40rem, 80vh);
+}
+
+.dz-message-scroller:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+}
+
+/* Empty / loading affordance when no message children yet */
+.dz-message-scroller__empty {
+  margin: auto;
+  padding: var(--space-lg);
+  color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
+  font-size: var(--text-sm);
+  text-align: center;
+}

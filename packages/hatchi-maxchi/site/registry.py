@@ -2229,6 +2229,99 @@ def select(source: str, id: str) -> str:
             "menu Hyperpart for denser item lists.",
             tags=("navigation", "interactive"),
         ),
+        Hyperpart(
+            "bubble",
+            "Bubble",
+            "Data",
+            "Chat bubble shell — rounded content for inbound/outbound speech. "
+            "Compose inside message rows.",
+            '<div class="hm-demo-row" style="gap:1rem;flex-wrap:wrap;align-items:flex-end">'
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
+            "<p>Can we reschedule the walkthrough to Thursday?</p></div>"
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="out">'
+            "<p>Thursday 14:00 works — I'll send a calendar hold.</p></div>"
+            "</div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-040). "
+            "<code>data-dz-from=in|out</code> picks surface colour. Prefer "
+            "message Hyperpart for avatar + meta; bubble is the content shell only.",
+            tags=("media", "chat"),
+        ),
+        Hyperpart(
+            "message",
+            "Message",
+            "Data",
+            "Chat message row — media + author/time meta + bubble. "
+            "Outbound rows reverse with data-dz-from=out.",
+            '<div class="hm-stack" style="gap:0.75rem;max-width:28rem">'
+            '<div class="dz-message" data-dz-message data-dz-from="in">'
+            '<span class="dz-message__media" aria-hidden="true">MR</span>'
+            '<div class="dz-message__body">'
+            '<div class="dz-message__meta">'
+            '<span class="dz-message__author">Maya Reyes</span>'
+            '<time class="dz-message__time" datetime="2026-07-12T10:02">10:02</time>'
+            "</div>"
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
+            "<p>Can we reschedule the walkthrough to Thursday?</p></div>"
+            "</div></div>"
+            '<div class="dz-message" data-dz-message data-dz-from="out">'
+            '<span class="dz-message__media" aria-hidden="true">You</span>'
+            '<div class="dz-message__body">'
+            '<div class="dz-message__meta">'
+            '<span class="dz-message__author">You</span>'
+            '<time class="dz-message__time" datetime="2026-07-12T10:04">10:04</time>'
+            "</div>"
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="out">'
+            "<p>Thursday 14:00 works — I'll send a calendar hold.</p></div>"
+            "</div></div></div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-041). Composes "
+            "bubble. Live chat = server re-render / OOB append into "
+            "message-scroller, not client message state.",
+            tags=("media", "chat"),
+        ),
+        Hyperpart(
+            "message-scroller",
+            "Message scroller",
+            "Data",
+            "Chat transcript viewport — scrollable stack of message rows. "
+            "Document order is chronological (newest last).",
+            '<div class="dz-message-scroller" data-dz-message-scroller '
+            'role="log" aria-label="Conversation" aria-live="polite" tabindex="0">'
+            '<div class="dz-message" data-dz-message data-dz-from="in">'
+            '<span class="dz-message__media" aria-hidden="true">MR</span>'
+            '<div class="dz-message__body">'
+            '<div class="dz-message__meta">'
+            '<span class="dz-message__author">Maya Reyes</span>'
+            '<time class="dz-message__time" datetime="2026-07-12T10:02">10:02</time>'
+            "</div>"
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
+            "<p>Can we reschedule the walkthrough to Thursday?</p></div>"
+            "</div></div>"
+            '<div class="dz-message" data-dz-message data-dz-from="out">'
+            '<span class="dz-message__media" aria-hidden="true">You</span>'
+            '<div class="dz-message__body">'
+            '<div class="dz-message__meta">'
+            '<span class="dz-message__author">You</span>'
+            '<time class="dz-message__time" datetime="2026-07-12T10:04">10:04</time>'
+            "</div>"
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="out">'
+            "<p>Thursday 14:00 works — I'll send a calendar hold.</p></div>"
+            "</div></div>"
+            '<div class="dz-message" data-dz-message data-dz-from="in">'
+            '<span class="dz-message__media" aria-hidden="true">MR</span>'
+            '<div class="dz-message__body">'
+            '<div class="dz-message__meta">'
+            '<span class="dz-message__author">Maya Reyes</span>'
+            '<time class="dz-message__time" datetime="2026-07-12T10:05">10:05</time>'
+            "</div>"
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
+            "<p>Perfect — see you then.</p></div>"
+            "</div></div></div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-042). "
+            "<code>role=log</code> + <code>aria-live=polite</code> for "
+            "assistive updates. Auto-scroll-to-bottom controller deferred; "
+            "prefer append-at-end + optional host scrollIntoView.",
+            tags=("media", "chat", "interactive"),
+        ),
         # ── Navigation / Data ────────────────────────────────────────────
         Hyperpart(
             "breadcrumb",

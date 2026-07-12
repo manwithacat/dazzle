@@ -14,12 +14,12 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 
 | Status | Count |
 |--------|------:|
-| **parity** | 31 |
+| **parity** | 34 |
 | **partial** | 27 |
-| **gap** (placeholders) | 5 |
+| **gap** (placeholders) | 2 |
 | **n/a** | 1 |
 | **total shadcn** | 64 |
-| HM Hyperparts (registry) | 81 |
+| HM Hyperparts (registry) | 84 |
 
 ## Mapping
 
@@ -33,7 +33,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `avatar` | **parity** | `avatar` | Gallery |
 | `badge` | **parity** | `badge` | Gallery + tone system |
 | `breadcrumb` | **parity** | `breadcrumb` | Gallery |
-| `bubble` | **gap** | `—` | Chat bubble — shadcn New; no HM chat message surface |
+| `bubble` | **parity** | `bubble` | Gallery Hyperpart — chat bubble shell; data-dz-from in|out |
 | `button` | **parity** | `button` | Gallery + data-dz-variant |
 | `button-group` | **partial** | `toggle-group,toolbar,controls` | Compose toggle-group / toolbar; no dedicated button-group id |
 | `calendar` | **partial** | `date-range` | Date-range + CalendarGrid emit exist; no full month-picker Hyperpart |
@@ -62,8 +62,8 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `label` | **partial** | `field` | Label is part of field triad, not standalone |
 | `marker` | **gap** | `—` | shadcn New — map/marker chrome |
 | `menubar` | **parity** | `menubar` | Gallery Hyperpart — horizontal File/Edit/View via native details |
-| `message` | **gap** | `—` | Chat message row — shadcn New; no HM messaging surface |
-| `message-scroller` | **gap** | `—` | Chat transcript scroller — shadcn New |
+| `message` | **parity** | `message` | Gallery Hyperpart — chat message row (media + meta + bubble) |
+| `message-scroller` | **parity** | `message-scroller` | Gallery Hyperpart — chat transcript scroller; composes message |
 | `native-select` | **partial** | `field,combobox` | Native select via forms; combobox enhances |
 | `navigation-menu` | **gap** | `app-shell` | Top nav mega-menu; app-shell covers sidebar nav only |
 | `pagination` | **parity** | `pagination` | Gallery Hyperpart |
@@ -97,11 +97,8 @@ Playbook: `.claude/commands/improve/strategies/shadcn_parity.md`.
 
 | # | shadcn | suggested Hyperpart id | notes |
 |--:|--------|------------------------|-------|
-| 1 | `bubble` | `bubble` | Chat bubble — shadcn New; no HM chat message surface |
-| 2 | `marker` | `marker` | shadcn New — map/marker chrome |
-| 3 | `message` | `message` | Chat message row — shadcn New; no HM messaging surface |
-| 4 | `message-scroller` | `message-scroller` | Chat transcript scroller — shadcn New |
-| 5 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
+| 1 | `marker` | `marker` | shadcn New — map/marker chrome |
+| 2 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
 
 ## Status definitions
 
