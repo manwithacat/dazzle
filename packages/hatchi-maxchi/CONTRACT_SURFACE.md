@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 42 |
+| Modules | 43 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -26,6 +26,7 @@ blast radius (who embeds / refuses this part).
 | `command` | `command` | `[data-dz-command]` | [data-dz-command][] | — |
 | `confirm` | `confirm` | `[hx-confirm]` | [hx-confirm][hx-confirm=present] | — |
 | `confirm_panel` | `confirm-panel` | `[data-dz-confirm-gate]` | [data-dz-confirm-gate][data-dz-required-count=present]; [data-dz-required="true"][data-dz-required=present] | — |
+| `date_range` | `date-range` | `[data-dz-date-range]` | [data-dz-date-range][data-dz-date-range=present] | DateRange(date_from:str:opt; date_to:str:opt; endpoint:str:opt; region_name:str:opt; target:str:opt) |
 | `dialog` | `dialog` | `[data-dz-dialog-open]` | [data-dz-dialog-open][data-dz-dialog-open=present] | — |
 | `funnel` | `funnel` | `[data-dz-funnel]` | [data-dz-funnel][data-dz-funnel=present] | Funnel(empty_message:str:opt; stages:list[FunnelStage]:opt; total:int:opt); FunnelStage(count:int:opt; label:str:req) |
 | `grid` | `grid` | `[data-dz-grid]` | — | — |
