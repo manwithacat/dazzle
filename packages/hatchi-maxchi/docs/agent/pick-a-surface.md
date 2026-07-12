@@ -79,6 +79,50 @@ Disclosure chevron ≠ dismiss path.
 
 Agent packs: `site/agents/menu.md`, `menubar.md`, `navigation-menu.md`.
 
+### Modals / confirm / gates
+
+**Chrome vs protocol** (stem `chrome-vs-protocol.md`): two surfaces can share
+modal **chrome** (focus trap, Esc, buttons) and still differ in **protocol**
+(how they open and attach to htmx). Related split: **addressing** (trigger →
+dialog id) vs **request gating** (hold an existing `hx-*` until accept).
+
+Taxonomy when choosing (and when writing Guidance):
+
+| Dimension | Ask |
+|-----------|-----|
+| **Job** | Custom modal workspace, or yes/no before a request, or checklist consent? |
+| **Lifecycle** | Authored N dialogs in the page, or lazy singleton, or in-flow gate? |
+| **Who authors markup** | Full dialog HTML, or message string on the action, or checklist + parked href? |
+| **htmx attach** | Open by id; gate via `htmx:confirm`; or no modal (DOM arm/disarm)? |
+
+| Job | Lifecycle | Markup author | htmx attach | **Use** | **Do not use** |
+|-----|-----------|---------------|-------------|---------|----------------|
+| Designed modal body / multi-control flow | N instances in page (or swapped in) | Author full `<dialog>` | Addressing: `data-dz-dialog-open` → `showModal`; actions may carry `hx-*` | **`dialog`** | confirm for custom body; div role=dialog |
+| Edge-anchored modal panel | Same as dialog | Author drawer dialog | Same opener as dialog | **`drawer`** | reinvent with absolute panels |
+| Yes/no before **existing** destructive (or serious) request | Lazy singleton | Message = `hx-confirm="…"` on the action | **Gating:** `htmx:confirm` → issue/drop; **no** confirm Exchange | **`confirm`** | full dialog per delete; `POST /confirm` |
+| Multi-obligation consent before primary arms | In-flow form region | Checklist + `data-dz-confirm-href` | No modal; gate promotes href | **`confirm-panel`** | dialog that only counts checkboxes in JS state |
+| Non-modal free content under trigger | Ephemeral details | Author panel | Light-dismiss details | **`popover`** | dialog (modal) |
+
+**Compressed pick:**
+
+```
+Custom modal body / multi-control?     → dialog (addressing)
+Yes/no before existing hx-*?         → confirm (request gating, hx-confirm)
+Checklist before arming primary?     → confirm-panel
+Non-modal content under a trigger?   → popover
+```
+
+**Orthogonality cheatsheet** (for agent notes):
+
+| | Chrome (looks modal) | Protocol (attach) |
+|--|----------------------|-------------------|
+| `dialog` | full authored shell | addressing by id |
+| `confirm` | fixed alert shell | gate on `hx-confirm` |
+| `command` | palette shell | addressing + search exchange |
+| `menu` / `popover` | not modal trap | details + light-dismiss |
+
+Agent packs: `site/agents/dialog.md`, `confirm.md`, `confirm-panel.md`.
+
 If no row fits: open `invent-safely.md`—do **not** stretch an L1 with mode flags that change lifetime or commit path.
 
 ## Stop conditions
@@ -87,6 +131,7 @@ If no row fits: open `invent-safely.md`—do **not** stretch an L1 with mode fla
 - You planned `data-density=cell` on combobox → read `docs/decisions/0002-three-layers.md`.
 - Grid in-cell combobox → `CONSUMER_MAP` refuse edge + `docs/spikes/combobox-in-grid-cell.md`.
 - You picked menubar vs navigation-menu by “horizontal strip” alone → re-ask: **app commands** or **go somewhere**?
+- You picked dialog vs confirm by “both use `<dialog>`” alone → re-ask: **addressing** (custom body) or **request gating** (`hx-confirm`)?
 
 ## Next
 

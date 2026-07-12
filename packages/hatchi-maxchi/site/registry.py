@@ -887,18 +887,15 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "Designed replacement for window.confirm — every hx-confirm upgrades automatically.",
             '<button class="dz-button" data-dz-variant="destructive" hx-delete="/mock/noop" '
             'hx-confirm="Delete this invoice? This cannot be undone.">Delete invoice</button>',
-            notes="dz-confirm.js intercepts <code>htmx:confirm</code> (a client affordance — no "
-            "server round-trip of its own). The dialog <em>message</em> is the "
-            "<code>hx-confirm</code> attribute value (here: "
-            "&quot;Delete this invoice? This cannot be undone.&quot;). On approval the controller "
-            "issues the underlying request — no per-button wiring; any element with "
-            "<code>hx-confirm</code> gets the designed dialog. "
-            "<strong>Gallery-only toast:</strong> after confirm, this static site flashes "
-            "<code>Deleted (demo).</code> — that string is hard-coded in the site's "
-            "<code>MOCK_HTMX</code> shim (<code>site/build_site.py</code>), not in the "
-            "Hyperpart, not in <code>contracts/confirm.py</code>, and not returned by a "
-            "server. Production: your <code>DELETE</code> endpoint returns the Exchange "
-            "response fragment (row removal / empty-state); there is no toast API.",
+            notes="**Pick:** request <strong>gating</strong> — yes/no before an existing "
+            "<code>hx-*</code> runs (stem <code>chrome-vs-protocol</code>). Not a custom "
+            "modal body (dialog = addressing). Protocol: <code>dz-confirm.js</code> "
+            "intercepts <code>htmx:confirm</code>; message IS the "
+            "<code>hx-confirm</code> string; accept issues the underlying request. "
+            "No confirm Exchange / no <code>POST /confirm</code>. "
+            "<strong>Gallery-only toast:</strong> MOCK_HTMX may flash "
+            "<code>Deleted (demo).</code> — not Hyperpart surface; production returns "
+            "the action Exchange fragment.",
             tags=("interactive", "htmx"),
             exchanges=(
                 Exchange(
@@ -933,14 +930,16 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             contracts=("contracts/confirm.py",),
             guidance=Guidance(
                 seams=(
-                    "any element with hx-confirm gets the designed dialog via htmx:confirm",
-                    "dialog message text IS the hx-confirm attribute value",
-                    "on approval the controller issues the underlying request — no per-button wiring",
+                    "protocol: any hx-confirm → htmx:confirm → designed singleton dialog",
+                    "message text IS the hx-confirm attribute value (author the string, not a dialog partial)",
+                    "on accept: issueRequest on the underlying action; cancel: dropRequest",
+                    "pick-a-surface: request gating vs dialog addressing (chrome-vs-protocol)",
                 ),
                 pitfalls=(
                     "hx-confirm is a client affordance — it needs no Exchange of its own "
                     "(and no FastAPI route for “confirm”)",
                     "do not re-implement confirm with window.confirm (loses the designed dialog)",
+                    "do not use confirm when you need a custom modal body — that is dialog (addressing)",
                     "gallery toast 'Deleted (demo).' is MOCK_HTMX scaffolding in site/build_site.py — "
                     "not Hyperpart surface; production returns the DELETE fragment from the Exchange",
                 ),
@@ -950,6 +949,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                         "(or other) endpoint as the Server exchange",
                         "wire a bespoke dialog open/close for every delete button or invent a "
                         "POST /confirm endpoint for the dialog itself",
+                    ),
+                    (
+                        "fleet upgrade: every hx-confirm gets the same chrome (gating)",
+                        "author a full <dialog> per delete when only yes/no is required",
                     ),
                 ),
                 a11y_keys=(
@@ -1098,27 +1101,36 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<button type="submit" class="dz-button" data-dz-variant="outline">Cancel</button>'
             '<button type="submit" class="dz-button" data-dz-variant="destructive" value="confirm">Delete</button>'
             "</div></form></dialog>",
-            notes="Opening is the only scripted behaviour (<code>dz-dialog.js</code> calls "
-            "<code>showModal()</code> for a <code>[data-dz-dialog-open]</code> trigger); closing is "
-            "native. The confirm button closes the dialog and sets <code>returnValue</code> — in a "
-            "real app, carry the action on it (<code>hx-delete</code> …) or submit a form to the server.",
+            notes="**Pick:** modal <strong>addressing</strong> — authored shell by id "
+            "(stem <code>chrome-vs-protocol</code>). Not request gating (confirm = "
+            "<code>hx-confirm</code> singleton). Opening is the only scripted behaviour "
+            "(<code>dz-dialog.js</code> → <code>showModal()</code> for "
+            "<code>[data-dz-dialog-open]</code>); closing is native. Put actions on "
+            "footer buttons (<code>hx-*</code> / form submit / <code>returnValue</code>).",
             tags=("interactive",),
             composes=("button",),
             controller="controllers/dz-dialog.js",
             contracts=("contracts/dialog.py",),
             guidance=Guidance(
                 seams=(
-                    "data-dz-dialog-open triggers showModal() — opening is the only scripted behaviour",
+                    "addressing: data-dz-dialog-open → showModal on dialog#id (N instances)",
+                    "author full dialog HTML (header/body/footer) — chrome you own",
                     "confirm button may carry hx-delete / form submit; closing is native",
+                    "pick-a-surface: custom modal body → dialog; yes/no on hx-* → confirm",
                 ),
                 pitfalls=(
                     "do not re-implement close with custom overlays — use <dialog> + showModal",
                     "returnValue on the confirm button is the hand-off for form-less actions",
+                    "do not use dialog for fleet hx-confirm upgrades — that is confirm (gating)",
                 ),
                 do_dont=(
                     (
                         "use native <dialog> with data-dz-dialog-open triggers",
                         "build a div[role=dialog] + manual focus trap",
+                    ),
+                    (
+                        "author one dialog per designed flow (addressing)",
+                        "duplicate a full dialog for every Delete when hx-confirm suffices",
                     ),
                 ),
                 a11y_keys=(
@@ -1333,18 +1345,15 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<a href="#" class="dz-confirm-revoke">Revoke</a>'
             "</div></div>"
             "</div>",
-            notes="The gate is state-in-DOM: the primary anchor ships with "
-            "<code>aria-disabled=&quot;true&quot;</code> and its destination "
-            "parked in <code>data-dz-confirm-href</code>; "
-            "<code>dz-confirm-gate.js</code> recounts checked "
-            "<code>data-dz-required=&quot;true&quot;</code> boxes on every "
-            "change inside the <code>[data-dz-confirm-gate]</code> root and "
-            "promotes the href / removes <code>aria-disabled</code> only when "
-            "the count meets <code>data-dz-required-count</code>. Optional "
-            "boxes never gate. Zero required boxes = always armed. The live "
-            "and revoked branches swap the checklist for a "
-            "<code>dz-confirm-summary</code> toned via "
-            "<code>data-dz-confirm-tone=&quot;success|muted&quot;</code>.",
+            notes="**Pick:** in-flow consent gate — not modal chrome (dialog) and not "
+            "hx-confirm yes/no (confirm). Stem <code>chrome-vs-protocol</code>: no "
+            "addressing/gating modal; state-in-DOM. Primary ships "
+            "<code>aria-disabled</code> with destination in "
+            "<code>data-dz-confirm-href</code>; <code>dz-confirm-gate.js</code> "
+            "recounts <code>data-dz-required=true</code> vs "
+            "<code>data-dz-required-count</code> and arms the primary. Optional "
+            "boxes never gate. Live/revoked branches use "
+            "<code>dz-confirm-summary</code> + <code>data-dz-confirm-tone</code>.",
             tags=("forms",),
             controller="controllers/dz-confirm-gate.js",
             contracts=("contracts/confirm_panel.py",),
@@ -1352,10 +1361,12 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                 seams=(
                     "data-dz-confirm-gate root + data-dz-required=true checkboxes + data-dz-required-count",
                     "primary anchor parks destination in data-dz-confirm-href until armed",
+                    "pick-a-surface: checklist consent → confirm-panel (not dialog / hx-confirm)",
                 ),
                 pitfalls=(
                     "optional boxes never gate — only data-dz-required=true count",
                     "zero required boxes means the gate is always armed",
+                    "not a modal — do not replace with dialog that only mirrors checkbox state in JS",
                 ),
                 do_dont=(
                     (

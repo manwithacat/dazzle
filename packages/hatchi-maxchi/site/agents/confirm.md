@@ -66,20 +66,23 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 
 ### Seams
 
-- any element with hx-confirm gets the designed dialog via htmx:confirm
-- dialog message text IS the hx-confirm attribute value
-- on approval the controller issues the underlying request — no per-button wiring
+- protocol: any hx-confirm → htmx:confirm → designed singleton dialog
+- message text IS the hx-confirm attribute value (author the string, not a dialog partial)
+- on accept: issueRequest on the underlying action; cancel: dropRequest
+- pick-a-surface: request gating vs dialog addressing (chrome-vs-protocol)
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
 | put hx-confirm on the destructive action element; implement the DELETE (or other) endpoint as the Server exchange | wire a bespoke dialog open/close for every delete button or invent a POST /confirm endpoint for the dialog itself |
+| fleet upgrade: every hx-confirm gets the same chrome (gating) | author a full <dialog> per delete when only yes/no is required |
 
 ### Pitfalls
 
 - hx-confirm is a client affordance — it needs no Exchange of its own (and no FastAPI route for “confirm”)
 - do not re-implement confirm with window.confirm (loses the designed dialog)
+- do not use confirm when you need a custom modal body — that is dialog (addressing)
 - gallery toast 'Deleted (demo).' is MOCK_HTMX scaffolding in site/build_site.py — not Hyperpart surface; production returns the DELETE fragment from the Exchange
 
 ### Keyboard / AT
@@ -134,7 +137,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-dz-confirm.js intercepts htmx:confirm (a client affordance — no server round-trip of its own). The dialog message is the hx-confirm attribute value (here: "Delete this invoice? This cannot be undone."). On approval the controller issues the underlying request — no per-button wiring; any element with hx-confirm gets the designed dialog. Gallery-only toast: after confirm, this static site flashes Deleted (demo). — that string is hard-coded in the site's MOCK_HTMX shim (site/build_site.py), not in the Hyperpart, not in contracts/confirm.py, and not returned by a server. Production: your DELETE endpoint returns the Exchange response fragment (row removal / empty-state); there is no toast API.
+**Pick:** request gating — yes/no before an existing hx-* runs (stem chrome-vs-protocol). Not a custom modal body (dialog = addressing). Protocol: dz-confirm.js intercepts htmx:confirm; message IS the hx-confirm string; accept issues the underlying request. No confirm Exchange / no POST /confirm. Gallery-only toast: MOCK_HTMX may flash Deleted (demo). — not Hyperpart surface; production returns the action Exchange fragment.
 
 ## Source files
 

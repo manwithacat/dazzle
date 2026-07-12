@@ -51,6 +51,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - data-dz-confirm-gate root + data-dz-required=true checkboxes + data-dz-required-count
 - primary anchor parks destination in data-dz-confirm-href until armed
+- pick-a-surface: checklist consent → confirm-panel (not dialog / hx-confirm)
 
 ### Do / Don't
 
@@ -62,6 +63,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - optional boxes never gate — only data-dz-required=true count
 - zero required boxes means the gate is always armed
+- not a modal — do not replace with dialog that only mirrors checkbox state in JS
 
 ### Keyboard / AT
 
@@ -112,7 +114,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-The gate is state-in-DOM: the primary anchor ships with aria-disabled="true" and its destination parked in data-dz-confirm-href; dz-confirm-gate.js recounts checked data-dz-required="true" boxes on every change inside the [data-dz-confirm-gate] root and promotes the href / removes aria-disabled only when the count meets data-dz-required-count. Optional boxes never gate. Zero required boxes = always armed. The live and revoked branches swap the checklist for a dz-confirm-summary toned via data-dz-confirm-tone="success|muted".
+**Pick:** in-flow consent gate — not modal chrome (dialog) and not hx-confirm yes/no (confirm). Stem chrome-vs-protocol: no addressing/gating modal; state-in-DOM. Primary ships aria-disabled with destination in data-dz-confirm-href; dz-confirm-gate.js recounts data-dz-required=true vs data-dz-required-count and arms the primary. Optional boxes never gate. Live/revoked branches use dz-confirm-summary + data-dz-confirm-tone.
 
 ## Source files
 

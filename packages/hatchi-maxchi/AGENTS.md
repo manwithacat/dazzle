@@ -76,7 +76,8 @@ decisions. Decisions under `docs/decisions/` are **expressions** of the same ste
 | **Affordance disclosure chrome** | Expand/submenu signals: CSS/SVG chevron at control scale, not tiny Unicode | `stems/affordance-disclosure-chrome.md` |
 | **Selection strip honest** | Tabs/segments: button vs link by intent; square active underline; no half ARIA tablist | `stems/selection-strip-honest.md` |
 | **Shortcut hint chrome** | Keyboard chips: visually secondary + spatially secondary (adjacent gap / trailing) | `stems/shortcut-hint-chrome.md` |
-| **Overlay light-dismiss** | Transient overlays (menu/popover/menubar/nav): Esc + outside; not accordion/tree | `stems/overlay-light-dismiss.md` |
+| **Overlay light-dismiss** | Transient overlays: spatial (Esc/outside) vs temporal (opt-in ms); not accordion/tree | `stems/overlay-light-dismiss.md` |
+| **Chrome vs protocol** | Modal lookalike L1s: job/lifecycle/authoring/htmx attach; addressing vs request gating | `stems/chrome-vs-protocol.md` |
 
 Monorepo framework stems (DSL-first, hypermedia SSR, …): `../../stems/` when
 working inside the Dazzle tree.

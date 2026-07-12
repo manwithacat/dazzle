@@ -36,19 +36,23 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 ### Seams
 
-- data-dz-dialog-open triggers showModal() — opening is the only scripted behaviour
+- addressing: data-dz-dialog-open → showModal on dialog#id (N instances)
+- author full dialog HTML (header/body/footer) — chrome you own
 - confirm button may carry hx-delete / form submit; closing is native
+- pick-a-surface: custom modal body → dialog; yes/no on hx-* → confirm
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
 | use native <dialog> with data-dz-dialog-open triggers | build a div[role=dialog] + manual focus trap |
+| author one dialog per designed flow (addressing) | duplicate a full dialog for every Delete when hx-confirm suffices |
 
 ### Pitfalls
 
 - do not re-implement close with custom overlays — use <dialog> + showModal
 - returnValue on the confirm button is the hand-off for form-less actions
+- do not use dialog for fleet hx-confirm upgrades — that is confirm (gating)
 
 ### Keyboard / AT
 
@@ -91,7 +95,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Opening is the only scripted behaviour (dz-dialog.js calls showModal() for a [data-dz-dialog-open] trigger); closing is native. The confirm button closes the dialog and sets returnValue — in a real app, carry the action on it (hx-delete …) or submit a form to the server.
+**Pick:** modal addressing — authored shell by id (stem chrome-vs-protocol). Not request gating (confirm = hx-confirm singleton). Opening is the only scripted behaviour (dz-dialog.js → showModal() for [data-dz-dialog-open]); closing is native. Put actions on footer buttons (hx-* / form submit / returnValue).
 
 ## Source files
 
