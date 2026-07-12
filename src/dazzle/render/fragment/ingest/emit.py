@@ -21,6 +21,7 @@ from dazzle.render.fragment.ingest.models import (
     Bullet,
     ComboboxField,
     DateRange,
+    EmptyState,
     Funnel,
     GridEditCell,
     Heatmap,
@@ -39,6 +40,7 @@ from dazzle.render.fragment.ingest.models import (
     SearchBox,
     SearchResultRow,
     SearchSelectShell,
+    Skeleton,
     Sparkline,
     StatusListEntry,
     TagsField,
@@ -894,10 +896,42 @@ def list_region_root_attrs(_lr: ListRegion) -> str:
     return "data-dz-list-region"
 
 
+def empty_state_root_attrs(_e: EmptyState) -> str:
+    return "data-dz-empty-state"
+
+
+def skeleton_root_attrs(_s: Skeleton) -> str:
+    return "data-dz-skeleton"
+
+
 def render_list_region(lr: ListRegion) -> str:
     """Model → list-region root (matches HM contracts/list_region.py)."""
     root_attrs = list_region_root_attrs(lr)
     return f'<div class="dz-list-region" {root_attrs}>{lr.body_html}</div>'
+
+
+def render_empty_state(e: EmptyState) -> str:
+    """Model → empty-state (matches HM contracts/empty_state.py)."""
+    root_attrs = empty_state_root_attrs(e)
+    return (
+        f'<div class="dz-empty-state" {root_attrs}>'
+        f"{e.icon_html}"
+        f'<h3 class="dz-empty-state__title">{_html.escape(e.title)}</h3>'
+        f'<p class="dz-empty-state__description">{_html.escape(e.description)}</p>'
+        f'<div class="dz-empty-state__action">{e.action_html}</div>'
+        f"</div>"
+    )
+
+
+def render_skeleton(s: Skeleton) -> str:
+    """Model → skeleton-lines stack (matches HM contracts/skeleton.py)."""
+    root_attrs = skeleton_root_attrs(s)
+    if s.body_html.strip():
+        inner = s.body_html
+    else:
+        n = max(1, int(s.lines))
+        inner = "".join('<div class="dz-skeleton" data-dz-shape="text"></div>' for _ in range(n))
+    return f'<div class="dz-skeleton-lines" {root_attrs}>{inner}</div>'
 
 
 def render_date_range(d: DateRange) -> str:

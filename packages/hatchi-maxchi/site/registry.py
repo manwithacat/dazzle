@@ -2286,7 +2286,8 @@ def select(source: str, id: str) -> str:
             "Feedback",
             "Loading placeholder with a lifecycle-driven sheen (TASTE-9) — drop it "
             "into a swap target while the request is in flight.",
-            '<div class="dz-card dz-card-body hm-measure hm-stack" aria-hidden="true">'
+            '<div class="dz-card dz-card-body hm-measure hm-stack" aria-hidden="true" '
+            "data-dz-skeleton>"
             '<div class="hm-demo-row">'
             '<div class="dz-skeleton" data-dz-shape="circle"></div>'
             '<div class="hm-grow hm-stack">'
@@ -2294,21 +2295,28 @@ def select(source: str, id: str) -> str:
             '<div class="dz-skeleton" data-dz-shape="text"></div>'
             "</div></div>"
             '<div class="dz-skeleton" data-dz-shape="block"></div></div>',
-            notes="Purely decorative, so the placeholder region is <code>aria-hidden</code>; announce "
+            notes="Dual-lock root is <code>data-dz-skeleton</code> "
+            "(<code>contracts/skeleton.py</code>) on the placeholder stack. Purely "
+            "decorative, so the region is <code>aria-hidden</code>; announce "
             "&ldquo;loading&rdquo; on the live region that owns the swap. Shapes: "
             "<code>data-dz-shape=&quot;text|circle|block&quot;</code>. The sheen honours "
             "<code>prefers-reduced-motion</code>.",
+            contracts=("contracts/skeleton.py",),
         ),
         Hyperpart(
             "empty-state",
             "Empty state",
             "Feedback",
             "Icon + one sentence + primary action — never a bare 'No X'.",
-            '<div class="dz-card dz-card-body hm-measure"><div class="dz-empty-state">'
+            '<div class="dz-card dz-card-body hm-measure">'
+            '<div class="dz-empty-state" data-dz-empty-state>'
             '<span class="dz-empty-state__icon">{svg:inbox}</span>'
             '<h3 class="dz-empty-state__title">No invoices yet</h3>'
             '<p class="dz-empty-state__description">Create your first invoice to get started.</p>'
             '<div class="dz-empty-state__action"><a class="dz-button" data-dz-variant="primary" href="#">New Invoice</a></div></div></div>',
+            notes="Dual-lock root is <code>data-dz-empty-state</code> "
+            "(<code>contracts/empty_state.py</code>). Icon + action markup are host-owned.",
+            contracts=("contracts/empty_state.py",),
         ),
         Hyperpart(
             "code",

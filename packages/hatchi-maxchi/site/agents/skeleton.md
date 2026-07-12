@@ -12,7 +12,7 @@ Loading placeholder with a lifecycle-driven sheen (TASTE-9) — drop it into a s
 ## Copy this
 
 ```html
-<div class="card card-body hm-measure hm-stack" aria-hidden="true">
+<div class="card card-body hm-measure hm-stack" aria-hidden="true" data-skeleton>
   <div class="hm-demo-row">
     <div class="skeleton" data-shape="circle"></div>
     <div class="hm-grow hm-stack">
@@ -36,16 +36,47 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/skeleton.py`
+
+- **Required root:** `[data-dz-skeleton]` (part `skeleton`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-skeleton]` | `data-dz-skeleton` | present (any value) |
+
+#### Ingestion model `Skeleton`
+
+| Field | Type | Required |
+|---|---|---|
+| `lines` | `integer` | no |
+| `body_html` | `string` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(s: Skeleton) -> str:
+    """Model → skeleton-lines stack."""
+    if s.body_html.strip():
+        inner = s.body_html
+    else:
+        n = max(1, int(s.lines))
+        inner = "".join(
+            '<div class="dz-skeleton" data-dz-shape="text"></div>' for _ in range(n)
+        )
+    return f'<div class="dz-skeleton-lines" data-dz-skeleton>{inner}</div>'
+```
 
 ## Notes
 
-Purely decorative, so the placeholder region is aria-hidden; announce “loading” on the live region that owns the swap. Shapes: data-dz-shape="text|circle|block". The sheen honours prefers-reduced-motion.
+Dual-lock root is data-dz-skeleton (contracts/skeleton.py) on the placeholder stack. Purely decorative, so the region is aria-hidden; announce “loading” on the live region that owns the swap. Shapes: data-dz-shape="text|circle|block". The sheen honours prefers-reduced-motion.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/skeleton.py`

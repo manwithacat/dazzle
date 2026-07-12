@@ -93,7 +93,8 @@ python packages/hatchi-maxchi/tools/contract_surface.py --write
 python packages/hatchi-maxchi/tools/consumer_map.py --write
 python packages/hatchi-maxchi/tools/dual_lock_queue.py --write
 python packages/hatchi-maxchi/site/build_site.py
-python scripts/gen_ux_catalogue.py   # if emission HTML is in the catalogue
+python scripts/gen_ux_catalogue.py   # REQUIRED when emit path appears in catalogue
+                                     # (list-region, empty-state, skeleton, …)
 ```
 
 **F. Import + morph ship gates** (mandatory — cycles 345–346 left main red)

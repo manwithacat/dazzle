@@ -34,6 +34,9 @@ from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html
+from dazzle.render.fragment.ingest import EmptyState as EmptyStateSeam
+from dazzle.render.fragment.ingest import Skeleton as SkeletonSeam
+from dazzle.render.fragment.ingest import render_empty_state, render_skeleton
 from dazzle.render.fragment.primitives import (
     Badge,
     Card,
@@ -249,26 +252,25 @@ class _RenderLayoutMixin:
         return f'<span class="{cls}">{ctx.escape(b.label)}</span>'
 
     def _emit_empty_state(self, e: EmptyState, ctx: RenderContext) -> str:
+        """Render EmptyState via HM dual-lock empty-state seam."""
         action_html = self._emit(e.action, ctx) if e.action is not None else ""  # type: ignore[arg-type]
         icon_html = lucide_icon_html(e.icon, cls="dz-empty-state__icon") if e.icon else ""
-        return (
-            f'<div class="dz-empty-state">'
-            f"{icon_html}"
-            f'<h3 class="dz-empty-state__title">{ctx.escape(e.title)}</h3>'
-            f'<p class="dz-empty-state__description">{ctx.escape(e.description)}</p>'
-            f'<div class="dz-empty-state__action">{action_html}</div>'
-            f"</div>"
+        return render_empty_state(
+            EmptyStateSeam(
+                title=e.title,
+                description=e.description,
+                icon_html=icon_html,
+                action_html=action_html,
+            )
         )
 
     def _emit_skeleton(self, s: Skeleton, ctx: RenderContext) -> str:
-        # Adopts the design system's canonical `.dz-skeleton` placeholder (the
-        # HM skeleton Hyperpart): each line is a `dz-skeleton` element shaped
-        # `text`, stacked by `dz-skeleton-lines`. (The prior `dz-skeleton__line`
-        # child class had no CSS rule — the lines rendered invisible.)
-        lines = "".join(
-            '<div class="dz-skeleton" data-dz-shape="text"></div>' for _ in range(s.lines)
-        )
-        return f'<div class="dz-skeleton-lines">{lines}</div>'
+        """Render Skeleton via HM dual-lock skeleton seam.
+
+        Each line is a `dz-skeleton` element shaped `text`, stacked by
+        `dz-skeleton-lines` with dual-lock root `data-dz-skeleton`.
+        """
+        return render_skeleton(SkeletonSeam(lines=s.lines))
 
     def _emit_lazy_tab_panel(self, p: LazyTabPanel, ctx: RenderContext) -> str:
         """Render a LazyTabPanel using the HM `tabs` Hyperpart contract.

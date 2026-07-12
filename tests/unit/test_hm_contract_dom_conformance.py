@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -831,6 +831,44 @@ def test_list_region_emission_conforms_to_list_region_contract() -> None:
     assert "Quarterly audit" in html
     assert "Showing 1 of 14" in html
     assert "dz-list-csv-button" in html
+
+
+def test_empty_state_emission_conforms_to_empty_state_contract() -> None:
+    """Real FragmentRenderer EmptyState path satisfies contracts/empty_state.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.content import EmptyState
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    es_mod = load_hm_module("contracts/empty_state.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        EmptyState(
+            title="No invoices yet",
+            description="Create your first invoice to get started.",
+            icon="inbox",
+        )
+    )
+    violations = kit.validate_dom(html, es_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-empty-state" in html
+    assert "No invoices yet" in html
+    assert "dz-empty-state__title" in html
+
+
+def test_skeleton_emission_conforms_to_skeleton_contract() -> None:
+    """Real FragmentRenderer Skeleton path satisfies contracts/skeleton.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.content import Skeleton
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    sk_mod = load_hm_module("contracts/skeleton.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(Skeleton(lines=3))
+    violations = kit.validate_dom(html, sk_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-skeleton" in html
+    assert "dz-skeleton-lines" in html
+    assert html.count('data-dz-shape="text"') == 3
 
 
 def test_radar_emission_conforms_to_radar_contract() -> None:

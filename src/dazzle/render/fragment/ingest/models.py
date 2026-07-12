@@ -613,6 +613,28 @@ class ListRegion(BaseModel):
     body_html: str = ""
 
 
+# ── Empty-state seam copy (contracts/empty_state.py) ─────────────────
+
+
+class EmptyState(BaseModel):
+    """Empty-state placeholder — dual-lock unit for empty-state."""
+
+    title: str = ""
+    description: str = ""
+    icon_html: str = ""
+    action_html: str = ""
+
+
+# ── Skeleton seam copy (contracts/skeleton.py) ───────────────────────
+
+
+class Skeleton(BaseModel):
+    """Loading skeleton stack — dual-lock unit for skeleton."""
+
+    lines: int = 3
+    body_html: str = ""
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

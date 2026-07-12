@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 44 |
+| Modules | 46 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -28,6 +28,7 @@ blast radius (who embeds / refuses this part).
 | `confirm_panel` | `confirm-panel` | `[data-dz-confirm-gate]` | [data-dz-confirm-gate][data-dz-required-count=present]; [data-dz-required="true"][data-dz-required=present] | — |
 | `date_range` | `date-range` | `[data-dz-date-range]` | [data-dz-date-range][data-dz-date-range=present] | DateRange(date_from:str:opt; date_to:str:opt; endpoint:str:opt; region_name:str:opt; target:str:opt) |
 | `dialog` | `dialog` | `[data-dz-dialog-open]` | [data-dz-dialog-open][data-dz-dialog-open=present] | — |
+| `empty_state` | `empty-state` | `[data-dz-empty-state]` | [data-dz-empty-state][data-dz-empty-state=present] | EmptyState(action_html:str:opt; description:str:opt; icon_html:str:opt; title:str:opt) |
 | `funnel` | `funnel` | `[data-dz-funnel]` | [data-dz-funnel][data-dz-funnel=present] | Funnel(empty_message:str:opt; stages:list[FunnelStage]:opt; total:int:opt); FunnelStage(count:int:opt; label:str:req) |
 | `grid` | `grid` | `[data-dz-grid]` | — | — |
 | `grid_cols` | `grid-cols` | `[data-dz-grid]` | [data-dz-grid-col-toggle][data-dz-grid-col-toggle=present]; [data-dz-col][data-dz-col=present]; [data-dz-grid-cols-reset][] | — |
@@ -49,6 +50,7 @@ blast radius (who embeds / refuses this part).
 | `radar` | `radar` | `[data-dz-radar]` | [data-dz-radar][data-dz-radar=present] | Radar(axes:list[RadarAxis]:opt; empty_message:str:opt; label:str:opt; peak_display:str:opt; svg_html:str:opt); RadarAxis(label:str:req; value:float:opt) |
 | `search_box` | `search-box` | `[data-dz-search-box]` | [data-dz-search-box][data-dz-search-box=present] | SearchBox(coaching_message:str:opt; endpoint:str:opt; label:str:opt; name:str:opt; placeholder:str:opt; results_html:str:opt) |
 | `search_select` | `search-select` | `[data-dz-widget="search_select"]` | [data-dz-widget="search_select"][] | SearchResultRow(id:str:req; media_html:str:opt; name:str:req; results_target:str:req; secondary:str:opt; select_url:str:req); SearchSelectShell(blur_grace_ms:int:opt; confirm_hold_ms:int:opt; debounce_ms:int:opt; field_id:str:opt; field_name:str:req; initial_label:str:opt; initial_value:str:opt; input_id:str:opt; placeholder:str:opt; prompt:str:opt; results_id:str:opt; search_url:str:req) |
+| `skeleton` | `skeleton` | `[data-dz-skeleton]` | [data-dz-skeleton][data-dz-skeleton=present] | Skeleton(body_html:str:opt; lines:int:opt) |
 | `slider` | `slider` | `[data-dz-slider]` | [data-dz-slider][]; [data-dz-range-value][] | — |
 | `sparkline` | `sparkline` | `[data-dz-sparkline]` | [data-dz-sparkline][data-dz-sparkline=present] | Sparkline(empty_message:str:opt; points:list[tuple[str,float]]:opt) |
 | `status_list` | `status-list` | `[data-dz-status-entry]` | [data-dz-status-entry][data-dz-state=one_of:neutral\|positive\|warning\|destructive\|accent, data-dz-status-entry=present] | StatusListEntry(caption:str:opt; icon_html:str:opt; state:Literal:opt; title:str:req) |

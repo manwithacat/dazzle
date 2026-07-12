@@ -10,8 +10,8 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 |--------|------:|
 | Component CSS modules | 68 |
 | Controllers | 20 |
-| Contract modules | 44 |
-| Dual-lock schema+DOM | 29 |
+| Contract modules | 46 |
+| Dual-lock schema+DOM | 31 |
 | Dual-lock DOM-only | 14 |
 | Dual-lock deferred | 0 |
 | Contract with no dual-lock row | 1 |
@@ -37,6 +37,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `confirm_panel` | `confirm_panel.py` | `—` | yes | no | no | **DOM-only** |
 | `date_range` | `date_range.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `dialog` | `dialog.py` | `dz-dialog.js` | yes | no | no | **DOM-only** |
+| `empty_state` | `empty_state.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `funnel` | `funnel.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `grid` | `grid.py` | `dz-grid.js` | yes | no | no | **DOM-only** |
 | `grid_cols` | `grid_cols.py` | `dz-grid-cols.js` | yes | no | no | **DOM-only** |
@@ -58,6 +59,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `radar` | `radar.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `search_box` | `search_box.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `search_select` | `search_select.py` | `dz-search-select.js` | yes | yes | yes | **schema+DOM** |
+| `skeleton` | `skeleton.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `slider` | `slider.py` | `dz-slider.js` | yes | no | no | **DOM-only** |
 | `sparkline` | `sparkline.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `status_list` | `status_list.py` | `—` | yes | yes | yes | **schema+DOM** |
