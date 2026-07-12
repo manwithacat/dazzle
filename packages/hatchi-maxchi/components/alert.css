@@ -137,7 +137,11 @@
   [data-dz-tooltip]::after { transition: none; }
 }
 
-/* ── dz-menu — details-based dropdown (the hypermedia answer) ────────── */
+/* ── dz-menu — details-based dropdown (the hypermedia answer) ──────────
+ * Disclosure chrome: CSS chevron on the summary trigger (same family as
+ * accordion / navigation-menu) — not Unicode ▾ in the label text
+ * (affordance-disclosure-chrome). Summary usually carries .dz-button.
+ */
 
 .dz-menu {
   position: relative;
@@ -147,9 +151,38 @@
 .dz-menu > summary {
   list-style: none;
   cursor: pointer;
+  /* .dz-button is already inline-flex; ensure room for ::after chevron */
+  gap: var(--space-2xs);
 }
 
-.dz-menu > summary::-webkit-details-marker { display: none; }
+.dz-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* House disclosure chevron — 1rem, rotates when open (not part of label text) */
+.dz-menu > summary::after {
+  content: "";
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  opacity: 0.65;
+  -webkit-mask: center / contain no-repeat
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+  mask: center / contain no-repeat
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+  transition: transform var(--duration-base, 150ms) var(--ease-out, ease);
+}
+
+.dz-menu[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-menu > summary::after {
+    transition: none;
+  }
+}
 
 .dz-menu__panel {
   position: absolute;

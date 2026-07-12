@@ -27,26 +27,34 @@ whisper scale).
 
 ## House exemplars
 
-| Stem | Affordance |
-|------|------------|
+| Surface | Affordance |
+|---------|------------|
 | `accordion` | `::after` 1rem SVG mask; rotates when `[open]` |
 | `navigation-menu` | same family on `__trigger::after` |
+| `menu` | same family on `summary::after` (label is plain “Actions”) |
 | `tree` | `.tree-chevron` SVG ~0.75rem; rotates 90° when open |
 | `grid` / table sort | `{svg:chevron-up}` in sort button; oriented by `aria-sort` |
 | `menubar` | no caret (app-menu genre); exclusive open is behavioural, not chevron |
 
+**Wording:** “affordance” here means the **visual signal that more UI is
+available on interaction** (expand/open). Prefer that phrase over “icon”
+when the mark is decorative disclosure chrome, not a content icon
+(`{icon:pencil}` on a menu *item* is content, not disclosure).
+
 ## Not this
 
 - Reintroducing `<span class="…__caret">▾</span>` on nav triggers.
+- Baking `▾` / `▼` into summary/button **label text** (e.g. `Actions ▾`).
 - “Fixing” scale only by bumping Unicode `font-size` without house stroke language.
 - Inventing Alpine/React for a chevron.
-- Treating menubar’s lack of caret as license to drop nav submenu chrome
-  (different product genre — site nav almost always signals panels).
+- Treating menubar’s lack of caret as license to drop nav/menu disclosure chrome
+  (different product genres).
 
 ## Expressions
 
 - CSS: `components/accordion.css`, `components/navigation-menu.css`,
-  `components/tree.css`, `components/table.css`
-- Partials: no Unicode carets on `navigation-menu` triggers
+  `components/alert.css` (`.dz-menu`), `components/tree.css`, `components/table.css`
+- Partials: no Unicode carets in `menu` / `navigation-menu` trigger labels
+- Guidance on those Hyperparts; optional pin: no `▾` in menu partial
 - Guidance on `navigation-menu` / `accordion` agent packs
 - Behaviour pin: `test_navigation_menu_disclosure_chevron_scale`

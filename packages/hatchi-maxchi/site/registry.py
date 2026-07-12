@@ -965,13 +965,42 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "Overlays",
             "Disclosure menu (`<details>`) — no JS for open state. A disclosure, "
             "not a full ARIA menu: no roving tabindex or typeahead.",
-            '<details class="dz-menu"><summary class="dz-button" data-dz-variant="outline">Actions ▾</summary>'
+            '<details class="dz-menu"><summary class="dz-button" data-dz-variant="outline">'
+            "Actions</summary>"
             '<div class="dz-menu__panel">'
-            '<button class="dz-menu__item">{icon:pencil} Edit</button>'
-            '<button class="dz-menu__item">{icon:copy} Duplicate</button>'
+            '<button type="button" class="dz-menu__item">{icon:pencil} Edit</button>'
+            '<button type="button" class="dz-menu__item">{icon:copy} Duplicate</button>'
             '<hr class="dz-menu__separator">'
-            '<button class="dz-menu__item" data-dz-tone="destructive">{icon:trash-2} Delete</button></div></details>',
+            '<button type="button" class="dz-menu__item" data-dz-tone="destructive">'
+            "{icon:trash-2} Delete</button></div></details>",
+            notes="Trigger label is plain text; the open-panel signal is CSS "
+            "<code>::after</code> chevron on the summary (same family as "
+            "accordion / navigation-menu — not Unicode <code>▾</code> in the "
+            "label). Open intent is native details (single trigger). Honest "
+            "disclosure, not ARIA menu with roving tabindex.",
             tags=("interactive",),
+            guidance=Guidance(
+                seams=(
+                    "`details.dz-menu` + `summary` (usually `.dz-button`) + `.dz-menu__panel`",
+                    "disclosure chevron is presentation on summary::after — not label text",
+                ),
+                pitfalls=(
+                    "do not bake ▾/▼ into the summary text — house disclosure chrome is CSS/SVG",
+                    "not a full ARIA menu (no roving tabindex/typeahead) — do not invent role=menu half-contracts",
+                    "distinct from menubar (app chrome strip) and navigation-menu (site nav)",
+                ),
+                do_dont=(
+                    (
+                        "label text only + CSS chevron that rotates when [open]",
+                        "Actions ▾ as a single text string for the expand signal",
+                    ),
+                ),
+                a11y_keys=(
+                    "details/summary carry expand; chevron is decorative",
+                    "Keyboard: Enter/Space on summary toggles the panel",
+                ),
+                composes_with=("button",),
+            ),
         ),
         Hyperpart(
             "popover",

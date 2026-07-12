@@ -14,12 +14,12 @@ Disclosure menu (`<details>`) — no JS for open state. A disclosure, not a full
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
 <details class="menu">
-  <summary class="button" data-variant="outline">Actions ▾</summary>
+  <summary class="button" data-variant="outline">Actions</summary>
   <div class="menu__panel">
-    <button class="menu__item"><svg class="icon icon--size-sm" aria-hidden="true"><use href="#i-pencil"/></svg> Edit</button>
-    <button class="menu__item"><svg class="icon icon--size-sm" aria-hidden="true"><use href="#i-copy"/></svg> Duplicate</button>
+    <button type="button" class="menu__item"><svg class="icon icon--size-sm" aria-hidden="true"><use href="#i-pencil"/></svg> Edit</button>
+    <button type="button" class="menu__item"><svg class="icon icon--size-sm" aria-hidden="true"><use href="#i-copy"/></svg> Duplicate</button>
     <hr class="menu__separator">
-    <button class="menu__item" data-tone="destructive"><svg class="icon icon--size-sm" aria-hidden="true"><use href="#i-trash-2"/></svg> Delete</button>
+    <button type="button" class="menu__item" data-tone="destructive"><svg class="icon icon--size-sm" aria-hidden="true"><use href="#i-trash-2"/></svg> Delete</button>
   </div>
 </details>
 ```
@@ -30,17 +30,39 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- `details.dz-menu` + `summary` (usually `.dz-button`) + `.dz-menu__panel`
+- disclosure chevron is presentation on summary::after — not label text
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| label text only + CSS chevron that rotates when [open] | Actions ▾ as a single text string for the expand signal |
+
+### Pitfalls
+
+- do not bake ▾/▼ into the summary text — house disclosure chrome is CSS/SVG
+- not a full ARIA menu (no roving tabindex/typeahead) — do not invent role=menu half-contracts
+- distinct from menubar (app chrome strip) and navigation-menu (site nav)
+
+### Keyboard / AT
+
+- details/summary carry expand; chevron is decorative
+- Keyboard: Enter/Space on summary toggles the panel
+
+### Related parts
+
+- `button` — agents/button.md
 
 ## DOM contract
 
 No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+
+## Notes
+
+Trigger label is plain text; the open-panel signal is CSS ::after chevron on the summary (same family as accordion / navigation-menu — not Unicode ▾ in the label). Open intent is native details (single trigger). Honest disclosure, not ARIA menu with roving tabindex.
 
 ## Source files
 
