@@ -18,7 +18,9 @@ import html as _html
 import json
 import re
 import shutil
+import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "src"))
@@ -107,6 +109,45 @@ def _hm_package_version() -> str:
     """Semver from package.json (source of truth for standalone releases)."""
     data = json.loads((_PKG / "package.json").read_text(encoding="utf-8"))
     return str(data["version"])
+
+
+def _git_short_sha() -> str:
+    """Short HEAD SHA for gallery build reporting (best-effort)."""
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return out.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return "unknown"
+
+
+def _build_timestamp() -> str:
+    """UTC build time stamped into the gallery brand strip."""
+    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _hm_brand_html() -> str:
+    """Top-left gallery brand + build report (version / commit / built-at)."""
+    ver = _html.escape(_hm_package_version())
+    sha = _html.escape(_git_short_sha())
+    built = _html.escape(_build_timestamp())
+    return (
+        '<div class="hm-brand">HaTchi-MaXchi'
+        "<small>htmx4-native design system</small>"
+        '<div class="hm-brand-meta" title="Gallery build report">'
+        f"<span>v{ver}</span>"
+        f"<span>{sha}</span>"
+        f"<span>built {built}</span>"
+        "</div></div>"
+    )
 
 
 def _htmx_pinned_version() -> str:
@@ -1884,6 +1925,11 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-brand { font-weight: var(--weight-bold); font-size: 1.1rem; letter-spacing: -.01em; }
 .hm-brand small { display:block; font-weight: var(--weight-regular); color: var(--colour-text-muted);
   font-size: .7rem; margin-top: .25rem; }
+/* Build report under brand — version / commit / built-at (reporting only). */
+.hm-brand-meta { display:flex; flex-direction:column; gap:.05rem; margin-top:.5rem;
+  font-size:.65rem; font-weight: var(--weight-regular); color: var(--colour-text-muted);
+  letter-spacing:0; line-height:1.35; font-variant-numeric: tabular-nums; }
+.hm-brand-meta span { display:block; }
 .hm-nav-group { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em;
   color: var(--colour-text-muted); margin: 1.25rem 0 .375rem; }
 .hm-nav a { display:block; padding: .25rem .5rem; border-radius: var(--radius-sm);
@@ -2155,9 +2201,7 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
     (out_dir / "sprite_sheet.svg").write_text(sheet, encoding="utf-8")
 
     # ── gallery HTML ──
-    nav_parts = [
-        '<div class="hm-brand">HaTchi-MaXchi<small>htmx4-native design system</small></div>'
-    ]
+    nav_parts = [_hm_brand_html()]
     body_parts = []
     for group in GROUPS:
         comps = [c for c in HYPERPARTS if c.group == group]
