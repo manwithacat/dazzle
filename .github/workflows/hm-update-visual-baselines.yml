@@ -32,14 +32,8 @@ jobs:
           -c /dev/null
           --rootdir=.
           -p no:cacheprovider
-      - name: Commit baselines if changed
-        run: |
-          git config user.name "dazzle-hm-baselines[bot]"
-          git config user.email "noreply@github.com"
-          git add packages/hatchi-maxchi/tests/baselines/linux/
-          if git diff --staged --quiet; then
-            echo "No baseline changes"
-            exit 0
-          fi
-          git commit -m "chore(hm): refresh linux visual baselines"
-          git push origin HEAD
+      # Main is PR-protected; bot push is rejected. Upload for local commit/push.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-baselines
+          path: packages/hatchi-maxchi/tests/baselines/linux/
