@@ -2519,9 +2519,12 @@ def select(source: str, id: str) -> str:
             "is shown.",
             '<div class="dz-tabs" data-dz-tabs>'
             '<div class="dz-tabs__list">'
-            '<button class="dz-tabs__tab" aria-current="true" data-dz-tab-target="hm-tab-overview">Overview</button>'
-            '<button class="dz-tabs__tab" data-dz-tab-target="hm-tab-activity">Activity</button>'
-            '<button class="dz-tabs__tab" data-dz-tab-target="hm-tab-settings">Settings</button>'
+            '<button type="button" class="dz-tabs__tab" aria-current="true" '
+            'data-dz-tab-target="hm-tab-overview">Overview</button>'
+            '<button type="button" class="dz-tabs__tab" '
+            'data-dz-tab-target="hm-tab-activity">Activity</button>'
+            '<button type="button" class="dz-tabs__tab" '
+            'data-dz-tab-target="hm-tab-settings">Settings</button>'
             "</div>"
             '<div id="hm-tab-overview" class="dz-tabs__panel">'
             '<p class="hm-demo-muted">Active on the Pro plan, renewing 1 August.</p></div>'
@@ -2532,11 +2535,13 @@ def select(source: str, id: str) -> str:
             'hx-get="/mock/tabs/settings" hx-trigger="intersect once" hx-swap="innerHTML">'
             '<div class="dz-tabs__loading">{svg:loader-circle}</div></div>'
             "</div>",
-            notes="The tabs are <code>&lt;button&gt;</code>s with <code>aria-current</code> — no "
-            "<code>role=tablist</code> without the roving-tabindex/arrow-key contract to back it "
-            "(honest, like the menu). <code>dz-tabs.js</code> reveals the chosen panel scoped to "
-            "its <code>.dz-tabs</code> root; showing a hidden panel triggers its "
-            "<code>intersect once</code> lazy load. The first panel is eager (content inline).",
+            notes="Taxonomy: <strong>tab</strong> (<code>__tab</code> button), "
+            "<strong>tab list</strong> (<code>__list</code>), <strong>panel</strong> "
+            "(<code>__panel</code>). Stem <code>selection-strip-honest</code>: buttons "
+            "because this is in-page state, not navigation; no <code>role=tablist</code> "
+            "without roving-tabindex/arrows. Active indicator is a square bottom border "
+            "(force <code>border-radius: 0</code> — base button radius would curve the "
+            "underline). <code>dz-tabs.js</code> + lazy <code>intersect once</code> panels.",
             tags=("interactive", "htmx"),
             exchanges=(
                 Exchange(
@@ -2552,17 +2557,24 @@ def select(source: str, id: str) -> str:
             contracts=("contracts/tabs.py",),
             guidance=Guidance(
                 seams=(
-                    "tabs are buttons with aria-current; panels toggle visibility scoped to .dz-tabs",
+                    "tab (`__tab` button) + tab list (`__list`) + panel (`__panel`)",
+                    "aria-current marks the selected tab; panels toggle scoped to .dz-tabs",
                     "hidden panels may carry intersect once lazy-load; first panel is eager",
                 ),
                 pitfalls=(
                     "no role=tablist without the roving-tabindex/arrow-key contract — honest buttons",
+                    "do not use <a href> for in-page panel switches (wrong affordance)",
+                    "active underline must stay square — reset border-radius (base button is radius-sm)",
                     "panel reveal is scoped to THIS root so multiple tab sets coexist",
                 ),
                 do_dont=(
                     (
                         "mark the active tab with aria-current and show its panel",
                         "fake tabs with links that reload the whole page for every panel",
+                    ),
+                    (
+                        "square active underline (border-radius: 0 on strip tabs)",
+                        "inherit base button radius so the brand bar curves at the ends",
                     ),
                 ),
                 a11y_keys=(

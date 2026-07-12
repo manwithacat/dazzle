@@ -14,7 +14,7 @@ A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept rol
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
 <div class="tabs" data-tabs>
-  <div class="tabs__list"><button class="tabs__tab" aria-current="true" data-tab-target="hm-tab-overview">Overview</button><button class="tabs__tab" data-tab-target="hm-tab-activity">Activity</button><button class="tabs__tab" data-tab-target="hm-tab-settings">Settings</button></div>
+  <div class="tabs__list"><button type="button" class="tabs__tab" aria-current="true" data-tab-target="hm-tab-overview">Overview</button><button type="button" class="tabs__tab" data-tab-target="hm-tab-activity">Activity</button><button type="button" class="tabs__tab" data-tab-target="hm-tab-settings">Settings</button></div>
   <div id="hm-tab-overview" class="tabs__panel">
     <p class="hm-demo-muted">Active on the Pro plan, renewing 1 August.</p>
   </div>
@@ -55,7 +55,8 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 
 ### Seams
 
-- tabs are buttons with aria-current; panels toggle visibility scoped to .dz-tabs
+- tab (`__tab` button) + tab list (`__list`) + panel (`__panel`)
+- aria-current marks the selected tab; panels toggle scoped to .dz-tabs
 - hidden panels may carry intersect once lazy-load; first panel is eager
 
 ### Do / Don't
@@ -63,10 +64,13 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 | Do | Don't |
 |---|---|
 | mark the active tab with aria-current and show its panel | fake tabs with links that reload the whole page for every panel |
+| square active underline (border-radius: 0 on strip tabs) | inherit base button radius so the brand bar curves at the ends |
 
 ### Pitfalls
 
 - no role=tablist without the roving-tabindex/arrow-key contract — honest buttons
+- do not use <a href> for in-page panel switches (wrong affordance)
+- active underline must stay square — reset border-radius (base button is radius-sm)
 - panel reveal is scoped to THIS root so multiple tab sets coexist
 
 ### Keyboard / AT
@@ -114,7 +118,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-The tabs are <button>s with aria-current — no role=tablist without the roving-tabindex/arrow-key contract to back it (honest, like the menu). dz-tabs.js reveals the chosen panel scoped to its .dz-tabs root; showing a hidden panel triggers its intersect once lazy load. The first panel is eager (content inline).
+Taxonomy: tab (__tab button), tab list (__list), panel (__panel). Stem selection-strip-honest: buttons because this is in-page state, not navigation; no role=tablist without roving-tabindex/arrows. Active indicator is a square bottom border (force border-radius: 0 — base button radius would curve the underline). dz-tabs.js + lazy intersect once panels.
 
 ## Source files
 

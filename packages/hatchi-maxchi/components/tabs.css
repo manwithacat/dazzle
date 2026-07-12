@@ -1,16 +1,29 @@
 /* HYPERPART: tabs */
 /*
  * dz-tabs — a lazy tab strip. An honest link-strip, NOT a half-built ARIA
- * tabs widget: the tabs are <button>s (natively focusable + Tab-navigable)
- * with `aria-current="true"` on the active one — no `role="tablist"` it
- * can't back with roving-tabindex/arrow-key navigation (the candor HM
- * already applies to menu: "disclosure, not ARIA menu").
+ * tabs widget: the tabs are <button type="button">s (natively focusable +
+ * Tab-navigable) with `aria-current="true"` on the active one — no
+ * `role="tablist"` it can't back with roving-tabindex/arrow-key navigation
+ * (the candor HM already applies to menu: "disclosure, not ARIA menu").
  *
- * Each panel lazy-loads its content via htmx (`hx-get` on `intersect once`,
- * so a panel fetches the first time it's revealed); dz-tabs.js toggles the
- * active tab + shows/hides panels, scoped to each `.dz-tabs` root so N tab
- * groups coexist. The first panel is visible (and may carry its content
- * inline / load on `load`); the rest start `hidden`.
+ * Taxonomy (agent-facing):
+ *   - tab (class `__tab`) — the clickable label in the strip (a button)
+ *   - tab list (`__list`) — the strip container
+ *   - panel (`__panel`) — the content region shown for the current tab
+ *
+ * Why <button>, not <a>: in-page state change (which panel is visible), not
+ * navigation to a new URL. Links would imply a destination; buttons are the
+ * platform control for "activate something here". See stem
+ * selection-strip-honest.
+ *
+ * Indicator geometry: the active mark is a 2px bottom border. base.css gives
+ * every button `border-radius: var(--radius-sm)`, which would curve that
+ * underline at the corners — incongruous for a flush tab rail. Force
+ * `border-radius: 0` so the indicator is a straight bar (stem
+ * selection-strip-honest › indicator).
+ *
+ * Each panel lazy-loads via htmx (`hx-get` on `intersect once`); dz-tabs.js
+ * toggles active tab + shows/hides panels, scoped to each `.dz-tabs` root.
  */
 
 .dz-tabs {
@@ -24,9 +37,13 @@
 }
 
 .dz-tabs__tab {
+  /* Reset base button chrome — this is strip chrome, not a filled action */
+  appearance: none;
+  border-radius: 0; /* straight active underline; do not inherit radius-sm */
   padding-inline: var(--space-md);
   padding-block: var(--space-sm);
   font-size: var(--text-sm);
+  font-weight: var(--weight-regular, 400);
   color: var(--colour-text-muted);
   background: transparent;
   border: 0;
@@ -38,6 +55,7 @@
 
 .dz-tabs__tab:hover {
   color: var(--colour-text);
+  background: transparent; /* beat base button:hover surface fill */
 }
 
 .dz-tabs__tab:focus-visible {
@@ -49,6 +67,8 @@
   border-block-end-color: var(--colour-brand);
   color: var(--colour-text);
   font-weight: var(--weight-medium);
+  /* corners stay square — curved indicator is a presentation bug */
+  border-radius: 0;
 }
 
 .dz-tabs__loading {

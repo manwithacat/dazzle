@@ -41,3 +41,10 @@ def test_accordion_and_nav_share_disclosure_mask_family() -> None:
     for css in (ACC_CSS, NAV_CSS):
         assert "m6 9 6 6 6-6" in css or "mask:" in css
         assert "1rem" in css
+
+
+def test_tabs_css_forces_square_radius_for_underline() -> None:
+    """base.css button radius would curve border-block-end — tabs must zero it."""
+    tabs_css = (PKG / "components" / "tabs.css").read_text(encoding="utf-8")
+    assert "border-radius: 0" in tabs_css
+    assert "selection-strip-honest" in tabs_css or "straight" in tabs_css.lower()

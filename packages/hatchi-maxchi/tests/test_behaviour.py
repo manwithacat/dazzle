@@ -159,6 +159,38 @@ def test_navigation_menu_dismiss_outside(page) -> None:  # type: ignore[no-untyp
     assert open_n == 0, f"expected dismiss, still open={open_n}"
 
 
+def test_tabs_active_indicator_is_square(page) -> None:  # type: ignore[no-untyped-def]
+    """Stem selection-strip-honest: active tab underline must not curve with button radius."""
+    goto_part(page, "tabs")
+    metrics = page.evaluate(
+        """() => {
+          const tab = document.querySelector(
+            '.hm-preview .tabs__tab[aria-current], .hm-preview .dz-tabs__tab[aria-current]'
+          );
+          if (!tab) return null;
+          const s = getComputedStyle(tab);
+          const parse = (v) => parseFloat(v) || 0;
+          return {
+            tag: tab.tagName,
+            bl: parse(s.borderBottomLeftRadius),
+            br: parse(s.borderBottomRightRadius),
+            tl: parse(s.borderTopLeftRadius),
+            tr: parse(s.borderTopRightRadius),
+            bbw: parse(s.borderBottomWidth),
+            bbc: s.borderBottomColor,
+          };
+        }"""
+    )
+    assert metrics is not None, "active tab not found"
+    assert metrics["tag"] == "BUTTON"
+    assert metrics["bbw"] >= 1, f"expected bottom indicator, got {metrics}"
+    # Any non-zero radius curves the bottom border (the human-visible curl)
+    assert metrics["bl"] == 0 and metrics["br"] == 0, (
+        f"active tab corners must be square so the underline is straight: {metrics}"
+    )
+    assert metrics["tl"] == 0 and metrics["tr"] == 0, metrics
+
+
 def test_navigation_menu_disclosure_chevron_scale(page) -> None:  # type: ignore[no-untyped-def]
     """Stem affordance-disclosure-chrome: nav trigger chevron is ~1rem, not Unicode ▾."""
     goto_part(page, "navigation-menu")
