@@ -31,7 +31,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 390 | USED |
-| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 371 | USED |
+| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 371 | STALE (lag 25 since @371) |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 386 | USED |
 | `dazzle qa trial` | CLI | trials | 389 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 385 | USED |
@@ -39,17 +39,17 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI | **hm-convergence** | — | OWNED-IDLE |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 378 | USED |
-| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 368 | USED |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 369 | USED |
-| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 370 | USED |
+| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 368 | STALE (lag 28 since @368) |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 369 | STALE (lag 27 since @369) |
+| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 370 | STALE (lag 26 since @370) |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 388 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 380 | USED |
-| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 367 | USED |
-| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 373 | USED |
+| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 367 | STALE (lag 29 since @367) |
+| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 373 | STALE (lag 23 since @373) |
 | `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 382 | USED |
-| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 374 | USED |
-| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 375 | USED |
-| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 372 | USED |
+| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 374 | STALE (lag 22 since @374) |
+| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 375 | STALE (lag 21 since @375) |
+| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 372 | STALE (lag 24 since @372) |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 383 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 391 | USED |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 391 | USED |
@@ -69,8 +69,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 393 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 394 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 395 | USED |
-| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 365 | USED |
-| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 366 | USED |
+| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 365 | STALE (lag 31 since @365) |
+| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 366 | STALE (lag 30 since @366) |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 > **Capability-sweep cycle 190 (2026-07-08).** First sweep to run. Re-derived the
@@ -259,3 +259,16 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > **Governance:** STALE monomania risk shifted to mid-window Tier-1 (rbac/coverage/pulse) after
 > successful core STALE clear + OWNED-IDLE graduation. Prefer clear 7 new STALE next, then
 > remaining OWNED-IDLE. Explore budget: 15/100.
+
+> **Capability-sweep cycle 396 (2026-07-12).** Inventory re-derived: `dazzle --help` /
+> `dazzle commands` surface intact; MCP handler modules 42 under `handlers/`;
+> `.claude/skills` = dsl-authoring, phase-contract, qa-trial, spec-narrate, stems;
+> commands = improve/fuzz/smells/xproject/issues/ship/check/bump/cimonitor/docs-update.
+> **new UNOWNED: none** (quality CLI/MCP already registered; remaining unmapped MCP
+> handlers are platform plumbing — bootstrap/db/status/serializers — not loop gaps).
+> **STALE flips (11):** last-exercised ≤376 crossed the 20-cycle threshold after
+> the post-376 STALE-clear arc finished and the loop rotated process/compliance/policy.
+> Prefer rule-6 drain of highest lag next (test_intelligence@365 → story@367 → …).
+> **OWNED-IDLE unchanged (6):** taste-panel / component-vision / property-vision +
+> standalone /fuzz /smells /xproject. **still USED** recent stamps through policy@395.
+> Self-audit last@392 (lag 4); next capability-sweep due cycle **416**.
