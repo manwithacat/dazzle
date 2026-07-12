@@ -101,36 +101,45 @@ python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write
 
 | Signal | Action |
 |--------|--------|
+| Gallery probe FAILs / OWNED-IDLE `hm gallery interaction probes` | Run strategy **`gallery_probes`** — forceable via `/improve hm-convergence gallery_probes` |
 | Queue depth > 0 | Run strategy **`dual_lock_expand`** (playbook below) — forceable via `/improve hm-convergence dual_lock_expand` |
-| Queue empty + floors green | **dual_lock_visual_smoke** or HOUSEKEEPING; hand back to driver for other lanes |
+| Queue empty + floors green + probes green | **dual_lock_visual_smoke** or HOUSEKEEPING; hand back to driver for other lanes |
 | Floor red | Fix floor; never expand dual-locks on a red reservoir |
 
 ### Explore / promote strategies
 
-1. **shadcn_parity** — close catalogue gaps vs shadcn/ui (placeholder Hyperparts
+1. **gallery_probes** — deterministic **interaction** contracts (Playwright) for
+   gallery Hyperparts. Catches multi-open menubars, nav panels, etc. that dual-lock
+   and static vision miss. Tool:
+   `python scripts/hm_gallery_probes.py --run` (also `--discover`,
+   `--validate-observation`). Playbook: **`improve/strategies/gallery_probes.md`**.
+   Force: `/improve hm-convergence gallery_probes`. Prefer when capability map
+   shows OWNED-IDLE / STALE for `hm gallery interaction probes`, or a human HMG
+   observation needs machine validation.
+2. **shadcn_parity** — close catalogue gaps vs shadcn/ui (placeholder Hyperparts
    first). Inventory: `python packages/hatchi-maxchi/tools/shadcn_parity.py --gaps-only`.
    Map: `packages/hatchi-maxchi/SHADCN_PARITY.md`. Playbook:
    **`improve/strategies/shadcn_parity.md`**. Force:
    `/improve hm-convergence shadcn_parity`. Prefer when `gap` count > 0 and
    the dual-lock queue is not more urgent (operator judgment / force path).
-2. **dual_lock_expand** (default for existing surfaces) — promote the top
+3. **dual_lock_expand** (default for existing surfaces) — promote the top
    dual-lock queue candidate(s) to schema+DOM (or DOM-only). Full cycle recipe:
    **`improve/strategies/dual_lock_expand.md`**.
    Queue tool: `packages/hatchi-maxchi/tools/dual_lock_queue.py`.
    Coverage: `packages/hatchi-maxchi/DUAL_LOCK_COVERAGE.md`.
-3. **dual_lock_visual_smoke** (subscription default after a promote) — run
+4. **dual_lock_visual_smoke** (subscription default after a promote) — run
    `python scripts/hm_visual_smoke.py --dazzle-emit`.
    Output in gitignored `.dazzle/hm-visual-smoke/` (+ `.dazzle/hm-visual-last.json`).
    Structured scores without metered API:
    `python scripts/hm_subscription_vision.py --from-smoke --write-prompt` + host
    Read of PNGs; ingest with `--ingest`. Never a ship gate.
-4. **dead_prune** — 0-reference class prune across **all** of `src/dazzle`
+5. **dead_prune** — 0-reference class prune across **all** of `src/dazzle`
    (incl. top-level `page/*.py`), `tests/`, and JS dynamic construction
    (`'dz-x-' + var`). Grep-by-full-class misses JS-built names.
-5. **legacy_card_chrome_retirement** (optional, careful) — the
+6. **legacy_card_chrome_retirement** (optional, careful) — the
    `_has_card_chrome` Tailwind-shaped branch is defence-in-depth only; delete
    only with a dedicated gate plan and fixture audit (emitters already at 0).
-6. **taste_gate** (optional, credits-permitting) — aesthetic pass vs
+7. **taste_gate** (optional, credits-permitting) — aesthetic pass vs
    `dev_docs/taste/`; billing-blocked by default. Policy: `docs/reference/taste.md`.
 
 Historical sub-strategies `reservoir_audit` / `css_migration` / `markup_drain`

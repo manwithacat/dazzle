@@ -3755,3 +3755,104 @@
     );
   });
 })();
+
+/* ── controllers/menubar.js ── */
+/* HYPERPART: menubar */
+/*
+ * menubar — exclusive-open across native <details> items.
+ *
+ * Contract:
+ *   - root:  `[data-menubar]` (presentation: `.menubar` / `.menubar`)
+ *   - item:  `details.menubar__item` or `details.menubar__item`
+ *   - open:  one item open at a time inside a root
+ *
+ * Native <details> allow multiple open panels; app menubars must not.
+ * On `toggle` (capture), when an item opens, close sibling items in the
+ * same root. No framework dependency — progressive enhancement of the
+ * gallery partial.
+ */
+(function () {
+  "use strict";
+
+  var ITEM = "details.menubar__item, details.menubar__item";
+
+  function menubarRoot(el) {
+    if (!el || !el.closest) return null;
+    return (
+      el.closest("[data-menubar]") ||
+      el.closest(".menubar") ||
+      el.closest(".menubar")
+    );
+  }
+
+  function isItem(el) {
+    return el && el.matches && el.matches(ITEM);
+  }
+
+  document.addEventListener(
+    "toggle",
+    function (evt) {
+      var item = evt.target;
+      if (!isItem(item) || !item.open) return;
+      var root = menubarRoot(item);
+      if (!root) return;
+      var siblings = root.querySelectorAll(ITEM);
+      for (var i = 0; i < siblings.length; i++) {
+        if (siblings[i] !== item && siblings[i].open) {
+          siblings[i].open = false;
+        }
+      }
+    },
+    true,
+  );
+})();
+
+/* ── controllers/navigation-menu.js ── */
+/* HYPERPART: navigation-menu */
+/*
+ * navigation-menu — exclusive-open across native <details> panels.
+ *
+ * Contract:
+ *   - root:  `[data-navigation-menu]` (presentation: `.navigation-menu`)
+ *   - item:  `details` descendants of the root (one panel per item)
+ *   - open:  one panel open at a time inside a root
+ *
+ * Native <details> allow multiple open panels; product nav must not.
+ * On `toggle` (capture), when a panel opens, close sibling details in the
+ * same root. Progressive enhancement of the gallery partial.
+ */
+(function () {
+  "use strict";
+
+  function navRoot(el) {
+    if (!el || !el.closest) return null;
+    return (
+      el.closest("[data-navigation-menu]") ||
+      el.closest(".navigation-menu") ||
+      el.closest(".navigation-menu") ||
+      el.closest("[data-navigation-menu]")
+    );
+  }
+
+  function isNavDetails(el) {
+    if (!el || el.tagName !== "DETAILS") return false;
+    return !!navRoot(el);
+  }
+
+  document.addEventListener(
+    "toggle",
+    function (evt) {
+      var item = evt.target;
+      if (!isNavDetails(item) || !item.open) return;
+      var root = navRoot(item);
+      if (!root) return;
+      var siblings = root.querySelectorAll("details");
+      for (var i = 0; i < siblings.length; i++) {
+        if (siblings[i] !== item && siblings[i].open) {
+          siblings[i].open = false;
+        }
+      }
+    },
+    true,
+  );
+})();

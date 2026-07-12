@@ -18,6 +18,7 @@ pick via rule 7 automatically.
 
 | Capability | How to exercise (no human) | Budget | Stamp as |
 |------------|----------------------------|--------|----------|
+| **`hm gallery interaction probes`** | `python scripts/hm_gallery_probes.py --run` — drain FAIL rows per `improve/strategies/gallery_probes.md`. Prefer this over static vision when dual-lock queue is gallery-only. | 1 | USED on completed run (PASS or FAIL-with-fix) |
 | `dazzle qa taste-panel` | **Do not** call the metered judge by default. Prefer subscription vision: `python scripts/hm_visual_smoke.py --dazzle-emit` then `python scripts/hm_subscription_vision.py --from-smoke --write-prompt` + host-Read scores + ingest. Log that taste-panel *metered* remains optional. | 1–2 | USED if smoke+subscription path completed; else leave OWNED-IDLE with note |
 | `dazzle qa component-vision` / `property-vision` | Same: subscription host-Read path over showcase PNG / property capture. Metered CLI only if `ANTHROPIC_API_KEY` has credit **and** operator forced. | 1–2 | USED on successful advisory score or subscription substitute |
 | `/fuzz` | Follow `.claude/commands/fuzz.md` in-process: scout apps → static boot-stderr signatures (or workflow if available) → dedup `gh` → file HIGH/MEDIUM only. Side-effect (issues) is allowed. | 1 | USED@N on owning standalone (or framework-ux if stamped under improve) |

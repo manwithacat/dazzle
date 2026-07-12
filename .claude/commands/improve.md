@@ -141,7 +141,7 @@ Read `improve/lanes/{name}.md` and follow its playbook end-to-end. The lane:
 - Returns an outcome: `{status: PASS|FAIL|BLOCKED|EXPLORED|HOUSEKEEPING, summary: str, signals_to_emit: list, budget_consumed: int}`
 - Does **not** touch the lock, the preflight, the log, or other lanes' state
 
-If the lane requires sub-strategy dispatch (framework-ux explore phase has 7: `missing_contracts`, `edge_cases`, `contract_audit`, `framework_gap_analysis`, `finding_investigation`, `api_surface_audit`, `quality_intelligence_sweep`; **hm-convergence** strategies: `shadcn_parity` — catalogue gaps via `python packages/hatchi-maxchi/tools/shadcn_parity.py --gaps-only` / `improve/strategies/shadcn_parity.md`; `dual_lock_expand` — dual-lock queue via `python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5` / `improve/strategies/dual_lock_expand.md`), the lane reads from `improve/strategies/*.md` and picks one per its own rules.
+If the lane requires sub-strategy dispatch (framework-ux explore phase has 7: `missing_contracts`, `edge_cases`, `contract_audit`, `framework_gap_analysis`, `finding_investigation`, `api_surface_audit`, `quality_intelligence_sweep`; **hm-convergence** strategies: `shadcn_parity` — catalogue gaps via `python packages/hatchi-maxchi/tools/shadcn_parity.py --gaps-only` / `improve/strategies/shadcn_parity.md`; `dual_lock_expand` — dual-lock queue via `python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5` / `improve/strategies/dual_lock_expand.md`; **`gallery_probes`** — interaction contracts via `python scripts/hm_gallery_probes.py --run` / `improve/strategies/gallery_probes.md`), the lane reads from `improve/strategies/*.md` and picks one per its own rules.
 
 ### Step 3: Apply outcome
 

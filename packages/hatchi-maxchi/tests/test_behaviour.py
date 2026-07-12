@@ -71,6 +71,39 @@ def test_palette_opens_via_button_and_cmd_k(page) -> None:  # type: ignore[no-un
     assert page.evaluate(f"document.querySelector('{PALETTE}').open")
 
 
+def test_menubar_exclusive_open(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery probe menubar.exclusive_open — File then Edit leaves only Edit open."""
+    goto_part(page, "menubar")
+    item = "details.dz-menubar__item, details.menubar__item"
+    trigger = "summary.dz-menubar__trigger, summary.menubar__trigger"
+    page.locator(trigger).filter(has_text="File").first.click()
+    page.wait_for_timeout(80)
+    page.locator(trigger).filter(has_text="Edit").first.click()
+    page.wait_for_timeout(80)
+    open_n = page.locator(f"{item}[open]").count()
+    labels = page.locator(f"{item}[open] summary").all_text_contents()
+    labels = [" ".join(t.split()) for t in labels]
+    assert open_n == 1, f"expected exclusive open, got {open_n}: {labels}"
+    assert labels == ["Edit"], labels
+
+
+def test_navigation_menu_exclusive_open(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery probe navigation_menu.exclusive_open — one mega panel at a time."""
+    goto_part(page, "navigation-menu")
+    root = "[data-dz-navigation-menu], .dz-navigation-menu, .navigation-menu"
+    item = f"{root} details"
+    trigger = "summary.dz-navigation-menu__trigger, summary.navigation-menu__trigger"
+    page.locator(trigger).filter(has_text="Product").first.click()
+    page.wait_for_timeout(80)
+    page.locator(trigger).filter(has_text="Resources").first.click()
+    page.wait_for_timeout(80)
+    open_n = page.locator(f"{item}[open]").count()
+    labels = page.locator(f"{item}[open] summary").all_text_contents()
+    labels = [" ".join(t.split()) for t in labels]
+    assert open_n == 1, f"expected exclusive open, got {open_n}: {labels}"
+    assert any("Resources" in t for t in labels), labels
+
+
 def test_palette_esc_closes_even_with_query_text(page) -> None:  # type: ignore[no-untyped-def]
     goto_part(page, "command")
     _open_palette(page)

@@ -2223,11 +2223,36 @@ def select(source: str, id: str) -> str:
             '<button type="button" role="menuitem">Zoom in</button>'
             '<button type="button" role="menuitem">Zoom out</button>'
             "</div></details></div>",
-            notes="PLACEHOLDER — shadcn parity (HMC-038). Native "
-            "<code>details</code> for open state (no Alpine). Single-open "
-            "across items may need a tiny controller later; compose with "
-            "menu Hyperpart for denser item lists.",
+            notes="shadcn parity (HMC-038). Native <code>details</code> for "
+            "open state; <code>controllers/dz-menubar.js</code> enforces "
+            "exclusive open across items (gallery probe "
+            "<code>menubar.exclusive_open</code>). Compose with menu "
+            "Hyperpart for denser item lists.",
             tags=("navigation", "interactive"),
+            controller="controllers/dz-menubar.js",
+            contracts=("contracts/menubar.py",),
+            guidance=Guidance(
+                seams=(
+                    "`[data-dz-menubar]` / `.dz-menubar` root scopes exclusive open",
+                    "`details.dz-menubar__item` + `summary.dz-menubar__trigger` for panels",
+                ),
+                pitfalls=(
+                    "Native details allow multi-open — never ship menubar without "
+                    "dz-menubar.js exclusive-open",
+                    "Do not nest menubars; one root per chrome strip",
+                ),
+                do_dont=(
+                    (
+                        "Let the controller close siblings on toggle",
+                        "Hand-roll per-item open flags in Alpine/React",
+                    ),
+                ),
+                a11y_keys=(
+                    "role=menubar / menuitem on panel actions",
+                    "Keyboard: platform details toggle via Enter/Space on summary",
+                ),
+                composes_with=("menu",),
+            ),
         ),
         Hyperpart(
             "bubble",
@@ -2360,10 +2385,35 @@ def select(source: str, id: str) -> str:
             '<li class="dz-navigation-menu__item">'
             '<a class="dz-navigation-menu__link" href="#">Pricing</a></li>'
             "</ul></nav>",
-            notes="PLACEHOLDER — shadcn parity (HMC-039). Distinct from "
-            "menubar (app chrome) and app-shell (sidebar). Mega layout via "
-            "<code>data-dz-layout=mega</code>. Single-open across items deferred.",
+            notes="shadcn parity (HMC-039). Distinct from menubar (app chrome) "
+            "and app-shell (sidebar). Mega layout via "
+            "<code>data-dz-layout=mega</code>. Exclusive open across panels: "
+            "<code>controllers/dz-navigation-menu.js</code> (gallery probe "
+            "<code>navigation_menu.exclusive_open</code>).",
             tags=("navigation", "interactive"),
+            controller="controllers/dz-navigation-menu.js",
+            contracts=("contracts/navigation_menu.py",),
+            guidance=Guidance(
+                seams=(
+                    "`[data-dz-navigation-menu]` / `.dz-navigation-menu` scopes exclusive open",
+                    "`details` + `summary.dz-navigation-menu__trigger` for panels",
+                ),
+                pitfalls=(
+                    "Native details allow multi-open — ship dz-navigation-menu.js",
+                    "Do not confuse with menubar (app File/Edit) or app-shell sidebar",
+                ),
+                do_dont=(
+                    (
+                        "Let the controller close sibling details on toggle",
+                        "Leave multi-open mega panels as native multi-details",
+                    ),
+                ),
+                a11y_keys=(
+                    "aria-label on root nav",
+                    "Keyboard: platform details toggle via Enter/Space on summary",
+                ),
+                composes_with=("menubar", "app-shell"),
+            ),
         ),
         Hyperpart(
             "marker",

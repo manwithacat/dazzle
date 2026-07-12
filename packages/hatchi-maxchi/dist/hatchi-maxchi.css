@@ -5356,11 +5356,11 @@ button.item:hover {
 /* HYPERPART: menubar */
 /*
  * Horizontal app menubar — File / Edit / View style. Each item is a
- * details/summary (or button) so open state is DOM-native.
+ * details/summary so open state is DOM-native.
  *
- * PLACEHOLDER — shadcn parity (HMC-038). No nested popover controller yet;
- * open one panel via native details. Compose with menu Hyperpart for
- * richer item lists later.
+ * Exclusive open across items: controllers/menubar.js (toggle capture).
+ * Gated by gallery probe menubar.exclusive_open
+ * (packages/hatchi-maxchi/tools/gallery_probes.py).
  */
 
 .menubar {
@@ -5630,6 +5630,9 @@ button.item:hover {
  * Top navigation mega-menu — horizontal site/product nav (distinct from
  * menubar File/Edit/View and from app-shell's sidebar). Each trigger is a
  * native details/summary; open panel is a multi-column mega list.
+ * Exclusive open across panels: controllers/navigation-menu.js.
+ * Gated by gallery probe navigation_menu.exclusive_open
+ * (packages/hatchi-maxchi/tools/gallery_probes.py).
  *
  * PLACEHOLDER — shadcn parity (HMC-039). No JS single-open controller yet;
  * browser allows multiple details open. Compose with link lists / item.

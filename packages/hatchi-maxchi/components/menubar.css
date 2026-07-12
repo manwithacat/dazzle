@@ -1,11 +1,11 @@
 /* HYPERPART: menubar */
 /*
  * Horizontal app menubar — File / Edit / View style. Each item is a
- * details/summary (or button) so open state is DOM-native.
+ * details/summary so open state is DOM-native.
  *
- * PLACEHOLDER — shadcn parity (HMC-038). No nested popover controller yet;
- * open one panel via native details. Compose with menu Hyperpart for
- * richer item lists later.
+ * Exclusive open across items: controllers/dz-menubar.js (toggle capture).
+ * Gated by gallery probe menubar.exclusive_open
+ * (packages/hatchi-maxchi/tools/gallery_probes.py).
  */
 
 .dz-menubar {

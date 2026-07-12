@@ -81,6 +81,10 @@ _No composition edges declared._
 
 - `saas-shell` — blueprint
 
+**Related from (`composes_with`)**
+
+- `navigation-menu` — composes_with
+
 ### `aspect-ratio`
 
 **Layer:** `L1`
@@ -477,11 +481,17 @@ _No composition edges declared._
 
 - `toolbar` — composes
 
+**Related from (`composes_with`)**
+
+- `menubar` — composes_with
+
 ### `menubar`
 
 **Layer:** `L1`
 
-_No composition edges declared._
+**Related from (`composes_with`)**
+
+- `navigation-menu` — composes_with
 
 ### `message`
 
