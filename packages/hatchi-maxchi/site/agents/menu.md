@@ -34,7 +34,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - `details.dz-menu` + `summary` (usually `.dz-button`) + `.dz-menu__panel`
 - disclosure chevron is presentation on summary::after — not label text
-- light-dismiss: Esc + pointerdown outside (dz-details-light-dismiss.js)
+- data-dz-dismiss / data-dz-dismiss-ms — spatial vs temporal abandon
 - pick-a-surface: local actions from one button → menu (not menubar / navigation-menu)
 
 ### Do / Don't
@@ -43,7 +43,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 |---|---|
 | label text only + CSS chevron that rotates when [open] | Actions ▾ as a single text string for the expand signal |
 | one Actions control with an item list on a host (toolbar/row) | a horizontal multi-trigger strip (that is menubar or navigation-menu) |
-| Esc + outside abandon for transient overlays (touch: outside) | require re-tapping the summary as the only way to cancel |
+| spatial Esc+outside by default; data-dz-dismiss-ms only when intentional | require re-tapping the summary as the only way to cancel |
 
 ### Pitfalls
 
@@ -51,11 +51,12 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 - not a full ARIA menu (no roving tabindex/typeahead) — do not invent role=menu half-contracts
 - do not use menu for top product IA or File/Edit strips — wrong job
 - native details do not Esc/outside-dismiss — ship the light-dismiss controller
+- do not default-timeout action menus — temporal is opt-in for glance UIs only
 
 ### Keyboard / AT
 
 - details/summary carry expand; chevron is decorative
-- Keyboard: Enter/Space opens; Escape light-dismisses
+- Keyboard: Enter/Space opens; Escape light-dismisses (unless data-dz-dismiss=none)
 - Touch: tap outside to abandon (no Esc key)
 
 ### Related parts
@@ -79,7 +80,11 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
 
 ```python
-"""HYPERPART: menu — details disclosure root (light-dismiss enhanced)."""
+"""HYPERPART: menu — details disclosure root (light-dismiss enhanced).
+
+Optional instance attrs (controller reads; not required by DomContract):
+  data-dz-dismiss, data-dz-dismiss-ms — see stems/overlay-light-dismiss.md
+"""
 
 from contracts._kit import DomContract, Node
 
@@ -94,7 +99,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-**Pick:** local actions from one control — not app File/Edit chrome (menubar) and not product/site go-to nav (navigation-menu). See docs/agent/pick-a-surface.md › Menus / panels / chrome strips. Trigger label is plain text; open-panel signal is CSS ::after chevron. Light-dismiss (stem overlay-light-dismiss): Esc + outside pointer via dz-details-light-dismiss.js — native details alone do not. Honest disclosure, not ARIA menu with roving tabindex.
+**Pick:** local actions from one control — not app File/Edit chrome (menubar) and not product/site go-to nav (navigation-menu). See docs/agent/pick-a-surface.md › Menus / panels / chrome strips. Trigger label is plain text; open-panel signal is CSS ::after chevron. Light-dismiss (stem overlay-light-dismiss): default spatial (Esc + outside); optional temporal via data-dz-dismiss-ms. Configure data-dz-dismiss / data-dz-dismiss-ms on the details. Controller dz-details-light-dismiss.js.
 
 ## Source files
 

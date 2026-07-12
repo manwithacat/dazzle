@@ -30,24 +30,27 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 ### Seams
 
 - `details.dz-popover` + summary + `.dz-popover__panel`
-- light-dismiss shared with menu (dz-details-light-dismiss.js)
+- data-dz-dismiss / data-dz-dismiss-ms — spatial vs temporal (stem overlay-light-dismiss)
+- shared controller with menu (dz-details-light-dismiss.js)
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
-| Esc + outside to abandon; summary to open | leave the panel open until the user re-taps the trigger only |
+| spatial Esc+outside by default; opt-in data-dz-dismiss-ms for glance only | auto-close content the user is still editing |
+| data-dz-dismiss=none when the host owns dismiss | assume a global timer on every popover instance |
 
 ### Pitfalls
 
 - not a modal dialog — no focus trap; use dialog when you need modal
+- not a tooltip — do not put a default timeout on form/filter popovers
 - native details do not Esc/outside-dismiss without the controller
 - do not light-dismiss accordion/tree (in-flow structure)
 
 ### Keyboard / AT
 
-- Keyboard: Enter/Space on summary; Escape dismisses
-- Touch: pointer outside dismisses
+- Keyboard: Enter/Space on summary; Escape dismisses (if esc enabled)
+- Touch: pointer outside dismisses (if outside enabled)
 
 ### Related parts
 
@@ -70,7 +73,11 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
 
 ```python
-"""HYPERPART: popover — details free-content panel (light-dismiss enhanced)."""
+"""HYPERPART: popover — details free-content panel (light-dismiss enhanced).
+
+Optional instance attrs (controller reads; not required by DomContract):
+  data-dz-dismiss, data-dz-dismiss-ms — see stems/overlay-light-dismiss.md
+"""
 
 from contracts._kit import DomContract, Node
 
@@ -85,7 +92,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-**Pick:** free content under a trigger — not an action list (menu). Light-dismiss (stem overlay-light-dismiss): Esc + outside via dz-details-light-dismiss.js. Not a focus-trapped dialog.
+**Pick:** free content under a trigger — not an action list (menu). Not a tooltip (no auto-timeout by default). Light-dismiss: spatial Esc+outside; optional data-dz-dismiss-ms for glance previews only. data-dz-dismiss=none for native toggle only. Controller dz-details-light-dismiss.js.
 
 ## Source files
 

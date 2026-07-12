@@ -978,9 +978,11 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<code>docs/agent/pick-a-surface.md</code> › Menus / panels / chrome strips. "
             "Trigger label is plain text; open-panel signal is CSS "
             "<code>::after</code> chevron. Light-dismiss (stem "
-            "<code>overlay-light-dismiss</code>): Esc + outside pointer via "
-            "<code>dz-details-light-dismiss.js</code> — native details alone do not. "
-            "Honest disclosure, not ARIA menu with roving tabindex.",
+            "<code>overlay-light-dismiss</code>): default <strong>spatial</strong> "
+            "(Esc + outside); optional <strong>temporal</strong> via "
+            "<code>data-dz-dismiss-ms</code>. Configure "
+            "<code>data-dz-dismiss</code> / <code>data-dz-dismiss-ms</code> on the "
+            "<code>details</code>. Controller <code>dz-details-light-dismiss.js</code>.",
             tags=("interactive",),
             controller="controllers/dz-details-light-dismiss.js",
             contracts=("contracts/menu.py",),
@@ -988,7 +990,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                 seams=(
                     "`details.dz-menu` + `summary` (usually `.dz-button`) + `.dz-menu__panel`",
                     "disclosure chevron is presentation on summary::after — not label text",
-                    "light-dismiss: Esc + pointerdown outside (dz-details-light-dismiss.js)",
+                    "data-dz-dismiss / data-dz-dismiss-ms — spatial vs temporal abandon",
                     "pick-a-surface: local actions from one button → menu (not menubar / navigation-menu)",
                 ),
                 pitfalls=(
@@ -996,6 +998,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "not a full ARIA menu (no roving tabindex/typeahead) — do not invent role=menu half-contracts",
                     "do not use menu for top product IA or File/Edit strips — wrong job",
                     "native details do not Esc/outside-dismiss — ship the light-dismiss controller",
+                    "do not default-timeout action menus — temporal is opt-in for glance UIs only",
                 ),
                 do_dont=(
                     (
@@ -1007,13 +1010,13 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                         "a horizontal multi-trigger strip (that is menubar or navigation-menu)",
                     ),
                     (
-                        "Esc + outside abandon for transient overlays (touch: outside)",
+                        "spatial Esc+outside by default; data-dz-dismiss-ms only when intentional",
                         "require re-tapping the summary as the only way to cancel",
                     ),
                 ),
                 a11y_keys=(
                     "details/summary carry expand; chevron is decorative",
-                    "Keyboard: Enter/Space opens; Escape light-dismisses",
+                    "Keyboard: Enter/Space opens; Escape light-dismisses (unless data-dz-dismiss=none)",
                     "Touch: tap outside to abandon (no Esc key)",
                 ),
                 composes_with=("button",),
@@ -1030,30 +1033,39 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<div class="dz-popover__panel"><div class="hm-demo-title">Dimensions</div>'
             '<p class="hm-demo-muted">Filters, previews, quick forms.</p></div></details>',
             notes="**Pick:** free content under a trigger — not an action list (menu). "
-            "Light-dismiss (stem <code>overlay-light-dismiss</code>): Esc + outside "
-            "via <code>dz-details-light-dismiss.js</code>. Not a focus-trapped dialog.",
+            "Not a tooltip (no auto-timeout by default). Light-dismiss: "
+            "<strong>spatial</strong> Esc+outside; optional "
+            "<code>data-dz-dismiss-ms</code> for glance previews only. "
+            "<code>data-dz-dismiss=none</code> for native toggle only. "
+            "Controller <code>dz-details-light-dismiss.js</code>.",
             tags=("interactive",),
             controller="controllers/dz-details-light-dismiss.js",
             contracts=("contracts/popover.py",),
             guidance=Guidance(
                 seams=(
                     "`details.dz-popover` + summary + `.dz-popover__panel`",
-                    "light-dismiss shared with menu (dz-details-light-dismiss.js)",
+                    "data-dz-dismiss / data-dz-dismiss-ms — spatial vs temporal (stem overlay-light-dismiss)",
+                    "shared controller with menu (dz-details-light-dismiss.js)",
                 ),
                 pitfalls=(
                     "not a modal dialog — no focus trap; use dialog when you need modal",
+                    "not a tooltip — do not put a default timeout on form/filter popovers",
                     "native details do not Esc/outside-dismiss without the controller",
                     "do not light-dismiss accordion/tree (in-flow structure)",
                 ),
                 do_dont=(
                     (
-                        "Esc + outside to abandon; summary to open",
-                        "leave the panel open until the user re-taps the trigger only",
+                        "spatial Esc+outside by default; opt-in data-dz-dismiss-ms for glance only",
+                        "auto-close content the user is still editing",
+                    ),
+                    (
+                        "data-dz-dismiss=none when the host owns dismiss",
+                        "assume a global timer on every popover instance",
                     ),
                 ),
                 a11y_keys=(
-                    "Keyboard: Enter/Space on summary; Escape dismisses",
-                    "Touch: pointer outside dismisses",
+                    "Keyboard: Enter/Space on summary; Escape dismisses (if esc enabled)",
+                    "Touch: pointer outside dismisses (if outside enabled)",
                 ),
                 composes_with=("button",),
             ),

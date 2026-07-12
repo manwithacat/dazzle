@@ -69,11 +69,13 @@ Need left rail app IA?                      → app-shell
 item lists with menu patterns; navigation-menu sits with app-shell as peer chrome
 (top vs side). Do **not** collapse into one part with `data-mode=bar|nav|dropdown`.
 
-**Dismiss model** (stem `overlay-light-dismiss`): transient overlays
-(`menu`, `popover`, `menubar`, `navigation-menu` panels) light-dismiss via
-**Escape** and **pointer outside**. In-flow structure (`accordion`, `tree`) does
-not — toggle the trigger only. Touch has no Esc: outside pointer is the abandon
-path. Disclosure chevron ≠ dismiss path.
+**Dismiss model** (stem `overlay-light-dismiss`): two axes — **spatial**
+(Esc / outside) vs **temporal** (opt-in `data-dz-dismiss-ms`). Transient overlays
+(`menu`, `popover`, menubar/nav panels) default to **spatial only**. Timeout is
+per-instance for glance previews, not for forms. Configure:
+`data-dz-dismiss="esc outside|none"` + optional `data-dz-dismiss-ms`. In-flow
+structure (`accordion`, `tree`): no light-dismiss. Touch: outside, not Esc.
+Disclosure chevron ≠ dismiss path.
 
 Agent packs: `site/agents/menu.md`, `menubar.md`, `navigation-menu.md`.
 

@@ -6,45 +6,84 @@
 **Light-dismiss** teaches “I can abandon without committing.”
 
 They are not substitutes. Native `<details>` only implements *toggle the
-summary* — not Esc, not outside pointer. When a surface is a **transient
-overlay over the user’s task**, progressive enhancement should add:
+summary*. Transient overlays add progressive enhancement.
 
-| Path | Keyboard | Touch / pointer |
-|------|----------|-----------------|
-| Abandon | **Escape** closes open panel(s) | **pointerdown outside** the open root |
-| Commit | Activate an item / link | Same |
-| Open | Summary / trigger | Tap trigger |
+Abandon has two axes (same vocabulary as shortcut secondary):
 
-When a surface is **in-flow document structure** (accordion FAQ, tree), do
-**not** light-dismiss: expanding is reading, not a popover layer.
+| Axis | Meaning | Typical paths |
+|------|---------|----------------|
+| **Spatial** | Leave the layer without re-hunting the trigger | **Escape**, **pointer outside** |
+| **Temporal** | System ends the layer without another deliberate close | **timeout** (ms), hover-end (tooltip/hover-card — CSS, not this controller) |
+
+**Default for click overlays (`menu`, `popover`):** spatial only (`esc` +
+`outside`). **Temporal (timeout) is opt-in per instance** — never the default
+for content that can host filters/forms.
+
+## Per-instance configuration (lightweight)
+
+On the openable root (`details.dz-menu`, `details.dz-popover`, …):
+
+| Attribute | Role |
+|-----------|------|
+| `data-dz-dismiss` | Space-separated tokens: `esc`, `outside`, `timeout`, or `none` |
+| `data-dz-dismiss-ms` | Temporal duration in ms; if set (&gt;0), enables timeout |
+
+Examples:
+
+```html
+<!-- default (class-based): esc + outside, no timer -->
+<details class="dz-popover">…</details>
+
+<!-- explicit spatial -->
+<details class="dz-popover" data-dz-dismiss="esc outside">…</details>
+
+<!-- spatial + temporal (e.g. short preview) -->
+<details class="dz-popover" data-dz-dismiss="esc outside" data-dz-dismiss-ms="4000">…</details>
+
+<!-- timeout alone still keeps default spatial unless none -->
+<details class="dz-popover" data-dz-dismiss-ms="3000">…</details>
+
+<!-- native toggle only -->
+<details class="dz-popover" data-dz-dismiss="none">…</details>
+```
+
+Controller: `controllers/dz-details-light-dismiss.js`
+- **No timer when closed.** At most one `setTimeout` per open root.
+- Activity **inside** an open panel **resets** the timeout (user is engaged).
+- Menubar / navigation-menu keep their own exclusive controllers (same spatial
+  idea, multi-peer policy).
+- Accordion / tree: do **not** opt in (in-flow structure).
 
 ## Taxonomy
 
-| Class | Examples | Light-dismiss? | Why |
-|-------|----------|----------------|-----|
-| Modal / focus trap | `dialog`, `command` | **Yes** (+ explicit close for touch) | Focus captured; Esc is abort |
-| Exclusive chrome strip | `menubar`, `navigation-menu` | **Yes** | OS-menu / nav mega genre; multi-peer open is wrong |
-| Single overlay disclosure | `menu`, `popover` | **Yes** | Ephemeral panel over work |
-| In-flow structure | `accordion`, `tree` | **No** | Structure, not a layer |
+| Class | Examples | Spatial default | Temporal default |
+|-------|----------|-----------------|------------------|
+| Modal / trap | `dialog`, `command` | Esc + backdrop + close control | none |
+| Exclusive strip | `menubar`, `navigation-menu` | Esc + outside | none |
+| Single overlay | `menu`, `popover` | Esc + outside | **none** (opt-in ms) |
+| In-flow structure | `accordion`, `tree` | none | none |
+| Glance / hover | `tooltip`, `hover-card` | leave region | hover-end (CSS) |
 
 ## Reconstruct
 
-1. Is this a **layer over the task** or **document structure**?
-2. Layer → implement Esc + outside (and close control if modal/touch-critical).
-3. Structure → toggle trigger only; Esc closing a FAQ is surprising.
-4. Touch never has Esc → outside pointer (or visible close) is mandatory for layers.
-5. Disclosure chevron still required for discoverability of *open* — dismiss is separate.
+1. Layer over the task, or document structure?
+2. Layer → spatial light-dismiss (`esc` / `outside`).
+3. Glance-only preview → optional `data-dz-dismiss-ms`; never default for forms.
+4. Structure → no light-dismiss.
+5. Touch has no Esc → `outside` is the spatial abandon path.
+6. Disclosure chevron remains the **open** signal — dismiss is separate.
 
 ## Expressions
 
-- Controllers: `dz-menubar.js`, `dz-navigation-menu.js`, `dz-details-light-dismiss.js`
-  (menu + popover), `dz-command.js` / native `<dialog>`
-- Guidance on those Hyperparts; pick-a-surface note for menu family
-- Pins: behaviour tests for Esc + outside on menu / popover / menubar
+- `controllers/dz-details-light-dismiss.js` (menu + popover config)
+- `dz-menubar.js` / `dz-navigation-menu.js` (strip exclusive + spatial)
+- Guidance on menu / popover; pick-a-surface dismiss note
+- Pins: Esc/outside defaults; timeout + `none` overrides
 
 ## Not this
 
-- Assuming native `<details>` light-dismisses (it does not).
-- Esc-only policy (fails touch).
+- Assuming native `<details>` light-dismisses.
+- Global auto-timeout on all popovers.
+- Polling / interval-based dismiss (use one timeout on open only).
 - Light-dismiss on accordion/tree “for consistency.”
-- Replacing disclosure chrome with “users will find Esc.”
+- Esc-only without outside (fails touch).

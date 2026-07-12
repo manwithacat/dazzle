@@ -192,6 +192,50 @@ def test_popover_light_dismiss_esc_and_outside(page) -> None:  # type: ignore[no
     assert page.locator(".hm-preview details[open]").count() == 0
 
 
+def test_popover_dismiss_none_opts_out(page) -> None:  # type: ignore[no-untyped-def]
+    """data-dz-dismiss=none → native toggle only (no Esc / outside).
+
+    Gallery/CDN strip dz- from the controller; set both attr forms so the
+    test matches dual-lock source and unprefixed site JS.
+    """
+    goto_part(page, "popover")
+    page.evaluate(
+        """() => {
+          const d = document.querySelector('.hm-preview details');
+          d.setAttribute('data-dz-dismiss', 'none');
+          d.setAttribute('data-dismiss', 'none');
+        }"""
+    )
+    page.locator(".hm-preview summary").first.click()
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 1
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 1
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 1
+
+
+def test_popover_temporal_timeout(page) -> None:  # type: ignore[no-untyped-def]
+    """data-dz-dismiss-ms arms one timer; closes without polling."""
+    goto_part(page, "popover")
+    page.evaluate(
+        """() => {
+          const d = document.querySelector('.hm-preview details');
+          d.setAttribute('data-dz-dismiss', 'esc outside');
+          d.setAttribute('data-dismiss', 'esc outside');
+          d.setAttribute('data-dz-dismiss-ms', '150');
+          d.setAttribute('data-dismiss-ms', '150');
+        }"""
+    )
+    page.locator(".hm-preview summary").first.click()
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 1
+    page.wait_for_timeout(350)
+    assert page.locator(".hm-preview details[open]").count() == 0
+
+
 def test_command_opener_kbd_is_spatially_secondary(page) -> None:  # type: ignore[no-untyped-def]
     """Stem shortcut-hint-chrome: opener label and ⌘K chip must not be flush (0 gap)."""
     goto_part(page, "command")
