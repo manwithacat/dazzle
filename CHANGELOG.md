@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **radar + time-series → schema+DOM dual-lock** — HM `contracts/radar.py`
+  (`Radar`/`RadarAxis`, root `data-dz-radar`) and `contracts/time_series.py`
+  (`TimeSeries`/`TimeSeriesPoint`/`TimeSeriesLayer`, root `data-dz-time-series`)
+  with ingest models/renders + sole-emitters. Line/area wrapper classes stay
+  view-specific; SVG + multi-series legend HTML stay host-trusted.
 - **box-plot + progress → schema+DOM dual-lock** — HM `contracts/box_plot.py`
   (`BoxPlot`/`BoxPlotGroup`, root `data-dz-box-plot`, trusted `svg_html`) and
   `contracts/progress.py` (`Progress`/`ProgressStage`, root

@@ -75,6 +75,8 @@
 - [Funnel](https://manwithacat.github.io/hatchi-maxchi/agents/funnel.md): Stage-by-stage narrowing — each bar's width is the stage's share, with a total summary line.
 - [Bar chart](https://manwithacat.github.io/hatchi-maxchi/agents/bar-chart.md): Label / track / value rows — the workhorse categorical chart, server-computed and scope-safe.
 - [Chart legend](https://manwithacat.github.io/hatchi-maxchi/agents/chart-legend.md): The shared tail of every multi-series chart: swatch + series-name chips and a sample/series summary line.
+- [Radar](https://manwithacat.github.io/hatchi-maxchi/agents/radar.md): Polar multi-axis profile — spokes share a scale; the polygon is server-rendered SVG.
+- [Time series](https://manwithacat.github.io/hatchi-maxchi/agents/time-series.md): Line or area sequential chart — one series of (label, value) points, or multi-series overlays with a shared legend.
 - [Heatmap](https://manwithacat.github.io/hatchi-maxchi/agents/heatmap.md): A two-dimensional grid of toned cells — rows × buckets, thresholds driving good/warn/bad tones, never colour alone (the value is IN the cell).
 - [Bullet chart](https://manwithacat.github.io/hatchi-maxchi/agents/bullet.md): Actual vs target on qualitative bands — the KPI-with-context bar. All geometry is server-computed inline percentages.
 - [Pivot table](https://manwithacat.github.io/hatchi-maxchi/agents/pivot.md): Two group-bys crossed into a matrix — row labels × column buckets, empty intersections rendered as explicit nulls.

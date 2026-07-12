@@ -33,8 +33,13 @@ from dazzle.render.fragment.ingest import HeatmapRow as HeatmapRowSeam
 from dazzle.render.fragment.ingest import Histogram as HistogramSeam
 from dazzle.render.fragment.ingest import HistogramBin as HistogramBinSeam
 from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
+from dazzle.render.fragment.ingest import Radar as RadarSeam
+from dazzle.render.fragment.ingest import RadarAxis as RadarAxisSeam
 from dazzle.render.fragment.ingest import Sparkline as SparklineSeam
 from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
+from dazzle.render.fragment.ingest import TimeSeries as TimeSeriesSeam
+from dazzle.render.fragment.ingest import TimeSeriesLayer as TimeSeriesLayerSeam
+from dazzle.render.fragment.ingest import TimeSeriesPoint as TimeSeriesPointSeam
 from dazzle.render.fragment.ingest import (
     render_bar_chart,
     render_box_plot,
@@ -43,7 +48,9 @@ from dazzle.render.fragment.ingest import (
     render_heatmap,
     render_histogram,
     render_kanban_card,
+    render_radar,
     render_sparkline,
+    render_time_series,
     render_timeline_event,
 )
 from dazzle.render.fragment.primitives import (
@@ -257,37 +264,27 @@ class _RenderChartsMixin:
         )
 
     def _emit_time_series(self, t: TimeSeries, ctx: RenderContext) -> str:
-        """Render line/area/sparkline as inline SVG plus optional `<dl>`
-        annotation lists for reference lines and reference bands.
+        """Render line/area via HM dual-lock TimeSeries seam.
 
-        Phase 4B.1.c replaced the semantic `<ol>` of points with an
-        inline SVG produced by `dazzle.render.svg.time_series_svg` —
-        byte-equivalent to the legacy `line_chart.html` template. The
-        `<dl class="dz-timeseries__references">` block remains as the
-        programmatic-data layer for screen-readers and tests; the SVG
-        already carries the same data via `<title>` tooltips and is
-        the visual layer.
+        SVG geometry stays in ``dazzle.render.svg.time_series_svg``; the
+        seam carries trusted SVG (+ multi-series legend HTML).
         """
         from dazzle.render.svg import _series_color, time_series_svg
 
-        # Phase 4B.4 wave 3: aligned with legacy template — strip the
-        # `<section class="dz-timeseries">` chrome + `<h4>` + Phase 4B-
-        # only `<dl>` references block. Wrapper class is per-view
-        # (`dz-line-chart-region` for line, `dz-area-chart-region` for
-        # area). Summary line emits `{count} buckets · peak {max_val}`.
-        wrapper_class = "dz-area-chart-region" if t.view == "area" else "dz-line-chart-region"
+        # Sparkline view is dual-locked via the Sparkline primitive; this
+        # path still accepts view="sparkline" for legacy TimeSeries callers
+        # and maps it to the line wrapper class (pre-existing behaviour).
+        view = t.view if t.view in ("line", "area") else "line"
 
-        # Multi-series path (#1473): overlaid layers + a colour-keyed legend.
         if t.series:
             series_pairs = tuple((s.name, s.points) for s in t.series)
-            axis_labels = {lbl for _n, pts in series_pairs for lbl, _v in pts}
             all_vals = [v for _n, pts in series_pairs for _l, v in pts]
             max_val = max(all_vals, default=1) or 1
             max_val_str = str(int(max_val)) if max_val == int(max_val) else str(max_val)
             svg = time_series_svg(
                 t.label,
                 (),
-                view=t.view,
+                view=view,
                 series=series_pairs,
                 reference_lines=t.reference_lines,
                 reference_bands=t.reference_bands,
@@ -299,57 +296,70 @@ class _RenderChartsMixin:
                 f'<span class="dz-chart-legend-name">{ctx.escape(s.name)}</span></li>'
                 for i, s in enumerate(t.series)
             )
-            legend = f'<ul class="dz-chart-legend">{legend_items}</ul>'
-            summary = (
-                f'<p class="dz-chart-summary">{len(axis_labels)} buckets · '
-                f"{len(t.series)} series · peak {max_val_str}</p>"
+            return render_time_series(
+                TimeSeriesSeam(
+                    label=t.label,
+                    view=view,
+                    series=[
+                        TimeSeriesLayerSeam(
+                            name=s.name,
+                            points=[
+                                TimeSeriesPointSeam(label=lbl, value=val) for lbl, val in s.points
+                            ],
+                        )
+                        for s in t.series
+                    ],
+                    svg_html=svg,
+                    legend_html=f'<ul class="dz-chart-legend">{legend_items}</ul>',
+                    peak_display=max_val_str,
+                )
             )
-            return f'<div class="{wrapper_class}">{svg}{legend}{summary}</div>'
 
         if not t.points:
-            return f'<div class="{wrapper_class}"></div>'
+            return render_time_series(TimeSeriesSeam(label=t.label, view=view))
 
         max_val = max((v for _, v in t.points), default=1) or 1
         max_val_str = str(int(max_val)) if max_val == int(max_val) else str(max_val)
-
         svg = time_series_svg(
             t.label,
             t.points,
-            view=t.view,
+            view=view,
             reference_lines=t.reference_lines,
             reference_bands=t.reference_bands,
         )
-        summary = f'<p class="dz-chart-summary">{len(t.points)} buckets · peak {max_val_str}</p>'
-        return f'<div class="{wrapper_class}">{svg}{summary}</div>'
+        return render_time_series(
+            TimeSeriesSeam(
+                label=t.label,
+                view=view,
+                points=[TimeSeriesPointSeam(label=lbl, value=val) for lbl, val in t.points],
+                svg_html=svg,
+                peak_display=max_val_str,
+            )
+        )
 
     def _emit_radar(self, r: Radar, ctx: RenderContext) -> str:
-        """Render a polar/radar profile as inline SVG with concentric
-        grid rings, spoke axis lines, data polygon, and spoke labels —
-        byte-equivalent to `workspace/regions/radar.html` for the
-        single-series case.
+        """Render a Radar via HM dual-lock Radar seam.
 
-        Phase 4B.1.c (SVG arc, radar variant): replaces the prior
-        `<ul>` of axes with the SVG produced by
-        `dazzle.render.svg.radar_svg`. Outer `<section class="dz-radar">`
-        + `<h4 class="dz-radar__label">` wrapper survives so existing
-        CSS hooks keep working; the SVG sits in a new
-        `<div class="dz-radar-region">` (the legacy class).
+        SVG geometry stays in ``dazzle.render.svg.radar_svg``.
         """
         from dazzle.render.filters import _metric_number_filter
         from dazzle.render.svg import radar_svg
 
-        # Phase 4B.4 wave 3: aligned with legacy template — strip the
-        # `<section class="dz-radar">` + `<h4>` chrome. Summary uses
-        # the legacy "N spokes · 1 series · peak {metric_number}" format
-        # (single-series — multi-series Radar is a deferred primitive).
+        if not r.axes:
+            return render_radar(RadarSeam(label=r.label, axes=[]))
+
         svg = radar_svg(r.label, r.axes)
         max_val = max((v for _, v in r.axes), default=1) or 1
         max_for_filter = int(max_val) if max_val == int(max_val) else max_val
         max_val_str = _metric_number_filter(max_for_filter)
-        summary = (
-            f'<p class="dz-chart-summary">{len(r.axes)} spokes · 1 series · peak {max_val_str}</p>'
+        return render_radar(
+            RadarSeam(
+                label=r.label,
+                axes=[RadarAxisSeam(label=lbl, value=val) for lbl, val in r.axes],
+                svg_html=svg,
+                peak_display=max_val_str,
+            )
         )
-        return f'<div class="dz-radar-region">{svg}{summary}</div>'
 
     def _emit_box_plot(self, b: BoxPlot, ctx: RenderContext) -> str:
         """Render a BoxPlot via HM dual-lock BoxPlot seam.

@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -726,6 +726,52 @@ def test_progress_emission_conforms_to_progress_contract() -> None:
     assert 'data-dz-stage-tone="active"' in html
     assert 'data-dz-stage-tone="empty"' in html
     assert "1 of 3 complete" in html
+
+
+def test_radar_emission_conforms_to_radar_contract() -> None:
+    """Real FragmentRenderer Radar path satisfies contracts/radar.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import Radar as RadarFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    radar_mod = load_hm_module("contracts/radar.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        RadarFrag(
+            label="Coverage",
+            axes=(("Auth", 80.0), ("API", 65.0), ("UI", 90.0)),
+        )
+    )
+    violations = kit.validate_dom(html, radar_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-radar" in html
+    assert "dz-chart-summary" in html
+    assert "<svg" in html
+    assert "3 spokes" in html
+
+
+def test_time_series_emission_conforms_to_time_series_contract() -> None:
+    """Real FragmentRenderer TimeSeries path satisfies contracts/time_series.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import TimeSeries as TsFrag
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    ts_mod = load_hm_module("contracts/time_series.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        TsFrag(
+            label="Traffic",
+            points=(("Mon", 12.0), ("Tue", 18.0), ("Wed", 9.0)),
+            view="line",
+        )
+    )
+    violations = kit.validate_dom(html, ts_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-time-series" in html
+    assert "dz-line-chart-region" in html
+    assert "dz-chart-summary" in html
+    assert "<svg" in html
+    assert "3 buckets" in html
 
 
 # ── Root-only Hyperpart DOM conformance (#1578) ──────────────────────

@@ -32,12 +32,14 @@ from dazzle.render.fragment.ingest.models import (
     Progress,
     ProgressStage,
     QueueRow,
+    Radar,
     SearchResultRow,
     SearchSelectShell,
     Sparkline,
     StatusListEntry,
     TagsField,
     TimelineEvent,
+    TimeSeries,
 )
 
 _BULLET_BAND_COLORS: dict[str, str] = {
@@ -864,6 +866,14 @@ def progress_root_attrs(_p: Progress) -> str:
     return "data-dz-progress-region"
 
 
+def radar_root_attrs(_r: Radar) -> str:
+    return "data-dz-radar"
+
+
+def time_series_root_attrs(_t: TimeSeries) -> str:
+    return "data-dz-time-series"
+
+
 def render_histogram(h: Histogram) -> str:
     """Model → histogram region (matches HM contracts/histogram.py)."""
     root_attrs = histogram_root_attrs(h)
@@ -976,6 +986,63 @@ def render_progress(p: Progress) -> str:
         f"{summary_html}"
         f"</div>"
     )
+
+
+def render_radar(r: Radar) -> str:
+    """Model → radar region (matches HM contracts/radar.py)."""
+    root_attrs = radar_root_attrs(r)
+    if not r.axes:
+        return (
+            f'<div class="dz-radar-region" {root_attrs}>'
+            f'<p class="dz-empty-dense" role="status">'
+            f"{_html.escape(r.empty_message)}</p>"
+            f"</div>"
+        )
+    peak = r.peak_display
+    if not peak:
+        max_val = max((a.value for a in r.axes), default=0) or 0
+        peak = str(int(max_val)) if max_val == int(max_val) else str(max_val)
+    summary = (
+        f'<p class="dz-chart-summary">'
+        f"{len(r.axes)} spokes · 1 series · peak {_html.escape(peak)}"
+        f"</p>"
+    )
+    return f'<div class="dz-radar-region" {root_attrs}>{r.svg_html}{summary}</div>'
+
+
+def render_time_series(t: TimeSeries) -> str:
+    """Model → line/area region (matches HM contracts/time_series.py)."""
+    root_attrs = time_series_root_attrs(t)
+    cls = "dz-area-chart-region" if t.view == "area" else "dz-line-chart-region"
+    if not t.points and not t.series:
+        if t.empty_message:
+            return (
+                f'<div class="{cls}" {root_attrs}>'
+                f'<p class="dz-empty-dense" role="status">'
+                f"{_html.escape(t.empty_message)}</p>"
+                f"</div>"
+            )
+        return f'<div class="{cls}" {root_attrs}></div>'
+
+    if t.series:
+        axis_labels = {p.label for layer in t.series for p in layer.points}
+        peak = t.peak_display
+        if not peak:
+            vals = [p.value for layer in t.series for p in layer.points]
+            max_val = max(vals, default=0) or 0
+            peak = str(int(max_val)) if max_val == int(max_val) else str(max_val)
+        summary = (
+            f'<p class="dz-chart-summary">{len(axis_labels)} buckets · '
+            f"{len(t.series)} series · peak {_html.escape(peak)}</p>"
+        )
+        return f'<div class="{cls}" {root_attrs}>{t.svg_html}{t.legend_html}{summary}</div>'
+
+    peak = t.peak_display
+    if not peak:
+        max_val = max((p.value for p in t.points), default=0) or 0
+        peak = str(int(max_val)) if max_val == int(max_val) else str(max_val)
+    summary = f'<p class="dz-chart-summary">{len(t.points)} buckets · peak {_html.escape(peak)}</p>'
+    return f'<div class="{cls}" {root_attrs}>{t.svg_html}{summary}</div>'
 
 
 def render_search_result_row(row: SearchResultRow) -> str:

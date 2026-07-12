@@ -14,6 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 Kind = Literal["text", "date", "bool", "select"]
+TimeSeriesView = Literal["line", "area"]
 
 
 class GridEditCell(BaseModel):
@@ -560,3 +561,53 @@ class Progress(BaseModel):
     complete_pct: float = 0.0
     complete_count: int = 0
     total: int = 0
+
+
+# ── Radar seam copy (contracts/radar.py) ─────────────────────────────
+
+
+class RadarAxis(BaseModel):
+    """One radar spoke."""
+
+    label: str
+    value: float = 0.0
+
+
+class Radar(BaseModel):
+    """Polar radar — dual-lock unit for radar."""
+
+    label: str = ""
+    axes: list[RadarAxis] = Field(default_factory=list)
+    svg_html: str = ""
+    peak_display: str = ""
+    empty_message: str = "No data available."
+
+
+# ── Time-series seam copy (contracts/time_series.py) ─────────────────
+
+
+class TimeSeriesPoint(BaseModel):
+    """One (label, value) sample."""
+
+    label: str
+    value: float = 0.0
+
+
+class TimeSeriesLayer(BaseModel):
+    """One named multi-series layer."""
+
+    name: str
+    points: list[TimeSeriesPoint] = Field(default_factory=list)
+
+
+class TimeSeries(BaseModel):
+    """Line/area chart — dual-lock unit for time-series."""
+
+    label: str = ""
+    view: TimeSeriesView = "line"
+    points: list[TimeSeriesPoint] = Field(default_factory=list)
+    series: list[TimeSeriesLayer] = Field(default_factory=list)
+    svg_html: str = ""
+    legend_html: str = ""
+    peak_display: str = ""
+    empty_message: str = ""

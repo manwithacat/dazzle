@@ -2957,6 +2957,49 @@ def select(source: str, id: str) -> str:
             tags=("data", "chart"),
         ),
         Hyperpart(
+            "radar",
+            "Radar",
+            "Data",
+            "Polar multi-axis profile — spokes share a scale; the polygon is server-rendered SVG.",
+            '<div class="dz-radar-region hm-measure-lg" data-dz-radar>'
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" '
+            'role="img" aria-label="Radar — 3 spokes">'
+            '<polygon points="60,20 100,90 20,90" fill="var(--colour-brand)" '
+            'fill-opacity="0.25" stroke="var(--colour-brand)"/>'
+            "</svg>"
+            '<p class="dz-chart-summary">3 spokes · 1 series · peak 90</p>'
+            "</div>",
+            notes="Dual-lock root is <code>data-dz-radar</code> "
+            "(<code>contracts/radar.py</code>). Geometry rides trusted "
+            "<code>svg_html</code> from <code>dazzle.render.svg.radar_svg</code>; "
+            "the summary carries spoke count and peak.",
+            tags=("data", "chart"),
+            contracts=("contracts/radar.py",),
+        ),
+        Hyperpart(
+            "time-series",
+            "Time series",
+            "Data",
+            "Line or area sequential chart — one series of (label, value) points, "
+            "or multi-series overlays with a shared legend.",
+            '<div class="dz-line-chart-region hm-measure-lg" data-dz-time-series>'
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" '
+            'role="img" aria-label="Line chart — 3 buckets">'
+            '<polyline points="4,30 90,10 176,34" fill="none" '
+            'stroke="var(--colour-brand)" stroke-width="2"/>'
+            "</svg>"
+            '<p class="dz-chart-summary">3 buckets · peak 18</p>'
+            "</div>",
+            notes="Dual-lock root is <code>data-dz-time-series</code> "
+            "(<code>contracts/time_series.py</code>). Wrapper class stays "
+            "view-specific (<code>dz-line-chart-region</code> / "
+            "<code>dz-area-chart-region</code>). Multi-series charts append a "
+            "trusted legend; SVG geometry comes from "
+            "<code>dazzle.render.svg.time_series_svg</code>.",
+            tags=("data", "chart"),
+            contracts=("contracts/time_series.py",),
+        ),
+        Hyperpart(
             "heatmap",
             "Heatmap",
             "Data",

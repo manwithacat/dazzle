@@ -69,11 +69,7 @@ def render(b: BoxPlot) -> str:
             f"</div>"
         )
     n_total = sum(g.samples for g in b.groups)
-    summary = (
-        f'<p class="dz-box-plot-summary">'
-        f"{len(b.groups)} groups · {n_total} samples"
-        f"</p>"
-    )
+    summary = f'<p class="dz-box-plot-summary">{len(b.groups)} groups · {n_total} samples</p>'
     return f'<div class="dz-box-plot-region" data-dz-box-plot>{b.svg_html}{summary}</div>'
 ```
 

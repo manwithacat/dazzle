@@ -200,6 +200,36 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "ProgressStage",
     ),
+    (
+        "contracts/radar.py",
+        "Radar",
+        "dazzle.render.fragment.ingest",
+        "Radar",
+    ),
+    (
+        "contracts/radar.py",
+        "RadarAxis",
+        "dazzle.render.fragment.ingest",
+        "RadarAxis",
+    ),
+    (
+        "contracts/time_series.py",
+        "TimeSeries",
+        "dazzle.render.fragment.ingest",
+        "TimeSeries",
+    ),
+    (
+        "contracts/time_series.py",
+        "TimeSeriesPoint",
+        "dazzle.render.fragment.ingest",
+        "TimeSeriesPoint",
+    ),
+    (
+        "contracts/time_series.py",
+        "TimeSeriesLayer",
+        "dazzle.render.fragment.ingest",
+        "TimeSeriesLayer",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.
