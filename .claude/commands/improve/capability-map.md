@@ -5,13 +5,19 @@ MCP tools + `.claude` skills/commands + standalone loops), each with an owning l
 and a staleness status, so the `/improve` loop **polices its own coverage** — nothing
 we build rots unexercised behind the framework's velocity. This is the governance
 half of the "pull all skills under the aegis of the improve loop" directive
-(2026-07-08); the driver's `capability-coverage` rule (see `improve.md` Step 1) reads
-this file to bias directed exploration toward `UNOWNED`/`STALE` rows.
+(2026-07-08); the driver's capability-coverage rule (see `improve.md` Step 1 rule 7)
+reads this file to bias directed exploration toward `UNOWNED` / `STALE` /
+**`OWNED-IDLE` first-exercise**. Product TR-rows are drained separately (rule 6 /
+`trial_signal_action.md`) when autonomous-actionable.
 
 **Status vocabulary**
 - `USED` — a lane/strategy invokes it every relevant cycle.
-- `OWNED-IDLE` — has an owning lane but runs only on demand / low frequency (exercised when the driver's capability-coverage rule picks it).
+- `OWNED-IDLE` — has an owning lane but runs only on demand / low frequency.
+  **Rule 7 first-exercises these** when UNOWNED/STALE are clear (playbook:
+  `improve/strategies/owned_idle_exercise.md`). Prefer subscription vision over
+  metered `taste-panel` / `*-vision` judges.
 - `STALE` — owned but not exercised for ≥ **20** cycles → the driver biases toward it.
+  Also treat `USED` rows with lag ≥20 as **STALE-effective** even if the label lags.
 - `UNOWNED` — built, but no lane invokes it. The strongest gap; the capability-sweep cadence flags these.
 - `EXEMPT` — deliberately human-invoked (authoring aids, stakeholder docs); not a loop gap.
 
@@ -35,9 +41,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 386 | USED |
 | `dazzle qa trial` | CLI | trials | 389 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 385 | USED |
-| `dazzle qa taste-panel` | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
-| `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
-| `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI | **hm-convergence** | — | OWNED-IDLE |
+| `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | — | OWNED-IDLE |
+| `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | — | OWNED-IDLE |
+| `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | — | OWNED-IDLE |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 405 | USED |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 400 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 401 | USED |

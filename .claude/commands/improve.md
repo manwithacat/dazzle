@@ -5,7 +5,7 @@ Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve tho
 ARGUMENTS: $ARGUMENTS
 
 If `$ARGUMENTS` is empty: driver picks the lane.
-If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep.)
+If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep; `trial-signals` forces the TR-action drain strategy.)
 If `$ARGUMENTS` is `<lane> <strategy>`: force that lane and that sub-strategy.
 If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (no cycle).
 If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count`, log the manual reset, and exit (no cycle). Operator escape hatch — use when the cap was reached but exploration should continue (e.g. after a large framework change that a release signal didn't capture).
@@ -100,10 +100,38 @@ Selection priority:
 3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute `STALE` (last-exercised ≥20 cycles behind the current cycle). Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt.
 4. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
 5. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
-6. **All counts zero → explore phase, capability-coverage-directed.** Consult `improve/capability-map.md`: if any capability is `UNOWNED` or `STALE`, pick its owning lane and have the lane **exercise that specific capability** this cycle (log `picked {lane} to exercise {capability} — {UNOWNED | STALE N cycles}`). This is what keeps the full toolset live against the framework's velocity — nothing we build rots unexercised. Otherwise pick the lane with oldest `last_run_at` and run its ordinary **explore phase**.
-7. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit. The log entry must name the two renewal routes so the loop never looks permanently stuck: the budget resets automatically on the next `dazzle-updated` release signal, or manually via `/improve --reset-budget`.
+6. **TR-signal drain (autonomous-only).** If the trials backlog (`## Lane: trials`) has any **autonomous-actionable** TR row (see below), pick the owning lane for that row and run `improve/strategies/trial_signal_action.md` this cycle (log `picked {lane} for TR-N — {status}/{severity}`). Forceable via `/improve trial-signals`. Preempts pure capability re-stamps when product signal is sitting idle. Does **not** preempt REGRESSION / self-audit / capability-sweep / fresh signal bias.
+7. **Explore phase, capability-coverage-directed.** Consult `improve/capability-map.md`. Recompute lag as `current_cycle − last-exercised` (treat map status `USED` with lag ≥20 as **STALE-effective**). Pick **one** capability in this order and hand the owning lane that specific exercise (log `picked {lane} to exercise {capability} — {reason}`):
+   1. Any `UNOWNED` (strongest gap)
+   2. Any `STALE` or STALE-effective, highest lag first
+   3. Any `OWNED-IDLE` with `last-exercised = —` (never first-exercised), preferring **in-loop** owners over `(standalone)` when both exist; exercise playbook: `improve/strategies/owned_idle_exercise.md`
+   4. Any `OWNED-IDLE` that has been exercised before but not for ≥20 cycles (treat like STALE)
+   5. Else oldest `last_run_at` lane ordinary **explore phase**
+8. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit. The log entry must name the two renewal routes so the loop never looks permanently stuck: the budget resets automatically on the next `dazzle-updated` release signal, or manually via `/improve --reset-budget`.
 
-Record the choice. Bias from signals or capability-coverage must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N"; "picked hm-convergence to expand dual-locks — STALE 24 cycles") so future operators can audit.
+Record the choice. Bias from signals, TR-drain, or capability-coverage must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N"; "picked hm-convergence to expand dual-locks — STALE 24 cycles"; "picked framework-ux for TR-50 OPEN_FRAMEWORK high") so future operators can audit.
+
+### Autonomous TR eligibility (rule 6)
+
+A TR row is **autonomous-actionable** when **all** of:
+
+| Gate | Pass when |
+|------|-----------|
+| Status | ∈ {`OPEN`, `OPEN_FRAMEWORK`, `OPEN_DSL`, `FIXED-VERIFY`} — not `OPEN_UNKNOWN`, `NEEDS_REINFORCE`, `NOTED-POLLUTED`, `BLOCKED_ON→*`, praise-only |
+| Severity | ∈ {`high`, `medium`} **or** status is `FIXED-VERIFY` (any severity — re-verify is cheap) |
+| Clarity | Description names a concrete surface (URL, region, CLI flag, error string) **or** status is `FIXED-VERIFY` / already `→ #NNN` |
+| No human fork | Fix does **not** require product/design intent (no tenancy/RBAC "what should we allow?" questions). If the only honest action is "ask the user", leave the row for a human session |
+
+**Lane routing for TR rows:**
+
+| Status / shape | Owning lane | Default action |
+|----------------|-------------|----------------|
+| `OPEN_FRAMEWORK` / filed `→ #N` | `framework-ux` (or `test-suite` if clearly test harness) | Reproduce → fix if local/clear → ship; else reinforce + leave filed |
+| `OPEN_DSL` | `example-apps` | DSL/demo fix in the named app; validate+lint |
+| `FIXED-VERIFY` | `trials` | Re-run the named scenario with `dazzle qa trial --fresh-db` (+ subscription driver); close or re-open |
+| `OPEN` with clear bug + mechanism | best-fit lane | Same as OPEN_FRAMEWORK / OPEN_DSL by mechanism |
+
+Skip (not autonomous): pure aesthetic/confusion without DOM/URL; same-trial contradictions (`NEEDS_REINFORCE`); anything that needs "author intent" (tenancy model, persona RBAC design). Full playbook: `improve/strategies/trial_signal_action.md`.
 
 ### Step 2: Hand off to lane
 
@@ -158,7 +186,7 @@ One-paragraph summary: lane chosen, outcome, what changed, budget remaining, nex
 |------|-----------|-------------|
 | `ux-component-shipped` | framework-ux | example-apps (re-verify), ux-converge (refresh contracts) |
 | `ux-regression` | framework-ux | driver (priority pick) |
-| `trial-friction` | trials | framework-ux (consider contract), driver (lane bias) |
+| `trial-friction` | trials / trial_signal_action | framework-ux (consider contract), driver (lane bias + rule 6 TR drain) |
 | `gap-doc-written` | framework-ux | driver (informational; logged) |
 | `app-fixed` | example-apps | framework-ux (re-walk if contract relates), trials (re-trial scenarios) |
 | `convergence-clean` | ux-converge | example-apps (clear stale rows for that app) |

@@ -24,11 +24,23 @@ Each cycle burns ~50–100k tokens (the `dazzle qa trial` invocation itself). Us
 
 ## actionable_count
 
-For trials, "actionable" doesn't mean "row to action" — it means "verified state worth running a trial against".
+Two independent sources (driver uses either for rule 5 / rule 6):
 
-Computation: count `(app, scenario)` pairs in `trial.toml` files where the lane has NOT run a trial in the last 48h. If non-zero, lane has work.
+1. **Fresh rotation work:** count `(app, scenario)` pairs in `trial.toml` files where the lane has NOT run a trial in the last 48h.
+2. **Autonomous TR drain:** count rows in this section that pass the driver eligibility table in `improve.md` (rule 6 — OPEN_FRAMEWORK / OPEN_DSL / FIXED-VERIFY with clear evidence, etc.).
+
+If either is non-zero, the lane (or the routed owning lane for TR-drain) has work. Prefer **TR drain** over a fresh rotation when an autonomous-actionable TR exists — product signal beats another exploratory trial. Full playbook: `improve/strategies/trial_signal_action.md`.
 
 ## Playbook
+
+### 0. TR ACTION (when driver picks trial-signals or an autonomous TR routes here)
+
+Follow `improve/strategies/trial_signal_action.md` for **one** row. Typical cases for this lane:
+
+- `FIXED-VERIFY` → re-run `dazzle qa trial --scenario <name> --fresh-db` with subscription driver
+- Trial-harness bugs (seed, DEBUG flood, truncate) with clear code path → fix in framework, re-smoke one scenario
+
+Do **not** start a rotation trial in the same cycle.
 
 ### 1. ROTATE
 
