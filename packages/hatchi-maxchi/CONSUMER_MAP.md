@@ -75,6 +75,10 @@ _No composition edges declared._
 
 - `drawer` — composes
 
+**Used by blueprints**
+
+- `record-page` — blueprint
+
 **Related from (`composes_with`)**
 
 - `drawer` — composes_with
@@ -108,6 +112,7 @@ _No composition edges declared._
 **Used by blueprints**
 
 - `dashboard` — blueprint
+- `record-page` — blueprint
 - `saas-shell` — blueprint
 - `workspace-drawer` — blueprint
 
@@ -133,6 +138,7 @@ _No composition edges declared._
 
 - `dashboard` — blueprint
 - `master-detail` — blueprint
+- `record-page` — blueprint
 
 **Related from (`composes_with`)**
 
@@ -190,6 +196,7 @@ _No composition edges declared._
 **Used by blueprints**
 
 - `auth` — blueprint
+- `record-page` — blueprint
 - `saas-shell` — blueprint
 - `workspace-drawer` — blueprint
 
@@ -223,6 +230,7 @@ _No composition edges declared._
 - `auth` — blueprint
 - `dashboard` — blueprint
 - `master-detail` — blueprint
+- `record-page` — blueprint
 - `saas-shell` — blueprint
 - `workspace-drawer` — blueprint
 
@@ -266,6 +274,7 @@ _No composition edges declared._
 - `auth` — blueprint
 - `dashboard` — blueprint
 - `master-detail` — blueprint
+- `record-page` — blueprint
 - `workspace-drawer` — blueprint
 
 ### `code`
@@ -692,6 +701,7 @@ _No composition edges declared._
 - `auth` — blueprint
 - `dashboard` — blueprint
 - `master-detail` — blueprint
+- `record-page` — blueprint
 - `saas-shell` — blueprint
 - `workspace-drawer` — blueprint
 
@@ -720,6 +730,10 @@ _No composition edges declared._
 **Embedded by (hard `composes`)**
 
 - `related-tables` — composes
+
+**Used by blueprints**
+
+- `record-page` — blueprint
 
 ### `tags`
 

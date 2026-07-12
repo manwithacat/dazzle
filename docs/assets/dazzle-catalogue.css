@@ -2064,17 +2064,31 @@ dialog.dz-alert-dialog::backdrop {
   align-items: center;
 }
 
+/* 24×24px hit target (WCAG 2.2 target-size); visual pip via ::before. */
 .dz-carousel__dot {
-  width: 0.5rem;
-  height: 0.5rem;
+  position: relative;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: 999px;
   border: none;
   padding: 0;
-  background: var(--colour-border);
+  background: transparent;
   cursor: pointer;
+  flex: none;
 }
 
-.dz-carousel__dot[aria-current="true"] {
+.dz-carousel__dot::before {
+  content: "";
+  position: absolute;
+  inset: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--colour-border);
+}
+
+.dz-carousel__dot[aria-current="true"]::before {
   background: var(--colour-brand);
   width: 1rem;
 }
@@ -2346,7 +2360,8 @@ dialog.dz-alert-dialog::backdrop {
 }
 
 .dz-code__tok--cmt {
-  color: light-dark(var(--neutral-500), var(--neutral-500));
+  /* WCAG AA on code surface: neutral-500 on dark failed color-contrast. */
+  color: light-dark(var(--neutral-600), var(--neutral-400));
   font-style: italic;
 }
 

@@ -335,7 +335,7 @@ BLUEPRINTS: list[Blueprint] = [
         '<div class="dz-card-delta">Last inspection 14 June</div></div>'
         "</div>"
         '<div class="dz-tabs" data-dz-tabs>'
-        '<div class="dz-tabs__list" role="tablist">'
+        '<div class="dz-tabs__list" role="tablist" aria-label="Record sections">'
         '<button type="button" class="dz-tabs__tab" aria-current="true" '
         'data-dz-tab-target="rec-overview">Overview</button>'
         '<button type="button" class="dz-tabs__tab" '
