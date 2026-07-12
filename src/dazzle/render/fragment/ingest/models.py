@@ -703,6 +703,26 @@ class CohortStrip(BaseModel):
     body_html: str = ""
 
 
+# ── Day-timeline seam copy (contracts/day_timeline.py) ───────────────
+
+
+class DayTimeline(BaseModel):
+    """Day timeline region — dual-lock unit for day-timeline."""
+
+    region_name: str = ""
+    body_html: str = ""
+
+
+# ── Entity-card seam copy (contracts/entity_card.py) ─────────────────
+
+
+class EntityCard(BaseModel):
+    """Entity card region — dual-lock unit for entity-card."""
+
+    region_name: str = ""
+    body_html: str = ""
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

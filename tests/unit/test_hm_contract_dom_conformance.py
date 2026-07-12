@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|dashboard-card|cohort-strip|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|dashboard-card|cohort-strip|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|dashboard-card|cohort-strip|day-timeline|entity-card|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -1018,6 +1018,64 @@ def test_cohort_strip_emission_conforms_to_cohort_strip_contract() -> None:
     assert "data-dz-cohort-strip" in html
     assert "Ada" in html
     assert "dz-cohort-strip-lens" in html
+
+
+def test_day_timeline_emission_conforms_to_day_timeline_contract() -> None:
+    """Real FragmentRenderer DayTimelineRegion path satisfies contracts/day_timeline.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import DayTimelineRegion, DayTimelineSlot
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    dt_mod = load_hm_module("contracts/day_timeline.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        DayTimelineRegion(
+            region_name="today",
+            slots=(
+                DayTimelineSlot(
+                    slot_id="p3",
+                    label="Period 3",
+                    position="active",
+                    body="Maths",
+                ),
+            ),
+        )
+    )
+    violations = kit.validate_dom(html, dt_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-day-timeline" in html
+    assert "Period 3" in html
+    assert 'data-dz-position="active"' in html
+
+
+def test_entity_card_emission_conforms_to_entity_card_contract() -> None:
+    """Real FragmentRenderer EntityCardRegion path satisfies contracts/entity_card.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import EntityCardRegion, EntityCardSection
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    ec_mod = load_hm_module("contracts/entity_card.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        EntityCardRegion(
+            region_name="customer_360",
+            record_label="Acme Corp",
+            sections=(
+                EntityCardSection(
+                    section_id="halo",
+                    label="Profile",
+                    mode="halo",
+                    body="Hello",
+                    column="main",
+                ),
+            ),
+        )
+    )
+    violations = kit.validate_dom(html, ec_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-entity-card" in html
+    assert "Acme Corp" in html
+    assert "dz-entity-card-section" in html
 
 
 def test_radar_emission_conforms_to_radar_contract() -> None:

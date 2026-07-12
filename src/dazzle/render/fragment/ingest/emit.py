@@ -24,8 +24,10 @@ from dazzle.render.fragment.ingest.models import (
     ComboboxField,
     DashboardCard,
     DateRange,
+    DayTimeline,
     Diagram,
     EmptyState,
+    EntityCard,
     Funnel,
     GridEditCell,
     Heatmap,
@@ -934,6 +936,14 @@ def cohort_strip_root_attrs(_c: CohortStrip) -> str:
     return "data-dz-cohort-strip"
 
 
+def day_timeline_root_attrs(_d: DayTimeline) -> str:
+    return "data-dz-day-timeline"
+
+
+def entity_card_root_attrs(_e: EntityCard) -> str:
+    return "data-dz-entity-card"
+
+
 def render_list_region(lr: ListRegion) -> str:
     """Model → list-region root (matches HM contracts/list_region.py)."""
     root_attrs = list_region_root_attrs(lr)
@@ -1045,6 +1055,26 @@ def render_cohort_strip(c: CohortStrip) -> str:
     return (
         f'<div class="dz-cohort-strip-region" {root_attrs} '
         f'data-dz-region-name="{rname}">{c.body_html}</div>'
+    )
+
+
+def render_day_timeline(d: DayTimeline) -> str:
+    """Model → day-timeline region (matches HM contracts/day_timeline.py)."""
+    root_attrs = day_timeline_root_attrs(d)
+    rname = _html.escape(d.region_name, quote=True)
+    return (
+        f'<div class="dz-day-timeline-region" {root_attrs} '
+        f'data-dz-region-name="{rname}">{d.body_html}</div>'
+    )
+
+
+def render_entity_card(e: EntityCard) -> str:
+    """Model → entity-card region (matches HM contracts/entity_card.py)."""
+    root_attrs = entity_card_root_attrs(e)
+    rname = _html.escape(e.region_name, quote=True)
+    return (
+        f'<div class="dz-entity-card-region" {root_attrs} '
+        f'data-dz-region-name="{rname}">{e.body_html}</div>'
     )
 
 

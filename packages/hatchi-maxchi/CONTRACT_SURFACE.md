@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 52 |
+| Modules | 54 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -30,9 +30,11 @@ blast radius (who embeds / refuses this part).
 | `confirm_panel` | `confirm-panel` | `[data-dz-confirm-gate]` | [data-dz-confirm-gate][data-dz-required-count=present]; [data-dz-required="true"][data-dz-required=present] | — |
 | `dashboard_card` | `dashboard-card` | `[data-dz-dashboard-card]` | [data-dz-dashboard-card][data-dz-dashboard-card=present] | DashboardCard(attrs:str:opt; body_html:str:opt) |
 | `date_range` | `date-range` | `[data-dz-date-range]` | [data-dz-date-range][data-dz-date-range=present] | DateRange(date_from:str:opt; date_to:str:opt; endpoint:str:opt; region_name:str:opt; target:str:opt) |
+| `day_timeline` | `day-timeline` | `[data-dz-day-timeline]` | [data-dz-day-timeline][data-dz-day-timeline=present] | DayTimeline(body_html:str:opt; region_name:str:opt) |
 | `diagram` | `diagram` | `[data-dz-diagram]` | [data-dz-diagram][data-dz-diagram=present] | Diagram(edges:list[tuple[str,str]]:opt; mermaid_source:str:opt; nodes:list[str]:opt) |
 | `dialog` | `dialog` | `[data-dz-dialog-open]` | [data-dz-dialog-open][data-dz-dialog-open=present] | — |
 | `empty_state` | `empty-state` | `[data-dz-empty-state]` | [data-dz-empty-state][data-dz-empty-state=present] | EmptyState(action_html:str:opt; description:str:opt; icon_html:str:opt; title:str:opt) |
+| `entity_card` | `entity-card` | `[data-dz-entity-card]` | [data-dz-entity-card][data-dz-entity-card=present] | EntityCard(body_html:str:opt; region_name:str:opt) |
 | `funnel` | `funnel` | `[data-dz-funnel]` | [data-dz-funnel][data-dz-funnel=present] | Funnel(empty_message:str:opt; stages:list[FunnelStage]:opt; total:int:opt); FunnelStage(count:int:opt; label:str:req) |
 | `grid` | `grid` | `[data-dz-grid]` | — | — |
 | `grid_cols` | `grid-cols` | `[data-dz-grid]` | [data-dz-grid-col-toggle][data-dz-grid-col-toggle=present]; [data-dz-col][data-dz-col=present]; [data-dz-grid-cols-reset][] | — |
