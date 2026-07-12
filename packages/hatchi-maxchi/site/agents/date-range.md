@@ -12,7 +12,7 @@ Two native date inputs driving one htmx exchange — the from/to filter bar for 
 ## Copy this
 
 ```html
-<div class="date-range-picker date-range-bar">
+<div class="date-range-picker date-range-bar" data-date-range>
   <label class="date-range-label" for="hm-dr-from">From</label>
   <input type="date" id="hm-dr-from" name="date_from" value="2026-06-01" class="date-range-input" hx-get="/mock/search" hx-target="#hm-dr-out" hx-swap="innerHTML" hx-include="closest .date-range-bar">
   <label class="date-range-label" for="hm-dr-to">To</label>
@@ -53,16 +53,61 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - implement Server exchange endpoints; return HTML fragments, not JSON
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/date_range.py`
+
+- **Required root:** `[data-dz-date-range]` (part `date-range`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-date-range]` | `data-dz-date-range` | present (any value) |
+
+#### Ingestion model `DateRange`
+
+| Field | Type | Required |
+|---|---|---|
+| `region_name` | `string` | no |
+| `endpoint` | `string` | no |
+| `date_from` | `string` | no |
+| `date_to` | `string` | no |
+| `target` | `string` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(d: DateRange) -> str:
+    """Model → date-range picker bar."""
+    rname = html.escape(d.region_name, quote=True)
+    endpoint = html.escape(d.endpoint, quote=True)
+    target = html.escape(d.target or f"#region-{d.region_name}", quote=True)
+    date_from = html.escape(d.date_from, quote=True)
+    date_to = html.escape(d.date_to, quote=True)
+    return (
+        f'<div class="dz-date-range-picker date-range-bar" data-dz-date-range>'
+        f'<label class="dz-date-range-label" for="date-from-{rname}">From</label>'
+        f'<input type="date" id="date-from-{rname}" name="date_from" '
+        f'value="{date_from}" class="dz-date-range-input" '
+        f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
+        f'hx-include="closest .date-range-bar">'
+        f'<label class="dz-date-range-label" for="date-to-{rname}">To</label>'
+        f'<input type="date" id="date-to-{rname}" name="date_to" '
+        f'value="{date_to}" class="dz-date-range-input" '
+        f'hx-get="{endpoint}" hx-target="{target}" hx-swap="innerHTML" '
+        f'hx-include="closest .date-range-bar">'
+        f"</div>"
+    )
+```
 
 ## Notes
 
-Native type="date" inputs — no picker JS. Each input fires the region's hx-get on change and hx-include="closest .date-range-bar" sends BOTH bounds every time, so the server always sees the full range.
+Dual-lock root is data-dz-date-range (contracts/date_range.py). Native type="date" inputs — no picker JS. Each input fires the region's hx-get on change and hx-include="closest .date-range-bar" sends BOTH bounds every time, so the server always sees the full range.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/date_range.py`

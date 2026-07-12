@@ -38,6 +38,8 @@ from dazzle.http.runtime.route_support import (
     _is_htmx_request,
     _wants_html,
 )
+from dazzle.render.fragment.ingest import Pagination as PaginationSeam
+from dazzle.render.fragment.ingest import render_pagination
 
 logger = logging.getLogger(__name__)
 
@@ -97,9 +99,6 @@ def _render_table_pagination(table: dict[str, Any]) -> str:
 
     # Dual-lock sole-emitter (contracts/pagination.py) — roots
     # data-dz-pagination + data-dz-grid-pagination + data-dz-grid-total.
-    from dazzle.render.fragment.ingest import Pagination as PaginationSeam
-    from dazzle.render.fragment.ingest import render_pagination
-
     return render_pagination(
         PaginationSeam(
             total=total,

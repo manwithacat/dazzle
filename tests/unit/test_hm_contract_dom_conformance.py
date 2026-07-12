@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -779,6 +779,32 @@ def test_search_box_emission_conforms_to_search_box_contract() -> None:
     assert "dz-search-box-input" in html
     assert 'aria-live="polite"' in html
     assert "Type a title or keyword" in html
+
+
+def test_date_range_emission_conforms_to_date_range_contract() -> None:
+    """Real FragmentRenderer DateRangePicker path satisfies contracts/date_range.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.htmx import URL
+    from dazzle.render.fragment.primitives.data import DateRangePicker
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    dr_mod = load_hm_module("contracts/date_range.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        DateRangePicker(
+            region_name="invoices",
+            endpoint=URL("/api/region"),
+            date_from="2026-06-01",
+            date_to="2026-06-30",
+        )
+    )
+    violations = kit.validate_dom(html, dr_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-date-range" in html
+    assert 'name="date_from"' in html
+    assert 'name="date_to"' in html
+    assert "date-range-bar" in html
+    assert "2026-06-01" in html
 
 
 def test_radar_emission_conforms_to_radar_contract() -> None:

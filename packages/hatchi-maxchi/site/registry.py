@@ -360,8 +360,11 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             notes="Dual-lock root is <code>data-dz-pagination</code> "
             "(<code>contracts/pagination.py</code>) plus "
             "<code>data-dz-grid-pagination</code> / <code>data-dz-grid-total</code> "
-            "for grid selection. Each page button carries its own <code>hx-get</code>; "
-            "here a mock htmx swaps a canned page into <code>#hm-pag-body</code>.",
+            "for grid selection. Production swaps use <code>innerMorph</code> of the "
+            "region body (<code>#{region}-body</code>) so selection and focus can "
+            "survive page changes. Each page button carries its own <code>hx-get</code>; "
+            "here the gallery mock approximates with <code>innerHTML</code> into "
+            "<code>#hm-pag-body</code>.",
             tags=("htmx",),
             contracts=("contracts/pagination.py",),
             exchanges=(
@@ -1994,7 +1997,7 @@ def select(source: str, id: str) -> str:
             "Forms",
             "Two native date inputs driving one htmx exchange — the from/to "
             "filter bar for time-scoped regions.",
-            '<div class="dz-date-range-picker date-range-bar">'
+            '<div class="dz-date-range-picker date-range-bar" data-dz-date-range>'
             '<label class="dz-date-range-label" for="hm-dr-from">From</label>'
             '<input type="date" id="hm-dr-from" name="date_from" value="2026-06-01" '
             'class="dz-date-range-input" hx-get="/mock/search" '
@@ -2007,11 +2010,14 @@ def select(source: str, id: str) -> str:
             'hx-include="closest .date-range-bar">'
             '<div id="hm-dr-out" hidden></div>'
             "</div>",
-            notes="Native <code>type=&quot;date&quot;</code> inputs — no picker "
-            "JS. Each input fires the region's hx-get on change and "
+            notes="Dual-lock root is <code>data-dz-date-range</code> "
+            "(<code>contracts/date_range.py</code>). Native "
+            "<code>type=&quot;date&quot;</code> inputs — no picker JS. Each "
+            "input fires the region's hx-get on change and "
             "<code>hx-include=&quot;closest .date-range-bar&quot;</code> sends "
             "BOTH bounds every time, so the server always sees the full range.",
             tags=("forms", "htmx"),
+            contracts=("contracts/date_range.py",),
             exchanges=(
                 Exchange(
                     method="GET",

@@ -588,6 +588,19 @@ class SearchBox(BaseModel):
     results_html: str = ""
 
 
+# ── Date-range seam copy (contracts/date_range.py) ───────────────────
+
+
+class DateRange(BaseModel):
+    """From/To date filter bar — dual-lock unit for date-range."""
+
+    region_name: str = "region"
+    endpoint: str = ""
+    date_from: str = ""
+    date_to: str = ""
+    target: str = ""
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

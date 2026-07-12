@@ -90,9 +90,7 @@ def render(s: SearchBox) -> str:
     placeholder = html.escape(s.placeholder or "Search…", quote=True)
     label_text = html.escape(s.label or s.placeholder or "Search")
     coaching = html.escape(s.coaching_message or "Type a title or keyword")
-    results_body = s.results_html.strip() or (
-        f'<div class="dz-search-box-empty">{coaching}</div>'
-    )
+    results_body = s.results_html.strip() or (f'<div class="dz-search-box-empty">{coaching}</div>')
     return (
         f'<div class="dz-search-box-region" data-dz-search-box>'
         f'<div class="dz-search-box-input-row">'

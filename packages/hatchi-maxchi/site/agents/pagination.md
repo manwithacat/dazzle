@@ -107,7 +107,7 @@ def render(p: Pagination) -> str:
 
 ## Notes
 
-Dual-lock root is data-dz-pagination (contracts/pagination.py) plus data-dz-grid-pagination / data-dz-grid-total for grid selection. Each page button carries its own hx-get; here a mock htmx swaps a canned page into #hm-pag-body.
+Dual-lock root is data-dz-pagination (contracts/pagination.py) plus data-dz-grid-pagination / data-dz-grid-total for grid selection. Production swaps use innerMorph of the region body (#{region}-body) so selection and focus can survive page changes. Each page button carries its own hx-get; here the gallery mock approximates with innerHTML into #hm-pag-body.
 
 ## Source files
 

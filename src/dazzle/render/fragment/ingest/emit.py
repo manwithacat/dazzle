@@ -20,6 +20,7 @@ from dazzle.render.fragment.ingest.models import (
     BoxPlot,
     Bullet,
     ComboboxField,
+    DateRange,
     Funnel,
     GridEditCell,
     Heatmap,
@@ -882,6 +883,35 @@ def pagination_root_attrs(p: Pagination) -> str:
 
 def search_box_root_attrs(_s: SearchBox) -> str:
     return "data-dz-search-box"
+
+
+def date_range_root_attrs(_d: DateRange) -> str:
+    return "data-dz-date-range"
+
+
+def render_date_range(d: DateRange) -> str:
+    """Model → date-range bar (matches HM contracts/date_range.py)."""
+    root_attrs = date_range_root_attrs(d)
+    rname = _html.escape(d.region_name, quote=True)
+    endpoint = _html.escape(d.endpoint, quote=True)
+    date_from = _html.escape(d.date_from, quote=True)
+    date_to = _html.escape(d.date_to, quote=True)
+    target = d.target or f"#region-{d.region_name}"
+    target_esc = _html.escape(target, quote=True)
+    return (
+        f'<div class="dz-date-range-picker date-range-bar" {root_attrs}>'
+        f'<label class="dz-date-range-label" for="date-from-{rname}">From</label>'
+        f'<input type="date" id="date-from-{rname}" name="date_from" '
+        f'value="{date_from}" class="dz-date-range-input" '
+        f'hx-get="{endpoint}" hx-target="{target_esc}" hx-swap="innerHTML" '
+        f'hx-include="closest .date-range-bar">'
+        f'<label class="dz-date-range-label" for="date-to-{rname}">To</label>'
+        f'<input type="date" id="date-to-{rname}" name="date_to" '
+        f'value="{date_to}" class="dz-date-range-input" '
+        f'hx-get="{endpoint}" hx-target="{target_esc}" hx-swap="innerHTML" '
+        f'hx-include="closest .date-range-bar">'
+        f"</div>"
+    )
 
 
 def render_histogram(h: Histogram) -> str:
