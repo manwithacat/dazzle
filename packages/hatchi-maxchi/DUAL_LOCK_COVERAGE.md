@@ -72,3 +72,15 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 ## Plan
 
 See `docs/superpowers/plans/2026-07-11-hm-sophistication-plan.md`.
+
+## Improve loop
+
+Ranked next promotions (machine queue for `/improve hm-convergence`):
+
+```bash
+python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5
+python packages/hatchi-maxchi/tools/dual_lock_queue.py --write   # → DUAL_LOCK_QUEUE.md
+```
+
+Playbook: `.claude/commands/improve/strategies/dual_lock_expand.md`.
+Force path: `/improve hm-convergence dual_lock_expand`.

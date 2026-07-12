@@ -19,7 +19,7 @@ If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count
 | trials | qualitative persona scenarios (trial.toml) | `## Lane: trials` | `improve/lanes/trials.md` |
 | ux-converge | example apps with nonzero UX contract failures | `## Lane: ux-converge` | `improve/lanes/ux-converge.md` |
 | test-suite | test-suite redundancy-cluster collapse (#1530) | `## Lane: test-suite` | `improve/lanes/test-suite.md` |
-| hm-convergence | HM ownership floors + dual-locks / taste (Tailwind drain complete; zero-floor gates only) | `## Lane: hm-convergence` | `improve/lanes/hm-convergence.md` |
+| hm-convergence | HM ownership floors + dual-locks / taste (Tailwind drain complete; **dual_lock_expand** is the default remaining work) | `## Lane: hm-convergence` | `improve/lanes/hm-convergence.md` |
 
 ## State files
 
@@ -113,7 +113,7 @@ Read `improve/lanes/{name}.md` and follow its playbook end-to-end. The lane:
 - Returns an outcome: `{status: PASS|FAIL|BLOCKED|EXPLORED|HOUSEKEEPING, summary: str, signals_to_emit: list, budget_consumed: int}`
 - Does **not** touch the lock, the preflight, the log, or other lanes' state
 
-If the lane requires sub-strategy dispatch (framework-ux explore phase has 7: `missing_contracts`, `edge_cases`, `contract_audit`, `framework_gap_analysis`, `finding_investigation`, `api_surface_audit`, `quality_intelligence_sweep`), the lane reads from `improve/strategies/*.md` and picks one per its own rules.
+If the lane requires sub-strategy dispatch (framework-ux explore phase has 7: `missing_contracts`, `edge_cases`, `contract_audit`, `framework_gap_analysis`, `finding_investigation`, `api_surface_audit`, `quality_intelligence_sweep`; **hm-convergence** default promote strategy: `dual_lock_expand` — queue via `python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5`, playbook `improve/strategies/dual_lock_expand.md`), the lane reads from `improve/strategies/*.md` and picks one per its own rules.
 
 ### Step 3: Apply outcome
 

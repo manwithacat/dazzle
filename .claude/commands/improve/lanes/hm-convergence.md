@@ -88,15 +88,32 @@ screenshot — for those, reason about token/value equality (Tier A) or defer.
 `dazzle qa taste-panel` remains available as an *optional aesthetic-quality* pass **iff
 credits are topped up** — never the regression gate.
 
-## Explore phase (when floors are green and no actionable HMC rows)
+## Actionable work when floors are green
 
-Prefer sophistication / dual-lock work over reopening the drain campaign:
+Dual-lock expansion is the **primary** remaining product work for this lane.
+Do **not** treat empty historical HMC drain rows as "lane idle" — consult the
+machine queue first.
 
-1. **dual_lock_expand** — promote root-only contracts to schema locks where an
-   ingest model exists; scaffold missing `contracts/<part>.py` (see
-   `contracts/AUTHORING.md` + sophistication plan Phase B).
-2. **dual_lock_visual_smoke** (subscription default) — after dual-lock expansion
-   or contract changes, run `python scripts/hm_visual_smoke.py --dazzle-emit`.
+```bash
+python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5
+python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write
+```
+
+| Signal | Action |
+|--------|--------|
+| Queue depth > 0 | Run strategy **`dual_lock_expand`** (playbook below) — forceable via `/improve hm-convergence dual_lock_expand` |
+| Queue empty + floors green | **dual_lock_visual_smoke** or HOUSEKEEPING; hand back to driver for other lanes |
+| Floor red | Fix floor; never expand dual-locks on a red reservoir |
+
+### Explore / promote strategies
+
+1. **dual_lock_expand** (default) — promote the top queue candidate(s) to
+   schema+DOM (or DOM-only). Full cycle recipe:
+   **`improve/strategies/dual_lock_expand.md`**.
+   Queue tool: `packages/hatchi-maxchi/tools/dual_lock_queue.py`.
+   Coverage: `packages/hatchi-maxchi/DUAL_LOCK_COVERAGE.md`.
+2. **dual_lock_visual_smoke** (subscription default after a promote) — run
+   `python scripts/hm_visual_smoke.py --dazzle-emit`.
    Output in gitignored `.dazzle/hm-visual-smoke/` (+ `.dazzle/hm-visual-last.json`).
    Structured scores without metered API:
    `python scripts/hm_subscription_vision.py --from-smoke --write-prompt` + host
@@ -112,6 +129,13 @@ Prefer sophistication / dual-lock work over reopening the drain campaign:
 
 Historical sub-strategies `reservoir_audit` / `css_migration` / `markup_drain`
 are retired (floors already 0). Reopen only if a floor is red.
+
+### Backlog rows for dual-locks
+
+Use `HMC-NNN` with `scope` = `dual_lock <stem>` and status
+`PENDING` / `IN_PROGRESS` / `DONE`. Seed from the queue when the lane is
+picked and no dual-lock row is already `IN_PROGRESS`. The queue is the
+authority for *what* is left; the backlog is the cycle ledger.
 
 ## Owns (capability-map)
 

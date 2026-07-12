@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **/improve dual-lock loop** — `packages/hatchi-maxchi/tools/dual_lock_queue.py`
+  ranks the next schema+DOM promotions; strategy
+  `improve/strategies/dual_lock_expand.md` is the default remaining work for
+  lane `hm-convergence`. Force: `/improve hm-convergence dual_lock_expand`.
+  Coverage map + AUTHORING.md point at the queue.
 - **radar + time-series → schema+DOM dual-lock** — HM `contracts/radar.py`
   (`Radar`/`RadarAxis`, root `data-dz-radar`) and `contracts/time_series.py`
   (`TimeSeries`/`TimeSeriesPoint`/`TimeSeriesLayer`, root `data-dz-time-series`)
