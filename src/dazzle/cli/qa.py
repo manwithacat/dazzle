@@ -715,10 +715,10 @@ def _seed_signable_rows(
     ``token_state="expired"`` mints already-expired tokens so *_token_expired*
     scenarios exercise the real "Invalid or expired link" page (TR-51).
 
-    ``token_state="already_signed"`` (TR-50) seeds a normal token then immediately
-    signs the row via the production ``POST /api/sign/...`` path (stub signature
-    PNG), so ``*_already_signed`` scenarios re-open a genuinely signed document
-    with completion page + signed-copy download instead of a pending form.
+    ``token_state="already_signed"`` (TR-49 / #1571) seeds a normal token then
+    immediately signs the row via the production ``POST /api/sign/...`` path
+    (stub signature PNG), so ``*_already_signed`` scenarios re-open a genuinely
+    signed document with completion page + signed-copy download.
 
     ``signable_ids`` (#1382) maps entity name → a pre-generated UUID to insert
     the row under (so it matches the armed ``DAZZLE_QA_SIGNING_REJECT_IDS``).
