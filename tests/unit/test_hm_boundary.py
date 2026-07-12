@@ -59,6 +59,9 @@ SANCTIONED = {
     "scripts/hm_pages_vision.py",
     "scripts/hm_visual_smoke.py",
     "scripts/hm_css_classify.py",
+    # Gallery interaction probes: monorepo entry that runpy-delegates to
+    # packages/hatchi-maxchi/tools/gallery_probes.py (same class as visual smoke).
+    "scripts/hm_gallery_probes.py",
     # Design-context facade names the HM families path in *generated doc prose*
     # (the hm-design-context.md pointer to the vernacular). Reference, not consumption.
     "src/dazzle/core/design_context.py",

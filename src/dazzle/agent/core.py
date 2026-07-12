@@ -20,6 +20,7 @@ from datetime import datetime
 from typing import Any
 
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL, default_model_for_driver
+from dazzle.llm.driver import call_subscription_cli, is_subscription_driver
 
 from .executor import Executor
 from .models import ActionResult, ActionType, AgentAction, PageState, Step
@@ -408,8 +409,6 @@ class DazzleAgent:
         self._use_tool_calls = use_tool_calls
         self._tool_use_warned = False  # one-shot warning latch for MCP+tool_calls path
         self._llm_driver = llm_driver
-        from dazzle.llm.driver import is_subscription_driver
-
         if is_subscription_driver(llm_driver) and use_tool_calls:
             # Subscription CLIs (claude --print / grok -p) are text pipes —
             # no native tool-use blocks. The text protocol's robust parser
@@ -756,8 +755,6 @@ class DazzleAgent:
         full flattened context; the loop's continuity lives in the
         message history, not in any CLI session state.
         """
-        from dazzle.llm.driver import call_subscription_cli
-
         parts: list[str] = []
         for msg in messages:
             content = msg["content"]

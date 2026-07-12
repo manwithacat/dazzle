@@ -129,23 +129,50 @@ def _git_short_sha() -> str:
     return "unknown"
 
 
-def _build_timestamp() -> str:
-    """UTC build time stamped into the gallery brand strip."""
-    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
+def _git_commit_timestamp() -> str:
+    """UTC commit time for the gallery brand strip (deterministic).
+
+    Wall-clock ``datetime.now`` would make ``site/index.html`` change on every
+    rebuild and break the byte-identical gallery gate. Commit date is the
+    right reporting signal for "last updated" and is stable across builds of
+    the same tree.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "show", "-s", "--format=%cI", "HEAD"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            # 2026-07-12T20:41:34+00:00 → 2026-07-12 20:41 UTC
+            raw = out.stdout.strip()
+            try:
+                dt = datetime.fromisoformat(raw)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=UTC)
+                return dt.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
+            except ValueError:
+                return raw
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return "unknown"
 
 
 def _hm_brand_html() -> str:
-    """Top-left gallery brand + build report (version / commit / built-at)."""
+    """Top-left gallery brand + build report (version / commit / last updated)."""
     ver = _html.escape(_hm_package_version())
     sha = _html.escape(_git_short_sha())
-    built = _html.escape(_build_timestamp())
+    updated = _html.escape(_git_commit_timestamp())
     return (
         '<div class="hm-brand">HaTchi-MaXchi'
         "<small>htmx4-native design system</small>"
         '<div class="hm-brand-meta" title="Gallery build report">'
         f"<span>v{ver}</span>"
         f"<span>{sha}</span>"
-        f"<span>built {built}</span>"
+        f"<span>updated {updated}</span>"
         "</div></div>"
     )
 

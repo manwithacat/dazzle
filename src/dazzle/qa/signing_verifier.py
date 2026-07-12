@@ -71,6 +71,27 @@ def _has_audit_fields(row: dict[str, Any]) -> bool:
     return bool(row.get("signer_ip")) and bool(row.get("signed_at"))
 
 
+def _expected_outcome_for_seeded_doc(
+    active_doc: SeededDoc | None,
+    invoked: list[str],
+) -> str:
+    """Map seeded-doc harness flags to an expected outcome label.
+
+    When the harness fixed token/validator state, tool-based inference would
+    mis-score (e.g. expect "signed" after an attempt against an expired link).
+    """
+    if active_doc is not None and getattr(active_doc, "token_state", "fresh") == "expired":
+        # TR-51: expired token — every attempt rejected; row stays untouched.
+        return "token_expired"
+    if active_doc is not None and getattr(active_doc, "token_state", "fresh") == "already_signed":
+        # TR-49: pre-signed row; re-open must leave status=signed.
+        return "signed"
+    if active_doc is not None and getattr(active_doc, "validator_reject", False):
+        # #1382: project signing_validator armed to reject — stay `sent`.
+        return "validator_rejected"
+    return infer_expected_outcome(invoked)
+
+
 def verify_signing_outcome(
     *,
     action_sink: dict[str, Any],
@@ -88,25 +109,7 @@ def verify_signing_outcome(
     requests: list[dict[str, Any]] = action_sink.get("requests", [])
     active_doc: SeededDoc | None = action_sink.get("active_doc")
 
-    # When the harness seeded an already-expired token (TR-51), the
-    # expectation is fixed by the seeding, not by what the persona tried:
-    # every sign/decline attempt must be rejected and the row must stay
-    # untouched. Tool-based inference would wrongly expect "signed" the
-    # moment the persona attempts a signature against the expired link.
-    if active_doc is not None and getattr(active_doc, "token_state", "fresh") == "expired":
-        expected = "token_expired"
-    elif active_doc is not None and getattr(active_doc, "token_state", "fresh") == "already_signed":
-        # TR-49: harness pre-signed the row; re-open must leave status=signed
-        # (persona may open the link / download; must not un-sign or re-seed pending).
-        expected = "signed"
-    elif active_doc is not None and getattr(active_doc, "validator_reject", False):
-        # #1382: the project signing_validator is armed to reject this row, so the
-        # expectation is fixed by the seeding — the persona's sign attempt must be
-        # blocked and the row must stay `sent`. Tool inference would wrongly expect
-        # "signed" and a successful rejection would mis-score as a failure.
-        expected = "validator_rejected"
-    else:
-        expected = infer_expected_outcome(invoked)
+    expected = _expected_outcome_for_seeded_doc(active_doc, invoked)
     outcome = SigningOutcome(detected=False, expected_outcome_inferred=expected)
 
     if not any("/sign/" in r.get("url", "") for r in requests):

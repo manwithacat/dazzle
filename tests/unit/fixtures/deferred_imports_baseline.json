@@ -1,6 +1,5 @@
 {
   "src/dazzle/agent/client_factory.py": 1,
-  "src/dazzle/agent/core.py": 1,
   "src/dazzle/agent/missions/journey.py": 4,
   "src/dazzle/api_kb/loader.py": 6,
   "src/dazzle/api_surface/ir_types.py": 1,
@@ -46,7 +45,7 @@
   "src/dazzle/cli/process_cli.py": 9,
   "src/dazzle/cli/project.py": 4,
   "src/dazzle/cli/pulse.py": 18,
-  "src/dazzle/cli/qa.py": 28,
+  "src/dazzle/cli/qa.py": 29,
   "src/dazzle/cli/quality.py": 2,
   "src/dazzle/cli/rbac.py": 20,
   "src/dazzle/cli/rhythm.py": 15,
@@ -303,7 +302,6 @@
   "src/dazzle/pitch/generators/pptx_gen.py": 2,
   "src/dazzle/qa/capture.py": 2,
   "src/dazzle/qa/signing_seed.py": 1,
-  "src/dazzle/qa/trial_verdict_fallback.py": 1,
   "src/dazzle/rbac/report.py": 1,
   "src/dazzle/rbac/verification_harness.py": 5,
   "src/dazzle/rbac/verification_types.py": 1,

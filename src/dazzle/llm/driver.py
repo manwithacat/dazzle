@@ -33,6 +33,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -421,7 +422,7 @@ def _parse_cli_json_output(stdout: str, *, cli_label: str = "CLI") -> tuple[str,
     )
 
 
-def _extract_text_from_envelope(envelope: dict) -> str | None:
+def _extract_text_from_envelope(envelope: dict[str, Any]) -> str | None:
     for key in ("result", "response", "text", "content", "output"):
         val = envelope.get(key)
         if isinstance(val, str):
@@ -445,7 +446,7 @@ def _extract_text_from_envelope(envelope: dict) -> str | None:
     return None
 
 
-def _extract_tokens_from_envelope(envelope: dict) -> int:
+def _extract_tokens_from_envelope(envelope: dict[str, Any]) -> int:
     usage = envelope.get("usage") or {}
     if not isinstance(usage, dict):
         return 0

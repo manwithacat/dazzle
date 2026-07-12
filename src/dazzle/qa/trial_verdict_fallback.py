@@ -17,7 +17,8 @@ import logging
 import os
 from typing import Any
 
-from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL, default_model_for_driver
+from dazzle.llm.driver import call_subscription_cli, is_subscription_driver
 
 logger = logging.getLogger(__name__)
 _FALLBACK_SYSTEM_PROMPT = """\
@@ -92,13 +93,8 @@ def synthesize_verdict(
     )
     user_msg = "Write the verdict now. One paragraph, in character."
 
-    from dazzle.llm.driver import is_subscription_driver
-
     if is_subscription_driver(llm_driver):
         try:
-            from dazzle.core.model_defaults import default_model_for_driver
-            from dazzle.llm.driver import call_subscription_cli
-
             text, _tokens = call_subscription_cli(
                 llm_driver,
                 user_msg,

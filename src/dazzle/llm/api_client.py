@@ -14,7 +14,11 @@ import uuid
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
-from dazzle.core.model_defaults import ANTHROPIC_PRICING_PER_MTOK, DEFAULT_JUDGMENT_MODEL
+from dazzle.core.model_defaults import (
+    ANTHROPIC_PRICING_PER_MTOK,
+    DEFAULT_GROK_JUDGMENT_MODEL,
+    DEFAULT_JUDGMENT_MODEL,
+)
 from dazzle.llm.driver import (
     DRIVER_CLAUDE_CLI,
     DRIVER_GROK_CLI,
@@ -112,50 +116,12 @@ class LLMAPIClient:
         # client so multiple invocations from the same run share the ID.
         self.run_id: str = uuid.uuid4().hex
 
-        # Get API key
+        # Get API key / subscription CLI fallback (extracted for CC ceiling).
         self.api_key: str | None = None
         self._use_cli_fallback = False
         # Concrete subscription driver when using CLI fallback (claude-cli / grok-cli).
         self._cli_driver: str | None = None
-
-        if api_key:
-            self.api_key = api_key
-        elif api_key_env:
-            self.api_key = os.environ.get(api_key_env)
-        else:
-            # Default env var names
-            if provider == LLMProvider.ANTHROPIC:
-                self.api_key = os.environ.get("ANTHROPIC_API_KEY")
-            elif provider == LLMProvider.OPENAI:
-                self.api_key = os.environ.get("OPENAI_API_KEY")
-            elif provider == LLMProvider.CLAUDE_CLI:
-                self._use_cli_fallback = True
-                self._cli_driver = DRIVER_CLAUDE_CLI
-            elif provider == LLMProvider.GROK_CLI:
-                self._use_cli_fallback = True
-                self._cli_driver = DRIVER_GROK_CLI
-
-        # If no API key found, try any available subscription CLI.
-        if not self.api_key and not self._use_cli_fallback:
-            picked = pick_available_subscription_driver()
-            if picked is not None:
-                logger.info(
-                    "No API key found, using subscription CLI fallback (%s)",
-                    picked,
-                )
-                self._use_cli_fallback = True
-                self._cli_driver = picked
-                self.provider = (
-                    LLMProvider.GROK_CLI if picked == DRIVER_GROK_CLI else LLMProvider.CLAUDE_CLI
-                )
-            else:
-                raise ValueError(
-                    f"API key not found for {provider}.\n"
-                    f"Options:\n"
-                    f"  1. Set {api_key_env or 'ANTHROPIC_API_KEY'} environment variable\n"
-                    f"  2. Install Claude Code CLI (claude.com/claude-code) or Grok Build "
-                    f"CLI (`grok login`) for subscription-based local cognition\n"
-                )
+        self._resolve_credentials(provider, api_key, api_key_env)
 
         # Subscription billing is a development convenience, never a
         # production dependency — a deployed app must not run its
@@ -163,21 +129,62 @@ class LLMAPIClient:
         if self._use_cli_fallback and os.environ.get("DAZZLE_ENV") == "production":
             raise RuntimeError(PRODUCTION_NEEDS_API_KEY_MSG)
 
-        # Set default model
-        if model:
-            self.model = model
-        elif provider == LLMProvider.OPENAI:
-            self.model = "gpt-4-turbo"
-        elif self._cli_driver == DRIVER_GROK_CLI or provider == LLMProvider.GROK_CLI:
-            from dazzle.core.model_defaults import DEFAULT_GROK_JUDGMENT_MODEL
-
-            self.model = DEFAULT_GROK_JUDGMENT_MODEL
-        else:
-            # Anthropic API and Claude CLI both speak Claude model IDs.
-            self.model = DEFAULT_JUDGMENT_MODEL
-
-        # Initialize provider client
+        self.model = self._default_model(model, provider)
         self._init_client()
+
+    def _resolve_credentials(
+        self,
+        provider: LLMProvider,
+        api_key: str | None,
+        api_key_env: str | None,
+    ) -> None:
+        """Populate api_key / CLI fallback from args, env, or subscription CLI."""
+        if api_key:
+            self.api_key = api_key
+        elif api_key_env:
+            self.api_key = os.environ.get(api_key_env)
+        elif provider == LLMProvider.ANTHROPIC:
+            self.api_key = os.environ.get("ANTHROPIC_API_KEY")
+        elif provider == LLMProvider.OPENAI:
+            self.api_key = os.environ.get("OPENAI_API_KEY")
+        elif provider == LLMProvider.CLAUDE_CLI:
+            self._use_cli_fallback = True
+            self._cli_driver = DRIVER_CLAUDE_CLI
+        elif provider == LLMProvider.GROK_CLI:
+            self._use_cli_fallback = True
+            self._cli_driver = DRIVER_GROK_CLI
+
+        if self.api_key or self._use_cli_fallback:
+            return
+        picked = pick_available_subscription_driver()
+        if picked is not None:
+            logger.info(
+                "No API key found, using subscription CLI fallback (%s)",
+                picked,
+            )
+            self._use_cli_fallback = True
+            self._cli_driver = picked
+            self.provider = (
+                LLMProvider.GROK_CLI if picked == DRIVER_GROK_CLI else LLMProvider.CLAUDE_CLI
+            )
+            return
+        raise ValueError(
+            f"API key not found for {provider}.\n"
+            f"Options:\n"
+            f"  1. Set {api_key_env or 'ANTHROPIC_API_KEY'} environment variable\n"
+            f"  2. Install Claude Code CLI (claude.com/claude-code) or Grok Build "
+            f"CLI (`grok login`) for subscription-based local cognition\n"
+        )
+
+    def _default_model(self, model: str | None, provider: LLMProvider) -> str:
+        if model:
+            return model
+        if provider == LLMProvider.OPENAI:
+            return "gpt-4-turbo"
+        if self._cli_driver == DRIVER_GROK_CLI or provider == LLMProvider.GROK_CLI:
+            return DEFAULT_GROK_JUDGMENT_MODEL
+        # Anthropic API and Claude CLI both speak Claude model IDs.
+        return DEFAULT_JUDGMENT_MODEL
 
     def _init_client(self) -> None:
         """Initialize provider-specific client."""

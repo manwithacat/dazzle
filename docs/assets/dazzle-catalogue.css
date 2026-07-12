@@ -873,7 +873,13 @@ a.dz-action-card:hover {
   [data-dz-tooltip]::after { transition: none; }
 }
 
-/* ── dz-menu — details-based dropdown (the hypermedia answer) ────────── */
+/* HYPERPART: menu */
+/* ── dz-menu — details-based dropdown (the hypermedia answer) ──────────
+ * Disclosure chrome: CSS chevron on the summary trigger (same family as
+ * accordion / navigation-menu) — not Unicode ▾ in the label text
+ * (affordance-disclosure-chrome). Summary usually carries .dz-button.
+ * Light-dismiss: controllers/dz-details-light-dismiss.js (overlay-light-dismiss).
+ */
 
 .dz-menu {
   position: relative;
@@ -883,9 +889,38 @@ a.dz-action-card:hover {
 .dz-menu > summary {
   list-style: none;
   cursor: pointer;
+  /* .dz-button is already inline-flex; ensure room for ::after chevron */
+  gap: var(--space-2xs);
 }
 
-.dz-menu > summary::-webkit-details-marker { display: none; }
+.dz-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* House disclosure chevron — 1rem, rotates when open (not part of label text) */
+.dz-menu > summary::after {
+  content: "";
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  opacity: 0.65;
+  -webkit-mask: center / contain no-repeat
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+  mask: center / contain no-repeat
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+  transition: transform var(--duration-base, 150ms) var(--ease-out, ease);
+}
+
+.dz-menu[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-menu > summary::after {
+    transition: none;
+  }
+}
 
 .dz-menu__panel {
   position: absolute;
@@ -3306,6 +3341,13 @@ dialog.dz-dialog {
   background: var(--colour-surface);
   color: var(--colour-text);
   box-shadow: var(--shadow-lg);
+  /* Shell may hold initial focus after open (dz-dialog.js) — no ring on the panel. */
+  outline: none;
+}
+
+dialog.dz-dialog:focus,
+dialog.dz-dialog:focus-visible {
+  outline: none;
 }
 
 dialog.dz-dialog::backdrop {
@@ -3363,15 +3405,18 @@ dialog.dz-dialog::backdrop {
   height: 1rem;
 }
 
+/* Body is a composition host (same rule as drawer): primary text so nested
+   Hyperparts keep their own colour scale. Leading prose stays muted. */
 .dz-dialog__body {
   padding: 0 var(--space-lg);
   font-size: var(--text-sm);
-  color: var(--colour-text-muted);
+  color: var(--colour-text);
   line-height: var(--leading-normal);
 }
 
-.dz-dialog__body p {
+.dz-dialog__body > p {
   margin: 0;
+  color: var(--colour-text-muted);
 }
 
 .dz-dialog__footer {
@@ -3410,6 +3455,8 @@ dialog.dz-drawer {
   background: var(--colour-surface);
   color: var(--colour-text);
   box-shadow: var(--shadow-lg);
+  /* Shell may hold initial focus after open (dz-dialog.js) — no ring on the panel. */
+  outline: none;
   /* right edge (default): pin to the inline-end */
   margin-block: 0;
   margin-inline: auto 0;
@@ -3421,6 +3468,11 @@ dialog.dz-drawer {
     translate var(--duration-base) var(--ease-out),
     overlay var(--duration-base) var(--ease-out) allow-discrete,
     display var(--duration-base) var(--ease-out) allow-discrete;
+}
+
+dialog.dz-drawer:focus,
+dialog.dz-drawer:focus-visible {
+  outline: none;
 }
 
 /* Width presets (data-dz-width) — promoted from Dazzle's peek
@@ -3527,16 +3579,20 @@ dialog.dz-drawer > form {
   height: 1rem;
 }
 
+/* Body is a composition host: primary text colour so nested Hyperparts
+   (field labels, card values, switch labels, badges) match their standalone
+   demos. Do not paint the whole body muted — guests inherit. Leading prose
+   (direct children <p>, gallery hm-demo-muted) is the secondary voice. */
 .dz-drawer__body {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-lg);
   font-size: var(--text-sm);
-  color: var(--colour-text-muted);
+  color: var(--colour-text);
   line-height: var(--leading-normal);
 }
 
-.dz-drawer__body p { margin: 0; }
+.dz-drawer__body > p { margin: 0; color: var(--colour-text-muted); }
 
 .dz-drawer__footer {
   display: flex;
@@ -7112,10 +7168,12 @@ input.dz-switch:checked::before {
   outline-offset: var(--focus-ring-offset);
 }
 
+/* HYPERPART: popover */
 /* ── dz-popover — details-based generic panel ────────────────────────
  * <details class="dz-popover"><summary>…trigger…</summary>
  *   <div class="dz-popover__panel">…free content…</div></details>
  * data-dz-align="start|end" on the root positions the panel.
+ * Light-dismiss: controllers/dz-details-light-dismiss.js (overlay-light-dismiss).
  */
 
 .dz-popover {
@@ -7150,6 +7208,12 @@ input.dz-switch:checked::before {
 
 /* ── dz-kbd ──────────────────────────────────────────────────────────
  * <kbd class="dz-kbd">⌘K</kbd> — shortcut chips (command palette etc.)
+ *
+ * Stem shortcut-hint-chrome:
+ *   - Visually secondary: mono, small, muted keycap (this block).
+ *   - Spatially secondary: never glue to a primary label — two layout roles:
+ *       adjacent → parent flex gap (see .dz-button:has(.dz-kbd))
+ *       trailing → margin-inline-start: auto (see .dz-command__item .dz-kbd)
  */
 
 .dz-kbd {
@@ -7163,6 +7227,12 @@ input.dz-switch:checked::before {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: var(--colour-text-muted);
+}
+
+/* Adjacent role: label + keycap on a compact control (opener buttons, etc.) */
+.dz-button:has(> .dz-kbd),
+button:has(> .dz-kbd) {
+  gap: var(--space-sm);
 }
 
 /* ── dz-command — the hx-get command palette (htmx4 flagship) ─────────
@@ -7284,7 +7354,10 @@ dialog.dz-command::backdrop {
   background: color-mix(in oklab, var(--colour-brand) 8%, var(--colour-surface));
 }
 
-.dz-command__item .dz-kbd { margin-inline-start: auto; }
+/* Trailing role: label leads; shortcut at the end of the row (cmdk/Linear) */
+.dz-command__item .dz-kbd {
+  margin-inline-start: auto;
+}
 
 .dz-command__empty {
   padding: var(--space-xl);
@@ -8282,11 +8355,11 @@ button.dz-item:hover {
 /* HYPERPART: menubar */
 /*
  * Horizontal app menubar — File / Edit / View style. Each item is a
- * details/summary (or button) so open state is DOM-native.
+ * details/summary so open state is DOM-native.
  *
- * PLACEHOLDER — shadcn parity (HMC-038). No nested popover controller yet;
- * open one panel via native details. Compose with menu Hyperpart for
- * richer item lists later.
+ * Exclusive open across items: controllers/dz-menubar.js (toggle capture).
+ * Gated by gallery probe menubar.exclusive_open
+ * (packages/hatchi-maxchi/tools/gallery_probes.py).
  */
 
 .dz-menubar {
@@ -8603,9 +8676,12 @@ button.dz-item:hover {
  * Top navigation mega-menu — horizontal site/product nav (distinct from
  * menubar File/Edit/View and from app-shell's sidebar). Each trigger is a
  * native details/summary; open panel is a multi-column mega list.
+ * Exclusive open + outside dismiss: controllers/dz-navigation-menu.js.
+ * Gated by gallery probes navigation_menu.exclusive_open /
+ * navigation_menu.dismiss_outside (packages/hatchi-maxchi/tools/gallery_probes.py).
  *
- * PLACEHOLDER — shadcn parity (HMC-039). No JS single-open controller yet;
- * browser allows multiple details open. Compose with link lists / item.
+ * Disclosure chrome: CSS chevron on the trigger (::after), same family as
+ * accordion — not a Unicode ▾ span (stem: affordance-disclosure-chrome).
  */
 
 .dz-navigation-menu {
@@ -8655,6 +8731,28 @@ button.dz-item:hover {
   display: none;
 }
 
+/* CSS chevron — inherits currentColor; rotates when the branch is open.
+ * Sized in rem (not em-of-label) so the affordance stays peer to the label
+ * (stem: affordance-disclosure-chrome). */
+.dz-navigation-menu__trigger::after {
+  content: "";
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  opacity: 0.65;
+  -webkit-mask: center / contain no-repeat
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+  mask: center / contain no-repeat
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+  transition: transform var(--duration-base, 150ms) var(--ease-out, ease);
+}
+
+.dz-navigation-menu__branch[open] > .dz-navigation-menu__trigger::after,
+details.dz-navigation-menu__branch[open] > .dz-navigation-menu__trigger::after {
+  transform: rotate(180deg);
+}
+
 .dz-navigation-menu__item[open] > .dz-navigation-menu__trigger,
 .dz-navigation-menu__link:hover,
 .dz-navigation-menu__trigger:hover,
@@ -8663,15 +8761,16 @@ button.dz-item:hover {
   color: var(--colour-text);
 }
 
+/* Open branch: surface highlight on trigger (details is the open element) */
+.dz-navigation-menu__branch[open] > .dz-navigation-menu__trigger {
+  background: var(--colour-surface-muted);
+  color: var(--colour-text);
+}
+
 .dz-navigation-menu__link:focus-visible,
 .dz-navigation-menu__trigger:focus-visible {
   outline: 2px solid var(--colour-brand);
   outline-offset: 2px;
-}
-
-.dz-navigation-menu__caret {
-  font-size: 0.65em;
-  opacity: 0.7;
 }
 
 .dz-navigation-menu__panel {
@@ -8732,6 +8831,12 @@ button.dz-item:hover {
   font-size: var(--text-xs, 0.75rem);
   font-weight: normal;
   color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-navigation-menu__trigger::after {
+    transition: none;
+  }
 }
 /* --- hatchi-maxchi/components/onboarding.css --- */
 /*
@@ -13772,16 +13877,29 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 /* HYPERPART: tabs */
 /*
  * dz-tabs — a lazy tab strip. An honest link-strip, NOT a half-built ARIA
- * tabs widget: the tabs are <button>s (natively focusable + Tab-navigable)
- * with `aria-current="true"` on the active one — no `role="tablist"` it
- * can't back with roving-tabindex/arrow-key navigation (the candor HM
- * already applies to menu: "disclosure, not ARIA menu").
+ * tabs widget: the tabs are <button type="button">s (natively focusable +
+ * Tab-navigable) with `aria-current="true"` on the active one — no
+ * `role="tablist"` it can't back with roving-tabindex/arrow-key navigation
+ * (the candor HM already applies to menu: "disclosure, not ARIA menu").
  *
- * Each panel lazy-loads its content via htmx (`hx-get` on `intersect once`,
- * so a panel fetches the first time it's revealed); dz-tabs.js toggles the
- * active tab + shows/hides panels, scoped to each `.dz-tabs` root so N tab
- * groups coexist. The first panel is visible (and may carry its content
- * inline / load on `load`); the rest start `hidden`.
+ * Taxonomy (agent-facing):
+ *   - tab (class `__tab`) — the clickable label in the strip (a button)
+ *   - tab list (`__list`) — the strip container
+ *   - panel (`__panel`) — the content region shown for the current tab
+ *
+ * Why <button>, not <a>: in-page state change (which panel is visible), not
+ * navigation to a new URL. Links would imply a destination; buttons are the
+ * platform control for "activate something here". See stem
+ * selection-strip-honest.
+ *
+ * Indicator geometry: the active mark is a 2px bottom border. base.css gives
+ * every button `border-radius: var(--radius-sm)`, which would curve that
+ * underline at the corners — incongruous for a flush tab rail. Force
+ * `border-radius: 0` so the indicator is a straight bar (stem
+ * selection-strip-honest › indicator).
+ *
+ * Each panel lazy-loads via htmx (`hx-get` on `intersect once`); dz-tabs.js
+ * toggles active tab + shows/hides panels, scoped to each `.dz-tabs` root.
  */
 
 .dz-tabs {
@@ -13795,9 +13913,13 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 }
 
 .dz-tabs__tab {
+  /* Reset base button chrome — this is strip chrome, not a filled action */
+  appearance: none;
+  border-radius: 0; /* straight active underline; do not inherit radius-sm */
   padding-inline: var(--space-md);
   padding-block: var(--space-sm);
   font-size: var(--text-sm);
+  font-weight: var(--weight-regular, 400);
   color: var(--colour-text-muted);
   background: transparent;
   border: 0;
@@ -13809,6 +13931,7 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 
 .dz-tabs__tab:hover {
   color: var(--colour-text);
+  background: transparent; /* beat base button:hover surface fill */
 }
 
 .dz-tabs__tab:focus-visible {
@@ -13820,6 +13943,8 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   border-block-end-color: var(--colour-brand);
   color: var(--colour-text);
   font-weight: var(--weight-medium);
+  /* corners stay square — curved indicator is a presentation bug */
+  border-radius: 0;
 }
 
 .dz-tabs__loading {
