@@ -36,12 +36,16 @@ EXEMPLARS: list[MoneyField] = [
 def render(field: MoneyField) -> str:
     fid = html.escape(field.field_id, quote=True)
     name = html.escape(field.name, quote=True)
+    cur = html.escape(field.currency, quote=True)
+    # aria-label on the major input — dual-lock fragment has no visible
+    # label sibling; axe label rule requires an accessible name.
     return (
         f'<div class="dz-money" data-dz-money '
-        f'data-dz-currency="{html.escape(field.currency, quote=True)}" '
+        f'data-dz-currency="{cur}" '
         f'data-dz-scale="{field.scale}">'
         f'<input id="{fid}" name="{name}" inputmode="decimal" '
-        f'value="{html.escape(field.major_display, quote=True)}" class="dz-form-input">'
+        f'value="{html.escape(field.major_display, quote=True)}" '
+        f'class="dz-form-input" aria-label="Amount ({cur})">'
         f'<input type="hidden" name="{name}_minor" value="{field.minor_value}">'
         f"</div>"
     )
