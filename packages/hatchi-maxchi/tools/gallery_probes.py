@@ -65,6 +65,8 @@ class Probe:
     kind: str  # runner dispatch key
     params: dict[str, Any] = field(default_factory=dict)
     fix_surface: str = "controller"  # controller | css | partial | gallery-only | contract
+    # exclusive = only one open; multi_open = intentional multi-expand (tree)
+    intent: str = "exclusive"
 
 
 # Built-in probes. Author more here (or later: probes/*.toml discovery).
@@ -88,6 +90,7 @@ PROBES: tuple[Probe, ...] = (
             "expect_open_labels": ["Edit"],
         },
         fix_surface="controller",
+        intent="exclusive",
     ),
     Probe(
         id="navigation_menu.exclusive_open",
@@ -116,6 +119,7 @@ PROBES: tuple[Probe, ...] = (
             "expect_open_contains": ["Resources"],
         },
         fix_surface="controller",
+        intent="exclusive",
     ),
     Probe(
         id="accordion.exclusive_open",
@@ -139,6 +143,31 @@ PROBES: tuple[Probe, ...] = (
             "expect_open_contains": ["Can two panels be open at once?"],
         },
         fix_surface="partial",  # native name= on details
+        intent="exclusive",
+    ),
+    Probe(
+        id="tree.multi_open",
+        stem="tree",
+        page="hyperparts/tree.html",
+        category="interaction",
+        severity="medium",
+        claim=(
+            "Tree nodes stay multi-open by design — expanding Platform then "
+            "Design systems leaves both open (native details forest, no exclusive controller)"
+        ),
+        kind="multi_details_open",
+        params={
+            "root": "[data-dz-tree], .dz-tree, .tree, [data-tree]",
+            # single class branch only — avoid OR multi-match double-counting open nodes
+            "item": "details.dz-tree-node, details.tree-node",
+            "trigger": "summary.dz-tree-summary, summary.tree-summary",
+            # Engineering is open by default; open two siblings under it
+            "sequence": ["Platform", "Design systems"],
+            "expect_open_contains_all": ["Engineering", "Platform", "Design systems"],
+            "expect_min_open": 3,
+        },
+        fix_surface="partial",
+        intent="multi_open",
     ),
 )
 
@@ -216,8 +245,10 @@ def _run_exclusive_details_open(page: Any, probe: Probe) -> dict[str, Any]:
 
     open_items = page.locator(_open_item_selector(item_sel))
     open_count = open_items.count()
+    # direct child summary only — nested forests (tree) have descendant summaries
     open_labels = [
-        _norm_label(open_items.nth(i).locator("summary").inner_text()) for i in range(open_count)
+        _norm_label(open_items.nth(i).locator(":scope > summary").inner_text())
+        for i in range(open_count)
     ]
 
     if _labels_match_expect(
@@ -241,8 +272,64 @@ def _run_exclusive_details_open(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_multi_details_open(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click triggers in sequence; assert multiple items stay open (tree forest)."""
+    params = probe.params
+    item_sel = params["item"]
+    trigger_sel = params["trigger"]
+    sequence: list[str] = list(params.get("sequence") or [])
+    expect_all: list[str] = list(params.get("expect_open_contains_all") or sequence)
+    min_open = int(params.get("expect_min_open") or len(expect_all) or 2)
+
+    root_loc = page.locator(params["root"])
+    if root_loc.count() == 0:
+        return {"verdict": "ERROR", "detail": f"root not found ({params['root']})"}
+
+    n_items = page.locator(item_sel).count()
+    if n_items < min_open:
+        return {
+            "verdict": "ERROR",
+            "detail": f"need ≥{min_open} items, found {n_items}",
+        }
+
+    for label in sequence:
+        trig = page.locator(trigger_sel).filter(has_text=label).first
+        if trig.count() == 0:
+            return {"verdict": "ERROR", "detail": f"trigger not found: {label!r}"}
+        # open if closed (click summary toggles)
+        trig.click()
+        page.wait_for_timeout(80)
+
+    open_items = page.locator(_open_item_selector(item_sel))
+    open_count = open_items.count()
+    open_labels = [
+        _norm_label(open_items.nth(i).locator(":scope > summary").inner_text())
+        for i in range(open_count)
+    ]
+    joined = " ".join(open_labels).lower()
+    missing = [n for n in expect_all if n.lower() not in joined]
+    if open_count >= min_open and not missing:
+        return {
+            "verdict": "PASS",
+            "detail": f"open_count={open_count} open_labels={open_labels}",
+            "open_count": open_count,
+            "open_labels": open_labels,
+        }
+    return {
+        "verdict": "FAIL",
+        "detail": (
+            f"expected multi-open min={min_open} contains_all={expect_all}, "
+            f"got open_count={open_count} open_labels={open_labels} missing={missing}"
+        ),
+        "open_count": open_count,
+        "open_labels": open_labels,
+        "dom_hint": item_sel,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
+    "multi_details_open": _run_multi_details_open,
 }
 
 
@@ -254,14 +341,15 @@ _NAME_ATTR_RE = re.compile(r"<details\b[^>]*\bname\s*=", re.I)
 
 
 def discover_candidates() -> list[dict[str, Any]]:
-    """Scan registry partials for multi-details roots that may need exclusive-open.
+    """Scan registry partials for multi-details roots needing an intent probe.
 
     Heuristic (cheap, no browser):
     - partial contains ≥2 ``<details``
-    - not all details share a native ``name=`` (browser exclusivity)
-    - stem not already covered by an ``exclusive_details_open`` catalog probe
+    - not all details share a native ``name=`` (browser exclusivity → skip)
+    - stem covered by **any** catalog probe (exclusive *or* multi_open intent)
 
-    Returns candidate rows for improve / probe authoring — not PASS/FAIL.
+    Uncovered stems need an authored probe that declares intent:
+    exclusive (controller/name=) vs multi_open (tree forest).
     """
     sys.path.insert(0, str(SITE))
     try:
@@ -269,7 +357,10 @@ def discover_candidates() -> list[dict[str, Any]]:
     except Exception as exc:  # noqa: BLE001
         return [{"verdict": "ERROR", "detail": f"cannot import registry: {exc}"}]
 
-    covered = {p.stem for p in PROBES if p.kind == "exclusive_details_open"}
+    probes_by_stem: dict[str, list[Probe]] = {}
+    for p in PROBES:
+        probes_by_stem.setdefault(p.stem, []).append(p)
+
     rows: list[dict[str, Any]] = []
     for h in HYPERPARTS:
         partial = getattr(h, "partial", "") or ""
@@ -282,7 +373,15 @@ def discover_candidates() -> list[dict[str, Any]]:
             continue
         page = f"hyperparts/{h.id}.html"
         has_controller = bool(getattr(h, "controller", None))
-        in_catalog = h.id in covered
+        stem_probes = probes_by_stem.get(h.id, [])
+        in_catalog = bool(stem_probes)
+        intents = sorted({p.intent for p in stem_probes}) if stem_probes else []
+        if in_catalog:
+            rec = "catalog_ok_multi_open" if "multi_open" in intents else "catalog_ok"
+        elif not has_controller:
+            rec = "author_probe_declare_intent"  # exclusive controller vs multi_open partial
+        else:
+            rec = "author_probe_verify_controller"
         rows.append(
             {
                 "stem": h.id,
@@ -293,15 +392,9 @@ def discover_candidates() -> list[dict[str, Any]]:
                 "has_controller": has_controller,
                 "controller": getattr(h, "controller", None),
                 "in_probe_catalog": in_catalog,
-                "recommendation": (
-                    "catalog_ok"
-                    if in_catalog
-                    else (
-                        "author_probe_and_controller"
-                        if not has_controller
-                        else "author_probe_verify_controller"
-                    )
-                ),
+                "intents": intents,
+                "probe_ids": [p.id for p in stem_probes],
+                "recommendation": rec,
             }
         )
     rows.sort(key=lambda r: (r.get("in_probe_catalog", False), r.get("stem", "")))
@@ -460,6 +553,11 @@ def match_observation(obs: dict[str, Any]) -> list[Probe]:
         "resources",
         "multi",
         "stay",
+        "tree",
+        "expand",
+        "collapse",
+        "branch",
+        "sibling",
     )
     for p in PROBES:
         p_stem = p.stem.lower()
@@ -541,22 +639,29 @@ def write_catalog() -> Path:
         "python scripts/hm_gallery_probes.py --run   # monorepo entrypoint",
         "```",
         "",
-        "| id | stem | severity | fix_surface | claim |",
-        "|----|------|----------|-------------|-------|",
+        "| id | stem | intent | severity | fix_surface | claim |",
+        "|----|------|--------|----------|-------------|-------|",
     ]
     for p in PROBES:
         claim = p.claim.replace("|", "\\|")
-        lines.append(f"| `{p.id}` | `{p.stem}` | {p.severity} | {p.fix_surface} | {claim} |")
+        lines.append(
+            f"| `{p.id}` | `{p.stem}` | {p.intent} | {p.severity} | {p.fix_surface} | {claim} |"
+        )
     lines.extend(
         [
             "",
             "## Loop (autonomous improve)",
             "",
-            "1. `--discover` → uncovered multi-details stems",
-            "2. Author `Probe` + fix_surface (controller/partial)",
+            "1. `--discover` → uncovered multi-details stems (must declare intent)",
+            "2. Author `Probe` with `intent=exclusive|multi_open` + fix_surface",
             "3. `--run` → FAIL drains via `improve/strategies/gallery_probes.md`",
             "4. Human observation → `--validate-observation '{…}'`",
             "5. CI pin optional: `tests/test_behaviour.py` scenario for ship-grade contracts",
+            "",
+            "### Intent",
+            "",
+            "- **exclusive** — menubar / nav / accordion: only one panel open",
+            "- **multi_open** — tree forests: expanding siblings must *not* close peers",
             "",
         ]
     )
@@ -570,7 +675,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--discover",
         action="store_true",
-        help="Static scan for multi-details stems that may need exclusive-open probes",
+        help="Static scan for multi-details stems needing an intent probe (exclusive|multi_open)",
     )
     ap.add_argument("--run", action="store_true", help="Run probes")
     ap.add_argument("--stem", action="append", default=[], help="Filter by stem (repeatable)")

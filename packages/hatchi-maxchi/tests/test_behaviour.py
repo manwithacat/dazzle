@@ -104,6 +104,22 @@ def test_navigation_menu_exclusive_open(page) -> None:  # type: ignore[no-untype
     assert any("Resources" in t for t in labels), labels
 
 
+def test_tree_multi_open(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery probe tree.multi_open — sibling branches stay open together."""
+    goto_part(page, "tree")
+    item = "details.dz-tree-node, details.tree-node"
+    trigger = "summary.dz-tree-summary, summary.tree-summary"
+    page.locator(trigger).filter(has_text="Platform").first.click()
+    page.wait_for_timeout(80)
+    page.locator(trigger).filter(has_text="Design systems").first.click()
+    page.wait_for_timeout(80)
+    labels = page.locator(f"{item}[open] summary").all_text_contents()
+    labels = [" ".join(t.split()) for t in labels]
+    joined = " ".join(labels)
+    assert "Platform" in joined and "Design systems" in joined, labels
+    assert "Engineering" in joined, labels
+
+
 def test_palette_esc_closes_even_with_query_text(page) -> None:  # type: ignore[no-untyped-def]
     goto_part(page, "command")
     _open_palette(page)

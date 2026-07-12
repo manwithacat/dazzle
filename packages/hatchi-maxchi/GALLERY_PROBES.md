@@ -11,16 +11,22 @@ python packages/hatchi-maxchi/tools/gallery_probes.py --run
 python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 ```
 
-| id | stem | severity | fix_surface | claim |
-|----|------|----------|-------------|-------|
-| `menubar.exclusive_open` | `menubar` | high | controller | Opening a second menubar item closes the previously open item (exclusive open — File then Edit leaves only Edit open) |
-| `navigation_menu.exclusive_open` | `navigation-menu` | high | controller | Opening a second navigation-menu panel closes the previously open panel (exclusive open — Product then Resources leaves only Resources open) |
-| `accordion.exclusive_open` | `accordion` | medium | partial | Accordion items sharing the HTML name= attribute stay exclusive (open second trigger leaves only that panel open — zero JS) |
+| id | stem | intent | severity | fix_surface | claim |
+|----|------|--------|----------|-------------|-------|
+| `menubar.exclusive_open` | `menubar` | exclusive | high | controller | Opening a second menubar item closes the previously open item (exclusive open — File then Edit leaves only Edit open) |
+| `navigation_menu.exclusive_open` | `navigation-menu` | exclusive | high | controller | Opening a second navigation-menu panel closes the previously open panel (exclusive open — Product then Resources leaves only Resources open) |
+| `accordion.exclusive_open` | `accordion` | exclusive | medium | partial | Accordion items sharing the HTML name= attribute stay exclusive (open second trigger leaves only that panel open — zero JS) |
+| `tree.multi_open` | `tree` | multi_open | medium | partial | Tree nodes stay multi-open by design — expanding Platform then Design systems leaves both open (native details forest, no exclusive controller) |
 
 ## Loop (autonomous improve)
 
-1. `--discover` → uncovered multi-details stems
-2. Author `Probe` + fix_surface (controller/partial)
+1. `--discover` → uncovered multi-details stems (must declare intent)
+2. Author `Probe` with `intent=exclusive|multi_open` + fix_surface
 3. `--run` → FAIL drains via `improve/strategies/gallery_probes.md`
 4. Human observation → `--validate-observation '{…}'`
 5. CI pin optional: `tests/test_behaviour.py` scenario for ship-grade contracts
+
+### Intent
+
+- **exclusive** — menubar / nav / accordion: only one panel open
+- **multi_open** — tree forests: expanding siblings must *not* close peers

@@ -25,8 +25,15 @@ python scripts/hm_gallery_probes.py --discover
 # JSON: --discover --json → .dazzle/hm-gallery-probes/discover.json
 ```
 
-Uncovered multi-``<details>`` stems without a catalog probe → author probe + fix
-surface (controller or native `name=`). Do **not** ignore `NEED_PROBE` rows.
+Uncovered multi-``<details>`` stems without a catalog probe → author a probe that
+**declares intent**:
+
+| Intent | When | Fix surface |
+|--------|------|-------------|
+| `exclusive` | menubar / nav / accordion | controller or native `name=` |
+| `multi_open` | tree forests | partial only — do **not** add exclusive controller |
+
+Do **not** ignore `NEED_PROBE` / `author_probe_declare_intent` rows.
 
 ### 1. Run
 

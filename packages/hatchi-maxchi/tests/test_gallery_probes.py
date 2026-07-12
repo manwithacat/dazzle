@@ -31,9 +31,14 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "menubar.exclusive_open" in ids
     assert "navigation_menu.exclusive_open" in ids
     assert "accordion.exclusive_open" in ids
+    assert "tree.multi_open" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
+        assert p.intent in {"exclusive", "multi_open"}
+    tree = next(p for p in PROBES if p.id == "tree.multi_open")
+    assert tree.intent == "multi_open"
+    assert tree.kind == "multi_details_open"
 
 
 def test_match_observation_menubar_file_edit() -> None:
@@ -60,12 +65,21 @@ def test_discover_covers_catalogued_stems() -> None:
     report = discover_report()
     assert report["schema"] == "hm.gallery_probes.v1"
     assert "summary" in report
-    # menubar + navigation-menu must appear as multi-details and catalog-covered
+    assert report["summary"]["uncovered"] == 0, report["uncovered_stems"]
+    # menubar + navigation-menu + tree multi-details covered
     by_stem = {c["stem"]: c for c in report["candidates"] if "stem" in c}
     assert "menubar" in by_stem
     assert by_stem["menubar"]["in_probe_catalog"] is True
     assert "navigation-menu" in by_stem
     assert by_stem["navigation-menu"]["in_probe_catalog"] is True
+    assert "tree" in by_stem
+    assert by_stem["tree"]["in_probe_catalog"] is True
+    assert "multi_open" in by_stem["tree"]["intents"]
+
+
+def test_match_observation_tree_multi_open() -> None:
+    hits = match_observation({"stem": "tree", "claim": "expanding one branch collapses siblings"})
+    assert any(p.id == "tree.multi_open" for p in hits)
 
 
 def test_emit_findings_empty_and_fail() -> None:
