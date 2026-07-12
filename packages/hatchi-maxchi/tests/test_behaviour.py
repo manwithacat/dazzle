@@ -159,6 +159,29 @@ def test_navigation_menu_dismiss_outside(page) -> None:  # type: ignore[no-untyp
     assert open_n == 0, f"expected dismiss, still open={open_n}"
 
 
+def test_gallery_preview_hash_links_do_not_scroll(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery presentation: demo <a href="#"> must not jump the host page to top.
+
+    Product markup keeps href=\"#\" (stand-in route). MOCK_HTMX suppresses the
+    scroll only inside live demo surfaces so Hyperpart browse is not disrupted.
+    """
+    goto_part(page, "navigation-menu")
+    # Scroll down so a jump-to-top is observable
+    page.evaluate("window.scrollTo(0, 400)")
+    page.wait_for_timeout(50)
+    y_before = page.evaluate("window.scrollY")
+    assert y_before >= 200, f"setup: expected scrolled page, got scrollY={y_before}"
+    page.locator(
+        ".hm-preview a.navigation-menu__link, .hm-preview a.dz-navigation-menu__link"
+    ).filter(has_text="Pricing").first.click()
+    page.wait_for_timeout(80)
+    y_after = page.evaluate("window.scrollY")
+    assert y_after >= 200, (
+        f"Pricing href=# jumped gallery host (scrollY {y_before} → {y_after}); "
+        "inert hash links in .hm-preview must preventDefault"
+    )
+
+
 def test_palette_esc_closes_even_with_query_text(page) -> None:  # type: ignore[no-untyped-def]
     goto_part(page, "command")
     _open_palette(page)

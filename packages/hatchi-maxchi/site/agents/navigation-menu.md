@@ -66,6 +66,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - Native details allow multi-open and ignore outside click — ship dz-navigation-menu.js
 - Do not confuse with menubar (app File/Edit) or app-shell sidebar
+- Gallery: href=# is product-shaped stand-in; MOCK_HTMX inert-hash handler stops host scroll — do not 'fix' Copy this to void(0)
 
 ### Keyboard / AT
 

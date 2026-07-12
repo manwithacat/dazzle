@@ -1790,6 +1790,36 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   };
   setTimeout(fireLoads, 0);
 
+  // Inert demo destinations: Hyperpart partials use <a href="#"> as stand-in
+  // routes (nav Pricing, menubar File→New, …). In a real app that is a real
+  // path; in the gallery, following "#" scrolls the *host document* to top —
+  // correct UI semantics, wrong Hyperpart-demo experience. Suppress bare
+  // hash/empty hrefs only inside live demo surfaces. Copy this keeps href="#"
+  // so pasted markup stays product-shaped.
+  document.addEventListener(
+    "click",
+    function (e) {
+      var a = e.target.closest && e.target.closest("a[href]");
+      if (!a) return;
+      if (a.closest("pre, code, .code, .code__pre, figure.code")) return;
+      var href = a.getAttribute("href");
+      if (href !== "#" && href !== "") return;
+      if (!a.closest(".hm-preview, .hm-contract-live__preview, .hm-comp")) return;
+      // hx-* affordances: owned by the mock click handlers above
+      if (
+        a.hasAttribute("hx-get") ||
+        a.hasAttribute("hx-post") ||
+        a.hasAttribute("hx-delete") ||
+        a.hasAttribute("hx-put") ||
+        a.hasAttribute("hx-patch")
+      ) {
+        return;
+      }
+      e.preventDefault();
+    },
+    true,
+  );
+
   window.htmx = { version: "mock-4" };
 })();
 """
