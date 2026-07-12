@@ -723,6 +723,24 @@ class EntityCard(BaseModel):
     body_html: str = ""
 
 
+# ── Grid-region seam copy (contracts/grid_region.py) ─────────────────
+
+
+class GridRegion(BaseModel):
+    """Grid region shell — dual-lock unit for grid-region."""
+
+    body_html: str = ""
+
+
+# ── Pipeline seam copy (contracts/pipeline.py) ───────────────────────
+
+
+class Pipeline(BaseModel):
+    """Pipeline steps shell — dual-lock unit for pipeline."""
+
+    body_html: str = ""
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 54 |
+| Modules | 56 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -39,6 +39,7 @@ blast radius (who embeds / refuses this part).
 | `grid` | `grid` | `[data-dz-grid]` | — | — |
 | `grid_cols` | `grid-cols` | `[data-dz-grid]` | [data-dz-grid-col-toggle][data-dz-grid-col-toggle=present]; [data-dz-col][data-dz-col=present]; [data-dz-grid-cols-reset][] | — |
 | `grid_edit` | `grid-edit` | `[data-dz-grid][data-dz-grid-edit-url]` | [data-dz-grid-edit][data-dz-edit-kind=one_of:text\|date\|bool\|select, data-dz-edit-label=present, data-dz-edit-options=json_pairs(when:data-dz-edit-kind=select), data-dz-edit-value=present] | GridEditCell(col:str:req; kind:Literal:req; label:str:req; options:list[tuple[str,str]]\|None:opt; value:str:req) |
+| `grid_region` | `grid-region` | `[data-dz-grid-region]` | [data-dz-grid-region][data-dz-grid-region=present] | GridRegion(body_html:str:opt) |
 | `grid_resize` | `grid-resize` | `[data-dz-grid]` | [data-dz-grid-resize][data-dz-grid-resize=present]; col[data-dz-col], [data-dz-col][data-dz-col=present] | — |
 | `heatmap` | `heatmap` | `[data-dz-heatmap]` | [data-dz-heatmap][data-dz-heatmap=present] | Heatmap(columns:list[str]:opt; empty_message:str:opt; rows:list[HeatmapRow]:opt; thresholds:list[float]:opt; total:int:opt); HeatmapRow(cells:list[float]:opt; label:str:req) |
 | `histogram` | `histogram` | `[data-dz-histogram]` | [data-dz-histogram][data-dz-histogram=present] | Histogram(bins:list[HistogramBin]:opt; empty_message:str:opt; label:str:opt; svg_html:str:opt); HistogramBin(count:int:opt; high:float:opt; label:str:req; low:float:opt) |
@@ -49,6 +50,7 @@ blast radius (who embeds / refuses this part).
 | `money` | `money` | `[data-dz-money]` | [data-dz-money][data-dz-currency=present, data-dz-scale=present] | MoneyField(currency:str:opt; field_id:str:opt; major_display:str:opt; minor_value:int:opt; name:str:req; scale:int:opt) |
 | `pagination` | `pagination` | `[data-dz-pagination]` | [data-dz-pagination][data-dz-grid-pagination=present, data-dz-grid-total=present, data-dz-pagination=present] | Pagination(pages_html:str:opt; rows_label:str:opt; total:int:opt) |
 | `pdf` | `pdf` | `[data-dz-pdf]` | [data-dz-pdf][data-dz-pdf-lib=present, data-dz-pdf-src=present]; [data-dz-pdf-viewer][] | — |
+| `pipeline` | `pipeline` | `[data-dz-pipeline]` | [data-dz-pipeline][data-dz-pipeline=present] | Pipeline(body_html:str:opt) |
 | `pivot` | `pivot` | `[data-dz-pivot]` | [data-dz-pivot][data-dz-pivot=present] | PivotTable(dim_headers:list[str]:opt; empty_message:str:opt; measure_headers:list[str]:opt; rows:list[list[str]]:opt) |
 | `profile_card` | `profile-card` | `[data-dz-profile-card]` | [data-dz-profile-card][data-dz-profile-card=present] | ProfileCard(avatar_url:str:opt; facts:list[str]:opt; initials:str:opt; primary:str:opt; secondary:str:opt; stats:list[tuple[str,str]]:opt) |
 | `progress` | `progress-region` | `[data-dz-progress-region]` | [data-dz-progress-region][data-dz-progress-region=present] | Progress(complete_count:int:opt; complete_pct:float:opt; stages:list[ProgressStage]:opt; total:int:opt); ProgressStage(complete:bool:opt; count:int:opt; name:str:req) |

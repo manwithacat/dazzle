@@ -85,6 +85,7 @@ SEMANTIC_ONLY = {
     "dz-cohort-strip-region",  # dual-lock root; lenses/cells own styling
     "dz-day-timeline-region",  # dual-lock root; slots own styling
     "dz-entity-card-region",  # dual-lock root; sections own styling
+    "dz-pipeline-steps-region",  # dual-lock root; stages own styling
     # wizard stage block: visibility rides the native `hidden` attribute
     # (dz-wizard.js); the fields inside carry the styling.
     "dz-wizard-stage",

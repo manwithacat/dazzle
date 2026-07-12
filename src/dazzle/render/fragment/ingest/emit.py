@@ -30,6 +30,7 @@ from dazzle.render.fragment.ingest.models import (
     EntityCard,
     Funnel,
     GridEditCell,
+    GridRegion,
     Heatmap,
     Histogram,
     KanbanCard,
@@ -37,6 +38,7 @@ from dazzle.render.fragment.ingest.models import (
     MetricTile,
     MoneyField,
     Pagination,
+    Pipeline,
     PivotTable,
     ProfileCard,
     Progress,
@@ -944,6 +946,14 @@ def entity_card_root_attrs(_e: EntityCard) -> str:
     return "data-dz-entity-card"
 
 
+def grid_region_root_attrs(_g: GridRegion) -> str:
+    return "data-dz-grid-region"
+
+
+def pipeline_root_attrs(_p: Pipeline) -> str:
+    return "data-dz-pipeline"
+
+
 def render_list_region(lr: ListRegion) -> str:
     """Model → list-region root (matches HM contracts/list_region.py)."""
     root_attrs = list_region_root_attrs(lr)
@@ -1076,6 +1086,18 @@ def render_entity_card(e: EntityCard) -> str:
         f'<div class="dz-entity-card-region" {root_attrs} '
         f'data-dz-region-name="{rname}">{e.body_html}</div>'
     )
+
+
+def render_grid_region(g: GridRegion) -> str:
+    """Model → grid-region root (matches HM contracts/grid_region.py)."""
+    root_attrs = grid_region_root_attrs(g)
+    return f'<div class="dz-grid-region" {root_attrs}>{g.body_html}</div>'
+
+
+def render_pipeline(p: Pipeline) -> str:
+    """Model → pipeline-steps region (matches HM contracts/pipeline.py)."""
+    root_attrs = pipeline_root_attrs(p)
+    return f'<div class="dz-pipeline-steps-region" {root_attrs}>{p.body_html}</div>'
 
 
 def render_date_range(d: DateRange) -> str:

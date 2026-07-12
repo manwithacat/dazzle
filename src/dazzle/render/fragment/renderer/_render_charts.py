@@ -36,6 +36,7 @@ from dazzle.render.fragment.ingest import HeatmapRow as HeatmapRowSeam
 from dazzle.render.fragment.ingest import Histogram as HistogramSeam
 from dazzle.render.fragment.ingest import HistogramBin as HistogramBinSeam
 from dazzle.render.fragment.ingest import KanbanCard as KanbanCardSeam
+from dazzle.render.fragment.ingest import Pipeline as PipelineSeam
 from dazzle.render.fragment.ingest import Radar as RadarSeam
 from dazzle.render.fragment.ingest import RadarAxis as RadarAxisSeam
 from dazzle.render.fragment.ingest import Sparkline as SparklineSeam
@@ -54,6 +55,7 @@ from dazzle.render.fragment.ingest import (
     render_heatmap,
     render_histogram,
     render_kanban_card,
+    render_pipeline,
     render_radar,
     render_sparkline,
     render_time_series,
@@ -462,11 +464,12 @@ class _RenderChartsMixin:
         + mobile chevron).
         """
         if not p.stages:
-            return (
-                f'<div class="dz-pipeline-steps-region">'
-                f'<p class="dz-empty-dense" role="status">'
-                f"{ctx.escape(p.empty_message)}</p>"
-                f"</div>"
+            return render_pipeline(
+                PipelineSeam(
+                    body_html=(
+                        f'<p class="dz-empty-dense" role="status">{ctx.escape(p.empty_message)}</p>'
+                    )
+                )
             )
 
         last_idx = len(p.stages) - 1
@@ -529,10 +532,8 @@ class _RenderChartsMixin:
                 f"</li>"
             )
 
-        return (
-            f'<div class="dz-pipeline-steps-region">'
-            f'<ol class="dz-pipeline-stages">{"".join(items)}</ol>'
-            f"</div>"
+        return render_pipeline(
+            PipelineSeam(body_html=f'<ol class="dz-pipeline-stages">{"".join(items)}</ol>')
         )
 
     def _emit_kanban_region(self, k: KanbanRegion, ctx: RenderContext) -> str:

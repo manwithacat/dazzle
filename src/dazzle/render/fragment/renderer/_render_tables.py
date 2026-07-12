@@ -31,6 +31,7 @@ from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
 from dazzle.render.fragment.ingest import ActivityRow as ActivityRowSeam
 from dazzle.render.fragment.ingest import BarTrack as BarTrackSeam
 from dazzle.render.fragment.ingest import BarTrackRow as BarTrackRowSeam
+from dazzle.render.fragment.ingest import GridRegion as GridRegionSeam
 from dazzle.render.fragment.ingest import ListRegion as ListRegionSeam
 from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
 from dazzle.render.fragment.ingest import PivotTable as PivotTableSeam
@@ -43,6 +44,7 @@ from dazzle.render.fragment.ingest import (
     render_action_card,
     render_activity_row,
     render_bar_track,
+    render_grid_region,
     render_list_region,
     render_metric_tile,
     render_pivot_table,
@@ -993,14 +995,13 @@ class _RenderTablesMixin:
             # the message only. CTA support is a follow-up when the
             # primitive gains the appropriate fields.
             label = g.empty_message or "No items found."
-            return (
-                f'<div class="dz-grid-region">'
+            empty_inner = (
                 f'<div class="dz-empty-state" data-dz-empty-kind="read-only" role="status">'
                 f"{lucide_svg_html('inbox', cls='dz-empty-state__icon')}"
                 f'<p class="dz-empty-state__description">{ctx.escape(label)}</p>'
                 f"</div>"
-                f"</div>"
             )
+            return render_grid_region(GridRegionSeam(body_html=empty_inner))
 
         cells_html: list[str] = []
         for cell in g.cells:
@@ -1027,10 +1028,8 @@ class _RenderTablesMixin:
                 f"</div>"
             )
 
-        return (
-            f'<div class="dz-grid-region">'
-            f'<div class="dz-grid-list">{"".join(cells_html)}</div>'
-            f"</div>"
+        return render_grid_region(
+            GridRegionSeam(body_html=f'<div class="dz-grid-list">{"".join(cells_html)}</div>')
         )
 
     def _emit_status_list(self, s: StatusList, ctx: RenderContext) -> str:
