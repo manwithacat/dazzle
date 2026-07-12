@@ -26,7 +26,12 @@ jobs:
         working-directory: packages/hatchi-maxchi
         env:
           HM_UPDATE_BASELINES: "1"
-        run: python -m pytest tests/test_visual.py -q
+        # Isolate from monorepo pytest.ini (asyncio_default_fixture_loop_scope).
+        run: >
+          python -m pytest tests/test_visual.py -q
+          -c /dev/null
+          --rootdir=.
+          -p no:cacheprovider
       - name: Commit baselines if changed
         run: |
           git config user.name "dazzle-hm-baselines[bot]"
