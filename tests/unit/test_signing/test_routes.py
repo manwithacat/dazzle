@@ -1048,6 +1048,16 @@ class TestSignedCopyRetrieval1571:
         assert "signed-copy" in resp.text  # the durable link
         assert "Download your signed copy" in resp.text
 
+    def test_original_link_without_persisted_copy_still_completion_not_terminal(self) -> None:
+        """TR-49: missing signed_document must not regress to 'Document unavailable'."""
+        client, record_id, token, _fs = self._signed_setup(with_document=False)
+        resp = client.get(f"/sign/Contract/{record_id}", params={"token": token})
+        assert resp.status_code == 200
+        assert "Document signed" in resp.text
+        assert "Document unavailable" not in resp.text
+        # No broken download CTA when the artifact was never persisted.
+        assert "signed-copy" not in resp.text
+
     def test_original_link_without_matching_hash_stays_terminal(self) -> None:
         from dazzle.signing.tokens import mint_token as _mint
 

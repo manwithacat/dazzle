@@ -294,21 +294,20 @@ async def _handle_get(
 
     status = _row_get(row, "status")
     if status not in _active_signing_states(entity):
-        # #1571: a signatory reopening their ORIGINAL link after signing gets a
-        # completion page with the durable signed-copy download, not a dead end.
-        # Gated on the exact credential that signed (token_hash match) AND the
-        # persisted artifact existing (the upload can fail best-effort at sign
-        # time, leaving signed_document null).
-        if (
-            status == "signed"
-            and _row_get(row, "signed_document")
-            and token_hash(token) == _row_get(row, "signing_token_hash")
-        ):
+        # #1571 / TR-49: a signatory reopening their ORIGINAL link after signing
+        # must not land on the dead-end "Document unavailable" terminal page.
+        # Gate on status=signed + the exact credential that signed (token_hash).
+        # The durable download CTA is shown when signed_document is present;
+        # when the best-effort upload failed at sign time we still show a
+        # completion page (not a terminal dead end) so the signatory knows
+        # the document is signed and how to recover a copy.
+        if status == "signed" and token_hash(token) == _row_get(row, "signing_token_hash"):
             body = _signed_completion_page(
                 entity_name=entity.name,
                 record_id=str(record_id),
                 token=token,
                 support_contact=support_contact,
+                has_copy=bool(_row_get(row, "signed_document")),
             )
             return HTMLResponse(body, status_code=200)  # nosemgrep
         body = _terminal_page(status)
@@ -934,17 +933,39 @@ def _terminal_page(status: str) -> str:
 
 
 def _signed_completion_page(
-    *, entity_name: str, record_id: str, token: str, support_contact: str = ""
+    *,
+    entity_name: str,
+    record_id: str,
+    token: str,
+    support_contact: str = "",
+    has_copy: bool = True,
 ) -> str:
-    """Post-signing landing for the signatory's ORIGINAL link (#1571): instead
-    of the dead-end terminal page, offer the durable signed-copy download."""
+    """Post-signing landing for the signatory's ORIGINAL link (#1571 / TR-49).
+
+    Prefer a durable signed-copy download when the artifact was persisted at
+    sign time. When the best-effort upload failed, still show a completion
+    page (never the terminal "Document unavailable" dead end).
+    """
     from urllib.parse import quote
 
-    copy_href = html.escape(
-        f"/sign/{quote(entity_name, safe='')}/{quote(record_id, safe='')}"
-        f"/signed-copy?token={quote(token, safe='')}",
-        quote=True,
-    )
+    if has_copy:
+        copy_href = html.escape(
+            f"/sign/{quote(entity_name, safe='')}/{quote(record_id, safe='')}"
+            f"/signed-copy?token={quote(token, safe='')}",
+            quote=True,
+        )
+        primary = (
+            f'<p><a href="{copy_href}" style="display:inline-block;padding:0.6rem 1.2rem;'
+            'background:#111;color:#fff;border-radius:0.4rem;text-decoration:none;">'
+            "Download your signed copy</a></p>"
+            "<p>Keep this link — it works whenever you need the document again.</p>"
+        )
+    else:
+        primary = (
+            "<p>This document has already been signed. A certified copy was produced "
+            "at signing time, but a re-download is not available from this link right "
+            "now. Contact the sender or support if you need another copy.</p>"
+        )
     return (
         "<!DOCTYPE html>"
         '<html lang="en"><head><meta charset="utf-8">'
@@ -953,10 +974,7 @@ def _signed_completion_page(
         "<h1>Document signed</h1>"
         "<p>This document has already been signed. A digitally certified copy is "
         "stored securely.</p>"
-        f'<p><a href="{copy_href}" style="display:inline-block;padding:0.6rem 1.2rem;'
-        'background:#111;color:#fff;border-radius:0.4rem;text-decoration:none;">'
-        "Download your signed copy</a></p>"
-        "<p>Keep this link — it works whenever you need the document again.</p>"
+        f"{primary}"
         f"{_support_line(support_contact)}"
         "</body></html>"
     )
