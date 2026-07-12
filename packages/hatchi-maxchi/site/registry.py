@@ -2494,7 +2494,9 @@ def select(source: str, id: str) -> str:
             '<div class="dz-carousel__controls">'
             '<button type="button" class="dz-carousel__btn" data-dz-carousel-prev '
             'aria-label="Previous slide" disabled>‹</button>'
-            '<div class="dz-carousel__dots" role="tablist" aria-label="Slides">'
+            # role=group (not tablist) — dots are prev/next peers, not ARIA tabs
+            # without tabpanels (axe aria-required-children).
+            '<div class="dz-carousel__dots" role="group" aria-label="Slides">'
             '<button type="button" class="dz-carousel__dot" aria-current="true" '
             'aria-label="Slide 1"></button>'
             '<button type="button" class="dz-carousel__dot" aria-label="Slide 2"></button>'
@@ -2515,7 +2517,10 @@ def select(source: str, id: str) -> str:
             "Navigation",
             "Horizontal app menus (File / Edit / View) — each item is a native "
             "details/summary so open state is DOM-native.",
-            '<div class="dz-menubar" data-dz-menubar role="menubar" aria-label="App">'
+            # role=navigation — not menubar: details/summary items are not
+            # ARIA menuitems (axe aria-required-children). Native details open
+            # state is the contract; menubar role would need menuitem children.
+            '<div class="dz-menubar" data-dz-menubar role="navigation" aria-label="App">'
             '<details class="dz-menubar__item">'
             '<summary class="dz-menubar__trigger">File</summary>'
             '<div class="dz-menubar__panel" role="menu" aria-label="File">'

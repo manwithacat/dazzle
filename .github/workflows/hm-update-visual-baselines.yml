@@ -1,0 +1,40 @@
+# Regenerate packages/hatchi-maxchi/tests/baselines/linux/ on ubuntu
+# (same Chromium font stack as HM standalone visual CI) and commit.
+name: HM update visual baselines
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  baselines:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: |
+          pip install pytest playwright pillow
+          playwright install --with-deps chromium
+      - name: Capture linux baselines
+        working-directory: packages/hatchi-maxchi
+        env:
+          HM_UPDATE_BASELINES: "1"
+        run: python -m pytest tests/test_visual.py -q
+      - name: Commit baselines if changed
+        run: |
+          git config user.name "dazzle-hm-baselines[bot]"
+          git config user.email "noreply@github.com"
+          git add packages/hatchi-maxchi/tests/baselines/linux/
+          if git diff --staged --quiet; then
+            echo "No baseline changes"
+            exit 0
+          fi
+          git commit -m "chore(hm): refresh linux visual baselines"
+          git push origin HEAD

@@ -193,7 +193,8 @@
 }
 
 .dz-code__tok--cmt {
-  color: light-dark(var(--neutral-500), var(--neutral-500));
+  /* WCAG AA on code surface: neutral-500 on dark failed color-contrast. */
+  color: light-dark(var(--neutral-600), var(--neutral-400));
   font-style: italic;
 }
 

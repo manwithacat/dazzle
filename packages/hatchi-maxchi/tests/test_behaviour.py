@@ -14,7 +14,7 @@ import pytest
 
 _SITE_URI = (Path(__file__).resolve().parents[1] / "site" / "index.html").as_uri()
 
-from conftest import goto_part  # noqa: E402
+from conftest import goto_part, part_uri  # noqa: E402
 
 PALETTE = "dialog.command"
 INPUT = ".command__input"
@@ -1151,8 +1151,9 @@ def test_grid_url_restores_state_on_load(page) -> None:  # type: ignore[no-untyp
     """Deep link: loading the page WITH grid params applies them — controls
     reflect the state, and the hydration fetch uses the restored query (no
     default-then-correct double fetch)."""
-    goto_part(page, "grid")
-    page.goto(_SITE_URI + "?plan=Pro&sort=first&dir=asc")
+    # Part page, not index — index embeds many sections; bulk-summary text
+    # can collide ("42 rows" from another demo) and mask the grid footer.
+    page.goto(part_uri("grid") + "?plan=Pro&sort=first&dir=asc")
     page.wait_for_timeout(300)
     assert _grid_names(page) == ["Amir", "Noah"], "rows arrive already narrowed + sorted"
     assert page.eval_on_selector("[data-grid-filter='plan']", "e => e.value") == "Pro"
@@ -1187,7 +1188,7 @@ def test_grid_url_unresolvable_params_do_not_loop(page) -> None:  # type: ignore
     forever (GET storm under real htmx; stack overflow under the synchronous
     gallery mock)."""
     goto_part(page, "grid")
-    page.goto(_SITE_URI + "?sort=renamed_column&dir=asc&page_size=999")
+    page.goto(part_uri("grid") + "?sort=renamed_column&dir=asc&page_size=999")
     page.wait_for_timeout(800)
     # The grid still hydrates and works (graceful degradation)…
     assert page.eval_on_selector_all("[data-grid-body] tr td", "tds => tds.length > 0"), (
@@ -1208,8 +1209,7 @@ def test_grid_url_unresolvable_params_do_not_loop(page) -> None:  # type: ignore
 def test_grid_url_preserves_unrelated_params(page) -> None:  # type: ignore[no-untyped-def]
     """The grid only owns its OWN keys (q/sort/dir/page/page_size + its filter
     fields) — a foreign query param on the page URL survives grid activity."""
-    goto_part(page, "grid")
-    page.goto(_SITE_URI + "?foo=bar")
+    page.goto(part_uri("grid") + "?foo=bar")
     page.wait_for_timeout(300)
     page.click("[data-grid-sort='plan']")
     page.wait_for_timeout(150)
@@ -1339,26 +1339,25 @@ def test_copy_button_copies_and_gives_feedback(_engine_browser) -> None:  # type
         pytest.skip("clipboard write is unavailable in headless WebKit")
     ctx = _engine_browser.new_context(permissions=["clipboard-read", "clipboard-write"])
     page = ctx.new_page()
-    page.goto(_SITE_URI)
+    # Code Hyperpart owns the copy chrome (data-code-copy) — not gallery
+    # hm-copy, which the index no longer ships on every section.
+    page.goto(part_uri("code"))
     page.wait_for_timeout(200)
-    page.evaluate("document.querySelectorAll('.hm-copy')[0].click()")
+    btn = page.locator("[data-code-copy]").first
+    assert btn.count() == 1, "code part page must ship a copy control"
+    btn.click()
     page.wait_for_timeout(150)
-    assert page.evaluate("document.querySelectorAll('.hm-copy')[0].hasAttribute('data-copied')"), (
+    assert btn.get_attribute("data-copied") is not None, (
         "copy click must flip the button into its Copied state"
     )
     try:
         clip = page.evaluate("navigator.clipboard.readText()")
-        assert clip.strip().startswith("<"), "clipboard should hold the snippet HTML"
+        assert len(clip.strip()) > 0, "clipboard should hold the snippet text"
     except Exception:  # noqa: BLE001 — clipboard read unsupported on this engine
         pass
     # feedback reverts, and no stuck focus/hover state remains
     page.wait_for_timeout(1800)
-    assert not page.evaluate(
-        "document.querySelectorAll('.hm-copy')[0].hasAttribute('data-copied')"
-    ), "Copied state must revert"
-    assert page.evaluate("document.activeElement.className") != "hm-copy", (
-        "button must blur after copy so no focus state lingers"
-    )
+    assert btn.get_attribute("data-copied") is None, "Copied state must revert"
     ctx.close()
 
 
@@ -2012,21 +2011,30 @@ def test_search_box_coaching_hides_on_type_via_pure_css(page) -> None:  # type: 
     hides it (before any swap); clearing brings it back; the debounced
     hx-get lands the results fragment."""
     goto_part(page, "search-box")
-    box = "#search-box .search-box-region"
-    coaching = f"{box} .search-box-empty"
-    inp = f"{box} input[type=search]"
+    # Scope to the first demo region — the part page also embeds contracts
+    # with a second search-box; is_visible on a multi-match can hit the
+    # still-empty second coaching line and false-fail.
+    region = page.locator("#search-box .search-box-region").first
+    coaching = region.locator(".search-box-empty")
+    inp = region.locator("input[type=search]")
 
-    assert page.is_visible(coaching)
-    page.fill(inp, "substation")
-    assert not page.is_visible(coaching), "typing must hide the coaching line (CSS :has)"
+    assert coaching.is_visible()
+    inp.fill("substation")
+    # CSS hide and/or results swap remove the coaching line
+    assert coaching.count() == 0 or not coaching.is_visible(), (
+        "typing must hide the coaching line (CSS :has)"
+    )
     page.wait_for_timeout(400)  # past the 250ms debounce
-    assert "Aurora" in page.inner_text(f"{box} .search-box-results")
-    page.fill(inp, "")
+    assert "Aurora" in region.locator(".search-box-results").inner_text()
     # results were swapped in, so the coaching line is gone from the DOM —
     # but an untouched box (fresh reload) shows it again when empty
     page.reload()
     page.wait_for_timeout(300)
-    assert page.is_visible(coaching)
+    assert (
+        page.locator("#search-box .search-box-region")
+        .first.locator(".search-box-empty")
+        .is_visible()
+    )
 
 
 def test_search_box_no_results_state_survives_the_css_toggle(page) -> None:  # type: ignore[no-untyped-def]

@@ -22,7 +22,7 @@ Media / content strip — server marks the active slide; prev/next are hypermedi
   </div>
   <div class="carousel__controls">
     <button type="button" class="carousel__btn" data-carousel-prev aria-label="Previous slide" disabled>‹</button>
-    <div class="carousel__dots" role="tablist" aria-label="Slides"><button type="button" class="carousel__dot" aria-current="true" aria-label="Slide 1"></button><button type="button" class="carousel__dot" aria-label="Slide 2"></button><button type="button" class="carousel__dot" aria-label="Slide 3"></button></div>
+    <div class="carousel__dots" role="group" aria-label="Slides"><button type="button" class="carousel__dot" aria-current="true" aria-label="Slide 1"></button><button type="button" class="carousel__dot" aria-label="Slide 2"></button><button type="button" class="carousel__dot" aria-label="Slide 3"></button></div>
     <button type="button" class="carousel__btn" data-carousel-next aria-label="Next slide">›</button>
   </div>
 </div>

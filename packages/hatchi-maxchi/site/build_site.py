@@ -517,6 +517,17 @@ def _contracts_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
 
         if render_fn and exemplars:
             live = render_fn(exemplars[0])
+            # Nu / axe: dual-lock fragments are often bare <li> or role=option
+            # rows (valid as exchange fragments). Host them for the gallery so
+            # full-document validation does not flag the preview host.
+            live_stripped = live.lstrip()
+            if live_stripped.startswith("<li"):
+                live = f'<ul class="hm-contract-live__list" role="list">{live}</ul>'
+            elif 'role="option"' in live and "listbox" not in live:
+                live = (
+                    f'<div class="hm-contract-live__listbox" role="listbox" '
+                    f'aria-label="Exemplar options">{live}</div>'
+                )
             # Sample fields from EXEMPLARS[0] so humans know "Fix the door" is
             # fixture data, not product chrome or a broken demo.
             ex0 = exemplars[0]

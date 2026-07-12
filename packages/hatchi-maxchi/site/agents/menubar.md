@@ -12,7 +12,7 @@ Horizontal app menus (File / Edit / View) — each item is a native details/summ
 ## Copy this
 
 ```html
-<div class="menubar" data-menubar role="menubar" aria-label="App">
+<div class="menubar" data-menubar role="navigation" aria-label="App">
   <details class="menubar__item">
     <summary class="menubar__trigger">File</summary>
     <div class="menubar__panel" role="menu" aria-label="File"><a href="#" role="menuitem">New</a><a href="#" role="menuitem">Open…</a><button type="button" role="menuitem">Export</button></div>
