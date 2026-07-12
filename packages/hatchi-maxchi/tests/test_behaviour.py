@@ -2134,6 +2134,52 @@ def test_drawer_peek_body_scrolls_independently(page) -> None:  # type: ignore[n
     assert metrics["overflowY"] in ("auto", "scroll", "overlay")
 
 
+def test_drawer_record_actions_load_panels(page) -> None:  # type: ignore[no-untyped-def]
+    """Work orders / Show on map are independent actions with real fragments.
+
+    Not a tab strip (equal outline + verb labels). Map must not be a no-op.
+    """
+    goto_part(page, "drawer")
+    page.click('#drawer [data-dialog-open="hm-drawer-lazy"]')
+    page.wait_for_timeout(250)
+    page.wait_for_selector("#hm-drawer-record-panel", timeout=3000)
+    body = "#hm-drawer-lazy-body"
+    actions = page.locator(f'{body} [role="group"][aria-labelledby="hm-drawer-actions-label"]')
+    assert actions.count() == 1
+    wo = actions.locator("button", has_text="Work orders")
+    show_map = actions.locator("button", has_text="Show on map")
+    assert wo.count() == 1 and show_map.count() == 1
+    # Same visual weight — not outline+ghost tab illusion
+    assert wo.get_attribute("data-variant") == "outline"
+    assert show_map.get_attribute("data-variant") == "outline"
+    # Icon + label spacing comes from .button gap (not a text-node space)
+    gap = wo.evaluate("el => getComputedStyle(el).gap")
+    assert gap not in ("0px", "normal", ""), f"button icon gap missing: {gap!r}"
+
+    show_map.click()
+    page.wait_for_timeout(200)
+    panel = page.inner_text("#hm-drawer-record-panel")
+    assert "Site location" in panel or "Coordinates" in panel, (
+        f"Show on map must load a location panel, got: {panel[:200]!r}"
+    )
+    assert "54.978" in panel or "N," in panel
+    # Actions chrome stays; only the panel swapped
+    assert actions.locator("button", has_text="Show on map").count() == 1
+
+    wo.click()
+    page.wait_for_timeout(200)
+    panel2 = page.inner_text("#hm-drawer-record-panel")
+    assert "WO-1842" in panel2 and "WO-1799" in panel2, (
+        f"Work orders must list open WOs, got: {panel2[:200]!r}"
+    )
+
+    page.locator("#hm-drawer-record-panel button", has_text="Overview").click()
+    page.wait_for_timeout(200)
+    assert "Open WOs" in page.inner_text("#hm-drawer-record-panel") or "Region" in page.inner_text(
+        "#hm-drawer-record-panel"
+    )
+
+
 def test_search_box_coaching_hides_on_type_via_pure_css(page) -> None:  # type: ignore[no-untyped-def]
     """The search-box coaching line is toggled by CSS alone
     (`:has(input:not(:placeholder-shown))`) — no client state. Typing

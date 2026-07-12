@@ -312,7 +312,7 @@ BLUEPRINTS: list[Blueprint] = [
         '<span class="dz-badge" data-dz-tone="success">'
         '<span class="dz-badge-icon">{svg:circle-check}</span>Online</span>'
         '<button type="button" class="dz-button" data-dz-variant="outline">'
-        "{svg:clipboard-list} Work orders</button>"
+        "{svg:clipboard-list}Work orders</button>"
         '<button type="button" class="dz-button" data-dz-variant="primary">'
         "Edit asset</button>"
         "</div></div>"

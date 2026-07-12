@@ -92,10 +92,16 @@ behaviour, the demo content must make that behaviour **observable**:
 | `drawer__body` scrolls | Peek fragment taller than the panel (overflow) |
 | Expand / Restore | Button flips label + `data-dz-width` without navigation |
 | Open full page | Real `href` to owned URL |
+| Secondary record actions | Each control has an observable result (panel swap / fragment) — not a dead button |
 | Composition host | Nested guests keep standalone DOM contracts |
 
 A short fragment that never overflows **does not demonstrate** independent
 body scroll — agents and humans will miss the contract.
+
+**Record actions are not tabs.** Equal-weight outline buttons with verb labels
+(`Work orders`, `Show on map`) load **independent** panel fragments into a
+body region. Do not pair outline+ghost to imply selection, and do not ship a
+“Map” control with no exchange.
 
 Product peers: Linear/Jira/GitHub project panels use peek → issue route; Notion uses
 peek mode → full page of the same object. Component kits (Radix/shadcn) only own

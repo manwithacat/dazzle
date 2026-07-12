@@ -1504,13 +1504,18 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     // Server returns the body only — not drawer chrome (open/focus stay host).
     // Length is intentional: drawer__body must overflow so the gallery
     // demonstrates independent panel scroll (host page stays put).
+    //
+    // Work orders / Show on map are INDEPENDENT secondary actions (same
+    // outline variant, verb labels) — not a tab strip. Each hx-gets a panel
+    // fragment into #hm-drawer-record-panel; Overview returns to the summary.
+    // Icon tokens sit flush against the label — .dz-button gap owns spacing.
     "/mock/drawer/detail":
       '<div class="dz-stack" data-dz-gap="md">' +
       '<p class="hm-demo-muted" style="margin:0">' +
       "Scroll this panel — the page behind does not move. Header and footer stay pinned." +
       "</p>" +
-      '<div class="hm-demo-row" style="justify-content:space-between;align-items:flex-start;' +
-      'gap:var(--space-sm);flex-wrap:wrap">' +
+      '<div class="dz-cluster" data-dz-justify="between" data-dz-gap="sm" ' +
+      'style="align-items:flex-start;flex-wrap:wrap">' +
       "<div>" +
       '<div class="dz-card-label">Asset</div>' +
       '<div class="dz-card-value" style="font-size:var(--text-lg);line-height:1.2">' +
@@ -1519,6 +1524,20 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       '<span class="dz-badge" data-dz-tone="success">' +
       '<span class="dz-badge-icon">{i:circle-check}</span>Online</span>' +
       "</div>" +
+      // Equal-weight actions — not outline+ghost (reads as selected/unselected tabs)
+      '<div class="dz-stack" data-dz-gap="xs">' +
+      '<div class="dz-card-label" id="hm-drawer-actions-label">Record actions</div>' +
+      '<div class="dz-cluster" data-dz-gap="sm" role="group" ' +
+      'aria-labelledby="hm-drawer-actions-label">' +
+      '<button type="button" class="dz-button" data-dz-variant="outline" ' +
+      'hx-get="/mock/drawer/work-orders" hx-target="#hm-drawer-record-panel" ' +
+      'hx-swap="innerHTML">{i:clipboard-list}Work orders</button>' +
+      '<button type="button" class="dz-button" data-dz-variant="outline" ' +
+      'hx-get="/mock/drawer/map" hx-target="#hm-drawer-record-panel" ' +
+      'hx-swap="innerHTML">{i:map-pin}Show on map</button>' +
+      "</div></div>" +
+      '<div id="hm-drawer-record-panel" class="dz-stack" data-dz-gap="md" ' +
+      'aria-live="polite">' +
       // One card per metric — matches Card hyperpart scale (no value overrides)
       '<div class="dz-auto-grid" style="--dz-grid-min:7rem">' +
       '<div class="dz-card dz-card-body">' +
@@ -1550,14 +1569,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       '<div class="dz-alert__body">' +
       '<div class="dz-alert__title">Two open work orders</div>' +
       '<div class="dz-alert__description">' +
-      "Peek stays partial — Open full page navigates to the owned record URL. " +
-      "Expand widens this panel in place; it is not full page." +
+      "Use Work orders for the list, Show on map for site location. " +
+      "Open full page is the owned record URL — Expand only widens this panel." +
       "</div></div></div>" +
-      '<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">' +
-      '<button type="button" class="dz-button" data-dz-variant="outline">{i:clipboard-list} ' +
-      "Work orders</button>" +
-      '<button type="button" class="dz-button" data-dz-variant="ghost">{i:map-pin} Map</button>' +
-      "</div>" +
       // Activity + notes: enough vertical mass that body overflow is visible
       '<div class="dz-stack" data-dz-gap="sm">' +
       '<div class="dz-card-label">Recent activity</div>' +
@@ -1588,7 +1602,87 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       "outage longer than 90 minutes.</div>" +
       "<div>End of peek fragment — if you can read this without scrolling the host " +
       "page, independent body scroll is working.</div>" +
-      "</div></div>",
+      "</div></div></div>",
+
+    // Panel swaps for record actions (stay in the drawer — not full-page nav).
+    "/mock/drawer/work-orders":
+      '<div class="dz-stack" data-dz-gap="md">' +
+      '<div class="dz-cluster" data-dz-justify="between" data-dz-gap="sm">' +
+      '<div class="dz-card-label">Open work orders</div>' +
+      '<button type="button" class="dz-button" data-dz-variant="ghost" data-dz-size="sm" ' +
+      'hx-get="/mock/drawer/overview" hx-target="#hm-drawer-record-panel" ' +
+      'hx-swap="innerHTML">← Overview</button></div>' +
+      '<div class="dz-card dz-card-body">' +
+      '<div class="dz-cluster" data-dz-justify="between" data-dz-gap="sm">' +
+      "<div><strong>WO-1842</strong> · Thermal follow-up bay 2</div>" +
+      '<span class="dz-badge" data-dz-tone="warning">In progress</span></div>' +
+      '<p class="hm-demo-muted" style="margin:var(--space-xs) 0 0">' +
+      "Assigned North crew · ETA Friday · opened after load spike.</p></div>" +
+      '<div class="dz-card dz-card-body">' +
+      '<div class="dz-cluster" data-dz-justify="between" data-dz-gap="sm">' +
+      "<div><strong>WO-1799</strong> · Vegetation corridor C-4</div>" +
+      '<span class="dz-badge" data-dz-tone="neutral">Scheduled</span></div>' +
+      '<p class="hm-demo-muted" style="margin:var(--space-xs) 0 0">' +
+      "Permit filed · crew week of 21 June · no outage planned.</p></div>" +
+      '<p class="hm-demo-muted" style="margin:0">' +
+      "Gallery mock: list exchange fragment into the peek panel — not a tab strip." +
+      "</p></div>",
+
+    "/mock/drawer/map":
+      '<div class="dz-stack" data-dz-gap="md">' +
+      '<div class="dz-cluster" data-dz-justify="between" data-dz-gap="sm">' +
+      '<div class="dz-card-label">Site location</div>' +
+      '<button type="button" class="dz-button" data-dz-variant="ghost" data-dz-size="sm" ' +
+      'hx-get="/mock/drawer/overview" hx-target="#hm-drawer-record-panel" ' +
+      'hx-swap="innerHTML">← Overview</button></div>' +
+      // Faux map surface — communicates location job without an embed
+      '<div class="dz-card" style="min-height:12rem;display:flex;align-items:center;' +
+      'justify-content:center;background:var(--colour-bg);' +
+      'border:1px dashed var(--colour-border)">' +
+      '<div class="dz-stack" data-dz-gap="xs" style="text-align:center;padding:var(--space-md)">' +
+      '<span class="dz-icon dz-icon--size-lg" aria-hidden="true">{i:map-pin}</span>' +
+      "<div><strong>Aurora Substation</strong></div>" +
+      '<div class="hm-demo-muted">North grid · cluster A</div>' +
+      "</div></div>" +
+      '<div class="dz-stack" data-dz-gap="sm">' +
+      '<div><div class="dz-card-label">Coordinates</div>' +
+      "<div>54.9783° N, 1.6178° W</div></div>" +
+      '<div><div class="dz-card-label">Access</div>' +
+      "<div>Gate B · badge + radio check-in · parking south apron</div></div>" +
+      "</div>" +
+      '<p class="hm-demo-muted" style="margin:0">' +
+      "Show on map loads a location fragment in the peek — same drawer, same URL. " +
+      "A product app would wire this to a maps exchange or deep-link; the gallery " +
+      "keeps it as an HTML panel so the action is observable." +
+      "</p></div>",
+
+    // Shared overview panel (return path from work-orders / map)
+    "/mock/drawer/overview":
+      '<div class="dz-auto-grid" style="--dz-grid-min:7rem">' +
+      '<div class="dz-card dz-card-body">' +
+      '<div class="dz-card-label">Region</div>' +
+      '<div class="dz-card-value">North</div></div>' +
+      '<div class="dz-card dz-card-body">' +
+      '<div class="dz-card-label">Load</div>' +
+      '<div class="dz-card-value">82%</div></div>' +
+      '<div class="dz-card dz-card-body">' +
+      '<div class="dz-card-label">Open WOs</div>' +
+      '<div class="dz-card-value">2</div></div></div>' +
+      '<div class="dz-stack" data-dz-gap="sm">' +
+      '<div><div class="dz-card-label">Commissioned</div>' +
+      "<div>2019 · last inspection 14 June</div></div>" +
+      '<div><div class="dz-card-label">Primary contact</div>' +
+      "<div>Maya Reyes · Operations</div></div>" +
+      '<div><div class="dz-card-label">Feeder</div>' +
+      "<div>N-14 · 33 kV · dual bay</div></div></div>" +
+      '<div class="dz-alert" data-dz-tone="warning" role="alert">' +
+      '<span class="dz-alert__icon">{i:triangle-alert}</span>' +
+      '<div class="dz-alert__body">' +
+      '<div class="dz-alert__title">Two open work orders</div>' +
+      '<div class="dz-alert__description">' +
+      "Back on the summary — use Record actions again or Open full page." +
+      "</div></div></div>" +
+      '<p class="hm-demo-muted" style="margin:0">Overview panel restored inside the peek.</p>',
 
     "/mock/shell/dashboard": '<div class="dz-stack" data-dz-gap="md"><h1>Dashboard</h1><div class="dz-auto-grid" style="--dz-grid-min: 10rem"><div class="dz-card dz-card-body"><div class="dz-card-label">Outstanding</div><div class="dz-card-value">£12,450</div></div><div class="dz-card dz-card-body"><div class="dz-card-label">Paid</div><div class="dz-card-value">£48,900</div></div></div></div>',
     "/mock/shell/invoices": '<div class="dz-stack" data-dz-gap="md"><h1>Invoices</h1><p class="hm-demo-muted">The routed workspace swapped — the shell, sidebar state, and scroll position persist; only the main slot changed.</p></div>',

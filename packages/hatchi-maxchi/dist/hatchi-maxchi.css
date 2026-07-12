@@ -2005,6 +2005,9 @@ dialog.alert-dialog::backdrop {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* Icon + label: gap owns spacing — do not rely on a text-node space after
+     an icon span (flex collapses that inconsistently vs sprite <svg> siblings). */
+  gap: var(--space-xs);
   height: 2rem;
   padding-inline: var(--space-md);
   border-radius: var(--radius-sm);
