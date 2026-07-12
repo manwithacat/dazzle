@@ -159,6 +159,39 @@ def test_navigation_menu_dismiss_outside(page) -> None:  # type: ignore[no-untyp
     assert open_n == 0, f"expected dismiss, still open={open_n}"
 
 
+def test_menu_light_dismiss_esc_and_outside(page) -> None:  # type: ignore[no-untyped-def]
+    """Stem overlay-light-dismiss: menu closes on Esc and outside pointer."""
+    goto_part(page, "menu")
+    page.locator(".hm-preview summary").first.click()
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 1
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 0
+    page.locator(".hm-preview summary").first.click()
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 1
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 0
+
+
+def test_popover_light_dismiss_esc_and_outside(page) -> None:  # type: ignore[no-untyped-def]
+    """Stem overlay-light-dismiss: popover closes on Esc and outside pointer."""
+    goto_part(page, "popover")
+    page.locator(".hm-preview summary").first.click()
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 1
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 0
+    page.locator(".hm-preview summary").first.click()
+    page.wait_for_timeout(80)
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(80)
+    assert page.locator(".hm-preview details[open]").count() == 0
+
+
 def test_command_opener_kbd_is_spatially_secondary(page) -> None:  # type: ignore[no-untyped-def]
     """Stem shortcut-hint-chrome: opener label and ⌘K chip must not be flush (0 gap)."""
     goto_part(page, "command")

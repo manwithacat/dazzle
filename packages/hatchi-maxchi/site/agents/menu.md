@@ -34,6 +34,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - `details.dz-menu` + `summary` (usually `.dz-button`) + `.dz-menu__panel`
 - disclosure chevron is presentation on summary::after — not label text
+- light-dismiss: Esc + pointerdown outside (dz-details-light-dismiss.js)
 - pick-a-surface: local actions from one button → menu (not menubar / navigation-menu)
 
 ### Do / Don't
@@ -42,17 +43,20 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 |---|---|
 | label text only + CSS chevron that rotates when [open] | Actions ▾ as a single text string for the expand signal |
 | one Actions control with an item list on a host (toolbar/row) | a horizontal multi-trigger strip (that is menubar or navigation-menu) |
+| Esc + outside abandon for transient overlays (touch: outside) | require re-tapping the summary as the only way to cancel |
 
 ### Pitfalls
 
 - do not bake ▾/▼ into the summary text — house disclosure chrome is CSS/SVG
 - not a full ARIA menu (no roving tabindex/typeahead) — do not invent role=menu half-contracts
 - do not use menu for top product IA or File/Edit strips — wrong job
+- native details do not Esc/outside-dismiss — ship the light-dismiss controller
 
 ### Keyboard / AT
 
 - details/summary carry expand; chevron is decorative
-- Keyboard: Enter/Space on summary toggles the panel
+- Keyboard: Enter/Space opens; Escape light-dismisses
+- Touch: tap outside to abandon (no Esc key)
 
 ### Related parts
 
@@ -60,12 +64,40 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/menu.py`
+
+- **Required root:** `details.dz-menu, .dz-menu` (part `menu`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `details.dz-menu, .dz-menu` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: menu — details disclosure root (light-dismiss enhanced)."""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="menu",
+    root="details.dz-menu, .dz-menu",
+    nodes=(Node("details.dz-menu, .dz-menu", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
-**Pick:** local actions from one control — not app File/Edit chrome (menubar) and not product/site go-to nav (navigation-menu). See docs/agent/pick-a-surface.md › Menus / panels / chrome strips. Trigger label is plain text; open-panel signal is CSS ::after chevron (not Unicode in the label). Single-trigger native details; honest disclosure, not ARIA menu with roving tabindex.
+**Pick:** local actions from one control — not app File/Edit chrome (menubar) and not product/site go-to nav (navigation-menu). See docs/agent/pick-a-surface.md › Menus / panels / chrome strips. Trigger label is plain text; open-panel signal is CSS ::after chevron. Light-dismiss (stem overlay-light-dismiss): Esc + outside pointer via dz-details-light-dismiss.js — native details alone do not. Honest disclosure, not ARIA menu with roving tabindex.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/menu.py`
+- `controllers/dz-details-light-dismiss.js`

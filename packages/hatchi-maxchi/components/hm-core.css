@@ -192,10 +192,12 @@
   outline-offset: var(--focus-ring-offset);
 }
 
+/* HYPERPART: popover */
 /* ── dz-popover — details-based generic panel ────────────────────────
  * <details class="dz-popover"><summary>…trigger…</summary>
  *   <div class="dz-popover__panel">…free content…</div></details>
  * data-dz-align="start|end" on the root positions the panel.
+ * Light-dismiss: controllers/dz-details-light-dismiss.js (overlay-light-dismiss).
  */
 
 .dz-popover {

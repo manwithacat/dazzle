@@ -69,6 +69,12 @@ Need left rail app IA?                      → app-shell
 item lists with menu patterns; navigation-menu sits with app-shell as peer chrome
 (top vs side). Do **not** collapse into one part with `data-mode=bar|nav|dropdown`.
 
+**Dismiss model** (stem `overlay-light-dismiss`): transient overlays
+(`menu`, `popover`, `menubar`, `navigation-menu` panels) light-dismiss via
+**Escape** and **pointer outside**. In-flow structure (`accordion`, `tree`) does
+not — toggle the trigger only. Touch has no Esc: outside pointer is the abandon
+path. Disclosure chevron ≠ dismiss path.
+
 Agent packs: `site/agents/menu.md`, `menubar.md`, `navigation-menu.md`.
 
 If no row fits: open `invent-safely.md`—do **not** stretch an L1 with mode flags that change lifetime or commit path.

@@ -137,10 +137,12 @@
   [data-dz-tooltip]::after { transition: none; }
 }
 
+/* HYPERPART: menu */
 /* ── dz-menu — details-based dropdown (the hypermedia answer) ──────────
  * Disclosure chrome: CSS chevron on the summary trigger (same family as
  * accordion / navigation-menu) — not Unicode ▾ in the label text
  * (affordance-disclosure-chrome). Summary usually carries .dz-button.
+ * Light-dismiss: controllers/dz-details-light-dismiss.js (overlay-light-dismiss).
  */
 
 .dz-menu {

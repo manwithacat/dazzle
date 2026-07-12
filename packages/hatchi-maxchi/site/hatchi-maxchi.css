@@ -1711,10 +1711,12 @@ th {
   [data-tooltip]::after { transition: none; }
 }
 
+/* HYPERPART: menu */
 /* ── menu — details-based dropdown (the hypermedia answer) ──────────
  * Disclosure chrome: CSS chevron on the summary trigger (same family as
  * accordion / navigation-menu) — not Unicode ▾ in the label text
  * (affordance-disclosure-chrome). Summary usually carries .button.
+ * Light-dismiss: controllers/details-light-dismiss.js (overlay-light-dismiss).
  */
 
 .menu {
@@ -4135,10 +4137,12 @@ input.switch:checked::before {
   outline-offset: var(--focus-ring-offset);
 }
 
+/* HYPERPART: popover */
 /* ── popover — details-based generic panel ────────────────────────
  * <details class="popover"><summary>…trigger…</summary>
  *   <div class="popover__panel">…free content…</div></details>
  * data-align="start|end" on the root positions the panel.
+ * Light-dismiss: controllers/details-light-dismiss.js (overlay-light-dismiss).
  */
 
 .popover {

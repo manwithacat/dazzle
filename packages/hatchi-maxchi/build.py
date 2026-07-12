@@ -146,6 +146,7 @@ JS_SOURCES = [
     "controllers/dz-code.js",
     "controllers/dz-menubar.js",
     "controllers/dz-navigation-menu.js",
+    "controllers/dz-details-light-dismiss.js",
 ]
 
 FONT_DIR = PKG / "site" / "fonts"  # tracked vendored copy (Geist, OFL)
