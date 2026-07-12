@@ -38,17 +38,20 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - `[data-dz-menubar]` / `.dz-menubar` root scopes exclusive open
 - `details.dz-menubar__item` + `summary.dz-menubar__trigger` for panels
+- pick-a-surface: File/Edit/View app chrome → menubar (not navigation-menu / menu)
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
 | Let the controller close siblings on toggle and outside click | Hand-roll per-item open flags in Alpine/React |
+| app command strip (File / Edit / View) | top product nav with Home/Pricing links (navigation-menu) |
 
 ### Pitfalls
 
 - Native details allow multi-open and ignore outside click — never ship menubar without dz-menubar.js
 - Do not nest menubars; one root per chrome strip
+- do not use menubar for marketing/product site IA — that is navigation-menu
 
 ### Keyboard / AT
 
@@ -91,7 +94,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Open intent: exclusive + outside/Escape dismiss (stem details-open-intent). controllers/dz-menubar.js; gallery probes menubar.exclusive_open, menubar.dismiss_outside. Compose with menu Hyperpart for denser item lists. shadcn parity (HMC-038).
+**Pick:** app chrome File/Edit/View — not product/site go-to (navigation-menu) and not a single Actions dropdown (menu). See docs/agent/pick-a-surface.md › Menus / panels / chrome strips. Open intent: exclusive + outside/Escape dismiss (details-open-intent). dz-menubar.js; probes menubar.exclusive_open, menubar.dismiss_outside. May compose denser item lists with menu patterns. shadcn parity (HMC-038).
 
 ## Source files
 

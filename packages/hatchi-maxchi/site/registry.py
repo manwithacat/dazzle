@@ -973,26 +973,32 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<hr class="dz-menu__separator">'
             '<button type="button" class="dz-menu__item" data-dz-tone="destructive">'
             "{icon:trash-2} Delete</button></div></details>",
-            notes="Trigger label is plain text; the open-panel signal is CSS "
-            "<code>::after</code> chevron on the summary (same family as "
-            "accordion / navigation-menu — not Unicode <code>▾</code> in the "
-            "label). Open intent is native details (single trigger). Honest "
-            "disclosure, not ARIA menu with roving tabindex.",
+            notes="**Pick:** local actions from one control — not app File/Edit chrome "
+            "(menubar) and not product/site go-to nav (navigation-menu). See "
+            "<code>docs/agent/pick-a-surface.md</code> › Menus / panels / chrome strips. "
+            "Trigger label is plain text; open-panel signal is CSS "
+            "<code>::after</code> chevron (not Unicode in the label). Single-trigger "
+            "native details; honest disclosure, not ARIA menu with roving tabindex.",
             tags=("interactive",),
             guidance=Guidance(
                 seams=(
                     "`details.dz-menu` + `summary` (usually `.dz-button`) + `.dz-menu__panel`",
                     "disclosure chevron is presentation on summary::after — not label text",
+                    "pick-a-surface: local actions from one button → menu (not menubar / navigation-menu)",
                 ),
                 pitfalls=(
                     "do not bake ▾/▼ into the summary text — house disclosure chrome is CSS/SVG",
                     "not a full ARIA menu (no roving tabindex/typeahead) — do not invent role=menu half-contracts",
-                    "distinct from menubar (app chrome strip) and navigation-menu (site nav)",
+                    "do not use menu for top product IA or File/Edit strips — wrong job",
                 ),
                 do_dont=(
                     (
                         "label text only + CSS chevron that rotates when [open]",
                         "Actions ▾ as a single text string for the expand signal",
+                    ),
+                    (
+                        "one Actions control with an item list on a host (toolbar/row)",
+                        "a horizontal multi-trigger strip (that is menubar or navigation-menu)",
                     ),
                 ),
                 a11y_keys=(
@@ -2285,12 +2291,13 @@ def select(source: str, id: str) -> str:
             '<button type="button" role="menuitem">Zoom in</button>'
             '<button type="button" role="menuitem">Zoom out</button>'
             "</div></details></div>",
-            notes="Open intent: <strong>exclusive</strong> + outside/Escape "
-            "dismiss (stem <code>details-open-intent</code>). "
-            "<code>controllers/dz-menubar.js</code>; gallery probes "
-            "<code>menubar.exclusive_open</code>, "
-            "<code>menubar.dismiss_outside</code>. Compose with menu "
-            "Hyperpart for denser item lists. shadcn parity (HMC-038).",
+            notes="**Pick:** app chrome File/Edit/View — not product/site go-to "
+            "(navigation-menu) and not a single Actions dropdown (menu). See "
+            "<code>docs/agent/pick-a-surface.md</code> › Menus / panels / chrome strips. "
+            "Open intent: <strong>exclusive</strong> + outside/Escape dismiss "
+            "(<code>details-open-intent</code>). <code>dz-menubar.js</code>; probes "
+            "<code>menubar.exclusive_open</code>, <code>menubar.dismiss_outside</code>. "
+            "May compose denser item lists with menu patterns. shadcn parity (HMC-038).",
             tags=("navigation", "interactive"),
             controller="controllers/dz-menubar.js",
             contracts=("contracts/menubar.py",),
@@ -2298,16 +2305,22 @@ def select(source: str, id: str) -> str:
                 seams=(
                     "`[data-dz-menubar]` / `.dz-menubar` root scopes exclusive open",
                     "`details.dz-menubar__item` + `summary.dz-menubar__trigger` for panels",
+                    "pick-a-surface: File/Edit/View app chrome → menubar (not navigation-menu / menu)",
                 ),
                 pitfalls=(
                     "Native details allow multi-open and ignore outside click — "
                     "never ship menubar without dz-menubar.js",
                     "Do not nest menubars; one root per chrome strip",
+                    "do not use menubar for marketing/product site IA — that is navigation-menu",
                 ),
                 do_dont=(
                     (
                         "Let the controller close siblings on toggle and outside click",
                         "Hand-roll per-item open flags in Alpine/React",
+                    ),
+                    (
+                        "app command strip (File / Edit / View)",
+                        "top product nav with Home/Pricing links (navigation-menu)",
                     ),
                 ),
                 a11y_keys=(
@@ -2446,16 +2459,13 @@ def select(source: str, id: str) -> str:
             '<li class="dz-navigation-menu__item">'
             '<a class="dz-navigation-menu__link" href="#">Pricing</a></li>'
             "</ul></nav>",
-            notes="Open intent: <strong>exclusive</strong> + outside/Escape "
-            "dismiss (stem <code>details-open-intent</code>). Disclosure "
-            "chevron is CSS on the trigger (stem "
-            "<code>affordance-disclosure-chrome</code>) — not a Unicode caret. "
-            "Distinct from menubar and app-shell. Mega layout via "
-            "<code>data-dz-layout=mega</code>. Controller "
-            "<code>dz-navigation-menu.js</code>; probes "
-            "<code>navigation_menu.exclusive_open</code>, "
-            "<code>navigation_menu.dismiss_outside</code>. shadcn parity "
-            "(HMC-039).",
+            notes="**Pick:** product/site **go-to** top nav — not File/Edit app chrome "
+            "(menubar), not a single Actions dropdown (menu), not left-rail shell "
+            "(app-shell). See <code>docs/agent/pick-a-surface.md</code> › Menus / "
+            "panels / chrome strips. Open intent: exclusive + outside/Escape dismiss. "
+            "Disclosure chevron is CSS on the trigger (not Unicode). Mega layout via "
+            "<code>data-dz-layout=mega</code>. <code>dz-navigation-menu.js</code>; "
+            "probes exclusive_open + dismiss_outside. shadcn parity (HMC-039).",
             tags=("navigation", "interactive"),
             controller="controllers/dz-navigation-menu.js",
             contracts=("contracts/navigation_menu.py",),
@@ -2464,6 +2474,7 @@ def select(source: str, id: str) -> str:
                     "`[data-dz-navigation-menu]` / `.dz-navigation-menu` scopes exclusive open",
                     "`details.dz-navigation-menu__branch` + `summary.dz-navigation-menu__trigger`",
                     "Submenu affordance: CSS `::after` chevron on trigger (1rem, rotates open)",
+                    "pick-a-surface: top product/site go-to → navigation-menu (not menubar / menu / sidebar)",
                 ),
                 pitfalls=(
                     "Native details allow multi-open and ignore outside click — "
@@ -2473,6 +2484,7 @@ def select(source: str, id: str) -> str:
                     "handler stops host scroll — do not 'fix' Copy this to void(0)",
                     "Do not reintroduce Unicode ▾ spans or 0.65em carets — match "
                     "accordion disclosure chrome (stem affordance-disclosure-chrome)",
+                    "do not use navigation-menu for local action lists — that is menu",
                 ),
                 do_dont=(
                     (
@@ -2482,6 +2494,10 @@ def select(source: str, id: str) -> str:
                     (
                         "CSS/SVG disclosure chevron at ~1rem control scale",
                         "Tiny Unicode caret as the only submenu signal",
+                    ),
+                    (
+                        "top nav with links + optional mega panels (go somewhere)",
+                        "File/Edit command strip (menubar) or one Actions dropdown (menu)",
                     ),
                 ),
                 a11y_keys=(

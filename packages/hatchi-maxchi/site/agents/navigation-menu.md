@@ -56,6 +56,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 - `[data-dz-navigation-menu]` / `.dz-navigation-menu` scopes exclusive open
 - `details.dz-navigation-menu__branch` + `summary.dz-navigation-menu__trigger`
 - Submenu affordance: CSS `::after` chevron on trigger (1rem, rotates open)
+- pick-a-surface: top product/site go-to → navigation-menu (not menubar / menu / sidebar)
 
 ### Do / Don't
 
@@ -63,6 +64,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 |---|---|
 | Let the controller close siblings on toggle and outside click | Leave multi-open mega panels as bare multi-details |
 | CSS/SVG disclosure chevron at ~1rem control scale | Tiny Unicode caret as the only submenu signal |
+| top nav with links + optional mega panels (go somewhere) | File/Edit command strip (menubar) or one Actions dropdown (menu) |
 
 ### Pitfalls
 
@@ -70,6 +72,7 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 - Do not confuse with menubar (app File/Edit) or app-shell sidebar
 - Gallery: href=# is product-shaped stand-in; MOCK_HTMX inert-hash handler stops host scroll — do not 'fix' Copy this to void(0)
 - Do not reintroduce Unicode ▾ spans or 0.65em carets — match accordion disclosure chrome (stem affordance-disclosure-chrome)
+- do not use navigation-menu for local action lists — that is menu
 
 ### Keyboard / AT
 
@@ -119,7 +122,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Open intent: exclusive + outside/Escape dismiss (stem details-open-intent). Disclosure chevron is CSS on the trigger (stem affordance-disclosure-chrome) — not a Unicode caret. Distinct from menubar and app-shell. Mega layout via data-dz-layout=mega. Controller dz-navigation-menu.js; probes navigation_menu.exclusive_open, navigation_menu.dismiss_outside. shadcn parity (HMC-039).
+**Pick:** product/site **go-to** top nav — not File/Edit app chrome (menubar), not a single Actions dropdown (menu), not left-rail shell (app-shell). See docs/agent/pick-a-surface.md › Menus / panels / chrome strips. Open intent: exclusive + outside/Escape dismiss. Disclosure chevron is CSS on the trigger (not Unicode). Mega layout via data-dz-layout=mega. dz-navigation-menu.js; probes exclusive_open + dismiss_outside. shadcn parity (HMC-039).
 
 ## Source files
 

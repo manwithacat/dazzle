@@ -34,18 +34,20 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - `details.dz-menu` + `summary` (usually `.dz-button`) + `.dz-menu__panel`
 - disclosure chevron is presentation on summary::after — not label text
+- pick-a-surface: local actions from one button → menu (not menubar / navigation-menu)
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
 | label text only + CSS chevron that rotates when [open] | Actions ▾ as a single text string for the expand signal |
+| one Actions control with an item list on a host (toolbar/row) | a horizontal multi-trigger strip (that is menubar or navigation-menu) |
 
 ### Pitfalls
 
 - do not bake ▾/▼ into the summary text — house disclosure chrome is CSS/SVG
 - not a full ARIA menu (no roving tabindex/typeahead) — do not invent role=menu half-contracts
-- distinct from menubar (app chrome strip) and navigation-menu (site nav)
+- do not use menu for top product IA or File/Edit strips — wrong job
 
 ### Keyboard / AT
 
@@ -62,7 +64,7 @@ No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this**
 
 ## Notes
 
-Trigger label is plain text; the open-panel signal is CSS ::after chevron on the summary (same family as accordion / navigation-menu — not Unicode ▾ in the label). Open intent is native details (single trigger). Honest disclosure, not ARIA menu with roving tabindex.
+**Pick:** local actions from one control — not app File/Edit chrome (menubar) and not product/site go-to nav (navigation-menu). See docs/agent/pick-a-surface.md › Menus / panels / chrome strips. Trigger label is plain text; open-panel signal is CSS ::after chevron (not Unicode in the label). Single-trigger native details; honest disclosure, not ARIA menu with roving tabindex.
 
 ## Source files
 
