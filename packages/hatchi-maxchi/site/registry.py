@@ -3457,7 +3457,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "The in-card data table: an actions row with CSV export, a "
             "horizontally scrollable table, and an overflow count.",
-            '<div class="dz-list-region">'
+            '<div class="dz-list-region" data-dz-list-region>'
             '<div class="dz-list-actions">'
             '<div class="dz-list-action-group">'
             '<button type="button" class="dz-list-csv-button" '
@@ -3477,12 +3477,13 @@ def select(source: str, id: str) -> str:
             "</tbody></table></div>"
             '<p class="dz-list-overflow">Showing 2 of 14</p>'
             "</div>",
-            notes="The CSV button is ALWAYS rendered in the actions row. The "
-            "snippet omits its wiring: the real emitter adds "
-            "<code>data-dz-csv-endpoint</code>/<code>data-dz-csv-filename</code> "
-            "and an <code>onclick</code> that calls "
-            "<code>window.dz.downloadCsv(endpoint, filename)</code> against the "
-            "server export route. Sortable headers are "
+            notes="Dual-lock root is <code>data-dz-list-region</code> "
+            "(<code>contracts/list_region.py</code>). The CSV button is ALWAYS "
+            "rendered in the actions row. The snippet omits its wiring: the real "
+            "emitter adds <code>data-dz-csv-endpoint</code>/"
+            "<code>data-dz-csv-filename</code> and an <code>onclick</code> that "
+            "calls <code>window.dz.downloadCsv(endpoint, filename)</code> against "
+            "the server export route. Sortable headers are "
             "<code>dz-list-sort-link</code> anchors carrying an hx-get with "
             "<code>?sort=&lt;col&gt;&amp;dir=&lt;asc|desc&gt;</code> — the "
             "server re-renders the region; the active column shows a text "
@@ -3492,6 +3493,7 @@ def select(source: str, id: str) -> str:
             "the <code>grid</code> Hyperpart — this one is the lighter in-card "
             "region.",
             tags=("data",),
+            contracts=("contracts/list_region.py",),
         ),
         Hyperpart(
             "task-inbox",

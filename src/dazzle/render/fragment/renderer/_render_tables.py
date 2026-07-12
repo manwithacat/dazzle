@@ -31,6 +31,7 @@ from dazzle.render.fragment.ingest import ActionCard as ActionCardSeam
 from dazzle.render.fragment.ingest import ActivityRow as ActivityRowSeam
 from dazzle.render.fragment.ingest import BarTrack as BarTrackSeam
 from dazzle.render.fragment.ingest import BarTrackRow as BarTrackRowSeam
+from dazzle.render.fragment.ingest import ListRegion as ListRegionSeam
 from dazzle.render.fragment.ingest import MetricTile as MetricTileSeam
 from dazzle.render.fragment.ingest import PivotTable as PivotTableSeam
 from dazzle.render.fragment.ingest import ProfileCard as ProfileCardSeam
@@ -42,6 +43,7 @@ from dazzle.render.fragment.ingest import (
     render_action_card,
     render_activity_row,
     render_bar_track,
+    render_list_region,
     render_metric_tile,
     render_pivot_table,
     render_profile_card,
@@ -853,13 +855,10 @@ class _RenderTablesMixin:
         )
 
     def _emit_list_region(self, lst: ListRegion, ctx: RenderContext) -> str:
-        """Render a ListRegion matching legacy
-        `workspace/regions/list.html` byte-for-byte: outer
-        `dz-list-region`, action row with always-emitted CSV button,
-        `<div class="dz-list-scroll">` of `<table class="dz-list-table">`,
-        optional overflow line. Filter chrome / sortable headers /
-        click-through wiring deferred to follow-up — read-only basic
-        case here.
+        """Render a ListRegion via HM dual-lock list-region seam.
+
+        Host builds actions + table/empty + overflow; sole-emitter roots
+        ``data-dz-list-region`` on ``dz-list-region``.
         """
         # Action row — CSV button always rendered (legacy behaviour).
         csv_button = (
@@ -890,7 +889,7 @@ class _RenderTablesMixin:
                 f'<p class="dz-empty-state__description">{ctx.escape(label)}</p>'
                 f"</div>"
             )
-            return f'<div class="dz-list-region">{actions_row}{empty_html}</div>'
+            return render_list_region(ListRegionSeam(body_html=f"{actions_row}{empty_html}"))
 
         has_actions = bool(lst.row_actions)
         thead_cells = [f"<th>{ctx.escape(c.label)}</th>" for c in lst.columns]
@@ -976,7 +975,7 @@ class _RenderTablesMixin:
                 f'<p class="dz-list-overflow">Showing {len(lst.rows)} of {lst.total}</p>'
             )
 
-        return f'<div class="dz-list-region">{actions_row}{table}{overflow_html}</div>'
+        return render_list_region(ListRegionSeam(body_html=f"{actions_row}{table}{overflow_html}"))
 
     def _emit_grid_region(self, g: GridRegion, ctx: RenderContext) -> str:
         """Render a GridRegion matching legacy

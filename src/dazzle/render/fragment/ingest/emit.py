@@ -26,6 +26,7 @@ from dazzle.render.fragment.ingest.models import (
     Heatmap,
     Histogram,
     KanbanCard,
+    ListRegion,
     MetricTile,
     MoneyField,
     Pagination,
@@ -887,6 +888,16 @@ def search_box_root_attrs(_s: SearchBox) -> str:
 
 def date_range_root_attrs(_d: DateRange) -> str:
     return "data-dz-date-range"
+
+
+def list_region_root_attrs(_lr: ListRegion) -> str:
+    return "data-dz-list-region"
+
+
+def render_list_region(lr: ListRegion) -> str:
+    """Model → list-region root (matches HM contracts/list_region.py)."""
+    root_attrs = list_region_root_attrs(lr)
+    return f'<div class="dz-list-region" {root_attrs}>{lr.body_html}</div>'
 
 
 def render_date_range(d: DateRange) -> str:

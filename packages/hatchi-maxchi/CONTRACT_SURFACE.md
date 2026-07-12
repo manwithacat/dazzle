@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 43 |
+| Modules | 44 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -36,6 +36,7 @@ blast radius (who embeds / refuses this part).
 | `heatmap` | `heatmap` | `[data-dz-heatmap]` | [data-dz-heatmap][data-dz-heatmap=present] | Heatmap(columns:list[str]:opt; empty_message:str:opt; rows:list[HeatmapRow]:opt; thresholds:list[float]:opt; total:int:opt); HeatmapRow(cells:list[float]:opt; label:str:req) |
 | `histogram` | `histogram` | `[data-dz-histogram]` | [data-dz-histogram][data-dz-histogram=present] | Histogram(bins:list[HistogramBin]:opt; empty_message:str:opt; label:str:opt; svg_html:str:opt); HistogramBin(count:int:opt; high:float:opt; label:str:req; low:float:opt) |
 | `kanban` | `kanban` | `[data-dz-kanban-card]` | [data-dz-kanban-card][data-dz-kanban-card=present] | KanbanCard(attention_level:str:opt; attention_message:str:opt; fields_html:str:opt; title:str:req) |
+| `list_region` | `list-region` | `[data-dz-list-region]` | [data-dz-list-region][data-dz-list-region=present] | ListRegion(body_html:str:opt) |
 | `master_detail` | `master-detail` | `[data-dz-master-detail]` | [data-dz-master-detail][]; [data-dz-master-detail-list-body][]; [data-dz-master-detail-detail-body][] | — |
 | `metrics` | `metrics` | `[data-dz-metric-key]` | [data-dz-metric-key][data-dz-metric-key=present] | MetricTile(delta_direction:Literal:opt; delta_pct:float:opt; delta_period_label:str:opt; delta_sentiment:Literal:opt; delta_value:str:opt; label:str:req; metric_key:str:opt; tone:Literal:opt; value:str:req) |
 | `money` | `money` | `[data-dz-money]` | [data-dz-money][data-dz-currency=present, data-dz-scale=present] | MoneyField(currency:str:opt; field_id:str:opt; major_display:str:opt; minor_value:int:opt; name:str:req; scale:int:opt) |

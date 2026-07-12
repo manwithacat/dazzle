@@ -601,6 +601,18 @@ class DateRange(BaseModel):
     target: str = ""
 
 
+# ── List-region seam copy (contracts/list_region.py) ─────────────────
+
+
+class ListRegion(BaseModel):
+    """List region shell — dual-lock unit for list-region.
+
+    ``body_html`` is host-trusted (actions row + table/empty + overflow).
+    """
+
+    body_html: str = ""
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

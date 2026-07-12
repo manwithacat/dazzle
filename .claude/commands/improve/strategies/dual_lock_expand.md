@@ -85,7 +85,7 @@ Canonical recent ships: histogram/pivot (`f40622115`), box-plot/progress
 - Registry Hyperpart: root attr + `contracts=("contracts/<stem>.py",)` when gallery exists
 - Region wrappers without CSS rules → `SEMANTIC_ONLY` in `packages/hatchi-maxchi/tests/test_contract.py`
 
-**E. Regen**
+**E. Regen** (mandatory — CI drift gates; AUD-002)
 
 ```bash
 python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write
@@ -96,7 +96,25 @@ python packages/hatchi-maxchi/site/build_site.py
 python scripts/gen_ux_catalogue.py   # if emission HTML is in the catalogue
 ```
 
-**F. Complexity**
+**F. Import + morph ship gates** (mandatory — cycles 345–346 left main red)
+
+1. **Hoist dual-lock ingest imports to module top** on the renderer mixin
+   (and any other host that calls `render_*`). Follow charts/tables pattern —
+   **never** add function-level `from dazzle.render.fragment.ingest import …`
+   (ratchet `#1438` / `test_deferred_imports_ratchet_1438` forbids growth).
+2. **Morph-exchange lint:** if the registry `Exchange.swap` mentions morph /
+   `innerMorph` / `outerMorph`, the Hyperpart `notes` **or** `partial` must
+   also contain that Morph signal (`test_morph_template_gates`).
+3. Pre-push smoke (must pass locally):
+
+```bash
+pytest tests/unit/test_deferred_imports_ratchet_1438.py \
+  packages/hatchi-maxchi/tests/test_morph_template_gates.py::test_registry_and_controllers_are_clean \
+  tests/unit/test_contract_surface_tool.py \
+  tests/unit/test_hm_package_suite_gate.py -q --tb=line
+```
+
+**G. Complexity**
 
 If `test_complexity_ratchet` red after intentional growth:
 
@@ -111,7 +129,7 @@ dazzle fitness code --write-baseline
 pytest tests/unit/test_hm_contract_schema_parity.py \
   tests/unit/test_hm_contract_dom_conformance.py -q --tb=short
 
-# ship floor
+# ship floor (+ section F smokes)
 make sync-ci-type   # once per session if mypy extras missing
 make ci-fast
 ```
