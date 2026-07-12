@@ -19,4 +19,4 @@
 **Playbooks:** `docs/agent/`
 **Decisions (expressions):** `docs/decisions/`
 **Interaction probes (machine expressions):** `GALLERY_PROBES.md`, `tools/gallery_probes.py`
-**Composition matrix (host × guest):** `tools/composition_matrix.py`
+**Composition matrix (host × guest):** `tools/composition_matrix.py` · `COMPOSITION_MATRIX.md`

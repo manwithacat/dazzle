@@ -35,11 +35,24 @@ Both shells:
 
 ### Machine expression
 
-`tools/composition_matrix.py` — host × guest matrix + gallery drawer pins.
+`tools/composition_matrix.py` — host × guest matrix, **declared incompatibilities
+with reasons**, gallery drawer pins, Playwright coherence subset.
 
 ```bash
 python packages/hatchi-maxchi/tools/composition_matrix.py --validate
+python packages/hatchi-maxchi/tools/composition_matrix.py --incompatible
+python packages/hatchi-maxchi/tools/composition_matrix.py --write-catalog
 ```
+
+Catalog: `COMPOSITION_MATRIX.md` (generated). Guests include field, switch,
+controls, toggle-group, badge, card, alert, button, menu, tabs, separator,
+empty-state, popover, kbd, skeleton — plus refusal probes (`nested-form`,
+`nested-dialog`, `command`).
+
+| Compatible | Incompatible (examples) |
+|------------|-------------------------|
+| form_shell × field/switch/tabs/menu/… | form_shell × nested-form (invalid nested form) |
+| exchange_shell × nested-form | any shell × nested-dialog / command (overlay-in-overlay) |
 
 ## Not this
 
@@ -49,10 +62,12 @@ python packages/hatchi-maxchi/tools/composition_matrix.py --validate
 - One card wrapping three metric cells with `font-size` overrides.
 - Read-only meta built as Field (label + hint, no control).
 - Dogfooding `input.dz-switch` while declaring `composes` → `switch`.
+- Nesting a dialog/command palette inside a drawer body “for convenience.”
 
 ## Expressions
 
 - Drawer / dialog gallery partials (`site/registry.py`)
-- `tools/composition_matrix.py`
+- `tools/composition_matrix.py` · `COMPOSITION_MATRIX.md`
+- `tests/test_composition_matrix.py` · `tests/test_composition_matrix_playwright.py`
 - `docs/agent/compose-or-refuse.md` (host mount rules)
 - Related: `stems/composition-declared.md`, `stems/chrome-vs-protocol.md`

@@ -89,8 +89,10 @@ working inside the Dazzle tree.
 menubar/nav without the controller.
 
 **Composition matrix (host × guest structural coherence):**
-`python tools/composition_matrix.py --validate` — form_shell vs exchange_shell
-chrome, switch/toggle-group/card guest contracts, gallery drawer pins.
+`python tools/composition_matrix.py --validate` · `--incompatible` ·
+`--write-catalog` → `COMPOSITION_MATRIX.md`. form_shell vs exchange_shell,
+guest DOM contracts, declared refusals (nested-form / nested-dialog / command),
+Playwright coherence subset (`tests/test_composition_matrix_playwright.py`).
 
 **Same visual shape ≠ same Hyperpart.** Lifetime and exchange decide the surface.
 Example: form searchable select → `combobox`; dense in-cell enum with PUT + morph
