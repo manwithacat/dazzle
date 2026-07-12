@@ -14,12 +14,12 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 
 | Status | Count |
 |--------|------:|
-| **parity** | 27 |
+| **parity** | 29 |
 | **partial** | 27 |
-| **gap** (placeholders) | 9 |
+| **gap** (placeholders) | 7 |
 | **n/a** | 1 |
 | **total shadcn** | 64 |
-| HM Hyperparts (registry) | 77 |
+| HM Hyperparts (registry) | 79 |
 
 ## Mapping
 
@@ -53,11 +53,11 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `dropdown-menu` | **partial** | `menu` | menu Hyperpart covers dropdown job |
 | `empty` | **parity** | `empty-state` | empty-state Hyperpart |
 | `field` | **parity** | `field,form-chrome` | field-triad + form chrome |
-| `hover-card` | **gap** | `popover` | Popover exists; hover-intent card not first-class |
+| `hover-card` | **parity** | `hover-card` | Gallery Hyperpart — CSS :hover/:focus-within panel |
 | `input` | **partial** | `field,form` | Native inputs via field triad — not a decorative Input part |
 | `input-group` | **partial** | `form-chrome` | Addon/prefix chrome lives in form-chrome |
 | `input-otp` | **partial** | `two-factor` | two-factor Hyperpart; general OTP input not extracted |
-| `item` | **gap** | `—` | Generic list Item (media+title+actions) — no HM item primitive |
+| `item` | **parity** | `item` | Gallery Hyperpart — media + title + description + actions row |
 | `kbd` | **parity** | `kbd` | Gallery Hyperpart; styles in hm-core.css (.dz-kbd) |
 | `label` | **partial** | `field` | Label is part of field triad, not standalone |
 | `marker` | **gap** | `—` | shadcn New — map/marker chrome |
@@ -99,13 +99,11 @@ Playbook: `.claude/commands/improve/strategies/shadcn_parity.md`.
 |--:|--------|------------------------|-------|
 | 1 | `bubble` | `bubble` | Chat bubble — shadcn New; no HM chat message surface |
 | 2 | `carousel` | `carousel` | No carousel / media strip Hyperpart |
-| 3 | `hover-card` | `hover-card` | Popover exists; hover-intent card not first-class |
-| 4 | `item` | `item` | Generic list Item (media+title+actions) — no HM item primitive |
-| 5 | `marker` | `marker` | shadcn New — map/marker chrome |
-| 6 | `menubar` | `menubar` | Horizontal app menubar |
-| 7 | `message` | `message` | Chat message row — shadcn New; no HM messaging surface |
-| 8 | `message-scroller` | `message-scroller` | Chat transcript scroller — shadcn New |
-| 9 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
+| 3 | `marker` | `marker` | shadcn New — map/marker chrome |
+| 4 | `menubar` | `menubar` | Horizontal app menubar |
+| 5 | `message` | `message` | Chat message row — shadcn New; no HM messaging surface |
+| 6 | `message-scroller` | `message-scroller` | Chat transcript scroller — shadcn New |
+| 7 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
 
 ## Status definitions
 

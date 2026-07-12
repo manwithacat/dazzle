@@ -2103,6 +2103,54 @@ def select(source: str, id: str) -> str:
             "data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). No controller.",
             tags=("layout", "media"),
         ),
+        Hyperpart(
+            "item",
+            "Item",
+            "Data",
+            "Generic list row — optional media, title, description, trailing actions. "
+            "Compose into lists, pickers, and search results.",
+            '<div class="dz-item-group hm-measure-lg">'
+            '<div class="dz-item" data-dz-item data-dz-variant="outline">'
+            '<span class="dz-item__media" aria-hidden="true">MR</span>'
+            '<div class="dz-item__content">'
+            '<div class="dz-item__title">Maya Reyes</div>'
+            '<div class="dz-item__description">Operations · North grid</div>'
+            "</div>"
+            '<div class="dz-item__actions">'
+            '<button type="button" class="dz-button" data-dz-variant="ghost" '
+            'data-dz-size="sm">View</button></div></div>'
+            '<div class="dz-item" data-dz-item data-dz-variant="outline">'
+            '<span class="dz-item__media" aria-hidden="true">JK</span>'
+            '<div class="dz-item__content">'
+            '<div class="dz-item__title">Jordan Kim</div>'
+            '<div class="dz-item__description">Support · Escalations</div>'
+            "</div>"
+            '<div class="dz-item__actions">'
+            '<button type="button" class="dz-button" data-dz-variant="ghost" '
+            'data-dz-size="sm">View</button></div></div></div>',
+            notes="PLACEHOLDER — shadcn parity (HMC-033). Flex row anatomy only; "
+            "no controller. Actions stop at product buttons. Dual-lock when a "
+            "stable Dazzle list-row path needs it.",
+            tags=("data", "layout"),
+        ),
+        Hyperpart(
+            "hover-card",
+            "Hover card",
+            "Overlays",
+            "Rich preview on hover/focus — CSS-only progressive enhancement over a "
+            "trigger link or button.",
+            '<div class="dz-hover-card" data-dz-hover-card>'
+            '<button type="button" class="dz-hover-card__trigger">@maya</button>'
+            '<div class="dz-hover-card__content" role="tooltip">'
+            '<p class="dz-hover-card__title">Maya Reyes</p>'
+            '<p class="dz-hover-card__description">Operations lead · Online now. '
+            "Hover or tab-focus the trigger to keep this open.</p>"
+            "</div></div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-035). Opens on :hover / "
+            ":focus-within; coarse pointers rely on focus. Distinct from "
+            "popover (explicit open). No JS controller.",
+            tags=("overlay",),
+        ),
         # ── Navigation / Data ────────────────────────────────────────────
         Hyperpart(
             "breadcrumb",

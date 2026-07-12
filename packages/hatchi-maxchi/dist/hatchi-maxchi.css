@@ -5038,6 +5038,215 @@ body.cursor-col-resize * {
 }
 
 }
+/* ── components/item.css ── */
+@layer components {
+/* HYPERPART: item */
+/*
+ * Generic list row: optional media + title/description + trailing actions.
+ * Compose into lists, menus, and search results. State-free presentation;
+ * interactive children (links/buttons) own their own exchanges.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-033).
+ */
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--colour-text);
+  text-align: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.item[data-variant="outline"] {
+  border-color: var(--colour-border);
+  background: var(--colour-surface);
+}
+
+.item[data-variant="muted"] {
+  background: var(--colour-surface-muted);
+}
+
+a.item {
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+a.item:hover,
+button.item:hover {
+  background: var(--colour-surface-muted);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+}
+
+.item__media {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  background: var(--colour-brand-soft);
+  color: var(--colour-brand-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+}
+
+.item__media > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item__content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.item__title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--colour-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item__description {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item__actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.item-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+}
+/* ── components/hover-card.css ── */
+@layer components {
+/* HYPERPART: hover-card */
+/*
+ * Rich preview on hover/focus — CSS-only progressive enhancement.
+ * Trigger + floating panel; panel appears on :hover / :focus-within.
+ * Touch users get the panel via focus (tab) or a follow-up click controller.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-035). Distinct from popover (explicit open).
+ */
+
+.hover-card {
+  position: relative;
+  display: inline-block;
+}
+
+.hover-card__trigger {
+  color: var(--colour-brand-text);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+}
+
+.hover-card__trigger:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.hover-card__content {
+  position: absolute;
+  z-index: var(--z-popover, 40);
+  top: calc(100% + var(--space-xs));
+  left: 0;
+  min-width: 14rem;
+  max-width: 18rem;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-md, 0 8px 24px color-mix(in oklab, var(--colour-text) 12%, transparent));
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-0.25rem);
+  pointer-events: none;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    visibility var(--duration-fast) var(--ease-out);
+}
+
+.hover-card:hover .hover-card__content,
+.hover-card:focus-within .hover-card__content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.hover-card__title {
+  font-weight: var(--weight-medium);
+  margin: 0 0 var(--space-xs);
+}
+
+.hover-card__description {
+  margin: 0;
+  color: var(--colour-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-card__content {
+    transition: none;
+  }
+}
+
+/* Prefer click/focus on coarse pointers — hover-only is a desktop affordance */
+@media (hover: none) {
+  .hover-card:hover .hover-card__content {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .hover-card:focus-within .hover-card__content {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+}
+
+}
 /* ── components/table.css ── */
 @layer components {
 /* HYPERPART: grid */

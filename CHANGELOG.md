@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **shadcn parity placeholders: item + hover-card** — list-row anatomy
+  Hyperpart and CSS hover/focus preview card. Catalogue gaps 9→7.
 - **shadcn parity placeholders: toggle + aspect-ratio** — gallery Hyperparts
   for pressable toolbar toggles (`aria-pressed`) and media frames
   (`data-dz-ratio` CSS presets). Catalogue gaps 11→9.

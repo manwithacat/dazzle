@@ -1,0 +1,94 @@
+/* HYPERPART: hover-card */
+/*
+ * Rich preview on hover/focus — CSS-only progressive enhancement.
+ * Trigger + floating panel; panel appears on :hover / :focus-within.
+ * Touch users get the panel via focus (tab) or a follow-up click controller.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-035). Distinct from popover (explicit open).
+ */
+
+.dz-hover-card {
+  position: relative;
+  display: inline-block;
+}
+
+.dz-hover-card__trigger {
+  color: var(--colour-brand-text);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+}
+
+.dz-hover-card__trigger:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.dz-hover-card__content {
+  position: absolute;
+  z-index: var(--z-popover, 40);
+  top: calc(100% + var(--space-xs));
+  left: 0;
+  min-width: 14rem;
+  max-width: 18rem;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-md, 0 8px 24px color-mix(in oklab, var(--colour-text) 12%, transparent));
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-0.25rem);
+  pointer-events: none;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    visibility var(--duration-fast) var(--ease-out);
+}
+
+.dz-hover-card:hover .dz-hover-card__content,
+.dz-hover-card:focus-within .dz-hover-card__content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.dz-hover-card__title {
+  font-weight: var(--weight-medium);
+  margin: 0 0 var(--space-xs);
+}
+
+.dz-hover-card__description {
+  margin: 0;
+  color: var(--colour-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-hover-card__content {
+    transition: none;
+  }
+}
+
+/* Prefer click/focus on coarse pointers — hover-only is a desktop affordance */
+@media (hover: none) {
+  .dz-hover-card:hover .dz-hover-card__content {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .dz-hover-card:focus-within .dz-hover-card__content {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+}

@@ -45,7 +45,7 @@ Same **job** can have multiple **surfaces**. Pick from `docs/agent/pick-a-surfac
 - **`overlay-dialog`** (modal / drawer overlay): `dialog`, `drawer`
 - **`remote-fk-typeahead`** (remote FK typeahead): `search-select`
 - **`single-select-form`** (single-select (form field)): `combobox`
-- **_(unset)_** (59 parts): open pick-a-surface or seed `_RECIPE_SEED` in `site/registry.py` when a part sits on the matrix
+- **_(unset)_** (61 parts): open pick-a-surface or seed `_RECIPE_SEED` in `site/registry.py` when a part sits on the matrix
 
 ## Reverse index by part
 
@@ -401,7 +401,19 @@ _No composition edges declared._
 
 _No composition edges declared._
 
+### `hover-card`
+
+**Layer:** `L1`
+
+_No composition edges declared._
+
 ### `icon`
+
+**Layer:** `L1`
+
+_No composition edges declared._
+
+### `item`
 
 **Layer:** `L1`
 

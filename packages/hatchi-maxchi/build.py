@@ -55,6 +55,8 @@ CSS_SOURCES = [
     ("components", "components/switch.css"),
     ("components", "components/toggle.css"),
     ("components", "components/aspect-ratio.css"),
+    ("components", "components/item.css"),
+    ("components", "components/hover-card.css"),
     ("components", "components/table.css"),
     ("components", "components/layout.css"),
     ("components", "components/app-shell.css"),

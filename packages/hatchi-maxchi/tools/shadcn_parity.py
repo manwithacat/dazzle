@@ -147,9 +147,9 @@ _MAP: list[tuple[str, str, str, str]] = [
     ("field", "parity", "field,form-chrome", "field-triad + form chrome"),
     (
         "hover-card",
-        "gap",
-        "popover",
-        "Popover exists; hover-intent card not first-class",
+        "parity",
+        "hover-card",
+        "Gallery Hyperpart — CSS :hover/:focus-within panel",
     ),
     (
         "input",
@@ -171,9 +171,9 @@ _MAP: list[tuple[str, str, str, str]] = [
     ),
     (
         "item",
-        "gap",
-        "",
-        "Generic list Item (media+title+actions) — no HM item primitive",
+        "parity",
+        "item",
+        "Gallery Hyperpart — media + title + description + actions row",
     ),
     (
         "kbd",
