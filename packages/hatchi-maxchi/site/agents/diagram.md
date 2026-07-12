@@ -12,7 +12,7 @@ A horizontal-scroll wrapper for server-emitted Mermaid source — the library re
 ## Copy this
 
 ```html
-<div class="diagram-scroll">
+<div class="diagram-scroll" data-diagram>
   <pre class="mermaid diagram-source">erDiagram
   CUSTOMER ||--o{ ORDER : places
   ORDER ||--|{ LINE_ITEM : contains</pre>
@@ -31,16 +31,66 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/diagram.py`
+
+- **Required root:** `[data-dz-diagram]` (part `diagram`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-diagram]` | `data-dz-diagram` | present (any value) |
+
+#### Ingestion model `Diagram`
+
+| Field | Type | Required |
+|---|---|---|
+| `mermaid_source` | `string` | no |
+| `nodes` | `array` | no |
+| `edges` | `array` | no |
+
+#### Exemplar `render()`
+
+```python
+def render(d: Diagram) -> str:
+    """Model → diagram root (Mermaid shell or structural list)."""
+    if d.mermaid_source:
+        src = html.escape(d.mermaid_source)
+        return (
+            f'<div class="dz-diagram-scroll" data-dz-diagram>'
+            f'<pre class="mermaid dz-diagram-source">{src}</pre>'
+            f"</div>"
+        )
+    nodes_html = "".join(
+        f'<li class="dz-diagram__node" data-dz-key="{html.escape(name, quote=True)}">'
+        f"{html.escape(name)}</li>"
+        for name in d.nodes
+    )
+    edges_html = "".join(
+        f'<li class="dz-diagram__edge">'
+        f'<span class="dz-diagram__edge-from">{html.escape(src)}</span>'
+        f'<span class="dz-diagram__edge-arrow">→</span>'
+        f'<span class="dz-diagram__edge-to">{html.escape(dst)}</span>'
+        f"</li>"
+        for src, dst in d.edges
+    )
+    return (
+        f'<section class="dz-diagram" data-dz-diagram>'
+        f'<ul class="dz-diagram__nodes">{nodes_html}</ul>'
+        f'<ul class="dz-diagram__edges">{edges_html}</ul>'
+        f"</section>"
+    )
+```
 
 ## Notes
 
-The gallery shows the raw source (Mermaid is not loaded here); in Dazzle the emitter appends the Mermaid loader script and the library swaps the <pre> for SVG at runtime — the source styling only matters for the initial paint flash. The wrapper owns overflow; dz-diagram-empty is the no-data paragraph.
+Dual-lock root is data-dz-diagram (contracts/diagram.py). The gallery shows the raw source (Mermaid is not loaded here); in Dazzle the emitter appends the Mermaid loader script and the library swaps the <pre> for SVG at runtime — the source styling only matters for the initial paint flash. The wrapper owns overflow; dz-diagram-empty is the no-data paragraph.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/diagram.py`

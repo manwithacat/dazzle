@@ -438,8 +438,12 @@ class TestErrorHandlerDispatch:
         # Back to dashboard (workspace parent rule).
         assert 'href="/app"' in body
         assert "Back to Dashboard" in body
-        # Custom message from exc.detail
-        assert "You don&#39;t have permission" in body or "You don't have permission" in body
+        # Custom message from exc.detail (stdlib html.escape uses &#x27; for ')
+        assert (
+            "You don&#39;t have permission" in body
+            or "You don&#x27;t have permission" in body
+            or "You don't have permission" in body
+        )
 
     @pytest.mark.asyncio
     async def test_api_request_still_returns_json(self, handler: Any) -> None:

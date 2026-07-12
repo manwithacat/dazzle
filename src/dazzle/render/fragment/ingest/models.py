@@ -635,6 +635,27 @@ class Skeleton(BaseModel):
     body_html: str = ""
 
 
+# ── Diagram seam copy (contracts/diagram.py) ─────────────────────────
+
+
+class Diagram(BaseModel):
+    """Mermaid or structural diagram — dual-lock unit for diagram."""
+
+    mermaid_source: str = ""
+    nodes: list[str] = Field(default_factory=list)
+    edges: list[tuple[str, str]] = Field(default_factory=list)
+
+
+# ── Task-inbox seam copy (contracts/task_inbox.py) ───────────────────
+
+
+class TaskInbox(BaseModel):
+    """Task inbox shell — dual-lock unit for task-inbox."""
+
+    region_name: str = ""
+    body_html: str = ""
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

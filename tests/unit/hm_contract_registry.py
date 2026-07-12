@@ -266,6 +266,18 @@ CONTRACT_MODELS: list[tuple[str, str, str, str]] = [
         "dazzle.render.fragment.ingest",
         "Skeleton",
     ),
+    (
+        "contracts/diagram.py",
+        "Diagram",
+        "dazzle.render.fragment.ingest",
+        "Diagram",
+    ),
+    (
+        "contracts/task_inbox.py",
+        "TaskInbox",
+        "dazzle.render.fragment.ingest",
+        "TaskInbox",
+    ),
 ]
 
 # Root-only Hyperparts with a stable Dazzle emission path.

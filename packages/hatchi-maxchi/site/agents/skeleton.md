@@ -66,9 +66,7 @@ def render(s: Skeleton) -> str:
         inner = s.body_html
     else:
         n = max(1, int(s.lines))
-        inner = "".join(
-            '<div class="dz-skeleton" data-dz-shape="text"></div>' for _ in range(n)
-        )
+        inner = "".join('<div class="dz-skeleton" data-dz-shape="text"></div>' for _ in range(n))
     return f'<div class="dz-skeleton-lines" data-dz-skeleton>{inner}</div>'
 ```
 

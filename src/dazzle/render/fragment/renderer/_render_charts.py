@@ -26,6 +26,7 @@ from dazzle.render.fragment.ingest import BoxPlotGroup as BoxPlotGroupSeam
 from dazzle.render.fragment.ingest import Bullet as BulletSeam
 from dazzle.render.fragment.ingest import BulletBand as BulletBandSeam
 from dazzle.render.fragment.ingest import BulletRow as BulletRowSeam
+from dazzle.render.fragment.ingest import Diagram as DiagramSeam
 from dazzle.render.fragment.ingest import Funnel as FunnelSeam
 from dazzle.render.fragment.ingest import FunnelStage as FunnelStageSeam
 from dazzle.render.fragment.ingest import Heatmap as HeatmapSeam
@@ -44,6 +45,7 @@ from dazzle.render.fragment.ingest import (
     render_bar_chart,
     render_box_plot,
     render_bullet,
+    render_diagram,
     render_funnel,
     render_heatmap,
     render_histogram,
@@ -236,31 +238,14 @@ class _RenderChartsMixin:
         """
         if d.mermaid_source:
             return (
-                f'<div class="dz-diagram-scroll">'
-                f'<pre class="mermaid dz-diagram-source">'
-                f"{ctx.escape(d.mermaid_source)}"
-                f"</pre>"
-                f"</div>"
-                f"{_DIAGRAM_MERMAID_SCRIPT}"
+                render_diagram(DiagramSeam(mermaid_source=d.mermaid_source))
+                + _DIAGRAM_MERMAID_SCRIPT
             )
-        nodes_html = "".join(
-            f'<li class="dz-diagram__node" data-dz-key="{ctx.escape_attr(name)}">'
-            f"{ctx.escape(name)}</li>"
-            for name in d.nodes
-        )
-        edges_html = "".join(
-            f'<li class="dz-diagram__edge">'
-            f'<span class="dz-diagram__edge-from">{ctx.escape(src)}</span>'
-            f'<span class="dz-diagram__edge-arrow">→</span>'
-            f'<span class="dz-diagram__edge-to">{ctx.escape(dst)}</span>'
-            f"</li>"
-            for src, dst in d.edges
-        )
-        return (
-            f'<section class="dz-diagram">'
-            f'<ul class="dz-diagram__nodes">{nodes_html}</ul>'
-            f'<ul class="dz-diagram__edges">{edges_html}</ul>'
-            f"</section>"
+        return render_diagram(
+            DiagramSeam(
+                nodes=list(d.nodes),
+                edges=list(d.edges),
+            )
         )
 
     def _emit_time_series(self, t: TimeSeries, ctx: RenderContext) -> str:

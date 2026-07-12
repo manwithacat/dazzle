@@ -81,6 +81,7 @@ SEMANTIC_ONLY = {
     "dz-profile-card-region",
     "dz-grid-region",
     "dz-list-region",
+    "dz-task-inbox-region",  # dual-lock root; chips/items own styling
     # wizard stage block: visibility rides the native `hidden` attribute
     # (dz-wizard.js); the fields inside carry the styling.
     "dz-wizard-stage",

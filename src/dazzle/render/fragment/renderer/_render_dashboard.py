@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html
+from dazzle.render.fragment.ingest import TaskInbox as TaskInboxSeam
+from dazzle.render.fragment.ingest import render_task_inbox
 from dazzle.render.fragment.primitives import (
     CohortStripRegion,
     DashboardCard,
@@ -429,8 +431,6 @@ class _RenderDashboardMixin:
         meta + urgency-tone tint via `data-dz-urgency`. When there
         are zero items AND zero summary chips, the empty-state path
         emits a single paragraph in place of both."""
-        region_name_attr = ctx.escape_attr(t.region_name)
-
         chip_parts: list[str] = []
         for chip in t.summary_chips:
             inner = (
@@ -500,9 +500,9 @@ class _RenderDashboardMixin:
         else:
             body = f'{chips_html}<ul class="dz-task-inbox-items">{"".join(item_parts)}</ul>'
 
-        return (
-            f'<div class="dz-task-inbox-region" '
-            f'data-dz-region-name="{region_name_attr}">'
-            f"{body}"
-            f"</div>"
+        return render_task_inbox(
+            TaskInboxSeam(
+                region_name=t.region_name,
+                body_html=body,
+            )
         )

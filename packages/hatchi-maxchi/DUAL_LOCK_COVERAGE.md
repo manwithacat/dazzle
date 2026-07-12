@@ -10,8 +10,8 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 |--------|------:|
 | Component CSS modules | 68 |
 | Controllers | 20 |
-| Contract modules | 46 |
-| Dual-lock schema+DOM | 31 |
+| Contract modules | 48 |
+| Dual-lock schema+DOM | 33 |
 | Dual-lock DOM-only | 14 |
 | Dual-lock deferred | 0 |
 | Contract with no dual-lock row | 1 |
@@ -36,6 +36,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `confirm` | `confirm.py` | `dz-confirm.js` | yes | no | no | **DOM-only** |
 | `confirm_panel` | `confirm_panel.py` | `—` | yes | no | no | **DOM-only** |
 | `date_range` | `date_range.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `diagram` | `diagram.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `dialog` | `dialog.py` | `dz-dialog.js` | yes | no | no | **DOM-only** |
 | `empty_state` | `empty_state.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `funnel` | `funnel.py` | `—` | yes | yes | yes | **schema+DOM** |
@@ -65,6 +66,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `status_list` | `status_list.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `tabs` | `tabs.py` | `dz-tabs.js` | yes | no | no | **DOM-only** |
 | `tags` | `tags.py` | `dz-tags.js` | yes | yes | yes | **schema+DOM** |
+| `task_inbox` | `task_inbox.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `time_series` | `time_series.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `timeline` | `timeline.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `wizard` | `wizard.py` | `dz-wizard.js` | yes | no | no | **DOM-only** |

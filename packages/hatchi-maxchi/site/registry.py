@@ -3510,6 +3510,7 @@ def select(source: str, id: str) -> str:
             "The personal worklist: filter chips over urgency-flagged items, "
             "each a drill link with title and meta.",
             '<div class="hm-measure-lg">'
+            '<div class="dz-task-inbox-region" data-dz-task-inbox data-dz-region-name="inbox">'
             '<div class="dz-task-inbox-chips">'
             '<div class="dz-task-inbox-chip" data-dz-chip-id="all">'
             '<span class="dz-task-inbox-chip-count">6</span>'
@@ -3533,14 +3534,16 @@ def select(source: str, id: str) -> str:
             '<div class="dz-task-inbox-item-title">Review KYC — Globex</div>'
             '<div class="dz-task-inbox-item-meta">due tomorrow</div>'
             "</div></a></li>"
-            "</ul></div>",
-            notes="Items carry <code>data-dz-urgency=&quot;overdue|due|soon|"
-            "later&quot;</code> (the server clamps anything else to "
-            "<code>later</code>) + a stable <code>data-dz-item-id</code>; the "
-            "whole row is one link, leading with its icon. Chips render count "
-            "THEN label (<code>data-dz-chip-id</code> anchors a filter exchange "
-            "in Dazzle).",
+            "</ul></div></div>",
+            notes="Dual-lock root is <code>data-dz-task-inbox</code> "
+            "(<code>contracts/task_inbox.py</code>) on the region. Items carry "
+            "<code>data-dz-urgency=&quot;overdue|due|soon|later&quot;</code> "
+            "(the server clamps anything else to <code>later</code>) + a stable "
+            "<code>data-dz-item-id</code>; the whole row is one link, leading "
+            "with its icon. Chips render count THEN label "
+            "(<code>data-dz-chip-id</code> anchors a filter exchange in Dazzle).",
             tags=("data",),
+            contracts=("contracts/task_inbox.py",),
         ),
         Hyperpart(
             "tree",
@@ -3602,20 +3605,22 @@ def select(source: str, id: str) -> str:
             "Data",
             "A horizontal-scroll wrapper for server-emitted Mermaid source — "
             "the library replaces the <pre> with rendered SVG.",
-            '<div class="dz-diagram-scroll">'
+            '<div class="dz-diagram-scroll" data-dz-diagram>'
             '<pre class="mermaid dz-diagram-source">'
             "erDiagram\n"
             "  CUSTOMER ||--o{ ORDER : places\n"
             "  ORDER ||--|{ LINE_ITEM : contains"
             "</pre>"
             "</div>",
-            notes="The gallery shows the raw source (Mermaid is not loaded "
-            "here); in Dazzle the emitter appends the Mermaid loader script "
-            "and the library swaps the <code>&lt;pre&gt;</code> for SVG at "
-            "runtime — the source styling only matters for the initial paint "
-            "flash. The wrapper owns overflow; <code>dz-diagram-empty</code> "
-            "is the no-data paragraph.",
+            notes="Dual-lock root is <code>data-dz-diagram</code> "
+            "(<code>contracts/diagram.py</code>). The gallery shows the raw "
+            "source (Mermaid is not loaded here); in Dazzle the emitter appends "
+            "the Mermaid loader script and the library swaps the "
+            "<code>&lt;pre&gt;</code> for SVG at runtime — the source styling "
+            "only matters for the initial paint flash. The wrapper owns "
+            "overflow; <code>dz-diagram-empty</code> is the no-data paragraph.",
             tags=("data",),
+            contracts=("contracts/diagram.py",),
         ),
         # ── Primitives ───────────────────────────────────────────────────
         Hyperpart(

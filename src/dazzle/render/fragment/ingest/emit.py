@@ -21,6 +21,7 @@ from dazzle.render.fragment.ingest.models import (
     Bullet,
     ComboboxField,
     DateRange,
+    Diagram,
     EmptyState,
     Funnel,
     GridEditCell,
@@ -44,6 +45,7 @@ from dazzle.render.fragment.ingest.models import (
     Sparkline,
     StatusListEntry,
     TagsField,
+    TaskInbox,
     TimelineEvent,
     TimeSeries,
 )
@@ -904,6 +906,14 @@ def skeleton_root_attrs(_s: Skeleton) -> str:
     return "data-dz-skeleton"
 
 
+def diagram_root_attrs(_d: Diagram) -> str:
+    return "data-dz-diagram"
+
+
+def task_inbox_root_attrs(_t: TaskInbox) -> str:
+    return "data-dz-task-inbox"
+
+
 def render_list_region(lr: ListRegion) -> str:
     """Model → list-region root (matches HM contracts/list_region.py)."""
     root_attrs = list_region_root_attrs(lr)
@@ -932,6 +942,47 @@ def render_skeleton(s: Skeleton) -> str:
         n = max(1, int(s.lines))
         inner = "".join('<div class="dz-skeleton" data-dz-shape="text"></div>' for _ in range(n))
     return f'<div class="dz-skeleton-lines" {root_attrs}>{inner}</div>'
+
+
+def render_diagram(d: Diagram) -> str:
+    """Model → diagram root (matches HM contracts/diagram.py)."""
+    root_attrs = diagram_root_attrs(d)
+    if d.mermaid_source:
+        src = _html.escape(d.mermaid_source)
+        return (
+            f'<div class="dz-diagram-scroll" {root_attrs}>'
+            f'<pre class="mermaid dz-diagram-source">{src}</pre>'
+            f"</div>"
+        )
+    nodes_html = "".join(
+        f'<li class="dz-diagram__node" data-dz-key="{_html.escape(name, quote=True)}">'
+        f"{_html.escape(name)}</li>"
+        for name in d.nodes
+    )
+    edges_html = "".join(
+        f'<li class="dz-diagram__edge">'
+        f'<span class="dz-diagram__edge-from">{_html.escape(src)}</span>'
+        f'<span class="dz-diagram__edge-arrow">→</span>'
+        f'<span class="dz-diagram__edge-to">{_html.escape(dst)}</span>'
+        f"</li>"
+        for src, dst in d.edges
+    )
+    return (
+        f'<section class="dz-diagram" {root_attrs}>'
+        f'<ul class="dz-diagram__nodes">{nodes_html}</ul>'
+        f'<ul class="dz-diagram__edges">{edges_html}</ul>'
+        f"</section>"
+    )
+
+
+def render_task_inbox(t: TaskInbox) -> str:
+    """Model → task-inbox region (matches HM contracts/task_inbox.py)."""
+    root_attrs = task_inbox_root_attrs(t)
+    rname = _html.escape(t.region_name, quote=True)
+    return (
+        f'<div class="dz-task-inbox-region" {root_attrs} '
+        f'data-dz-region-name="{rname}">{t.body_html}</div>'
+    )
 
 
 def render_date_range(d: DateRange) -> str:
