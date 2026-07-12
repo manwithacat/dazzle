@@ -33,24 +33,24 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 357 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 371 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | — | OWNED-IDLE |
-| `dazzle qa trial` | CLI | trials | 321 | STALE (lag 35 since @321) |
+| `dazzle qa trial` | CLI | trials | 321 | STALE (lag 55 since @321) |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | — | OWNED-IDLE |
 | `dazzle qa taste-panel` | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI | **hm-convergence** | — | OWNED-IDLE |
-| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 337 | USED |
+| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 337 | STALE (lag 39 since @337) |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 368 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 369 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 370 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | — | OWNED-IDLE |
-| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 339 | USED |
+| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 339 | STALE (lag 37 since @339) |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 367 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 373 | USED |
-| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 341 | USED |
+| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 341 | STALE (lag 35 since @341) |
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 374 | USED |
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 375 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 372 | USED |
-| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 341 | USED |
+| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 341 | STALE (lag 35 since @341) |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 360 | USED |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 359 | USED |
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 360 | USED |
@@ -59,13 +59,13 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | — | OWNED-IDLE |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
-| `qa-trial` skill | skill | trials (downstream authoring) | 321 | STALE (lag 35 since @321) |
+| `qa-trial` skill | skill | trials (downstream authoring) | 321 | STALE (lag 55 since @321) |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
-| `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 338 | USED |
-| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 340 | USED |
-| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 341 | USED |
+| `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 338 | STALE (lag 38 since @338) |
+| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 340 | STALE (lag 36 since @340) |
+| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 341 | STALE (lag 35 since @341) |
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 361 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 363 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 364 | USED |
@@ -243,3 +243,19 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > ~**16**. **Governance:** hm-convergence dual-lock/shadcn monomania re-created cold core
 > verify paths. Next rule-6 cycles should clear STALE (validate first) before more gallery
 > placeholders. Explore budget: 0/100.
+
+> **Capability-sweep cycle 376 (2026-07-12).** Sweep due (20 cycles since 356). Re-derived
+> inventory: typer app **77** unique top-level commands/groups; MCP consolidated tools
+> **34** (mcp package available this run); `.claude/skills` (5: dsl-authoring, phase-contract,
+> qa-trial, spec-narrate, stems) + `.agents/skills` + `.claude/commands` (improve/fuzz/smells/
+> xproject/issues/ship/check/bump/cimonitor/docs-update). **No newly-built UNOWNED** loop
+> capability since 356 — cycles 357–375 were STALE clears + OWNED-IDLE first-exercise
+> (discovery@372, test-design@373, sentinel scan@374, fitness CLI@375) + shadcn drain@358–359
+> + dual_lock code deferred@360. STALE recompute (threshold last-exercised ≤356): **7 flips**
+> — deploy plan@337, rbac@338, rhythm@339, coverage@340, pulse/composition/fragment-audit@341;
+> **still STALE** qa-trial + qa-trial skill@321 (lag 55, no LLM driver). **still USED** 18
+> (validate@357 through fitness CLI@375). OWNED-IDLE never-exercised remaining: qa capture/
+> login/taste/vision, sentinel mutate, sweep/nightly, standalone /fuzz/smells/xproject (~10).
+> **Governance:** STALE monomania risk shifted to mid-window Tier-1 (rbac/coverage/pulse) after
+> successful core STALE clear + OWNED-IDLE graduation. Prefer clear 7 new STALE next, then
+> remaining OWNED-IDLE. Explore budget: 15/100.
