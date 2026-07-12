@@ -61,8 +61,13 @@ window.__HM_ICONS__ = {'circle-check':'<svg xmlns="http://www.w3.org/2000/svg" v
     // card-label/value title stack, one KPI card per metric in auto-grid,
     // meta as card-label + primary text (not form-field+hint), alert role=alert.
     // Server returns the body only — not drawer chrome (open/focus stay host).
+    // Length is intentional: drawer__body must overflow so the gallery
+    // demonstrates independent panel scroll (host page stays put).
     "/mock/drawer/detail":
       '<div class="stack" data-gap="md">' +
+      '<p class="hm-demo-muted" style="margin:0">' +
+      "Scroll this panel — the page behind does not move. Header and footer stay pinned." +
+      "</p>" +
       '<div class="hm-demo-row" style="justify-content:space-between;align-items:flex-start;' +
       'gap:var(--space-sm);flex-wrap:wrap">' +
       "<div>" +
@@ -94,18 +99,54 @@ window.__HM_ICONS__ = {'circle-check':'<svg xmlns="http://www.w3.org/2000/svg" v
       "<div>" +
       '<div class="card-label">Primary contact</div>' +
       "<div>Maya Reyes · Operations</div>" +
+      "</div>" +
+      "<div>" +
+      '<div class="card-label">Feeder</div>' +
+      "<div>N-14 · 33 kV · dual bay</div>" +
       "</div></div>" +
       '<div class="alert" data-tone="warning" role="alert">' +
       '<span class="alert__icon">{i:triangle-alert}</span>' +
       '<div class="alert__body">' +
       '<div class="alert__title">Two open work orders</div>' +
       '<div class="alert__description">' +
-      "Peek stays partial — Open full page navigates to the owned record URL." +
+      "Peek stays partial — Open full page navigates to the owned record URL. " +
+      "Expand widens this panel in place; it is not full page." +
       "</div></div></div>" +
       '<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">' +
       '<button type="button" class="button" data-variant="outline">{i:clipboard-list} ' +
       "Work orders</button>" +
       '<button type="button" class="button" data-variant="ghost">{i:map-pin} Map</button>' +
+      "</div>" +
+      // Activity + notes: enough vertical mass that body overflow is visible
+      '<div class="stack" data-gap="sm">' +
+      '<div class="card-label">Recent activity</div>' +
+      '<div class="card card-body"><div class="card-label">Today 09:14</div>' +
+      "<div>Load spike to 91% — auto-throttle engaged bay 2.</div></div>" +
+      '<div class="card card-body"><div class="card-label">Yesterday</div>' +
+      "<div>WO-1842 assigned to field crew North · ETA Friday.</div></div>" +
+      '<div class="card card-body"><div class="card-label">Mon 12 Jun</div>' +
+      "<div>Thermal scan complete — hotspot cleared on bushing B.</div></div>" +
+      '<div class="card card-body"><div class="card-label">Fri 9 Jun</div>' +
+      "<div>SCADA heartbeat restored after firmware patch 3.2.1.</div></div>" +
+      '<div class="card card-body"><div class="card-label">Thu 8 Jun</div>' +
+      "<div>Vegetation clearance permit filed for corridor C-4.</div></div>" +
+      '<div class="card card-body"><div class="card-label">Wed 7 Jun</div>' +
+      "<div>Oil sample OK · moisture within band · next sample Q3.</div></div>" +
+      '<div class="card card-body"><div class="card-label">Tue 6 Jun</div>' +
+      "<div>Relay coordination study uploaded by protection team.</div></div>" +
+      '<div class="card card-body"><div class="card-label">Mon 5 Jun</div>' +
+      "<div>Access control badge audit — 2 visitors signed out late.</div></div>" +
+      "</div>" +
+      '<div class="stack" data-gap="sm">' +
+      '<div class="card-label">Inspection notes</div>' +
+      "<div>Secondary containment dry. Ground grid resistance last measured at " +
+      "0.42 Ω (within site standard). Spare bushing stored in bay shed; key with " +
+      "Maya. Winter de-icing plan still draft — ops to confirm before October.</div>" +
+      "<div>Related feeders N-12 and N-16 share the same protection zone; a trip " +
+      "here can cascade under high load. Prefer staged switching for any planned " +
+      "outage longer than 90 minutes.</div>" +
+      "<div>End of peek fragment — if you can read this without scrolling the host " +
+      "page, independent body scroll is working.</div>" +
       "</div></div>",
 
     "/mock/shell/dashboard": '<div class="stack" data-gap="md"><h1>Dashboard</h1><div class="auto-grid" style="--grid-min: 10rem"><div class="card card-body"><div class="card-label">Outstanding</div><div class="card-value">£12,450</div></div><div class="card card-body"><div class="card-label">Paid</div><div class="card-value">£48,900</div></div></div></div>',
@@ -901,7 +942,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg xmlns="http://www.w3.org/2000/svg" v
  * microtask is still too early in Chromium — open-and-instantly-close).
  *
  * initial focus: showModal focuses the first focusable in the dialog —
- * often header chrome (✕ close, Widen, …). WebKit paints that as
+ * often header chrome (✕ close, Expand, …). WebKit paints that as
  * :focus-visible after a pointer open, so the control looks "active"
  * until the user clicks away. After open we ALWAYS settle focus on
  * [autofocus] if present, else the dialog shell (tabindex=-1, outline
@@ -909,9 +950,20 @@ window.__HM_ICONS__ = {'circle-check':'<svg xmlns="http://www.w3.org/2000/svg" v
  * Tabs. Do not special-case only close — a later header button becomes
  * first focusable and reintroduces the same bug. Esc / focus trap still
  * work — focus remains inside the dialog.
+ *
+ * panel width: Expand / Restore is a 2-state toggle (resting width ↔ xl),
+ * not a multi-step cycle. A unipolar "Widen" cycle lied on the last press
+ * (reset to default). Labels always name the next action. Separate job
+ * from "Open full page" (navigation to an owned URL).
  */
 (function () {
   "use strict";
+
+  var REST_WIDTH = "md";
+  var EXPANDED_WIDTH = "xl";
+  var EXPAND_SEL =
+    "[data-drawer-expand], [data-drawer-expand], " +
+    "[data-drawer-widen], [data-drawer-widen]";
 
   function openAttr(el) {
     return (
@@ -949,12 +1001,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg xmlns="http://www.w3.org/2000/svg" v
     focusQuiet(dlg);
   }
 
-  // Widen-in-place: cycle data-width on the host drawer (md→lg→xl→full→md).
-  // Separate job from "Open full page" (which is navigation to an owned URL).
-  var WIDTH_CYCLE = ["md", "lg", "xl", "full"];
-
   function widthAttr(dlg) {
-    return dlg.getAttribute("data-width") || dlg.getAttribute("data-width") || "md";
+    return dlg.getAttribute("data-width") || dlg.getAttribute("data-width") || REST_WIDTH;
   }
 
   function setWidth(dlg, w) {
@@ -962,18 +1010,62 @@ window.__HM_ICONS__ = {'circle-check':'<svg xmlns="http://www.w3.org/2000/svg" v
     dlg.setAttribute("data-width", w); // gallery unprefixed dialect
   }
 
+  function isExpandedWidth(w) {
+    return w === EXPANDED_WIDTH || w === "full";
+  }
+
+  function expandControls(dlg) {
+    return dlg.querySelectorAll(EXPAND_SEL);
+  }
+
+  /** Label always describes the *next* action (honest after multi-state cycle). */
+  function syncExpandControl(btn, expanded) {
+    if (!btn) return;
+    btn.setAttribute("aria-pressed", expanded ? "true" : "false");
+    btn.setAttribute(
+      "aria-label",
+      expanded ? "Restore drawer panel to default width" : "Expand drawer panel"
+    );
+    // Text-only chrome (gallery); leave icon-only buttons to aria-label alone.
+    if (!btn.querySelector("svg, img, .icon, .icon")) {
+      btn.textContent = expanded ? "Restore" : "Expand";
+    }
+  }
+
+  function syncExpandControls(dlg) {
+    var expanded = isExpandedWidth(widthAttr(dlg));
+    var btns = expandControls(dlg);
+    for (var i = 0; i < btns.length; i++) {
+      syncExpandControl(btns[i], expanded);
+    }
+  }
+
+  function toggleExpand(dlg) {
+    var cur = widthAttr(dlg);
+    if (isExpandedWidth(cur)) {
+      var rest =
+        dlg.getAttribute("data-width-rest") ||
+        dlg.getAttribute("data-width-rest") ||
+        REST_WIDTH;
+      setWidth(dlg, rest);
+    } else {
+      // Remember resting width so Restore returns to author default (sm/md/lg).
+      dlg.setAttribute("data-width-rest", cur);
+      dlg.setAttribute("data-width-rest", cur);
+      setWidth(dlg, EXPANDED_WIDTH);
+    }
+    syncExpandControls(dlg);
+  }
+
   document.addEventListener("click", function (evt) {
-    var widen =
-      (evt.target.closest && evt.target.closest("[data-drawer-widen]")) ||
-      (evt.target.closest && evt.target.closest("[data-drawer-widen]"));
-    if (widen) {
+    var expandBtn =
+      evt.target.closest && evt.target.closest(EXPAND_SEL);
+    if (expandBtn) {
       var host =
-        widen.closest("dialog.drawer") || widen.closest("dialog.drawer");
+        expandBtn.closest("dialog.drawer") || expandBtn.closest("dialog.drawer");
       if (!host) return;
       evt.preventDefault();
-      var cur = widthAttr(host);
-      var i = WIDTH_CYCLE.indexOf(cur);
-      setWidth(host, WIDTH_CYCLE[i < 0 ? 0 : (i + 1) % WIDTH_CYCLE.length]);
+      toggleExpand(host);
       return;
     }
 
@@ -991,6 +1083,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg xmlns="http://www.w3.org/2000/svg" v
     // Macrotask: past closedby="any" handling for this click.
     setTimeout(function () {
       if (!dlg.open) dlg.showModal();
+      syncExpandControls(dlg);
       settleInitialFocus(dlg);
     }, 0);
   });

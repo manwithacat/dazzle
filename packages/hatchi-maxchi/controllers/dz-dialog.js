@@ -17,7 +17,7 @@
  * microtask is still too early in Chromium — open-and-instantly-close).
  *
  * initial focus: showModal focuses the first focusable in the dialog —
- * often header chrome (✕ close, Widen, …). WebKit paints that as
+ * often header chrome (✕ close, Expand, …). WebKit paints that as
  * :focus-visible after a pointer open, so the control looks "active"
  * until the user clicks away. After open we ALWAYS settle focus on
  * [autofocus] if present, else the dialog shell (tabindex=-1, outline
@@ -25,9 +25,20 @@
  * Tabs. Do not special-case only close — a later header button becomes
  * first focusable and reintroduces the same bug. Esc / focus trap still
  * work — focus remains inside the dialog.
+ *
+ * panel width: Expand / Restore is a 2-state toggle (resting width ↔ xl),
+ * not a multi-step cycle. A unipolar "Widen" cycle lied on the last press
+ * (reset to default). Labels always name the next action. Separate job
+ * from "Open full page" (navigation to an owned URL).
  */
 (function () {
   "use strict";
+
+  var REST_WIDTH = "md";
+  var EXPANDED_WIDTH = "xl";
+  var EXPAND_SEL =
+    "[data-dz-drawer-expand], [data-drawer-expand], " +
+    "[data-dz-drawer-widen], [data-drawer-widen]";
 
   function openAttr(el) {
     return (
@@ -65,12 +76,8 @@
     focusQuiet(dlg);
   }
 
-  // Widen-in-place: cycle data-dz-width on the host drawer (md→lg→xl→full→md).
-  // Separate job from "Open full page" (which is navigation to an owned URL).
-  var WIDTH_CYCLE = ["md", "lg", "xl", "full"];
-
   function widthAttr(dlg) {
-    return dlg.getAttribute("data-dz-width") || dlg.getAttribute("data-width") || "md";
+    return dlg.getAttribute("data-dz-width") || dlg.getAttribute("data-width") || REST_WIDTH;
   }
 
   function setWidth(dlg, w) {
@@ -78,18 +85,62 @@
     dlg.setAttribute("data-width", w); // gallery unprefixed dialect
   }
 
+  function isExpandedWidth(w) {
+    return w === EXPANDED_WIDTH || w === "full";
+  }
+
+  function expandControls(dlg) {
+    return dlg.querySelectorAll(EXPAND_SEL);
+  }
+
+  /** Label always describes the *next* action (honest after multi-state cycle). */
+  function syncExpandControl(btn, expanded) {
+    if (!btn) return;
+    btn.setAttribute("aria-pressed", expanded ? "true" : "false");
+    btn.setAttribute(
+      "aria-label",
+      expanded ? "Restore drawer panel to default width" : "Expand drawer panel"
+    );
+    // Text-only chrome (gallery); leave icon-only buttons to aria-label alone.
+    if (!btn.querySelector("svg, img, .icon, .dz-icon")) {
+      btn.textContent = expanded ? "Restore" : "Expand";
+    }
+  }
+
+  function syncExpandControls(dlg) {
+    var expanded = isExpandedWidth(widthAttr(dlg));
+    var btns = expandControls(dlg);
+    for (var i = 0; i < btns.length; i++) {
+      syncExpandControl(btns[i], expanded);
+    }
+  }
+
+  function toggleExpand(dlg) {
+    var cur = widthAttr(dlg);
+    if (isExpandedWidth(cur)) {
+      var rest =
+        dlg.getAttribute("data-dz-width-rest") ||
+        dlg.getAttribute("data-width-rest") ||
+        REST_WIDTH;
+      setWidth(dlg, rest);
+    } else {
+      // Remember resting width so Restore returns to author default (sm/md/lg).
+      dlg.setAttribute("data-dz-width-rest", cur);
+      dlg.setAttribute("data-width-rest", cur);
+      setWidth(dlg, EXPANDED_WIDTH);
+    }
+    syncExpandControls(dlg);
+  }
+
   document.addEventListener("click", function (evt) {
-    var widen =
-      (evt.target.closest && evt.target.closest("[data-dz-drawer-widen]")) ||
-      (evt.target.closest && evt.target.closest("[data-drawer-widen]"));
-    if (widen) {
+    var expandBtn =
+      evt.target.closest && evt.target.closest(EXPAND_SEL);
+    if (expandBtn) {
       var host =
-        widen.closest("dialog.dz-drawer") || widen.closest("dialog.drawer");
+        expandBtn.closest("dialog.dz-drawer") || expandBtn.closest("dialog.drawer");
       if (!host) return;
       evt.preventDefault();
-      var cur = widthAttr(host);
-      var i = WIDTH_CYCLE.indexOf(cur);
-      setWidth(host, WIDTH_CYCLE[i < 0 ? 0 : (i + 1) % WIDTH_CYCLE.length]);
+      toggleExpand(host);
       return;
     }
 
@@ -107,6 +158,7 @@
     // Macrotask: past closedby="any" handling for this click.
     setTimeout(function () {
       if (!dlg.open) dlg.showModal();
+      syncExpandControls(dlg);
       settleInitialFocus(dlg);
     }, 0);
   });

@@ -1232,15 +1232,15 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             # close is scoped method=dialog forms only. Same BEM shell parts.
             # Peek → full page: primary CTA is a real href (owned URL), not a
             # no-op. __HM_ROOT__ is rewritten by build_site for index vs part pages.
-            # Widen is a separate affordance (data-dz-width cycle) — not "full page".
+            # Expand/Restore is a 2-state width toggle — not "full page".
             '<dialog class="dz-drawer" id="hm-drawer-lazy" data-dz-width="md" '
             'data-dz-side="right" closedby="any" aria-labelledby="hm-drawer-lazy-title">'
             '<div class="dz-drawer__header">'
             '<h2 class="dz-drawer__title" id="hm-drawer-lazy-title">Record detail</h2>'
             '<div class="hm-demo-row" style="gap:var(--space-xs);align-items:center">'
             '<button type="button" class="dz-button" data-dz-variant="ghost" '
-            'data-dz-drawer-widen aria-label="Widen drawer panel">'
-            "Widen</button>"
+            'data-dz-drawer-expand aria-pressed="false" '
+            'aria-label="Expand drawer panel">Expand</button>'
             '<form method="dialog">'
             '<button type="submit" class="dz-drawer__close" aria-label="Close">{svg:x}</button>'
             "</form></div></div>"
@@ -1271,9 +1271,12 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<strong>Peek vs full page:</strong> footer "
             "<code>Open full page</code> is a real link to the "
             "<code>record-page</code> Blueprint (owned URL) — not a CSS maximize. "
-            "<strong>Widen</strong> cycles <code>data-dz-width</code> on the same "
-            "dialog (md→lg→xl→full→md). See <code>stems/host-chrome-symmetry.md</code> "
-            "and <code>tools/composition_matrix.py</code>.",
+            "<strong>Expand / Restore</strong> toggles resting "
+            "<code>data-dz-width</code> ↔ <code>xl</code> (honest next-action "
+            "labels — not a multi-step cycle). Peek body content must be tall "
+            "enough to show independent body scroll. See "
+            "<code>stems/host-chrome-symmetry.md</code> and "
+            "<code>tools/composition_matrix.py</code>.",
             tags=("interactive", "htmx"),
             composes=(
                 "dialog",
@@ -1298,9 +1301,11 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "(fragment into drawer__body; list stays underneath)",
                     "peek → full page: real href to owned record URL "
                     "(Blueprint record-page) — not type=button no-op",
-                    "widen-in-place: data-dz-drawer-widen cycles data-dz-width "
-                    "(separate job from full page)",
+                    "expand/restore: data-dz-drawer-expand toggles resting width ↔ xl "
+                    "(aria-pressed + next-action label; not a multi-step cycle)",
                     "data-dz-side / data-dz-width for placement presets",
+                    "demo must exercise behaviour: peek body tall enough to scroll "
+                    "independently of the host page",
                     "composition matrix: tools/composition_matrix.py",
                 ),
                 pitfalls=(
@@ -1313,11 +1318,13 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "(use label.dz-switch + track + data-dz-switch)",
                     "do not use form-field as read-only meta (hint is help, not value)",
                     "lazy body starts empty/skeleton; exchange fills #…-body, not the whole dialog",
-                    "do not label a width cycle “Open full page” — full page is navigation",
+                    "do not label Expand/Restore “Open full page” — full page is navigation",
                     "do not use type=button for full-page when the job is a new URL",
-                    "do not leave pointer-open focus on header chrome (close, Widen, …) "
+                    "do not cycle multi-step widths under a unipolar verb (Widen→reset lies)",
+                    "do not leave pointer-open focus on header chrome (close, Expand, …) "
                     "— settle to [autofocus] or the dialog shell (dz-dialog.js); "
                     "close-only special-cases miss the next header button",
+                    "do not ship a scrollable body claim with content that never overflows",
                 ),
                 do_dont=(
                     (
@@ -1341,17 +1348,23 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     (
                         "Open full page = <a href> to the record document "
                         "(shareable / refreshable URL)",
-                        "Open full page = widen the dialog or a dead type=button",
+                        "Open full page = expand the dialog or a dead type=button",
                     ),
                     (
-                        "Widen = cycle data-dz-width on the same drawer (same URL)",
-                        "call a width change “full page”",
+                        "Expand/Restore = 2-state data-dz-width toggle "
+                        "(next-action label + aria-pressed)",
+                        "cycle md→lg→xl→full under a single “Widen” label",
+                    ),
+                    (
+                        "peek fragment tall enough that drawer__body scrolls (host page stays put)",
+                        "short demo content that never exercises body overflow",
                     ),
                 ),
                 a11y_keys=(
                     "native dialog focus trap + Esc/backdrop; body may be tabindex=0 for scroll",
                     "pointer open: settle focus on [autofocus] or dialog shell — never "
-                    "header chrome (close/Widen look 'active' under WebKit :focus-visible)",
+                    "header chrome (close/Expand look 'active' under WebKit :focus-visible)",
+                    "Expand control: aria-pressed + aria-label for next action (Expand/Restore)",
                     "label the body (aria-label) when it is the live region for peek loads",
                     "toggle-group: external label + aria-labelledby (not legend inside)",
                 ),

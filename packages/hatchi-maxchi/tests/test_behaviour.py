@@ -1523,7 +1523,7 @@ def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore
 
     showModal focuses the first focusable. WebKit paints that as
     :focus-visible, so the control looks "active" until click-away.
-    That used to be the ✕ alone; Open-record puts Widen first in tab
+    That used to be the ✕ alone; Open-record puts Expand first in tab
     order. dz-dialog.js always settles to the dialog shell (or
     [autofocus]) — not a close-only special case. Gate both demos.
     """
@@ -1539,7 +1539,9 @@ def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore
               const dlg = document.getElementById(id);
               const active = document.activeElement;
               const close = dlg && dlg.querySelector('.drawer__close');
-              const widen = dlg && (
+              const expand = dlg && (
+                dlg.querySelector('[data-drawer-expand]') ||
+                dlg.querySelector('[data-dz-drawer-expand]') ||
                 dlg.querySelector('[data-drawer-widen]') ||
                 dlg.querySelector('[data-dz-drawer-widen]')
               );
@@ -1550,12 +1552,12 @@ def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore
               return {
                 open: !!(dlg && dlg.open),
                 activeIsClose: active === close,
-                activeIsWiden: active === widen,
+                activeIsExpand: active === expand,
                 activeInHeaderChrome: inHeader,
                 activeIsShell: active === dlg,
                 activeIsInside: !!(dlg && active && dlg.contains(active)),
                 closeFocusVisible: !!(close && close.matches(':focus-visible')),
-                widenFocusVisible: !!(widen && widen.matches(':focus-visible')),
+                expandFocusVisible: !!(expand && expand.matches(':focus-visible')),
                 activeClass: active ? active.className : '',
                 activeTag: active ? active.tagName : '',
               };
@@ -1568,8 +1570,8 @@ def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore
             f"{dlg_id}: close must not hold initial focus after pointer open "
             f"(active={info['activeTag']}.{info['activeClass']})"
         )
-        assert not info["activeIsWiden"], (
-            f"{dlg_id}: Widen must not hold initial focus after pointer open "
+        assert not info["activeIsExpand"], (
+            f"{dlg_id}: Expand must not hold initial focus after pointer open "
             f"(active={info['activeTag']}.{info['activeClass']})"
         )
         assert not info["activeInHeaderChrome"], (
@@ -1579,8 +1581,8 @@ def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore
         assert not info["closeFocusVisible"], (
             f"{dlg_id}: close must not be :focus-visible after pointer open"
         )
-        assert not info["widenFocusVisible"], (
-            f"{dlg_id}: Widen must not be :focus-visible after pointer open"
+        assert not info["expandFocusVisible"], (
+            f"{dlg_id}: Expand must not be :focus-visible after pointer open"
         )
         # Esc still works with shell focus
         page.keyboard.press("Escape")
@@ -2010,28 +2012,91 @@ def test_drawer_open_full_page_is_real_navigation(page) -> None:  # type: ignore
     assert page.locator("h1").count() >= 1
 
 
-def test_drawer_widen_cycles_width_without_navigation(page) -> None:  # type: ignore[no-untyped-def]
-    """Widen is chrome (data-width cycle), not full-page navigation."""
+def test_drawer_expand_restore_toggles_width_without_navigation(page) -> None:  # type: ignore[no-untyped-def]
+    """Expand/Restore is a 2-state chrome toggle — not full-page navigation.
+
+    Labels name the next action; aria-pressed reflects expanded state.
+    A multi-step “Widen” cycle is forbidden (last press would narrow).
+    """
     goto_part(page, "drawer")
     page.click('#drawer [data-dialog-open="hm-drawer-lazy"]')
     page.wait_for_timeout(150)
     dlg = page.locator("#hm-drawer-lazy")
+    btn = page.locator(
+        "#hm-drawer-lazy [data-drawer-expand], #hm-drawer-lazy [data-dz-drawer-expand]"
+    )
+    assert btn.count() == 1
     assert (
         dlg.get_attribute("data-width") in (None, "md") or dlg.get_attribute("data-width") == "md"
     )
-    # gallery unprefixed attr
-    before = page.evaluate(
-        "() => document.getElementById('hm-drawer-lazy').getAttribute('data-width') || 'md'"
-    )
-    page.click("#hm-drawer-lazy [data-drawer-widen]")
+    assert btn.get_attribute("aria-pressed") in (None, "false")
+    label0 = (btn.inner_text() or "").strip().lower()
+    assert "expand" in label0, f"resting label should be Expand, got {label0!r}"
+
+    btn.click()
     page.wait_for_timeout(50)
     after = page.evaluate(
         "() => document.getElementById('hm-drawer-lazy').getAttribute('data-width')"
     )
-    assert after in ("lg", "xl", "full"), f"expected width cycle, got {after!r} (from {before!r})"
+    assert after == "xl", f"Expand should set xl, got {after!r}"
+    assert btn.get_attribute("aria-pressed") == "true"
+    label1 = (btn.inner_text() or "").strip().lower()
+    assert "restore" in label1, f"expanded label should be Restore, got {label1!r}"
     assert page.url.endswith("drawer.html") or "drawer" in page.url
-    # still open
     assert page.get_attribute("#hm-drawer-lazy", "open") is not None
+
+    btn.click()
+    page.wait_for_timeout(50)
+    restored = page.evaluate(
+        "() => document.getElementById('hm-drawer-lazy').getAttribute('data-width')"
+    )
+    assert restored == "md", f"Restore should return to resting md, got {restored!r}"
+    assert btn.get_attribute("aria-pressed") == "false"
+    label2 = (btn.inner_text() or "").strip().lower()
+    assert "expand" in label2, f"after restore label should be Expand, got {label2!r}"
+
+
+def test_drawer_peek_body_scrolls_independently(page) -> None:  # type: ignore[no-untyped-def]
+    """Peek fragment must be tall enough that drawer__body overflows.
+
+    Demo obligation (stem host-chrome-symmetry): claiming independent body
+    scroll requires content that actually overflows — short peeks hide the
+    contract from agents and humans.
+    """
+    goto_part(page, "drawer")
+    page.click('#drawer [data-dialog-open="hm-drawer-lazy"]')
+    page.wait_for_timeout(250)
+    # Wait for mock fragment (Aurora + activity)
+    page.wait_for_selector("#hm-drawer-lazy-body .card-value", timeout=3000)
+    assert "Aurora" in page.inner_text("#hm-drawer-lazy-body")
+    metrics = page.evaluate(
+        """() => {
+          const body = document.getElementById('hm-drawer-lazy-body');
+          if (!body) return null;
+          const beforeWin = window.scrollY;
+          const sh = body.scrollHeight;
+          const ch = body.clientHeight;
+          body.scrollTop = Math.min(sh - ch, 120);
+          return {
+            scrollHeight: sh,
+            clientHeight: ch,
+            bodyScrollTop: body.scrollTop,
+            windowScrollY: window.scrollY,
+            windowScrollYBefore: beforeWin,
+            overflowY: getComputedStyle(body).overflowY,
+          };
+        }"""
+    )
+    assert metrics is not None
+    assert metrics["scrollHeight"] > metrics["clientHeight"] + 40, (
+        f"peek body must overflow to demo independent scroll "
+        f"(scrollHeight={metrics['scrollHeight']}, clientHeight={metrics['clientHeight']})"
+    )
+    assert metrics["bodyScrollTop"] > 0, "body should accept scrollTop"
+    assert metrics["windowScrollY"] == metrics["windowScrollYBefore"], (
+        "scrolling the drawer body must not move the host window"
+    )
+    assert metrics["overflowY"] in ("auto", "scroll", "overlay")
 
 
 def test_search_box_coaching_hides_on_type_via_pure_css(page) -> None:  # type: ignore[no-untyped-def]

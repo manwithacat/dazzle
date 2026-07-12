@@ -33,7 +33,7 @@ Both shells:
 - Refuse almost-DOM: `input.switch` (controls pill) ≠ Switch Hyperpart;
   `form-field` + hint without control ≠ Field; legend-in-toggle-group ≠ Toggle group.
 
-### Peek vs full page vs widen
+### Peek vs full page vs expand
 
 Three jobs; do not collapse them into one button:
 
@@ -41,16 +41,27 @@ Three jobs; do not collapse them into one button:
 |-----|------------|------------------------|
 | **Peek** | Open record (drawer) | `GET …?peek=1` fragment → `drawer__body` + `showModal` |
 | **Full page** | **Open full page** (`<a href>`) | `GET /records/{id}` document — owned URL (gallery: Blueprint `record-page`) |
-| **Widen** | **Widen** (`data-dz-drawer-widen`) | Same dialog; cycle `data-dz-width` md→lg→xl→full |
+| **Expand / Restore** | **Expand** (`data-dz-drawer-expand`) | Same dialog; toggle resting `data-dz-width` ↔ `xl` |
 
 - Full page is **addressing** (new history entry, share/refresh/Back).
-- Widen is **chrome** (same URL, more panel width).
-- Never label a width cycle “Open full page”; never ship that label on `type=button` with no `href`.
+- Expand is **chrome** (same URL, more panel width) — **2-state**, not a cycle.
+- Label (and `aria-label`) always names the **next** action: Expand → Restore.
+- `aria-pressed="true"` while expanded. Resting width remembered in
+  `data-dz-width-rest` so Restore returns to the author default (not only `md`).
+- Never label expand “Open full page”; never ship that label on `type=button`
+  with no `href`.
+- Do **not** cycle `md→lg→xl→full` under a unipolar verb — the last press
+  narrows while still saying “Widen.”
+
+Author-set `data-dz-width` presets (`sm`…`full`) remain valid for **initial**
+size; the interactive affordance only needs default ↔ expanded. If a product
+needs three+ user-facing sizes, use an honest selection control (segments/menu),
+not a multi-step cycle.
 
 ### Pointer-open focus (header chrome)
 
 `showModal()` focuses the **first focusable** in the dialog. Header chrome
-(✕ close, **Widen**, later actions…) is often first in tab order. After a
+(✕ close, **Expand**, later actions…) is often first in tab order. After a
 **pointer** open, WebKit paints that control as `:focus-visible`, so it looks
 **active** until click-away.
 
@@ -60,7 +71,22 @@ suppressed on `dialog.drawer` / `dialog.dialog`). Do **not** special-case only
 the close control — adding any earlier header button reintroduces the bug.
 
 Pin: `test_drawer_open_does_not_focus_header_chrome` (both gallery demos:
-filters + Open record with Widen).
+filters + Open record with Expand).
+
+### Demos must exercise the behaviour
+
+Gallery / agent demos are contracts in motion. If a Hyperpart claims a
+behaviour, the demo content must make that behaviour **observable**:
+
+| Claim | Demo obligation |
+|-------|-----------------|
+| `drawer__body` scrolls | Peek fragment taller than the panel (overflow) |
+| Expand / Restore | Button flips label + `data-dz-width` without navigation |
+| Open full page | Real `href` to owned URL |
+| Composition host | Nested guests keep standalone DOM contracts |
+
+A short fragment that never overflows **does not demonstrate** independent
+body scroll — agents and humans will miss the contract.
 
 Product peers: Linear/Jira/GitHub project panels use peek → issue route; Notion uses
 peek mode → full page of the same object. Component kits (Radix/shadcn) only own
@@ -98,8 +124,10 @@ empty-state, popover, kbd, skeleton — plus refusal probes (`nested-form`,
 - Nesting a dialog/command palette inside a drawer body “for convenience.”
 - Calling a width maximize “Open full page.”
 - Dead `type=button` primary labeled Open full page.
+- Multi-step width cycle under a single “Widen” (last press narrows).
 - Settling initial focus only when the active element is the close button
-  (Widen or any new header control then looks active on open).
+  (Expand or any new header control then looks active on open).
+- Claiming body scroll with demo content that never overflows.
 
 ## Expressions
 

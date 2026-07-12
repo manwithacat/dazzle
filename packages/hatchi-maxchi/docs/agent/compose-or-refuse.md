@@ -16,9 +16,13 @@
    - Overlay hosts: pick **form_shell** vs **exchange_shell** first
      (`stems/host-chrome-symmetry.md`). Body colour stays primary so guests
      inherit correctly.
-   - Peek vs full page vs widen are three jobs: fragment into the body,
-     `<a href>` to the owned record URL, and `data-dz-width` cycle —
-     never one dead button for all three.
+   - Peek vs full page vs expand are three jobs: fragment into the body,
+     `<a href>` to the owned record URL, and Expand/Restore
+     (`data-dz-drawer-expand`, resting width ↔ `xl`) — never one dead
+     button for all three, never a multi-step “Widen” cycle.
+   - **Demo must exercise behaviour:** scrollable hosts need overflowing
+     content; toggles must flip observable state (see
+     `stems/host-chrome-symmetry.md` › *Demos must exercise the behaviour*).
    - Do not invent almost-DOM (e.g. `input.dz-switch` for the Switch
      Hyperpart; legend inside `dz-toggle-group`; `form-field` as read-only
      meta). Pin with `tools/composition_matrix.py --validate`.

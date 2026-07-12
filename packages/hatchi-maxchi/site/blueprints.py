@@ -381,8 +381,9 @@ BLUEPRINTS: list[Blueprint] = [
         "loads <code>GET …?peek=1</code> into <code>drawer__body</code>; this "
         "Blueprint is the owned document for the same record. "
         "<strong>Open full page</strong> is navigation (a real <code>href</code>), "
-        "not a CSS maximize of the dialog. Widen-in-place is a separate job "
-        "(<code>data-dz-width</code> cycle) — do not label it “full page.” "
+        "not a CSS maximize of the dialog. Expand/Restore is a separate job "
+        "(<code>data-dz-drawer-expand</code> toggles resting width ↔ "
+        "<code>xl</code>) — do not label it “full page.” "
         "See <code>stems/host-chrome-symmetry.md</code> › Peek vs full page.",
     ),
 ]

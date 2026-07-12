@@ -64,7 +64,7 @@ Edge-anchored panel on the native <dialog> — a drawer with a modal's guarantee
   <div class="drawer__header">
     <h2 class="drawer__title" id="hm-drawer-lazy-title">Record detail</h2>
     <div class="hm-demo-row" style="gap:var(--space-xs);align-items:center">
-      <button type="button" class="button" data-variant="ghost" data-drawer-widen aria-label="Widen drawer panel">Widen</button>
+      <button type="button" class="button" data-variant="ghost" data-drawer-expand aria-pressed="false" aria-label="Expand drawer panel">Expand</button>
       <form method="dialog"><button type="submit" class="drawer__close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></form>
     </div>
   </div>
@@ -113,8 +113,9 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 - body is a composition host — nest field, toggle-group, switch, controls, badge, card, alert with honest guest DOM
 - hypermedia peek: hx-get + data-dz-dialog-open on the same click (fragment into drawer__body; list stays underneath)
 - peek → full page: real href to owned record URL (Blueprint record-page) — not type=button no-op
-- widen-in-place: data-dz-drawer-widen cycles data-dz-width (separate job from full page)
+- expand/restore: data-dz-drawer-expand toggles resting width ↔ xl (aria-pressed + next-action label; not a multi-step cycle)
 - data-dz-side / data-dz-width for placement presets
+- demo must exercise behaviour: peek body tall enough to scroll independently of the host page
 - composition matrix: tools/composition_matrix.py
 
 ### Do / Don't
@@ -125,8 +126,9 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 | pick form_shell vs exchange_shell by whether the body may contain nested forms | mix half-patterns (header element + whole-form wrap) without reason |
 | pair hx-get target with the scrollable body id | swap the entire dialog element (loses open state / focus trap) |
 | use one KPI card per metric (or card-label + card-value meta) | one card wrapping an auto-grid of overridden card-value sizes |
-| Open full page = <a href> to the record document (shareable / refreshable URL) | Open full page = widen the dialog or a dead type=button |
-| Widen = cycle data-dz-width on the same drawer (same URL) | call a width change “full page” |
+| Open full page = <a href> to the record document (shareable / refreshable URL) | Open full page = expand the dialog or a dead type=button |
+| Expand/Restore = 2-state data-dz-width toggle (next-action label + aria-pressed) | cycle md→lg→xl→full under a single “Widen” label |
+| peek fragment tall enough that drawer__body scrolls (host page stays put) | short demo content that never exercises body overflow |
 
 ### Pitfalls
 
@@ -137,14 +139,17 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 - do not use input.dz-switch when composing the switch Hyperpart (use label.dz-switch + track + data-dz-switch)
 - do not use form-field as read-only meta (hint is help, not value)
 - lazy body starts empty/skeleton; exchange fills #…-body, not the whole dialog
-- do not label a width cycle “Open full page” — full page is navigation
+- do not label Expand/Restore “Open full page” — full page is navigation
 - do not use type=button for full-page when the job is a new URL
-- do not leave pointer-open focus on header chrome (close, Widen, …) — settle to [autofocus] or the dialog shell (dz-dialog.js); close-only special-cases miss the next header button
+- do not cycle multi-step widths under a unipolar verb (Widen→reset lies)
+- do not leave pointer-open focus on header chrome (close, Expand, …) — settle to [autofocus] or the dialog shell (dz-dialog.js); close-only special-cases miss the next header button
+- do not ship a scrollable body claim with content that never overflows
 
 ### Keyboard / AT
 
 - native dialog focus trap + Esc/backdrop; body may be tabindex=0 for scroll
-- pointer open: settle focus on [autofocus] or dialog shell — never header chrome (close/Widen look 'active' under WebKit :focus-visible)
+- pointer open: settle focus on [autofocus] or dialog shell — never header chrome (close/Expand look 'active' under WebKit :focus-visible)
+- Expand control: aria-pressed + aria-label for next action (Expand/Restore)
 - label the body (aria-label) when it is the live region for peek loads
 - toggle-group: external label + aria-labelledby (not legend inside)
 
@@ -166,7 +171,7 @@ No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this**
 
 ## Notes
 
-Opened by shared dz-dialog.js ([data-dz-dialog-open]); close is native. Chrome shells: form_shell (one method=dialog wrap when body has no nested forms) vs exchange_shell (scoped close forms; body is HTMX target). Both keep drawer__header|body|footer as flex children (outer form is display:contents). Composition host: guests mount with their own DOM contracts (field triad, switch track, toggle-group without legend inside the fieldset, honest KPI cards). Peek: one click fires hx-get into the body and showModal. Peek vs full page: footer Open full page is a real link to the record-page Blueprint (owned URL) — not a CSS maximize. Widen cycles data-dz-width on the same dialog (md→lg→xl→full→md). See stems/host-chrome-symmetry.md and tools/composition_matrix.py.
+Opened by shared dz-dialog.js ([data-dz-dialog-open]); close is native. Chrome shells: form_shell (one method=dialog wrap when body has no nested forms) vs exchange_shell (scoped close forms; body is HTMX target). Both keep drawer__header|body|footer as flex children (outer form is display:contents). Composition host: guests mount with their own DOM contracts (field triad, switch track, toggle-group without legend inside the fieldset, honest KPI cards). Peek: one click fires hx-get into the body and showModal. Peek vs full page: footer Open full page is a real link to the record-page Blueprint (owned URL) — not a CSS maximize. Expand / Restore toggles resting data-dz-width ↔ xl (honest next-action labels — not a multi-step cycle). Peek body content must be tall enough to show independent body scroll. See stems/host-chrome-symmetry.md and tools/composition_matrix.py.
 
 ## Source files
 

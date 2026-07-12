@@ -349,7 +349,7 @@ document.addEventListener('click', function (e) {
     <span class="code__tok--op">&lt;/</span><span class="code__tok--kw">div</span><span class="code__tok--op">&gt;</span>
   <span class="code__tok--op">&lt;/</span><span class="code__tok--kw">div</span><span class="code__tok--op">&gt;</span>
 <span class="code__tok--op">&lt;/</span><span class="code__tok--kw">main</span><span class="code__tok--op">&gt;</span></code></pre></figure></details>
-<details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">Paired with the <strong>Drawer</strong> hypermedia peek: the drawer loads <code>GET …?peek=1</code> into <code>drawer__body</code>; this Blueprint is the owned document for the same record. <strong>Open full page</strong> is navigation (a real <code>href</code>), not a CSS maximize of the dialog. Widen-in-place is a separate job (<code>data-width</code> cycle) — do not label it “full page.” See <code>stems/host-chrome-symmetry.md</code> › Peek vs full page.</div></details>
+<details class="hm-guidance"><summary>Agent Implementation Guidance</summary><div class="hm-notes">Paired with the <strong>Drawer</strong> hypermedia peek: the drawer loads <code>GET …?peek=1</code> into <code>drawer__body</code>; this Blueprint is the owned document for the same record. <strong>Open full page</strong> is navigation (a real <code>href</code>), not a CSS maximize of the dialog. Expand/Restore is a separate job (<code>data-drawer-expand</code> toggles resting width ↔ <code>xl</code>) — do not label it “full page.” See <code>stems/host-chrome-symmetry.md</code> › Peek vs full page.</div></details>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>
 </body>

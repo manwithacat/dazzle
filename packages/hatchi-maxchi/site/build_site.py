@@ -1502,8 +1502,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     // card-label/value title stack, one KPI card per metric in auto-grid,
     // meta as card-label + primary text (not form-field+hint), alert role=alert.
     // Server returns the body only — not drawer chrome (open/focus stay host).
+    // Length is intentional: drawer__body must overflow so the gallery
+    // demonstrates independent panel scroll (host page stays put).
     "/mock/drawer/detail":
       '<div class="dz-stack" data-dz-gap="md">' +
+      '<p class="hm-demo-muted" style="margin:0">' +
+      "Scroll this panel — the page behind does not move. Header and footer stay pinned." +
+      "</p>" +
       '<div class="hm-demo-row" style="justify-content:space-between;align-items:flex-start;' +
       'gap:var(--space-sm);flex-wrap:wrap">' +
       "<div>" +
@@ -1535,18 +1540,54 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       "<div>" +
       '<div class="dz-card-label">Primary contact</div>' +
       "<div>Maya Reyes · Operations</div>" +
+      "</div>" +
+      "<div>" +
+      '<div class="dz-card-label">Feeder</div>' +
+      "<div>N-14 · 33 kV · dual bay</div>" +
       "</div></div>" +
       '<div class="dz-alert" data-dz-tone="warning" role="alert">' +
       '<span class="dz-alert__icon">{i:triangle-alert}</span>' +
       '<div class="dz-alert__body">' +
       '<div class="dz-alert__title">Two open work orders</div>' +
       '<div class="dz-alert__description">' +
-      "Peek stays partial — Open full page navigates to the owned record URL." +
+      "Peek stays partial — Open full page navigates to the owned record URL. " +
+      "Expand widens this panel in place; it is not full page." +
       "</div></div></div>" +
       '<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">' +
       '<button type="button" class="dz-button" data-dz-variant="outline">{i:clipboard-list} ' +
       "Work orders</button>" +
       '<button type="button" class="dz-button" data-dz-variant="ghost">{i:map-pin} Map</button>' +
+      "</div>" +
+      // Activity + notes: enough vertical mass that body overflow is visible
+      '<div class="dz-stack" data-dz-gap="sm">' +
+      '<div class="dz-card-label">Recent activity</div>' +
+      '<div class="dz-card dz-card-body"><div class="dz-card-label">Today 09:14</div>' +
+      "<div>Load spike to 91% — auto-throttle engaged bay 2.</div></div>" +
+      '<div class="dz-card dz-card-body"><div class="dz-card-label">Yesterday</div>' +
+      "<div>WO-1842 assigned to field crew North · ETA Friday.</div></div>" +
+      '<div class="dz-card dz-card-body"><div class="dz-card-label">Mon 12 Jun</div>' +
+      "<div>Thermal scan complete — hotspot cleared on bushing B.</div></div>" +
+      '<div class="dz-card dz-card-body"><div class="dz-card-label">Fri 9 Jun</div>' +
+      "<div>SCADA heartbeat restored after firmware patch 3.2.1.</div></div>" +
+      '<div class="dz-card dz-card-body"><div class="dz-card-label">Thu 8 Jun</div>' +
+      "<div>Vegetation clearance permit filed for corridor C-4.</div></div>" +
+      '<div class="dz-card dz-card-body"><div class="dz-card-label">Wed 7 Jun</div>' +
+      "<div>Oil sample OK · moisture within band · next sample Q3.</div></div>" +
+      '<div class="dz-card dz-card-body"><div class="dz-card-label">Tue 6 Jun</div>' +
+      "<div>Relay coordination study uploaded by protection team.</div></div>" +
+      '<div class="dz-card dz-card-body"><div class="dz-card-label">Mon 5 Jun</div>' +
+      "<div>Access control badge audit — 2 visitors signed out late.</div></div>" +
+      "</div>" +
+      '<div class="dz-stack" data-dz-gap="sm">' +
+      '<div class="dz-card-label">Inspection notes</div>' +
+      "<div>Secondary containment dry. Ground grid resistance last measured at " +
+      "0.42 Ω (within site standard). Spare bushing stored in bay shed; key with " +
+      "Maya. Winter de-icing plan still draft — ops to confirm before October.</div>" +
+      "<div>Related feeders N-12 and N-16 share the same protection zone; a trip " +
+      "here can cascade under high load. Prefer staged switching for any planned " +
+      "outage longer than 90 minutes.</div>" +
+      "<div>End of peek fragment — if you can read this without scrolling the host " +
+      "page, independent body scroll is working.</div>" +
       "</div></div>",
 
     "/mock/shell/dashboard": '<div class="dz-stack" data-dz-gap="md"><h1>Dashboard</h1><div class="dz-auto-grid" style="--dz-grid-min: 10rem"><div class="dz-card dz-card-body"><div class="dz-card-label">Outstanding</div><div class="dz-card-value">£12,450</div></div><div class="dz-card dz-card-body"><div class="dz-card-label">Paid</div><div class="dz-card-value">£48,900</div></div></div></div>',
