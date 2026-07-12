@@ -351,7 +351,12 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
 # Keep as inventory so the drain is greppable; add a DOM_ONLY_CONTRACTS row
 # when a stable emission site exists.
-DOM_ONLY_DEFERRED: list[tuple[str, str]] = []
+DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
+    # Gallery + build-site highlighter (site/highlight.py); fleet-exempt as
+    # "HM gallery + agent-pack snippets". Promote to DOM_ONLY_CONTRACTS only
+    # when Dazzle gains a stable fenced-code emitter (not invent a fixture).
+    ("contracts/code.py", "gallery/docs highlighter only — no FragmentRenderer emit"),
+]
 
 
 def load_hm_module(rel: str):

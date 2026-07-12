@@ -13,8 +13,8 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Contract modules | 56 |
 | Dual-lock schema+DOM | 41 |
 | Dual-lock DOM-only | 14 |
-| Dual-lock deferred | 0 |
-| Contract with no dual-lock row | 1 |
+| Dual-lock deferred | 1 |
+| Contract with no dual-lock row | 0 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 
@@ -30,7 +30,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `box_plot` | `box_plot.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `bullet` | `bullet.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `calendar` | `calendar.py` | `—` | yes | yes | yes | **schema+DOM** |
-| `code` | `code.py` | `dz-code.js` | yes | no | no | **none** |
+| `code` | `code.py` | `dz-code.js` | yes | no | no | **deferred** |
 | `cohort_strip` | `cohort_strip.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `color` | `color.py` | `dz-color.js` | yes | no | no | **DOM-only** |
 | `combobox` | `combobox.py` | `dz-combobox.js` | yes | yes | yes | **schema+DOM** |
