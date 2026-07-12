@@ -1,0 +1,82 @@
+/* HYPERPART: menubar */
+/*
+ * Horizontal app menubar — File / Edit / View style. Each item is a
+ * details/summary (or button) so open state is DOM-native.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-038). No nested popover controller yet;
+ * open one panel via native details. Compose with menu Hyperpart for
+ * richer item lists later.
+ */
+
+.dz-menubar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  padding-inline: var(--space-2xs);
+}
+
+.dz-menubar__item {
+  position: relative;
+}
+
+.dz-menubar__trigger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding-inline: var(--space-sm);
+  border: none;
+  background: transparent;
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  list-style: none;
+}
+
+.dz-menubar__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.dz-menubar__item[open] > .dz-menubar__trigger,
+.dz-menubar__trigger:hover {
+  background: var(--colour-surface-muted);
+}
+
+.dz-menubar__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  min-width: 10rem;
+  margin-top: 0.125rem;
+  padding: var(--space-2xs);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-md, 0 4px 16px color-mix(in oklab, #000 12%, transparent));
+}
+
+.dz-menubar__panel a,
+.dz-menubar__panel button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dz-menubar__panel a:hover,
+.dz-menubar__panel button:hover {
+  background: var(--colour-surface-muted);
+}

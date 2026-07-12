@@ -116,6 +116,8 @@ SIGNALS: dict[str, object] = {
     "aspect-ratio": "exempt:no Dazzle emitter yet (gallery CSS media frame)",
     "item": "exempt:no Dazzle emitter yet (gallery list-row anatomy)",
     "hover-card": "exempt:no Dazzle emitter yet (gallery CSS hover panel)",
+    "carousel": "exempt:no Dazzle emitter yet (gallery media strip shell)",
+    "menubar": "exempt:no Dazzle emitter yet (gallery native-details menubar)",
     "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",
 }
 

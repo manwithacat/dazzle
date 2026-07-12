@@ -2166,6 +2166,69 @@ def select(source: str, id: str) -> str:
             "popover (explicit open). No JS controller.",
             tags=("overlay",),
         ),
+        Hyperpart(
+            "carousel",
+            "Carousel",
+            "Data",
+            "Media / content strip — server marks the active slide; prev/next "
+            "are hypermedia affordances (re-render or future controller).",
+            '<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0">'
+            '<div class="dz-carousel__viewport">'
+            '<div class="dz-carousel__track">'
+            '<div class="dz-carousel__slide" data-dz-active>Slide 1 · hero</div>'
+            '<div class="dz-carousel__slide">Slide 2 · details</div>'
+            '<div class="dz-carousel__slide">Slide 3 · CTA</div>'
+            "</div></div>"
+            '<div class="dz-carousel__controls">'
+            '<button type="button" class="dz-carousel__btn" data-dz-carousel-prev '
+            'aria-label="Previous slide" disabled>‹</button>'
+            '<div class="dz-carousel__dots" role="tablist" aria-label="Slides">'
+            '<button type="button" class="dz-carousel__dot" aria-current="true" '
+            'aria-label="Slide 1"></button>'
+            '<button type="button" class="dz-carousel__dot" aria-label="Slide 2"></button>'
+            '<button type="button" class="dz-carousel__dot" aria-label="Slide 3"></button>'
+            "</div>"
+            '<button type="button" class="dz-carousel__btn" data-dz-carousel-next '
+            'aria-label="Next slide">›</button>'
+            "</div></div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-037). Only "
+            "<code>[data-dz-active]</code> slides show. Prefer server page "
+            "index or OOB swap over client-only slide state. Controller that "
+            "cycles <code>data-dz-active</code> is deferred.",
+            tags=("media", "interactive"),
+        ),
+        Hyperpart(
+            "menubar",
+            "Menubar",
+            "Navigation",
+            "Horizontal app menus (File / Edit / View) — each item is a native "
+            "details/summary so open state is DOM-native.",
+            '<div class="dz-menubar" data-dz-menubar role="menubar" aria-label="App">'
+            '<details class="dz-menubar__item">'
+            '<summary class="dz-menubar__trigger">File</summary>'
+            '<div class="dz-menubar__panel" role="menu" aria-label="File">'
+            '<a href="#" role="menuitem">New</a>'
+            '<a href="#" role="menuitem">Open…</a>'
+            '<button type="button" role="menuitem">Export</button>'
+            "</div></details>"
+            '<details class="dz-menubar__item">'
+            '<summary class="dz-menubar__trigger">Edit</summary>'
+            '<div class="dz-menubar__panel" role="menu" aria-label="Edit">'
+            '<button type="button" role="menuitem">Undo</button>'
+            '<button type="button" role="menuitem">Redo</button>'
+            "</div></details>"
+            '<details class="dz-menubar__item">'
+            '<summary class="dz-menubar__trigger">View</summary>'
+            '<div class="dz-menubar__panel" role="menu" aria-label="View">'
+            '<button type="button" role="menuitem">Zoom in</button>'
+            '<button type="button" role="menuitem">Zoom out</button>'
+            "</div></details></div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-038). Native "
+            "<code>details</code> for open state (no Alpine). Single-open "
+            "across items may need a tiny controller later; compose with "
+            "menu Hyperpart for denser item lists.",
+            tags=("navigation", "interactive"),
+        ),
         # ── Navigation / Data ────────────────────────────────────────────
         Hyperpart(
             "breadcrumb",

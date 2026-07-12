@@ -5247,6 +5247,196 @@ button.item:hover {
 }
 
 }
+/* ── components/carousel.css ── */
+@layer components {
+/* HYPERPART: carousel */
+/*
+ * Server-rendered media / content strip. Active slide is marked
+ * data-active on the slide; index lives on the root as
+ * data-carousel-index for future controller + SSR re-renders.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-037). No controller yet: demos show
+ * slide 1 active; prev/next buttons are affordances for a follow-up
+ * that cycles data-active / re-fetches the strip. Hypermedia-native:
+ * prefer server pages or OOB swap over client slide state.
+ */
+
+.carousel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 28rem;
+}
+
+.carousel__viewport {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface-muted);
+  aspect-ratio: 16 / 9;
+}
+
+.carousel__track {
+  display: grid;
+  grid-template-areas: "slide";
+  height: 100%;
+}
+
+.carousel__slide {
+  grid-area: slide;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+}
+
+.carousel__slide[data-active] {
+  display: flex;
+}
+
+.carousel__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.carousel__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  font-size: var(--text-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.carousel__btn:hover {
+  background: var(--colour-surface-muted);
+}
+
+.carousel__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.carousel__dots {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.carousel__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  background: var(--colour-border);
+  cursor: pointer;
+}
+
+.carousel__dot[aria-current="true"] {
+  background: var(--colour-brand);
+  width: 1rem;
+}
+
+}
+/* ── components/menubar.css ── */
+@layer components {
+/* HYPERPART: menubar */
+/*
+ * Horizontal app menubar — File / Edit / View style. Each item is a
+ * details/summary (or button) so open state is DOM-native.
+ *
+ * PLACEHOLDER — shadcn parity (HMC-038). No nested popover controller yet;
+ * open one panel via native details. Compose with menu Hyperpart for
+ * richer item lists later.
+ */
+
+.menubar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  padding-inline: var(--space-2xs);
+}
+
+.menubar__item {
+  position: relative;
+}
+
+.menubar__trigger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding-inline: var(--space-sm);
+  border: none;
+  background: transparent;
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  list-style: none;
+}
+
+.menubar__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.menubar__item[open] > .menubar__trigger,
+.menubar__trigger:hover {
+  background: var(--colour-surface-muted);
+}
+
+.menubar__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  min-width: 10rem;
+  margin-top: 0.125rem;
+  padding: var(--space-2xs);
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-md, 0 4px 16px color-mix(in oklab, #000 12%, transparent));
+}
+
+.menubar__panel a,
+.menubar__panel button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.menubar__panel a:hover,
+.menubar__panel button:hover {
+  background: var(--colour-surface-muted);
+}
+
+}
 /* ── components/table.css ── */
 @layer components {
 /* HYPERPART: grid */

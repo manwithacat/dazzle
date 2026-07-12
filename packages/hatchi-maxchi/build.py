@@ -57,6 +57,8 @@ CSS_SOURCES = [
     ("components", "components/aspect-ratio.css"),
     ("components", "components/item.css"),
     ("components", "components/hover-card.css"),
+    ("components", "components/carousel.css"),
+    ("components", "components/menubar.css"),
     ("components", "components/table.css"),
     ("components", "components/layout.css"),
     ("components", "components/app-shell.css"),

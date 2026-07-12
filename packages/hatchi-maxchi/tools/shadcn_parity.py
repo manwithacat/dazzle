@@ -95,7 +95,12 @@ _MAP: list[tuple[str, str, str, str]] = [
         "Date-range + CalendarGrid emit exist; no full month-picker Hyperpart",
     ),
     ("card", "parity", "card", "Gallery + dashboard-card chrome"),
-    ("carousel", "gap", "", "No carousel / media strip Hyperpart"),
+    (
+        "carousel",
+        "parity",
+        "carousel",
+        "Gallery Hyperpart — SSR strip + data-dz-active slide; controller deferred",
+    ),
     (
         "chart",
         "partial",
@@ -188,7 +193,12 @@ _MAP: list[tuple[str, str, str, str]] = [
         "Label is part of field triad, not standalone",
     ),
     ("marker", "gap", "", "shadcn New — map/marker chrome"),
-    ("menubar", "gap", "", "Horizontal app menubar"),
+    (
+        "menubar",
+        "parity",
+        "menubar",
+        "Gallery Hyperpart — horizontal File/Edit/View via native details",
+    ),
     (
         "message",
         "gap",

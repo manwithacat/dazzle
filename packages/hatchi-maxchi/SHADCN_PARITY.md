@@ -14,12 +14,12 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 
 | Status | Count |
 |--------|------:|
-| **parity** | 29 |
+| **parity** | 31 |
 | **partial** | 27 |
-| **gap** (placeholders) | 7 |
+| **gap** (placeholders) | 5 |
 | **n/a** | 1 |
 | **total shadcn** | 64 |
-| HM Hyperparts (registry) | 79 |
+| HM Hyperparts (registry) | 81 |
 
 ## Mapping
 
@@ -38,7 +38,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `button-group` | **partial** | `toggle-group,toolbar,controls` | Compose toggle-group / toolbar; no dedicated button-group id |
 | `calendar` | **partial** | `date-range` | Date-range + CalendarGrid emit exist; no full month-picker Hyperpart |
 | `card` | **parity** | `card` | Gallery + dashboard-card chrome |
-| `carousel` | **gap** | `—` | No carousel / media strip Hyperpart |
+| `carousel` | **parity** | `carousel` | Gallery Hyperpart — SSR strip + data-dz-active slide; controller deferred |
 | `chart` | **partial** | `bar-chart,time-series,radar,sparkline,histogram,box-plot,funnel,heatmap,bullet,bar-track,chart-legend` | HM owns server-SVG chart family; shadcn is Recharts client wrapper |
 | `checkbox` | **partial** | `field,form` | Native form field; not a named Hyperpart (deliberate) |
 | `collapsible` | **partial** | `accordion` | Accordion covers disclosure; single collapsible root optional |
@@ -61,7 +61,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `kbd` | **parity** | `kbd` | Gallery Hyperpart; styles in hm-core.css (.dz-kbd) |
 | `label` | **partial** | `field` | Label is part of field triad, not standalone |
 | `marker` | **gap** | `—` | shadcn New — map/marker chrome |
-| `menubar` | **gap** | `—` | Horizontal app menubar |
+| `menubar` | **parity** | `menubar` | Gallery Hyperpart — horizontal File/Edit/View via native details |
 | `message` | **gap** | `—` | Chat message row — shadcn New; no HM messaging surface |
 | `message-scroller` | **gap** | `—` | Chat transcript scroller — shadcn New |
 | `native-select` | **partial** | `field,combobox` | Native select via forms; combobox enhances |
@@ -98,12 +98,10 @@ Playbook: `.claude/commands/improve/strategies/shadcn_parity.md`.
 | # | shadcn | suggested Hyperpart id | notes |
 |--:|--------|------------------------|-------|
 | 1 | `bubble` | `bubble` | Chat bubble — shadcn New; no HM chat message surface |
-| 2 | `carousel` | `carousel` | No carousel / media strip Hyperpart |
-| 3 | `marker` | `marker` | shadcn New — map/marker chrome |
-| 4 | `menubar` | `menubar` | Horizontal app menubar |
-| 5 | `message` | `message` | Chat message row — shadcn New; no HM messaging surface |
-| 6 | `message-scroller` | `message-scroller` | Chat transcript scroller — shadcn New |
-| 7 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
+| 2 | `marker` | `marker` | shadcn New — map/marker chrome |
+| 3 | `message` | `message` | Chat message row — shadcn New; no HM messaging surface |
+| 4 | `message-scroller` | `message-scroller` | Chat transcript scroller — shadcn New |
+| 5 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
 
 ## Status definitions
 
