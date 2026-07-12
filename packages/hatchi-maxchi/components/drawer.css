@@ -30,10 +30,13 @@ dialog.dz-drawer {
   margin-inline: auto 0;
   border-inline-start: 1px solid var(--colour-border);
   /* enter transition: slide from the anchored edge. `allow-discrete` lets
-     the dialog animate on open despite the display:none→block flip. */
+     the dialog animate on open despite the display:none→block flip.
+     Width is animated so Expand/Restore is visibly functional (not a silent
+     data-attr flip). */
   translate: 0 0;
   transition:
     translate var(--duration-base) var(--ease-out),
+    width var(--duration-base) var(--ease-out),
     overlay var(--duration-base) var(--ease-out) allow-discrete,
     display var(--duration-base) var(--ease-out) allow-discrete;
 }

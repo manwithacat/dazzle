@@ -65,13 +65,22 @@ not a multi-step cycle.
 **pointer** open, WebKit paints that control as `:focus-visible`, so it looks
 **active** until click-away.
 
-**Rule (class, not instance):** after pointer-driven open, settle focus on
-`[autofocus]` if present, else the **dialog shell** (`tabindex="-1"`, outline
-suppressed on `dialog.drawer` / `dialog.dialog`). Do **not** special-case only
-the close control — adding any earlier header button reintroduces the bug.
+**Rule (class, not instance of close):** after pointer-driven open:
 
-Pin: `test_drawer_open_does_not_focus_header_chrome` (both gallery demos:
-filters + Open record with Expand).
+1. Prefer `[autofocus]` if present.
+2. Else if focus already sits on a **body** control, leave it.
+3. Else move focus to **`drawer__body`** (scrollable, `tabindex="0"`) or the
+   dialog shell — **never** leave it on header chrome.
+4. **Re-settle** after `showModal` (rAF + short timeout). UA focus assignment
+   can land *after* `showModal()` returns; a single settle races and leaves
+   Expand/✕ lit.
+
+Do **not** special-case only `.drawer__close`. Any earlier header control
+reintroduces the bug. Blur chrome before focusing the settle target so
+`:focus-visible` cannot stick.
+
+Pins: `test_drawer_open_does_not_focus_header_chrome` (both demos, delayed
+re-check); width pin asserts **computed rect width**, not only the attribute.
 
 ### Demos must exercise the behaviour
 

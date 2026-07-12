@@ -1523,18 +1523,14 @@ def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore
 
     showModal focuses the first focusable. WebKit paints that as
     :focus-visible, so the control looks "active" until click-away.
-    That used to be the ✕ alone; Open-record puts Expand first in tab
-    order. dz-dialog.js always settles to the dialog shell (or
-    [autofocus]) — not a close-only special case. Gate both demos.
+    UA may assign that focus *after* showModal returns — settle must
+    re-run (rAF/timeout), not only when active is .drawer__close.
+    Gate both demos at t≈0 and after a delayed re-check.
     """
     goto_part(page, "drawer")
-    for dlg_id, open_sel in (
-        ("hm-drawer-demo", '[data-dialog-open="hm-drawer-demo"]'),
-        ("hm-drawer-lazy", '[data-dialog-open="hm-drawer-lazy"]'),
-    ):
-        page.click(open_sel)
-        page.wait_for_timeout(200)
-        info = page.evaluate(
+
+    def _focus_info(dlg_id: str) -> dict:
+        return page.evaluate(
             """(id) => {
               const dlg = document.getElementById(id);
               const active = document.activeElement;
@@ -1546,6 +1542,7 @@ def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore
                 dlg.querySelector('[data-dz-drawer-widen]')
               );
               const header = dlg && dlg.querySelector('.drawer__header');
+              const body = dlg && dlg.querySelector('.drawer__body');
               const inHeader = !!(
                 header && active && header.contains(active) && active !== dlg
               );
@@ -1554,6 +1551,7 @@ def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore
                 activeIsClose: active === close,
                 activeIsExpand: active === expand,
                 activeInHeaderChrome: inHeader,
+                activeIsBody: active === body,
                 activeIsShell: active === dlg,
                 activeIsInside: !!(dlg && active && dlg.contains(active)),
                 closeFocusVisible: !!(close && close.matches(':focus-visible')),
@@ -1564,27 +1562,39 @@ def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore
             }""",
             dlg_id,
         )
-        assert info["open"], f"{dlg_id} must be open"
-        assert info["activeIsInside"], f"{dlg_id}: focus must remain inside the dialog (trap)"
-        assert not info["activeIsClose"], (
-            f"{dlg_id}: close must not hold initial focus after pointer open "
-            f"(active={info['activeTag']}.{info['activeClass']})"
-        )
-        assert not info["activeIsExpand"], (
-            f"{dlg_id}: Expand must not hold initial focus after pointer open "
-            f"(active={info['activeTag']}.{info['activeClass']})"
-        )
-        assert not info["activeInHeaderChrome"], (
-            f"{dlg_id}: no header chrome control should hold initial focus "
-            f"(active={info['activeTag']}.{info['activeClass']})"
-        )
-        assert not info["closeFocusVisible"], (
-            f"{dlg_id}: close must not be :focus-visible after pointer open"
-        )
-        assert not info["expandFocusVisible"], (
-            f"{dlg_id}: Expand must not be :focus-visible after pointer open"
-        )
-        # Esc still works with shell focus
+
+    for dlg_id, open_sel in (
+        ("hm-drawer-demo", '[data-dialog-open="hm-drawer-demo"]'),
+        ("hm-drawer-lazy", '[data-dialog-open="hm-drawer-lazy"]'),
+    ):
+        page.click(open_sel)
+        # Immediate + delayed: catches the post-showModal focus race
+        for wait_ms in (80, 200):
+            page.wait_for_timeout(wait_ms if wait_ms == 80 else 120)
+            info = _focus_info(dlg_id)
+            assert info["open"], f"{dlg_id} must be open (@{wait_ms}ms)"
+            assert info["activeIsInside"], (
+                f"{dlg_id}: focus must remain inside the dialog (@{wait_ms}ms)"
+            )
+            assert not info["activeIsClose"], (
+                f"{dlg_id}: close must not hold focus after pointer open "
+                f"(@{wait_ms}ms active={info['activeTag']}.{info['activeClass']})"
+            )
+            assert not info["activeIsExpand"], (
+                f"{dlg_id}: Expand must not hold focus after pointer open "
+                f"(@{wait_ms}ms active={info['activeTag']}.{info['activeClass']})"
+            )
+            assert not info["activeInHeaderChrome"], (
+                f"{dlg_id}: no header chrome control should hold focus "
+                f"(@{wait_ms}ms active={info['activeTag']}.{info['activeClass']})"
+            )
+            assert not info["closeFocusVisible"], (
+                f"{dlg_id}: close must not be :focus-visible (@{wait_ms}ms)"
+            )
+            assert not info["expandFocusVisible"], (
+                f"{dlg_id}: Expand must not be :focus-visible (@{wait_ms}ms)"
+            )
+        # Esc still works with body/shell focus
         page.keyboard.press("Escape")
         page.wait_for_timeout(150)
         assert page.get_attribute(f"#{dlg_id}", "open") is None, f"{dlg_id} Esc close"
@@ -2016,11 +2026,13 @@ def test_drawer_expand_restore_toggles_width_without_navigation(page) -> None:  
     """Expand/Restore is a 2-state chrome toggle — not full-page navigation.
 
     Labels name the next action; aria-pressed reflects expanded state.
-    A multi-step “Widen” cycle is forbidden (last press would narrow).
+    Assert *computed* width change (attr-only gates miss CSS/media bugs).
     """
     goto_part(page, "drawer")
+    # Ensure viewport is wide enough for md vs xl presets (min-width: 40rem)
+    page.set_viewport_size({"width": 1280, "height": 800})
     page.click('#drawer [data-dialog-open="hm-drawer-lazy"]')
-    page.wait_for_timeout(150)
+    page.wait_for_timeout(200)
     dlg = page.locator("#hm-drawer-lazy")
     btn = page.locator(
         "#hm-drawer-lazy [data-drawer-expand], #hm-drawer-lazy [data-dz-drawer-expand]"
@@ -2033,24 +2045,47 @@ def test_drawer_expand_restore_toggles_width_without_navigation(page) -> None:  
     label0 = (btn.inner_text() or "").strip().lower()
     assert "expand" in label0, f"resting label should be Expand, got {label0!r}"
 
-    btn.click()
-    page.wait_for_timeout(50)
-    after = page.evaluate(
-        "() => document.getElementById('hm-drawer-lazy').getAttribute('data-width')"
+    def _geom() -> dict:
+        return page.evaluate(
+            """() => {
+              const d = document.getElementById('hm-drawer-lazy');
+              const r = d.getBoundingClientRect();
+              return {
+                attr: d.getAttribute('data-width') || d.getAttribute('data-dz-width'),
+                w: Math.round(r.width),
+              };
+            }"""
+        )
+
+    before = _geom()
+    assert before["attr"] in (None, "md")
+    assert before["w"] > 100
+
+    # Real pointer (not only locator.click) — same path as a human
+    box = btn.bounding_box()
+    assert box is not None
+    page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+    page.wait_for_timeout(200)
+    after = _geom()
+    assert after["attr"] == "xl", f"Expand should set xl, got {after['attr']!r}"
+    assert after["w"] > before["w"] + 80, (
+        f"Expand must visibly widen the panel (before={before['w']} after={after['w']})"
     )
-    assert after == "xl", f"Expand should set xl, got {after!r}"
     assert btn.get_attribute("aria-pressed") == "true"
     label1 = (btn.inner_text() or "").strip().lower()
     assert "restore" in label1, f"expanded label should be Restore, got {label1!r}"
     assert page.url.endswith("drawer.html") or "drawer" in page.url
     assert page.get_attribute("#hm-drawer-lazy", "open") is not None
 
-    btn.click()
-    page.wait_for_timeout(50)
-    restored = page.evaluate(
-        "() => document.getElementById('hm-drawer-lazy').getAttribute('data-width')"
+    box2 = btn.bounding_box()
+    assert box2 is not None
+    page.mouse.click(box2["x"] + box2["width"] / 2, box2["y"] + box2["height"] / 2)
+    page.wait_for_timeout(200)
+    restored = _geom()
+    assert restored["attr"] == "md", f"Restore should return to md, got {restored['attr']!r}"
+    assert restored["w"] < after["w"] - 80, (
+        f"Restore must visibly narrow (expanded={after['w']} restored={restored['w']})"
     )
-    assert restored == "md", f"Restore should return to resting md, got {restored!r}"
     assert btn.get_attribute("aria-pressed") == "false"
     label2 = (btn.inner_text() or "").strip().lower()
     assert "expand" in label2, f"after restore label should be Expand, got {label2!r}"

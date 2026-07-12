@@ -148,7 +148,7 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 ### Keyboard / AT
 
 - native dialog focus trap + Esc/backdrop; body may be tabindex=0 for scroll
-- pointer open: settle focus on [autofocus] or dialog shell — never header chrome (close/Expand look 'active' under WebKit :focus-visible)
+- pointer open: settle to [autofocus] else body else shell — never header chrome; re-settle after showModal (rAF) — single settle races
 - Expand control: aria-pressed + aria-label for next action (Expand/Restore)
 - label the body (aria-label) when it is the live region for peek loads
 - toggle-group: external label + aria-labelledby (not legend inside)
