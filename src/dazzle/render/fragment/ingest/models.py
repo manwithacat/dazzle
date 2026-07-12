@@ -683,6 +683,26 @@ class Calendar(BaseModel):
     body_html: str = ""
 
 
+# ── Dashboard-card seam copy (contracts/dashboard_card.py) ───────────
+
+
+class DashboardCard(BaseModel):
+    """Dashboard card wrapper — dual-lock unit for dashboard-card."""
+
+    attrs: str = ""
+    body_html: str = ""
+
+
+# ── Cohort-strip seam copy (contracts/cohort_strip.py) ───────────────
+
+
+class CohortStrip(BaseModel):
+    """Cohort strip region — dual-lock unit for cohort-strip."""
+
+    region_name: str = ""
+    body_html: str = ""
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

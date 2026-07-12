@@ -22,8 +22,14 @@ from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html
+from dazzle.render.fragment.ingest import CohortStrip as CohortStripSeam
+from dazzle.render.fragment.ingest import DashboardCard as DashboardCardSeam
 from dazzle.render.fragment.ingest import TaskInbox as TaskInboxSeam
-from dazzle.render.fragment.ingest import render_task_inbox
+from dazzle.render.fragment.ingest import (
+    render_cohort_strip,
+    render_dashboard_card,
+    render_task_inbox,
+)
 from dazzle.render.fragment.primitives import (
     CohortStripRegion,
     DashboardCard,
@@ -191,18 +197,21 @@ class _RenderDashboardMixin:
             f"</div>"
         )
 
-        return (
-            # #1494: addressable wrapper id (`card-{name}-{card_id}`, derivable
-            # from the body's `region-{name}-{card_id}` hx-target) so an empty
-            # `when_empty: suppress` region can self-remove via htmx OOB-delete.
-            f'<div id="card-{ctx.escape_attr(c.name)}-{ctx.escape_attr(c.card_id)}" '
+        # #1494: addressable wrapper id (`card-{name}-{card_id}`, derivable
+        # from the body's `region-{name}-{card_id}` hx-target) so an empty
+        # `when_empty: suppress` region can self-remove via htmx OOB-delete.
+        # Dual-lock sole-emitter roots data-dz-dashboard-card on the wrapper.
+        attrs = (
+            f'id="card-{ctx.escape_attr(c.name)}-{ctx.escape_attr(c.card_id)}" '
             f'data-card-id="{ctx.escape_attr(c.card_id)}" '
             f'data-card-region="{ctx.escape_attr(c.name)}" '
             f'data-card-col-span="{c.col_span}" '
             f'data-card-row-order="{c.row_order}" '
             f'class="{ctx.escape_attr(wrapper_class)}" '
             f'style="grid-column: span {c.col_span} / span {c.col_span};" '
-            f'tabindex="0">'
+            f'tabindex="0"'
+        )
+        article = (
             f'<article class="dz-card" role="article" '
             f'aria-labelledby="card-title-{ctx.escape_attr(c.card_id)}">'
             f"{header_html}"
@@ -210,8 +219,8 @@ class _RenderDashboardMixin:
             f"{body_html}"
             f"</article>"
             f'<div class="dz-card-resize" aria-hidden="true"></div>'
-            f"</div>"
         )
+        return render_dashboard_card(DashboardCardSeam(attrs=attrs, body_html=article))
 
     def _emit_cohort_strip_region(self, c: CohortStripRegion, ctx: RenderContext) -> str:
         """Render a CohortStripRegion (#1018).
@@ -299,15 +308,13 @@ class _RenderDashboardMixin:
                     )
             cells_html = f'<div class="dz-cohort-strip-cells">{"".join(cell_parts)}</div>'
 
-        return (
-            f'<div class="dz-cohort-strip-region" '
-            f'data-dz-region-name="{region_name_attr}">'
+        body = (
             f"{lens_bar}"
             f'<div class="dz-cohort-strip-body" id="region-{region_name_attr}-body">'
             f"{cells_html}"
             f"</div>"
-            f"</div>"
         )
+        return render_cohort_strip(CohortStripSeam(region_name=c.region_name, body_html=body))
 
     def _emit_day_timeline_region(self, t: DayTimelineRegion, ctx: RenderContext) -> str:
         """Render a DayTimelineRegion (#1016).

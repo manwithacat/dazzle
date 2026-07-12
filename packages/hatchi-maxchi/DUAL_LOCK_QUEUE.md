@@ -15,34 +15,32 @@ Consumed by: `/improve hm-convergence` → strategy `dual_lock_expand`.
 
 | # | stem | kind | pri | dual-lock | contract | css | gallery | emitters | action |
 |--:|------|------|----:|-----------|:--------:|:---:|:-------:|----------|--------|
-| 1 | `dashboard_card` | emitter_uncontracted | 15 | missing | no | yes | no | `_emit_dashboard_card` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
-| 2 | `cohort_strip` | emitter_uncontracted | 25 | missing | no | no | no | `_emit_cohort_strip_region` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
-| 3 | `day_timeline` | emitter_uncontracted | 25 | missing | no | no | no | `_emit_day_timeline_region` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
-| 4 | `entity_card` | emitter_uncontracted | 25 | missing | no | no | no | `_emit_entity_card_region` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
-| 5 | `grid_region` | emitter_uncontracted | 25 | missing | no | no | no | `_emit_grid_region` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
-| 6 | `pipeline` | emitter_uncontracted | 25 | missing | no | no | no | `_emit_pipeline_steps` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
-| 7 | `accordion` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 8 | `alert` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 9 | `aspect_ratio` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 10 | `badge` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 11 | `hover_card` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 12 | `item` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 13 | `switch` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 14 | `toggle` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 15 | `code` | contract_none | 40 | none | yes | yes | yes | `—` | DOM-only dual-lock if a stable Dazzle emission path exists; else schema+DOM once an ingest model lands; else document BLOCKED (gallery-only) in backlog. |
-| 16 | `auto_grid` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 17 | `breadcrumb` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 18 | `card` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 19 | `center` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 20 | `cluster` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 21 | `controls` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 22 | `field` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 23 | `icon` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 24 | `kbd` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 25 | `popover` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 26 | `separator` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 27 | `sidebar_layout` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 28 | `tooltip` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 1 | `day_timeline` | emitter_uncontracted | 25 | missing | no | no | no | `_emit_day_timeline_region` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
+| 2 | `entity_card` | emitter_uncontracted | 25 | missing | no | no | no | `_emit_entity_card_region` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
+| 3 | `grid_region` | emitter_uncontracted | 25 | missing | no | no | no | `_emit_grid_region` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
+| 4 | `pipeline` | emitter_uncontracted | 25 | missing | no | no | no | `_emit_pipeline_steps` | Scaffold contracts/<stem>.py (model + DOM_CONTRACT + render), ingest seam + sole-emitter, CONTRACT_MODELS + DOM test, Tier 0 ship. |
+| 5 | `accordion` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 6 | `alert` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 7 | `aspect_ratio` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 8 | `badge` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 9 | `hover_card` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 10 | `item` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 11 | `switch` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 12 | `toggle` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 13 | `code` | contract_none | 40 | none | yes | yes | yes | `—` | DOM-only dual-lock if a stable Dazzle emission path exists; else schema+DOM once an ingest model lands; else document BLOCKED (gallery-only) in backlog. |
+| 14 | `auto_grid` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 15 | `breadcrumb` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 16 | `card` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 17 | `center` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 18 | `cluster` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 19 | `controls` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 20 | `field` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 21 | `icon` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 22 | `kbd` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 23 | `popover` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 24 | `separator` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 25 | `sidebar_layout` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 26 | `tooltip` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
 
 ## Kind legend
 
@@ -53,4 +51,4 @@ Consumed by: `/improve hm-convergence` → strategy `dual_lock_expand`.
 | `emitter_uncontracted` | FragmentRenderer `_emit_*` ready, no contract |
 | `gallery_uncontracted` | Registry Hyperpart without `contracts=` |
 
-**Queue depth:** 28 candidates (showing 28).
+**Queue depth:** 26 candidates (showing 26).

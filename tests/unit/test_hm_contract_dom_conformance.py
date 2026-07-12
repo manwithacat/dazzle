@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|dashboard-card|cohort-strip|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|dashboard-card|cohort-strip|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -958,6 +958,66 @@ def test_calendar_emission_conforms_to_calendar_contract() -> None:
     assert "data-dz-calendar" in html
     assert "Sprint review" in html
     assert "dz-calendar--view-month" in html
+
+
+def test_dashboard_card_emission_conforms_to_dashboard_card_contract() -> None:
+    """Real FragmentRenderer DashboardCard path satisfies contracts/dashboard_card.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import DashboardCard
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    dc_mod = load_hm_module("contracts/dashboard_card.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        DashboardCard(
+            card_id="card-0",
+            name="tasks",
+            title="Tasks",
+            display="list",
+            col_span=1,
+            row_order=0,
+            hx_endpoint="/api/regions/tasks",
+        )
+    )
+    violations = kit.validate_dom(html, dc_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-dashboard-card" in html
+    assert "Tasks" in html
+    assert "dz-card-wrapper" in html
+
+
+def test_cohort_strip_emission_conforms_to_cohort_strip_contract() -> None:
+    """Real FragmentRenderer CohortStripRegion path satisfies contracts/cohort_strip.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.htmx import URL
+    from dazzle.render.fragment.primitives.data import (
+        CohortStripCell,
+        CohortStripLensTab,
+        CohortStripRegion,
+    )
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    cs_mod = load_hm_module("contracts/cohort_strip.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        CohortStripRegion(
+            region_name="class_roll",
+            endpoint=URL("/api/region"),
+            lenses=(CohortStripLensTab(id="grade", label="Grade", is_active=True),),
+            cells=(
+                CohortStripCell(
+                    member_id="m1",
+                    member_name="Ada",
+                    primary_value="A",
+                ),
+            ),
+        )
+    )
+    violations = kit.validate_dom(html, cs_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-cohort-strip" in html
+    assert "Ada" in html
+    assert "dz-cohort-strip-lens" in html
 
 
 def test_radar_emission_conforms_to_radar_contract() -> None:

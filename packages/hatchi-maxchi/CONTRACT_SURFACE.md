@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 50 |
+| Modules | 52 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -22,11 +22,13 @@ blast radius (who embeds / refuses this part).
 | `bullet` | `bullet` | `[data-dz-bullet]` | [data-dz-bullet][data-dz-bullet=present] | Bullet(bands:list[BulletBand]:opt; empty_message:str:opt; max_value:float:opt; rows:list[BulletRow]:opt); BulletBand(color:Literal:opt; from_value:float:req; label:str:opt; to_value:float:req); BulletRow(actual:float:req; label:str:req; target:float\|None:opt) |
 | `calendar` | `calendar` | `[data-dz-calendar]` | [data-dz-calendar][data-dz-calendar=present] | Calendar(body_html:str:opt; events:list[CalendarEvent]:opt; view:Literal:opt); CalendarEvent(label:str:req; when:str:opt) |
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
+| `cohort_strip` | `cohort-strip` | `[data-dz-cohort-strip]` | [data-dz-cohort-strip][data-dz-cohort-strip=present] | CohortStrip(body_html:str:opt; region_name:str:opt) |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |
 | `combobox` | `combobox` | `[data-dz-combobox]` | [data-dz-combobox][name=present] | ComboboxField(field_id:str:req; label:str:req; name:str:req; options:list[ComboboxOption]:req; placeholder:str:opt; selected:str:opt); ComboboxOption(label:str:req; value:str:req) |
 | `command` | `command` | `[data-dz-command]` | [data-dz-command][] | — |
 | `confirm` | `confirm` | `[hx-confirm]` | [hx-confirm][hx-confirm=present] | — |
 | `confirm_panel` | `confirm-panel` | `[data-dz-confirm-gate]` | [data-dz-confirm-gate][data-dz-required-count=present]; [data-dz-required="true"][data-dz-required=present] | — |
+| `dashboard_card` | `dashboard-card` | `[data-dz-dashboard-card]` | [data-dz-dashboard-card][data-dz-dashboard-card=present] | DashboardCard(attrs:str:opt; body_html:str:opt) |
 | `date_range` | `date-range` | `[data-dz-date-range]` | [data-dz-date-range][data-dz-date-range=present] | DateRange(date_from:str:opt; date_to:str:opt; endpoint:str:opt; region_name:str:opt; target:str:opt) |
 | `diagram` | `diagram` | `[data-dz-diagram]` | [data-dz-diagram][data-dz-diagram=present] | Diagram(edges:list[tuple[str,str]]:opt; mermaid_source:str:opt; nodes:list[str]:opt) |
 | `dialog` | `dialog` | `[data-dz-dialog-open]` | [data-dz-dialog-open][data-dz-dialog-open=present] | — |

@@ -20,7 +20,9 @@ from dazzle.render.fragment.ingest.models import (
     BoxPlot,
     Bullet,
     Calendar,
+    CohortStrip,
     ComboboxField,
+    DashboardCard,
     DateRange,
     Diagram,
     EmptyState,
@@ -924,6 +926,14 @@ def calendar_root_attrs(_c: Calendar) -> str:
     return "data-dz-calendar"
 
 
+def dashboard_card_root_attrs(_d: DashboardCard) -> str:
+    return "data-dz-dashboard-card"
+
+
+def cohort_strip_root_attrs(_c: CohortStrip) -> str:
+    return "data-dz-cohort-strip"
+
+
 def render_list_region(lr: ListRegion) -> str:
     """Model → list-region root (matches HM contracts/list_region.py)."""
     root_attrs = list_region_root_attrs(lr)
@@ -1018,6 +1028,24 @@ def render_calendar(c: Calendar) -> str:
         )
         inner = f"<ul>{items}</ul>"
     return f'<div class="dz-calendar dz-calendar--view-{view_esc}" {root_attrs}>{inner}</div>'
+
+
+def render_dashboard_card(d: DashboardCard) -> str:
+    """Model → dashboard card wrapper (matches HM contracts/dashboard_card.py)."""
+    root_attrs = dashboard_card_root_attrs(d)
+    attrs = d.attrs.strip()
+    prefix = f"{attrs} " if attrs else ""
+    return f"<div {prefix}{root_attrs}>{d.body_html}</div>"
+
+
+def render_cohort_strip(c: CohortStrip) -> str:
+    """Model → cohort-strip region (matches HM contracts/cohort_strip.py)."""
+    root_attrs = cohort_strip_root_attrs(c)
+    rname = _html.escape(c.region_name, quote=True)
+    return (
+        f'<div class="dz-cohort-strip-region" {root_attrs} '
+        f'data-dz-region-name="{rname}">{c.body_html}</div>'
+    )
 
 
 def render_date_range(d: DateRange) -> str:

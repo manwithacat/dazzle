@@ -10,8 +10,8 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 |--------|------:|
 | Component CSS modules | 68 |
 | Controllers | 20 |
-| Contract modules | 50 |
-| Dual-lock schema+DOM | 35 |
+| Contract modules | 52 |
+| Dual-lock schema+DOM | 37 |
 | Dual-lock DOM-only | 14 |
 | Dual-lock deferred | 0 |
 | Contract with no dual-lock row | 1 |
@@ -31,11 +31,13 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `bullet` | `bullet.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `calendar` | `calendar.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `code` | `code.py` | `dz-code.js` | yes | no | no | **none** |
+| `cohort_strip` | `cohort_strip.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `color` | `color.py` | `dz-color.js` | yes | no | no | **DOM-only** |
 | `combobox` | `combobox.py` | `dz-combobox.js` | yes | yes | yes | **schema+DOM** |
 | `command` | `command.py` | `dz-command.js` | yes | no | no | **DOM-only** |
 | `confirm` | `confirm.py` | `dz-confirm.js` | yes | no | no | **DOM-only** |
 | `confirm_panel` | `confirm_panel.py` | `—` | yes | no | no | **DOM-only** |
+| `dashboard_card` | `dashboard_card.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `date_range` | `date_range.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `diagram` | `diagram.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `dialog` | `dialog.py` | `dz-dialog.js` | yes | no | no | **DOM-only** |
