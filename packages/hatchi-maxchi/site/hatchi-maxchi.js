@@ -900,18 +900,18 @@ window.__HM_ICONS__ = {'circle-check':'<svg xmlns="http://www.w3.org/2000/svg" v
  * click is not also treated as a light-dismiss on closedby="any" (a
  * microtask is still too early in Chromium — open-and-instantly-close).
  *
- * initial focus: showModal focuses the first focusable (often the ✕
- * close). WebKit paints that as :focus-visible after a pointer open, so
- * the close control looks "active" until the user clicks away. After
- * open we settle focus on [autofocus] if present, else the dialog shell
- * (tabindex=-1, outline suppressed in CSS) so chrome is not lit until
- * the user Tabs. Esc / focus trap still work — focus remains inside.
+ * initial focus: showModal focuses the first focusable in the dialog —
+ * often header chrome (✕ close, Widen, …). WebKit paints that as
+ * :focus-visible after a pointer open, so the control looks "active"
+ * until the user clicks away. After open we ALWAYS settle focus on
+ * [autofocus] if present, else the dialog shell (tabindex=-1, outline
+ * suppressed in CSS) so *any* chrome control is not lit until the user
+ * Tabs. Do not special-case only close — a later header button becomes
+ * first focusable and reintroduces the same bug. Esc / focus trap still
+ * work — focus remains inside the dialog.
  */
 (function () {
   "use strict";
-
-  var CLOSE_SEL =
-    ".drawer__close, .drawer__close, .dialog__close, .dialog__close";
 
   function openAttr(el) {
     return (
@@ -933,25 +933,15 @@ window.__HM_ICONS__ = {'circle-check':'<svg xmlns="http://www.w3.org/2000/svg" v
     }
   }
 
-  function isCloseControl(el) {
-    return !!(el && el.closest && el.closest(CLOSE_SEL));
-  }
-
   /**
-   * After showModal, avoid leaving focus on the dismiss ✕ (looks active
-   * under WebKit :focus-visible). Honour [autofocus]; otherwise hold
-   * focus on the dialog shell.
+   * After pointer-driven showModal: never leave focus on header chrome.
+   * Honour [autofocus]; otherwise hold focus on the dialog shell.
    */
   function settleInitialFocus(dlg) {
     var auto = dlg.querySelector("[autofocus]");
     if (auto) {
       focusQuiet(auto);
       return;
-    }
-    var active = document.activeElement;
-    if (!active || !dlg.contains(active) || !isCloseControl(active)) {
-      // Already on a meaningful control (or dialog) — leave it.
-      if (active && dlg.contains(active) && active !== dlg) return;
     }
     if (!dlg.hasAttribute("tabindex")) {
       dlg.setAttribute("tabindex", "-1");

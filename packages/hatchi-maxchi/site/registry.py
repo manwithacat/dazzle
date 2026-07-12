@@ -1315,6 +1315,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "lazy body starts empty/skeleton; exchange fills #…-body, not the whole dialog",
                     "do not label a width cycle “Open full page” — full page is navigation",
                     "do not use type=button for full-page when the job is a new URL",
+                    "do not leave pointer-open focus on header chrome (close, Widen, …) "
+                    "— settle to [autofocus] or the dialog shell (dz-dialog.js); "
+                    "close-only special-cases miss the next header button",
                 ),
                 do_dont=(
                     (
@@ -1347,6 +1350,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                 ),
                 a11y_keys=(
                     "native dialog focus trap + Esc/backdrop; body may be tabindex=0 for scroll",
+                    "pointer open: settle focus on [autofocus] or dialog shell — never "
+                    "header chrome (close/Widen look 'active' under WebKit :focus-visible)",
                     "label the body (aria-label) when it is the live region for peek loads",
                     "toggle-group: external label + aria-labelledby (not legend inside)",
                 ),

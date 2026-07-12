@@ -1518,45 +1518,74 @@ def test_drawer_opens_via_shared_opener_and_closes(page) -> None:  # type: ignor
     assert not page.evaluate(f"document.querySelector('{dw}').open"), "Esc must close the drawer"
 
 
-def test_drawer_open_does_not_focus_close_control(page) -> None:  # type: ignore[no-untyped-def]
-    """Pointer open must not leave the ✕ as the focused control.
+def test_drawer_open_does_not_focus_header_chrome(page) -> None:  # type: ignore[no-untyped-def]
+    """Pointer open must not leave focus on header chrome controls.
 
-    WebKit paints showModal's first focusable (the close button) as
-    :focus-visible, so the dismiss control looks "active" until the user
-    clicks away. dz-dialog.js settles focus on the dialog shell instead.
+    showModal focuses the first focusable. WebKit paints that as
+    :focus-visible, so the control looks "active" until click-away.
+    That used to be the ✕ alone; Open-record puts Widen first in tab
+    order. dz-dialog.js always settles to the dialog shell (or
+    [autofocus]) — not a close-only special case. Gate both demos.
     """
     goto_part(page, "drawer")
-    page.click('[data-dialog-open="hm-drawer-demo"]')
-    page.wait_for_timeout(200)
-    info = page.evaluate(
-        """() => {
-          const dlg = document.getElementById('hm-drawer-demo');
-          const active = document.activeElement;
-          const close = dlg && dlg.querySelector('.drawer__close');
-          return {
-            open: !!(dlg && dlg.open),
-            activeIsClose: active === close,
-            activeIsInside: !!(dlg && active && dlg.contains(active)),
-            closeFocusVisible: !!(close && close.matches(':focus-visible')),
-            activeClass: active ? active.className : '',
-            activeTag: active ? active.tagName : '',
-          };
-        }"""
-    )
-    assert info["open"], "drawer must be open"
-    assert info["activeIsInside"], "focus must remain inside the dialog (trap)"
-    assert not info["activeIsClose"], (
-        f"close button must not hold initial focus after pointer open "
-        f"(active={info['activeTag']}.{info['activeClass']})"
-    )
-    assert not info["closeFocusVisible"], (
-        "close button must not be :focus-visible after pointer open "
-        "(looks 'active' until click-away)"
-    )
-    # Esc still works with shell focus
-    page.keyboard.press("Escape")
-    page.wait_for_timeout(150)
-    assert page.get_attribute("#hm-drawer-demo", "open") is None
+    for dlg_id, open_sel in (
+        ("hm-drawer-demo", '[data-dialog-open="hm-drawer-demo"]'),
+        ("hm-drawer-lazy", '[data-dialog-open="hm-drawer-lazy"]'),
+    ):
+        page.click(open_sel)
+        page.wait_for_timeout(200)
+        info = page.evaluate(
+            """(id) => {
+              const dlg = document.getElementById(id);
+              const active = document.activeElement;
+              const close = dlg && dlg.querySelector('.drawer__close');
+              const widen = dlg && (
+                dlg.querySelector('[data-drawer-widen]') ||
+                dlg.querySelector('[data-dz-drawer-widen]')
+              );
+              const header = dlg && dlg.querySelector('.drawer__header');
+              const inHeader = !!(
+                header && active && header.contains(active) && active !== dlg
+              );
+              return {
+                open: !!(dlg && dlg.open),
+                activeIsClose: active === close,
+                activeIsWiden: active === widen,
+                activeInHeaderChrome: inHeader,
+                activeIsShell: active === dlg,
+                activeIsInside: !!(dlg && active && dlg.contains(active)),
+                closeFocusVisible: !!(close && close.matches(':focus-visible')),
+                widenFocusVisible: !!(widen && widen.matches(':focus-visible')),
+                activeClass: active ? active.className : '',
+                activeTag: active ? active.tagName : '',
+              };
+            }""",
+            dlg_id,
+        )
+        assert info["open"], f"{dlg_id} must be open"
+        assert info["activeIsInside"], f"{dlg_id}: focus must remain inside the dialog (trap)"
+        assert not info["activeIsClose"], (
+            f"{dlg_id}: close must not hold initial focus after pointer open "
+            f"(active={info['activeTag']}.{info['activeClass']})"
+        )
+        assert not info["activeIsWiden"], (
+            f"{dlg_id}: Widen must not hold initial focus after pointer open "
+            f"(active={info['activeTag']}.{info['activeClass']})"
+        )
+        assert not info["activeInHeaderChrome"], (
+            f"{dlg_id}: no header chrome control should hold initial focus "
+            f"(active={info['activeTag']}.{info['activeClass']})"
+        )
+        assert not info["closeFocusVisible"], (
+            f"{dlg_id}: close must not be :focus-visible after pointer open"
+        )
+        assert not info["widenFocusVisible"], (
+            f"{dlg_id}: Widen must not be :focus-visible after pointer open"
+        )
+        # Esc still works with shell focus
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(150)
+        assert page.get_attribute(f"#{dlg_id}", "open") is None, f"{dlg_id} Esc close"
 
 
 def test_master_detail_selection_and_instance_isolation(page) -> None:  # type: ignore[no-untyped-def]

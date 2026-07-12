@@ -47,6 +47,21 @@ Three jobs; do not collapse them into one button:
 - Widen is **chrome** (same URL, more panel width).
 - Never label a width cycle “Open full page”; never ship that label on `type=button` with no `href`.
 
+### Pointer-open focus (header chrome)
+
+`showModal()` focuses the **first focusable** in the dialog. Header chrome
+(✕ close, **Widen**, later actions…) is often first in tab order. After a
+**pointer** open, WebKit paints that control as `:focus-visible`, so it looks
+**active** until click-away.
+
+**Rule (class, not instance):** after pointer-driven open, settle focus on
+`[autofocus]` if present, else the **dialog shell** (`tabindex="-1"`, outline
+suppressed on `dialog.drawer` / `dialog.dialog`). Do **not** special-case only
+the close control — adding any earlier header button reintroduces the bug.
+
+Pin: `test_drawer_open_does_not_focus_header_chrome` (both gallery demos:
+filters + Open record with Widen).
+
 Product peers: Linear/Jira/GitHub project panels use peek → issue route; Notion uses
 peek mode → full page of the same object. Component kits (Radix/shadcn) only own
 the sheet; the app owns the route.
@@ -83,6 +98,8 @@ empty-state, popover, kbd, skeleton — plus refusal probes (`nested-form`,
 - Nesting a dialog/command palette inside a drawer body “for convenience.”
 - Calling a width maximize “Open full page.”
 - Dead `type=button` primary labeled Open full page.
+- Settling initial focus only when the active element is the close button
+  (Widen or any new header control then looks active on open).
 
 ## Expressions
 
