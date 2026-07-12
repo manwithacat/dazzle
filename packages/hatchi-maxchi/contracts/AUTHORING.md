@@ -6,7 +6,11 @@
 `/improve hm-convergence dual_lock_expand` picks next):
 `python packages/hatchi-maxchi/tools/dual_lock_queue.py --write` →
 `packages/hatchi-maxchi/DUAL_LOCK_QUEUE.md`. Cycle recipe:
-`.claude/commands/improve/strategies/dual_lock_expand.md`. Sophistication plan:
+`.claude/commands/improve/strategies/dual_lock_expand.md`.
+
+**shadcn parity:** `python packages/hatchi-maxchi/tools/shadcn_parity.py --write`
+→ `SHADCN_PARITY.md`. Gaps are improve placeholders
+(`/improve hm-convergence shadcn_parity`). Sophistication plan:
 `docs/superpowers/plans/2026-07-11-hm-sophistication-plan.md` (epic #1580).
 
 **Visual smoke (subscription, never a ship gate):** after dual-locking a part,

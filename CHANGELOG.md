@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **shadcn ↔ HM parity inventory** — pinned shadcn/ui catalogue (64 parts,
+  2026-07-12) vs HaTchi-MaXchi: 23 parity / 27 partial / 13 gap / 1 n/a.
+  Tool `packages/hatchi-maxchi/tools/shadcn_parity.py` writes
+  `SHADCN_PARITY.md`. Improve strategy `shadcn_parity` seeds placeholder
+  Hyperparts for gaps (`/improve hm-convergence shadcn_parity`). Backlog
+  HMC-031–043 PENDING for the 13 gaps.
 - **/improve dual-lock loop** — `packages/hatchi-maxchi/tools/dual_lock_queue.py`
   ranks the next schema+DOM promotions; strategy
   `improve/strategies/dual_lock_expand.md` is the default remaining work for
