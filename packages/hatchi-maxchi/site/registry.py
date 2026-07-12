@@ -2023,6 +2023,44 @@ def select(source: str, id: str) -> str:
             '<label><input type="radio" name="hm-view"><span>{icon:kanban} Board</span></label>'
             '<label><input type="radio" name="hm-view"><span>{icon:calendar} Calendar</span></label></fieldset>',
         ),
+        Hyperpart(
+            "switch",
+            "Switch",
+            "Forms",
+            "On/off control — progressive enhancement over a native checkbox. "
+            "State is the checkbox's checked attribute (DOM), not a JS store.",
+            '<div class="hm-demo-row">'
+            '<label class="dz-switch">'
+            '<input type="checkbox" name="hm-notify" data-dz-switch checked>'
+            '<span class="dz-switch__track" aria-hidden="true"></span>'
+            "<span>Email notifications</span></label>"
+            '<label class="dz-switch">'
+            '<input type="checkbox" name="hm-digest" data-dz-switch>'
+            '<span class="dz-switch__track" aria-hidden="true"></span>'
+            "<span>Weekly digest</span></label>"
+            "</div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-031). No controller: native "
+            "checkbox + CSS track/thumb. Label text is a sibling span so the "
+            "whole control is a click target. Dual-lock deferred until a Dazzle "
+            "form-field path emits data-dz-switch.",
+            tags=("form", "interactive"),
+        ),
+        Hyperpart(
+            "kbd",
+            "Keyboard key",
+            "Primitives",
+            "Shortcut chip for docs and command chrome — <kbd class=dz-kbd>.",
+            '<div class="hm-demo-row">'
+            '<kbd class="dz-kbd">⌘K</kbd>'
+            '<kbd class="dz-kbd">Esc</kbd>'
+            '<kbd class="dz-kbd">↵</kbd>'
+            '<kbd class="dz-kbd">⇧</kbd>'
+            "</div>",
+            notes="PLACEHOLDER — shadcn parity (HMC-034). Styles already live in "
+            "hm-core.css (.dz-kbd); this registry entry makes the surface "
+            "discoverable in the gallery. No dual-lock needed (pure presentation).",
+            tags=("docs",),
+        ),
         # ── Navigation / Data ────────────────────────────────────────────
         Hyperpart(
             "breadcrumb",

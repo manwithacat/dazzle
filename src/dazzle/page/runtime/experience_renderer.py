@@ -95,7 +95,8 @@ def _render_form_step_body(experience: Any, page_context: Any) -> str:
     if sections:
 
         def _section_title(s: Any) -> str:
-            return s.get("title", "") if isinstance(s, dict) else getattr(s, "title", "")
+            raw = s.get("title", "") if isinstance(s, dict) else getattr(s, "title", "")
+            return str(raw or "")
 
         stepper_html = FragmentRenderer().render(
             FormStepper(sections=tuple(str(_section_title(s) or "") for s in sections))

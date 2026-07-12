@@ -14,12 +14,12 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 
 | Status | Count |
 |--------|------:|
-| **parity** | 23 |
+| **parity** | 25 |
 | **partial** | 27 |
-| **gap** (placeholders) | 13 |
+| **gap** (placeholders) | 11 |
 | **n/a** | 1 |
 | **total shadcn** | 64 |
-| HM Hyperparts (registry) | 73 |
+| HM Hyperparts (registry) | 75 |
 
 ## Mapping
 
@@ -58,7 +58,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `input-group` | **partial** | `form-chrome` | Addon/prefix chrome lives in form-chrome |
 | `input-otp` | **partial** | `two-factor` | two-factor Hyperpart; general OTP input not extracted |
 | `item` | **gap** | `—` | Generic list Item (media+title+actions) — no HM item primitive |
-| `kbd` | **gap** | `—` | Keyboard key glyph component |
+| `kbd` | **parity** | `kbd` | Gallery Hyperpart; styles in hm-core.css (.dz-kbd) |
 | `label` | **partial** | `field` | Label is part of field triad, not standalone |
 | `marker` | **gap** | `—` | shadcn New — map/marker chrome |
 | `menubar` | **gap** | `—` | Horizontal app menubar |
@@ -80,7 +80,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `slider` | **parity** | `slider` | DOM-only dual-lock |
 | `sonner` | **partial** | `fragments` | Toast stack in fragments/htmx states — not named sonner |
 | `spinner` | **partial** | `htmx-states` | dz-spinner-* in htmx-states; not a gallery Hyperpart |
-| `switch` | **gap** | `field` | No dedicated switch Hyperpart (checkbox/toggle gap) |
+| `switch` | **parity** | `switch` | Gallery Hyperpart — progressive checkbox + data-dz-switch; dual-lock later |
 | `table` | **partial** | `grid,list-region,table` | grid dual-lock + list-region + CSS table |
 | `tabs` | **parity** | `tabs` | DOM-only dual-lock |
 | `textarea` | **partial** | `field,form` | Native textarea via field triad |
@@ -102,14 +102,12 @@ Playbook: `.claude/commands/improve/strategies/shadcn_parity.md`.
 | 3 | `carousel` | `carousel` | No carousel / media strip Hyperpart |
 | 4 | `hover-card` | `hover-card` | Popover exists; hover-intent card not first-class |
 | 5 | `item` | `item` | Generic list Item (media+title+actions) — no HM item primitive |
-| 6 | `kbd` | `kbd` | Keyboard key glyph component |
-| 7 | `marker` | `marker` | shadcn New — map/marker chrome |
-| 8 | `menubar` | `menubar` | Horizontal app menubar |
-| 9 | `message` | `message` | Chat message row — shadcn New; no HM messaging surface |
-| 10 | `message-scroller` | `message-scroller` | Chat transcript scroller — shadcn New |
-| 11 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
-| 12 | `switch` | `switch` | No dedicated switch Hyperpart (checkbox/toggle gap) |
-| 13 | `toggle` | `toggle` | Single toggle button not extracted; group exists |
+| 6 | `marker` | `marker` | shadcn New — map/marker chrome |
+| 7 | `menubar` | `menubar` | Horizontal app menubar |
+| 8 | `message` | `message` | Chat message row — shadcn New; no HM messaging surface |
+| 9 | `message-scroller` | `message-scroller` | Chat transcript scroller — shadcn New |
+| 10 | `navigation-menu` | `navigation-menu` | Top nav mega-menu; app-shell covers sidebar nav only |
+| 11 | `toggle` | `toggle` | Single toggle button not extracted; group exists |
 
 ## Status definitions
 

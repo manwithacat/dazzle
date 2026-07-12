@@ -1,0 +1,91 @@
+/* HYPERPART: switch */
+/*
+ * On/off control — progressive enhancement over a native checkbox.
+ * Root: label.dz-switch > input[type=checkbox][data-dz-switch] + span.dz-switch__track
+ * Thumb is the track's ::after. State is the checkbox's .checked (DOM), never JS.
+ *
+ * PLACEHOLDER shell for shadcn parity (HMC-031). Token-only; no controller
+ * required — native checkbox semantics + keyboard already work.
+ */
+
+.dz-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-switch input[data-dz-switch] {
+  /* Visually hide the checkbox but keep it focusable / AT-accessible */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dz-switch__track {
+  position: relative;
+  display: inline-block;
+  width: 2.5rem;
+  height: 1.375rem;
+  flex: none;
+  border-radius: var(--radius-full);
+  background: var(--colour-surface-muted);
+  border: 1px solid var(--colour-border);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.dz-switch__track::after {
+  content: "";
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--radius-full);
+  background: var(--colour-surface);
+  box-shadow: var(--shadow-sm, 0 1px 2px color-mix(in oklab, var(--colour-text) 12%, transparent));
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.dz-switch input[data-dz-switch]:checked + .dz-switch__track {
+  background: var(--colour-brand);
+  border-color: var(--colour-brand);
+}
+
+.dz-switch input[data-dz-switch]:checked + .dz-switch__track::after {
+  transform: translateX(1.125rem);
+  background: var(--colour-brand-contrast, var(--colour-surface));
+}
+
+.dz-switch input[data-dz-switch]:focus-visible + .dz-switch__track {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+}
+
+.dz-switch input[data-dz-switch]:disabled + .dz-switch__track {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dz-switch:has(input[data-dz-switch]:disabled) {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-switch__track,
+  .dz-switch__track::after {
+    transition: none;
+  }
+}

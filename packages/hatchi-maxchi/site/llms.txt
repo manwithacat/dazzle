@@ -47,6 +47,8 @@
 - [Tags](https://manwithacat.github.io/hatchi-maxchi/agents/tags.md): Multi-value chips + free create — a native text input carrying a comma-joined value, progressively enhanced into a chips UI. JS off: a usable comma-separated text field. JS on: type + Enter/comma creates a chip, × removes; the native input stays as the submitted value.
 - [Date range](https://manwithacat.github.io/hatchi-maxchi/agents/date-range.md): Two native date inputs driving one htmx exchange — the from/to filter bar for time-scoped regions.
 - [Toggle group](https://manwithacat.github.io/hatchi-maxchi/agents/toggle-group.md): Segmented control on native radios.
+- [Switch](https://manwithacat.github.io/hatchi-maxchi/agents/switch.md): On/off control — progressive enhancement over a native checkbox. State is the checkbox's checked attribute (DOM), not a JS store.
+- [Keyboard key](https://manwithacat.github.io/hatchi-maxchi/agents/kbd.md): Shortcut chip for docs and command chrome — <kbd class=dz-kbd>.
 - [Breadcrumb](https://manwithacat.github.io/hatchi-maxchi/agents/breadcrumb.md): CSS-generated chevrons; clean list markup.
 - [Accordion](https://manwithacat.github.io/hatchi-maxchi/agents/accordion.md): Native <details> group; single-open via the HTML name= attribute — opening one closes its siblings, zero JS.
 - [Tabs](https://manwithacat.github.io/hatchi-maxchi/agents/tabs.md): A lazy tab strip — an honest link-strip (buttons + aria-current, no unkept role=tablist). Each panel hx-gets its content the first time it is shown.

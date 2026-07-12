@@ -170,7 +170,12 @@ _MAP: list[tuple[str, str, str, str]] = [
         "",
         "Generic list Item (media+title+actions) — no HM item primitive",
     ),
-    ("kbd", "gap", "", "Keyboard key glyph component"),
+    (
+        "kbd",
+        "parity",
+        "kbd",
+        "Gallery Hyperpart; styles in hm-core.css (.dz-kbd)",
+    ),
     (
         "label",
         "partial",
@@ -259,9 +264,9 @@ _MAP: list[tuple[str, str, str, str]] = [
     ),
     (
         "switch",
-        "gap",
-        "field",
-        "No dedicated switch Hyperpart (checkbox/toggle gap)",
+        "parity",
+        "switch",
+        "Gallery Hyperpart — progressive checkbox + data-dz-switch; dual-lock later",
     ),
     (
         "table",

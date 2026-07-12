@@ -78,19 +78,13 @@ def render(t: TimeSeries) -> str:
             f'<p class="dz-chart-summary">{len(axis_labels)} buckets · '
             f"{len(t.series)} series · peak {html.escape(peak)}</p>"
         )
-        return (
-            f'<div class="{cls}" data-dz-time-series>'
-            f"{t.svg_html}{t.legend_html}{summary}"
-            f"</div>"
-        )
+        return f'<div class="{cls}" data-dz-time-series>{t.svg_html}{t.legend_html}{summary}</div>'
 
     peak = t.peak_display
     if not peak:
         max_val = max((p.value for p in t.points), default=0) or 0
         peak = str(int(max_val)) if max_val == int(max_val) else str(max_val)
-    summary = (
-        f'<p class="dz-chart-summary">{len(t.points)} buckets · peak {html.escape(peak)}</p>'
-    )
+    summary = f'<p class="dz-chart-summary">{len(t.points)} buckets · peak {html.escape(peak)}</p>'
     return f'<div class="{cls}" data-dz-time-series>{t.svg_html}{summary}</div>'
 ```
 

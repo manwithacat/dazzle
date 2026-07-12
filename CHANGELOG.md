@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **shadcn parity placeholders: switch + kbd** — gallery Hyperparts for
+  on/off switch (`data-dz-switch` over native checkbox + `components/switch.css`)
+  and keyboard key chips (styles already in hm-core). Gaps 13→11 on the
+  shadcn catalogue map. Improve cycle hm-convergence / shadcn_parity.
 - **shadcn ↔ HM parity inventory** — pinned shadcn/ui catalogue (64 parts,
   2026-07-12) vs HaTchi-MaXchi: 23 parity / 27 partial / 13 gap / 1 n/a.
   Tool `packages/hatchi-maxchi/tools/shadcn_parity.py` writes
