@@ -171,6 +171,22 @@ parts for page motifs—prefer a Blueprint over a new part when possible.
 
 **Trap:** inventing toast APIs or `/mock/…` routes. Stop. Return the exchange fragment.
 
+### Gallery icon tokens (two systems — do not mix)
+
+| Where | Token | Expand | Fail mode |
+|-------|--------|--------|-----------|
+| Hyperpart partials, blueprints, Copy this | `{svg:name}` / `{icon:name}` | Build-time → sprite `<use href="#i-…">` | Unknown name **fails the build** |
+| `MOCK_HTMX` canned responses only | `{i:name}` | Runtime from `window.__HM_ICONS__` | Missing map entry → **empty icon span** (silent) |
+
+**Why two?** Mock swaps return a fragment without the gallery symbol sheet, so
+runtime needs inline SVGs. Product markup always has the sheet (or ships it).
+
+**When editing `MOCK_HTMX`:** use `{i:lucide-name}` only; `build_site` derives
+`__HM_ICONS__` from every `{i:}` token and fails on unknowns. Do **not** hardcode
+the map, and do **not** put `{svg:}` / `{icon:}` in canned mock HTML (they are
+not expanded there). After changes: `python site/build_site.py` and commit
+`site/hatchi-maxchi.js`. Gate: `tests/test_icon_contract.py`.
+
 ## Changing the system (contributing)
 
 - **Mutate a primitive:** `docs/agent/mutate-a-primitive.md` — then regenerate

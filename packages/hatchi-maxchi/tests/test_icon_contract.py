@@ -103,6 +103,53 @@ def test_known_icon_token_still_expands() -> None:
     assert "<svg" in expand_icons("<i>{svg:check}</i>")
 
 
+# ── mock-htmx {i:} map: complete + fail-loud (drawer Work Orders regression) ─
+
+
+def test_mock_htmx_i_tokens_are_known_icons() -> None:
+    """Every {i:name} in MOCK_HTMX must resolve in ICONS (build fails otherwise)."""
+    from build_site import mock_htmx_icon_names
+
+    names = mock_htmx_icon_names()
+    assert names, "MOCK_HTMX should use at least one {i:} icon"
+    # Drawer open-record body — the regression that shipped empty spans
+    for required in ("clipboard-list", "circle-check", "map-pin", "triangle-alert"):
+        assert required in names, f"drawer mock expects {{i:{required}}}"
+
+
+def test_unknown_mock_i_token_fails_loud() -> None:
+    from build_site import mock_htmx_icon_names
+
+    with pytest.raises(ValueError) as exc:
+        mock_htmx_icon_names("{i:definitely-not-an-icon}")
+    assert "definitely-not-an-icon" in str(exc.value)
+
+
+def test_mock_icon_map_js_includes_every_i_token() -> None:
+    from build_site import build_mock_icon_map_js, mock_htmx_icon_names
+
+    names = mock_htmx_icon_names()
+    js = build_mock_icon_map_js(names)
+    assert js.startswith("window.__HM_ICONS__")
+    for name in names:
+        assert f"'{name}':" in js, f"__HM_ICONS__ missing {name}"
+        assert "<svg" in js
+
+
+def test_committed_gallery_js_carries_full_mock_icon_map() -> None:
+    """Committed hatchi-maxchi.js must not lag the MOCK_HTMX token set."""
+    from build_site import mock_htmx_icon_names
+
+    names = mock_htmx_icon_names()
+    js = (PKG / "site" / "hatchi-maxchi.js").read_text(encoding="utf-8")
+    assert "window.__HM_ICONS__" in js
+    for name in names:
+        assert f"'{name}':" in js, (
+            f"site/hatchi-maxchi.js missing mock icon {name!r} — "
+            "re-run python site/build_site.py and commit"
+        )
+
+
 # ── sprite: one symbol sheet + short <use> references ─────────────────────
 
 

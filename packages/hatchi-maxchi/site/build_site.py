@@ -103,6 +103,8 @@ _HTMX_PIN_FALLBACK = "4.0.0-beta4"
 
 _ICON_RE = re.compile(r"\{icon:([a-z0-9-]+)\}")
 _SVG_RE = re.compile(r"\{svg:([a-z0-9-]+)\}")
+# Runtime mock-htmx only — not expanded at build time (see MOCK_HTMX expand()).
+_MOCK_I_RE = re.compile(r"\{i:([a-z0-9-]+)\}")
 
 
 def _hm_package_version() -> str:
@@ -1403,10 +1405,50 @@ def expand_icons(markup: str) -> str:
     return markup
 
 
+def mock_htmx_icon_names(mock_src: str | None = None) -> frozenset[str]:
+    """Every ``{i:name}`` token in MOCK_HTMX — must all exist in ``ICONS``.
+
+    Product partials use ``{svg:}`` / ``{icon:}`` (build-time sprite expand).
+    Canned mock responses cannot use sprite ``<use>`` (no sheet in the
+    swapped fragment), so they use ``{i:name}`` expanded at runtime from
+    ``window.__HM_ICONS__``. The map is *derived* from these tokens so a
+    drawer/button icon added to MOCK_HTMX cannot silently empty.
+    """
+    src = MOCK_HTMX if mock_src is None else mock_src
+    names = frozenset(_MOCK_I_RE.findall(src))
+    unknown = sorted(n for n in names if n not in ICONS)
+    if unknown:
+        raise ValueError(
+            "MOCK_HTMX uses unknown {i:} icon(s) "
+            f"{unknown} — add via icons/gen_registry.py or fix the token"
+        )
+    return names
+
+
+def build_mock_icon_map_js(names: frozenset[str] | None = None) -> str:
+    """JS preamble: ``window.__HM_ICONS__`` for mock-htmx ``{i:}`` expand."""
+    icon_names = sorted(mock_htmx_icon_names() if names is None else names)
+    parts = ["window.__HM_ICONS__ = {"]
+    for name in icon_names:
+        inner = ICONS[name].replace("'", "\\'")
+        parts.append(
+            f'\'{name}\':\'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+            f'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+            f'stroke-linejoin="round">{inner}</svg>\','
+        )
+    parts.append("};\n")
+    return "".join(parts)
+
+
 MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
    Supports: hx-get (canned responses), hx-confirm -> htmx:confirm event,
    hx-boost no-op. NOT a real htmx; the point is that the SAME markup that
-   runs against a Dazzle server also demos statically here. */
+   runs against a Dazzle server also demos statically here.
+
+   Icons in canned HTML: use the i-token form only (NOT svg:/icon: tokens).
+   Runtime expand() looks up window.__HM_ICONS__, which build_site derives
+   from every i-token below — unknown names fail the build. Product
+   partials keep svg:/icon: tokens + sprite sheet. */
 (function () {
   "use strict";
   var RESPONSES = {
@@ -2223,16 +2265,10 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
     # the prefix to the controllers; the mock's canned markup carries the
     # namespace too, so reprefix it to match.
     controllers = "\n" + build_js(prefix)
-    # inline icon map for the mock htmx canned command results
-    icon_map = "window.__HM_ICONS__ = {"
-    for name in ("layout-dashboard", "settings", "receipt", "users", "triangle-alert"):
-        inner = ICONS[name].replace("'", "\\'")
-        icon_map += (
-            f'\'{name}\':\'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
-            f'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
-            f'stroke-linejoin="round">{inner}</svg>\','
-        )
-    icon_map += "};\n"
+    # Inline icon map for mock-htmx {i:name} expand — derived from MOCK_HTMX
+    # tokens so drawer/command/etc. cannot ship empty icons (hardcoded maps
+    # previously listed only the command palette set).
+    icon_map = build_mock_icon_map_js()
     (out_dir / "hatchi-maxchi.js").write_text(
         (apply_prefix(icon_map + MOCK_HTMX, prefix) + controllers).rstrip("\n") + "\n",
         encoding="utf-8",

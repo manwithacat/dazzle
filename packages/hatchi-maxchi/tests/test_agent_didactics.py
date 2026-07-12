@@ -88,6 +88,20 @@ def test_playbooks_name_stop_conditions() -> None:
         assert "Stop conditions" in body or "stop" in body.lower(), name
 
 
+def test_agents_md_documents_mock_vs_product_icon_tokens() -> None:
+    """Dual icon systems must stay in the always-on curriculum.
+
+    Product partials use build-time {svg:}/{icon:} + sprite; MOCK_HTMX uses
+    runtime {i:} + __HM_ICONS__. Agents that only knew the product path shipped
+    drawer mock icons that expanded to empty spans.
+    """
+    text = AGENTS.read_text(encoding="utf-8")
+    assert "Gallery icon tokens" in text or "two systems" in text.lower()
+    assert "{i:" in text or "{i:name}" in text
+    assert "__HM_ICONS__" in text
+    assert "{svg:" in text or "{svg:name}" in text
+
+
 def test_recipe_seeds_are_labelled_and_real_parts() -> None:
     import sys
 
