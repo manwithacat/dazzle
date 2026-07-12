@@ -112,7 +112,7 @@ SIGNALS: dict[str, object] = {
     "code": "exempt:HM gallery + agent-pack snippets (no Dazzle DSL emitter yet)",
     # shadcn parity placeholders (HMC-031/034) — gallery surfaces; no DSL emitter yet
     "switch": "exempt:no Dazzle form-field emitter yet (gallery progressive-enhance shell)",
-    "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",
+    "kbd": "exempt:presentation chip (hm-core .dz-kbd; command palette already uses it)",  # cimonitor re-trigger
 }
 
 # ── the ratchet: recorded adoption debt (#164) ──────────────────────
