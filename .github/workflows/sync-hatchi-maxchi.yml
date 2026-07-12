@@ -3,12 +3,18 @@
 # (github.com/manwithacat/hatchi-maxchi). The standalone repo's own CI
 # then gates the sync (contract / behaviour / visual / WCAG).
 #
+# After push, this workflow **waits for hatchi-maxchi CI** and fails if
+# red — so a green "Sync HaTchi-MaXchi" on Dazzle means the standalone
+# repo accepted the tip. Mirror check also runs on every Dazzle CI
+# (job hm-standalone-ci → scripts/hm_standalone_ci_status.py).
+#
 # Releases stay DELIBERATE and are cut on the standalone repo (release.yml
 # there: push a v* tag, or run its workflow_dispatch with a version input).
 #
 # Auth: HM_SYNC_DEPLOY_KEY — an SSH deploy key scoped to write on the
 # hatchi-maxchi repo only (Settings → Deploy keys there; private half in
-# this repo's Actions secrets).
+# this repo's Actions secrets). Status poll uses the public Actions API
+# (optional GITHUB_TOKEN for rate limits).
 name: Sync HaTchi-MaXchi
 
 on:
@@ -28,11 +34,16 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    outputs:
+      # Tip of packages/hatchi-maxchi after the push (subtree split SHA ==
+      # commit that lands on hatchi-maxchi main when fast-forward succeeds).
+      hm_tip_sha: ${{ steps.push.outputs.hm_tip_sha }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # subtree split walks the full history
       - name: Split package history and push to standalone repo
+        id: push
         env:
           HM_SYNC_DEPLOY_KEY: ${{ secrets.HM_SYNC_DEPLOY_KEY }}
         run: |
@@ -53,6 +64,7 @@ jobs:
           # Fast-forward is the common case (HM main unchanged since the last sync).
           if git push "$HM_URL" "$BRANCH_SHA:refs/heads/main"; then
             echo "sync: fast-forward push ok"
+            echo "hm_tip_sha=$BRANCH_SHA" >> "$GITHUB_OUTPUT"
           else
             # HM main diverged — a trusted party committed directly to the standalone
             # repo (e.g. a README edit). Instead of failing (or force-pushing, which
@@ -69,4 +81,32 @@ jobs:
             git merge --no-edit -X ours "$BRANCH_SHA" \
               -m "sync: merge monorepo packages/hatchi-maxchi (preserve trusted HM edits)"
             git push "$HM_URL" hm-sync:refs/heads/main
+            # Tip after merge is the merge commit on hm-sync
+            echo "hm_tip_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Transitive gate: do not leave "Sync HaTchi-MaXchi" green while the
+  # standalone repo's CI is red for the tip we just pushed.
+  wait-hm-ci:
+    name: Wait for hatchi-maxchi CI
+    needs: sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Poll standalone CI until green (or fail)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HM_TIP: ${{ needs.sync.outputs.hm_tip_sha }}
+        run: |
+          set -euo pipefail
+          # Give Actions a moment to create the workflow run on HM.
+          sleep 15
+          # Prefer the tip SHA when known; fall back to latest main run.
+          if [ -n "${HM_TIP:-}" ]; then
+            python scripts/hm_standalone_ci_status.py --sha "$HM_TIP" --wait 900 --poll 25
+          else
+            python scripts/hm_standalone_ci_status.py --wait 900 --poll 25
           fi

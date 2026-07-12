@@ -305,6 +305,26 @@ jobs:
           fi
         done
 
+  # Transitive gate: hatchi-maxchi standalone CI (behaviour / visual / WCAG /
+  # Nu) is not fully re-run in the monorepo. If that repo's main CI is red,
+  # Dazzle main must not look green. Script uses the public Actions API.
+  # After a packages/hatchi-maxchi sync, Sync HaTchi-MaXchi also waits.
+  hm-standalone-ci:
+    name: HaTchi-MaXchi standalone CI (mirror)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Require hatchi-maxchi main CI green
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Prefer last *completed* main run so an in-flight post-sync CI
+        # does not fail every concurrent Dazzle matrix. Sync workflow
+        # separately waits on the tip SHA it just pushed.
+        run: python scripts/hm_standalone_ci_status.py --prefer-completed
+
   type-check:
     runs-on: ubuntu-latest
 
