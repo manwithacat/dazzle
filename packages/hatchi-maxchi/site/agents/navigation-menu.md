@@ -16,7 +16,7 @@ Top product/site nav with optional mega-menu panels — horizontal, not the app-
   <ul class="navigation-menu__list">
     <li class="navigation-menu__item"><a class="navigation-menu__link" href="#" aria-current="page">Home</a></li>
     <li class="navigation-menu__item">
-      <details>
+      <details class="navigation-menu__branch">
         <summary class="navigation-menu__trigger">Product <span class="navigation-menu__caret" aria-hidden="true">▾</span></summary>
         <div class="navigation-menu__panel" data-layout="mega">
           <div class="navigation-menu__group">
@@ -33,7 +33,7 @@ Top product/site nav with optional mega-menu panels — horizontal, not the app-
       </details>
     </li>
     <li class="navigation-menu__item">
-      <details>
+      <details class="navigation-menu__branch">
         <summary class="navigation-menu__trigger">Resources <span class="navigation-menu__caret" aria-hidden="true">▾</span></summary>
         <div class="navigation-menu__panel">
           <div class="navigation-menu__group"><a href="#">Docs</a><a href="#">Changelog</a><a href="#">Community</a></div>
@@ -54,23 +54,23 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 ### Seams
 
 - `[data-dz-navigation-menu]` / `.dz-navigation-menu` scopes exclusive open
-- `details` + `summary.dz-navigation-menu__trigger` for panels
+- `details.dz-navigation-menu__branch` + `summary.dz-navigation-menu__trigger`
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
-| Let the controller close sibling details on toggle | Leave multi-open mega panels as native multi-details |
+| Let the controller close siblings on toggle and outside click | Leave multi-open mega panels as bare multi-details |
 
 ### Pitfalls
 
-- Native details allow multi-open — ship dz-navigation-menu.js
+- Native details allow multi-open and ignore outside click — ship dz-navigation-menu.js
 - Do not confuse with menubar (app File/Edit) or app-shell sidebar
 
 ### Keyboard / AT
 
 - aria-label on root nav
-- Keyboard: platform details toggle via Enter/Space on summary
+- Keyboard: Enter/Space toggles summary; Escape dismisses open panels
 
 ### Related parts
 
@@ -114,7 +114,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-shadcn parity (HMC-039). Distinct from menubar (app chrome) and app-shell (sidebar). Mega layout via data-dz-layout=mega. Exclusive open across panels: controllers/dz-navigation-menu.js (gallery probe navigation_menu.exclusive_open).
+shadcn parity (HMC-039). Distinct from menubar (app chrome) and app-shell (sidebar). Mega layout via data-dz-layout=mega. Exclusive open + outside dismiss: controllers/dz-navigation-menu.js (gallery probes navigation_menu.exclusive_open, navigation_menu.dismiss_outside).
 
 ## Source files
 

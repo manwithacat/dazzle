@@ -2225,8 +2225,9 @@ def select(source: str, id: str) -> str:
             "</div></details></div>",
             notes="shadcn parity (HMC-038). Native <code>details</code> for "
             "open state; <code>controllers/dz-menubar.js</code> enforces "
-            "exclusive open across items (gallery probe "
-            "<code>menubar.exclusive_open</code>). Compose with menu "
+            "exclusive open + outside/Escape dismiss (gallery probes "
+            "<code>menubar.exclusive_open</code>, "
+            "<code>menubar.dismiss_outside</code>). Compose with menu "
             "Hyperpart for denser item lists.",
             tags=("navigation", "interactive"),
             controller="controllers/dz-menubar.js",
@@ -2237,19 +2238,19 @@ def select(source: str, id: str) -> str:
                     "`details.dz-menubar__item` + `summary.dz-menubar__trigger` for panels",
                 ),
                 pitfalls=(
-                    "Native details allow multi-open — never ship menubar without "
-                    "dz-menubar.js exclusive-open",
+                    "Native details allow multi-open and ignore outside click — "
+                    "never ship menubar without dz-menubar.js",
                     "Do not nest menubars; one root per chrome strip",
                 ),
                 do_dont=(
                     (
-                        "Let the controller close siblings on toggle",
+                        "Let the controller close siblings on toggle and outside click",
                         "Hand-roll per-item open flags in Alpine/React",
                     ),
                 ),
                 a11y_keys=(
                     "role=menubar / menuitem on panel actions",
-                    "Keyboard: platform details toggle via Enter/Space on summary",
+                    "Keyboard: Enter/Space toggles summary; Escape dismisses open panels",
                 ),
                 composes_with=("menu",),
             ),
@@ -2358,7 +2359,7 @@ def select(source: str, id: str) -> str:
             '<li class="dz-navigation-menu__item">'
             '<a class="dz-navigation-menu__link" href="#" aria-current="page">Home</a></li>'
             '<li class="dz-navigation-menu__item">'
-            "<details>"
+            '<details class="dz-navigation-menu__branch">'
             '<summary class="dz-navigation-menu__trigger">Product '
             '<span class="dz-navigation-menu__caret" aria-hidden="true">▾</span></summary>'
             '<div class="dz-navigation-menu__panel" data-dz-layout="mega">'
@@ -2373,7 +2374,7 @@ def select(source: str, id: str) -> str:
             '<a href="#">Observability<small>Pulse + fitness</small></a>'
             "</div></div></details></li>"
             '<li class="dz-navigation-menu__item">'
-            "<details>"
+            '<details class="dz-navigation-menu__branch">'
             '<summary class="dz-navigation-menu__trigger">Resources '
             '<span class="dz-navigation-menu__caret" aria-hidden="true">▾</span></summary>'
             '<div class="dz-navigation-menu__panel">'
@@ -2387,30 +2388,32 @@ def select(source: str, id: str) -> str:
             "</ul></nav>",
             notes="shadcn parity (HMC-039). Distinct from menubar (app chrome) "
             "and app-shell (sidebar). Mega layout via "
-            "<code>data-dz-layout=mega</code>. Exclusive open across panels: "
-            "<code>controllers/dz-navigation-menu.js</code> (gallery probe "
-            "<code>navigation_menu.exclusive_open</code>).",
+            "<code>data-dz-layout=mega</code>. Exclusive open + outside dismiss: "
+            "<code>controllers/dz-navigation-menu.js</code> (gallery probes "
+            "<code>navigation_menu.exclusive_open</code>, "
+            "<code>navigation_menu.dismiss_outside</code>).",
             tags=("navigation", "interactive"),
             controller="controllers/dz-navigation-menu.js",
             contracts=("contracts/navigation_menu.py",),
             guidance=Guidance(
                 seams=(
                     "`[data-dz-navigation-menu]` / `.dz-navigation-menu` scopes exclusive open",
-                    "`details` + `summary.dz-navigation-menu__trigger` for panels",
+                    "`details.dz-navigation-menu__branch` + `summary.dz-navigation-menu__trigger`",
                 ),
                 pitfalls=(
-                    "Native details allow multi-open — ship dz-navigation-menu.js",
+                    "Native details allow multi-open and ignore outside click — "
+                    "ship dz-navigation-menu.js",
                     "Do not confuse with menubar (app File/Edit) or app-shell sidebar",
                 ),
                 do_dont=(
                     (
-                        "Let the controller close sibling details on toggle",
-                        "Leave multi-open mega panels as native multi-details",
+                        "Let the controller close siblings on toggle and outside click",
+                        "Leave multi-open mega panels as bare multi-details",
                     ),
                 ),
                 a11y_keys=(
                     "aria-label on root nav",
-                    "Keyboard: platform details toggle via Enter/Space on summary",
+                    "Keyboard: Enter/Space toggles summary; Escape dismisses open panels",
                 ),
                 composes_with=("menubar", "app-shell"),
             ),

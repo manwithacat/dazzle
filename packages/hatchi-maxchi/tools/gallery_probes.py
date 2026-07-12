@@ -88,6 +88,7 @@ PROBES: tuple[Probe, ...] = (
             "trigger": "summary.dz-menubar__trigger, summary.menubar__trigger",
             "sequence": ["File", "Edit"],
             "expect_open_labels": ["Edit"],
+            "scope": ".hm-preview",
         },
         fix_surface="controller",
         intent="exclusive",
@@ -108,15 +109,15 @@ PROBES: tuple[Probe, ...] = (
                 "[data-dz-navigation-menu], .dz-navigation-menu, "
                 ".navigation-menu, [data-navigation-menu]"
             ),
-            # bare <details> under each nav item (gallery partial has no item class)
             "item": (
-                "[data-dz-navigation-menu] details, .dz-navigation-menu details, "
-                ".navigation-menu details, [data-navigation-menu] details"
+                "details.dz-navigation-menu__branch, details.navigation-menu__branch, "
+                "[data-dz-navigation-menu] details, .navigation-menu details"
             ),
             "trigger": ("summary.dz-navigation-menu__trigger, summary.navigation-menu__trigger"),
             "sequence": ["Product", "Resources"],
             # summary text includes caret glyph — match by contains
             "expect_open_contains": ["Resources"],
+            "scope": ".hm-preview",
         },
         fix_surface="controller",
         intent="exclusive",
@@ -165,9 +166,59 @@ PROBES: tuple[Probe, ...] = (
             "sequence": ["Platform", "Design systems"],
             "expect_open_contains_all": ["Engineering", "Platform", "Design systems"],
             "expect_min_open": 3,
+            # ignore .hm-contract-live__preview twin forest
+            "scope": ".hm-preview",
         },
         fix_surface="partial",
         intent="multi_open",
+    ),
+    Probe(
+        id="menubar.dismiss_outside",
+        stem="menubar",
+        page="hyperparts/menubar.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking outside the menubar closes the open panel "
+            "(app chrome must not leave File/Edit stuck open)"
+        ),
+        kind="details_dismiss_outside",
+        params={
+            "root": "[data-dz-menubar], .dz-menubar, .menubar, [data-menubar]",
+            "item": "details.dz-menubar__item, details.menubar__item",
+            "trigger": "summary.dz-menubar__trigger, summary.menubar__trigger",
+            "open_label": "File",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
+    Probe(
+        id="navigation_menu.dismiss_outside",
+        stem="navigation-menu",
+        page="hyperparts/navigation-menu.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking outside the navigation menu closes the open panel "
+            "(mega panels must not stick after leaving the nav)"
+        ),
+        kind="details_dismiss_outside",
+        params={
+            "root": (
+                "[data-dz-navigation-menu], .dz-navigation-menu, "
+                ".navigation-menu, [data-navigation-menu]"
+            ),
+            "item": (
+                "details.dz-navigation-menu__branch, details.navigation-menu__branch, "
+                "[data-dz-navigation-menu] details, .navigation-menu details"
+            ),
+            "trigger": ("summary.dz-navigation-menu__trigger, summary.navigation-menu__trigger"),
+            "open_label": "Product",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
     ),
 )
 
@@ -188,6 +239,31 @@ def _open_item_selector(item_sel: str) -> str:
     """
     parts = [p.strip() for p in item_sel.split(",") if p.strip()]
     return ", ".join(f"{p}[open]" for p in parts)
+
+
+def _probe_scope(page: Any, params: dict[str, Any]) -> Any:
+    """Prefer gallery demo scope so contract-live / code exemplars are ignored.
+
+    Gallery pages often mount a second live partial under
+    ``.hm-contract-live__preview`` (e.g. tree). Default scope ``.hm-preview``
+    keeps open-counts honest. Set ``scope: null`` / empty to search whole page.
+    """
+    if "scope" in params and not params["scope"]:
+        return page.locator("body")
+    scope_sel = params.get("scope", ".hm-preview")
+    scoped = page.locator(scope_sel).first
+    if scoped.count() > 0:
+        return scoped
+    return page.locator("body")
+
+
+def _open_labels(scope: Any, item_sel: str) -> list[str]:
+    open_items = scope.locator(_open_item_selector(item_sel))
+    n = open_items.count()
+    # direct child summary only — nested forests (tree) have descendant summaries
+    return [
+        _norm_label(open_items.nth(i).locator(":scope > summary").inner_text()) for i in range(n)
+    ]
 
 
 def _labels_match_expect(
@@ -222,14 +298,15 @@ def _run_exclusive_details_open(page: Any, probe: Probe) -> dict[str, Any]:
     if expect_exact is None and expect_contains is None:
         expect_exact = sequence[-1:]
 
-    root_loc = page.locator(params["root"])
+    scope = _probe_scope(page, params)
+    root_loc = scope.locator(params["root"])
     if root_loc.count() == 0:
         return {
             "verdict": "ERROR",
-            "detail": f"root not found ({params['root']})",
+            "detail": f"root not found ({params['root']}) in scope",
         }
 
-    n_items = page.locator(item_sel).count()
+    n_items = scope.locator(item_sel).count()
     if n_items < len(sequence):
         return {
             "verdict": "ERROR",
@@ -237,19 +314,14 @@ def _run_exclusive_details_open(page: Any, probe: Probe) -> dict[str, Any]:
         }
 
     for label in sequence:
-        trig = page.locator(trigger_sel).filter(has_text=label).first
+        trig = scope.locator(trigger_sel).filter(has_text=label).first
         if trig.count() == 0:
             return {"verdict": "ERROR", "detail": f"trigger not found: {label!r}"}
         trig.click()
         page.wait_for_timeout(80)
 
-    open_items = page.locator(_open_item_selector(item_sel))
-    open_count = open_items.count()
-    # direct child summary only — nested forests (tree) have descendant summaries
-    open_labels = [
-        _norm_label(open_items.nth(i).locator(":scope > summary").inner_text())
-        for i in range(open_count)
-    ]
+    open_labels = _open_labels(scope, item_sel)
+    open_count = len(open_labels)
 
     if _labels_match_expect(
         open_labels, expect_exact=expect_exact, expect_contains=expect_contains
@@ -281,11 +353,12 @@ def _run_multi_details_open(page: Any, probe: Probe) -> dict[str, Any]:
     expect_all: list[str] = list(params.get("expect_open_contains_all") or sequence)
     min_open = int(params.get("expect_min_open") or len(expect_all) or 2)
 
-    root_loc = page.locator(params["root"])
+    scope = _probe_scope(page, params)
+    root_loc = scope.locator(params["root"])
     if root_loc.count() == 0:
-        return {"verdict": "ERROR", "detail": f"root not found ({params['root']})"}
+        return {"verdict": "ERROR", "detail": f"root not found ({params['root']}) in scope"}
 
-    n_items = page.locator(item_sel).count()
+    n_items = scope.locator(item_sel).count()
     if n_items < min_open:
         return {
             "verdict": "ERROR",
@@ -293,19 +366,15 @@ def _run_multi_details_open(page: Any, probe: Probe) -> dict[str, Any]:
         }
 
     for label in sequence:
-        trig = page.locator(trigger_sel).filter(has_text=label).first
+        trig = scope.locator(trigger_sel).filter(has_text=label).first
         if trig.count() == 0:
             return {"verdict": "ERROR", "detail": f"trigger not found: {label!r}"}
         # open if closed (click summary toggles)
         trig.click()
         page.wait_for_timeout(80)
 
-    open_items = page.locator(_open_item_selector(item_sel))
-    open_count = open_items.count()
-    open_labels = [
-        _norm_label(open_items.nth(i).locator(":scope > summary").inner_text())
-        for i in range(open_count)
-    ]
+    open_labels = _open_labels(scope, item_sel)
+    open_count = len(open_labels)
     joined = " ".join(open_labels).lower()
     missing = [n for n in expect_all if n.lower() not in joined]
     if open_count >= min_open and not missing:
@@ -327,9 +396,54 @@ def _run_multi_details_open(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_details_dismiss_outside(page: Any, probe: Probe) -> dict[str, Any]:
+    """Open first trigger, click outside root, assert no open details remain."""
+    params = probe.params
+    item_sel = params["item"]
+    trigger_sel = params["trigger"]
+    open_label = params.get("open_label")  # optional filter text
+
+    scope = _probe_scope(page, params)
+    root = scope.locator(params["root"]).first
+    if root.count() == 0:
+        return {"verdict": "ERROR", "detail": f"root not found ({params['root']})"}
+
+    trig = scope.locator(trigger_sel)
+    if open_label:
+        trig = trig.filter(has_text=open_label)
+    trig = trig.first
+    if trig.count() == 0:
+        return {"verdict": "ERROR", "detail": "trigger not found"}
+    trig.click()
+    page.wait_for_timeout(80)
+    before = _open_labels(scope, item_sel)
+    if not before:
+        return {"verdict": "ERROR", "detail": "failed to open panel before outside click"}
+
+    # click page chrome well outside the component
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(100)
+    after = _open_labels(scope, item_sel)
+    if not after:
+        return {
+            "verdict": "PASS",
+            "detail": f"dismissed after outside click (was {before})",
+            "open_labels_before": before,
+            "open_labels": after,
+        }
+    return {
+        "verdict": "FAIL",
+        "detail": f"outside click left open_labels={after} (before={before})",
+        "open_labels_before": before,
+        "open_labels": after,
+        "dom_hint": item_sel,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
+    "details_dismiss_outside": _run_details_dismiss_outside,
 }
 
 

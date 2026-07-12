@@ -43,17 +43,17 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 | Do | Don't |
 |---|---|
-| Let the controller close siblings on toggle | Hand-roll per-item open flags in Alpine/React |
+| Let the controller close siblings on toggle and outside click | Hand-roll per-item open flags in Alpine/React |
 
 ### Pitfalls
 
-- Native details allow multi-open — never ship menubar without dz-menubar.js exclusive-open
+- Native details allow multi-open and ignore outside click — never ship menubar without dz-menubar.js
 - Do not nest menubars; one root per chrome strip
 
 ### Keyboard / AT
 
 - role=menubar / menuitem on panel actions
-- Keyboard: platform details toggle via Enter/Space on summary
+- Keyboard: Enter/Space toggles summary; Escape dismisses open panels
 
 ### Related parts
 
@@ -91,7 +91,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-shadcn parity (HMC-038). Native details for open state; controllers/dz-menubar.js enforces exclusive open across items (gallery probe menubar.exclusive_open). Compose with menu Hyperpart for denser item lists.
+shadcn parity (HMC-038). Native details for open state; controllers/dz-menubar.js enforces exclusive open + outside/Escape dismiss (gallery probes menubar.exclusive_open, menubar.dismiss_outside). Compose with menu Hyperpart for denser item lists.
 
 ## Source files
 

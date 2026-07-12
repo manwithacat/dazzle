@@ -29,7 +29,9 @@ def test_open_item_selector_applies_to_each_branch() -> None:
 def test_catalog_has_core_exclusive_open_probes() -> None:
     ids = {p.id for p in PROBES}
     assert "menubar.exclusive_open" in ids
+    assert "menubar.dismiss_outside" in ids
     assert "navigation_menu.exclusive_open" in ids
+    assert "navigation_menu.dismiss_outside" in ids
     assert "accordion.exclusive_open" in ids
     assert "tree.multi_open" in ids
     for p in PROBES:

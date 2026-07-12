@@ -17,6 +17,8 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `navigation_menu.exclusive_open` | `navigation-menu` | exclusive | high | controller | Opening a second navigation-menu panel closes the previously open panel (exclusive open — Product then Resources leaves only Resources open) |
 | `accordion.exclusive_open` | `accordion` | exclusive | medium | partial | Accordion items sharing the HTML name= attribute stay exclusive (open second trigger leaves only that panel open — zero JS) |
 | `tree.multi_open` | `tree` | multi_open | medium | partial | Tree nodes stay multi-open by design — expanding Platform then Design systems leaves both open (native details forest, no exclusive controller) |
+| `menubar.dismiss_outside` | `menubar` | exclusive | high | controller | Clicking outside the menubar closes the open panel (app chrome must not leave File/Edit stuck open) |
+| `navigation_menu.dismiss_outside` | `navigation-menu` | exclusive | high | controller | Clicking outside the navigation menu closes the open panel (mega panels must not stick after leaving the nav) |
 
 ## Loop (autonomous improve)
 

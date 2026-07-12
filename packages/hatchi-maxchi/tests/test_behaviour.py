@@ -107,17 +107,56 @@ def test_navigation_menu_exclusive_open(page) -> None:  # type: ignore[no-untype
 def test_tree_multi_open(page) -> None:  # type: ignore[no-untyped-def]
     """Gallery probe tree.multi_open — sibling branches stay open together."""
     goto_part(page, "tree")
+    # Scope to gallery demo — contract-live preview mounts a second forest
+    scope = page.locator(".hm-preview")
     item = "details.dz-tree-node, details.tree-node"
     trigger = "summary.dz-tree-summary, summary.tree-summary"
-    page.locator(trigger).filter(has_text="Platform").first.click()
+    scope.locator(trigger).filter(has_text="Platform").first.click()
     page.wait_for_timeout(80)
-    page.locator(trigger).filter(has_text="Design systems").first.click()
+    scope.locator(trigger).filter(has_text="Design systems").first.click()
     page.wait_for_timeout(80)
-    labels = page.locator(f"{item}[open] summary").all_text_contents()
+    labels = scope.locator(f"{item}[open] > summary").all_text_contents()
     labels = [" ".join(t.split()) for t in labels]
     joined = " ".join(labels)
     assert "Platform" in joined and "Design systems" in joined, labels
     assert "Engineering" in joined, labels
+
+
+def test_menubar_dismiss_outside(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery probe menubar.dismiss_outside — click outside closes File."""
+    goto_part(page, "menubar")
+    scope = page.locator(".hm-preview")
+    item = "details.dz-menubar__item, details.menubar__item"
+    trigger = "summary.dz-menubar__trigger, summary.menubar__trigger"
+    scope.locator(trigger).filter(has_text="File").first.click()
+    page.wait_for_timeout(80)
+    assert scope.locator(f"{item}[open]").count() == 1
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(100)
+    assert scope.locator(f"{item}[open]").count() == 0
+
+
+def test_navigation_menu_dismiss_outside(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery probe navigation_menu.dismiss_outside — click outside closes panel."""
+    goto_part(page, "navigation-menu")
+    scope = page.locator(".hm-preview")
+    trigger = "summary.dz-navigation-menu__trigger, summary.navigation-menu__trigger"
+    scope.locator(trigger).filter(has_text="Product").first.click()
+    page.wait_for_timeout(80)
+    assert (
+        scope.locator(
+            "details.navigation-menu__branch[open], details.dz-navigation-menu__branch[open], "
+            ".navigation-menu details[open]"
+        ).count()
+        >= 1
+    )
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(100)
+    open_n = scope.locator(
+        "details.navigation-menu__branch[open], details.dz-navigation-menu__branch[open], "
+        ".navigation-menu details[open]"
+    ).count()
+    assert open_n == 0, f"expected dismiss, still open={open_n}"
 
 
 def test_palette_esc_closes_even_with_query_text(page) -> None:  # type: ignore[no-untyped-def]
