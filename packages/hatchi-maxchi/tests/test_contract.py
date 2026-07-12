@@ -236,6 +236,24 @@ def test_committed_gallery_js_carries_current_controllers() -> None:
     )
 
 
+def _normalize_gallery_bytes(data: bytes) -> bytes:
+    """Drop brand-meta git stamp for byte-identity compare.
+
+    The gallery brand strip embeds HEAD short SHA + commit time. Those change
+    on every new commit that rebuilds the site, so a committed ``index.html``
+    can never match a post-commit rebuild of the *same* tree tip. Version and
+    structure still drift-gate; only the reporting stamp is normalized.
+    """
+    text = data.decode("utf-8")
+    text = re.sub(
+        r'<div class="hm-brand-meta"[^>]*>[\s\S]*?</div>',
+        '<div class="hm-brand-meta"></div>',
+        text,
+        count=1,
+    )
+    return text.encode("utf-8")
+
+
 def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore[no-untyped-def]
     """The committed gallery must equal a fresh standalone rebuild — the
     boundary acceptance test (Phase 3): the split repo regenerates its own
@@ -264,7 +282,12 @@ def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore
         f"committed artifacts the build no longer emits: {stale_extra} — delete them"
     )
     for rel, fq in fresh_files.items():
-        assert fq.read_bytes() == committed_files[rel].read_bytes(), (
+        fresh_b = fq.read_bytes()
+        committed_b = committed_files[rel].read_bytes()
+        if rel.endswith(".html"):
+            fresh_b = _normalize_gallery_bytes(fresh_b)
+            committed_b = _normalize_gallery_bytes(committed_b)
+        assert fresh_b == committed_b, (
             f"site/{rel} is stale or the build is nondeterministic — "
             "re-run python site/build_site.py and commit"
         )
@@ -273,8 +296,10 @@ def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore
     # Blueprint sub-pages regenerate byte-identically too — stale committed
     # HTML would make test_blueprints.py exercise outdated markup while green.
     for bp_html in sorted((tmp_path / "blueprints").glob("*.html")):
-        fresh = bp_html.read_text(encoding="utf-8")
-        committed = (PKG / "site" / "blueprints" / bp_html.name).read_text(encoding="utf-8")
+        fresh = _normalize_gallery_bytes(bp_html.read_bytes()).decode("utf-8")
+        committed = _normalize_gallery_bytes(
+            (PKG / "site" / "blueprints" / bp_html.name).read_bytes()
+        ).decode("utf-8")
         assert fresh == committed, (
             f"site/blueprints/{bp_html.name} is stale — re-run python site/build_site.py and commit"
         )
