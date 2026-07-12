@@ -19,6 +19,7 @@ from dazzle.render.fragment.ingest.models import (
     BarTrack,
     BoxPlot,
     Bullet,
+    Calendar,
     ComboboxField,
     DateRange,
     Diagram,
@@ -48,6 +49,7 @@ from dazzle.render.fragment.ingest.models import (
     TaskInbox,
     TimelineEvent,
     TimeSeries,
+    Tree,
 )
 
 _BULLET_BAND_COLORS: dict[str, str] = {
@@ -914,6 +916,14 @@ def task_inbox_root_attrs(_t: TaskInbox) -> str:
     return "data-dz-task-inbox"
 
 
+def tree_root_attrs(_t: Tree) -> str:
+    return "data-dz-tree"
+
+
+def calendar_root_attrs(_c: Calendar) -> str:
+    return "data-dz-calendar"
+
+
 def render_list_region(lr: ListRegion) -> str:
     """Model → list-region root (matches HM contracts/list_region.py)."""
     root_attrs = list_region_root_attrs(lr)
@@ -983,6 +993,31 @@ def render_task_inbox(t: TaskInbox) -> str:
         f'<div class="dz-task-inbox-region" {root_attrs} '
         f'data-dz-region-name="{rname}">{t.body_html}</div>'
     )
+
+
+def render_tree(t: Tree) -> str:
+    """Model → tree region (matches HM contracts/tree.py)."""
+    root_attrs = tree_root_attrs(t)
+    return f'<div class="dz-tree" {root_attrs}>{t.body_html}</div>'
+
+
+def render_calendar(c: Calendar) -> str:
+    """Model → calendar region (matches HM contracts/calendar.py)."""
+    root_attrs = calendar_root_attrs(c)
+    view = c.view if c.view in ("day", "week", "month") else "month"
+    view_esc = _html.escape(view, quote=True)
+    if c.body_html.strip():
+        inner = c.body_html
+    else:
+        items = "".join(
+            f'<li class="dz-calendar__event">'
+            f'<time datetime="{_html.escape(ev.when, quote=True)}">'
+            f"{_html.escape(ev.when)}</time> {_html.escape(ev.label)}"
+            f"</li>"
+            for ev in c.events
+        )
+        inner = f"<ul>{items}</ul>"
+    return f'<div class="dz-calendar dz-calendar--view-{view_esc}" {root_attrs}>{inner}</div>'
 
 
 def render_date_range(d: DateRange) -> str:

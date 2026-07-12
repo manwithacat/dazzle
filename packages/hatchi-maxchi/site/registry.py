@@ -3552,6 +3552,7 @@ def select(source: str, id: str) -> str:
             "Hierarchy on native <details>/<summary> — indented children, "
             "rotating chevron, child-count chips. No JS at all.",
             '<div class="hm-measure">'
+            '<div class="dz-tree" data-dz-tree>'
             '<details class="dz-tree-node" open>'
             '<summary class="dz-tree-summary">'
             '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
@@ -3590,14 +3591,16 @@ def select(source: str, id: str) -> str:
             '<span class="dz-tree-label">Design systems</span>'
             "</summary></details>"
             "</div></details>"
-            "</div>",
-            notes="Pure hypermedia: state is the native <code>open</code> "
-            "attribute, the chevron rotation keys off "
-            "<code>.dz-tree-node[open]</code>, and each level indents via its "
-            "<code>dz-tree-children</code> wrapper. The server emits depth-0 "
-            "nodes <code>open</code> by default; the count chip renders only "
-            "for nodes with children.",
+            "</div></div>",
+            notes="Dual-lock root is <code>data-dz-tree</code> "
+            "(<code>contracts/tree.py</code>) on the forest wrapper. Pure "
+            "hypermedia: state is the native <code>open</code> attribute, the "
+            "chevron rotation keys off <code>.dz-tree-node[open]</code>, and "
+            "each level indents via its <code>dz-tree-children</code> wrapper. "
+            "The server emits depth-0 nodes <code>open</code> by default; the "
+            "count chip renders only for nodes with children.",
             tags=("data",),
+            contracts=("contracts/tree.py",),
         ),
         Hyperpart(
             "diagram",

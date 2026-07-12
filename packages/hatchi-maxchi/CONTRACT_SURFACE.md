@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 48 |
+| Modules | 50 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -20,6 +20,7 @@ blast radius (who embeds / refuses this part).
 | `bar_track` | `bar-track` | `[data-dz-bar-track]` | [data-dz-bar-track][data-dz-bar-track=present] | BarTrack(max_value:float:opt; rows:list[BarTrackRow]:opt); BarTrackRow(fill_pct:float:opt; formatted:str:opt; label:str:req; value:float:opt) |
 | `box_plot` | `box-plot` | `[data-dz-box-plot]` | [data-dz-box-plot][data-dz-box-plot=present] | BoxPlot(empty_message:str:opt; groups:list[BoxPlotGroup]:opt; label:str:opt; svg_html:str:opt); BoxPlotGroup(label:str:req; max:float:opt; median:float:opt; min:float:opt; q1:float:opt; q3:float:opt; samples:int:opt) |
 | `bullet` | `bullet` | `[data-dz-bullet]` | [data-dz-bullet][data-dz-bullet=present] | Bullet(bands:list[BulletBand]:opt; empty_message:str:opt; max_value:float:opt; rows:list[BulletRow]:opt); BulletBand(color:Literal:opt; from_value:float:req; label:str:opt; to_value:float:req); BulletRow(actual:float:req; label:str:req; target:float\|None:opt) |
+| `calendar` | `calendar` | `[data-dz-calendar]` | [data-dz-calendar][data-dz-calendar=present] | Calendar(body_html:str:opt; events:list[CalendarEvent]:opt; view:Literal:opt); CalendarEvent(label:str:req; when:str:opt) |
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |
 | `combobox` | `combobox` | `[data-dz-combobox]` | [data-dz-combobox][name=present] | ComboboxField(field_id:str:req; label:str:req; name:str:req; options:list[ComboboxOption]:req; placeholder:str:opt; selected:str:opt); ComboboxOption(label:str:req; value:str:req) |
@@ -60,6 +61,7 @@ blast radius (who embeds / refuses this part).
 | `task_inbox` | `task-inbox` | `[data-dz-task-inbox]` | [data-dz-task-inbox][data-dz-task-inbox=present] | TaskInbox(body_html:str:opt; region_name:str:opt) |
 | `time_series` | `time-series` | `[data-dz-time-series]` | [data-dz-time-series][data-dz-time-series=present] | TimeSeries(empty_message:str:opt; label:str:opt; legend_html:str:opt; peak_display:str:opt; points:list[TimeSeriesPoint]:opt; series:list[TimeSeriesLayer]:opt; svg_html:str:opt; view:Literal:opt); TimeSeriesLayer(name:str:req; points:list[TimeSeriesPoint]:opt); TimeSeriesPoint(label:str:req; value:float:opt) |
 | `timeline` | `timeline` | `[data-dz-timeline-item]` | [data-dz-timeline-item][data-dz-timeline-item=present] | TimelineEvent(bullet_html:str:opt; date_label:str:opt; fields_html:str:opt; title:str:req) |
+| `tree` | `tree` | `[data-dz-tree]` | [data-dz-tree][data-dz-tree=present] | Tree(body_html:str:opt) |
 | `wizard` | `wizard` | `[data-dz-wizard]` | [data-dz-wizard][data-dz-step=present]; [data-dz-stage][data-dz-stage=present]; [data-dz-state][data-dz-state=one_of:complete\|current\|pending] | — |
 
 ## Related

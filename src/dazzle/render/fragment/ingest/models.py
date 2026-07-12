@@ -656,6 +656,33 @@ class TaskInbox(BaseModel):
     body_html: str = ""
 
 
+# ── Tree seam copy (contracts/tree.py) ───────────────────────────────
+
+
+class Tree(BaseModel):
+    """Tree region shell — dual-lock unit for tree."""
+
+    body_html: str = ""
+
+
+# ── Calendar seam copy (contracts/calendar.py) ───────────────────────
+
+
+class CalendarEvent(BaseModel):
+    """One calendar event row."""
+
+    label: str
+    when: str = ""
+
+
+class Calendar(BaseModel):
+    """Calendar event list — dual-lock unit for calendar."""
+
+    view: Literal["day", "week", "month"] = "month"
+    events: list[CalendarEvent] = Field(default_factory=list)
+    body_html: str = ""
+
+
 # ── Radar seam copy (contracts/radar.py) ─────────────────────────────
 
 

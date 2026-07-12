@@ -26,6 +26,8 @@ from dazzle.render.fragment.ingest import BoxPlotGroup as BoxPlotGroupSeam
 from dazzle.render.fragment.ingest import Bullet as BulletSeam
 from dazzle.render.fragment.ingest import BulletBand as BulletBandSeam
 from dazzle.render.fragment.ingest import BulletRow as BulletRowSeam
+from dazzle.render.fragment.ingest import Calendar as CalendarSeam
+from dazzle.render.fragment.ingest import CalendarEvent as CalendarEventSeam
 from dazzle.render.fragment.ingest import Diagram as DiagramSeam
 from dazzle.render.fragment.ingest import Funnel as FunnelSeam
 from dazzle.render.fragment.ingest import FunnelStage as FunnelStageSeam
@@ -41,10 +43,12 @@ from dazzle.render.fragment.ingest import TimelineEvent as TimelineEventSeam
 from dazzle.render.fragment.ingest import TimeSeries as TimeSeriesSeam
 from dazzle.render.fragment.ingest import TimeSeriesLayer as TimeSeriesLayerSeam
 from dazzle.render.fragment.ingest import TimeSeriesPoint as TimeSeriesPointSeam
+from dazzle.render.fragment.ingest import Tree as TreeSeam
 from dazzle.render.fragment.ingest import (
     render_bar_chart,
     render_box_plot,
     render_bullet,
+    render_calendar,
     render_diagram,
     render_funnel,
     render_heatmap,
@@ -54,6 +58,7 @@ from dazzle.render.fragment.ingest import (
     render_sparkline,
     render_time_series,
     render_timeline_event,
+    render_tree,
 )
 from dazzle.render.fragment.primitives import (
     BarChart,
@@ -212,15 +217,13 @@ class _RenderChartsMixin:
         return f'<div class="dz-kanban">{cols}</div>'
 
     def _emit_calendar_grid(self, c: CalendarGrid, ctx: RenderContext) -> str:
-        cls = f"dz-calendar dz-calendar--view-{c.view}"
-        events = "".join(
-            f'<li class="dz-calendar__event">'
-            f'<time datetime="{ctx.escape_attr(when)}">{ctx.escape(when)}</time> '
-            f"{ctx.escape(label)}"
-            f"</li>"
-            for label, when in c.events
+        """Render CalendarGrid via HM dual-lock calendar seam."""
+        return render_calendar(
+            CalendarSeam(
+                view=c.view,
+                events=[CalendarEventSeam(label=label, when=when) for label, when in c.events],
+            )
         )
-        return f'<div class="{cls}"><ul>{events}</ul></div>'
 
     def _emit_diagram(self, d: Diagram, ctx: RenderContext) -> str:
         """Render an entity-relationship diagram.
@@ -409,14 +412,15 @@ class _RenderChartsMixin:
         return render_sparkline(SparklineSeam(points=list(s.points), empty_message=s.empty_message))
 
     def _emit_tree(self, t: Tree, ctx: RenderContext) -> str:
-        """Render a Tree matching legacy `workspace/regions/tree.html`
-        byte-for-byte: recursive `<details class="dz-tree-node">` with
-        chevron SVG + label + optional child count, top-level depth-0
-        nodes open by default.
+        """Render a Tree via HM dual-lock tree seam.
+
+        Host builds recursive details/summary nodes; dual-lock roots
+        ``data-dz-tree`` on ``dz-tree``.
         """
         if not t.nodes:
             return ""
-        return "".join(self._emit_tree_node(n, depth=0, ctx=ctx) for n in t.nodes)
+        body = "".join(self._emit_tree_node(n, depth=0, ctx=ctx) for n in t.nodes)
+        return render_tree(TreeSeam(body_html=body))
 
     def _emit_tree_node(self, node: TreeNode, *, depth: int, ctx: RenderContext) -> str:
         open_attr = " open" if depth == 0 else ""

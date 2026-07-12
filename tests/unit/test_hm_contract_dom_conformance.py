@@ -69,8 +69,8 @@ def test_typed_path_is_sole_emitter() -> None:
     # (not every data-dz-widget — file-upload/pdf-viewer use the same attr).
     assembly = re.compile(
         r"""(?x)
-        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|blur-grace-ms|confirm-hold-ms))
-        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|blur-grace-ms|confirm-hold-ms))
+        (?:f['\"].{0,80}data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|blur-grace-ms|confirm-hold-ms))
+        | (?:['\"]data-dz-(?:edit-|tags|combobox|money|action-card|status-entry|queue-row|metric-key|kanban-card|activity-row|timeline-item|profile-card|sparkline|funnel|bar-chart|heatmap|bullet|bar-track|histogram|pivot|box-plot|progress-region|radar|time-series|pagination|grid-pagination|grid-total|search-box|date-range|list-region|empty-state|skeleton|diagram|task-inbox|tree|calendar|blur-grace-ms|confirm-hold-ms))
         | (?:data-dz-widget\s*=\s*[\"']search_select[\"'])
         """
     )
@@ -915,6 +915,49 @@ def test_task_inbox_emission_conforms_to_task_inbox_contract() -> None:
     assert "data-dz-task-inbox" in html
     assert "Approve refund" in html
     assert 'data-dz-urgency="overdue"' in html
+
+
+def test_tree_emission_conforms_to_tree_contract() -> None:
+    """Real FragmentRenderer Tree path satisfies contracts/tree.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import Tree, TreeNode
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    tr_mod = load_hm_module("contracts/tree.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        Tree(
+            nodes=(
+                TreeNode(
+                    label="Engineering",
+                    children=(TreeNode(label="Platform"),),
+                ),
+            )
+        )
+    )
+    violations = kit.validate_dom(html, tr_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-tree" in html
+    assert "Engineering" in html
+    assert "dz-tree-node" in html
+
+
+def test_calendar_emission_conforms_to_calendar_contract() -> None:
+    """Real FragmentRenderer CalendarGrid path satisfies contracts/calendar.py."""
+    pytest.importorskip("fastapi")
+    from dazzle.render.fragment.primitives.data import CalendarGrid
+    from dazzle.render.fragment.renderer import FragmentRenderer
+
+    cal_mod = load_hm_module("contracts/calendar.py")
+    kit = load_hm_module("contracts/_kit.py")
+    html = FragmentRenderer().render(
+        CalendarGrid(view="month", events=(("Sprint review", "2026-07-15"),))
+    )
+    violations = kit.validate_dom(html, cal_mod.DOM_CONTRACT, require_root=True)
+    assert not violations, violations
+    assert "data-dz-calendar" in html
+    assert "Sprint review" in html
+    assert "dz-calendar--view-month" in html
 
 
 def test_radar_emission_conforms_to_radar_contract() -> None:
