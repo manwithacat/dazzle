@@ -2360,8 +2360,7 @@ def select(source: str, id: str) -> str:
             '<a class="dz-navigation-menu__link" href="#" aria-current="page">Home</a></li>'
             '<li class="dz-navigation-menu__item">'
             '<details class="dz-navigation-menu__branch">'
-            '<summary class="dz-navigation-menu__trigger">Product '
-            '<span class="dz-navigation-menu__caret" aria-hidden="true">▾</span></summary>'
+            '<summary class="dz-navigation-menu__trigger">Product</summary>'
             '<div class="dz-navigation-menu__panel" data-dz-layout="mega">'
             '<div class="dz-navigation-menu__group">'
             '<p class="dz-navigation-menu__group-title">Build</p>'
@@ -2375,8 +2374,7 @@ def select(source: str, id: str) -> str:
             "</div></div></details></li>"
             '<li class="dz-navigation-menu__item">'
             '<details class="dz-navigation-menu__branch">'
-            '<summary class="dz-navigation-menu__trigger">Resources '
-            '<span class="dz-navigation-menu__caret" aria-hidden="true">▾</span></summary>'
+            '<summary class="dz-navigation-menu__trigger">Resources</summary>'
             '<div class="dz-navigation-menu__panel">'
             '<div class="dz-navigation-menu__group">'
             '<a href="#">Docs</a>'
@@ -2387,8 +2385,10 @@ def select(source: str, id: str) -> str:
             '<a class="dz-navigation-menu__link" href="#">Pricing</a></li>'
             "</ul></nav>",
             notes="Open intent: <strong>exclusive</strong> + outside/Escape "
-            "dismiss (stem <code>details-open-intent</code>). Distinct from "
-            "menubar (app chrome) and app-shell (sidebar). Mega layout via "
+            "dismiss (stem <code>details-open-intent</code>). Disclosure "
+            "chevron is CSS on the trigger (stem "
+            "<code>affordance-disclosure-chrome</code>) — not a Unicode caret. "
+            "Distinct from menubar and app-shell. Mega layout via "
             "<code>data-dz-layout=mega</code>. Controller "
             "<code>dz-navigation-menu.js</code>; probes "
             "<code>navigation_menu.exclusive_open</code>, "
@@ -2401,6 +2401,7 @@ def select(source: str, id: str) -> str:
                 seams=(
                     "`[data-dz-navigation-menu]` / `.dz-navigation-menu` scopes exclusive open",
                     "`details.dz-navigation-menu__branch` + `summary.dz-navigation-menu__trigger`",
+                    "Submenu affordance: CSS `::after` chevron on trigger (1rem, rotates open)",
                 ),
                 pitfalls=(
                     "Native details allow multi-open and ignore outside click — "
@@ -2408,16 +2409,23 @@ def select(source: str, id: str) -> str:
                     "Do not confuse with menubar (app File/Edit) or app-shell sidebar",
                     "Gallery: href=# is product-shaped stand-in; MOCK_HTMX inert-hash "
                     "handler stops host scroll — do not 'fix' Copy this to void(0)",
+                    "Do not reintroduce Unicode ▾ spans or 0.65em carets — match "
+                    "accordion disclosure chrome (stem affordance-disclosure-chrome)",
                 ),
                 do_dont=(
                     (
                         "Let the controller close siblings on toggle and outside click",
                         "Leave multi-open mega panels as bare multi-details",
                     ),
+                    (
+                        "CSS/SVG disclosure chevron at ~1rem control scale",
+                        "Tiny Unicode caret as the only submenu signal",
+                    ),
                 ),
                 a11y_keys=(
                     "aria-label on root nav",
                     "Keyboard: Enter/Space toggles summary; Escape dismisses open panels",
+                    "Chevron is decorative (CSS); details/summary carry expand semantics",
                 ),
                 composes_with=("menubar", "app-shell"),
             ),

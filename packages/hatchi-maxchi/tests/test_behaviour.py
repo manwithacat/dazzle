@@ -159,6 +159,51 @@ def test_navigation_menu_dismiss_outside(page) -> None:  # type: ignore[no-untyp
     assert open_n == 0, f"expected dismiss, still open={open_n}"
 
 
+def test_navigation_menu_disclosure_chevron_scale(page) -> None:  # type: ignore[no-untyped-def]
+    """Stem affordance-disclosure-chrome: nav trigger chevron is ~1rem, not Unicode ▾."""
+    goto_part(page, "navigation-menu")
+    scope = page.locator(".hm-preview")
+    # No placeholder Unicode caret spans in the live partial
+    assert scope.locator(".navigation-menu__caret, .dz-navigation-menu__caret").count() == 0
+    assert "▾" not in (scope.inner_text() or "")
+    metrics = page.evaluate(
+        """() => {
+          const t = document.querySelector(
+            '.hm-preview .navigation-menu__trigger, .hm-preview .dz-navigation-menu__trigger'
+          );
+          if (!t) return null;
+          const s = getComputedStyle(t, '::after');
+          const parse = (v) => parseFloat(v) || 0;
+          return {
+            width: parse(s.width),
+            height: parse(s.height),
+            content: s.content,
+            display: s.display,
+          };
+        }"""
+    )
+    assert metrics is not None, "trigger not found"
+    # 1rem at default 16px root ≈ 16px; allow subpixel / font-size variance
+    assert metrics["width"] >= 12, f"chevron width too small: {metrics}"
+    assert metrics["height"] >= 12, f"chevron height too small: {metrics}"
+    # Open state rotates the same ::after (accordion family)
+    scope.locator("summary.navigation-menu__trigger, summary.dz-navigation-menu__trigger").filter(
+        has_text="Product"
+    ).first.click()
+    page.wait_for_timeout(80)
+    rot = page.evaluate(
+        """() => {
+          const t = document.querySelector(
+            '.hm-preview details[open] > .navigation-menu__trigger, '
+            + '.hm-preview details[open] > .dz-navigation-menu__trigger'
+          );
+          if (!t) return '';
+          return getComputedStyle(t, '::after').transform;
+        }"""
+    )
+    assert rot and rot != "none", f"open trigger should rotate chevron, got {rot!r}"
+
+
 def test_gallery_preview_hash_links_do_not_scroll(page) -> None:  # type: ignore[no-untyped-def]
     """Gallery presentation: demo <a href="#"> must not jump the host page to top.
 

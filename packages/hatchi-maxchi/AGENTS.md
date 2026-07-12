@@ -73,6 +73,7 @@ decisions. Decisions under `docs/decisions/` are **expressions** of the same ste
 | **Invention ladder** | Reuse → refuse+spike → promote → new part | `stems/invention-ladder.md` |
 | **Morph-safe hypermedia** | htmx4 morph for stable surfaces; DOM identity/state; no Alpine in core | `stems/morph-safe-hypermedia.md` |
 | **Details open intent** | Multi-`<details>` peers: exclusive vs multi_open; chrome needs outside dismiss | `stems/details-open-intent.md` |
+| **Affordance disclosure chrome** | Expand/submenu signals: CSS/SVG chevron at control scale, not tiny Unicode | `stems/affordance-disclosure-chrome.md` |
 
 Monorepo framework stems (DSL-first, hypermedia SSR, …): `../../stems/` when
 working inside the Dazzle tree.

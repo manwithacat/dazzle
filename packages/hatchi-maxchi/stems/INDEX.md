@@ -8,6 +8,7 @@
 | [invention-ladder](invention-ladder.md) | Reuse → refuse+spike → promote → new Hyperpart |
 | [morph-safe-hypermedia](morph-safe-hypermedia.md) | htmx4 morph for stable surfaces; DOM identity/state; no Alpine in core |
 | [details-open-intent](details-open-intent.md) | Multi-`<details>`: declare exclusive vs multi_open; chrome needs dismiss |
+| [affordance-disclosure-chrome](affordance-disclosure-chrome.md) | Expand affordances: CSS/SVG chevron ≥0.75–1rem, not tiny Unicode |
 
 **Framework parent:** [monorepo stems](../../../stems/INDEX.md)
 **Playbooks:** `docs/agent/`

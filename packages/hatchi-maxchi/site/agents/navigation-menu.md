@@ -17,7 +17,7 @@ Top product/site nav with optional mega-menu panels — horizontal, not the app-
     <li class="navigation-menu__item"><a class="navigation-menu__link" href="#" aria-current="page">Home</a></li>
     <li class="navigation-menu__item">
       <details class="navigation-menu__branch">
-        <summary class="navigation-menu__trigger">Product <span class="navigation-menu__caret" aria-hidden="true">▾</span></summary>
+        <summary class="navigation-menu__trigger">Product</summary>
         <div class="navigation-menu__panel" data-layout="mega">
           <div class="navigation-menu__group">
             <p class="navigation-menu__group-title">Build</p>
@@ -34,7 +34,7 @@ Top product/site nav with optional mega-menu panels — horizontal, not the app-
     </li>
     <li class="navigation-menu__item">
       <details class="navigation-menu__branch">
-        <summary class="navigation-menu__trigger">Resources <span class="navigation-menu__caret" aria-hidden="true">▾</span></summary>
+        <summary class="navigation-menu__trigger">Resources</summary>
         <div class="navigation-menu__panel">
           <div class="navigation-menu__group"><a href="#">Docs</a><a href="#">Changelog</a><a href="#">Community</a></div>
         </div>
@@ -55,23 +55,27 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 - `[data-dz-navigation-menu]` / `.dz-navigation-menu` scopes exclusive open
 - `details.dz-navigation-menu__branch` + `summary.dz-navigation-menu__trigger`
+- Submenu affordance: CSS `::after` chevron on trigger (1rem, rotates open)
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
 | Let the controller close siblings on toggle and outside click | Leave multi-open mega panels as bare multi-details |
+| CSS/SVG disclosure chevron at ~1rem control scale | Tiny Unicode caret as the only submenu signal |
 
 ### Pitfalls
 
 - Native details allow multi-open and ignore outside click — ship dz-navigation-menu.js
 - Do not confuse with menubar (app File/Edit) or app-shell sidebar
 - Gallery: href=# is product-shaped stand-in; MOCK_HTMX inert-hash handler stops host scroll — do not 'fix' Copy this to void(0)
+- Do not reintroduce Unicode ▾ spans or 0.65em carets — match accordion disclosure chrome (stem affordance-disclosure-chrome)
 
 ### Keyboard / AT
 
 - aria-label on root nav
 - Keyboard: Enter/Space toggles summary; Escape dismisses open panels
+- Chevron is decorative (CSS); details/summary carry expand semantics
 
 ### Related parts
 
@@ -115,7 +119,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Open intent: exclusive + outside/Escape dismiss (stem details-open-intent). Distinct from menubar (app chrome) and app-shell (sidebar). Mega layout via data-dz-layout=mega. Controller dz-navigation-menu.js; probes navigation_menu.exclusive_open, navigation_menu.dismiss_outside. shadcn parity (HMC-039).
+Open intent: exclusive + outside/Escape dismiss (stem details-open-intent). Disclosure chevron is CSS on the trigger (stem affordance-disclosure-chrome) — not a Unicode caret. Distinct from menubar and app-shell. Mega layout via data-dz-layout=mega. Controller dz-navigation-menu.js; probes navigation_menu.exclusive_open, navigation_menu.dismiss_outside. shadcn parity (HMC-039).
 
 ## Source files
 
