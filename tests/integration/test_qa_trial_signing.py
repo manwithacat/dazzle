@@ -155,15 +155,16 @@ def test_token_tampered(running_signable_app) -> None:  # type: ignore[no-untype
 
 
 def test_validator_rejected(running_signable_app_with_reject) -> None:  # type: ignore[no-untyped-def]
-    """Scenario: open → sign → validator raises → expect status stays 'viewed', grade=fail.
+    """Scenario: open → sign → validator raises → row stays non-terminal, grade=pass.
 
     The reject fixture is restarted with DAZZLE_QA_SIGNING_REJECT_IDS=<row_id>
     so the signing_validator raises SigningError, the route returns 400, and
-    the row stays in 'viewed' (it was opened first).
+    the row stays in 'viewed' (it was opened first) — not signed/declined.
     """
     app = running_signable_app_with_reject
     by_name, sink = _make_tools_and_sink(app)
     doc = app.seeded_docs[0]
+    assert doc.validator_reject is True
 
     by_name["open_signing_link"].handler(entity=doc.entity, id=doc.id, token=doc.token)
     result = by_name["sign_document"].handler(authority_confirmed=True)
@@ -178,10 +179,10 @@ def test_validator_rejected(running_signable_app_with_reject) -> None:  # type: 
         pdf_validator=app.pdf_validator,
     )
 
-    assert outcome.expected_outcome_inferred == "signed"
-    # Validator rejected: row remains at 'viewed' after the open call.
-    assert outcome.functional["final_row_status"] == "viewed"
-    assert outcome.functional["status"] == "fail"
+    assert outcome.expected_outcome_inferred == "validator_rejected"
+    # Open advances sent→viewed; reject must not terminalise the row.
+    assert outcome.functional["final_row_status"] in {"sent", "viewed"}
+    assert outcome.functional["status"] == "pass"
 
 
 def test_already_signed(running_signable_app) -> None:  # type: ignore[no-untyped-def]

@@ -11,12 +11,18 @@ from dazzle.qa.signing_seed import SeededDoc
 DbReader = Callable[[str, str], "dict[str, Any] | None"]
 PdfValidator = Callable[[str], "dict[str, Any]"]
 
-_EXPECTED_STATUS: dict[str, str | None] = {
+# Expected final row status(es) for each inferred outcome. Values are a single
+# status string or a frozenset of acceptable statuses.
+#
+# ``validator_rejected`` accepts both ``sent`` and ``viewed``: opening the
+# link advances default lifecycle ``sent → viewed`` before POST sign; a
+# rejected signature must leave the row non-terminal (not signed/declined).
+_EXPECTED_STATUS: dict[str, str | frozenset[str] | None] = {
     "signed": "signed",
     "declined": "declined",
     "token_invalid": "sent",
     "token_expired": "sent",
-    "validator_rejected": "sent",  # #1382: validator blocks the signature → row stays sent
+    "validator_rejected": frozenset({"sent", "viewed"}),
     "not_engaged": None,
 }
 
@@ -90,7 +96,7 @@ def verify_signing_outcome(
     if active_doc is not None and getattr(active_doc, "token_state", "fresh") == "expired":
         expected = "token_expired"
     elif active_doc is not None and getattr(active_doc, "token_state", "fresh") == "already_signed":
-        # TR-50: harness pre-signed the row; re-open must leave status=signed
+        # TR-49: harness pre-signed the row; re-open must leave status=signed
         # (persona may open the link / download; must not un-sign or re-seed pending).
         expected = "signed"
     elif active_doc is not None and getattr(active_doc, "validator_reject", False):
@@ -125,13 +131,23 @@ def verify_signing_outcome(
 
     expected_status = _EXPECTED_STATUS.get(expected)
     final_status = row.get("status")
-    if expected_status is not None and final_status != expected_status:
+    if expected_status is None:
+        status_ok = True
+        expected_repr: str | None = None
+    elif isinstance(expected_status, frozenset):
+        status_ok = final_status in expected_status
+        expected_repr = "|".join(sorted(expected_status))
+    else:
+        status_ok = final_status == expected_status
+        expected_repr = expected_status
+
+    if expected_status is not None and not status_ok:
         outcome.functional = {
             "status": "fail",
             "final_row_status": final_status,
             "audit_row_present": _has_audit_fields(row),
             "reason": (
-                f"expected status={expected_status} for outcome={expected}, got {final_status}"
+                f"expected status={expected_repr} for outcome={expected}, got {final_status}"
             ),
         }
     else:

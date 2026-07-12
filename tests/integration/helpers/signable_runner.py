@@ -315,6 +315,9 @@ def boot_fixture_app(
                 token=token,
                 signing_url=f"{base_url}/sign/TestDoc/{row_id}?token={token}",
                 signatory_email="trial@example.com",
+                # #1382 / TR-50 investigation: fixture must stamp validator_reject
+                # so the post-trial verifier expects a blocked signature, not "signed".
+                validator_reject=reject_seeded,
             )
         ]
         inbox_path = write_mock_inbox(tmp_path, seeded)

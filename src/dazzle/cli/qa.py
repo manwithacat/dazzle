@@ -1379,7 +1379,7 @@ def qa_trial(
     if signing_token_state == "already_signed":
         typer.echo(
             "Signing trial harness: pre-signing the seeded row so re-open "
-            "exercises the already-signed completion path (TR-50)."
+            "exercises the already-signed completion path (TR-49 / #1571)."
         )
 
     # Optional per-scenario validator-reject arming (#1382). When true, the

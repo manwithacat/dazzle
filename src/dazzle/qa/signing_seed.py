@@ -26,9 +26,9 @@ class SeededDoc:
     - ``"expired"`` — minted already-expired so the scenario exercises the
       "Invalid or expired link" page. The verifier reads this to expect
       the row to stay untouched instead of inferring from sign attempts.
-    - ``"already_signed"`` (TR-50) — fresh token, then the harness pre-signs
-      via ``POST /api/sign/...`` so re-open hits the signed completion page
-      (#1571). Verifier expects the row to stay ``signed``.
+    - ``"already_signed"`` (TR-49 / #1571) — fresh token, then the harness
+      pre-signs via ``POST /api/sign/...`` so re-open hits the signed
+      completion page. Verifier expects the row to stay ``signed``.
 
     The state is harness-internal — it is deliberately NOT written to the
     mock inbox, so the persona discovers expiry / already-signed the way a

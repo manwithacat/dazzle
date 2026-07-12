@@ -118,9 +118,10 @@ Call submit_verdict describing the expired-link experience.
 [[scenario]]
 name = "sla_waiver_validator_rejected"
 login_persona = "customer"
-# #1382: arm the project signing_validator to reject this row's signature so the
-# scenario actually exercises the authority-check path (the seeded row id is
-# pre-injected into DAZZLE_QA_SIGNING_REJECT_IDS before boot).
+# #1382 / TR-50: arm the project signing_validator to reject this row's signature
+# so the scenario exercises the server-side authority check at POST sign (not
+# soft open-page copy). Seeded row id is pre-injected into
+# DAZZLE_QA_SIGNING_REJECT_IDS before boot.
 signing_validator_reject = true
 time_budget_seconds = 400
 max_steps = 25
@@ -131,22 +132,28 @@ waiver terms.
 """
 business_context = """
 You don't have authority to bind your team to waiver terms.
+This trial is about whether the *system* refuses a signature —
+not whether you politely decline. Soft warnings on the signing page
+are not enough evidence; you must attempt sign_document so a server
+check can run.
 """
 tasks = [
     "Read your inbox to find the SLA waiver awaiting signature.",
-    "Open the signing link.",
-    "Sign it.",
+    "Open the signing link and note any soft warnings (intended signatory, etc.).",
+    "Attempt to sign via sign_document(authority_confirmed=true) even if you believe you lack authority — the point is whether the server rejects the signature.",
+    "Record friction for soft-open vs hard-reject separately if both appear.",
 ]
 stop_when = """
-Call submit_verdict describing whether the system caught the
-authority gap.
+Call submit_verdict covering: (1) whether open was soft-only, and (2) whether
+the system refused the signature when you attempted to sign (HTTP status /
+error body). Do not end after decline_signing alone — attempt sign first.
 """
 
 
 [[scenario]]
 name = "sla_waiver_already_signed"
 login_persona = "customer"
-# TR-50: harness pre-signs the seeded row so re-open is real, not persona fiction.
+# TR-49: harness pre-signs the seeded row so re-open is real, not persona fiction.
 signing_token_state = "already_signed"
 time_budget_seconds = 400
 max_steps = 25

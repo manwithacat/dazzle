@@ -121,7 +121,7 @@ def test_expired_seed_fails_if_row_was_mutated():
 
 
 def test_already_signed_seed_expects_signed_without_persona_sign():
-    """TR-50: pre-signed seed fixes expectation to signed even if persona
+    """TR-49: pre-signed seed fixes expectation to signed even if persona
     only opens the link (no sign_document invocation)."""
     doc = SeededDoc("SlaWaiver", "abc", "tok", "http://x", "a@b.com", token_state="already_signed")
     outcome = verify_signing_outcome(
@@ -142,29 +142,31 @@ def test_already_signed_seed_expects_signed_without_persona_sign():
 
 
 def test_validator_reject_seed_overrides_inference_and_expects_untouched_row():
-    """#1382: with validator_reject the expectation is fixed by the seeding —
-    even when the persona attempted a signature, the verifier must expect the
-    project signing_validator to block it (row stays 'sent'), not infer
-    'signed'. Otherwise a successful rejection mis-scores as a failure and the
-    persona's 'no authority check' verdict reads as a false-critical."""
+    """#1382 / TR-50: with validator_reject the expectation is fixed by the
+    seeding — even when the persona attempted a signature, the verifier must
+    expect the project signing_validator to block it (row stays sent|viewed),
+    not infer 'signed'. Otherwise a successful rejection mis-scores as a
+    failure and the persona's 'no authority check' verdict reads as a
+    false-critical."""
     doc = SeededDoc("SlaWaiver", "abc", "tok", "http://x", "a@b.com", validator_reject=True)
     action_sink = {
         "invoked": ["read_inbox", "open_signing_link", "sign_document"],
         "requests": [
             {"method": "GET", "url": "http://x/sign/SlaWaiver/abc?token=tok", "status": 200},
-            {"method": "POST", "url": "http://x/api/sign/SlaWaiver/abc", "status": 422},
+            {"method": "POST", "url": "http://x/api/sign/SlaWaiver/abc", "status": 400},
         ],
         "active_doc": doc,
     }
-    outcome = verify_signing_outcome(
-        action_sink=action_sink,
-        seeded_docs=[doc],
-        db_reader=MagicMock(return_value={"id": "abc", "status": "sent"}),
-        pdf_validator=MagicMock(),
-    )
-    assert outcome.expected_outcome_inferred == "validator_rejected"
-    assert outcome.functional["status"] == "pass"
-    assert outcome.functional["final_row_status"] == "sent"
+    for status in ("sent", "viewed"):
+        outcome = verify_signing_outcome(
+            action_sink=action_sink,
+            seeded_docs=[doc],
+            db_reader=MagicMock(return_value={"id": "abc", "status": status}),
+            pdf_validator=MagicMock(),
+        )
+        assert outcome.expected_outcome_inferred == "validator_rejected"
+        assert outcome.functional["status"] == "pass", status
+        assert outcome.functional["final_row_status"] == status
 
 
 def test_validator_reject_seed_fails_if_row_was_signed():
