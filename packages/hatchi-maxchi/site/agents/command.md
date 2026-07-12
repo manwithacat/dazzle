@@ -50,17 +50,20 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 
 - hx-get on the search input returns persona-scoped result fragments
 - open triggers: data-hm-open-command / ⌘K; close: data-hm-close-command + closedby=any
+- shortcut-hint-chrome: opener kbd is adjacent (button gap); item kbd is trailing
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
 | return result-list fragments from /app/command (or mock) | hydrate a client-side result model the palette must re-render |
+| adjacent gap on opener; trailing auto on result-row kbd | flush label+kbd or treat ⌘K as a primary icon |
 
 ### Pitfalls
 
 - type=search swallows Esc to clear the value — the controller must close on first Esc
 - do not absolute-position the close button against a modal dialog (Safari/iPadOS collapse)
+- do not glue ⌘K to the opener label (0 gap) — chip is spatially secondary
 
 ### Keyboard / AT
 
@@ -71,6 +74,7 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 ### Related parts
 
 - `button` — agents/button.md
+- `kbd` — agents/kbd.md
 
 ## DOM contract
 
@@ -104,7 +108,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-In Dazzle the input's hx-get hits /app/command, which returns persona-scoped results as real links. The gallery mock returns <button type=button class=dz-command__item> rows so picking an option closes the palette without href=# scrolling the page to the top mid-browse.
+In Dazzle the input's hx-get hits /app/command, which returns persona-scoped results as real links. The gallery mock returns <button type=button class=dz-command__item> rows so picking an option closes the palette without href=# scrolling the page to the top mid-browse. Shortcut chips (stem shortcut-hint-chrome): opener uses adjacent layout (button gap); result rows use trailing (margin-inline-start: auto on .dz-kbd).
 
 ## Source files
 

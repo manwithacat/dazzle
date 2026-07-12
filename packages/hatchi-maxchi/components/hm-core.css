@@ -230,6 +230,12 @@
 
 /* ── dz-kbd ──────────────────────────────────────────────────────────
  * <kbd class="dz-kbd">⌘K</kbd> — shortcut chips (command palette etc.)
+ *
+ * Stem shortcut-hint-chrome:
+ *   - Visually secondary: mono, small, muted keycap (this block).
+ *   - Spatially secondary: never glue to a primary label — two layout roles:
+ *       adjacent → parent flex gap (see .dz-button:has(.dz-kbd))
+ *       trailing → margin-inline-start: auto (see .dz-command__item .dz-kbd)
  */
 
 .dz-kbd {
@@ -243,6 +249,12 @@
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: var(--colour-text-muted);
+}
+
+/* Adjacent role: label + keycap on a compact control (opener buttons, etc.) */
+.dz-button:has(> .dz-kbd),
+button:has(> .dz-kbd) {
+  gap: var(--space-sm);
 }
 
 /* ── dz-command — the hx-get command palette (htmx4 flagship) ─────────
@@ -364,7 +376,10 @@ dialog.dz-command::backdrop {
   background: color-mix(in oklab, var(--colour-brand) 8%, var(--colour-surface));
 }
 
-.dz-command__item .dz-kbd { margin-inline-start: auto; }
+/* Trailing role: label leads; shortcut at the end of the row (cmdk/Linear) */
+.dz-command__item .dz-kbd {
+  margin-inline-start: auto;
+}
 
 .dz-command__empty {
   padding: var(--space-xl);

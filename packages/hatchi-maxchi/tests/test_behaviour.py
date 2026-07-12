@@ -159,6 +159,40 @@ def test_navigation_menu_dismiss_outside(page) -> None:  # type: ignore[no-untyp
     assert open_n == 0, f"expected dismiss, still open={open_n}"
 
 
+def test_command_opener_kbd_is_spatially_secondary(page) -> None:  # type: ignore[no-untyped-def]
+    """Stem shortcut-hint-chrome: opener label and ⌘K chip must not be flush (0 gap)."""
+    goto_part(page, "command")
+    metrics = page.evaluate(
+        """() => {
+          const btn = document.querySelector('.hm-preview [data-hm-open-command]');
+          if (!btn) return null;
+          const kbd = btn.querySelector('kbd, .kbd, .dz-kbd');
+          if (!kbd) return { err: 'no kbd' };
+          const cs = getComputedStyle(btn);
+          let textEnd = null;
+          const range = document.createRange();
+          for (const n of btn.childNodes) {
+            if (n.nodeType === 3 && n.textContent && n.textContent.trim()) {
+              range.selectNodeContents(n);
+              textEnd = range.getBoundingClientRect().right;
+            }
+          }
+          const kr = kbd.getBoundingClientRect();
+          return {
+            gapCss: cs.gap,
+            textEnd,
+            kbdLeft: kr.left,
+            gapPx: textEnd != null ? kr.left - textEnd : null,
+          };
+        }"""
+    )
+    assert metrics is not None and "err" not in metrics, metrics
+    # space-sm is typically 8px; allow modest subpixel variance
+    assert metrics["gapPx"] is not None and metrics["gapPx"] >= 6, (
+        f"adjacent kbd must be spatially secondary (≥~space-sm): {metrics}"
+    )
+
+
 def test_tabs_active_indicator_is_square(page) -> None:  # type: ignore[no-untyped-def]
     """Stem selection-strip-honest: active tab underline must not curve with button radius."""
     goto_part(page, "tabs")

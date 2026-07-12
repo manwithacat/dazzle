@@ -4140,6 +4140,12 @@ input.switch:checked::before {
 
 /* ── kbd ──────────────────────────────────────────────────────────
  * <kbd class="kbd">⌘K</kbd> — shortcut chips (command palette etc.)
+ *
+ * Stem shortcut-hint-chrome:
+ *   - Visually secondary: mono, small, muted keycap (this block).
+ *   - Spatially secondary: never glue to a primary label — two layout roles:
+ *       adjacent → parent flex gap (see .button:has(.kbd))
+ *       trailing → margin-inline-start: auto (see .command__item .kbd)
  */
 
 .kbd {
@@ -4153,6 +4159,12 @@ input.switch:checked::before {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: var(--colour-text-muted);
+}
+
+/* Adjacent role: label + keycap on a compact control (opener buttons, etc.) */
+.button:has(> .kbd),
+button:has(> .kbd) {
+  gap: var(--space-sm);
 }
 
 /* ── command — the hx-get command palette (htmx4 flagship) ─────────
@@ -4274,7 +4286,10 @@ dialog.command::backdrop {
   background: color-mix(in oklab, var(--colour-brand) 8%, var(--colour-surface));
 }
 
-.command__item .kbd { margin-inline-start: auto; }
+/* Trailing role: label leads; shortcut at the end of the row (cmdk/Linear) */
+.command__item .kbd {
+  margin-inline-start: auto;
+}
 
 .command__empty {
   padding: var(--space-xl);

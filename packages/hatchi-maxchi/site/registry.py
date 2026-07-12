@@ -831,7 +831,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "persona-scoped results as real links. The gallery mock returns "
             "<code>&lt;button type=button class=dz-command__item&gt;</code> rows so picking "
             "an option closes the palette without <code>href=#</code> scrolling the page "
-            "to the top mid-browse.",
+            "to the top mid-browse. Shortcut chips (stem "
+            "<code>shortcut-hint-chrome</code>): opener uses <strong>adjacent</strong> "
+            "layout (button gap); result rows use <strong>trailing</strong> "
+            "(<code>margin-inline-start: auto</code> on <code>.dz-kbd</code>).",
             tags=("interactive", "htmx"),
             exchanges=(
                 Exchange(
@@ -851,15 +854,21 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                 seams=(
                     "hx-get on the search input returns persona-scoped result fragments",
                     "open triggers: data-hm-open-command / ⌘K; close: data-hm-close-command + closedby=any",
+                    "shortcut-hint-chrome: opener kbd is adjacent (button gap); item kbd is trailing",
                 ),
                 pitfalls=(
                     "type=search swallows Esc to clear the value — the controller must close on first Esc",
                     "do not absolute-position the close button against a modal dialog (Safari/iPadOS collapse)",
+                    "do not glue ⌘K to the opener label (0 gap) — chip is spatially secondary",
                 ),
                 do_dont=(
                     (
                         "return result-list fragments from /app/command (or mock)",
                         "hydrate a client-side result model the palette must re-render",
+                    ),
+                    (
+                        "adjacent gap on opener; trailing auto on result-row kbd",
+                        "flush label+kbd or treat ⌘K as a primary icon",
                     ),
                 ),
                 a11y_keys=(
@@ -867,7 +876,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "Arrow keys move aria-activedescendant through results; Enter activates",
                     "close button is the touch dismiss affordance (no Esc key on tablets)",
                 ),
-                composes_with=("button",),
+                composes_with=("button", "kbd"),
             ),
             mock="/mock/command",
         ),
@@ -2090,10 +2099,34 @@ def select(source: str, id: str) -> str:
             '<kbd class="dz-kbd">↵</kbd>'
             '<kbd class="dz-kbd">⇧</kbd>'
             "</div>",
-            notes="PLACEHOLDER — shadcn parity (HMC-034). Styles already live in "
-            "hm-core.css (.dz-kbd); this registry entry makes the surface "
-            "discoverable in the gallery. No dual-lock needed (pure presentation).",
+            notes="Stem <code>shortcut-hint-chrome</code>: keyboard chips are "
+            "<strong>visually secondary</strong> (mono, small, muted keycap) and "
+            "<strong>spatially secondary</strong> — layout roles "
+            "<em>adjacent</em> (flex gap next to a label) vs <em>trailing</em> "
+            "(row end via <code>margin-inline-start: auto</code>). Not disclosure "
+            "iconography. Styles in <code>hm-core.css</code>; pure presentation.",
             tags=("docs",),
+            guidance=Guidance(
+                seams=(
+                    '`<kbd class="dz-kbd">` — always the house chip, never bare Unicode',
+                    "layout roles: adjacent (button:has kbd gap) vs trailing (list/menu auto)",
+                ),
+                pitfalls=(
+                    "0px gap between primary label and kbd under-signals secondary metadata",
+                    "do not apply affordance-disclosure-chrome (chevrons) rules to shortcuts",
+                    "do not put a kbd on every dense toolbar control (clutter)",
+                ),
+                do_dont=(
+                    (
+                        "visually secondary chip + adjacent gap or trailing auto",
+                        "glue ⌘K to the action label or invent a Lucide keyboard as the only hint",
+                    ),
+                ),
+                a11y_keys=(
+                    "kbd is presentational hint; the control still needs its own accessible name",
+                ),
+                composes_with=("command", "button"),
+            ),
         ),
         Hyperpart(
             "aspect-ratio",

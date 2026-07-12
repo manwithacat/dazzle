@@ -26,13 +26,31 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- `<kbd class="dz-kbd">` — always the house chip, never bare Unicode
+- layout roles: adjacent (button:has kbd gap) vs trailing (list/menu auto)
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| visually secondary chip + adjacent gap or trailing auto | glue ⌘K to the action label or invent a Lucide keyboard as the only hint |
+
+### Pitfalls
+
+- 0px gap between primary label and kbd under-signals secondary metadata
+- do not apply affordance-disclosure-chrome (chevrons) rules to shortcuts
+- do not put a kbd on every dense toolbar control (clutter)
+
+### Keyboard / AT
+
+- kbd is presentational hint; the control still needs its own accessible name
+
+### Related parts
+
+- `command` — agents/command.md
+- `button` — agents/button.md
 
 ## DOM contract
 
@@ -40,7 +58,7 @@ No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this**
 
 ## Notes
 
-PLACEHOLDER — shadcn parity (HMC-034). Styles already live in hm-core.css (.dz-kbd); this registry entry makes the surface discoverable in the gallery. No dual-lock needed (pure presentation).
+Stem shortcut-hint-chrome: keyboard chips are visually secondary (mono, small, muted keycap) and spatially secondary — layout roles adjacent (flex gap next to a label) vs trailing (row end via margin-inline-start: auto). Not disclosure iconography. Styles in hm-core.css; pure presentation.
 
 ## Source files
 

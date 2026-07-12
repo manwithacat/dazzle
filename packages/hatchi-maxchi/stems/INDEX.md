@@ -10,6 +10,7 @@
 | [details-open-intent](details-open-intent.md) | Multi-`<details>`: declare exclusive vs multi_open; chrome needs dismiss |
 | [affordance-disclosure-chrome](affordance-disclosure-chrome.md) | Expand affordances: CSS/SVG chevron ≥0.75–1rem, not tiny Unicode |
 | [selection-strip-honest](selection-strip-honest.md) | Tabs/segments: button vs link by intent; square indicators; no half ARIA |
+| [shortcut-hint-chrome](shortcut-hint-chrome.md) | ⌘K chips: visually + spatially secondary (adjacent gap / trailing auto) |
 
 **Framework parent:** [monorepo stems](../../../stems/INDEX.md)
 **Playbooks:** `docs/agent/`

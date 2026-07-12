@@ -48,3 +48,12 @@ def test_tabs_css_forces_square_radius_for_underline() -> None:
     tabs_css = (PKG / "components" / "tabs.css").read_text(encoding="utf-8")
     assert "border-radius: 0" in tabs_css
     assert "selection-strip-honest" in tabs_css or "straight" in tabs_css.lower()
+
+
+def test_shortcut_hint_layout_roles_in_hm_core() -> None:
+    """Adjacent gap on button:has(kbd); trailing auto on command items."""
+    core = (PKG / "components" / "hm-core.css").read_text(encoding="utf-8")
+    assert "shortcut-hint-chrome" in core or ":has(> .dz-kbd)" in core
+    assert "gap: var(--space-sm)" in core
+    assert ".dz-command__item .dz-kbd" in core
+    assert "margin-inline-start: auto" in core
