@@ -13,8 +13,10 @@
 | [shortcut-hint-chrome](shortcut-hint-chrome.md) | ⌘K chips: visually + spatially secondary (adjacent gap / trailing auto) |
 | [overlay-light-dismiss](overlay-light-dismiss.md) | Transient overlays: Esc + outside; spatial vs temporal abandon |
 | [chrome-vs-protocol](chrome-vs-protocol.md) | Same modal chrome ≠ same L1; addressing vs request gating |
+| [host-chrome-symmetry](host-chrome-symmetry.md) | Overlay shells: form_shell vs exchange_shell; guests keep DOM contracts |
 
 **Framework parent:** [monorepo stems](../../../stems/INDEX.md)
 **Playbooks:** `docs/agent/`
 **Decisions (expressions):** `docs/decisions/`
 **Interaction probes (machine expressions):** `GALLERY_PROBES.md`, `tools/gallery_probes.py`
+**Composition matrix (host × guest):** `tools/composition_matrix.py`

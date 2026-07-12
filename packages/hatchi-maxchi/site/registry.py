@@ -1148,7 +1148,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "guarantees (focus trap, inert background, Esc, backdrop). Built on the "
             "dialog: shares its opener, adds a side + slide. No drawer-specific JS. "
             "Body is a composition host — nest field, badge, card, controls, …",
-            # Demo A: composed filter form (field + toggle-group + controls + badge)
+            # Demo A: form_shell chrome — one method=dialog wraps header/body/footer
+            # when the body has no nested forms (filters). Guests use honest DOM
+            # contracts (switch track, toggle-group without legend flex sibling).
             '<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">'
             '<button type="button" class="dz-button" data-dz-variant="outline" '
             'data-dz-dialog-open="hm-drawer-demo">Open filters</button>'
@@ -1168,10 +1170,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<div class="dz-drawer__body" tabindex="0" aria-label="Filter controls">'
             '<div class="dz-stack" data-dz-gap="md">'
             '<p class="hm-demo-muted" style="margin:0">'
-            "Compose field, toggle-group, and selection controls inside the scrollable "
-            "body — the drawer is a host, not a special form type."
+            "Compose field, toggle-group, switch, and controls inside the scrollable "
+            "body — guests keep their own DOM contracts."
             "</p>"
-            # field
+            # field (label + control + hint triad)
             '<div class="dz-form-field">'
             '<label class="dz-form-label" for="hm-drawer-q">Search</label>'
             '<input class="dz-form-input" id="hm-drawer-q" type="search" '
@@ -1180,17 +1182,17 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<p class="dz-form-hint" id="hm-drawer-q-hint">'
             "Matches title and secondary fields on the list exchange."
             "</p></div>"
-            # toggle-group (view density)
+            # toggle-group: label OUTSIDE fieldset (legend breaks inline-flex segments)
+            '<div class="dz-stack" data-dz-gap="xs">'
+            '<div class="dz-form-label" id="hm-drawer-density-label">Density</div>'
             '<fieldset class="dz-toggle-group" role="radiogroup" '
-            'aria-label="Result density">'
-            '<legend class="dz-form-label" style="margin-bottom:var(--space-xs)">'
-            "Density</legend>"
+            'aria-labelledby="hm-drawer-density-label">'
             '<label><input type="radio" name="hm-drawer-density" value="comfortable" checked>'
             "<span>Comfortable</span></label>"
             '<label><input type="radio" name="hm-drawer-density" value="compact">'
             "<span>Compact</span></label>"
-            "</fieldset>"
-            # status checkboxes
+            "</fieldset></div>"
+            # status checkboxes (controls)
             '<fieldset class="dz-stack" data-dz-gap="xs" style="border:0;padding:0;margin:0">'
             '<legend class="dz-form-label">Status</legend>'
             '<label class="hm-inline"><input type="checkbox" class="dz-checkbox" '
@@ -1200,16 +1202,18 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<label class="hm-inline"><input type="checkbox" class="dz-checkbox" '
             'name="status" value="churned"> Churned</label>'
             "</fieldset>"
-            # switch + badge
+            # switch Hyperpart (label.dz-switch + track) + badge — not input.dz-switch
             '<div class="hm-demo-row" style="justify-content:space-between;'
             'align-items:center;gap:var(--space-sm)">'
-            '<label class="hm-inline"><input type="checkbox" class="dz-switch" '
-            'name="mine" value="1"> Only my records</label>'
+            '<label class="dz-switch">'
+            '<input type="checkbox" name="mine" value="1" data-dz-switch>'
+            '<span class="dz-switch__track" aria-hidden="true"></span>'
+            "<span>Only my records</span></label>"
             '<span class="dz-badge" data-dz-tone="neutral">'
             '<span class="dz-badge-icon">{svg:filter}</span>3 filters</span>'
             "</div>"
-            # alert tip
-            '<div class="dz-alert" data-dz-tone="info" role="status">'
+            # alert (role=alert matches standalone Alert)
+            '<div class="dz-alert" data-dz-tone="info" role="alert">'
             '<span class="dz-alert__icon">{svg:info}</span>'
             '<div class="dz-alert__body">'
             '<div class="dz-alert__title">Server owns the query</div>'
@@ -1224,66 +1228,106 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<button type="submit" class="dz-button" data-dz-variant="primary" value="apply">'
             "Apply</button>"
             "</div></form></dialog>"
-            # Demo B: hypermedia peek — body filled by mock exchange
+            # Demo B: exchange_shell chrome — body may receive forms later, so
+            # close is scoped method=dialog forms only. Same BEM shell parts.
             '<dialog class="dz-drawer" id="hm-drawer-lazy" data-dz-width="md" '
             'data-dz-side="right" closedby="any" aria-labelledby="hm-drawer-lazy-title">'
-            '<header class="dz-drawer__header">'
+            '<div class="dz-drawer__header">'
             '<h2 class="dz-drawer__title" id="hm-drawer-lazy-title">Record detail</h2>'
             '<form method="dialog">'
             '<button type="submit" class="dz-drawer__close" aria-label="Close">{svg:x}</button>'
-            "</form></header>"
+            "</form></div>"
             '<div id="hm-drawer-lazy-body" class="dz-drawer__body" tabindex="0" '
             'aria-label="Record detail body" aria-live="polite">'
             '<p class="hm-demo-muted">Open record to load a composed peek fragment…</p>'
             "</div>"
             '<div class="dz-drawer__footer">'
-            '<form method="dialog" style="display:contents">'
+            '<form method="dialog">'
             '<button type="submit" class="dz-button" data-dz-variant="ghost">Close</button>'
             "</form>"
-            '<button type="button" class="dz-button" data-dz-variant="primary">Open full page</button>'
+            '<a class="dz-button" data-dz-variant="primary" href="#drawer">'
+            "Open full page</a>"
             "</div>"
             "</dialog>",
             notes="Opened by shared <code>dz-dialog.js</code> "
             "(<code>[data-dz-dialog-open]</code>); close is native. "
-            "<strong>Composition host:</strong> body nests field, toggle-group, "
-            "checkbox/switch, badge, alert (filters demo) or server-swapped card + "
-            "badge + menu actions (record peek). Second trigger is the hypermedia "
-            "peek contract: one click fires <code>hx-get</code> into the body "
-            "<em>and</em> <code>showModal</code>. "
-            "<code>data-dz-side</code> / <code>data-dz-width</code> for placement.",
+            "<strong>Chrome shells:</strong> <code>form_shell</code> (one "
+            "<code>method=dialog</code> wrap when body has no nested forms) vs "
+            "<code>exchange_shell</code> (scoped close forms; body is HTMX target). "
+            "Both keep <code>drawer__header|body|footer</code> as flex children "
+            "(outer form is <code>display:contents</code>). "
+            "<strong>Composition host:</strong> guests mount with their own DOM "
+            "contracts (field triad, switch track, toggle-group without legend "
+            "inside the fieldset, honest KPI cards). Peek: one click fires "
+            "<code>hx-get</code> into the body <em>and</em> <code>showModal</code>. "
+            "See <code>stems/host-chrome-symmetry.md</code> and "
+            "<code>tools/composition_matrix.py</code>.",
             tags=("interactive", "htmx"),
-            composes=("dialog", "button", "field", "badge", "card", "alert", "toggle-group"),
+            composes=(
+                "dialog",
+                "button",
+                "field",
+                "badge",
+                "card",
+                "alert",
+                "toggle-group",
+                "switch",
+                "controls",
+            ),
             # Opener is shared dz-dialog.js (owned by dialog Hyperpart) — not re-declared.
             guidance=Guidance(
                 seams=(
                     "addressing: data-dz-dialog-open + dialog.dz-drawer (shares dz-dialog.js)",
-                    "body is a composition host — nest field, toggle-group, controls, badge, card, alert",
+                    "chrome shells: form_shell (method=dialog wrap) vs exchange_shell "
+                    "(scoped close forms) — same header/body/footer BEM",
+                    "body is a composition host — nest field, toggle-group, switch, "
+                    "controls, badge, card, alert with honest guest DOM",
                     "hypermedia peek: hx-get + data-dz-dialog-open on the same click",
                     "data-dz-side / data-dz-width for placement presets",
+                    "composition matrix: tools/composition_matrix.py",
                 ),
                 pitfalls=(
                     "do not invent a second open protocol — same addressing as dialog",
-                    "footer forms: avoid nested <form> inside method=dialog bodies",
+                    "do not wrap exchange_shell body in method=dialog if the fragment "
+                    "may contain forms (nested form is invalid HTML)",
+                    "do not paint drawer__body muted — guests inherit colour",
+                    "do not put legend inside dz-toggle-group (breaks segment flex)",
+                    "do not use input.dz-switch when composing the switch Hyperpart "
+                    "(use label.dz-switch + track + data-dz-switch)",
+                    "do not use form-field as read-only meta (hint is help, not value)",
                     "lazy body starts empty/skeleton; exchange fills #…-body, not the whole dialog",
                 ),
                 do_dont=(
                     (
-                        "compose existing Hyperparts inside drawer__body",
-                        "rebuild field/badge chrome as one-off drawer-only markup",
+                        "compose existing Hyperparts inside drawer__body with their "
+                        "standalone DOM contracts",
+                        "rebuild field/badge/switch chrome as one-off drawer-only markup",
+                    ),
+                    (
+                        "pick form_shell vs exchange_shell by whether the body may "
+                        "contain nested forms",
+                        "mix half-patterns (header element + whole-form wrap) without reason",
                     ),
                     (
                         "pair hx-get target with the scrollable body id",
                         "swap the entire dialog element (loses open state / focus trap)",
                     ),
+                    (
+                        "use one KPI card per metric (or card-label + card-value meta)",
+                        "one card wrapping an auto-grid of overridden card-value sizes",
+                    ),
                 ),
                 a11y_keys=(
                     "native dialog focus trap + Esc/backdrop; body may be tabindex=0 for scroll",
                     "label the body (aria-label) when it is the live region for peek loads",
+                    "toggle-group: external label + aria-labelledby (not legend inside)",
                 ),
                 composes_with=(
                     "dialog",
                     "field",
                     "toggle-group",
+                    "switch",
+                    "controls",
                     "badge",
                     "card",
                     "button",

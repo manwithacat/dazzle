@@ -20,6 +20,7 @@ _REQUIRED = (
     "stems/hyperpart-not-component.md",
     "stems/three-layers.md",
     "stems/composition-declared.md",
+    "stems/host-chrome-symmetry.md",
     "stems/invention-ladder.md",
     "stems/morph-safe-hypermedia.md",
     "docs/decisions/README.md",

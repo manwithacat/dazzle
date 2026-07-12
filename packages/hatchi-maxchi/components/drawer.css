@@ -140,16 +140,20 @@ dialog.dz-drawer > form {
   height: 1rem;
 }
 
+/* Body is a composition host: primary text colour so nested Hyperparts
+   (field labels, card values, switch labels, badges) match their standalone
+   demos. Do not paint the whole body muted — guests inherit. Leading prose
+   (direct children <p>, gallery hm-demo-muted) is the secondary voice. */
 .dz-drawer__body {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-lg);
   font-size: var(--text-sm);
-  color: var(--colour-text-muted);
+  color: var(--colour-text);
   line-height: var(--leading-normal);
 }
 
-.dz-drawer__body p { margin: 0; }
+.dz-drawer__body > p { margin: 0; color: var(--colour-text-muted); }
 
 .dz-drawer__footer {
   display: flex;

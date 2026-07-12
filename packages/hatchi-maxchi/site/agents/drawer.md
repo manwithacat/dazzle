@@ -25,17 +25,19 @@ Edge-anchored panel on the native <dialog> — a drawer with a modal's guarantee
     </div>
     <div class="drawer__body" tabindex="0" aria-label="Filter controls">
       <div class="stack" data-gap="md">
-        <p class="hm-demo-muted" style="margin:0">Compose field, toggle-group, and selection controls inside the scrollable body — the drawer is a host, not a special form type.</p>
+        <p class="hm-demo-muted" style="margin:0">Compose field, toggle-group, switch, and controls inside the scrollable body — guests keep their own DOM contracts.</p>
         <div class="form-field">
           <label class="form-label" for="hm-drawer-q">Search</label>
           <input class="form-input" id="hm-drawer-q" type="search" name="q" placeholder="Name, id, or region…" aria-describedby="hm-drawer-q-hint">
           <p class="form-hint" id="hm-drawer-q-hint">Matches title and secondary fields on the list exchange.</p>
         </div>
-        <fieldset class="toggle-group" role="radiogroup" aria-label="Result density">
-          <legend class="form-label" style="margin-bottom:var(--space-xs)">Density</legend>
-          <label><input type="radio" name="hm-drawer-density" value="comfortable" checked><span>Comfortable</span></label>
-          <label><input type="radio" name="hm-drawer-density" value="compact"><span>Compact</span></label>
-        </fieldset>
+        <div class="stack" data-gap="xs">
+          <div class="form-label" id="hm-drawer-density-label">Density</div>
+          <fieldset class="toggle-group" role="radiogroup" aria-labelledby="hm-drawer-density-label">
+            <label><input type="radio" name="hm-drawer-density" value="comfortable" checked><span>Comfortable</span></label>
+            <label><input type="radio" name="hm-drawer-density" value="compact"><span>Compact</span></label>
+          </fieldset>
+        </div>
         <fieldset class="stack" data-gap="xs" style="border:0;padding:0;margin:0">
           <legend class="form-label">Status</legend>
           <label class="hm-inline"><input type="checkbox" class="checkbox" name="status" value="active" checked> Active</label>
@@ -43,10 +45,10 @@ Edge-anchored panel on the native <dialog> — a drawer with a modal's guarantee
           <label class="hm-inline"><input type="checkbox" class="checkbox" name="status" value="churned"> Churned</label>
         </fieldset>
         <div class="hm-demo-row" style="justify-content:space-between;align-items:center;gap:var(--space-sm)">
-          <label class="hm-inline"><input type="checkbox" class="switch" name="mine" value="1"> Only my records</label>
+          <label class="switch"><input type="checkbox" name="mine" value="1" data-switch><span class="switch__track" aria-hidden="true"></span><span>Only my records</span></label>
           <span class="badge" data-tone="neutral"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-filter"/></svg></span>3 filters</span>
         </div>
-        <div class="alert" data-tone="info" role="status">
+        <div class="alert" data-tone="info" role="alert">
           <span class="alert__icon"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg></span>
           <div class="alert__body">
             <div class="alert__title">Server owns the query</div>
@@ -59,16 +61,16 @@ Edge-anchored panel on the native <dialog> — a drawer with a modal's guarantee
   </form>
 </dialog>
 <dialog class="drawer" id="hm-drawer-lazy" data-width="md" data-side="right" closedby="any" aria-labelledby="hm-drawer-lazy-title">
-  <header class="drawer__header">
+  <div class="drawer__header">
     <h2 class="drawer__title" id="hm-drawer-lazy-title">Record detail</h2>
     <form method="dialog"><button type="submit" class="drawer__close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button></form>
-  </header>
+  </div>
   <div id="hm-drawer-lazy-body" class="drawer__body" tabindex="0" aria-label="Record detail body" aria-live="polite">
     <p class="hm-demo-muted">Open record to load a composed peek fragment…</p>
   </div>
   <div class="drawer__footer">
-    <form method="dialog" style="display:contents"><button type="submit" class="button" data-variant="ghost">Close</button></form>
-    <button type="button" class="button" data-variant="primary">Open full page</button>
+    <form method="dialog"><button type="submit" class="button" data-variant="ghost">Close</button></form>
+    <a class="button" data-variant="primary" href="#drawer">Open full page</a>
   </div>
 </dialog>
 ```
@@ -102,33 +104,44 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 ### Seams
 
 - addressing: data-dz-dialog-open + dialog.dz-drawer (shares dz-dialog.js)
-- body is a composition host — nest field, toggle-group, controls, badge, card, alert
+- chrome shells: form_shell (method=dialog wrap) vs exchange_shell (scoped close forms) — same header/body/footer BEM
+- body is a composition host — nest field, toggle-group, switch, controls, badge, card, alert with honest guest DOM
 - hypermedia peek: hx-get + data-dz-dialog-open on the same click
 - data-dz-side / data-dz-width for placement presets
+- composition matrix: tools/composition_matrix.py
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
-| compose existing Hyperparts inside drawer__body | rebuild field/badge chrome as one-off drawer-only markup |
+| compose existing Hyperparts inside drawer__body with their standalone DOM contracts | rebuild field/badge/switch chrome as one-off drawer-only markup |
+| pick form_shell vs exchange_shell by whether the body may contain nested forms | mix half-patterns (header element + whole-form wrap) without reason |
 | pair hx-get target with the scrollable body id | swap the entire dialog element (loses open state / focus trap) |
+| use one KPI card per metric (or card-label + card-value meta) | one card wrapping an auto-grid of overridden card-value sizes |
 
 ### Pitfalls
 
 - do not invent a second open protocol — same addressing as dialog
-- footer forms: avoid nested <form> inside method=dialog bodies
+- do not wrap exchange_shell body in method=dialog if the fragment may contain forms (nested form is invalid HTML)
+- do not paint drawer__body muted — guests inherit colour
+- do not put legend inside dz-toggle-group (breaks segment flex)
+- do not use input.dz-switch when composing the switch Hyperpart (use label.dz-switch + track + data-dz-switch)
+- do not use form-field as read-only meta (hint is help, not value)
 - lazy body starts empty/skeleton; exchange fills #…-body, not the whole dialog
 
 ### Keyboard / AT
 
 - native dialog focus trap + Esc/backdrop; body may be tabindex=0 for scroll
 - label the body (aria-label) when it is the live region for peek loads
+- toggle-group: external label + aria-labelledby (not legend inside)
 
 ### Related parts
 
 - `dialog` — agents/dialog.md
 - `field` — agents/field.md
 - `toggle-group` — agents/toggle-group.md
+- `switch` — agents/switch.md
+- `controls` — agents/controls.md
 - `badge` — agents/badge.md
 - `card` — agents/card.md
 - `button` — agents/button.md
@@ -140,7 +153,7 @@ No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this**
 
 ## Notes
 
-Opened by shared dz-dialog.js ([data-dz-dialog-open]); close is native. Composition host: body nests field, toggle-group, checkbox/switch, badge, alert (filters demo) or server-swapped card + badge + menu actions (record peek). Second trigger is the hypermedia peek contract: one click fires hx-get into the body and showModal. data-dz-side / data-dz-width for placement.
+Opened by shared dz-dialog.js ([data-dz-dialog-open]); close is native. Chrome shells: form_shell (one method=dialog wrap when body has no nested forms) vs exchange_shell (scoped close forms; body is HTMX target). Both keep drawer__header|body|footer as flex children (outer form is display:contents). Composition host: guests mount with their own DOM contracts (field triad, switch track, toggle-group without legend inside the fieldset, honest KPI cards). Peek: one click fires hx-get into the body and showModal. See stems/host-chrome-symmetry.md and tools/composition_matrix.py.
 
 ## Source files
 

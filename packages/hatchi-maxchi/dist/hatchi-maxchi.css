@@ -2179,15 +2179,18 @@ dialog.dialog::backdrop {
   height: 1rem;
 }
 
+/* Body is a composition host (same rule as drawer): primary text so nested
+   Hyperparts keep their own colour scale. Leading prose stays muted. */
 .dialog__body {
   padding: 0 var(--space-lg);
   font-size: var(--text-sm);
-  color: var(--colour-text-muted);
+  color: var(--colour-text);
   line-height: var(--leading-normal);
 }
 
-.dialog__body p {
+.dialog__body > p {
   margin: 0;
+  color: var(--colour-text-muted);
 }
 
 .dialog__footer {
@@ -2346,16 +2349,20 @@ dialog.drawer > form {
   height: 1rem;
 }
 
+/* Body is a composition host: primary text colour so nested Hyperparts
+   (field labels, card values, switch labels, badges) match their standalone
+   demos. Do not paint the whole body muted — guests inherit. Leading prose
+   (direct children <p>, gallery hm-demo-muted) is the secondary voice. */
 .drawer__body {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-lg);
   font-size: var(--text-sm);
-  color: var(--colour-text-muted);
+  color: var(--colour-text);
   line-height: var(--leading-normal);
 }
 
-.drawer__body p { margin: 0; }
+.drawer__body > p { margin: 0; color: var(--colour-text-muted); }
 
 .drawer__footer {
   display: flex;

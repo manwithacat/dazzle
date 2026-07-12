@@ -78,6 +78,7 @@ decisions. Decisions under `docs/decisions/` are **expressions** of the same ste
 | **Shortcut hint chrome** | Keyboard chips: visually secondary + spatially secondary (adjacent gap / trailing) | `stems/shortcut-hint-chrome.md` |
 | **Overlay light-dismiss** | Transient overlays: spatial (Esc/outside) vs temporal (opt-in ms); not accordion/tree | `stems/overlay-light-dismiss.md` |
 | **Chrome vs protocol** | Modal lookalike L1s: job/lifecycle/authoring/htmx attach; addressing vs request gating | `stems/chrome-vs-protocol.md` |
+| **Host chrome symmetry** | Overlay shells: form_shell vs exchange_shell; body hosts guests with honest DOM | `stems/host-chrome-symmetry.md` |
 
 Monorepo framework stems (DSL-first, hypermedia SSR, …): `../../stems/` when
 working inside the Dazzle tree.
@@ -86,6 +87,10 @@ working inside the Dazzle tree.
 `GALLERY_PROBES.md` · `python tools/gallery_probes.py --run` (or monorepo
 `scripts/hm_gallery_probes.py`). Do not invent exclusive-open on `tree` or ship
 menubar/nav without the controller.
+
+**Composition matrix (host × guest structural coherence):**
+`python tools/composition_matrix.py --validate` — form_shell vs exchange_shell
+chrome, switch/toggle-group/card guest contracts, gallery drawer pins.
 
 **Same visual shape ≠ same Hyperpart.** Lifetime and exchange decide the surface.
 Example: form searchable select → `combobox`; dense in-cell enum with PUT + morph

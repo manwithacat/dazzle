@@ -76,15 +76,18 @@ dialog.dz-dialog::backdrop {
   height: 1rem;
 }
 
+/* Body is a composition host (same rule as drawer): primary text so nested
+   Hyperparts keep their own colour scale. Leading prose stays muted. */
 .dz-dialog__body {
   padding: 0 var(--space-lg);
   font-size: var(--text-sm);
-  color: var(--colour-text-muted);
+  color: var(--colour-text);
   line-height: var(--leading-normal);
 }
 
-.dz-dialog__body p {
+.dz-dialog__body > p {
   margin: 0;
+  color: var(--colour-text-muted);
 }
 
 .dz-dialog__footer {

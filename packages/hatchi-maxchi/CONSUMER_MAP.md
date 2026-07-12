@@ -71,7 +71,13 @@ _No composition edges declared._
 
 **Layer:** `L1`
 
-_No composition edges declared._
+**Embedded by (hard `composes`)**
+
+- `drawer` — composes
+
+**Related from (`composes_with`)**
+
+- `drawer` — composes_with
 
 ### `app-shell`
 
@@ -119,6 +125,7 @@ _No composition edges declared._
 
 **Embedded by (hard `composes`)**
 
+- `drawer` — composes
 - `related-tables` — composes
 - `two-factor` — composes
 
@@ -129,6 +136,7 @@ _No composition edges declared._
 
 **Related from (`composes_with`)**
 
+- `drawer` — composes_with
 - `grid` — composes_with
 
 ### `bar-chart`
@@ -192,8 +200,12 @@ _No composition edges declared._
 - `confirm` — composes_with
 - `confirm-panel` — composes_with
 - `dialog` — composes_with
+- `drawer` — composes_with
 - `grid` — composes_with
+- `kbd` — composes_with
+- `menu` — composes_with
 - `pdf` — composes_with
+- `popover` — composes_with
 - `tabs` — composes_with
 - `wizard` — composes_with
 
@@ -203,6 +215,7 @@ _No composition edges declared._
 
 **Embedded by (hard `composes`)**
 
+- `drawer` — composes
 - `master-detail` — composes
 
 **Used by blueprints**
@@ -215,6 +228,7 @@ _No composition edges declared._
 
 **Related from (`composes_with`)**
 
+- `drawer` — composes_with
 - `master-detail` — composes_with
 
 **Embeds (forward `composes`)**
@@ -272,7 +286,9 @@ _No composition edges declared._
 
 **Layer:** `L1` · **Recipe:** `command-palette` (command palette search)
 
-_No composition edges declared._
+**Related from (`composes_with`)**
+
+- `kbd` — composes_with
 
 ### `confirm`
 
@@ -290,7 +306,13 @@ _No composition edges declared._
 
 **Layer:** `L1`
 
-_No composition edges declared._
+**Embedded by (hard `composes`)**
+
+- `drawer` — composes
+
+**Related from (`composes_with`)**
+
+- `drawer` — composes_with
 
 ### `date-range`
 
@@ -319,6 +341,7 @@ _No composition edges declared._
 **Related from (`composes_with`)**
 
 - `confirm` — composes_with
+- `drawer` — composes_with
 
 **Embeds (forward `composes`)**
 
@@ -332,6 +355,13 @@ _No composition edges declared._
 
 - `dialog`
 - `button`
+- `field`
+- `badge`
+- `card`
+- `alert`
+- `toggle-group`
+- `switch`
+- `controls`
 
 ### `empty-state`
 
@@ -345,6 +375,7 @@ _No composition edges declared._
 
 **Embedded by (hard `composes`)**
 
+- `drawer` — composes
 - `form-chrome` — composes
 - `money` — composes
 - `wizard` — composes
@@ -357,6 +388,7 @@ _No composition edges declared._
 
 - `combobox` — composes_with
 - `confirm-panel` — composes_with
+- `drawer` — composes_with
 - `money` — composes_with
 - `search-select` — composes_with
 - `slider` — composes_with
@@ -445,7 +477,9 @@ _No composition edges declared._
 
 **Layer:** `L1`
 
-_No composition edges declared._
+**Related from (`composes_with`)**
+
+- `command` — composes_with
 
 ### `list-region`
 
@@ -671,7 +705,13 @@ _No composition edges declared._
 
 **Layer:** `L1`
 
-_No composition edges declared._
+**Embedded by (hard `composes`)**
+
+- `drawer` — composes
+
+**Related from (`composes_with`)**
+
+- `drawer` — composes_with
 
 ### `tabs`
 
@@ -719,7 +759,12 @@ _No composition edges declared._
 
 **Embedded by (hard `composes`)**
 
+- `drawer` — composes
 - `toolbar` — composes
+
+**Related from (`composes_with`)**
+
+- `drawer` — composes_with
 
 ### `toolbar`
 

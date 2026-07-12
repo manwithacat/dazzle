@@ -13,10 +13,16 @@
 ### If yes — compose
 
 1. Embed markup that satisfies the **child’s** DOM contract (or load via exchange).
+   - Overlay hosts: pick **form_shell** vs **exchange_shell** first
+     (`stems/host-chrome-symmetry.md`). Body colour stays primary so guests
+     inherit correctly.
+   - Do not invent almost-DOM (e.g. `input.dz-switch` for the Switch
+     Hyperpart; legend inside `dz-toggle-group`; `form-field` as read-only
+     meta). Pin with `tools/composition_matrix.py --validate`.
 2. Add child id to parent `composes=(…)` in `site/registry.py`.
 3. Soft-link via `guidance.composes_with` if agents should discover the child.
 4. Parent contract names **host** seams only.
-5. Rebuild site packs if guidance changes; run cohesion tests.
+5. Rebuild site packs if guidance changes; run cohesion tests + composition matrix.
 
 ### If no — refuse (local primitive)
 

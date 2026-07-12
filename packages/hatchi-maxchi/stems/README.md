@@ -4,7 +4,7 @@ Package-level stems for the design system. They specialise framework stems
 (especially **hypermedia-ssr**) for Hyperparts.
 
 | Inherit from monorepo | `../../stems/` (dsl-first, agent-first, hypermedia-ssr, epistemic-layout, …) |
-| Own | Hyperpart identity, composition, invention, layers, morph-safe hypermedia, details open intent, affordance disclosure chrome, selection-strip honest, shortcut-hint chrome, overlay light-dismiss, chrome vs protocol |
+| Own | Hyperpart identity, composition, invention, layers, morph-safe hypermedia, details open intent, affordance disclosure chrome, selection-strip honest, shortcut-hint chrome, overlay light-dismiss, chrome vs protocol, host chrome symmetry |
 
 ## Authority inside this package
 

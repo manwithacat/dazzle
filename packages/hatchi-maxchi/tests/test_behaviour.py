@@ -1865,6 +1865,61 @@ def test_drawer_lazy_trigger_opens_dialog_and_loads_body(page) -> None:  # type:
     assert page.get_attribute("#hm-drawer-lazy", "open") is None
 
 
+def test_drawer_filters_compose_honest_guests(page) -> None:  # type: ignore[no-untyped-def]
+    """Filters form_shell: switch track anatomy + toggle-group without legend
+    + body text colour is primary (not host-muted inheritance)."""
+    goto_part(page, "drawer")
+    page.click('[data-dialog-open="hm-drawer-demo"]')
+    page.wait_for_timeout(150)
+    demo = "#hm-drawer-demo"
+    assert page.evaluate(f"document.querySelector('{demo}').open")
+    # Switch Hyperpart (not controls pill)
+    assert page.locator(f"{demo} .switch__track").count() == 1
+    assert page.locator(f"{demo} input[data-switch]").count() == 1
+    assert page.locator(f"{demo} input.switch").count() == 0
+    # Toggle-group: no legend inside fieldset
+    assert page.locator(f"{demo} .toggle-group legend").count() == 0
+    assert page.locator(f"{demo} .toggle-group").count() == 1
+    # Body colour is primary (composition host)
+    body_color = page.evaluate(
+        """() => {
+          const b = document.querySelector('#hm-drawer-demo .drawer__body');
+          return getComputedStyle(b).color;
+        }"""
+    )
+    label_color = page.evaluate(
+        """() => {
+          const el = document.querySelector('#hm-drawer-demo .form-label');
+          return getComputedStyle(el).color;
+        }"""
+    )
+    # Both should be the same primary (or label matches body); not a washed body
+    assert body_color == label_color, (
+        f"drawer body should use primary text so guests match standalone "
+        f"(body={body_color}, label={label_color})"
+    )
+    page.keyboard.press("Escape")
+
+
+def test_drawer_peek_composes_honest_kpi_cards(page) -> None:  # type: ignore[no-untyped-def]
+    """exchange_shell peek: one card per metric, no form-field meta fork."""
+    goto_part(page, "drawer")
+    page.click('#drawer [data-dialog-open="hm-drawer-lazy"]')
+    page.wait_for_timeout(200)
+    body = "#hm-drawer-lazy-body"
+    assert page.locator(f"{body} .card.card-body").count() >= 3, (
+        "peek should mount one KPI card per metric (Card hyperpart scale)"
+    )
+    assert page.locator(f"{body} .form-field").count() == 0, (
+        "read-only meta must not use form-field (hint is help, not value)"
+    )
+    assert page.locator(f'{body} .alert[role="alert"]').count() >= 1
+    # Chrome symmetry: header/body/footer classes present
+    for part in ("drawer__header", "drawer__body", "drawer__footer"):
+        assert page.locator(f"#hm-drawer-lazy .{part}").count() == 1
+    page.keyboard.press("Escape")
+
+
 def test_search_box_coaching_hides_on_type_via_pure_css(page) -> None:  # type: ignore[no-untyped-def]
     """The search-box coaching line is toggled by CSS alone
     (`:has(input:not(:placeholder-shown))`) — no client state. Typing

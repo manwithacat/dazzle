@@ -52,39 +52,45 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       + "Selected — hidden FK filled server-side; form posts the id, not this label."
       + "</div>",
     "/mock/search": '<div class="search-box-result-count">2 results</div><ul class="search-box-result-list" role="list"><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Aurora <mark>Substation</mark></span><ul class="search-box-result-snippets"><li class="search-box-result-snippet"><span class="search-box-result-snippet-field">Region:</span><span class="search-box-result-snippet-text">North grid, <mark>substation</mark> cluster A</span></li></ul></a></li><li class="search-box-result"><a href="#" class="search-box-result-link"><span class="search-box-result-title">Beacon <mark>Substation</mark></span></a></li></ul>',
-    // Composed peek fragment for the drawer Hyperpart demo (card + badge +
-    // field-like meta + alert + actions). Server returns the body only —
-    // not the drawer chrome (open/focus stay on the host dialog).
+    // Composed peek fragment for the drawer Hyperpart demo. Honest guest DOM:
+    // card-label/value title stack, one KPI card per metric in auto-grid,
+    // meta as card-label + primary text (not form-field+hint), alert role=alert.
+    // Server returns the body only — not drawer chrome (open/focus stay host).
     "/mock/drawer/detail":
       '<div class="stack" data-gap="md">' +
       '<div class="hm-demo-row" style="justify-content:space-between;align-items:flex-start;' +
       'gap:var(--space-sm);flex-wrap:wrap">' +
       "<div>" +
-      '<p class="form-label" style="margin:0 0 0.25rem">Asset</p>' +
-      '<h3 style="margin:0;font-size:var(--text-lg)">Aurora Substation</h3>' +
+      '<div class="card-label">Asset</div>' +
+      '<div class="card-value" style="font-size:var(--text-lg);line-height:1.2">' +
+      "Aurora Substation</div>" +
       "</div>" +
       '<span class="badge" data-tone="success">' +
       '<span class="badge-icon">{i:circle-check}</span>Online</span>' +
       "</div>" +
+      // One card per metric — matches Card hyperpart scale (no value overrides)
+      '<div class="auto-grid" style="--grid-min:7rem">' +
       '<div class="card card-body">' +
-      '<div class="auto-grid" style="--grid-min:7rem;gap:var(--space-md)">' +
-      '<div><div class="card-label">Region</div>' +
-      '<div class="card-value" style="font-size:var(--text-base)">North</div></div>' +
-      '<div><div class="card-label">Load</div>' +
-      '<div class="card-value" style="font-size:var(--text-base)">82%</div></div>' +
-      '<div><div class="card-label">Open WOs</div>' +
-      '<div class="card-value" style="font-size:var(--text-base)">2</div></div>' +
-      "</div></div>" +
-      '<div class="stack" data-gap="xs">' +
-      '<div class="form-field" style="margin:0">' +
-      '<span class="form-label">Commissioned</span>' +
-      '<p class="form-hint" style="margin:0">2019 · last inspection 14 June</p>' +
+      '<div class="card-label">Region</div>' +
+      '<div class="card-value">North</div></div>' +
+      '<div class="card card-body">' +
+      '<div class="card-label">Load</div>' +
+      '<div class="card-value">82%</div></div>' +
+      '<div class="card card-body">' +
+      '<div class="card-label">Open WOs</div>' +
+      '<div class="card-value">2</div></div>' +
       "</div>" +
-      '<div class="form-field" style="margin:0">' +
-      '<span class="form-label">Primary contact</span>' +
-      '<p class="form-hint" style="margin:0">Maya Reyes · Operations</p>' +
+      // Read-only meta: label + value, not form-field (hint is help text)
+      '<div class="stack" data-gap="sm">' +
+      "<div>" +
+      '<div class="card-label">Commissioned</div>' +
+      "<div>2019 · last inspection 14 June</div>" +
+      "</div>" +
+      "<div>" +
+      '<div class="card-label">Primary contact</div>' +
+      "<div>Maya Reyes · Operations</div>" +
       "</div></div>" +
-      '<div class="alert" data-tone="warning" role="status">' +
+      '<div class="alert" data-tone="warning" role="alert">' +
       '<span class="alert__icon">{i:triangle-alert}</span>' +
       '<div class="alert__body">' +
       '<div class="alert__title">Two open work orders</div>' +
