@@ -23,6 +23,8 @@ dialog.dz-drawer {
   background: var(--colour-surface);
   color: var(--colour-text);
   box-shadow: var(--shadow-lg);
+  /* Shell may hold initial focus after open (dz-dialog.js) — no ring on the panel. */
+  outline: none;
   /* right edge (default): pin to the inline-end */
   margin-block: 0;
   margin-inline: auto 0;
@@ -34,6 +36,11 @@ dialog.dz-drawer {
     translate var(--duration-base) var(--ease-out),
     overlay var(--duration-base) var(--ease-out) allow-discrete,
     display var(--duration-base) var(--ease-out) allow-discrete;
+}
+
+dialog.dz-drawer:focus,
+dialog.dz-drawer:focus-visible {
+  outline: none;
 }
 
 /* Width presets (data-dz-width) — promoted from Dazzle's peek

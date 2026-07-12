@@ -19,6 +19,13 @@ dialog.dz-dialog {
   background: var(--colour-surface);
   color: var(--colour-text);
   box-shadow: var(--shadow-lg);
+  /* Shell may hold initial focus after open (dz-dialog.js) — no ring on the panel. */
+  outline: none;
+}
+
+dialog.dz-dialog:focus,
+dialog.dz-dialog:focus-visible {
+  outline: none;
 }
 
 dialog.dz-dialog::backdrop {

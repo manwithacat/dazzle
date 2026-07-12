@@ -1519,6 +1519,47 @@ def test_drawer_opens_via_shared_opener_and_closes(page) -> None:  # type: ignor
     assert not page.evaluate(f"document.querySelector('{dw}').open"), "Esc must close the drawer"
 
 
+def test_drawer_open_does_not_focus_close_control(page) -> None:  # type: ignore[no-untyped-def]
+    """Pointer open must not leave the ✕ as the focused control.
+
+    WebKit paints showModal's first focusable (the close button) as
+    :focus-visible, so the dismiss control looks "active" until the user
+    clicks away. dz-dialog.js settles focus on the dialog shell instead.
+    """
+    goto_part(page, "drawer")
+    page.click('[data-dialog-open="hm-drawer-demo"]')
+    page.wait_for_timeout(200)
+    info = page.evaluate(
+        """() => {
+          const dlg = document.getElementById('hm-drawer-demo');
+          const active = document.activeElement;
+          const close = dlg && dlg.querySelector('.drawer__close');
+          return {
+            open: !!(dlg && dlg.open),
+            activeIsClose: active === close,
+            activeIsInside: !!(dlg && active && dlg.contains(active)),
+            closeFocusVisible: !!(close && close.matches(':focus-visible')),
+            activeClass: active ? active.className : '',
+            activeTag: active ? active.tagName : '',
+          };
+        }"""
+    )
+    assert info["open"], "drawer must be open"
+    assert info["activeIsInside"], "focus must remain inside the dialog (trap)"
+    assert not info["activeIsClose"], (
+        f"close button must not hold initial focus after pointer open "
+        f"(active={info['activeTag']}.{info['activeClass']})"
+    )
+    assert not info["closeFocusVisible"], (
+        "close button must not be :focus-visible after pointer open "
+        "(looks 'active' until click-away)"
+    )
+    # Esc still works with shell focus
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(150)
+    assert page.get_attribute("#hm-drawer-demo", "open") is None
+
+
 def test_master_detail_selection_and_instance_isolation(page) -> None:  # type: ignore[no-untyped-def]
     """The master-detail composite: clicking a list item selects it (aria-current
     moves) AND the controller is instance-isolated — a second master-detail on
