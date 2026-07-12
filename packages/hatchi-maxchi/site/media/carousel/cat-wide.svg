@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="Landscape cat illustration">
+  <rect width="640" height="360" fill="#f0e6d8"/>
+  <ellipse cx="320" cy="300" rx="180" ry="40" fill="#e0d0c0"/>
+  <!-- body -->
+  <ellipse cx="300" cy="230" rx="110" ry="70" fill="#d4a574"/>
+  <!-- head -->
+  <circle cx="400" cy="160" r="72" fill="#e0b080"/>
+  <!-- ears -->
+  <path d="M350 110 L340 50 L390 95 Z" fill="#e0b080"/>
+  <path d="M450 110 L460 50 L410 95 Z" fill="#e0b080"/>
+  <path d="M355 105 L348 65 L385 95 Z" fill="#f5c9a0"/>
+  <path d="M445 105 L452 65 L415 95 Z" fill="#f5c9a0"/>
+  <!-- eyes -->
+  <ellipse cx="375" cy="155" rx="10" ry="14" fill="#2a2a2a"/>
+  <ellipse cx="425" cy="155" rx="10" ry="14" fill="#2a2a2a"/>
+  <circle cx="378" cy="150" r="3" fill="#fff"/>
+  <circle cx="428" cy="150" r="3" fill="#fff"/>
+  <!-- nose / mouth -->
+  <ellipse cx="400" cy="178" rx="8" ry="6" fill="#c47a6a"/>
+  <path d="M400 184 Q385 200 375 190" fill="none" stroke="#8a5a4a" stroke-width="2"/>
+  <path d="M400 184 Q415 200 425 190" fill="none" stroke="#8a5a4a" stroke-width="2"/>
+  <!-- whiskers -->
+  <path d="M360 175 H310 M360 185 H305 M440 175 H490 M440 185 H495" stroke="#8a5a4a" stroke-width="1.5" fill="none"/>
+  <!-- tail -->
+  <path d="M200 220 Q140 180 160 120" fill="none" stroke="#d4a574" stroke-width="18" stroke-linecap="round"/>
+  <text x="24" y="40" font-family="system-ui,sans-serif" font-size="18" fill="#8a6a50">16∶9 · wide</text>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="Square cat illustration">
+  <rect width="400" height="400" fill="#eef5e8"/>
+  <circle cx="200" cy="210" r="95" fill="#9cbf6a"/>
+  <circle cx="200" cy="155" r="78" fill="#b5d47a"/>
+  <path d="M145 100 L130 35 L185 85 Z" fill="#b5d47a"/>
+  <path d="M255 100 L270 35 L215 85 Z" fill="#b5d47a"/>
+  <path d="M150 96 L140 50 L180 85 Z" fill="#d0e8a0"/>
+  <path d="M250 96 L260 50 L220 85 Z" fill="#d0e8a0"/>
+  <ellipse cx="175" cy="150" rx="11" ry="15" fill="#2a3a20"/>
+  <ellipse cx="225" cy="150" rx="11" ry="15" fill="#2a3a20"/>
+  <circle cx="178" cy="145" r="3" fill="#fff"/>
+  <circle cx="228" cy="145" r="3" fill="#fff"/>
+  <ellipse cx="200" cy="175" rx="9" ry="7" fill="#c47a6a"/>
+  <path d="M200 182 Q180 200 168 190 M200 182 Q220 200 232 190" fill="none" stroke="#4a6030" stroke-width="2.5"/>
+  <path d="M155 170 H110 M155 180 H105 M245 170 H290 M245 180 H295" stroke="#4a6030" stroke-width="1.5" fill="none"/>
+  <!-- paws -->
+  <ellipse cx="155" cy="290" rx="28" ry="18" fill="#9cbf6a"/>
+  <ellipse cx="245" cy="290" rx="28" ry="18" fill="#9cbf6a"/>
+  <text x="20" y="40" font-family="system-ui,sans-serif" font-size="18" fill="#5a7040">1∶1 · square</text>
+</svg>

@@ -1695,6 +1695,12 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       "</div></div></div>" +
       '<p class="hm-demo-muted" style="margin:0">Overview panel restored inside the peek.</p>',
 
+    // Carousel rich slide — hx-get into a live region inside the active slide.
+    "/mock/carousel/adopt":
+      '<span class="dz-badge" data-dz-tone="success">'
+      + "Visit requested — a product exchange would create the appointment."
+      + "</span>",
+
     "/mock/shell/dashboard": '<div class="dz-stack" data-dz-gap="md"><h1>Dashboard</h1><div class="dz-auto-grid" style="--dz-grid-min: 10rem"><div class="dz-card dz-card-body"><div class="dz-card-label">Outstanding</div><div class="dz-card-value">£12,450</div></div><div class="dz-card dz-card-body"><div class="dz-card-label">Paid</div><div class="dz-card-value">£48,900</div></div></div></div>',
     "/mock/shell/invoices": '<div class="dz-stack" data-dz-gap="md"><h1>Invoices</h1><p class="hm-demo-muted">The routed workspace swapped — the shell, sidebar state, and scroll position persist; only the main slot changed.</p></div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
@@ -2664,6 +2670,13 @@ Every snippet is the live example — copy it into any htmx4 app.
     if sample_pdf.exists():
         (out_dir / "sample.pdf").write_bytes(sample_pdf.read_bytes())
         (hp_dir / "sample.pdf").write_bytes(sample_pdf.read_bytes())
+    # Carousel (and future) demo media: site/media/** → out_dir/media/**
+    # Partials use __HM_ROOT__media/... so index and hyperparts/ both resolve.
+    media_src = Path(__file__).resolve().parent / "media"
+    if media_src.is_dir():
+        media_out = out_dir / "media"
+        if media_out.resolve() != media_src.resolve():
+            shutil.copytree(media_src, media_out, dirs_exist_ok=True)
     theme_toggle = (
         '<div class="hm-theme-toggle"><div class="dz-toggle-group" role="radiogroup">'
         '<label><input type="radio" name="hm-theme" data-hm-theme="light" '

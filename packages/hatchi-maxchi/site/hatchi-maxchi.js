@@ -246,6 +246,12 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       "</div></div></div>" +
       '<p class="hm-demo-muted" style="margin:0">Overview panel restored inside the peek.</p>',
 
+    // Carousel rich slide — hx-get into a live region inside the active slide.
+    "/mock/carousel/adopt":
+      '<span class="badge" data-tone="success">'
+      + "Visit requested — a product exchange would create the appointment."
+      + "</span>",
+
     "/mock/shell/dashboard": '<div class="stack" data-gap="md"><h1>Dashboard</h1><div class="auto-grid" style="--grid-min: 10rem"><div class="card card-body"><div class="card-label">Outstanding</div><div class="card-value">£12,450</div></div><div class="card card-body"><div class="card-label">Paid</div><div class="card-value">£48,900</div></div></div></div>',
     "/mock/shell/invoices": '<div class="stack" data-gap="md"><h1>Invoices</h1><p class="hm-demo-muted">The routed workspace swapped — the shell, sidebar state, and scroll position persist; only the main slot changed.</p></div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" width="300" height="400" role="img" aria-label="Portrait cat illustration">
+  <rect width="300" height="400" fill="#e8eef5"/>
+  <!-- sitting body -->
+  <ellipse cx="150" cy="280" rx="70" ry="90" fill="#7a8fa8"/>
+  <ellipse cx="150" cy="340" rx="85" ry="35" fill="#6a7f98"/>
+  <!-- head -->
+  <circle cx="150" cy="150" r="68" fill="#8aa0b8"/>
+  <path d="M105 105 L95 40 L140 90 Z" fill="#8aa0b8"/>
+  <path d="M195 105 L205 40 L160 90 Z" fill="#8aa0b8"/>
+  <path d="M110 100 L103 55 L138 90 Z" fill="#a8bcd0"/>
+  <path d="M190 100 L197 55 L162 90 Z" fill="#a8bcd0"/>
+  <ellipse cx="128" cy="145" rx="9" ry="13" fill="#1e2830"/>
+  <ellipse cx="172" cy="145" rx="9" ry="13" fill="#1e2830"/>
+  <circle cx="131" cy="141" r="2.5" fill="#fff"/>
+  <circle cx="175" cy="141" r="2.5" fill="#fff"/>
+  <ellipse cx="150" cy="168" rx="7" ry="5" fill="#c47a6a"/>
+  <path d="M150 173 Q135 188 125 180 M150 173 Q165 188 175 180" fill="none" stroke="#4a5a6a" stroke-width="2"/>
+  <path d="M115 165 H70 M115 175 H68 M185 165 H230 M185 175 H232" stroke="#4a5a6a" stroke-width="1.5" fill="none"/>
+  <text x="16" y="36" font-family="system-ui,sans-serif" font-size="16" fill="#5a6a7a">3∶4 · tall</text>
+</svg>

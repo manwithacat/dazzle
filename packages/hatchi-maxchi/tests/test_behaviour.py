@@ -1460,28 +1460,60 @@ def test_tabs_switch_and_lazy_load(page) -> None:  # type: ignore[no-untyped-def
 def test_carousel_prev_next_and_dots_change_active_slide(page) -> None:  # type: ignore[no-untyped-def]
     """dz-carousel.js: next/prev/dots move data-active and aria-current.
 
-    The gallery used to ship inert prev/next (controller deferred) — no
-    visible state change on click. Demo must exercise the behaviour.
+    Demo uses mixed media (3 cats) + a hypermedia CTA slide. Controllers
+    must change visible slide state; media must letterbox without crop.
     """
     goto_part(page, "carousel")
     root = page.locator("#carousel [data-carousel], #carousel .carousel").first
     assert root.count() == 1
     slides = root.locator(".carousel__slide")
-    assert slides.count() == 3
+    assert slides.count() == 4
+    media = root.locator(".carousel__slide--media img")
+    assert media.count() == 3, "three cat SVGs with distinct intrinsic sizes"
+    # Wait for all media to decode (hidden slides still fetch without loading=lazy)
+    page.wait_for_function(
+        """() => [...document.querySelectorAll(
+          '#carousel .carousel__slide--media img'
+        )].every(img => img.complete && img.naturalWidth > 0)""",
+        timeout=5000,
+    )
+    dims = page.evaluate(
+        """() => {
+          const imgs = [...document.querySelectorAll(
+            '#carousel .carousel__slide--media img'
+          )];
+          return imgs.map(img => ({
+            w: Number(img.getAttribute('width')),
+            h: Number(img.getAttribute('height')),
+            naturalW: img.naturalWidth,
+            naturalH: img.naturalHeight,
+          }));
+        }"""
+    )
+    assert len(dims) == 3
+    assert dims[0]["w"] > dims[0]["h"], "slide 1 landscape"
+    assert dims[1]["h"] > dims[1]["w"], "slide 2 portrait"
+    assert dims[2]["w"] == dims[2]["h"], "slide 3 square"
+    assert all(d["naturalW"] > 0 for d in dims), f"media failed to load: {dims}"
 
-    def active_text() -> str:
+    def active_label() -> str:
         return page.evaluate(
             """() => {
-              const r = document.querySelector('#carousel [data-carousel], #carousel .carousel');
+              const r = document.querySelector(
+                '#carousel [data-carousel], #carousel .carousel'
+              );
               const a = r && r.querySelector('.carousel__slide[data-active]');
-              return a ? a.textContent.trim() : '';
+              if (!a) return '';
+              const img = a.querySelector('img');
+              if (img) return img.getAttribute('alt') || '';
+              return (a.textContent || '').trim().slice(0, 80);
             }"""
         )
 
     def index_attr() -> str | None:
         return root.get_attribute("data-carousel-index")
 
-    assert "Slide 1" in active_text()
+    assert "16 by 9" in active_label() or "Landscape" in active_label()
     assert index_attr() in (None, "0")
     prev = root.locator("[data-carousel-prev]")
     next_btn = root.locator("[data-carousel-next]")
@@ -1490,7 +1522,9 @@ def test_carousel_prev_next_and_dots_change_active_slide(page) -> None:  # type:
 
     next_btn.click()
     page.wait_for_timeout(100)
-    assert "Slide 2" in active_text(), f"next should show slide 2, got {active_text()!r}"
+    assert "3 by 4" in active_label() or "Portrait" in active_label(), (
+        f"next should show portrait cat, got {active_label()!r}"
+    )
     assert index_attr() == "1"
     assert not prev.is_disabled()
     dots = root.locator(".carousel__dot")
@@ -1499,15 +1533,24 @@ def test_carousel_prev_next_and_dots_change_active_slide(page) -> None:  # type:
 
     dots.nth(2).click()
     page.wait_for_timeout(100)
-    assert "Slide 3" in active_text()
+    assert "1 by 1" in active_label() or "Square" in active_label()
     assert index_attr() == "2"
+
+    # Hypermedia slide: HTML fragment + hx-get CTA (not image-only)
+    dots.nth(3).click()
+    page.wait_for_timeout(100)
+    assert index_attr() == "3"
     assert next_btn.is_disabled()
-    assert dots.nth(2).get_attribute("aria-current") == "true"
+    assert "Hypermedia" in active_label() or "Adopt" in active_label()
+    adopt = root.locator("button", has_text="Request visit")
+    assert adopt.count() == 1
+    adopt.click()
+    page.wait_for_timeout(200)
+    assert "Visit requested" in page.inner_text("#hm-carousel-adopt")
 
     prev.click()
     page.wait_for_timeout(100)
-    assert "Slide 2" in active_text()
-    assert index_attr() == "1"
+    assert index_attr() == "2"
     assert not next_btn.is_disabled()
 
 

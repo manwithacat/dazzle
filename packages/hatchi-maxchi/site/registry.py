@@ -2500,14 +2500,50 @@ def select(source: str, id: str) -> str:
             "carousel",
             "Carousel",
             "Data",
-            "Media / content strip — active slide is data-dz-active; prev/next "
-            "and dots update DOM state via dz-carousel.js (or a server re-render).",
-            '<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0">'
+            "Content strip for media or HTML fragments — fixed viewport, "
+            "object-fit media, DOM-local prev/next/dots (or server re-render).",
+            # Media paths use __HM_ROOT__ so index + hyperparts/ pages resolve.
+            # Cats demonstrate mixed intrinsic dimensions (16:9 / 3:4 / 1:1)
+            # letterboxed in a 16:9 stage. Final slide is hypermedia HTML.
+            '<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0" '
+            'aria-roledescription="carousel" aria-label="Cat gallery">'
             '<div class="dz-carousel__viewport">'
             '<div class="dz-carousel__track">'
-            '<div class="dz-carousel__slide" data-dz-active>Slide 1 · hero</div>'
-            '<div class="dz-carousel__slide">Slide 2 · details</div>'
-            '<div class="dz-carousel__slide">Slide 3 · CTA</div>'
+            # ── media: landscape ──
+            '<div class="dz-carousel__slide dz-carousel__slide--media" data-dz-active>'
+            '<div class="dz-carousel__media">'
+            # No loading=lazy: inactive slides are display:none and lazy would
+            # skip fetch until activated — gallery demos need all media present.
+            '<img src="__HM_ROOT__media/carousel/cat-wide.svg" width="640" height="360" '
+            'alt="Landscape cat · 16 by 9 illustration">'
+            "</div></div>"
+            # ── media: portrait (taller than the stage) ──
+            '<div class="dz-carousel__slide dz-carousel__slide--media">'
+            '<div class="dz-carousel__media">'
+            '<img src="__HM_ROOT__media/carousel/cat-tall.svg" width="300" height="400" '
+            'alt="Portrait cat · 3 by 4 illustration">'
+            "</div></div>"
+            # ── media: square ──
+            '<div class="dz-carousel__slide dz-carousel__slide--media">'
+            '<div class="dz-carousel__media">'
+            '<img src="__HM_ROOT__media/carousel/cat-square.svg" width="400" height="400" '
+            'alt="Square cat · 1 by 1 illustration">'
+            "</div></div>"
+            # ── hypermedia: not “just an image” ──
+            '<div class="dz-carousel__slide dz-carousel__slide--rich">'
+            '<div class="dz-card dz-card-body">'
+            '<div class="dz-card-label">Hypermedia slide</div>'
+            '<div class="dz-card-value" style="font-size:var(--text-base)">Adopt Mochi</div>'
+            '<p class="dz-carousel__caption" style="margin-top:var(--space-xs)">'
+            "Slides are HTML fragments — media, KPI cards, or "
+            "<code>hx-get</code> actions. The strip is not image-only.</p>"
+            '<button type="button" class="dz-button" data-dz-variant="primary" '
+            'style="margin-top:var(--space-sm)" '
+            'hx-get="/mock/carousel/adopt" hx-target="#hm-carousel-adopt" '
+            'hx-swap="innerHTML">Request visit</button>'
+            '<div id="hm-carousel-adopt" class="dz-carousel__caption" '
+            'style="margin-top:var(--space-sm)" aria-live="polite"></div>'
+            "</div></div>"
             "</div></div>"
             '<div class="dz-carousel__controls">'
             '<button type="button" class="dz-carousel__btn" data-dz-carousel-prev '
@@ -2516,25 +2552,39 @@ def select(source: str, id: str) -> str:
             # without tabpanels (axe aria-required-children).
             '<div class="dz-carousel__dots" role="group" aria-label="Slides">'
             '<button type="button" class="dz-carousel__dot" aria-current="true" '
-            'aria-label="Slide 1"></button>'
-            '<button type="button" class="dz-carousel__dot" aria-label="Slide 2"></button>'
-            '<button type="button" class="dz-carousel__dot" aria-label="Slide 3"></button>'
+            'aria-label="Slide 1, landscape cat"></button>'
+            '<button type="button" class="dz-carousel__dot" '
+            'aria-label="Slide 2, portrait cat"></button>'
+            '<button type="button" class="dz-carousel__dot" '
+            'aria-label="Slide 3, square cat"></button>'
+            '<button type="button" class="dz-carousel__dot" '
+            'aria-label="Slide 4, adopt call to action"></button>'
             "</div>"
             '<button type="button" class="dz-carousel__btn" data-dz-carousel-next '
             'aria-label="Next slide">›</button>'
-            "</div></div>",
+            "</div>"
+            '<p class="hm-demo-muted" style="margin:0;font-size:var(--text-xs)">'
+            "Viewport is 16∶9; wide / tall / square media use "
+            "<code>object-fit: contain</code>. Last slide is a live HTML fragment "
+            "(not an image).</p>"
+            "</div>",
             notes="Only <code>[data-dz-active]</code> slides show. "
             "<code>dz-carousel.js</code> advances prev/next/dots (clamps at "
-            "ends — Previous disabled on first, Next on last). Product hosts "
-            "may re-render the strip over the wire; the controller is the "
-            "local affordance when the page stays put. shadcn parity (HMC-037).",
-            tags=("media", "interactive"),
+            "ends). <strong>Media:</strong> fixed viewport + "
+            "<code>object-fit: contain</code> so mixed intrinsic sizes "
+            "letterbox honestly. <strong>Hypermedia:</strong> a slide is any "
+            "HTML fragment — image, card, or <code>hx-*</code> affordance; the "
+            "server can also re-render the whole strip. shadcn parity (HMC-037).",
+            tags=("media", "interactive", "htmx"),
             controller="controllers/dz-carousel.js",
             contracts=("contracts/carousel.py",),
             guidance=Guidance(
                 seams=(
                     "root [data-dz-carousel] + data-dz-carousel-index",
                     "slides .dz-carousel__slide with data-dz-active on the visible one",
+                    "media: .dz-carousel__slide--media > .dz-carousel__media > img|svg "
+                    "(object-fit contain in a fixed 16/9 viewport)",
+                    "rich HTML: .dz-carousel__slide--rich (cards, hx-* CTAs, live regions)",
                     "prev [data-dz-carousel-prev] / next [data-dz-carousel-next] / "
                     ".dz-carousel__dot peers",
                 ),
@@ -2545,6 +2595,10 @@ def select(source: str, id: str) -> str:
                     "(matches SSR disabled affordance on first slide)",
                     "dots use role=group, not tablist (no tabpanels — axe)",
                     "do not invent a JS slide model outside the DOM",
+                    "do not stretch mixed media with object-fit:cover unless product "
+                    "requires cropping — contain preserves aspect honestly",
+                    "do not assume slides are images only — hypermedia fragments and "
+                    "server-swapped strips are first-class",
                 ),
                 do_dont=(
                     (
@@ -2555,9 +2609,18 @@ def select(source: str, id: str) -> str:
                         "clamp at first/last with disabled buttons",
                         "infinite-wrap without an explicit product requirement",
                     ),
+                    (
+                        "letterbox mixed aspect ratios with object-fit: contain",
+                        "force every asset to fill and crop without intent",
+                    ),
+                    (
+                        "put media, cards, or hx-* actions in slides as HTML fragments",
+                        "treat the carousel as an image-only widget with no server story",
+                    ),
                 ),
                 a11y_keys=(
                     "aria-label on prev/next; aria-current on the active dot",
+                    "meaningful alt text on media; aria-roledescription=carousel on root",
                     "dot hit targets are 24×24 (visual pip via ::before)",
                 ),
             ),

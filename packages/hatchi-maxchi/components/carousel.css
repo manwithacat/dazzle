@@ -1,12 +1,16 @@
 /* HYPERPART: carousel */
 /*
- * Server-rendered media / content strip. Active slide is marked
- * data-dz-active on the slide; index lives on the root as
- * data-dz-carousel-index (dz-carousel.js keeps both in sync).
+ * Server-rendered content strip — media, HTML fragments, or both. Active
+ * slide is data-dz-active; index lives on the root as data-dz-carousel-index
+ * (dz-carousel.js keeps both in sync).
+ *
+ * Viewport aspect is fixed (16/9); media of other dimensions object-fit:
+ * contain so wide / tall / square assets letterbox honestly. Rich slides
+ * (cards, hx-* actions) use overflow auto inside the same viewport.
  *
  * Controller (dz-carousel.js): prev / next / dots update data-dz-active,
  * aria-current on dots, and disabled ends (clamp, not wrap). Product hosts
- * may still re-render the strip over the wire; the controller is the local
+ * may re-render the strip over the wire; the controller is the local
  * affordance when the page stays put.
  */
 
@@ -24,6 +28,7 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--colour-border);
   background: var(--colour-surface-muted);
+  /* Stable stage: mixed media aspect ratios letterbox inside this box. */
   aspect-ratio: 16 / 9;
 }
 
@@ -38,6 +43,8 @@
   display: none;
   align-items: center;
   justify-content: center;
+  min-height: 0;
+  min-width: 0;
   padding: var(--space-md);
   color: var(--colour-text-muted);
   font-size: var(--text-sm);
@@ -45,6 +52,51 @@
 
 .dz-carousel__slide[data-dz-active] {
   display: flex;
+}
+
+/* Full-bleed media slide — image/SVG fills the stage, fit=contain. */
+.dz-carousel__slide--media {
+  padding: 0;
+  background: var(--colour-bg);
+}
+
+.dz-carousel__media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: var(--space-xs);
+  box-sizing: border-box;
+}
+
+.dz-carousel__media img,
+.dz-carousel__media svg {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* Hypermedia / mixed content: card, CTA, form fragment, etc. */
+.dz-carousel__slide--rich {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--space-sm);
+  overflow: auto;
+  color: var(--colour-text);
+  text-align: start;
+}
+
+.dz-carousel__caption {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  line-height: var(--leading-normal);
 }
 
 .dz-carousel__controls {
