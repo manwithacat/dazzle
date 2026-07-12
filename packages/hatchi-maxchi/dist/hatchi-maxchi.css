@@ -5332,12 +5332,12 @@ button.item:hover {
 /*
  * Server-rendered media / content strip. Active slide is marked
  * data-active on the slide; index lives on the root as
- * data-carousel-index for future controller + SSR re-renders.
+ * data-carousel-index (carousel.js keeps both in sync).
  *
- * PLACEHOLDER — shadcn parity (HMC-037). No controller yet: demos show
- * slide 1 active; prev/next buttons are affordances for a follow-up
- * that cycles data-active / re-fetches the strip. Hypermedia-native:
- * prefer server pages or OOB swap over client slide state.
+ * Controller (carousel.js): prev / next / dots update data-active,
+ * aria-current on dots, and disabled ends (clamp, not wrap). Product hosts
+ * may still re-render the strip over the wire; the controller is the local
+ * affordance when the page stays put.
  */
 
 .carousel {

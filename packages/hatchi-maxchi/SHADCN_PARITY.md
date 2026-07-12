@@ -38,7 +38,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `button-group` | **partial** | `toggle-group,toolbar,controls` | Compose toggle-group / toolbar; no dedicated button-group id |
 | `calendar` | **partial** | `date-range` | Date-range + CalendarGrid emit exist; no full month-picker Hyperpart |
 | `card` | **parity** | `card` | Gallery + dashboard-card chrome |
-| `carousel` | **parity** | `carousel` | Gallery Hyperpart — SSR strip + data-dz-active slide; controller deferred |
+| `carousel` | **parity** | `carousel` | Gallery Hyperpart — SSR strip + data-dz-active; `dz-carousel.js` prev/next/dots |
 | `chart` | **partial** | `bar-chart,time-series,radar,sparkline,histogram,box-plot,funnel,heatmap,bullet,bar-track,chart-legend` | HM owns server-SVG chart family; shadcn is Recharts client wrapper |
 | `checkbox` | **partial** | `field,form` | Native form field; not a named Hyperpart (deliberate) |
 | `collapsible` | **partial** | `accordion` | Accordion covers disclosure; single collapsible root optional |

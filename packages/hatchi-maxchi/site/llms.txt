@@ -53,7 +53,7 @@
 - [Aspect ratio](https://manwithacat.github.io/hatchi-maxchi/agents/aspect-ratio.md): Media frame that locks width/height — images and embeds fill with object-fit cover.
 - [Item](https://manwithacat.github.io/hatchi-maxchi/agents/item.md): Generic list row — optional media, title, description, trailing actions. Compose into lists, pickers, and search results.
 - [Hover card](https://manwithacat.github.io/hatchi-maxchi/agents/hover-card.md): Rich preview on hover/focus — CSS-only progressive enhancement over a trigger link or button.
-- [Carousel](https://manwithacat.github.io/hatchi-maxchi/agents/carousel.md): Media / content strip — server marks the active slide; prev/next are hypermedia affordances (re-render or future controller).
+- [Carousel](https://manwithacat.github.io/hatchi-maxchi/agents/carousel.md): Media / content strip — active slide is data-dz-active; prev/next and dots update DOM state via dz-carousel.js (or a server re-render).
 - [Menubar](https://manwithacat.github.io/hatchi-maxchi/agents/menubar.md): Horizontal app menus (File / Edit / View) — each item is a native details/summary so open state is DOM-native.
 - [Bubble](https://manwithacat.github.io/hatchi-maxchi/agents/bubble.md): Chat bubble shell — rounded content for inbound/outbound speech. Compose inside message rows.
 - [Message](https://manwithacat.github.io/hatchi-maxchi/agents/message.md): Chat message row — media + author/time meta + bubble. Outbound rows reverse with data-dz-from=out.

@@ -1,6 +1,6 @@
 # Carousel (`carousel`)
 
-Media / content strip — server marks the active slide; prev/next are hypermedia affordances (re-render or future controller).
+Media / content strip — active slide is data-dz-active; prev/next and dots update DOM state via dz-carousel.js (or a server re-render).
 
 > **Layer:** L1 surface · **Recipe:** _(unset — see docs/agent/pick-a-surface.md)_
 > Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
@@ -39,6 +39,7 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 ### Seams
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
+- load the controller (`controllers/dz-carousel.js` — included in hatchi-maxchi.js when you ship the bundle)
 - no Server exchange on this part — pure presentation or client chrome
 - no typed contracts/ module yet — the partial is the surface of record
 
@@ -48,8 +49,9 @@ No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this**
 
 ## Notes
 
-PLACEHOLDER — shadcn parity (HMC-037). Only [data-dz-active] slides show. Prefer server page index or OOB swap over client-only slide state. Controller that cycles data-dz-active is deferred.
+Only [data-dz-active] slides show. dz-carousel.js advances prev/next/dots (clamps at ends — Previous disabled on first, Next on last). Product hosts may re-render the strip over the wire; the controller is the local affordance when the page stays put. shadcn parity (HMC-037).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `controllers/dz-carousel.js`

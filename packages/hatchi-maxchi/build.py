@@ -130,6 +130,7 @@ JS_SOURCES = [
     "controllers/dz-dialog.js",
     "controllers/dz-slider.js",
     "controllers/dz-tabs.js",
+    "controllers/dz-carousel.js",
     "controllers/dz-grid.js",
     "controllers/dz-grid-cols.js",
     "controllers/dz-grid-resize.js",

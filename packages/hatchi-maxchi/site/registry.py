@@ -2500,8 +2500,8 @@ def select(source: str, id: str) -> str:
             "carousel",
             "Carousel",
             "Data",
-            "Media / content strip — server marks the active slide; prev/next "
-            "are hypermedia affordances (re-render or future controller).",
+            "Media / content strip — active slide is data-dz-active; prev/next "
+            "and dots update DOM state via dz-carousel.js (or a server re-render).",
             '<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0">'
             '<div class="dz-carousel__viewport">'
             '<div class="dz-carousel__track">'
@@ -2523,11 +2523,13 @@ def select(source: str, id: str) -> str:
             '<button type="button" class="dz-carousel__btn" data-dz-carousel-next '
             'aria-label="Next slide">›</button>'
             "</div></div>",
-            notes="PLACEHOLDER — shadcn parity (HMC-037). Only "
-            "<code>[data-dz-active]</code> slides show. Prefer server page "
-            "index or OOB swap over client-only slide state. Controller that "
-            "cycles <code>data-dz-active</code> is deferred.",
+            notes="Only <code>[data-dz-active]</code> slides show. "
+            "<code>dz-carousel.js</code> advances prev/next/dots (clamps at "
+            "ends — Previous disabled on first, Next on last). Product hosts "
+            "may re-render the strip over the wire; the controller is the "
+            "local affordance when the page stays put. shadcn parity (HMC-037).",
             tags=("media", "interactive"),
+            controller="controllers/dz-carousel.js",
         ),
         Hyperpart(
             "menubar",

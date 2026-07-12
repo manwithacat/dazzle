@@ -1457,6 +1457,60 @@ def test_tabs_switch_and_lazy_load(page) -> None:  # type: ignore[no-untyped-def
     )
 
 
+def test_carousel_prev_next_and_dots_change_active_slide(page) -> None:  # type: ignore[no-untyped-def]
+    """dz-carousel.js: next/prev/dots move data-active and aria-current.
+
+    The gallery used to ship inert prev/next (controller deferred) — no
+    visible state change on click. Demo must exercise the behaviour.
+    """
+    goto_part(page, "carousel")
+    root = page.locator("#carousel [data-carousel], #carousel .carousel").first
+    assert root.count() == 1
+    slides = root.locator(".carousel__slide")
+    assert slides.count() == 3
+
+    def active_text() -> str:
+        return page.evaluate(
+            """() => {
+              const r = document.querySelector('#carousel [data-carousel], #carousel .carousel');
+              const a = r && r.querySelector('.carousel__slide[data-active]');
+              return a ? a.textContent.trim() : '';
+            }"""
+        )
+
+    def index_attr() -> str | None:
+        return root.get_attribute("data-carousel-index")
+
+    assert "Slide 1" in active_text()
+    assert index_attr() in (None, "0")
+    prev = root.locator("[data-carousel-prev]")
+    next_btn = root.locator("[data-carousel-next]")
+    assert prev.is_disabled()
+    assert not next_btn.is_disabled()
+
+    next_btn.click()
+    page.wait_for_timeout(100)
+    assert "Slide 2" in active_text(), f"next should show slide 2, got {active_text()!r}"
+    assert index_attr() == "1"
+    assert not prev.is_disabled()
+    dots = root.locator(".carousel__dot")
+    assert dots.nth(1).get_attribute("aria-current") == "true"
+    assert dots.nth(0).get_attribute("aria-current") is None
+
+    dots.nth(2).click()
+    page.wait_for_timeout(100)
+    assert "Slide 3" in active_text()
+    assert index_attr() == "2"
+    assert next_btn.is_disabled()
+    assert dots.nth(2).get_attribute("aria-current") == "true"
+
+    prev.click()
+    page.wait_for_timeout(100)
+    assert "Slide 2" in active_text()
+    assert index_attr() == "1"
+    assert not next_btn.is_disabled()
+
+
 def test_slider_updates_value_readout(page) -> None:  # type: ignore[no-untyped-def]
     """dz-slider.js writes the range value into the group's [data-range-value]
     readout on input, scoped to the slider's own group."""
