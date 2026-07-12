@@ -27,6 +27,20 @@ DEFAULT_MECHANICAL_MODEL = "claude-haiku-4-5-20251001"
 # current Grok tier without a dated retirement cliff.
 DEFAULT_GROK_JUDGMENT_MODEL = "grok-4.5"
 
+
+def default_model_for_driver(driver: str) -> str:
+    """Pick the judgment-tier model ID for a resolved LLM driver.
+
+    Subscription CLIs only accept model IDs from their own family —
+    passing ``claude-sonnet-*`` to ``grok -p --model`` aborts with
+    "unknown model id". Call sites that leave ``model=None`` must use
+    this helper so auto / grok-cli paths do not inherit the Claude pin.
+    """
+    if driver == "grok-cli":
+        return DEFAULT_GROK_JUDGMENT_MODEL
+    return DEFAULT_JUDGMENT_MODEL
+
+
 # USD per million tokens (input, output) — current Anthropic lineup,
 # verified 2026-06-11. Consumers derive their own units from this; do
 # not duplicate prices elsewhere.

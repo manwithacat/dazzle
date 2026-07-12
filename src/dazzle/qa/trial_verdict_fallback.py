@@ -96,19 +96,14 @@ def synthesize_verdict(
 
     if is_subscription_driver(llm_driver):
         try:
-            from dazzle.core.model_defaults import DEFAULT_GROK_JUDGMENT_MODEL
-            from dazzle.llm.driver import DRIVER_GROK_CLI, call_subscription_cli
+            from dazzle.core.model_defaults import default_model_for_driver
+            from dazzle.llm.driver import call_subscription_cli
 
-            default_model = (
-                DEFAULT_GROK_JUDGMENT_MODEL
-                if llm_driver == DRIVER_GROK_CLI
-                else DEFAULT_JUDGMENT_MODEL
-            )
             text, _tokens = call_subscription_cli(
                 llm_driver,
                 user_msg,
                 system_prompt=prompt,
-                model=model or default_model,
+                model=model or default_model_for_driver(llm_driver),
             )
             return text.strip()
         except Exception:

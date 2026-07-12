@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL, default_model_for_driver
 
 from .executor import Executor
 from .models import ActionResult, ActionType, AgentAction, PageState, Step
@@ -401,7 +401,8 @@ class DazzleAgent:
     ):
         self._observer = observer
         self._executor = executor
-        self._model = model or self.DEFAULT_MODEL
+        # Driver-aware default: grok-cli needs a Grok model id, not Claude.
+        self._model = model or default_model_for_driver(llm_driver)
         self._api_key = api_key
         self._mcp_session = mcp_session
         self._use_tool_calls = use_tool_calls

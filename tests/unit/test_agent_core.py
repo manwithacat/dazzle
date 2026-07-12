@@ -245,6 +245,18 @@ class TestClaudeCliDriver:
         )
         assert agent._use_tool_calls is False
 
+    def test_default_model_follows_llm_driver(self) -> None:
+        """grok-cli must not inherit the Claude judgment pin (unknown model id)."""
+        from dazzle.core.model_defaults import (
+            DEFAULT_GROK_JUDGMENT_MODEL,
+            DEFAULT_JUDGMENT_MODEL,
+        )
+
+        claude = DazzleAgent(_mock_observer(), _mock_executor(), llm_driver="claude-cli")
+        grok = DazzleAgent(_mock_observer(), _mock_executor(), llm_driver="grok-cli")
+        assert claude._model == DEFAULT_JUDGMENT_MODEL
+        assert grok._model == DEFAULT_GROK_JUDGMENT_MODEL
+
     @pytest.mark.asyncio
     async def test_decide_routes_to_claude_cli(self) -> None:
         agent = DazzleAgent(_mock_observer(), _mock_executor(), llm_driver="claude-cli")
