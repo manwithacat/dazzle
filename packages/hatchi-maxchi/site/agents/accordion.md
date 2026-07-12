@@ -34,13 +34,27 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- `details.dz-accordion__item` + shared `name=` for exclusive group
+- `summary.dz-accordion__trigger` — native toggle, no controller
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| Share one name= across peer items for single-open FAQ | Copy menubar exclusive controller onto accordion panels |
+
+### Pitfalls
+
+- Missing or mismatched name= → multi-open (not exclusive)
+- Do not add exclusive-open JS here — browser name= is the contract
+- Do not confuse with tree (multi_open forest) or menubar (controller chrome)
+
+### Keyboard / AT
+
+- details/summary expose expanded state natively
+- Keyboard: Enter/Space on summary
 
 ## DOM contract
 
@@ -48,7 +62,7 @@ No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this**
 
 ## Notes
 
-Exclusivity is the native name attribute on <details> — the browser closes the open sibling for you. No aria-expanded wiring: <details>/<summary> carry it.
+Open intent: exclusive via native name= on peer <details> (stem details-open-intent) — zero JS. Gallery probe accordion.exclusive_open. No aria-expanded wiring: details/summary carry it. Drop name= only when multi-open FAQ is intentional.
 
 ## Source files
 

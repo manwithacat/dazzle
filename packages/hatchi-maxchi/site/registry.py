@@ -2223,12 +2223,12 @@ def select(source: str, id: str) -> str:
             '<button type="button" role="menuitem">Zoom in</button>'
             '<button type="button" role="menuitem">Zoom out</button>'
             "</div></details></div>",
-            notes="shadcn parity (HMC-038). Native <code>details</code> for "
-            "open state; <code>controllers/dz-menubar.js</code> enforces "
-            "exclusive open + outside/Escape dismiss (gallery probes "
+            notes="Open intent: <strong>exclusive</strong> + outside/Escape "
+            "dismiss (stem <code>details-open-intent</code>). "
+            "<code>controllers/dz-menubar.js</code>; gallery probes "
             "<code>menubar.exclusive_open</code>, "
-            "<code>menubar.dismiss_outside</code>). Compose with menu "
-            "Hyperpart for denser item lists.",
+            "<code>menubar.dismiss_outside</code>. Compose with menu "
+            "Hyperpart for denser item lists. shadcn parity (HMC-038).",
             tags=("navigation", "interactive"),
             controller="controllers/dz-menubar.js",
             contracts=("contracts/menubar.py",),
@@ -2386,12 +2386,14 @@ def select(source: str, id: str) -> str:
             '<li class="dz-navigation-menu__item">'
             '<a class="dz-navigation-menu__link" href="#">Pricing</a></li>'
             "</ul></nav>",
-            notes="shadcn parity (HMC-039). Distinct from menubar (app chrome) "
-            "and app-shell (sidebar). Mega layout via "
-            "<code>data-dz-layout=mega</code>. Exclusive open + outside dismiss: "
-            "<code>controllers/dz-navigation-menu.js</code> (gallery probes "
+            notes="Open intent: <strong>exclusive</strong> + outside/Escape "
+            "dismiss (stem <code>details-open-intent</code>). Distinct from "
+            "menubar (app chrome) and app-shell (sidebar). Mega layout via "
+            "<code>data-dz-layout=mega</code>. Controller "
+            "<code>dz-navigation-menu.js</code>; probes "
             "<code>navigation_menu.exclusive_open</code>, "
-            "<code>navigation_menu.dismiss_outside</code>).",
+            "<code>navigation_menu.dismiss_outside</code>. shadcn parity "
+            "(HMC-039).",
             tags=("navigation", "interactive"),
             controller="controllers/dz-navigation-menu.js",
             contracts=("contracts/navigation_menu.py",),
@@ -2468,10 +2470,35 @@ def select(source: str, id: str) -> str:
             '<summary class="dz-accordion__trigger">Can two panels be open at once?</summary>'
             '<div class="dz-accordion__panel">Not while they share a name=. Drop the attribute for an '
             "independent, multi-open group.</div></details></div>",
-            notes="Exclusivity is the native <code>name</code> attribute on "
-            "<code>&lt;details&gt;</code> — the browser closes the open sibling for you. No "
-            "<code>aria-expanded</code> wiring: <code>&lt;details&gt;/&lt;summary&gt;</code> carry it.",
+            notes="Open intent: <strong>exclusive</strong> via native "
+            "<code>name=</code> on peer <code>&lt;details&gt;</code> "
+            "(stem <code>details-open-intent</code>) — zero JS. Gallery probe "
+            "<code>accordion.exclusive_open</code>. No "
+            "<code>aria-expanded</code> wiring: details/summary carry it. "
+            "Drop <code>name=</code> only when multi-open FAQ is intentional.",
             tags=("interactive",),
+            guidance=Guidance(
+                seams=(
+                    "`details.dz-accordion__item` + shared `name=` for exclusive group",
+                    "`summary.dz-accordion__trigger` — native toggle, no controller",
+                ),
+                pitfalls=(
+                    "Missing or mismatched name= → multi-open (not exclusive)",
+                    "Do not add exclusive-open JS here — browser name= is the contract",
+                    "Do not confuse with tree (multi_open forest) or menubar (controller chrome)",
+                ),
+                do_dont=(
+                    (
+                        "Share one name= across peer items for single-open FAQ",
+                        "Copy menubar exclusive controller onto accordion panels",
+                    ),
+                ),
+                a11y_keys=(
+                    "details/summary expose expanded state natively",
+                    "Keyboard: Enter/Space on summary",
+                ),
+                composes_with=(),
+            ),
         ),
         Hyperpart(
             "tabs",
@@ -3866,15 +3893,40 @@ def select(source: str, id: str) -> str:
             "</summary></details>"
             "</div></details>"
             "</div></div>",
-            notes="Dual-lock root is <code>data-dz-tree</code> "
-            "(<code>contracts/tree.py</code>) on the forest wrapper. Pure "
-            "hypermedia: state is the native <code>open</code> attribute, the "
-            "chevron rotation keys off <code>.dz-tree-node[open]</code>, and "
-            "each level indents via its <code>dz-tree-children</code> wrapper. "
-            "The server emits depth-0 nodes <code>open</code> by default; the "
-            "count chip renders only for nodes with children.",
+            notes="Open intent: <strong>multi_open</strong> "
+            "(stem <code>details-open-intent</code>) — sibling branches stay "
+            "open; do <em>not</em> add exclusive-open. Dual-lock root "
+            "<code>data-dz-tree</code> (<code>contracts/tree.py</code>). Pure "
+            "hypermedia: state is the native <code>open</code> attribute; "
+            "chevron keys off <code>.dz-tree-node[open]</code>; levels indent "
+            "via <code>dz-tree-children</code>. Depth-0 nodes default "
+            "<code>open</code>; count chip only when children exist. Gallery "
+            "probe <code>tree.multi_open</code> (scope <code>.hm-preview</code>).",
             tags=("data",),
             contracts=("contracts/tree.py",),
+            guidance=Guidance(
+                seams=(
+                    "`[data-dz-tree]` / `.dz-tree` forest root (dual-lock)",
+                    "`details.dz-tree-node` + `summary.dz-tree-summary` per node",
+                ),
+                pitfalls=(
+                    "Do not ship exclusive-open or name= exclusivity on tree peers",
+                    "Gallery may mount a second forest under .hm-contract-live__preview — "
+                    "interaction checks use .hm-preview only",
+                    "Not menubar/nav chrome — no outside-dismiss controller",
+                ),
+                do_dont=(
+                    (
+                        "Leave multi-open native details for sibling branches",
+                        "Port dz-menubar exclusive-open onto the tree forest",
+                    ),
+                ),
+                a11y_keys=(
+                    "Native details/summary expand/collapse",
+                    "Keyboard: Enter/Space on summary",
+                ),
+                composes_with=(),
+            ),
         ),
         Hyperpart(
             "diagram",

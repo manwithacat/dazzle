@@ -40,13 +40,27 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- no Server exchange on this part — pure presentation or client chrome
-- satisfy the DOM contract tables (CI stop-ship)
+- `[data-dz-tree]` / `.dz-tree` forest root (dual-lock)
+- `details.dz-tree-node` + `summary.dz-tree-summary` per node
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| Leave multi-open native details for sibling branches | Port dz-menubar exclusive-open onto the tree forest |
+
+### Pitfalls
+
+- Do not ship exclusive-open or name= exclusivity on tree peers
+- Gallery may mount a second forest under .hm-contract-live__preview — interaction checks use .hm-preview only
+- Not menubar/nav chrome — no outside-dismiss controller
+
+### Keyboard / AT
+
+- Native details/summary expand/collapse
+- Keyboard: Enter/Space on summary
 
 ## DOM contract
 
@@ -76,7 +90,7 @@ def render(t: Tree) -> str:
 
 ## Notes
 
-Dual-lock root is data-dz-tree (contracts/tree.py) on the forest wrapper. Pure hypermedia: state is the native open attribute, the chevron rotation keys off .dz-tree-node[open], and each level indents via its dz-tree-children wrapper. The server emits depth-0 nodes open by default; the count chip renders only for nodes with children.
+Open intent: multi_open (stem details-open-intent) — sibling branches stay open; do not add exclusive-open. Dual-lock root data-dz-tree (contracts/tree.py). Pure hypermedia: state is the native open attribute; chevron keys off .dz-tree-node[open]; levels indent via dz-tree-children. Depth-0 nodes default open; count chip only when children exist. Gallery probe tree.multi_open (scope .hm-preview).
 
 ## Source files
 

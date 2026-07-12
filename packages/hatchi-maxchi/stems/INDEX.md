@@ -7,7 +7,9 @@
 | [composition-declared](composition-declared.md) | composes / does_not_compose / extensions; never silent dogfood |
 | [invention-ladder](invention-ladder.md) | Reuse → refuse+spike → promote → new Hyperpart |
 | [morph-safe-hypermedia](morph-safe-hypermedia.md) | htmx4 morph for stable surfaces; DOM identity/state; no Alpine in core |
+| [details-open-intent](details-open-intent.md) | Multi-`<details>`: declare exclusive vs multi_open; chrome needs dismiss |
 
 **Framework parent:** [monorepo stems](../../../stems/INDEX.md)
 **Playbooks:** `docs/agent/`
 **Decisions (expressions):** `docs/decisions/`
+**Interaction probes (machine expressions):** `GALLERY_PROBES.md`, `tools/gallery_probes.py`

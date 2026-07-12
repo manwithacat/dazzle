@@ -114,7 +114,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-shadcn parity (HMC-039). Distinct from menubar (app chrome) and app-shell (sidebar). Mega layout via data-dz-layout=mega. Exclusive open + outside dismiss: controllers/dz-navigation-menu.js (gallery probes navigation_menu.exclusive_open, navigation_menu.dismiss_outside).
+Open intent: exclusive + outside/Escape dismiss (stem details-open-intent). Distinct from menubar (app chrome) and app-shell (sidebar). Mega layout via data-dz-layout=mega. Controller dz-navigation-menu.js; probes navigation_menu.exclusive_open, navigation_menu.dismiss_outside. shadcn parity (HMC-039).
 
 ## Source files
 

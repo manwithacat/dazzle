@@ -72,9 +72,15 @@ decisions. Decisions under `docs/decisions/` are **expressions** of the same ste
 | **Declared composition** | `composes` / `does_not_compose` / extensions | `stems/composition-declared.md` |
 | **Invention ladder** | Reuse → refuse+spike → promote → new part | `stems/invention-ladder.md` |
 | **Morph-safe hypermedia** | htmx4 morph for stable surfaces; DOM identity/state; no Alpine in core | `stems/morph-safe-hypermedia.md` |
+| **Details open intent** | Multi-`<details>` peers: exclusive vs multi_open; chrome needs outside dismiss | `stems/details-open-intent.md` |
 
 Monorepo framework stems (DSL-first, hypermedia SSR, …): `../../stems/` when
 working inside the Dazzle tree.
+
+**Interaction contracts (machine expressions of open intent):**
+`GALLERY_PROBES.md` · `python tools/gallery_probes.py --run` (or monorepo
+`scripts/hm_gallery_probes.py`). Do not invent exclusive-open on `tree` or ship
+menubar/nav without the controller.
 
 **Same visual shape ≠ same Hyperpart.** Lifetime and exchange decide the surface.
 Example: form searchable select → `combobox`; dense in-cell enum with PUT + morph

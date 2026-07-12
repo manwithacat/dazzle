@@ -91,7 +91,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-shadcn parity (HMC-038). Native details for open state; controllers/dz-menubar.js enforces exclusive open + outside/Escape dismiss (gallery probes menubar.exclusive_open, menubar.dismiss_outside). Compose with menu Hyperpart for denser item lists.
+Open intent: exclusive + outside/Escape dismiss (stem details-open-intent). controllers/dz-menubar.js; gallery probes menubar.exclusive_open, menubar.dismiss_outside. Compose with menu Hyperpart for denser item lists. shadcn parity (HMC-038).
 
 ## Source files
 
