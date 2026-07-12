@@ -1488,7 +1488,7 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       '<div class="dz-alert__body">' +
       '<div class="dz-alert__title">Two open work orders</div>' +
       '<div class="dz-alert__description">' +
-      "Peek stays partial — use Open full page for the complete record shell." +
+      "Peek stays partial — Open full page navigates to the owned record URL." +
       "</div></div></div>" +
       '<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">' +
       '<button type="button" class="dz-button" data-dz-variant="outline">{i:clipboard-list} ' +
@@ -2275,6 +2275,9 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         # (e.g. controllers/dz-command.js) and HYPERPART markers, which keep
         # the source form regardless of the published class namespace.
         live = apply_prefix(expand_icons(c.partial), prefix)
+        # __HM_ROOT__ → site-root-relative prefix (index "" vs part pages "../")
+        live_index = live.replace("__HM_ROOT__", "")
+        live_part = live.replace("__HM_ROOT__", "../")
         # framed Hyperparts (fixed-position compositions) render as a
         # STANDALONE live page embedded via iframe — the same treatment
         # the Blueprints got (2026-07-06 Pages-layout breakage class):
@@ -2300,7 +2303,7 @@ window.addEventListener('storage', function (e) {{
 </head>
 <body>
 {sheet}
-{live}
+{live_part}
 <script src="../hatchi-maxchi.js" defer></script>
 </body>
 </html>"""
@@ -2309,13 +2312,16 @@ window.addEventListener('storage', function (e) {{
                 f'<iframe class="hm-hp-frame" src="hyperparts/{c.id}-live.html" '
                 f'title="{_html.escape(c.title)} — live preview"></iframe>'
             )
+            framed_live_part = framed_live.replace('src="hyperparts/', 'src="')
         else:
-            framed_live = live
+            framed_live = live_index
+            framed_live_part = live_part
         # The live demo uses the compact one-line `live`; the SNIPPET is
         # pretty-printed so the structure is legible (render-faithful — see
         # site/pretty.py). Sprite-dependency note prepended to the snippet only.
-        pretty = pretty_html(live)
-        snippet_src = _SPRITE_NOTE + pretty if '<use href="#i-' in live else pretty
+        # Snippet uses site-root relative hrefs (index form of __HM_ROOT__).
+        pretty = pretty_html(live_index)
+        snippet_src = _SPRITE_NOTE + pretty if '<use href="#i-' in live_index else pretty
         # Dogfood the code Hyperpart: surface + copy; HTML/Python build-time colour.
         snippet_block = apply_prefix(
             render_code_block(
@@ -2329,7 +2335,6 @@ window.addEventListener('storage', function (e) {{
         deps = _dependency_chips(c)
         # Linear part page (no accordions): demo → copy → exchange → how-to
         # → DOM contract → notes → files. Same order as agents/<id>.md.
-        framed_live_part = framed_live.replace('src="hyperparts/', 'src="')
         part_sections.append(
             (
                 c,
@@ -2359,6 +2364,7 @@ window.addEventListener('storage', function (e) {{
         agent_docs.append((c.id, _agent_md(c, snippet_src)))
         # SIMPLE gallery section (spec decision 5): demo + snippet + link.
         # No exchanges/contract/guidance/anatomy disclosures on the index.
+        # Index uses site-root relative links (framed_live / live_index).
         body_parts.append(
             f'<section class="hm-comp" id="{c.id}">'
             f"<h2>{_html.escape(c.title)}{tag}</h2>"

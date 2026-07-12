@@ -292,4 +292,97 @@ BLUEPRINTS: list[Blueprint] = [
         "so the SERVER renders <code>data-dz-sidebar</code> correctly on the "
         "next full page load — state-in-DOM at SSR, no client hydration flash.",
     ),
+    Blueprint(
+        "record-page",
+        "Record full page",
+        "The owned-URL home for a record after a drawer peek. Same asset as the "
+        "drawer hypermedia peek (Aurora Substation), but a full document: KPI "
+        "grid, tabs, activity, and primary actions — shareable, refreshable, "
+        "Back-friendly. Peek is GET ?peek=1 fragment; this page is GET /records/{id}.",
+        '<main class="dz-stack" data-dz-gap="lg">'
+        '<p class="hm-demo-muted" style="margin:0">'
+        '<a href="../#drawer">← Gallery · Drawer</a>'
+        " · full page (not a widened drawer)</p>"
+        '<div class="dz-cluster" data-dz-justify="between">'
+        "<div>"
+        '<div class="dz-card-label">Asset</div>'
+        '<h1 style="margin:0.25rem 0 0;letter-spacing:-0.02em">Aurora Substation</h1>'
+        "</div>"
+        '<div class="dz-cluster" data-dz-gap="sm">'
+        '<span class="dz-badge" data-dz-tone="success">'
+        '<span class="dz-badge-icon">{svg:circle-check}</span>Online</span>'
+        '<button type="button" class="dz-button" data-dz-variant="outline">'
+        "{svg:clipboard-list} Work orders</button>"
+        '<button type="button" class="dz-button" data-dz-variant="primary">'
+        "Edit asset</button>"
+        "</div></div>"
+        '<div class="dz-auto-grid" style="--dz-grid-min:11rem">'
+        '<div class="dz-card dz-card-body">'
+        '<div class="dz-card-label">Region</div>'
+        '<div class="dz-card-value">North</div>'
+        '<div class="dz-card-delta">Grid cluster A</div></div>'
+        '<div class="dz-card dz-card-body">'
+        '<div class="dz-card-label">Load</div>'
+        '<div class="dz-card-value">82%</div>'
+        '<div class="dz-card-delta">{svg:trending-up} +4% today</div></div>'
+        '<div class="dz-card dz-card-body">'
+        '<div class="dz-card-label">Open WOs</div>'
+        '<div class="dz-card-value">2</div>'
+        '<div class="dz-card-delta">{svg:triangle-alert} needs dispatch</div></div>'
+        '<div class="dz-card dz-card-body">'
+        '<div class="dz-card-label">Commissioned</div>'
+        '<div class="dz-card-value" style="font-size:var(--text-xl)">2019</div>'
+        '<div class="dz-card-delta">Last inspection 14 June</div></div>'
+        "</div>"
+        '<div class="dz-tabs" data-dz-tabs>'
+        '<div class="dz-tabs__list" role="tablist">'
+        '<button type="button" class="dz-tabs__tab" aria-current="true" '
+        'data-dz-tab-target="rec-overview">Overview</button>'
+        '<button type="button" class="dz-tabs__tab" '
+        'data-dz-tab-target="rec-activity">Activity</button>'
+        '<button type="button" class="dz-tabs__tab" '
+        'data-dz-tab-target="rec-related">Related</button>'
+        "</div>"
+        '<div id="rec-overview" class="dz-tabs__panel" role="tabpanel">'
+        '<div class="dz-stack" data-dz-gap="md">'
+        '<div class="dz-alert" data-dz-tone="warning" role="alert">'
+        '<span class="dz-alert__icon">{svg:triangle-alert}</span>'
+        '<div class="dz-alert__body">'
+        '<div class="dz-alert__title">Two open work orders</div>'
+        '<div class="dz-alert__description">'
+        "Full page owns the complete record shell — history, related tables, "
+        "and edit flows that do not fit a peek drawer."
+        "</div></div></div>"
+        '<div class="dz-stack" data-dz-gap="sm">'
+        '<div><div class="dz-card-label">Primary contact</div>'
+        "<div>Maya Reyes · Operations</div></div>"
+        '<div><div class="dz-card-label">Feeder</div>'
+        "<div>N-GRID-14 · 33 kV</div></div>"
+        "</div></div></div>"
+        '<div id="rec-activity" class="dz-tabs__panel" role="tabpanel" hidden>'
+        '<p class="hm-demo-muted">Inspection notes, status changes, and work-order '
+        "events land here on the full page — not in the peek fragment.</p></div>"
+        '<div id="rec-related" class="dz-tabs__panel" role="tabpanel" hidden>'
+        '<p class="hm-demo-muted">Related assets, contracts, and tickets would '
+        "compose as list-region / grid guests on this route.</p></div>"
+        "</div>"
+        "</main>",
+        composes=(
+            "stack",
+            "cluster",
+            "auto-grid",
+            "card",
+            "badge",
+            "button",
+            "alert",
+            "tabs",
+        ),
+        notes="Paired with the <strong>Drawer</strong> hypermedia peek: the drawer "
+        "loads <code>GET …?peek=1</code> into <code>drawer__body</code>; this "
+        "Blueprint is the owned document for the same record. "
+        "<strong>Open full page</strong> is navigation (a real <code>href</code>), "
+        "not a CSS maximize of the dialog. Widen-in-place is a separate job "
+        "(<code>data-dz-width</code> cycle) — do not label it “full page.” "
+        "See <code>stems/host-chrome-symmetry.md</code> › Peek vs full page.",
+    ),
 ]

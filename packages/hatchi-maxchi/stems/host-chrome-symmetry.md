@@ -33,6 +33,24 @@ Both shells:
 - Refuse almost-DOM: `input.switch` (controls pill) ≠ Switch Hyperpart;
   `form-field` + hint without control ≠ Field; legend-in-toggle-group ≠ Toggle group.
 
+### Peek vs full page vs widen
+
+Three jobs; do not collapse them into one button:
+
+| Job | Affordance | Exchange / navigation |
+|-----|------------|------------------------|
+| **Peek** | Open record (drawer) | `GET …?peek=1` fragment → `drawer__body` + `showModal` |
+| **Full page** | **Open full page** (`<a href>`) | `GET /records/{id}` document — owned URL (gallery: Blueprint `record-page`) |
+| **Widen** | **Widen** (`data-dz-drawer-widen`) | Same dialog; cycle `data-dz-width` md→lg→xl→full |
+
+- Full page is **addressing** (new history entry, share/refresh/Back).
+- Widen is **chrome** (same URL, more panel width).
+- Never label a width cycle “Open full page”; never ship that label on `type=button` with no `href`.
+
+Product peers: Linear/Jira/GitHub project panels use peek → issue route; Notion uses
+peek mode → full page of the same object. Component kits (Radix/shadcn) only own
+the sheet; the app owns the route.
+
 ### Machine expression
 
 `tools/composition_matrix.py` — host × guest matrix, **declared incompatibilities
@@ -63,10 +81,13 @@ empty-state, popover, kbd, skeleton — plus refusal probes (`nested-form`,
 - Read-only meta built as Field (label + hint, no control).
 - Dogfooding `input.dz-switch` while declaring `composes` → `switch`.
 - Nesting a dialog/command palette inside a drawer body “for convenience.”
+- Calling a width maximize “Open full page.”
+- Dead `type=button` primary labeled Open full page.
 
 ## Expressions
 
 - Drawer / dialog gallery partials (`site/registry.py`)
+- Blueprint `record-page` (full-page peer of drawer peek)
 - `tools/composition_matrix.py` · `COMPOSITION_MATRIX.md`
 - `tests/test_composition_matrix.py` · `tests/test_composition_matrix_playwright.py`
 - `docs/agent/compose-or-refuse.md` (host mount rules)

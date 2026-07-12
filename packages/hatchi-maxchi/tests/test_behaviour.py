@@ -1961,6 +1961,51 @@ def test_drawer_peek_composes_honest_kpi_cards(page) -> None:  # type: ignore[no
     page.keyboard.press("Escape")
 
 
+def test_drawer_open_full_page_is_real_navigation(page) -> None:  # type: ignore[no-untyped-def]
+    """Open full page is an <a href> to the record Blueprint — not a no-op button."""
+    goto_part(page, "drawer")
+    page.click('#drawer [data-dialog-open="hm-drawer-lazy"]')
+    page.wait_for_timeout(150)
+    link = page.locator('#hm-drawer-lazy a.button[data-variant="primary"]')
+    assert link.count() == 1
+    href = link.get_attribute("href") or ""
+    assert "blueprints/record-page" in href, (
+        f"full-page CTA must point at record-page Blueprint, got {href!r}"
+    )
+    assert href.endswith(".html") or "record-page" in href
+    assert link.evaluate("el => el.tagName") == "A"
+    # Follow the link — full page document, not a widened dialog
+    link.click()
+    page.wait_for_timeout(300)
+    assert "record-page" in page.url, f"expected navigation to record-page, url={page.url}"
+    assert "Aurora Substation" in page.inner_text("body")
+    assert page.locator("h1").count() >= 1
+
+
+def test_drawer_widen_cycles_width_without_navigation(page) -> None:  # type: ignore[no-untyped-def]
+    """Widen is chrome (data-width cycle), not full-page navigation."""
+    goto_part(page, "drawer")
+    page.click('#drawer [data-dialog-open="hm-drawer-lazy"]')
+    page.wait_for_timeout(150)
+    dlg = page.locator("#hm-drawer-lazy")
+    assert (
+        dlg.get_attribute("data-width") in (None, "md") or dlg.get_attribute("data-width") == "md"
+    )
+    # gallery unprefixed attr
+    before = page.evaluate(
+        "() => document.getElementById('hm-drawer-lazy').getAttribute('data-width') || 'md'"
+    )
+    page.click("#hm-drawer-lazy [data-drawer-widen]")
+    page.wait_for_timeout(50)
+    after = page.evaluate(
+        "() => document.getElementById('hm-drawer-lazy').getAttribute('data-width')"
+    )
+    assert after in ("lg", "xl", "full"), f"expected width cycle, got {after!r} (from {before!r})"
+    assert page.url.endswith("drawer.html") or "drawer" in page.url
+    # still open
+    assert page.get_attribute("#hm-drawer-lazy", "open") is not None
+
+
 def test_search_box_coaching_hides_on_type_via_pure_css(page) -> None:  # type: ignore[no-untyped-def]
     """The search-box coaching line is toggled by CSS alone
     (`:has(input:not(:placeholder-shown))`) — no client state. Typing

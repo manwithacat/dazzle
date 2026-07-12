@@ -1230,13 +1230,20 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "</div></form></dialog>"
             # Demo B: exchange_shell chrome — body may receive forms later, so
             # close is scoped method=dialog forms only. Same BEM shell parts.
+            # Peek → full page: primary CTA is a real href (owned URL), not a
+            # no-op. __HM_ROOT__ is rewritten by build_site for index vs part pages.
+            # Widen is a separate affordance (data-dz-width cycle) — not "full page".
             '<dialog class="dz-drawer" id="hm-drawer-lazy" data-dz-width="md" '
             'data-dz-side="right" closedby="any" aria-labelledby="hm-drawer-lazy-title">'
             '<div class="dz-drawer__header">'
             '<h2 class="dz-drawer__title" id="hm-drawer-lazy-title">Record detail</h2>'
+            '<div class="hm-demo-row" style="gap:var(--space-xs);align-items:center">'
+            '<button type="button" class="dz-button" data-dz-variant="ghost" '
+            'data-dz-drawer-widen aria-label="Widen drawer panel">'
+            "Widen</button>"
             '<form method="dialog">'
             '<button type="submit" class="dz-drawer__close" aria-label="Close">{svg:x}</button>'
-            "</form></div>"
+            "</form></div></div>"
             '<div id="hm-drawer-lazy-body" class="dz-drawer__body" tabindex="0" '
             'aria-label="Record detail body" aria-live="polite">'
             '<p class="hm-demo-muted">Open record to load a composed peek fragment…</p>'
@@ -1245,7 +1252,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<form method="dialog">'
             '<button type="submit" class="dz-button" data-dz-variant="ghost">Close</button>'
             "</form>"
-            '<a class="dz-button" data-dz-variant="primary" href="#drawer">'
+            '<a class="dz-button" data-dz-variant="primary" '
+            'href="__HM_ROOT__blueprints/record-page.html">'
             "Open full page</a>"
             "</div>"
             "</dialog>",
@@ -1260,8 +1268,12 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "contracts (field triad, switch track, toggle-group without legend "
             "inside the fieldset, honest KPI cards). Peek: one click fires "
             "<code>hx-get</code> into the body <em>and</em> <code>showModal</code>. "
-            "See <code>stems/host-chrome-symmetry.md</code> and "
-            "<code>tools/composition_matrix.py</code>.",
+            "<strong>Peek vs full page:</strong> footer "
+            "<code>Open full page</code> is a real link to the "
+            "<code>record-page</code> Blueprint (owned URL) — not a CSS maximize. "
+            "<strong>Widen</strong> cycles <code>data-dz-width</code> on the same "
+            "dialog (md→lg→xl→full→md). See <code>stems/host-chrome-symmetry.md</code> "
+            "and <code>tools/composition_matrix.py</code>.",
             tags=("interactive", "htmx"),
             composes=(
                 "dialog",
@@ -1282,7 +1294,12 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "(scoped close forms) — same header/body/footer BEM",
                     "body is a composition host — nest field, toggle-group, switch, "
                     "controls, badge, card, alert with honest guest DOM",
-                    "hypermedia peek: hx-get + data-dz-dialog-open on the same click",
+                    "hypermedia peek: hx-get + data-dz-dialog-open on the same click "
+                    "(fragment into drawer__body; list stays underneath)",
+                    "peek → full page: real href to owned record URL "
+                    "(Blueprint record-page) — not type=button no-op",
+                    "widen-in-place: data-dz-drawer-widen cycles data-dz-width "
+                    "(separate job from full page)",
                     "data-dz-side / data-dz-width for placement presets",
                     "composition matrix: tools/composition_matrix.py",
                 ),
@@ -1296,6 +1313,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "(use label.dz-switch + track + data-dz-switch)",
                     "do not use form-field as read-only meta (hint is help, not value)",
                     "lazy body starts empty/skeleton; exchange fills #…-body, not the whole dialog",
+                    "do not label a width cycle “Open full page” — full page is navigation",
+                    "do not use type=button for full-page when the job is a new URL",
                 ),
                 do_dont=(
                     (
@@ -1315,6 +1334,15 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     (
                         "use one KPI card per metric (or card-label + card-value meta)",
                         "one card wrapping an auto-grid of overridden card-value sizes",
+                    ),
+                    (
+                        "Open full page = <a href> to the record document "
+                        "(shareable / refreshable URL)",
+                        "Open full page = widen the dialog or a dead type=button",
+                    ),
+                    (
+                        "Widen = cycle data-dz-width on the same drawer (same URL)",
+                        "call a width change “full page”",
                     ),
                 ),
                 a11y_keys=(
@@ -1344,6 +1372,14 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     response="composed detail fragment (card, badge, meta stack, actions) "
                     "swapped into the drawer's body target",
                     swap="innerHTML",
+                ),
+                Exchange(
+                    method="GET",
+                    endpoint="/app/records/{id}",
+                    trigger="Open full page footer link (plain navigation — not hx-*)",
+                    response="full record document (tabs, KPI grid, edit actions) — "
+                    "gallery Blueprint `record-page`; not a fragment swap",
+                    swap="document (navigation)",
                 ),
             ),
             mock="/mock/drawer/detail",

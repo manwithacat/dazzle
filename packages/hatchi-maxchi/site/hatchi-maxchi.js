@@ -95,7 +95,7 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
       '<div class="alert__body">' +
       '<div class="alert__title">Two open work orders</div>' +
       '<div class="alert__description">' +
-      "Peek stays partial — use Open full page for the complete record shell." +
+      "Peek stays partial — Open full page navigates to the owned record URL." +
       "</div></div></div>" +
       '<div class="hm-demo-row" style="gap:var(--space-sm);flex-wrap:wrap">' +
       '<button type="button" class="button" data-variant="outline">{i:clipboard-list} ' +
@@ -954,7 +954,34 @@ window.__HM_ICONS__ = {'layout-dashboard':'<svg xmlns="http://www.w3.org/2000/sv
     focusQuiet(dlg);
   }
 
+  // Widen-in-place: cycle data-width on the host drawer (md→lg→xl→full→md).
+  // Separate job from "Open full page" (which is navigation to an owned URL).
+  var WIDTH_CYCLE = ["md", "lg", "xl", "full"];
+
+  function widthAttr(dlg) {
+    return dlg.getAttribute("data-width") || dlg.getAttribute("data-width") || "md";
+  }
+
+  function setWidth(dlg, w) {
+    dlg.setAttribute("data-width", w);
+    dlg.setAttribute("data-width", w); // gallery unprefixed dialect
+  }
+
   document.addEventListener("click", function (evt) {
+    var widen =
+      (evt.target.closest && evt.target.closest("[data-drawer-widen]")) ||
+      (evt.target.closest && evt.target.closest("[data-drawer-widen]"));
+    if (widen) {
+      var host =
+        widen.closest("dialog.drawer") || widen.closest("dialog.drawer");
+      if (!host) return;
+      evt.preventDefault();
+      var cur = widthAttr(host);
+      var i = WIDTH_CYCLE.indexOf(cur);
+      setWidth(host, WIDTH_CYCLE[i < 0 ? 0 : (i + 1) % WIDTH_CYCLE.length]);
+      return;
+    }
+
     var trigger =
       (evt.target.closest && evt.target.closest("[data-dialog-open]")) ||
       (evt.target.closest && evt.target.closest("[data-dialog-open]"));
