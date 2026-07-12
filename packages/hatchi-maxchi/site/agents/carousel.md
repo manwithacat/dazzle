@@ -34,18 +34,72 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- load the controller (`controllers/dz-carousel.js` — included in hatchi-maxchi.js when you ship the bundle)
-- no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- root [data-dz-carousel] + data-dz-carousel-index
+- slides .dz-carousel__slide with data-dz-active on the visible one
+- prev [data-dz-carousel-prev] / next [data-dz-carousel-next] / .dz-carousel__dot peers
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| update data-dz-active + aria-current + disabled ends in the DOM | keep slide index only in a JS variable (orphaned on morph) |
+| clamp at first/last with disabled buttons | infinite-wrap without an explicit product requirement |
+
+### Pitfalls
+
+- do not ship prev/next without a controller or server re-render (gallery demo must change data-dz-active on click)
+- do not wrap at ends — clamp and disable Previous/Next (matches SSR disabled affordance on first slide)
+- dots use role=group, not tablist (no tabpanels — axe)
+- do not invent a JS slide model outside the DOM
+
+### Keyboard / AT
+
+- aria-label on prev/next; aria-current on the active dot
+- dot hit targets are 24×24 (visual pip via ::before)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/carousel.py`
+
+- **Required root:** `[data-dz-carousel]` (part `carousel`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `[data-dz-carousel]` | `—` | — |
+| `[data-dz-carousel-index]` | `data-dz-carousel-index` | present (any value) |
+| `[data-dz-carousel-prev]` | `—` | — |
+| `[data-dz-carousel-next]` | `—` | — |
+| `[data-dz-active]` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: carousel — slide strip with prev/next/dots (DOM-local state)."""
+
+from contracts._kit import DomContract, Node, Present
+
+DOM_CONTRACT = DomContract(
+    part="carousel",
+    root="[data-dz-carousel]",
+    nodes=(
+        Node("[data-dz-carousel]", attrs={}),
+        # Optional index stamp on the root (controller keeps it in sync).
+        Node("[data-dz-carousel-index]", attrs={"data-dz-carousel-index": Present()}),
+        Node("[data-dz-carousel-prev]", attrs={}),
+        Node("[data-dz-carousel-next]", attrs={}),
+        # Active slide marker (also mirrored as data-active after prefix strip).
+        Node("[data-dz-active]", attrs={}),
+    ),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
@@ -54,4 +108,5 @@ Only [data-dz-active] slides show. dz-carousel.js advances prev/next/dots (clamp
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/carousel.py`
 - `controllers/dz-carousel.js`

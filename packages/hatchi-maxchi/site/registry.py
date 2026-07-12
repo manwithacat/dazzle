@@ -2530,6 +2530,37 @@ def select(source: str, id: str) -> str:
             "local affordance when the page stays put. shadcn parity (HMC-037).",
             tags=("media", "interactive"),
             controller="controllers/dz-carousel.js",
+            contracts=("contracts/carousel.py",),
+            guidance=Guidance(
+                seams=(
+                    "root [data-dz-carousel] + data-dz-carousel-index",
+                    "slides .dz-carousel__slide with data-dz-active on the visible one",
+                    "prev [data-dz-carousel-prev] / next [data-dz-carousel-next] / "
+                    ".dz-carousel__dot peers",
+                ),
+                pitfalls=(
+                    "do not ship prev/next without a controller or server re-render "
+                    "(gallery demo must change data-dz-active on click)",
+                    "do not wrap at ends — clamp and disable Previous/Next "
+                    "(matches SSR disabled affordance on first slide)",
+                    "dots use role=group, not tablist (no tabpanels — axe)",
+                    "do not invent a JS slide model outside the DOM",
+                ),
+                do_dont=(
+                    (
+                        "update data-dz-active + aria-current + disabled ends in the DOM",
+                        "keep slide index only in a JS variable (orphaned on morph)",
+                    ),
+                    (
+                        "clamp at first/last with disabled buttons",
+                        "infinite-wrap without an explicit product requirement",
+                    ),
+                ),
+                a11y_keys=(
+                    "aria-label on prev/next; aria-current on the active dot",
+                    "dot hit targets are 24×24 (visual pip via ::before)",
+                ),
+            ),
         ),
         Hyperpart(
             "menubar",
