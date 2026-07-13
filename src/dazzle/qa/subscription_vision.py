@@ -313,80 +313,98 @@ def build_hyperpart_coherence_prompt(
     return "\n".join(lines)
 
 
-def parse_hyperpart_coherence(
-    raw: str | list[Any] | dict[str, Any],
-) -> list[HyperpartCoherence]:
-    """Parse subagent JSON into :class:`HyperpartCoherence` list."""
+def _strip_json_fence(text: str) -> str:
+    text = text.strip()
+    if not text.startswith("```"):
+        return text
+    lines = text.splitlines()[1:]
+    if lines and lines[-1].strip() == "```":
+        lines = lines[:-1]
+    return "\n".join(lines)
+
+
+def _coherence_entries(raw: str | list[Any] | dict[str, Any]) -> list[Any] | None:
+    """Normalize raw subagent payload to a list of entry dicts, or None if unusable."""
     if isinstance(raw, str):
-        text = raw.strip()
-        if text.startswith("```"):
-            lines = text.splitlines()[1:]
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            text = "\n".join(lines)
         try:
-            data = json.loads(text)
+            data: Any = json.loads(_strip_json_fence(raw))
         except json.JSONDecodeError:
             logger.warning("subscription_vision: invalid coherence JSON")
-            return []
+            return None
     else:
         data = raw
 
     if isinstance(data, dict):
-        if "results" in data and isinstance(data["results"], list):
-            data = data["results"]
-        elif "image_id" in data:
-            data = [data]
-        else:
-            return []
-    if not isinstance(data, list):
-        return []
+        results = data.get("results")
+        if isinstance(results, list):
+            return results
+        if "image_id" in data:
+            return [data]
+        return None
+    if isinstance(data, list):
+        return data
+    return None
 
+
+def _clamp_score(value: Any, default: int = 5) -> int:
+    try:
+        return max(1, min(10, int(value)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_coherence_issue(iss: Any, allowed: set[str]) -> dict[str, str] | None:
+    if not isinstance(iss, dict):
+        return None
+    cat = str(iss.get("category") or "other")
+    if cat not in allowed:
+        cat = "other"
+    return {
+        "severity": str(iss.get("severity") or "medium"),
+        "category": cat,
+        "description": str(iss.get("description") or ""),
+        "suggestion": str(iss.get("suggestion") or ""),
+    }
+
+
+def _coherence_from_entry(entry: Any, allowed: set[str]) -> HyperpartCoherence | None:
+    if not isinstance(entry, dict):
+        return None
+    image_id = str(entry.get("image_id") or entry.get("id") or "")
+    path = str(entry.get("path") or "")
+    score = _clamp_score(entry.get("score", 5))
+    coherent_raw = entry.get("coherent")
+    coherent = coherent_raw if isinstance(coherent_raw, bool) else score >= 7
+    issues: list[dict[str, str]] = []
+    for iss in entry.get("issues") or []:
+        normalized = _normalize_coherence_issue(iss, allowed)
+        if normalized is not None:
+            issues.append(normalized)
+    if any(i.get("severity") == "high" for i in issues):
+        coherent = False
+    return HyperpartCoherence(
+        image_id=image_id or path or "unknown",
+        path=path,
+        coherent=coherent,
+        score=score,
+        issues=tuple(issues),
+        notes=str(entry.get("notes") or ""),
+    )
+
+
+def parse_hyperpart_coherence(
+    raw: str | list[Any] | dict[str, Any],
+) -> list[HyperpartCoherence]:
+    """Parse subagent JSON into :class:`HyperpartCoherence` list."""
+    data = _coherence_entries(raw)
+    if data is None:
+        return []
     allowed = set(COHERENCE_CATEGORIES)
     out: list[HyperpartCoherence] = []
     for entry in data:
-        if not isinstance(entry, dict):
-            continue
-        image_id = str(entry.get("image_id") or entry.get("id") or "")
-        path = str(entry.get("path") or "")
-        try:
-            score = max(1, min(10, int(entry.get("score", 5))))
-        except (TypeError, ValueError):
-            score = 5
-        coherent_raw = entry.get("coherent")
-        if isinstance(coherent_raw, bool):
-            coherent = coherent_raw
-        else:
-            coherent = score >= 7
-        issues_raw = entry.get("issues") or []
-        issues: list[dict[str, str]] = []
-        if isinstance(issues_raw, list):
-            for iss in issues_raw:
-                if not isinstance(iss, dict):
-                    continue
-                cat = str(iss.get("category") or "other")
-                if cat not in allowed:
-                    cat = "other"
-                issues.append(
-                    {
-                        "severity": str(iss.get("severity") or "medium"),
-                        "category": cat,
-                        "description": str(iss.get("description") or ""),
-                        "suggestion": str(iss.get("suggestion") or ""),
-                    }
-                )
-        if issues and any(i.get("severity") == "high" for i in issues):
-            coherent = False
-        out.append(
-            HyperpartCoherence(
-                image_id=image_id or path or "unknown",
-                path=path,
-                coherent=coherent,
-                score=score,
-                issues=tuple(issues),
-                notes=str(entry.get("notes") or ""),
-            )
-        )
+        parsed = _coherence_from_entry(entry, allowed)
+        if parsed is not None:
+            out.append(parsed)
     return out
 
 
