@@ -63,7 +63,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 450 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
-| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 446 | STALE (lag 20 since @446) |
+| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 478 | USED |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
 | `qa-trial` skill | skill | trials (downstream authoring) | 448 | USED |
