@@ -57,10 +57,18 @@
           },
           {
             "field_name": "model",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "PulseTrack X1",
+                "FieldMeter Pro 2",
+                "AetherSense Mini",
+                "NexusDAQ R4",
+                "VoltScope Handheld",
+                "ThermoLink Edge",
+                "GyroLab Bench Unit",
+                "SpectraCore Portable"
+              ]
             }
           },
           {
@@ -76,18 +84,34 @@
           },
           {
             "field_name": "serial_number",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "SN-FT-10041",
+                "SN-FT-10042",
+                "SN-FT-10043",
+                "SN-FT-10044",
+                "SN-FT-10045",
+                "SN-FT-10046",
+                "SN-FT-10047",
+                "SN-FT-10048"
+              ]
             }
           },
           {
             "field_name": "firmware_version",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "1.4.2",
+                "1.5.0-rc1",
+                "2.0.1",
+                "1.4.2-hotfix",
+                "2.1.0",
+                "1.3.9",
+                "2.0.0",
+                "1.5.1"
+              ]
             }
           },
           {
@@ -310,26 +334,50 @@
           },
           {
             "field_name": "description",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 5,
-              "max_words": 20
+              "values": [
+                "Device drops Wi-Fi after 12 minutes of continuous sampling in the field enclosure.",
+                "Touch screen ignores taps in the lower-left quadrant after cold soak at \u22125\u00b0C.",
+                "Battery indicator jumps from 40% to 5% without intermediate readings.",
+                "Calibration drift exceeds \u00b12% after three outdoor test cycles.",
+                "Audio alert fails to sound when temperature threshold is crossed.",
+                "USB-C port only charges when the cable is oriented one way; data transfer fails.",
+                "GPS lock takes >90s under light tree canopy; baseline is 20s.",
+                "App freezes when exporting a 24-hour log to CSV on firmware 1.4.x."
+              ]
             }
           },
           {
             "field_name": "steps_to_reproduce",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "1) Power on unit 2) Start continuous sample 3) Wait 12 min 4) Observe disconnect",
+                "1) Cold-soak overnight 2) Unlock screen 3) Tap lower-left controls repeatedly",
+                "1) Charge to 50% 2) Run outdoor walk 3) Watch battery UI for jumps",
+                "1) Run outdoor cal script 2) Compare to lab reference 3) Log delta",
+                "1) Set threshold to ambient+2\u00b0C 2) Warm sensor 3) Confirm no audible alert",
+                "1) Connect USB-C data cable 2) Attempt photo export 3) Note failure orientation",
+                "1) Clear GPS cache 2) Move under trees 3) Time to first fix",
+                "1) Collect 24h log 2) Tap Export CSV 3) Observe freeze"
+              ]
             }
           },
           {
             "field_name": "photo_url",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "https://cdn.example.test/fieldtest/issue-wifi-drop.jpg",
+                "https://cdn.example.test/fieldtest/issue-touch-deadzone.jpg",
+                "https://cdn.example.test/fieldtest/issue-battery-jump.jpg",
+                "https://cdn.example.test/fieldtest/issue-cal-drift.jpg",
+                "https://cdn.example.test/fieldtest/issue-alert-silent.jpg",
+                "https://cdn.example.test/fieldtest/issue-usbc.jpg",
+                "https://cdn.example.test/fieldtest/issue-gps-canopy.jpg",
+                "https://cdn.example.test/fieldtest/issue-csv-export.jpg"
+              ]
             }
           },
           {
@@ -368,18 +416,34 @@
           },
           {
             "field_name": "resolution",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "Updated Wi-Fi power-save policy in firmware 1.5.1; verified 4h continuous sample.",
+                "Touch firmware recalibrated; dead zone closed in bench retest.",
+                "Fuel-gauge lookup table corrected; battery curve smooth in field walk.",
+                "Shipped revised cal constants; outdoor delta within \u00b10.5%.",
+                "Audio path unmute bug fixed; threshold alerts audible.",
+                "USB PHY orientation workaround documented; hardware respins pending.",
+                "GPS cold-start improved with almanac prefetch; canopy TTF under 35s.",
+                "CSV export now streams off-thread; freeze no longer reproducible."
+              ]
             }
           },
           {
             "field_name": "firmware_version",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "1.4.2",
+                "1.5.0-rc1",
+                "2.0.1",
+                "1.4.2-hotfix",
+                "2.1.0",
+                "1.3.9",
+                "2.0.0",
+                "1.5.1"
+              ]
             }
           },
           {
@@ -467,10 +531,18 @@
           },
           {
             "field_name": "notes",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 5,
-              "max_words": 20
+              "values": [
+                "Morning outdoor run \u2014 cloudy, 12\u00b0C, light wind. All units paired successfully.",
+                "Bench soak complete; two devices needed re-flash after brownout.",
+                "Customer pilot site A \u2014 parking lot coverage map attached to session.",
+                "Regression suite green on firmware 1.5.1 except GPS canopy case.",
+                "Overnight temperature chamber \u221210\u00b0C to 40\u00b0C; one touch issue logged.",
+                "Side-by-side with competitor unit; battery life favorable by ~18%.",
+                "Field day cancelled for rain; rescheduled Friday with spare battery packs.",
+                "Collected 6 hours of continuous samples for reliability dashboard."
+              ]
             }
           },
           {
@@ -515,18 +587,34 @@
           },
           {
             "field_name": "version",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "1.4.2",
+                "1.5.0",
+                "1.5.1",
+                "2.0.0",
+                "2.0.1",
+                "2.1.0-rc1",
+                "1.4.2-hotfix",
+                "2.1.0"
+              ]
             }
           },
           {
             "field_name": "release_notes",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 5,
-              "max_words": 20
+              "values": [
+                "Stability: Wi-Fi power-save and CSV export reliability.",
+                "Features: improved GPS cold start and battery curve accuracy.",
+                "Hotfix: touch dead-zone after cold soak.",
+                "Major: new telemetry schema and remote log pull.",
+                "Patch: audio alert path unmute on threshold events.",
+                "RC: early access sensor fusion preview for pilot sites.",
+                "Hotfix: USB data path orientation edge case.",
+                "Features: field map overlays and multi-unit session grouping."
+              ]
             }
           },
           {
@@ -654,10 +742,18 @@
           },
           {
             "field_name": "notes",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 5,
-              "max_words": 20
+              "values": [
+                "Prepare loaner kit for Site B pilot \u2014 include spare batteries and USB cables.",
+                "Triage open IssueReports tagged severity=high before Friday standup.",
+                "Flash fleet units to 1.5.1 and verify serials in Device inventory.",
+                "Draft customer email summarizing known Wi-Fi drop workaround.",
+                "Book chamber time for cold-soak retest of touch firmware.",
+                "Update runbook with GPS canopy timing expectations.",
+                "Ship failed unit SN-FT-10044 to hardware for USB PHY inspection.",
+                "Close resolved issues still open after firmware 1.5.1 verify."
+              ]
             }
           },
           {
