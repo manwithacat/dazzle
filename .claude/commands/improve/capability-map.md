@@ -36,49 +36,69 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
-| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 390 | USED |
-| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 403 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 386 | USED |
-| `dazzle qa trial` | CLI | trials | 406 | USED |
-| `dazzle qa login` | CLI | (support for qa capture/verify) | 385 | USED |
-| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 407 | USED |
+| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 390 | STALE (lag 44 since @390) |
+| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 403 | STALE (lag 31 since @403) |
+| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 386 | STALE (lag 48 since @386) |
+| `dazzle qa trial` | CLI | trials | 406 | STALE (lag 28 since @406; product TR drain did not stamp) |
+| `dazzle qa login` | CLI | (support for qa capture/verify) | 385 | STALE (lag 49 since @385) |
+| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 407 | STALE (lag 27 since @407) |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | — | OWNED-IDLE |
-| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 405 | USED |
-| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 400 | USED |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 401 | USED |
-| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 402 | USED |
-| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 388 | USED |
-| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 380 | USED |
-| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 399 | USED |
-| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 373 | STALE (lag 23 since @373) |
-| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 382 | USED |
-| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 374 | STALE (lag 22 since @374) |
-| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 375 | STALE (lag 21 since @375) |
-| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 404 | USED |
-| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 383 | USED |
-| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 391 | USED |
-| `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 391 | USED |
-| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 391 | USED |
+| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 405 | STALE (lag 29 since @405) |
+| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 400 | STALE (lag 34 since @400) |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 401 | STALE (lag 33 since @401) |
+| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 402 | STALE (lag 32 since @402) |
+| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 388 | STALE (lag 46 since @388) |
+| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 380 | STALE (lag 54 since @380) |
+| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 399 | STALE (lag 35 since @399) |
+| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 373 | STALE (lag 61 since @373) |
+| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 382 | STALE (lag 52 since @382) |
+| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 374 | STALE (lag 60 since @374) |
+| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 375 | STALE (lag 59 since @375) |
+| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 404 | STALE (lag 30 since @404) |
+| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 383 | STALE (lag 51 since @383) |
+| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 391 | STALE (lag 43 since @391) |
+| `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 391 | STALE (lag 43 since @391) |
+| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 391 | STALE (lag 43 since @391) |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
-| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 387 | USED |
+| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 387 | STALE (lag 47 since @387) |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
-| `qa-trial` skill | skill | trials (downstream authoring) | 389 | USED |
+| `qa-trial` skill | skill | trials (downstream authoring) | 389 | STALE (lag 45 since @389) |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | — | OWNED-IDLE (standalone) |
-| `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 379 | USED |
-| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 381 | USED |
-| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 384 | USED |
-| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 393 | USED |
-| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 394 | USED |
-| MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 395 | USED |
-| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 397 | USED |
-| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 398 | USED |
+| `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 379 | STALE (lag 55 since @379) |
+| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 381 | STALE (lag 53 since @381) |
+| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 384 | STALE (lag 50 since @384) |
+| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 393 | STALE (lag 41 since @393) |
+| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 394 | STALE (lag 40 since @394) |
+| MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 395 | STALE (lag 39 since @395) |
+| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 397 | STALE (lag 37 since @397) |
+| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 398 | STALE (lag 36 since @398) |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
+
+> **Capability-sweep cycle 434 (2026-07-13).** Sweep overdue (38 cycles since 396; self-audit
+> 432 and TR-47 VERIFIED 433 ran first). Re-derived inventory: `dazzle --help` quality
+> surface intact (validate/lint/ux/qa/deploy/rbac/pulse/sentinel/discovery/composition/
+> fitness/story/rhythm/coverage/process/compliance/test-design/…); MCP consolidated tools
+> **34** (unchanged names vs cycle 376); `.claude/skills` (5: dsl-authoring, phase-contract,
+> qa-trial, spec-narrate, stems) + `.agents/skills` + `.claude/commands` (improve/fuzz/
+> smells/xproject/issues/ship/check/bump/cimonitor/docs-update). **No newly-built UNOWNED**
+> loop capability — cycles 409–433 were pure product TR drain (signing storage, activity_feed,
+> demo blueprints, seed timestamps, nav hooks, trial logging) on already-mapped surfaces;
+> `dazzle signing` remains operator/substrate (CI + unit suites), not a new loop gap.
+> **STALE recompute (threshold last-exercised ≤414):** **massive cold set** — every previously
+> USED row is now STALE (highest stamp was gallery@407, lag 27). Already-STALE test-design/
+> sentinel-scan/fitness-CLI deepen to lag 59–61. **OWNED-IDLE unchanged (6):** taste/vision
+> trio + /fuzz/smells/xproject. **Governance:** inverse of capability re-stamp monomania —
+> TR drain delivered product value but **zero capability-map stamps** for 27+ cycles, so
+> coverage governance now correctly forces a STALE clear rotation. Prefer highest-lag core
+> first (`test-design`@373, `sentinel scan`@374, `fitness` CLI@375, then `rbac`/`rhythm`/
+> `pulse`/…), not more residual low TRs. Explore budget at sweep: **42/100**. Next sweep due
+> ~**454**.
 
 > **Capability-sweep cycle 190 (2026-07-08).** First sweep to run. Re-derived the
 > inventory from `dazzle --help` + the MCP table + the `.claude/` tree and found the
