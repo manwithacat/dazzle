@@ -38,8 +38,9 @@ persona tester "Field Tester":
 
 persona manager "Manager":
   goals:
-    - "Track overall product quality"
-    - "Monitor critical issues"
+    - "See fleet health at a glance (active, prototype, recalled devices)"
+    - "Track tester field activity and recent test sessions"
+    - "Monitor critical issues and overall product quality"
   proficiency_level: intermediate
   session_style: quick_check
   default_workspace: engineering_dashboard
@@ -1010,8 +1011,28 @@ surface task_edit "Edit Task":
 
 # Workspace: Engineering Dashboard
 workspace engineering_dashboard "Engineering Dashboard":
-  purpose: "Comprehensive field testing oversight"
+  # TR-17: manager persona needs explicit fleet overview + tester activity,
+  # not only issue triage. Regions below power the manager focus strip.
+  purpose: "Fleet overview, tester activity, and field-quality oversight"
   access: persona(engineer, manager)
+
+  # Fleet overview KPI strip: total/active/prototype/recalled devices.
+  fleet_overview:
+    source: Device
+    aggregate:
+      total_devices: count(Device)
+      active_devices: count(Device where status = active)
+      prototype_devices: count(Device where status = prototype)
+      recalled_devices: count(Device where status = recalled)
+
+  # Recent hands-on sessions: manager "tester activity tracking".
+  tester_activity:
+    source: TestSession
+    sort: logged_at desc
+    limit: 15
+    display: list
+    action: test_session_detail
+    empty: "No recent test sessions logged"
 
   critical_issues:
     source: IssueReport
@@ -1152,8 +1173,9 @@ workspace engineering_dashboard "Engineering Dashboard":
       focus: critical_issues, metrics, firmware_releases, all_tasks
 
     as manager:
-      purpose: "Track product quality and field performance"
-      focus: metrics, critical_issues, all_testers
+      # TR-17: fleet KPIs + tester sessions first, then quality signals.
+      purpose: "Fleet overview, tester activity, and product quality"
+      focus: fleet_overview, tester_activity, metrics, critical_issues, all_testers, device_board
 
 # Workspace: Tester Dashboard
 workspace tester_dashboard "Tester Dashboard":
