@@ -46,7 +46,37 @@ Content strip for media or HTML fragments — fixed viewport, object-fit media, 
 
 ## Server exchange
 
-This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+When the client affordance finishes, htmx issues **this** request. Return the **response fragment** in the table (usually HTML, not JSON). Dazzle often implements these from the app model; a standalone HTMX4 app implements them explicitly.
+
+> **Do not reimplement the gallery.** Flash toasts (e.g. confirm’s > “Deleted (demo).”), `/mock/*` paths, and other static-site > scaffolding are **demo-only** (`MOCK_HTMX` in `site/build_site.py`). > They are not Hyperpart surface and not a product API. If you are > stuck making a toast or mock URL work, stop — implement the > exchange row below instead. See AGENTS.md › *Gallery demos are not > the product API*.
+
+| Request | Trigger | Response fragment | Swap | States |
+|---|---|---|---|---|
+| `GET /app/adoptions/request` | Request visit CTA inside a rich (non-media) slide | confirmation fragment into the slide live region (badge / status line) — not a full strip re-render | #hm-carousel-adopt innerHTML (gallery) / live region in the slide | populated error |
+
+### `GET /app/adoptions/request` — example handler
+
+Application code (not the dual-lock module). FastAPI-shaped; do not use `from __future__ import annotations` in route files (ADR-0014).
+
+```python
+@app.get("/app/adoptions/request")
+async def adoption_request():
+    return HTMLResponse('<span class="badge" data-tone="success">Visit requested</span>')
+```
+
+## Morph / swap
+
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### Replace / `innerHTML` (reset OK)
+
+- `GET /app/adoptions/request` → #hm-carousel-adopt innerHTML (gallery) / live region in the slide
+
+### Identity rules
+
+- Morph participants need **stable** `id` / domain keys (not loop indexes).
+- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
+- Mark third-party widgets as explicit islands / morph-skip boundaries.
 
 ## How to use it
 

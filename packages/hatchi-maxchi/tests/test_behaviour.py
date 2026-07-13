@@ -2123,7 +2123,8 @@ def test_drawer_expand_restore_toggles_width_without_navigation(page) -> None:  
     """Expand/Restore is a 2-state chrome toggle — not full-page navigation.
 
     Labels name the next action; aria-pressed reflects expanded state.
-    Assert *computed* width change (attr-only gates miss CSS/media bugs).
+    Assert *computed* width after CSS width transition settles (Linux WebKit
+    mid-transition samples were flaking: restored measured wider than expanded).
     """
     goto_part(page, "drawer")
     # Ensure viewport is wide enough for md vs xl presets (min-width: 40rem)
@@ -2148,23 +2149,38 @@ def test_drawer_expand_restore_toggles_width_without_navigation(page) -> None:  
               const d = document.getElementById('hm-drawer-lazy');
               const r = d.getBoundingClientRect();
               return {
-                attr: d.getAttribute('data-width') || d.getAttribute('data-dz-width'),
+                attr: d.getAttribute('data-width') || d.getAttribute('data-dz-width') || 'md',
                 w: Math.round(r.width),
               };
             }"""
         )
 
-    before = _geom()
-    assert before["attr"] in (None, "md")
+    def _wait_settled(attr: str, *, min_w: float | None = None, max_w: float | None = None) -> dict:
+        """Wait until data-width matches and layout width is in band (post-transition)."""
+        page.wait_for_function(
+            """([want, minW, maxW]) => {
+              const d = document.getElementById('hm-drawer-lazy');
+              if (!d || !d.open) return false;
+              const a = d.getAttribute('data-width') || d.getAttribute('data-dz-width') || 'md';
+              if (a !== want) return false;
+              const w = d.getBoundingClientRect().width;
+              if (minW != null && w < minW) return false;
+              if (maxW != null && w > maxW) return false;
+              return true;
+            }""",
+            arg=[attr, min_w, max_w],
+            timeout=4000,
+        )
+        # One extra frame after the band check so WebKit finishes paint
+        page.wait_for_timeout(50)
+        return _geom()
+
+    before = _wait_settled("md", max_w=600)
     assert before["w"] > 100
 
-    # Real pointer (not only locator.click) — same path as a human
-    box = btn.bounding_box()
-    assert box is not None
-    page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-    page.wait_for_timeout(200)
-    after = _geom()
-    assert after["attr"] == "xl", f"Expand should set xl, got {after['attr']!r}"
+    # locator.click is more reliable than raw mouse while the panel is animating
+    btn.click()
+    after = _wait_settled("xl", min_w=700)
     assert after["w"] > before["w"] + 80, (
         f"Expand must visibly widen the panel (before={before['w']} after={after['w']})"
     )
@@ -2174,12 +2190,8 @@ def test_drawer_expand_restore_toggles_width_without_navigation(page) -> None:  
     assert page.url.endswith("drawer.html") or "drawer" in page.url
     assert page.get_attribute("#hm-drawer-lazy", "open") is not None
 
-    box2 = btn.bounding_box()
-    assert box2 is not None
-    page.mouse.click(box2["x"] + box2["width"] / 2, box2["y"] + box2["height"] / 2)
-    page.wait_for_timeout(200)
-    restored = _geom()
-    assert restored["attr"] == "md", f"Restore should return to md, got {restored['attr']!r}"
+    btn.click()
+    restored = _wait_settled("md", max_w=600)
     assert restored["w"] < after["w"] - 80, (
         f"Restore must visibly narrow (expanded={after['w']} restored={restored['w']})"
     )

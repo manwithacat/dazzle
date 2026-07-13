@@ -2578,6 +2578,23 @@ def select(source: str, id: str) -> str:
             tags=("media", "interactive", "htmx"),
             controller="controllers/dz-carousel.js",
             contracts=("contracts/carousel.py",),
+            exchanges=(
+                Exchange(
+                    method="GET",
+                    endpoint="/app/adoptions/request",
+                    trigger="Request visit CTA inside a rich (non-media) slide",
+                    response="confirmation fragment into the slide live region "
+                    "(badge / status line) — not a full strip re-render",
+                    swap="#hm-carousel-adopt innerHTML (gallery) / live region in the slide",
+                    states=("populated", "error"),
+                    server_example=(
+                        '@app.get("/app/adoptions/request")\n'
+                        "async def adoption_request():\n"
+                        '    return HTMLResponse(\'<span class="badge" '
+                        'data-tone="success">Visit requested</span>\')\n'
+                    ),
+                ),
+            ),
             guidance=Guidance(
                 seams=(
                     "root [data-dz-carousel] + data-dz-carousel-index",
