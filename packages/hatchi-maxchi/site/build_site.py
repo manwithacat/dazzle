@@ -2392,11 +2392,13 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-bp-open { margin-inline-start: auto; font-size: var(--text-sm); color: var(--colour-brand); text-decoration: none; }
 .hm-bp-stage { display: flex; justify-content: center; background: var(--colour-bg); border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: .75rem; }
 .hm-bp-frame { width: 100%; height: 40rem; max-width: 100%; border: 0; border-radius: var(--radius-sm); background: var(--colour-surface); transition: width var(--duration-base) var(--ease-out); }
-/* min-inline-size 64rem: framed shells (app-shell) use a ≥64rem MQ for the
-   open-rail desktop layout; a short gallery column was leaving the fixed
-   sidebar overlaying main copy (coherence HMC-061). Parent .hm-preview
-   scrolls when the frame is wider than the column. */
-.hm-preview:has(.hm-hp-frame) { overflow-x: auto; }
+/* Framed Hyperparts (app-shell): desktop open-rail needs ≥64rem layout
+   width. The iframe is at least that wide; .hm-preview scrolls and must
+   stay keyboard-focusable (tabindex on the wrapper — axe
+   scrollable-region-focusable). */
+.hm-preview:has(.hm-hp-frame) {
+  overflow-x: auto;
+}
 .hm-hp-frame {
   display: block;
   inline-size: 100%;
@@ -2502,6 +2504,8 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         if c.framed:
             hp_dir = out_dir / "hyperparts"
             hp_dir.mkdir(exist_ok=True)
+            # Desktop open-rail MQ needs ≥64rem *iframe layout* width — see
+            # .hm-hp-frame min-inline-size (not body min-width; MQ ignores that).
             hp_live_doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -2548,6 +2552,17 @@ window.addEventListener('storage', function (e) {{
         )
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         deps = _dependency_chips(c)
+        # tabindex+role when framed: overflow-x scroll region must be keyboard
+        # accessible (axe scrollable-region-focusable).
+        if c.framed:
+            preview = (
+                f'<div class="hm-preview" tabindex="0" role="region" '
+                f'aria-label="{_html.escape(c.title)} live preview — '
+                f'scroll horizontally for the full desktop frame">'
+                f"{framed_live_part}</div>"
+            )
+        else:
+            preview = f'<div class="hm-preview">{framed_live_part}</div>'
         # Linear part page (no accordions): demo → copy → exchange → how-to
         # → DOM contract → notes → files. Same order as agents/<id>.md.
         part_sections.append(
@@ -2558,7 +2573,7 @@ window.addEventListener('storage', function (e) {{
                     f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
                     f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
                     f"{_epistemic_html(c)}"
-                    f'<div class="hm-preview">{framed_live_part}</div>'
+                    f"{preview}"
                     f'<section class="hm-ref" id="copy"><h3>Copy this</h3>'
                     f"{snippet_block}</section>"
                     # Linear skeleton on EVERY part (empty states when N/A):
@@ -2580,11 +2595,20 @@ window.addEventListener('storage', function (e) {{
         # SIMPLE gallery section (spec decision 5): demo + snippet + link.
         # No exchanges/contract/guidance/anatomy disclosures on the index.
         # Index uses site-root relative links (framed_live / live_index).
+        if c.framed:
+            idx_preview = (
+                f'<div class="hm-preview" tabindex="0" role="region" '
+                f'aria-label="{_html.escape(c.title)} live preview — '
+                f'scroll horizontally for the full desktop frame">'
+                f"{framed_live}</div>"
+            )
+        else:
+            idx_preview = f'<div class="hm-preview">{framed_live}</div>'
         body_parts.append(
             f'<section class="hm-comp" id="{c.id}">'
             f"<h2>{_html.escape(c.title)}{tag}</h2>"
             f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
-            f'<div class="hm-preview">{framed_live}</div>'
+            f"{idx_preview}"
             f"{snippet_block}"
             f'<p class="hm-more"><a href="hyperparts/{c.id}">Full reference: '
             f"contracts, guidance, anatomy →</a></p></section>"
