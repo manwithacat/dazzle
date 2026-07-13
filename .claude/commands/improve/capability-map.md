@@ -57,7 +57,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 436 | USED |
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 437 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 404 | STALE (lag 30 since @404) |
-| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 383 | STALE (lag 51 since @383) |
+| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 442 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 391 | STALE (lag 43 since @391) |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 391 | STALE (lag 43 since @391) |
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 391 | STALE (lag 43 since @391) |
