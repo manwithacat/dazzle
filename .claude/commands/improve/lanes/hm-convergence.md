@@ -13,6 +13,9 @@ total 0). This lane is no longer a “pick a CSS file and delete/port it” loop
 
 - Expand dual-locks (contract modules + schema/DOM gates)
 - Subscription vision / taste policy (`docs/reference/taste.md`)
+- **Hyperpart coherence sweep** — snapshot every gallery page, subagent “coherent?”
+  (playbook: `improve/strategies/hyperpart_coherence.md`; force:
+  `/improve hm-convergence hyperpart_coherence`)
 - Author new design **only** in `packages/hatchi-maxchi/`
 - Keep permanent zero-floors green (below)
 
