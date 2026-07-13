@@ -8629,19 +8629,13 @@ a.action-card:hover {
   color: var(--colour-text-muted);
 }
 
-/* status_cards — responsive 1/2/3-col card grid */
+/* status_cards — auto-fit so invoice id + amount stay readable (minmax
+ * floor ~14rem). Fixed 2/3-col tracks in a narrow gallery column were
+ * clipping primary amounts mid-value (coherence HMC-063). */
 .related-status-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: var(--space-md);
-}
-
-@media (min-width: 40rem) {
-  .related-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (min-width: 64rem) {
-  .related-status-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 .related-status-card {
@@ -8666,25 +8660,32 @@ a.action-card:hover {
 
 .related-status-card-text {
   min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
 }
 
 .related-status-card-primary {
+  display: block;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--colour-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Prefer wrap over ellipsis on money/id — amounts must stay legible */
+  white-space: normal;
+  overflow: visible;
   margin: 0;
+  line-height: 1.35;
 }
 
 .related-status-card-secondary {
+  display: block;
   font-size: var(--text-xs);
   color: var(--colour-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
   margin: 0;
+  line-height: 1.35;
 }
 
 .related-status-card-badge {
