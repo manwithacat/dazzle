@@ -249,7 +249,20 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-bp-open { margin-inline-start: auto; font-size: var(--text-sm); color: var(--colour-brand); text-decoration: none; }
 .hm-bp-stage { display: flex; justify-content: center; background: var(--colour-bg); border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: .75rem; }
 .hm-bp-frame { width: 100%; height: 40rem; max-width: 100%; border: 0; border-radius: var(--radius-sm); background: var(--colour-surface); transition: width var(--duration-base) var(--ease-out); }
-.hm-hp-frame { display: block; inline-size: 100%; block-size: 22rem; border: 1px solid var(--colour-border); border-radius: var(--radius-md); background: var(--colour-surface); }
+/* min-inline-size 64rem: framed shells (app-shell) use a ≥64rem MQ for the
+   open-rail desktop layout; a short gallery column was leaving the fixed
+   sidebar overlaying main copy (coherence HMC-061). Parent .hm-preview
+   scrolls when the frame is wider than the column. */
+.hm-preview:has(.hm-hp-frame) { overflow-x: auto; }
+.hm-hp-frame {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 64rem;
+  block-size: 28rem;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
 .hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }
