@@ -44,6 +44,7 @@ from pydantic import BaseModel
 from dazzle.core.ir import EntitySpec
 from dazzle.http.runtime.byte_serving import AccessDecision, serve_bytes
 from dazzle.http.runtime.document_routes import _extract_file_id
+from dazzle.http.runtime.file_storage import FileMetadata
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.signing.service import PdfBranding, async_sign_pdf, generate_pdf
 from dazzle.signing.tokens import (
@@ -1121,8 +1122,6 @@ async def _persist_signed_pdf(
         ms = getattr(file_service, "metadata_store", None)
         if ms is not None:
             try:
-                from dazzle.http.runtime.file_storage import FileMetadata
-
                 enriched = FileMetadata(
                     **{
                         **meta.model_dump(),
@@ -1169,7 +1168,12 @@ async def _retrieve_signed_pdf_from_storage(file_service: Any, stored: Any) -> b
     if not key:
         return None
     try:
-        return await storage.retrieve(key)
+        data = await storage.retrieve(key)
     except Exception:
         log.debug("storage retrieve failed for signed copy key=%s", key, exc_info=True)
         return None
+    if data is None:
+        return None
+    if isinstance(data, (bytes, bytearray)):
+        return bytes(data)
+    return None

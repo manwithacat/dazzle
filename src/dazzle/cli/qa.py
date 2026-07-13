@@ -19,6 +19,7 @@ import typer
 from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 from dazzle.core.manifest import load_manifest
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+from dazzle.log_setup import ensure_dazzle_logging_configured
 from dazzle.qa.capture import build_capture_plan, capture_screenshots, write_manifest
 from dazzle.qa.signing_seed import (
     SeededDoc,
@@ -67,8 +68,6 @@ def _configure_trial_logging() -> None:
     Opt into DEBUG via ``DAZZLE_LOG_LEVEL=DEBUG``.
     """
     import logging
-
-    from dazzle.log_setup import ensure_dazzle_logging_configured
 
     desired = os.environ.get("DAZZLE_LOG_LEVEL", "INFO").upper()
     ensure_dazzle_logging_configured(level=desired)

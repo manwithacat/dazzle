@@ -2220,6 +2220,9 @@ class DazzleBackendApp:
             if self._file_service is None:
                 self._ensure_file_service()
             # else: already early-constructed in _setup_routes (no reconstruction needed)
+            file_service = self._file_service
+            if file_service is None:
+                raise RuntimeError("FileService required when enable_files is set")
 
             # Profile-based upload size limits (v1.0.0)
             _upload_limits = {"basic": 50, "standard": 10, "strict": 5}
@@ -2254,7 +2257,7 @@ class DazzleBackendApp:
 
             create_file_routes(
                 self._app,
-                self._file_service,
+                file_service,
                 max_upload_size=_max_mb * 1024 * 1024,
                 field_size_overrides=_field_size_overrides,
                 on_upload_callbacks=_upload_callbacks,
