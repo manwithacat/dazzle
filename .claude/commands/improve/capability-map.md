@@ -49,7 +49,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 457 | STALE (lag 29 since @457) |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 458 | STALE (lag 28 since @458) |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 459 | STALE (lag 27 since @459) |
-| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 447 | STALE (lag 39 since @447) |
+| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 487 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 471 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 456 | STALE (lag 30 since @456) |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 467 | USED |
