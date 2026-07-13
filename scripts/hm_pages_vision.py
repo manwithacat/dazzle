@@ -111,10 +111,21 @@ def capture(
             try:
                 resp = page.goto(url, wait_until="networkidle", timeout=45000)
                 status = resp.status if resp else None
-                page.wait_for_timeout(350)
-                # detect GitHub Pages 404 chrome
+                # Meta-refresh aliases (e.g. grid-edit → grid.html) need a beat to land.
+                page.wait_for_timeout(500)
+                try:
+                    page.wait_for_load_state("networkidle", timeout=8000)
+                except Exception:
+                    pass
+                page.wait_for_timeout(200)
+                # detect GitHub Pages 404 chrome / blank file:// dead-ends
                 body = page.inner_text("body")[:200]
-                is_404 = status == 404 or "File not found" in body or body.strip().startswith("404")
+                is_404 = (
+                    status == 404
+                    or "File not found" in body
+                    or body.strip().startswith("404")
+                    or not body.strip()
+                )
                 png = out / f"{name}.png"
                 if not is_404 and clip_demo:
                     # Prefer the live demo region when present (less chrome noise).
