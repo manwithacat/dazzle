@@ -8736,7 +8736,9 @@ button.dz-item:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-2xs) var(--space-xs);
+  /* --space-2xs does not exist in tokens.css (invalidates the whole gap
+     declaration → author/time collide: "Maya Reyes10:02"). Use xs/sm. */
+  gap: var(--space-xs) var(--space-sm);
   font-size: var(--text-xs, 0.75rem);
   color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
 }
