@@ -14,7 +14,7 @@ import pytest
 
 _SITE_URI = (Path(__file__).resolve().parents[1] / "site" / "index.html").as_uri()
 
-from conftest import goto_part, part_uri  # noqa: E402
+from conftest import goto_part, part_uri, wait_for_layout  # noqa: E402
 
 PALETTE = "dialog.command"
 INPUT = ".command__input"
@@ -2221,37 +2221,21 @@ def test_drawer_expand_restore_toggles_width_without_navigation(page) -> None:  
     label0 = (btn.inner_text() or "").strip().lower()
     assert "expand" in label0, f"resting label should be Expand, got {label0!r}"
 
-    def _geom() -> dict:
-        return page.evaluate(
-            """() => {
-              const d = document.getElementById('hm-drawer-lazy');
-              const r = d.getBoundingClientRect();
-              return {
-                attr: d.getAttribute('data-width') || d.getAttribute('data-dz-width') || 'md',
-                w: Math.round(r.width),
-              };
-            }"""
+    def _wait_settled(
+        width_token: str, *, min_w: float | None = None, max_w: float | None = None
+    ) -> dict:
+        """Shared settlement: data-width (+ dual-lock) and layout band (decision 0010)."""
+        return wait_for_layout(
+            page,
+            "#hm-drawer-lazy",
+            attr="data-width",
+            attr_value=width_token,
+            attr_fallback="data-dz-width",
+            attr_default="md",
+            min_w=min_w,
+            max_w=max_w,
+            require_open=True,
         )
-
-    def _wait_settled(attr: str, *, min_w: float | None = None, max_w: float | None = None) -> dict:
-        """Wait until data-width matches and layout width is in band (post-transition)."""
-        page.wait_for_function(
-            """([want, minW, maxW]) => {
-              const d = document.getElementById('hm-drawer-lazy');
-              if (!d || !d.open) return false;
-              const a = d.getAttribute('data-width') || d.getAttribute('data-dz-width') || 'md';
-              if (a !== want) return false;
-              const w = d.getBoundingClientRect().width;
-              if (minW != null && w < minW) return false;
-              if (maxW != null && w > maxW) return false;
-              return true;
-            }""",
-            arg=[attr, min_w, max_w],
-            timeout=4000,
-        )
-        # One extra frame after the band check so WebKit finishes paint
-        page.wait_for_timeout(50)
-        return _geom()
 
     before = _wait_settled("md", max_w=600)
     assert before["w"] > 100

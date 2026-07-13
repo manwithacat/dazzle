@@ -47,8 +47,11 @@ Composition is **declared host embedding** (and explicit refusal), not imports.
 replacement for disposable fragments. Stable IDs and DOM-carried state are
 load-bearing. **Alpine is not HM core** — delegated vanilla controllers only.
 Reconstruct: `stems/morph-safe-hypermedia.md` (decisions 0005–0008).
+**Controller standards:** vanilla IIFE, DOM-local state, structural ESLint —
+decision **0010** (no TypeScript for shipped controllers).
 Lint fixtures: `python packages/hatchi-maxchi/tools/template_lint.py`
 (`--compose grid`, `--file partial.html`).
+JS structural lint: monorepo `npx eslint packages/hatchi-maxchi/controllers`.
 
 ## Two audiences (same Hyperpart, different entry)
 

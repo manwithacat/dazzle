@@ -8,11 +8,13 @@
 1. **Identify the part id** (`HYPERPART:` marker or registry).
 2. **Open `CONSUMER_MAP.md`** for that id — who embeds, relates, refuses, blueprints.
 3. **If dual-lock / DOM / model fields change**, note `CONTRACT_SURFACE.md` will move.
-4. **Morph / DOM checklist** (`stems/morph-safe-hypermedia.md`, decisions 0005–0007):
+4. **Morph / DOM checklist** (`stems/morph-safe-hypermedia.md`, decisions 0005–0007, **0010** for controllers):
    - Is state already in the DOM (or URL/form)? Avoid a second source of truth.
    - Morph or replace for this region? Stable ids on persistent elements?
    - Will open menus / focus / row selection survive the chosen swap?
    - Behaviour delegated + attribute-discovered — not Alpine / per-instance scope?
+   - Controllers: vanilla IIFE only (no TS for shipped sources); structural ESLint
+     covers `controllers/**/*.js` — see decision 0010.
    - Island / third-party boundaries explicit if present?
 5. Implement the smallest correct change. Prefer shared metrics (e.g. form-input box
    model) over one-off hacks on a single class.

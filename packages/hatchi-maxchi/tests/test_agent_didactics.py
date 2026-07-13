@@ -34,6 +34,7 @@ _REQUIRED = (
     "docs/decisions/0007-no-alpine-in-core.md",
     "docs/decisions/0008-template-lint-posture.md",
     "docs/decisions/0009-carousel-stage-and-motion.md",
+    "docs/decisions/0010-controller-coding-standards.md",
     "docs/agent/pick-a-surface.md",
     "docs/agent/compose-or-refuse.md",
     "docs/agent/mutate-a-primitive.md",
