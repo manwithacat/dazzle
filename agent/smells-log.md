@@ -77,3 +77,11 @@
 - Top concern: Logger acquired by string literal instead of __name__ (131 sites) — operability footgun, harness-blind
 - Decay: ratchet clean, import contracts kept (5/5), allow-list 3 (no growth); top target dsl_parser_impl/workspace.py (#2 hotspot, MI-C — overlaps the unmigrated parse_block_with_dispatch ladder)
 - Commit: 36d431cf8
+
+## Smells Run — 2026-07-13
+- Regressions: 4/4 checks passed (ratchet, import contracts, preflight, fitness code)
+- New patterns: 0 elevated (2 TRACK notes: cli/db broad except, MCP dispatcher density)
+- Top concern: standing MI-C hotspot `core/dsl_parser_impl/workspace.py` (owned by ratchet, not a new smell)
+- Decay: ratchet clean, import contracts 6 kept / 0 broken; top target handlers_consolidated.py
+- Commit: e20027608 (pre-stamp HEAD); cycle 484 improve stamp follows
+- Mode: improve OWNED-IDLE first-exercise (no Workflow fan-out)
