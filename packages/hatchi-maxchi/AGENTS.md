@@ -79,6 +79,7 @@ decisions. Decisions under `docs/decisions/` are **expressions** of the same ste
 | **Overlay light-dismiss** | Transient overlays: spatial (Esc/outside) vs temporal (opt-in ms); not accordion/tree | `stems/overlay-light-dismiss.md` |
 | **Chrome vs protocol** | Modal lookalike L1s: job/lifecycle/authoring/htmx attach; addressing vs request gating | `stems/chrome-vs-protocol.md` |
 | **Host chrome symmetry** | Overlay shells: form_shell vs exchange_shell; body hosts guests with honest DOM | `stems/host-chrome-symmetry.md` |
+| **Pragmatic gallery aesthetics** | Demos teach by looking intentional: full-bleed media, observable autoplay, in-family hypermedia | `stems/pragmatic-gallery-aesthetics.md` |
 
 Monorepo framework stems (DSL-first, hypermedia SSR, …): `../../stems/` when
 working inside the Dazzle tree.

@@ -37,9 +37,10 @@ record peeks (**drawer**).
 | Concern | Owner |
 |---------|--------|
 | **Stage geometry** (how tall is the strip?) | Carousel **viewport** — default 16/9; author may set `data-dz-ratio` on the viewport (same presets as aspect-ratio) |
-| **How media fills a slide** | Media policy: **contain** (letterbox mixed intrinsic sizes) by default; **cover** by composing **aspect-ratio** *inside* a media slide |
+| **How media fills a slide** | Gallery default: **cover** (full-bleed). Teach source aspect with **chips/captions**. **Contain** (letterbox) only when letterboxing *is* the lesson (`.carousel__media--contain`). Optional **aspect-ratio** compose for deliberate crop frames. |
 
-- **Compose** `aspect-ratio` inside a slide for cover/crop frames.
+- Prefer full-bleed demos (stem: pragmatic-gallery-aesthetics) — letterbox gutters often look like bugs.
+- **Compose** `aspect-ratio` inside a slide only for intentional cover frames.
 - **Do not** put prev/next state on aspect-ratio; carousel owns sequence index.
 - Hosts should not wrap the whole carousel in aspect-ratio (controls fall outside the stage).
 
@@ -60,12 +61,14 @@ Loop is for ambient/marketing strips.
 | Off by default | No `data-dz-carousel-interval` ⇒ no timer |
 | Interval | `data-dz-carousel-interval="{ms}"` (minimum 500) |
 | State | Timer only advances the same DOM attrs as prev/next (`data-dz-active`, index) |
-| Pause | While `:hover` or `:focus-within` on the root; while `document.hidden` |
-| Reduced motion | If `prefers-reduced-motion: reduce`, never arm the timer |
+| Pause | **Root** `pointerenter` / `pointerleave` only (not every child mouseenter) |
+| Reduced motion | If `prefers-reduced-motion: reduce`, never arm the timer; status must say so |
 | At last slide | **Clamp:** stop autoplay. **Loop:** continue |
+| Focus | Avoid `tabindex=0` on autoplay roots unless required — focus-within pause kills ambient demos |
 
 Autoplay is **secondary chrome**, not the only path to content. Critical copy
-must be reachable without waiting.
+must be reachable without waiting. Status should surface autoplay state
+(on / paused / reduced motion) so demos are observable.
 
 ### Hypermedia
 

@@ -12,12 +12,14 @@
  *   prev:     [data-dz-carousel-prev]
  *   next:     [data-dz-carousel-next]
  *   dots:     .dz-carousel__dot + aria-current
- *   status:   [data-dz-carousel-status]  — "Slide N of M" (optional)
+ *   status:   [data-dz-carousel-status]  — "Slide N of M" (+ autoplay hint)
  *
  * State lives in the DOM. Autoplay only mutates the same attrs as prev/next.
- * Timer id on root._dzCarouselTimer (survives as a host property; cleared on
- * pause). Loop is opt-in; clamp disables ends. prefers-reduced-motion kills
- * autoplay. Hover / focus-within / document.hidden pause the timer.
+ * Timer on root._dzCarouselTimer. Loop is opt-in; clamp disables ends.
+ * prefers-reduced-motion kills autoplay. Pause uses pointerenter/leave on the
+ * root only (not document mouseenter on every child — that never re-armed).
+ * Do not put tabindex=0 on autoplay roots unless needed — focus-within pause
+ * will stop the ambient demo.
  *
  * Delegated from document; N carousels stay independent.
  */
@@ -104,7 +106,25 @@
       root.querySelector("[data-dz-carousel-status]") ||
       root.querySelector("[data-carousel-status]");
     if (!status) return;
-    status.textContent = "Slide " + (i + 1) + " of " + n;
+    var base = "Slide " + (i + 1) + " of " + n;
+    var ms = intervalMs(root);
+    if (!ms) {
+      status.textContent = base;
+      return;
+    }
+    if (prefersReducedMotion()) {
+      status.textContent = base + " · Autoplay off (reduced motion)";
+      return;
+    }
+    if (root._dzCarouselPaused) {
+      status.textContent = base + " · Autoplay paused";
+      return;
+    }
+    if (root._dzCarouselTimer) {
+      status.textContent = base + " · Autoplay " + Math.round(ms / 1000) + "s";
+      return;
+    }
+    status.textContent = base + " · Autoplay ready";
   }
 
   function clearTimer(root) {
@@ -114,23 +134,22 @@
     }
   }
 
-  function shouldPause(root) {
-    if (prefersReducedMotion()) return true;
-    if (document.hidden) return true;
-    try {
-      if (root.matches(":hover") || root.matches(":focus-within")) return true;
-    } catch (e) {
-      /* :focus-within missing in ancient engines */
-    }
-    return false;
-  }
-
   function armTimer(root) {
     clearTimer(root);
     var ms = intervalMs(root);
-    if (!ms || shouldPause(root)) return;
+    if (!ms || prefersReducedMotion() || document.hidden) {
+      root._dzCarouselPaused = !!ms && (prefersReducedMotion() || document.hidden);
+      updateStatus(root, currentIndex(root), slideList(root).length);
+      return;
+    }
+    if (root._dzCarouselPaused) {
+      updateStatus(root, currentIndex(root), slideList(root).length);
+      return;
+    }
     root._dzCarouselTimer = setInterval(function () {
-      if (shouldPause(root)) return;
+      if (document.hidden || prefersReducedMotion() || root._dzCarouselPaused) {
+        return;
+      }
       var list = slideList(root);
       var n = list.length;
       if (!n) return;
@@ -141,8 +160,21 @@
         goTo(root, i + 1, { fromTimer: true });
       } else {
         clearTimer(root);
+        updateStatus(root, i, n);
       }
     }, ms);
+    updateStatus(root, currentIndex(root), slideList(root).length);
+  }
+
+  function pause(root) {
+    root._dzCarouselPaused = true;
+    clearTimer(root);
+    updateStatus(root, currentIndex(root), slideList(root).length);
+  }
+
+  function resume(root) {
+    root._dzCarouselPaused = false;
+    armTimer(root);
   }
 
   function goTo(root, index, opts) {
@@ -189,12 +221,25 @@
 
     updateStatus(root, i, n);
 
-    // User chrome restarts autoplay eligibility; timer tick keeps it armed.
     if (!opts.fromTimer) {
-      armTimer(root);
+      // Manual navigation: keep paused state if pointer is still over root
+      if (!root._dzCarouselPaused) armTimer(root);
     } else if (!wraps(root) && i >= n - 1) {
       clearTimer(root);
+      updateStatus(root, i, n);
     }
+  }
+
+  function bindRoot(root) {
+    if (root._dzCarouselBound) return;
+    root._dzCarouselBound = true;
+    // Root-level pointer only — child mouseenter never re-armed the timer.
+    root.addEventListener("pointerenter", function () {
+      pause(root);
+    });
+    root.addEventListener("pointerleave", function () {
+      resume(root);
+    });
   }
 
   document.addEventListener("click", function (evt) {
@@ -245,7 +290,6 @@
     }
     var root = rootOf(document.activeElement);
     if (!root) return;
-    // Only when focus is inside this carousel (not bubbling from page chrome).
     if (!root.contains(document.activeElement)) return;
 
     var i = currentIndex(root);
@@ -273,47 +317,13 @@
       var root = roots[i];
       var n = slideList(root).length;
       if (!n) continue;
+      bindRoot(root);
+      root._dzCarouselPaused = false;
       updateStatus(root, currentIndex(root), n);
       armTimer(root);
     }
   }
 
-  document.addEventListener(
-    "mouseenter",
-    function (evt) {
-      var root = rootOf(evt.target);
-      if (root) clearTimer(root);
-    },
-    true
-  );
-  document.addEventListener(
-    "mouseleave",
-    function (evt) {
-      var root = rootOf(evt.target);
-      if (root && !root.contains(evt.relatedTarget)) armTimer(root);
-    },
-    true
-  );
-  document.addEventListener(
-    "focusin",
-    function (evt) {
-      var root = rootOf(evt.target);
-      if (root) clearTimer(root);
-    },
-    true
-  );
-  document.addEventListener(
-    "focusout",
-    function (evt) {
-      var root = rootOf(evt.target);
-      if (!root) return;
-      // relatedTarget may be null; re-arm after focus leaves the root
-      setTimeout(function () {
-        if (!root.contains(document.activeElement)) armTimer(root);
-      }, 0);
-    },
-    true
-  );
   document.addEventListener("visibilitychange", function () {
     rearmAll();
   });

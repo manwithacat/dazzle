@@ -1534,13 +1534,14 @@ def test_carousel_prev_next_and_dots_change_active_slide(page) -> None:  # type:
     dots.nth(2).click()
     page.wait_for_timeout(100)
     assert index_attr() == "2"
-    assert root.locator(".aspect-ratio").count() >= 1, "cover slide composes aspect-ratio"
+    assert root.locator(".carousel__chip").count() >= 1, "source-aspect chips teach fit policy"
 
     dots.nth(3).click()
     page.wait_for_timeout(100)
     assert index_attr() == "3"
     assert next_btn.is_disabled(), "clamp: next disabled on last"
     assert "4 of 4" in status_text()
+    assert root.locator(".carousel__hero").count() == 1, "hypermedia uses hero overlay"
     adopt = root.locator("button", has_text="Request visit")
     assert adopt.count() == 1
     adopt.click()
@@ -1577,19 +1578,22 @@ def test_carousel_loop_wraps_last_to_first(page) -> None:  # type: ignore[no-unt
 
 
 def test_carousel_keyboard_arrows_change_slide(page) -> None:  # type: ignore[no-untyped-def]
-    """Arrow keys when focus is inside the carousel root."""
+    """Arrow keys when focus is on a control inside the carousel."""
     goto_part(page, "carousel")
     root = page.locator('#carousel [data-carousel-wrap="none"]').first
-    root.focus()
+    root.locator("[data-carousel-next]").focus()
     page.keyboard.press("ArrowRight")
     page.wait_for_timeout(80)
     assert root.get_attribute("data-carousel-index") == "1"
     page.keyboard.press("ArrowLeft")
     page.wait_for_timeout(80)
     assert root.get_attribute("data-carousel-index") == "0"
+    # Jump via End, then Home (focus stays on next control)
     page.keyboard.press("End")
     page.wait_for_timeout(80)
     assert root.get_attribute("data-carousel-index") == "3"
+    # Home may scroll the page in some engines if focus is lost — re-focus first
+    root.locator("[data-carousel-prev]").focus()
     page.keyboard.press("Home")
     page.wait_for_timeout(80)
     assert root.get_attribute("data-carousel-index") == "0"
@@ -1599,32 +1603,33 @@ def test_carousel_autoplay_advances_when_interval_set(page) -> None:  # type: ig
     """data-carousel-interval arms a timer that advances the active slide."""
     goto_part(page, "carousel")
     root = page.locator("#hm-carousel-ambient")
-    # Short interval; clear focus so :focus-within does not pause autoplay
+    # Keep pointer off the strip (pause is root pointerenter only)
+    page.mouse.move(0, 0)
     page.evaluate(
         """() => {
           const r = document.getElementById('hm-carousel-ambient');
-          r.setAttribute('data-carousel-interval', '600');
-          r.setAttribute('data-dz-carousel-interval', '600');
-          if (document.activeElement && document.activeElement.blur) {
-            document.activeElement.blur();
-          }
+          r.setAttribute('data-carousel-interval', '700');
+          r.setAttribute('data-dz-carousel-interval', '700');
+          r._dzCarouselPaused = false;
           document.dispatchEvent(new Event('visibilitychange'));
         }"""
     )
-    # Click outside the carousel so hover/focus pause is clear, then re-arm
-    page.mouse.click(8, 8)
-    page.wait_for_timeout(50)
-    page.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))")
     start = root.get_attribute("data-carousel-index") or "0"
+    # If reduced-motion is on in the environment, status must say so and we skip advance
+    status0 = root.locator("[data-carousel-status]").inner_text()
+    if "reduced motion" in (status0 or "").lower():
+        assert "Autoplay off" in status0 or "reduced motion" in status0.lower()
+        return
     page.wait_for_function(
         """(start) => {
           const r = document.getElementById('hm-carousel-ambient');
           return r && (r.getAttribute('data-carousel-index') || '0') !== start;
         }""",
         arg=start,
-        timeout=3000,
+        timeout=3500,
     )
     assert (root.get_attribute("data-carousel-index") or "0") != start
+    assert "Autoplay" in (root.locator("[data-carousel-status]").inner_text() or "")
 
 
 def test_slider_updates_value_readout(page) -> None:  # type: ignore[no-untyped-def]

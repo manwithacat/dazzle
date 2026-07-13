@@ -14,6 +14,7 @@
 | [overlay-light-dismiss](overlay-light-dismiss.md) | Transient overlays: Esc + outside; spatial vs temporal abandon |
 | [chrome-vs-protocol](chrome-vs-protocol.md) | Same modal chrome ≠ same L1; addressing vs request gating |
 | [host-chrome-symmetry](host-chrome-symmetry.md) | Overlay shells: form_shell vs exchange_shell; guests keep DOM contracts |
+| [pragmatic-gallery-aesthetics](pragmatic-gallery-aesthetics.md) | Demos teach by looking intentional: full-bleed media, observable autoplay, in-family hypermedia |
 
 **Framework parent:** [monorepo stems](../../../stems/INDEX.md)
 **Playbooks:** `docs/agent/`
