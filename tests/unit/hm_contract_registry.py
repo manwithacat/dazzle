@@ -347,6 +347,7 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/wizard.py", "wizard", True),  # experience form multi-section (#1582)
     ("contracts/master_detail.py", "master_detail", True),  # dual_pane_flow shell (#1580 C)
     ("contracts/menu.py", "menu", True),  # workspace overflow More ⋯ (#1491)
+    ("contracts/badge.py", "badge", True),  # FragmentRenderer._emit_badge
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

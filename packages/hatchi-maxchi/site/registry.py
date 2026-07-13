@@ -274,6 +274,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<span class="dz-badge" data-dz-tone="neutral">Draft</span>'
             "</div>",
             tags=("identity",),
+            contracts=("contracts/badge.py",),
         ),
         Hyperpart(
             "alert",

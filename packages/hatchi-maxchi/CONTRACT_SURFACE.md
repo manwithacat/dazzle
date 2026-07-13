@@ -9,13 +9,14 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 61 |
+| Modules | 62 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
 | `action_grid` | `action-grid` | `[data-dz-action-card]` | [data-dz-action-card][data-dz-action-card=present, data-dz-tone=one_of:neutral\|positive\|warning\|destructive\|accent] | ActionCard(count:int\|None:opt; icon_html:str:opt; label:str:req; tone:Literal:opt; url:str:opt) |
 | `activity_feed` | `activity-feed` | `[data-dz-activity-row]` | [data-dz-activity-row][data-dz-activity-row=present] | ActivityRow(actor:str:opt; description:str:req; time_str:str:req) |
 | `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
+| `badge` | `badge` | `.dz-badge` | .dz-badge[] | — |
 | `bar_chart` | `bar-chart` | `[data-dz-bar-chart]` | [data-dz-bar-chart][data-dz-bar-chart=present] | BarChart(rows:list[BarChartRow]:opt); BarChartRow(count:int:opt; label:str:req; label_html:str:opt; width_pct:int:opt) |
 | `bar_track` | `bar-track` | `[data-dz-bar-track]` | [data-dz-bar-track][data-dz-bar-track=present] | BarTrack(max_value:float:opt; rows:list[BarTrackRow]:opt); BarTrackRow(fill_pct:float:opt; formatted:str:opt; label:str:req; value:float:opt) |
 | `box_plot` | `box-plot` | `[data-dz-box-plot]` | [data-dz-box-plot][data-dz-box-plot=present] | BoxPlot(empty_message:str:opt; groups:list[BoxPlotGroup]:opt; label:str:opt; svg_html:str:opt); BoxPlotGroup(label:str:req; max:float:opt; median:float:opt; min:float:opt; q1:float:opt; q3:float:opt; samples:int:opt) |
