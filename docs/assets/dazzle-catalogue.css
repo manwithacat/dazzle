@@ -14161,10 +14161,11 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
  *
  * Progressive enhancement over a real `<input type="text" data-dz-tags>`
  * carrying a comma-joined value: with JS off the native input is fully
- * usable (the user types "a, b, c"; the server splits on comma). On first
- * interaction controllers/dz-tags.js wraps it in a `.dz-tags` root — a
- * role=list of removable chips + a borderless entry input — and hides the
- * native input (kept in the DOM as the submit value + no-JS fallback). The
+ * usable (the user types "a, b, c"; the server splits on comma). Controllers
+ * wrap it in a `.dz-tags` root on ready when the value is seeded, otherwise
+ * on first interaction — a role=list of removable chips + a borderless entry
+ * input — and hide the native input (kept in the DOM as the submit value +
+ * no-JS fallback). The
  * `.dz-tags` box carries the input chrome + focus-within ring + aria-invalid;
  * the entry is borderless inside it. Chrome mirrors the combobox /
  * search-select family. */
