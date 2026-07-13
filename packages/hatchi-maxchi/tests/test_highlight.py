@@ -54,6 +54,14 @@ def test_highlight_html_tags_attrs_and_values() -> None:
     assert "Ok" in html
 
 
+def test_highlight_html_comment_end_bang() -> None:
+    """WHATWG comment-end-bang ``--!>`` is still a comment (CodeQL py/bad-tag-filter)."""
+    html = highlight_html("<!-- bang end --!>\n<div>x</div>\n")
+    assert 'class="dz-code__tok--cmt"' in html
+    assert "bang end" in html
+    assert ">div<" in html
+
+
 def test_highlight_html_void_and_close() -> None:
     html = highlight_html('<br/>\n</div>\n<input type="text" />\n')
     assert ">br<" in html

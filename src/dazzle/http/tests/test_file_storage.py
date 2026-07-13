@@ -19,6 +19,8 @@ from dazzle.http.runtime.file_storage import (
     FileValidator,
     LocalStorageBackend,
     create_local_file_service,
+    resolve_under_base,
+    sanitize_storage_relpath,
     secure_filename,
 )
 
@@ -243,6 +245,37 @@ class TestLocalStorageBackend:
         )
 
         assert "documents" in metadata.url
+
+    @pytest.mark.asyncio
+    async def test_store_rejects_traversal_prefix(
+        self, local_storage: Any, sample_file: Any, temp_storage_path: Any
+    ) -> None:
+        """path_prefix with .. must not write outside base_path (CodeQL #220/#221)."""
+        metadata = await local_storage.store(
+            sample_file,
+            "evil.txt",
+            "text/plain",
+            path_prefix="../../outside",
+        )
+        written = temp_storage_path / metadata.storage_key
+        assert written.exists()
+        assert written.resolve().is_relative_to(temp_storage_path.resolve())
+        assert ".." not in metadata.storage_key
+        assert not (temp_storage_path.parent / "outside").exists()
+
+    @pytest.mark.asyncio
+    async def test_retrieve_rejects_traversal_key(self, local_storage: Any) -> None:
+        """storage_key traversal cannot read outside base_path."""
+        with pytest.raises((ValueError, FileNotFoundError)):
+            await local_storage.retrieve("../../../etc/passwd")
+
+    def test_sanitize_and_resolve_helpers(self, temp_storage_path: Any) -> None:
+        assert sanitize_storage_relpath("../../a/b") == "a/b"
+        assert sanitize_storage_relpath("/abs/x") == "abs/x"
+        resolved = resolve_under_base(temp_storage_path, "docs/nested/file.txt")
+        assert resolved.is_relative_to(temp_storage_path.resolve())
+        with pytest.raises(ValueError):
+            resolve_under_base(temp_storage_path, "")
 
     @pytest.mark.asyncio
     async def test_retrieve_file(self, local_storage: Any, sample_file: Any) -> None:

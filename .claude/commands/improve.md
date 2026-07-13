@@ -1,11 +1,11 @@
-Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome.
+Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → **CodeQL open-alert snapshot** (remediate if high/error open) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome.
 
-Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, signal bus, log, /loop).
+Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, CodeQL gate, signal bus, log, /loop).
 
 ARGUMENTS: $ARGUMENTS
 
 If `$ARGUMENTS` is empty: driver picks the lane.
-If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep; `trial-signals` forces the TR-action drain strategy; `cimonitor` forces the CI-badge gate playbook even when main is green — re-check + report only unless red.)
+If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep; `trial-signals` forces the TR-action drain strategy; `cimonitor` forces the CI-badge gate playbook even when main is green — re-check + report only unless red; `codeql` forces the CodeQL open-alert poll + remediate playbook.)
 If `$ARGUMENTS` is `<lane> <strategy>`: force that lane and that sub-strategy.
 If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (no cycle).
 If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count`, log the manual reset, and exit (no cycle). Operator escape hatch — use when the cap was reached but exploration should continue (e.g. after a large framework change that a release signal didn't capture).
@@ -75,9 +75,29 @@ gh run list --workflow ci.yml --branch main --limit 1 \
 | **Latest completed run `conclusion=success`** | Record **ci: green** (run id) in the cycle log; continue. |
 | **`gh` unavailable / auth failure / no runs** | Log **ci: unavailable** with the error; continue the cycle (local preflight already ran). Do not invent a green badge. |
 
-**Hard preemption:** a red completed badge outranks REGRESSION backlog rows, self-audit, capability-sweep, TR drain, and explore for **this** cycle — a broken main badge is fleet-visible shipped-broken. Product REGRESSION work resumes on the next green (or when CI is unavailable and cannot be repaired here).
+**Hard preemption:** a red completed badge outranks REGRESSION backlog rows, CodeQL, self-audit, capability-sweep, TR drain, and explore for **this** cycle — a broken main badge is fleet-visible shipped-broken. Product REGRESSION work resumes on the next green (or when CI is unavailable and cannot be repaired here).
 
 Forceable via `/improve cimonitor` (always run the snapshot; only enter repair mode when red, unless already mid-fix from a prior red cycle).
+
+### Step 0c2: CodeQL / code-scanning gate (always when 0c did not claim repair)
+
+Cheap poll of open GitHub code-scanning alerts. Playbook: `improve/strategies/codeql.md`.
+
+```bash
+gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/code-scanning/alerts" \
+  --jq '[.[] | select(.state=="open")] | length'
+```
+
+| Snapshot | Driver action |
+|----------|---------------|
+| **Open alert(s) with `severity=error` or `security_severity_level` ∈ {`critical`,`high`}** | **This cycle is CodeQL repair.** Do **not** pick a product/capability lane. Follow `codeql.md`: list alerts → fix true positives (prefer root-cause + tests; model-pack for real barriers; dismiss only with reason) → commit → push. Log `lane: codeql`. `budget_consumed: 0`. Apply Step 3–4 and exit. |
+| **Open alerts only warning/note** | Log `codeql: N open (low)`; **continue** unless ≥10 cycles since last `lane: codeql` and any remain open — then drain one. |
+| **Zero open** | Log `codeql: clean`; continue. |
+| **`gh` / API failure** | Log `codeql: unavailable`; continue. |
+
+**Preemption order:** CI red (0c) > CodeQL high/error (0c2) > REGRESSION > self-audit > … Fleet-visible Security findings outrank product explore but never jump ahead of a red CI badge.
+
+Forceable via `/improve codeql` (always poll; remediate any open alerts, not only high).
 
 ### Step 0d: Read signals
 
@@ -104,7 +124,7 @@ See **State compaction** above. Skip silently when both files are under the thre
 
 ### Step 1: Pick a lane
 
-If Step 0c already claimed this cycle for CI repair, skip Step 1–2 (already handled).
+If Step 0c already claimed this cycle for CI repair, or Step 0c2 claimed it for CodeQL repair, skip Step 1–2 (already handled).
 
 If `$ARGUMENTS` forces a lane, skip to Step 2.
 
@@ -117,7 +137,7 @@ For each lane, compute two numbers from the unified backlog:
 
 Selection priority:
 
-1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge already preempted this step via 0c.
+1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge or CodeQL high/error already preempted this step via 0c / 0c2.
 2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`.
 3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute `STALE` (last-exercised ≥20 cycles behind the current cycle). Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt.
 4. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count

@@ -159,8 +159,10 @@ def highlight_python(source: str) -> str:
 
 
 # Tag open / full comment / text. Tag interiors are tokenised separately.
+# Comment end accepts both ``-->`` and the HTML "comment end bang" form ``--!>``
+# (WHATWG comment-end-bang-state) so py/bad-tag-filter does not flag a half-match.
 _HTML_CHUNK_RE = re.compile(
-    r"(?P<cmt><!--[\s\S]*?-->)"
+    r"(?P<cmt><!--[\s\S]*?--!?>)"
     r"|(?P<tag><[!?/]?[A-Za-z][\w:.-]*"  # <div  </div  <!DOCTYPE  <?xml
     r"(?:\s+[A-Za-z_:][\w:.-]*(?:\s*=\s*(?:\"[^\"]*\"|'[^']*'|[^\s\"'=<>`]+))?)*"
     r"\s*/?>)"
