@@ -38,7 +38,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 449 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 460 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 445 | STALE (lag 21 since @445) |
+| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 477 | USED |
 | `dazzle qa trial` | CLI | trials | 463 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 476 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 464 | USED |
