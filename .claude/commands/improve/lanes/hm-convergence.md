@@ -13,9 +13,9 @@ total 0). This lane is no longer a “pick a CSS file and delete/port it” loop
 
 - Expand dual-locks (contract modules + schema/DOM gates)
 - Subscription vision / taste policy (`docs/reference/taste.md`)
-- **Hyperpart coherence sweep** — snapshot every gallery page, subagent “coherent?”
-  (playbook: `improve/strategies/hyperpart_coherence.md`; force:
-  `/improve hm-convergence hyperpart_coherence`)
+- **Hyperpart coherence (investigate + drain)** — machine queue of gallery
+  visual defects; playbook `improve/strategies/hyperpart_coherence.md`
+  (force: `/improve hm-convergence hyperpart_coherence` [`investigate`|`drain`])
 - Author new design **only** in `packages/hatchi-maxchi/`
 - Keep permanent zero-floors green (below)
 
@@ -98,20 +98,37 @@ Do **not** treat empty historical HMC drain rows as "lane idle" — consult the
 machine queue first.
 
 ```bash
+# Visual coherence drain (after a sweep) — preferred quality path when queue hot
+python scripts/hm_coherence_queue.py --status
+python scripts/hm_coherence_queue.py --top 5
+
 python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5
 python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write
 ```
 
 | Signal | Action |
 |--------|--------|
-| Gallery probe FAILs / OWNED-IDLE `hm gallery interaction probes` | Run strategy **`gallery_probes`** — forceable via `/improve hm-convergence gallery_probes` |
-| Queue depth > 0 | Run strategy **`dual_lock_expand`** (playbook below) — forceable via `/improve hm-convergence dual_lock_expand` |
-| Queue empty + floors green + probes green | **dual_lock_visual_smoke** or HOUSEKEEPING; hand back to driver for other lanes |
-| Floor red | Fix floor; never expand dual-locks on a red reservoir |
+| `hm_coherence_queue` depth > 0 **or** PENDING `coherence_drain *` rows | **`hyperpart_coherence` drain** — force: `/improve hm-convergence hyperpart_coherence drain` |
+| No/stale `coherence.json` (≥20 cycles since last investigate) | **`hyperpart_coherence` investigate** — force: `… hyperpart_coherence investigate` |
+| Gallery probe FAILs / OWNED-IDLE `hm gallery interaction probes` | **`gallery_probes`** — `/improve hm-convergence gallery_probes` |
+| Dual-lock queue depth > 0 (and coherence quiet) | **`dual_lock_expand`** — `/improve hm-convergence dual_lock_expand` |
+| Queues empty + floors green + probes green | dual_lock_visual_smoke / HOUSEKEEPING; hand back to driver |
+| Floor red | Fix floor; never expand dual-locks or polish gallery on a red reservoir |
+
+**Pick order when floors are green** (lane-internal):
+`hyperpart_coherence` drain → `hyperpart_coherence` investigate (if due) →
+`gallery_probes` → `dual_lock_expand` → `shadcn_parity` → smoke / housekeeping.
 
 ### Explore / promote strategies
 
-1. **gallery_probes** — deterministic **interaction** contracts (Playwright) for
+1. **hyperpart_coherence** — **investigate** (snapshot all gallery pages → subagent
+   “coherent?”) + **drain** (fix top queue stems). Tools:
+   `scripts/hm_pages_vision.py`, `scripts/hm_coherence_queue.py`.
+   Playbook: **`improve/strategies/hyperpart_coherence.md`**.
+   Force: `/improve hm-convergence hyperpart_coherence` [`investigate`|`drain`].
+   Backlog scope: `coherence_drain <stem>`. This is the structured quality path
+   for “looks broken” — not a one-off human walk.
+2. **gallery_probes** — deterministic **interaction** contracts (Playwright) for
    gallery Hyperparts. Catches multi-open menubars, nav panels, etc. that dual-lock
    and static vision miss. Tool:
    `python scripts/hm_gallery_probes.py --run` (also `--discover`,
@@ -119,41 +136,47 @@ python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write
    Force: `/improve hm-convergence gallery_probes`. Prefer when capability map
    shows OWNED-IDLE / STALE for `hm gallery interaction probes`, or a human HMG
    observation needs machine validation.
-2. **shadcn_parity** — close catalogue gaps vs shadcn/ui (placeholder Hyperparts
+3. **shadcn_parity** — close catalogue gaps vs shadcn/ui (placeholder Hyperparts
    first). Inventory: `python packages/hatchi-maxchi/tools/shadcn_parity.py --gaps-only`.
    Map: `packages/hatchi-maxchi/SHADCN_PARITY.md`. Playbook:
    **`improve/strategies/shadcn_parity.md`**. Force:
    `/improve hm-convergence shadcn_parity`. Prefer when `gap` count > 0 and
-   the dual-lock queue is not more urgent (operator judgment / force path).
-3. **dual_lock_expand** (default for existing surfaces) — promote the top
-   dual-lock queue candidate(s) to schema+DOM (or DOM-only). Full cycle recipe:
-   **`improve/strategies/dual_lock_expand.md`**.
+   coherence + dual-lock queues are not more urgent.
+4. **dual_lock_expand** (default for existing surfaces when coherence quiet) —
+   promote the top dual-lock queue candidate(s) to schema+DOM (or DOM-only).
+   Full cycle recipe: **`improve/strategies/dual_lock_expand.md`**.
    Queue tool: `packages/hatchi-maxchi/tools/dual_lock_queue.py`.
    Coverage: `packages/hatchi-maxchi/DUAL_LOCK_COVERAGE.md`.
-4. **dual_lock_visual_smoke** (subscription default after a promote) — run
+5. **dual_lock_visual_smoke** (subscription default after a promote) — run
    `python scripts/hm_visual_smoke.py --dazzle-emit`.
    Output in gitignored `.dazzle/hm-visual-smoke/` (+ `.dazzle/hm-visual-last.json`).
    Structured scores without metered API:
    `python scripts/hm_subscription_vision.py --from-smoke --write-prompt` + host
    Read of PNGs; ingest with `--ingest`. Never a ship gate.
-5. **dead_prune** — 0-reference class prune across **all** of `src/dazzle`
+6. **dead_prune** — 0-reference class prune across **all** of `src/dazzle`
    (incl. top-level `page/*.py`), `tests/`, and JS dynamic construction
    (`'dz-x-' + var`). Grep-by-full-class misses JS-built names.
-6. **legacy_card_chrome_retirement** (optional, careful) — the
+7. **legacy_card_chrome_retirement** (optional, careful) — the
    `_has_card_chrome` Tailwind-shaped branch is defence-in-depth only; delete
    only with a dedicated gate plan and fixture audit (emitters already at 0).
-7. **taste_gate** (optional, credits-permitting) — aesthetic pass vs
+8. **taste_gate** (optional, credits-permitting) — aesthetic pass vs
    `dev_docs/taste/`; billing-blocked by default. Policy: `docs/reference/taste.md`.
 
 Historical sub-strategies `reservoir_audit` / `css_migration` / `markup_drain`
 are retired (floors already 0). Reopen only if a floor is red.
 
-### Backlog rows for dual-locks
+### Backlog rows
 
-Use `HMC-NNN` with `scope` = `dual_lock <stem>` and status
-`PENDING` / `IN_PROGRESS` / `DONE`. Seed from the queue when the lane is
-picked and no dual-lock row is already `IN_PROGRESS`. The queue is the
-authority for *what* is left; the backlog is the cycle ledger.
+| Scope pattern | Meaning | Seed from |
+|---------------|---------|-----------|
+| `dual_lock <stem>` | Promote contract / dual-lock | `dual_lock_queue.py` |
+| `coherence_drain <stem>` | Fix gallery visual incoherence | `hm_coherence_queue.py --seed-backlog` |
+| `shadcn_parity <name>` | Catalogue gap placeholder | `shadcn_parity.py` |
+
+Status ∈ `PENDING` / `IN_PROGRESS` / `DONE`. Queues are the authority for *what*
+is left; the backlog is the cycle ledger. `actionable_count(hm-convergence)`
+includes both dual-lock and coherence_drain PENDING rows so the **driver**
+picks this lane when either queue is hot.
 
 ## Owns (capability-map)
 

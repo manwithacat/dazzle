@@ -2,135 +2,186 @@
 
 **Lane:** hm-convergence
 **Force path:** `/improve hm-convergence hyperpart_coherence`
-**Tooling:** `scripts/hm_pages_vision.py` + host-harness subagents that **Read** PNGs
-**Billing:** subscription (Playwright capture local; vision judgment via host Read)
-**Ship gate:** **false** — advisory only (dual-locks + `pytest -m gate` remain the floor)
+             `/improve hm-convergence hyperpart_coherence investigate`
+             `/improve hm-convergence hyperpart_coherence drain`
+**Tooling:**
+- Capture/judge: `scripts/hm_pages_vision.py`
+- Drain queue: `scripts/hm_coherence_queue.py`
+- Host subagents **Read** PNGs (subscription)
+**Billing:** subscription (Playwright local; vision via host Read)
+**Ship gate:** **false** — advisory scores; **fixes still ship** like any HM bug
+**Backlog:** `HMC-NNN` with `scope` = `coherence_drain <stem>` under `## Lane: hm-convergence`
 
-Snapshot **every** Hyperpart gallery page and ask a subagent “does this look
-coherent?” Faster than a human walking 90 pages; cheaper cognitive target than
-full multi-dimension taste scoring; image tokens often beat dumping full HTML
-as text for layout judgment.
+This strategy is **two phases** on the same lane — the driver picks which phase
+from the queue + backlog, not a separate top-level lane.
 
-Complements:
+| Phase | Question | Machine signal |
+|-------|----------|----------------|
+| **investigate** | Which Hyperparts look broken? | No/stale `coherence.json`, or force |
+| **drain** | Fix the worst open findings | `hm_coherence_queue.py` depth > 0 **or** PENDING `coherence_drain *` rows |
 
-| Path | Question |
-|------|----------|
-| dual-locks / gate | Structure / DOM / schema correct? |
-| `gallery_probes` | Interaction exclusive-open etc.? |
-| dual-lock smoke + `hm_subscription_vision` | A few exemplars taste scores |
-| **this strategy** | Full catalogue: visual coherence of each live page |
+Complements dual-locks (structure), gallery_probes (interaction), dual-lock smoke (few exemplars).
 
-## When to pick
+---
 
-- Operator wants HM **quality** time (not dual-lock expansion alone)
-- After a large HM gallery / registry / partial change
-- OWNED-IDLE / STALE re-exercise of subscription vision on a wider surface
-- Force path above
+## Driver / lane pick rules (authoritative)
 
-## Playbook (one cycle — full sweep)
+When `/improve` hands off to **hm-convergence**, choose sub-strategy in this order
+(after floors green; CI/CodeQL already handled by the driver):
 
-### 1. Capture (local site preferred — offline, deterministic)
+1. **`hyperpart_coherence` drain** — if either:
+   - `python scripts/hm_coherence_queue.py --status` reports `queue>0`, **or**
+   - backlog has `PENDING` / `IN_PROGRESS` rows with scope `coherence_drain *`
+2. **`hyperpart_coherence` investigate** — if either:
+   - `coherence.json` missing (`--status` exit 2 / "missing"), **or**
+   - last investigate ≥ **20** improve cycles ago (log: no `strategy: hyperpart_coherence` investigate since), **or**
+   - force `… hyperpart_coherence investigate`
+3. Else fall through: gallery_probes → dual_lock_expand → shadcn_parity → …
+
+Driver Step 1 also biases **toward hm-convergence** when queue depth > 0
+(actionable_count includes PENDING `coherence_drain` rows). Force always wins.
+
+Capability map: stamp **HM hyperpart coherence** `USED@N` after either phase runs.
+
+---
+
+## Phase A — Investigate (sweep)
+
+Goal: refresh `.dazzle/hm-hyperpart-coherence/coherence.json` + seed/update queue.
+
+### A1. Capture
 
 ```bash
-# rebuild site if registry/partials changed
-# python packages/hatchi-maxchi/site/build_site.py   # when needed
-
-python scripts/hm_pages_vision.py --list-hyperparts   # inventory (~90)
+python scripts/hm_pages_vision.py --list-hyperparts
 
 python scripts/hm_pages_vision.py --capture --all-hyperparts \
   --base "file://$(pwd)/packages/hatchi-maxchi/site" \
   --out .dazzle/hm-hyperpart-coherence
-# optional: --clip-demo  (crop to demo region)  --limit N  --stems a,b,c
+# budget: --limit N  or  --stems a,b,c
 ```
 
-Manifest: `.dazzle/hm-hyperpart-coherence/manifest.json` + one PNG per stem.
-
-### 2. Emit batched mission prompts
+### A2. Batch prompts + subagents
 
 ```bash
 python scripts/hm_pages_vision.py --write-coherence-prompt \
-  --out .dazzle/hm-hyperpart-coherence \
-  --batch-size 12
+  --out .dazzle/hm-hyperpart-coherence --batch-size 12
 ```
 
-Writes `coherence-prompt-batch-NN.txt` + `coherence-batches.json`.
-Default batch size **12** — parallelize across host subagents without drowning
-context.
+For each entry in `coherence-batches.json`, dispatch a **general-purpose** subagent
+(session model; Read + Write) with the batch prompt. Subagent Writes
+`batch-NN-raw.json`. No metered `taste-panel` / `component-vision`.
 
-### 3. Dispatch subagents (subscription Read)
-
-For **each** batch in `coherence-batches.json`:
-
-- `subagent_type`: `general-purpose` (needs Read + Write)
-- model: session tier (visual judgment — no Haiku pin)
-- `description`: `HM hyperpart coherence batch N`
-- `prompt`: contents of `coherence-prompt-batch-NN.txt`
-
-Subagent **Reads** each PNG path, **Writes** `batch-NN-raw.json` (schema in
-`dazzle.qa.subscription_vision.build_hyperpart_coherence_prompt`).
-
-Do **not** call metered `dazzle qa taste-panel` / `component-vision`.
-
-### 4. Ingest + rank
+### A3. Ingest + queue + backlog seed
 
 ```bash
 python scripts/hm_pages_vision.py --ingest-coherence \
   .dazzle/hm-hyperpart-coherence/batch-*-raw.json \
   --out .dazzle/hm-hyperpart-coherence
-# → coherence.json  (mean_score, worst[], n_incoherent)
+
+python scripts/hm_coherence_queue.py --write --top 15
+python scripts/hm_coherence_queue.py --status
+# If new stems lack HMC rows:
+python scripts/hm_coherence_queue.py --seed-backlog --start-id <next HMC>
+# → paste PENDING rows into improve-backlog.md ## Lane: hm-convergence
 ```
 
-### 5. Drain (same cycle if small; else backlog)
+### A4. Investigate-cycle outcome
 
-For each **incoherent** or score ≤ 6 row (worst first):
+| Outcome | When |
+|---------|------|
+| `EXPLORED` | Sweep completed; queue written; 0–N PENDING rows seeded |
+| `PASS` | Sweep completed and **queue empty** (all coherent) |
+| `BLOCKED` | No Playwright / site missing / subagent dispatch failed |
 
-| Severity / pattern | Action |
-|--------------------|--------|
-| empty_demo / layout_broken high | Fix HM partial / demo data this cycle if small |
-| overflow / contrast medium | Fix or file HMC backlog row |
-| copy / low noise | Note only unless trivial |
+- `budget_consumed: 1`
+- Log: `strategy: hyperpart_coherence` / `phase: investigate`
+- **Do not** start large drains in the same cycle unless queue ≤ 2 and fixes are tiny
+- Commit only if backlog seed or tooling changed (artifacts stay gitignored)
 
-Fix surface is **HM** (`packages/hatchi-maxchi/`), not Dazzle CSS.
+---
 
-Re-capture only the fixed stems:
+## Phase B — Drain (fix)
+
+Goal: clear **one** (max two sibling) top queue item(s) per cycle.
+
+### B1. Pick
 
 ```bash
-python scripts/hm_pages_vision.py --capture --stems money,wizard \
-  --base "file://$(pwd)/packages/hatchi-maxchi/site" \
-  --out .dazzle/hm-hyperpart-coherence
+python scripts/hm_coherence_queue.py --top 5
+# or backlog: first PENDING coherence_drain *
 ```
 
-### 6. Stamp + log
+Mark the chosen row `IN_PROGRESS`. Prefer:
 
-- capability-map: stamp subscription vision / hyperpart_coherence exercise
-- improve-log: `lane: hm-convergence` / strategy `hyperpart_coherence`
-- `budget_consumed: 1` (explore) — capture+judge is the exercise
-- Commit **code fixes** only; `.dazzle/` artifacts stay gitignored
+1. score ≤ 4 or severity high
+2. `empty_demo` / `layout_broken` / blank-capture
+3. shared root cause (e.g. both message + message-scroller meta)
 
-## Partial sweep (budget-friendly)
+### B2. Reproduce (cheap)
 
 ```bash
-# first 15 only
-python scripts/hm_pages_vision.py --capture --all-hyperparts --limit 15 \
-  --base "file://$(pwd)/packages/hatchi-maxchi/site" \
-  --out .dazzle/hm-hyperpart-coherence
+# open PNG + live page
+open .dazzle/hm-hyperpart-coherence/<stem>.png   # or Read tool
+# file://…/site/hyperparts/<stem>.html
 ```
 
-Or stems from dual-lock queue / recent commits.
+Classify:
+
+| Class | Meaning | Fix surface |
+|-------|---------|-------------|
+| **harness** | blank/white PNG but page OK in browser | capture timing / wait / full-page; re-capture before product fix |
+| **product** | page itself broken | HM partial, CSS, demo data, assets under `packages/hatchi-maxchi/` |
+| **by-design** | intentional sparse demo | dismiss: note in backlog DONE with reason; drop from queue via re-score |
+
+### B3. Fix (product only)
+
+- Edit **HM only** (components, registry demos, controllers, site assets)
+- Rebuild as needed: `python packages/hatchi-maxchi/build.py` / site build
+- Do **not** add Dazzle CSS for gallery polish
+
+### B4. Verify
+
+```bash
+python scripts/hm_pages_vision.py --capture --stems <stem> \
+  --base "file://$(pwd)/packages/hatchi-maxchi/site" \
+  --out .dazzle/hm-hyperpart-coherence
+# re-judge that stem (host Read PNG) or full batch if cheap
+# re-ingest / update coherence.json for that stem
+python scripts/hm_coherence_queue.py --status
+```
+
+Mark HMC row `DONE` when re-score is coherent (score ≥ 7, no high issues) **or**
+harness-proven false positive.
+
+### B5. Drain-cycle outcome
+
+| Outcome | When |
+|---------|------|
+| `PASS` | ≥1 stem fixed + re-verified coherent |
+| `FINDINGS` | Investigated; blocked on design intent / multi-cycle |
+| `FAIL` | Fix attempted; still incoherent |
+| `BLOCKED` | Cannot repro / missing site |
+
+- `budget_consumed: 1`
+- Log: `strategy: hyperpart_coherence` / `phase: drain` / stems + scores before→after
+- Commit product fix: `improve: cycle N hm-convergence — coherence drain <stem>`
+
+---
 
 ## Hard rules
 
-- **Advisory only** — never fail CI solely on coherence scores.
-- **Subscription only** — no metered vision APIs in the default loop.
-- **Images over HTML dumps** for “does it look right?” — capture PNG, Read PNG.
-- **One batch set per cycle** is enough; do not re-score the whole fleet every
-  cycle unless the gallery changed materially.
-- Prefer **fixing** high-severity incoherent demos over filing noise.
+- **Investigate produces queue; drain consumes queue.** Do not treat a one-off
+  human walk of PNGs as a substitute for the machine queue.
+- **One primary stem per drain cycle** (two if same root cause).
+- **Advisory scores, real fixes** — CI does not fail on score; broken demos still fix.
+- **Subscription only** for judgment — no metered vision APIs in the default loop.
+- **Images over HTML dumps** for “does it look right?”
+- Prefer **fix** high-severity over filing endless HMC noise; seed backlog when
+  drain will span cycles.
 
-## Outcome shapes
+## Related
 
-| Outcome | Meaning |
-|---------|---------|
-| `PASS` | Sweep ran; 0 high-severity incoherent (or fixed this cycle) |
-| `FINDINGS` | Incoherent list remains; top N logged / HMC rows |
-| `BLOCKED` | No Playwright / site missing / subagent dispatch unavailable |
+- Queue MD: `packages/hatchi-maxchi/COHERENCE_QUEUE.md` (`--write`)
+- Capture: `scripts/hm_pages_vision.py`
+- Taste policy: `docs/reference/taste.md`
+- Interaction complement: `improve/strategies/gallery_probes.md`
