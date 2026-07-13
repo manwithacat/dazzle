@@ -84,10 +84,64 @@ def _url(base: str, path: str) -> str:
     if not path.startswith("/"):
         path = "/" + path
     if base.startswith("file://"):
-        # file:///…/site + /hyperparts/x.html
+        # Prefer converting callers to HTTP via capture() — kept for one-off tools.
         root = base[len("file://") :]
         return Path(root + path).as_uri()
     return base + path
+
+
+def _http_base_for_site(site_dir: Path) -> tuple[str, object]:
+    """Serve *site_dir* on a free localhost port (PDF.js cannot XHR file://)."""
+    import http.server
+    import socketserver
+    import threading
+
+    class _Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(site_dir), **kwargs)
+
+        def log_message(self, format: str, *args) -> None:  # noqa: A003
+            return
+
+    socketserver.TCPServer.allow_reuse_address = True
+    httpd = socketserver.TCPServer(("127.0.0.1", 0), _Handler)
+    port = httpd.server_address[1]
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    return f"http://127.0.0.1:{port}", httpd
+
+
+def _settle_demo(page, name: str) -> None:
+    """Scroll demo into view and wait for lazy/async enhancements."""
+    try:
+        page.locator(
+            ".hm-preview, [data-pdf], [data-dz-pdf], [data-diagram], [data-dz-diagram]"
+        ).first.scroll_into_view_if_needed(timeout=3000)
+    except Exception:
+        pass
+    page.wait_for_timeout(400)
+    if name == "pdf" or "pdf" in name:
+        try:
+            page.wait_for_function(
+                """() => {
+                  const s = document.querySelector('[data-pdf-status], [data-dz-pdf-status]');
+                  const t = (s && s.textContent) || '';
+                  if (document.querySelector('canvas')) return true;
+                  if (/Failed|error/i.test(t)) return true;
+                  if (t && !/Loading/i.test(t)) return true;
+                  return false;
+                }""",
+                timeout=15000,
+            )
+        except Exception:
+            page.wait_for_timeout(2000)
+    if name == "diagram":
+        try:
+            page.wait_for_selector(
+                ".hm-preview svg, svg[id^='mermaid'], .mermaid svg", timeout=15000
+            )
+        except Exception:
+            page.wait_for_timeout(2000)
 
 
 def capture(
@@ -97,80 +151,95 @@ def capture(
     pages: list[tuple[str, str]],
     full_page: bool,
     clip_demo: bool = False,
+    site_dir: Path | None = None,
 ) -> dict:
     from playwright.sync_api import sync_playwright
 
     out.mkdir(parents=True, exist_ok=True)
     screens: list[dict] = []
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
-        for name, rel in pages:
-            url = _url(base, rel)
-            status = None
-            try:
-                resp = page.goto(url, wait_until="networkidle", timeout=45000)
-                status = resp.status if resp else None
-                # Meta-refresh aliases (e.g. grid-edit → grid.html) need a beat to land.
-                page.wait_for_timeout(500)
+    httpd = None
+    effective_base = base
+    # file:// PDF/XHR and some ES modules fail CORS — serve the site tree over HTTP.
+    if base.startswith("file://"):
+        root = Path(base[len("file://") :])
+        if root.is_dir():
+            effective_base, httpd = _http_base_for_site(root)
+            print(f"local HTTP capture base: {effective_base}  (from {root})")
+    elif site_dir is not None and site_dir.is_dir() and base.startswith("file://"):
+        effective_base, httpd = _http_base_for_site(site_dir)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            for name, rel in pages:
+                url = _url(effective_base, rel)
+                status = None
                 try:
-                    page.wait_for_load_state("networkidle", timeout=8000)
-                except Exception:
-                    pass
-                page.wait_for_timeout(200)
-                # detect GitHub Pages 404 chrome / blank file:// dead-ends
-                body = page.inner_text("body")[:200]
-                is_404 = (
-                    status == 404
-                    or "File not found" in body
-                    or body.strip().startswith("404")
-                    or not body.strip()
-                )
-                png = out / f"{name}.png"
-                if not is_404 and clip_demo:
-                    # Prefer the live demo region when present (less chrome noise).
-                    loc = page.locator(
-                        "main .hm-demo, main [data-hm-demo], .hm-hyperpart-demo, #demo, main"
-                    ).first
+                    resp = page.goto(url, wait_until="networkidle", timeout=45000)
+                    status = resp.status if resp else None
+                    page.wait_for_timeout(500)
                     try:
-                        if loc.count() > 0:
-                            loc.screenshot(path=str(png))
-                        else:
-                            page.screenshot(path=str(png), full_page=full_page)
+                        page.wait_for_load_state("networkidle", timeout=8000)
                     except Exception:
-                        page.screenshot(path=str(png), full_page=full_page)
-                else:
-                    page.screenshot(path=str(png), full_page=full_page and not is_404)
-                screens.append(
-                    {
-                        "image_id": name,
-                        "path": str(png.resolve()),
-                        "label": f"HM hyperpart: {name}",
-                        "url": url,
-                        "http_status": status,
-                        "is_404": is_404,
-                    }
-                )
-                flag = "404" if is_404 else "ok"
-                print(f"{flag:3} {name}  {url}")
-            except Exception as e:
-                print(f"ERR {name}: {e}")
-                screens.append(
-                    {
-                        "image_id": name,
-                        "path": "",
-                        "label": f"HM hyperpart: {name}",
-                        "url": url,
-                        "http_status": status,
-                        "is_404": True,
-                        "error": str(e),
-                    }
-                )
-        browser.close()
+                        pass
+                    page.wait_for_timeout(200)
+                    _settle_demo(page, name)
+                    body = page.inner_text("body")[:200]
+                    is_404 = (
+                        status == 404
+                        or "File not found" in body
+                        or body.strip().startswith("404")
+                        or not body.strip()
+                    )
+                    png = out / f"{name}.png"
+                    if not is_404 and clip_demo:
+                        loc = page.locator(
+                            "main .hm-demo, main [data-hm-demo], .hm-hyperpart-demo, #demo, main"
+                        ).first
+                        try:
+                            if loc.count() > 0:
+                                loc.screenshot(path=str(png))
+                            else:
+                                page.screenshot(path=str(png), full_page=full_page)
+                        except Exception:
+                            page.screenshot(path=str(png), full_page=full_page)
+                    else:
+                        page.screenshot(path=str(png), full_page=full_page and not is_404)
+                    screens.append(
+                        {
+                            "image_id": name,
+                            "path": str(png.resolve()),
+                            "label": f"HM hyperpart: {name}",
+                            "url": url,
+                            "http_status": status,
+                            "is_404": is_404,
+                        }
+                    )
+                    flag = "404" if is_404 else "ok"
+                    print(f"{flag:3} {name}  {url}")
+                except Exception as e:
+                    print(f"ERR {name}: {e}")
+                    screens.append(
+                        {
+                            "image_id": name,
+                            "path": "",
+                            "label": f"HM hyperpart: {name}",
+                            "url": url,
+                            "http_status": status,
+                            "is_404": True,
+                            "error": str(e),
+                        }
+                    )
+            browser.close()
+    finally:
+        if httpd is not None:
+            httpd.shutdown()
 
     manifest = {
         "created_at": datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"),
-        "base": base,
+        "base": effective_base,
+        "requested_base": base,
         "billing": "subscription-playwright-only",
         "ship_gate": False,
         "kind": "hm_pages_vision",

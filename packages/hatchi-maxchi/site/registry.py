@@ -4493,11 +4493,12 @@ def select(source: str, id: str) -> str:
             "</pre>"
             "</div>",
             notes="Dual-lock root is <code>data-dz-diagram</code> "
-            "(<code>contracts/diagram.py</code>). The gallery shows the raw "
-            "source (Mermaid is not loaded here); in Dazzle the emitter appends "
-            "the Mermaid loader script and the library swaps the "
-            "<code>&lt;pre&gt;</code> for SVG at runtime — the source styling "
-            "only matters for the initial paint flash. The wrapper owns "
+            "(<code>contracts/diagram.py</code>). The gallery part page loads "
+            "Mermaid from a CDN module (build_site gallery-only bootstrap) so "
+            "the live demo renders SVG the same way Dazzle does when the host "
+            "emitter appends the Mermaid loader. The library swaps the "
+            "<code>&lt;pre class=mermaid&gt;</code> for SVG at runtime — source "
+            "styling only matters for the initial paint flash. The wrapper owns "
             "overflow; <code>dz-diagram-empty</code> is the no-data paragraph.",
             tags=("data",),
             contracts=("contracts/diagram.py",),

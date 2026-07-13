@@ -2684,7 +2684,18 @@ Every snippet is the live example — copy it into any htmx4 app.
         '<label><input type="radio" name="hm-theme" data-hm-theme="dark" '
         "onclick=\"hmTheme('dark')\"><span>Dark</span></label></div></div>"
     )
+    # Gallery-only CDN bootstraps (not shipped in dist). Diagram needs Mermaid to
+    # turn the server-emitted <pre class="mermaid"> into SVG; Dazzle does this in
+    # the host emitter. Without it the live demo is raw source text (coherence
+    # HMC-059).
+    _MERMAID_BOOT = """
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({ startOnLoad: true, securityLevel: "loose", theme: "neutral" });
+</script>
+""".strip()
     for c, section in part_sections:
+        extra_boot = _MERMAID_BOOT if c.id == "diagram" else ""
         part_doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -2712,6 +2723,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 </div>
 <script src="../hatchi-maxchi.js" defer></script>
 <script>{opener_js}</script>
+{extra_boot}
 </body>
 </html>"""
         (hp_dir / f"{c.id}.html").write_text(part_doc + "\n", encoding="utf-8")
