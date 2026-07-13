@@ -44,4 +44,5 @@ guide contacts_onboarding "Getting started with Contacts":
   step_order: [welcome_empty, fill_first_name, explore_detail]
 
   on_complete:
-    redirect: surface.contact_list
+    # TR-2: after first contact, land on Home overview (not a bare list).
+    redirect: workspace.home
