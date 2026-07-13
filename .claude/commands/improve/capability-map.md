@@ -36,7 +36,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
-| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 449 | STALE (lag 37 since @449) |
+| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 489 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 460 | STALE (lag 26 since @460) |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 477 | USED |
 | `dazzle qa trial` | CLI | trials | 463 | STALE (lag 23 since @463) |
