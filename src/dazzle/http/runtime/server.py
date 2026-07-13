@@ -2218,16 +2218,7 @@ class DazzleBackendApp:
             # it now if not (e.g. when _mount_file_routes is called standalone
             # in tests or subsystem contexts that skip _setup_routes).
             if self._file_service is None:
-                from dazzle.http.runtime.file_storage import (
-                    FileMetadataStore,
-                    FileValidator,
-                    LocalStorageBackend,
-                )
-
-                storage = LocalStorageBackend(self._files_path, "/files")
-                metadata_store = FileMetadataStore(database_url=self._database_url)
-                validator = FileValidator()
-                self._file_service = FileService(storage, metadata_store, validator)
+                self._ensure_file_service()
             # else: already early-constructed in _setup_routes (no reconstruction needed)
 
             # Profile-based upload size limits (v1.0.0)
@@ -2315,6 +2306,25 @@ class DazzleBackendApp:
             except Exception:
                 logger.warning("FTS routes mount failed", exc_info=True)
 
+    def _ensure_file_service(self) -> None:
+        """Construct FileService if missing (local disk + dazzle_files metadata).
+
+        Used by file routes and by signing (TR-49 durable signed_document). Signing
+        must persist PDFs even when general ``enable_files`` upload UI is off.
+        """
+        if self._file_service is not None:
+            return
+        from dazzle.http.runtime.file_storage import (
+            FileMetadataStore,
+            FileValidator,
+            LocalStorageBackend,
+        )
+
+        storage = LocalStorageBackend(self._files_path, "/files")
+        metadata_store = FileMetadataStore(database_url=self._database_url)
+        validator = FileValidator()
+        self._file_service = FileService(storage, metadata_store, validator)
+
     def _mount_signing_routes(self) -> None:
         assert self._app is not None
         # Native document signing endpoints (#1283 phase 3d) — mounted
@@ -2325,6 +2335,20 @@ class DazzleBackendApp:
         if self._repositories and self._appspec.domain:
             try:
                 from dazzle.signing.routes import create_signing_routes
+
+                # TR-49: signed-copy download needs FileService even if the
+                # general file-upload surface is disabled.
+                has_signable = any(
+                    getattr(e, "signable", False) for e in self._appspec.domain.entities
+                )
+                if has_signable:
+                    try:
+                        self._ensure_file_service()
+                    except Exception:
+                        logger.warning(
+                            "Could not construct FileService for signing PDF persistence",
+                            exc_info=True,
+                        )
 
                 support_contact, resend_hook = self._resolve_signing_recovery()
                 signing_router = create_signing_routes(
@@ -2338,7 +2362,11 @@ class DazzleBackendApp:
                 )
                 if signing_router is not None:
                     self._app.include_router(signing_router)
-                    logger.info("  Signing: /sign/{entity}/{id} + /api/sign/{entity}/{id}")
+                    logger.info(
+                        "  Signing: /sign/{entity}/{id} + /api/sign/{entity}/{id}"
+                        " (file_service=%s)",
+                        "yes" if self._file_service else "no",
+                    )
             except ImportError:
                 # dazzle.signing imports `cryptography` lazily but the
                 # routes module itself is stdlib-only; an ImportError

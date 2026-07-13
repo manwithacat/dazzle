@@ -1027,7 +1027,8 @@ async def _handle_signed_copy(
         return HTMLResponse(body, status_code=404)  # nosemgrep
 
     file_id = _extract_file_id(stored)
-    metadata = await file_service.get_metadata(file_id) if file_id is not None else None
+    # FileService.get_metadata is synchronous (returns FileMetadata | None).
+    metadata = file_service.get_metadata(file_id) if file_id is not None else None
     if metadata is not None and (
         (getattr(metadata, "entity_name", None), getattr(metadata, "entity_id", None))
         == (entity.name, str(record_id))

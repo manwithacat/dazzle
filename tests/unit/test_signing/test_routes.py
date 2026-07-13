@@ -140,7 +140,7 @@ class _MockFileService:
         )
         return SimpleNamespace(url=f"/files/{filename}")
 
-    async def get_metadata(self, file_id: Any) -> Any:
+    def get_metadata(self, file_id: Any) -> Any:
         return None
 
 
@@ -999,7 +999,7 @@ class _CopyFileService(_MockFileService):
         self._entity_id = entity_id
         self.data = b"%PDF-1.7 signed-copy-bytes"
 
-    async def get_metadata(self, file_id: Any) -> Any:
+    def get_metadata(self, file_id: Any) -> Any:
         from types import SimpleNamespace
 
         if str(file_id) != str(self.file_id):
