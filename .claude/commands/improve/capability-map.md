@@ -46,7 +46,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | — | OWNED-IDLE |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 405 | STALE (lag 29 since @405) |
-| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 400 | STALE (lag 34 since @400) |
+| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 457 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 401 | STALE (lag 33 since @401) |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 402 | STALE (lag 32 since @402) |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 447 | USED |
