@@ -1280,6 +1280,24 @@ def _emit_root_only_html(part_id: str) -> str:
             action_url="/api/tickets",
         )
         return _render_form_step_body(SimpleNamespace(transitions=[]), SimpleNamespace(form=form))
+    if part_id == "menu":
+        # Workspace heading overflow (#1491) emits details.dz-menu (HM menu Hyperpart).
+        from dazzle.render.fragment.primitives.data import (
+            WorkspacePrimaryAction,
+            WorkspaceShell,
+        )
+
+        return r.render(
+            WorkspaceShell(
+                workspace_name="ops",
+                title="Command center",
+                body=Text(""),
+                overflow_actions=(
+                    WorkspacePrimaryAction(label="Export", route="/app/export"),
+                    WorkspacePrimaryAction(label="Settings", route="/app/settings"),
+                ),
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

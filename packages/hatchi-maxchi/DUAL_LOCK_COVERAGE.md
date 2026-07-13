@@ -12,9 +12,9 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Controllers | 24 |
 | Contract modules | 61 |
 | Dual-lock schema+DOM | 41 |
-| Dual-lock DOM-only | 14 |
+| Dual-lock DOM-only | 15 |
 | Dual-lock deferred | 1 |
-| Contract with no dual-lock row | 5 |
+| Contract with no dual-lock row | 4 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 
@@ -56,7 +56,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `kanban` | `kanban.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `list_region` | `list_region.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `master_detail` | `master_detail.py` | `dz-master-detail.js` | yes | no | no | **DOM-only** |
-| `menu` | `menu.py` | `—` | yes | no | no | **none** |
+| `menu` | `menu.py` | `—` | yes | no | no | **DOM-only** |
 | `menubar` | `menubar.py` | `dz-menubar.js` | yes | no | no | **none** |
 | `metrics` | `metrics.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `money` | `money.py` | `dz-money.js` | yes | yes | yes | **schema+DOM** |

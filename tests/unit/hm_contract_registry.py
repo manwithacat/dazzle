@@ -346,6 +346,7 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/pdf.py", "pdf", True),  # render_pdf_viewer_component (#1582)
     ("contracts/wizard.py", "wizard", True),  # experience form multi-section (#1582)
     ("contracts/master_detail.py", "master_detail", True),  # dual_pane_flow shell (#1580 C)
+    ("contracts/menu.py", "menu", True),  # workspace overflow More ⋯ (#1491)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
