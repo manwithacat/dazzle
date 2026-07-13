@@ -51,7 +51,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 402 | STALE (lag 32 since @402) |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 447 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 439 | USED |
-| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 399 | STALE (lag 35 since @399) |
+| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 456 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 435 | USED |
 | `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 441 | USED |
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 436 | USED |
