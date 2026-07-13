@@ -1,11 +1,11 @@
-Single autonomous-improvement entrypoint for Dazzle. Each cycle: pick the highest-leverage lane based on signals and actionable rows, hand off to its playbook, record outcome, repeat.
+Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome.
 
-Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, signal bus, log, /loop).
+Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, signal bus, log, /loop).
 
 ARGUMENTS: $ARGUMENTS
 
 If `$ARGUMENTS` is empty: driver picks the lane.
-If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep; `trial-signals` forces the TR-action drain strategy.)
+If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep; `trial-signals` forces the TR-action drain strategy; `cimonitor` forces the CI-badge gate playbook even when main is green — re-check + report only unless red.)
 If `$ARGUMENTS` is `<lane> <strategy>`: force that lane and that sub-strategy.
 If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (no cycle).
 If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count`, log the manual reset, and exit (no cycle). Operator escape hatch — use when the cap was reached but exploration should continue (e.g. after a large framework change that a release signal didn't capture).
@@ -59,7 +59,27 @@ make test-ux-preflight
 
 If red, **STOP and fix before continuing** — same rule as old /ux-cycle, applies to every lane now.
 
-### Step 0c: Read signals
+### Step 0c: CI badge gate (always)
+
+Every cycle opens with a **snapshot** of the README badge workflow on `main` (not a long poll). Playbook: `improve/strategies/cimonitor.md` (thin wrapper around `.agents/skills/cimonitor/SKILL.md`).
+
+```bash
+gh run list --workflow ci.yml --branch main --limit 1 \
+  --json status,conclusion,databaseId,url,displayTitle,updatedAt
+```
+
+| Snapshot | Driver action |
+|----------|---------------|
+| **Latest completed run `conclusion=failure` (or `cancelled` / `timed_out` that left the badge red)** | **This cycle is CI repair.** Do **not** pick a product/capability lane. Follow cimonitor: job breakdown → `gh run view <id> --log-failed` → fix root causes (including pre-existing) → commit → push → note follow-up. Log `lane: cimonitor`. `budget_consumed: 0`. Apply Step 3–4 (log, mark_run, release lock) and exit. Next `/improve` re-checks; if still red, repair again. |
+| **Latest run `in_progress` / `queued`** | Record status + run URL in this cycle's log under **ci:**; **continue** the normal cycle (do not burn the whole cycle waiting — the 6m `/loop` re-checks). |
+| **Latest completed run `conclusion=success`** | Record **ci: green** (run id) in the cycle log; continue. |
+| **`gh` unavailable / auth failure / no runs** | Log **ci: unavailable** with the error; continue the cycle (local preflight already ran). Do not invent a green badge. |
+
+**Hard preemption:** a red completed badge outranks REGRESSION backlog rows, self-audit, capability-sweep, TR drain, and explore for **this** cycle — a broken main badge is fleet-visible shipped-broken. Product REGRESSION work resumes on the next green (or when CI is unavailable and cannot be repaired here).
+
+Forceable via `/improve cimonitor` (always run the snapshot; only enter repair mode when red, unless already mid-fix from a prior red cycle).
+
+### Step 0d: Read signals
 
 ```python
 from dazzle.cli.runtime_impl.ux_cycle_signals import since_last_run
@@ -73,7 +93,7 @@ Categorise:
 - `ux-component-shipped` → bias toward `example-apps` (re-verify apps using that component)
 - `ux-regression` → priority signal; jump straight to the relevant lane regardless of selection algorithm
 
-### Step 0d: Compact state (only when oversized)
+### Step 0e: Compact state (only when oversized)
 
 ```bash
 [ $(wc -c < dev_docs/improve-backlog.md) -gt 100000 ] || [ $(wc -c < dev_docs/improve-log.md) -gt 100000 ] \
@@ -83,6 +103,8 @@ Categorise:
 See **State compaction** above. Skip silently when both files are under the threshold.
 
 ### Step 1: Pick a lane
+
+If Step 0c already claimed this cycle for CI repair, skip Step 1–2 (already handled).
 
 If `$ARGUMENTS` forces a lane, skip to Step 2.
 
@@ -95,7 +117,7 @@ For each lane, compute two numbers from the unified backlog:
 
 Selection priority:
 
-1. **Any lane with REGRESSION rows** → that lane (most urgent — it shipped broken)
+1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge already preempted this step via 0c.
 2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`.
 3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute `STALE` (last-exercised ≥20 cycles behind the current cycle). Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt.
 4. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
@@ -197,11 +219,12 @@ Lanes declare which kinds they emit and consume in their own files. Driver wires
 
 ## Hard rules
 
-- **One lane per cycle.** Don't chain across lanes — the next /improve invocation handles that.
+- **One lane per cycle.** Don't chain across lanes — the next /improve invocation handles that. Exception: Step 0c CI repair **is** the cycle (no second lane after a red-badge fix attempt).
 - **Lock is mandatory.** No cycle without `.dazzle/improve.lock` held.
 - **Always preflight.** Even for lanes whose strict checks don't seem relevant — preflight is the floor.
+- **Always CI snapshot.** Step 0c every cycle; red completed badge → repair cycle, not explore.
 - **Commit every cycle that modifies tracked files.** Even failure cycles commit if they updated notes.
-- **Explore budget is global.** A lane's explore phase always increments the shared counter.
+- **Explore budget is global.** A lane's explore phase always increments the shared counter. CI repair does not consume explore budget.
 
 ## Status mode
 
@@ -212,6 +235,7 @@ When invoked with `--status`, skip the cycle and emit:
 
 Budget: X/100
 Lock: free | held by PID since TIME
+CI badge (main): green | red (run #id) | in_progress | unavailable
 Last cycle: N — lane: {name} — outcome: {status}
 
 Lane:           Actionable    Last run     Likely next?
@@ -225,16 +249,17 @@ Recent signals (last 24h):
 - {kind} from {source} at TIME
 ```
 
-Read-only — does not modify state, log, or lock.
+Read-only — does not modify state, log, or lock. Status mode **does** run the cheap `gh` CI snapshot so the badge line is live.
 
 ## Usage
 
 ```bash
-/improve                                # driver picks the lane
+/improve                                # driver picks the lane (after CI snapshot)
 /improve framework-ux                   # force a lane
 /improve framework-ux contract_audit    # force lane + sub-strategy
+/improve cimonitor                      # force CI snapshot (+ repair if red)
 /improve --status                       # status report, no cycle
-/loop 30m /improve                      # recurring; lane-pickup auto each fire
+/loop 6m /improve                       # recurring; CI gate + lane-pickup each fire
 ```
 
 ## Consolidation status
