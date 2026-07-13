@@ -1885,6 +1885,9 @@ dialog.dz-alert-dialog::backdrop {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* Icon + label: gap owns spacing — do not rely on a text-node space after
+     an icon span (flex collapses that inconsistently vs sprite <svg> siblings). */
+  gap: var(--space-xs);
   height: 2rem;
   padding-inline: var(--space-md);
   border-radius: var(--radius-sm);
@@ -1980,14 +1983,12 @@ dialog.dz-alert-dialog::backdrop {
 /* --- hatchi-maxchi/components/carousel.css --- */
 /* HYPERPART: carousel */
 /*
- * Server-rendered media / content strip. Active slide is marked
- * data-dz-active on the slide; index lives on the root as
- * data-dz-carousel-index for future controller + SSR re-renders.
+ * Content strip — media and/or HTML fragments. Decision 0009 +
+ * stems/pragmatic-gallery-aesthetics.md.
  *
- * PLACEHOLDER — shadcn parity (HMC-037). No controller yet: demos show
- * slide 1 active; prev/next buttons are affordances for a follow-up
- * that cycles data-dz-active / re-fetches the strip. Hypermedia-native:
- * prefer server pages or OOB swap over client slide state.
+ * Stage: fixed aspect (data-dz-ratio). Media defaults to full-bleed cover so
+ * demos look intentional; teach source aspect with captions, not letterbox gutters.
+ * Hero slides: media + gradient overlay (hypermedia stays in-family).
  */
 
 .dz-carousel {
@@ -1995,7 +1996,15 @@ dialog.dz-alert-dialog::backdrop {
   flex-direction: column;
   gap: var(--space-sm);
   width: 100%;
+  max-width: 42rem;
+}
+
+.dz-carousel[data-dz-size="sm"] {
   max-width: 28rem;
+}
+
+.dz-carousel[data-dz-size="lg"] {
+  max-width: 56rem;
 }
 
 .dz-carousel__viewport {
@@ -2003,8 +2012,22 @@ dialog.dz-alert-dialog::backdrop {
   overflow: hidden;
   border-radius: var(--radius-md);
   border: 1px solid var(--colour-border);
-  background: var(--colour-surface-muted);
+  /* Match media letterbox-free stage (no dark gutter bands). */
+  background: var(--colour-surface);
   aspect-ratio: 16 / 9;
+}
+
+.dz-carousel__viewport[data-dz-ratio="1/1"] {
+  aspect-ratio: 1 / 1;
+}
+.dz-carousel__viewport[data-dz-ratio="4/3"] {
+  aspect-ratio: 4 / 3;
+}
+.dz-carousel__viewport[data-dz-ratio="16/9"] {
+  aspect-ratio: 16 / 9;
+}
+.dz-carousel__viewport[data-dz-ratio="21/9"] {
+  aspect-ratio: 21 / 9;
 }
 
 .dz-carousel__track {
@@ -2016,9 +2039,12 @@ dialog.dz-alert-dialog::backdrop {
 .dz-carousel__slide {
   grid-area: slide;
   display: none;
+  position: relative;
   align-items: center;
   justify-content: center;
-  padding: var(--space-md);
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
   color: var(--colour-text-muted);
   font-size: var(--text-sm);
 }
@@ -2027,11 +2053,152 @@ dialog.dz-alert-dialog::backdrop {
   display: flex;
 }
 
+/* Full-bleed media — cover fills the stage (no black bars). */
+.dz-carousel__slide--media {
+  background: var(--colour-surface);
+}
+
+.dz-carousel__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.dz-carousel__media img,
+.dz-carousel__media svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* Explicit contain (letterbox) when the lesson is mixed intrinsic size */
+.dz-carousel__media--contain {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--colour-surface-muted);
+  padding: 0;
+}
+.dz-carousel__media--contain img,
+.dz-carousel__media--contain svg {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Cover frame via composed aspect-ratio (fills media slot). */
+.dz-carousel__media--cover {
+  display: block;
+}
+.dz-carousel__media--cover .dz-aspect-ratio {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Source-aspect chip (teaches policy without ugly gutters) */
+.dz-carousel__chip {
+  position: absolute;
+  top: var(--space-sm);
+  inset-inline-start: var(--space-sm);
+  z-index: 1;
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: oklch(0% 0 0 / 0.55);
+  color: oklch(100% 0 0);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+/* Hero: media + bottom gradient + in-family CTA (not a floating admin card) */
+.dz-carousel__slide--hero {
+  display: none;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+}
+.dz-carousel__slide--hero[data-dz-active] {
+  display: flex;
+}
+.dz-carousel__slide--hero > .dz-carousel__media {
+  position: absolute;
+  inset: 0;
+}
+.dz-carousel__hero {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  padding: var(--space-lg) var(--space-md) var(--space-md);
+  background: linear-gradient(
+    to top,
+    oklch(12% 0.02 260 / 0.92) 0%,
+    oklch(12% 0.02 260 / 0.55) 55%,
+    oklch(12% 0.02 260 / 0) 100%
+  );
+  color: oklch(98% 0 0);
+  text-align: start;
+}
+.dz-carousel__hero-kicker {
+  margin: 0 0 0.15rem;
+  font-size: var(--text-xs);
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.dz-carousel__hero-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: 1.25;
+  color: inherit;
+}
+.dz-carousel__hero-text {
+  margin: 0.35rem 0 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  opacity: 0.9;
+  max-width: 28rem;
+}
+.dz-carousel__hero .dz-button {
+  margin-top: var(--space-sm);
+}
+.dz-carousel__hero-live {
+  margin-top: var(--space-xs);
+  min-height: 1.25rem;
+  font-size: var(--text-xs);
+}
+
+.dz-carousel__caption {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  line-height: var(--leading-normal);
+}
+
+.dz-carousel__status {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  text-align: center;
+}
+
 .dz-carousel__controls {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
+  flex-wrap: wrap;
 }
 
 .dz-carousel__btn {
@@ -2064,7 +2231,6 @@ dialog.dz-alert-dialog::backdrop {
   align-items: center;
 }
 
-/* 24×24px hit target (WCAG 2.2 target-size); visual pip via ::before. */
 .dz-carousel__dot {
   position: relative;
   width: 1.5rem;
@@ -2091,6 +2257,10 @@ dialog.dz-alert-dialog::backdrop {
 .dz-carousel__dot[aria-current="true"]::before {
   background: var(--colour-brand);
   width: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Autoplay disabled in JS; status text explains off state. */
 }
 /* --- hatchi-maxchi/components/chart-legend.css --- */
 /* HYPERPART: chart-legend */
@@ -3477,10 +3647,13 @@ dialog.dz-drawer {
   margin-inline: auto 0;
   border-inline-start: 1px solid var(--colour-border);
   /* enter transition: slide from the anchored edge. `allow-discrete` lets
-     the dialog animate on open despite the display:none→block flip. */
+     the dialog animate on open despite the display:none→block flip.
+     Width is animated so Expand/Restore is visibly functional (not a silent
+     data-attr flip). */
   translate: 0 0;
   transition:
     translate var(--duration-base) var(--ease-out),
+    width var(--duration-base) var(--ease-out),
     overlay var(--duration-base) var(--ease-out) allow-discrete,
     display var(--duration-base) var(--ease-out) allow-discrete;
 }

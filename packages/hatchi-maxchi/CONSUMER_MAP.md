@@ -99,7 +99,13 @@ _No composition edges declared._
 
 **Layer:** `L1`
 
-_No composition edges declared._
+**Embedded by (hard `composes`)**
+
+- `carousel` — composes
+
+**Related from (`composes_with`)**
+
+- `carousel` — composes_with
 
 ### `auto-grid`
 
@@ -142,6 +148,7 @@ _No composition edges declared._
 
 **Related from (`composes_with`)**
 
+- `carousel` — composes_with
 - `drawer` — composes_with
 - `grid` — composes_with
 
@@ -187,6 +194,7 @@ _No composition edges declared._
 
 **Embedded by (hard `composes`)**
 
+- `carousel` — composes
 - `dialog` — composes
 - `drawer` — composes
 - `pdf` — composes
@@ -203,6 +211,7 @@ _No composition edges declared._
 **Related from (`composes_with`)**
 
 - `app-shell` — composes_with
+- `carousel` — composes_with
 - `command` — composes_with
 - `confirm` — composes_with
 - `confirm-panel` — composes_with
@@ -222,6 +231,7 @@ _No composition edges declared._
 
 **Embedded by (hard `composes`)**
 
+- `carousel` — composes
 - `drawer` — composes
 - `master-detail` — composes
 
@@ -236,6 +246,7 @@ _No composition edges declared._
 
 **Related from (`composes_with`)**
 
+- `carousel` — composes_with
 - `drawer` — composes_with
 - `master-detail` — composes_with
 
@@ -245,9 +256,13 @@ _No composition edges declared._
 
 ### `carousel`
 
-**Layer:** `L1`
+**Layer:** `L2`
 
-_No composition edges declared._
+**Embeds (forward `composes`)**
+
+- `aspect-ratio`
+- `button`
+- `card`
 
 ### `center`
 
