@@ -787,8 +787,10 @@ def _seed_signable_rows(
         token = mint_token(record_id=row_id, email=effective_email, expires_hours=expires_hours)
 
         if token_state == "already_signed":
-            # TR-50: pre-sign through the real API so the row is status=signed
-            # with signed_document artifact (#1571 completion page works).
+            # TR-49 / #1571: pre-sign through the real API so the row is
+            # status=signed with a durable signed_document (completion page
+            # + Download). Persistence uses FileService.upload with a
+            # storage-only fallback when metadata fails (see signing routes).
             sign_url = f"{base_url}/api/sign/{entity.name}/{row_id}"
             sign_resp = httpx.post(
                 sign_url,
@@ -800,6 +802,19 @@ def _seed_signable_rows(
                 timeout=30.0,
             )
             sign_resp.raise_for_status()
+            # Fail loud if re-open still has no download CTA (harness contract).
+            open_url = f"{base_url}/sign/{entity.name}/{row_id}"
+            open_resp = httpx.get(open_url, params={"token": token}, timeout=15.0)
+            open_body = open_resp.text or ""
+            if open_resp.status_code != 200 or (
+                "signed-copy" not in open_body and "Download" not in open_body
+            ):
+                raise RuntimeError(
+                    f"TR-49 already_signed pre-sign did not yield a downloadable "
+                    f"completion page for {entity.name}/{row_id} "
+                    f"(HTTP {open_resp.status_code}, body={open_body[:200]!r}). "
+                    f"Check FileService / dazzle_files / signing storage."
+                )
 
         docs.append(
             SeededDoc(
