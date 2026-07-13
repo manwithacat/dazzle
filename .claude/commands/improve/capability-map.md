@@ -40,7 +40,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 403 | STALE (lag 31 since @403) |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 386 | STALE (lag 48 since @386) |
 | `dazzle qa trial` | CLI | trials | 406 | STALE (lag 28 since @406; product TR drain did not stamp) |
-| `dazzle qa login` | CLI | (support for qa capture/verify) | 385 | STALE (lag 49 since @385) |
+| `dazzle qa login` | CLI | (support for qa capture/verify) | 444 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 407 | STALE (lag 27 since @407) |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | — | OWNED-IDLE |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | — | OWNED-IDLE |
