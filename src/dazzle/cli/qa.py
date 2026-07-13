@@ -41,6 +41,48 @@ qa_app = typer.Typer(
 )
 
 
+# Third-party loggers that drown trial stdout when root is DEBUG (TR-47).
+_TRIAL_QUIET_LOGGERS = (
+    "httpx",
+    "httpcore",
+    "h11",
+    "hpack",
+    "faker",
+    "urllib3",
+    "asyncio",
+    "anthropic",
+    "openai",
+    "mcp",
+    "anyio",
+)
+
+
+def _configure_trial_logging() -> None:
+    """Keep ``dazzle qa trial`` stdout report-shaped, not a DEBUG dump.
+
+    TR-47: with root at DEBUG, faker locale probes, httpcore wire logs, and
+    anthropic request options (including full system prompts + tool schemas)
+    flood stdout — noise for operators and a secret-leak surface. Default
+    trial logging is INFO for ``dazzle.*``; noisy libraries are WARNING.
+    Opt into DEBUG via ``DAZZLE_LOG_LEVEL=DEBUG``.
+    """
+    import logging
+
+    from dazzle.log_setup import ensure_dazzle_logging_configured
+
+    desired = os.environ.get("DAZZLE_LOG_LEVEL", "INFO").upper()
+    ensure_dazzle_logging_configured(level=desired)
+
+    root = logging.getLogger()
+    # Pull root back from DEBUG unless the operator asked for it.
+    if desired != "DEBUG" and (root.level == logging.NOTSET or root.level < logging.INFO):
+        root.setLevel(logging.INFO)
+
+    quiet = logging.WARNING if desired != "DEBUG" else logging.DEBUG
+    for name in _TRIAL_QUIET_LOGGERS:
+        logging.getLogger(name).setLevel(quiet)
+
+
 # Patterns for classifying seed circuit-breaker failures (#1207).
 # Schema-drift: DSL declares a field/entity that the live DB schema lacks —
 # the recovery path is Alembic, not blueprint regeneration.
@@ -1289,6 +1331,9 @@ def qa_trial(
         # → dev_docs/qa-trial-<scenario>-<timestamp>.md
 
     """
+    # TR-47: before any library import that may log at DEBUG.
+    _configure_trial_logging()
+
     import sys
     import time
     import tomllib

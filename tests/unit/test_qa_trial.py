@@ -877,3 +877,42 @@ class TestSeedPreflightAndCircuitBreaker:
         assert "Seed aborted" in out.err
         assert "10 consecutive failures" in out.err
         assert "dazzle demo verify" in out.err
+
+
+# ---------------------------------------------------------------------------
+# Trial logging quieting (TR-47)
+# ---------------------------------------------------------------------------
+
+
+class TestConfigureTrialLogging:
+    """TR-47: trial stdout must not run at root DEBUG with chatty libs."""
+
+    def test_quiets_noisy_loggers_and_root_debug(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import logging
+
+        from dazzle.cli.qa import _configure_trial_logging
+
+        monkeypatch.delenv("DAZZLE_LOG_LEVEL", raising=False)
+        root = logging.getLogger()
+        # Simulate a dependency that flipped root to DEBUG.
+        root.setLevel(logging.DEBUG)
+        logging.getLogger("httpx").setLevel(logging.DEBUG)
+        logging.getLogger("faker").setLevel(logging.DEBUG)
+        logging.getLogger("anthropic").setLevel(logging.DEBUG)
+
+        _configure_trial_logging()
+
+        assert root.level == logging.INFO or root.level > logging.DEBUG
+        assert logging.getLogger("httpx").level == logging.WARNING
+        assert logging.getLogger("faker").level == logging.WARNING
+        assert logging.getLogger("anthropic").level == logging.WARNING
+        assert logging.getLogger("httpcore").level == logging.WARNING
+
+    def test_respects_explicit_debug_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import logging
+
+        from dazzle.cli.qa import _configure_trial_logging
+
+        monkeypatch.setenv("DAZZLE_LOG_LEVEL", "DEBUG")
+        _configure_trial_logging()
+        assert logging.getLogger("httpx").level == logging.DEBUG
