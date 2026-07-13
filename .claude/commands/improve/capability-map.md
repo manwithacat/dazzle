@@ -54,7 +54,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 399 | STALE (lag 35 since @399) |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 435 | USED |
 | `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 382 | STALE (lag 52 since @382) |
-| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 374 | STALE (lag 60 since @374) |
+| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 436 | USED |
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 375 | STALE (lag 59 since @375) |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 404 | STALE (lag 30 since @404) |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 383 | STALE (lag 51 since @383) |
