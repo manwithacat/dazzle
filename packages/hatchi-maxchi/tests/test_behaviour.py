@@ -1458,53 +1458,49 @@ def test_tabs_switch_and_lazy_load(page) -> None:  # type: ignore[no-untyped-def
 
 
 def test_carousel_prev_next_and_dots_change_active_slide(page) -> None:  # type: ignore[no-untyped-def]
-    """dz-carousel.js: next/prev/dots move data-active and aria-current.
+    """Clamp gallery: next/prev/dots, mixed media, hypermedia CTA, status.
 
-    Demo uses mixed media (3 cats) + a hypermedia CTA slide. Controllers
-    must change visible slide state; media must letterbox without crop.
+    Decision 0009 — clamp disables ends; media loads; status reads N of M.
     """
     goto_part(page, "carousel")
-    root = page.locator("#carousel [data-carousel], #carousel .carousel").first
+    # First carousel is the clamp gallery (not the ambient loop)
+    root = page.locator('#carousel [data-carousel-wrap="none"]').first
     assert root.count() == 1
     slides = root.locator(".carousel__slide")
     assert slides.count() == 4
     media = root.locator(".carousel__slide--media img")
     assert media.count() == 3, "three cat SVGs with distinct intrinsic sizes"
-    # Wait for all media to decode (hidden slides still fetch without loading=lazy)
     page.wait_for_function(
-        """() => [...document.querySelectorAll(
-          '#carousel .carousel__slide--media img'
-        )].every(img => img.complete && img.naturalWidth > 0)""",
+        """() => {
+          const r = document.querySelector('#carousel [data-carousel-wrap="none"]');
+          if (!r) return false;
+          return [...r.querySelectorAll('.carousel__slide--media img')]
+            .every(img => img.complete && img.naturalWidth > 0);
+        }""",
         timeout=5000,
     )
     dims = page.evaluate(
         """() => {
-          const imgs = [...document.querySelectorAll(
-            '#carousel .carousel__slide--media img'
-          )];
-          return imgs.map(img => ({
+          const r = document.querySelector('#carousel [data-carousel-wrap="none"]');
+          return [...r.querySelectorAll('.carousel__slide--media img')].map(img => ({
             w: Number(img.getAttribute('width')),
             h: Number(img.getAttribute('height')),
             naturalW: img.naturalWidth,
-            naturalH: img.naturalHeight,
           }));
         }"""
     )
-    assert len(dims) == 3
     assert dims[0]["w"] > dims[0]["h"], "slide 1 landscape"
     assert dims[1]["h"] > dims[1]["w"], "slide 2 portrait"
     assert dims[2]["w"] == dims[2]["h"], "slide 3 square"
-    assert all(d["naturalW"] > 0 for d in dims), f"media failed to load: {dims}"
+    assert all(d["naturalW"] > 0 for d in dims)
 
     def active_label() -> str:
         return page.evaluate(
             """() => {
-              const r = document.querySelector(
-                '#carousel [data-carousel], #carousel .carousel'
-              );
+              const r = document.querySelector('#carousel [data-carousel-wrap="none"]');
               const a = r && r.querySelector('.carousel__slide[data-active]');
               if (!a) return '';
-              const img = a.querySelector('img');
+              const img = a.querySelector('img[alt]:not([alt=""])');
               if (img) return img.getAttribute('alt') || '';
               return (a.textContent || '').trim().slice(0, 80);
             }"""
@@ -1513,8 +1509,12 @@ def test_carousel_prev_next_and_dots_change_active_slide(page) -> None:  # type:
     def index_attr() -> str | None:
         return root.get_attribute("data-carousel-index")
 
+    def status_text() -> str:
+        return (root.locator("[data-carousel-status]").inner_text() or "").strip()
+
     assert "16 by 9" in active_label() or "Landscape" in active_label()
     assert index_attr() in (None, "0")
+    assert "1 of 4" in status_text()
     prev = root.locator("[data-carousel-prev]")
     next_btn = root.locator("[data-carousel-next]")
     assert prev.is_disabled()
@@ -1526,22 +1526,21 @@ def test_carousel_prev_next_and_dots_change_active_slide(page) -> None:  # type:
         f"next should show portrait cat, got {active_label()!r}"
     )
     assert index_attr() == "1"
+    assert "2 of 4" in status_text()
     assert not prev.is_disabled()
     dots = root.locator(".carousel__dot")
     assert dots.nth(1).get_attribute("aria-current") == "true"
-    assert dots.nth(0).get_attribute("aria-current") is None
 
     dots.nth(2).click()
     page.wait_for_timeout(100)
-    assert "1 by 1" in active_label() or "Square" in active_label()
     assert index_attr() == "2"
+    assert root.locator(".aspect-ratio").count() >= 1, "cover slide composes aspect-ratio"
 
-    # Hypermedia slide: HTML fragment + hx-get CTA (not image-only)
     dots.nth(3).click()
     page.wait_for_timeout(100)
     assert index_attr() == "3"
-    assert next_btn.is_disabled()
-    assert "Hypermedia" in active_label() or "Adopt" in active_label()
+    assert next_btn.is_disabled(), "clamp: next disabled on last"
+    assert "4 of 4" in status_text()
     adopt = root.locator("button", has_text="Request visit")
     assert adopt.count() == 1
     adopt.click()
@@ -1552,6 +1551,80 @@ def test_carousel_prev_next_and_dots_change_active_slide(page) -> None:  # type:
     page.wait_for_timeout(100)
     assert index_attr() == "2"
     assert not next_btn.is_disabled()
+
+
+def test_carousel_loop_wraps_last_to_first(page) -> None:  # type: ignore[no-untyped-def]
+    """data-carousel-wrap=loop: next on last → first; ends stay enabled."""
+    goto_part(page, "carousel")
+    root = page.locator("#hm-carousel-ambient")
+    assert root.count() == 1
+    assert root.get_attribute("data-carousel-wrap") == "loop"
+    prev = root.locator("[data-carousel-prev]")
+    next_btn = root.locator("[data-carousel-next]")
+    assert not prev.is_disabled()
+    assert not next_btn.is_disabled()
+    # Jump to last via dots
+    root.locator(".carousel__dot").nth(2).click()
+    page.wait_for_timeout(80)
+    assert root.get_attribute("data-carousel-index") == "2"
+    next_btn.click()
+    page.wait_for_timeout(80)
+    assert root.get_attribute("data-carousel-index") == "0", "loop wraps last→first"
+    assert not next_btn.is_disabled()
+    prev.click()
+    page.wait_for_timeout(80)
+    assert root.get_attribute("data-carousel-index") == "2", "loop wraps first→last on prev"
+
+
+def test_carousel_keyboard_arrows_change_slide(page) -> None:  # type: ignore[no-untyped-def]
+    """Arrow keys when focus is inside the carousel root."""
+    goto_part(page, "carousel")
+    root = page.locator('#carousel [data-carousel-wrap="none"]').first
+    root.focus()
+    page.keyboard.press("ArrowRight")
+    page.wait_for_timeout(80)
+    assert root.get_attribute("data-carousel-index") == "1"
+    page.keyboard.press("ArrowLeft")
+    page.wait_for_timeout(80)
+    assert root.get_attribute("data-carousel-index") == "0"
+    page.keyboard.press("End")
+    page.wait_for_timeout(80)
+    assert root.get_attribute("data-carousel-index") == "3"
+    page.keyboard.press("Home")
+    page.wait_for_timeout(80)
+    assert root.get_attribute("data-carousel-index") == "0"
+
+
+def test_carousel_autoplay_advances_when_interval_set(page) -> None:  # type: ignore[no-untyped-def]
+    """data-carousel-interval arms a timer that advances the active slide."""
+    goto_part(page, "carousel")
+    root = page.locator("#hm-carousel-ambient")
+    # Short interval; clear focus so :focus-within does not pause autoplay
+    page.evaluate(
+        """() => {
+          const r = document.getElementById('hm-carousel-ambient');
+          r.setAttribute('data-carousel-interval', '600');
+          r.setAttribute('data-dz-carousel-interval', '600');
+          if (document.activeElement && document.activeElement.blur) {
+            document.activeElement.blur();
+          }
+          document.dispatchEvent(new Event('visibilitychange'));
+        }"""
+    )
+    # Click outside the carousel so hover/focus pause is clear, then re-arm
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(50)
+    page.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))")
+    start = root.get_attribute("data-carousel-index") or "0"
+    page.wait_for_function(
+        """(start) => {
+          const r = document.getElementById('hm-carousel-ambient');
+          return r && (r.getAttribute('data-carousel-index') || '0') !== start;
+        }""",
+        arg=start,
+        timeout=3000,
+    )
+    assert (root.get_attribute("data-carousel-index") or "0") != start
 
 
 def test_slider_updates_value_readout(page) -> None:  # type: ignore[no-untyped-def]

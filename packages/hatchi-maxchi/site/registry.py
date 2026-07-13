@@ -2500,36 +2500,41 @@ def select(source: str, id: str) -> str:
             "carousel",
             "Carousel",
             "Data",
-            "Content strip for media or HTML fragments — fixed viewport, "
-            "object-fit media, DOM-local prev/next/dots (or server re-render).",
-            # Media paths use __HM_ROOT__ so index + hyperparts/ pages resolve.
-            # Cats demonstrate mixed intrinsic dimensions (16:9 / 3:4 / 1:1)
-            # letterboxed in a 16:9 stage. Final slide is hypermedia HTML.
+            "Ordered peer slides in a stable stage — media and/or HTML fragments; "
+            "DOM-local prev/next/dots (clamp or loop); optional autoplay.",
+            # Decision 0009. Two demos: (1) clamp gallery cats + hypermedia CTA,
+            # (2) loop + autoplay ambient. __HM_ROOT__ for media paths.
+            '<div class="dz-stack" data-dz-gap="lg">'
+            # ── Demo A: clamp (default) · wide stage · mixed media + rich slide ──
+            "<div>"
+            '<p class="hm-demo-muted" style="margin:0 0 var(--space-sm);font-size:var(--text-xs)">'
+            "<strong>Clamp</strong> (default) — Previous disabled on first, Next on last. "
+            "Mixed media letterboxes in a 16∶9 stage; last slide is hypermedia HTML."
+            "</p>"
             '<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0" '
-            'aria-roledescription="carousel" aria-label="Cat gallery">'
-            '<div class="dz-carousel__viewport">'
+            'data-dz-carousel-wrap="none" data-dz-size="lg" '
+            'aria-roledescription="carousel" aria-label="Cat gallery" tabindex="0">'
+            '<div class="dz-carousel__viewport" data-dz-ratio="16/9">'
             '<div class="dz-carousel__track">'
-            # ── media: landscape ──
             '<div class="dz-carousel__slide dz-carousel__slide--media" data-dz-active>'
             '<div class="dz-carousel__media">'
-            # No loading=lazy: inactive slides are display:none and lazy would
-            # skip fetch until activated — gallery demos need all media present.
             '<img src="__HM_ROOT__media/carousel/cat-wide.svg" width="640" height="360" '
             'alt="Landscape cat · 16 by 9 illustration">'
             "</div></div>"
-            # ── media: portrait (taller than the stage) ──
             '<div class="dz-carousel__slide dz-carousel__slide--media">'
             '<div class="dz-carousel__media">'
             '<img src="__HM_ROOT__media/carousel/cat-tall.svg" width="300" height="400" '
             'alt="Portrait cat · 3 by 4 illustration">'
             "</div></div>"
-            # ── media: square ──
+            # Cover compose: aspect-ratio inside media slot
             '<div class="dz-carousel__slide dz-carousel__slide--media">'
-            '<div class="dz-carousel__media">'
+            '<div class="dz-carousel__media dz-carousel__media--cover">'
+            '<div class="dz-aspect-ratio" data-dz-ratio="1/1" aria-hidden="true">'
             '<img src="__HM_ROOT__media/carousel/cat-square.svg" width="400" height="400" '
-            'alt="Square cat · 1 by 1 illustration">'
+            'alt="">'
             "</div></div>"
-            # ── hypermedia: not “just an image” ──
+            '<span class="visually-hidden">Square cat cropped to 1:1 cover frame</span>'
+            "</div>"
             '<div class="dz-carousel__slide dz-carousel__slide--rich">'
             '<div class="dz-card dz-card-body">'
             '<div class="dz-card-label">Hypermedia slide</div>'
@@ -2548,36 +2553,86 @@ def select(source: str, id: str) -> str:
             '<div class="dz-carousel__controls">'
             '<button type="button" class="dz-carousel__btn" data-dz-carousel-prev '
             'aria-label="Previous slide" disabled>‹</button>'
-            # role=group (not tablist) — dots are prev/next peers, not ARIA tabs
-            # without tabpanels (axe aria-required-children).
             '<div class="dz-carousel__dots" role="group" aria-label="Slides">'
             '<button type="button" class="dz-carousel__dot" aria-current="true" '
             'aria-label="Slide 1, landscape cat"></button>'
             '<button type="button" class="dz-carousel__dot" '
             'aria-label="Slide 2, portrait cat"></button>'
             '<button type="button" class="dz-carousel__dot" '
-            'aria-label="Slide 3, square cat"></button>'
+            'aria-label="Slide 3, square cover"></button>'
             '<button type="button" class="dz-carousel__dot" '
             'aria-label="Slide 4, adopt call to action"></button>'
             "</div>"
             '<button type="button" class="dz-carousel__btn" data-dz-carousel-next '
             'aria-label="Next slide">›</button>'
             "</div>"
-            '<p class="hm-demo-muted" style="margin:0;font-size:var(--text-xs)">'
-            "Viewport is 16∶9; wide / tall / square media use "
-            "<code>object-fit: contain</code>. Last slide is a live HTML fragment "
-            "(not an image).</p>"
+            '<p class="dz-carousel__status" data-dz-carousel-status '
+            'aria-live="polite">Slide 1 of 4</p>'
+            "</div></div>"
+            # ── Demo B: loop + autoplay ambient ──
+            "<div>"
+            '<p class="hm-demo-muted" style="margin:0 0 var(--space-sm);font-size:var(--text-xs)">'
+            "<strong>Loop + autoplay</strong> — "
+            # Real quotes in text (not &quot;) so pretty-print stays render-faithful
+            '<code>data-dz-carousel-wrap="loop"</code> and '
+            '<code>data-dz-carousel-interval="4000"</code>. '
+            "Pauses on hover/focus; off when <code>prefers-reduced-motion</code>."
+            "</p>"
+            '<div class="dz-carousel" id="hm-carousel-ambient" data-dz-carousel '
+            'data-dz-carousel-index="0" data-dz-carousel-wrap="loop" '
+            'data-dz-carousel-interval="4000" data-dz-size="lg" '
+            'aria-roledescription="carousel" aria-label="Ambient cat loop" tabindex="0">'
+            '<div class="dz-carousel__viewport" data-dz-ratio="16/9">'
+            '<div class="dz-carousel__track">'
+            '<div class="dz-carousel__slide dz-carousel__slide--media" data-dz-active>'
+            '<div class="dz-carousel__media">'
+            '<img src="__HM_ROOT__media/carousel/cat-wide.svg" width="640" height="360" '
+            'alt="Ambient slide 1, landscape cat">'
+            "</div></div>"
+            '<div class="dz-carousel__slide dz-carousel__slide--media">'
+            '<div class="dz-carousel__media">'
+            '<img src="__HM_ROOT__media/carousel/cat-tall.svg" width="300" height="400" '
+            'alt="Ambient slide 2, portrait cat">'
+            "</div></div>"
+            '<div class="dz-carousel__slide dz-carousel__slide--media">'
+            '<div class="dz-carousel__media">'
+            '<img src="__HM_ROOT__media/carousel/cat-square.svg" width="400" height="400" '
+            'alt="Ambient slide 3, square cat">'
+            "</div></div>"
+            "</div></div>"
+            '<div class="dz-carousel__controls">'
+            '<button type="button" class="dz-carousel__btn" data-dz-carousel-prev '
+            'aria-label="Previous ambient slide">‹</button>'
+            '<div class="dz-carousel__dots" role="group" aria-label="Ambient slides">'
+            '<button type="button" class="dz-carousel__dot" aria-current="true" '
+            'aria-label="Ambient slide 1"></button>'
+            '<button type="button" class="dz-carousel__dot" '
+            'aria-label="Ambient slide 2"></button>'
+            '<button type="button" class="dz-carousel__dot" '
+            'aria-label="Ambient slide 3"></button>'
+            "</div>"
+            '<button type="button" class="dz-carousel__btn" data-dz-carousel-next '
+            'aria-label="Next ambient slide">›</button>'
+            "</div>"
+            '<p class="dz-carousel__status" data-dz-carousel-status '
+            'aria-live="polite">Slide 1 of 3</p>'
+            "</div></div>"
             "</div>",
-            notes="Only <code>[data-dz-active]</code> slides show. "
-            "<code>dz-carousel.js</code> advances prev/next/dots (clamps at "
-            "ends). <strong>Media:</strong> fixed viewport + "
-            "<code>object-fit: contain</code> so mixed intrinsic sizes "
-            "letterbox honestly. <strong>Hypermedia:</strong> a slide is any "
-            "HTML fragment — image, card, or <code>hx-*</code> affordance; the "
-            "server can also re-render the whole strip. shadcn parity (HMC-037).",
+            notes="Decision <code>docs/decisions/0009-carousel-stage-and-motion.md</code>. "
+            "Only <code>[data-dz-active]</code> slides show. "
+            "<strong>Clamp</strong> (default) disables ends; "
+            "<code>data-dz-carousel-wrap=&quot;loop&quot;</code> cycles. "
+            "<strong>Autoplay</strong> via <code>data-dz-carousel-interval</code> "
+            "(pause on hover/focus; off under reduced motion). "
+            "<strong>Stage:</strong> viewport <code>data-dz-ratio</code>; "
+            "media contain by default; cover via composed <code>aspect-ratio</code>. "
+            "<strong>Hypermedia:</strong> slides are fragments; in-slide "
+            "<code>hx-*</code> declares its own Exchange. shadcn/Embla parity job "
+            "with DOM-carried state (HMC-037).",
             tags=("media", "interactive", "htmx"),
             controller="controllers/dz-carousel.js",
             contracts=("contracts/carousel.py",),
+            composes=("aspect-ratio", "button", "card"),
             exchanges=(
                 Exchange(
                     method="GET",
@@ -2598,24 +2653,26 @@ def select(source: str, id: str) -> str:
             guidance=Guidance(
                 seams=(
                     "root [data-dz-carousel] + data-dz-carousel-index",
+                    "wrap: data-dz-carousel-wrap=none|loop (default none = clamp)",
+                    "autoplay: data-dz-carousel-interval=ms (absent = off; min 500)",
+                    "stage: .dz-carousel__viewport[data-dz-ratio] (1/1, 4/3, 16/9, 21/9)",
                     "slides .dz-carousel__slide with data-dz-active on the visible one",
-                    "media: .dz-carousel__slide--media > .dz-carousel__media > img|svg "
-                    "(object-fit contain in a fixed 16/9 viewport)",
+                    "media contain: .dz-carousel__media > img; cover: compose aspect-ratio "
+                    "inside .dz-carousel__media--cover",
                     "rich HTML: .dz-carousel__slide--rich (cards, hx-* CTAs, live regions)",
-                    "prev [data-dz-carousel-prev] / next [data-dz-carousel-next] / "
-                    ".dz-carousel__dot peers",
+                    "status: [data-dz-carousel-status] (“Slide N of M”)",
+                    "prev / next / .dz-carousel__dot; keyboard arrows when focused",
+                    "decision 0009: docs/decisions/0009-carousel-stage-and-motion.md",
                 ),
                 pitfalls=(
-                    "do not ship prev/next without a controller or server re-render "
-                    "(gallery demo must change data-dz-active on click)",
-                    "do not wrap at ends — clamp and disable Previous/Next "
-                    "(matches SSR disabled affordance on first slide)",
+                    "do not ship prev/next without a controller or server re-render",
+                    "do not loop by default — clamp is the honest task-UI default",
+                    "do not autoplay without data-dz-carousel-interval (and respect "
+                    "prefers-reduced-motion + hover/focus pause)",
                     "dots use role=group, not tablist (no tabpanels — axe)",
                     "do not invent a JS slide model outside the DOM",
-                    "do not stretch mixed media with object-fit:cover unless product "
-                    "requires cropping — contain preserves aspect honestly",
-                    "do not assume slides are images only — hypermedia fragments and "
-                    "server-swapped strips are first-class",
+                    "do not put navigation state on aspect-ratio — it owns frame only",
+                    "in-slide hx-* needs its own Exchange (not a carousel toast API)",
                 ),
                 do_dont=(
                     (
@@ -2623,23 +2680,26 @@ def select(source: str, id: str) -> str:
                         "keep slide index only in a JS variable (orphaned on morph)",
                     ),
                     (
-                        "clamp at first/last with disabled buttons",
+                        "opt into loop with data-dz-carousel-wrap=loop",
                         "infinite-wrap without an explicit product requirement",
                     ),
                     (
-                        "letterbox mixed aspect ratios with object-fit: contain",
-                        "force every asset to fill and crop without intent",
+                        "letterbox mixed sizes with contain; crop via composed aspect-ratio",
+                        "hardcode cover on every media slide without intent",
                     ),
                     (
-                        "put media, cards, or hx-* actions in slides as HTML fragments",
-                        "treat the carousel as an image-only widget with no server story",
+                        "compose aspect-ratio inside a media slide for cover frames",
+                        "wrap the whole carousel in aspect-ratio (controls fall outside)",
                     ),
                 ),
                 a11y_keys=(
                     "aria-label on prev/next; aria-current on the active dot",
-                    "meaningful alt text on media; aria-roledescription=carousel on root",
+                    "aria-live status “Slide N of M”; aria-roledescription=carousel",
+                    "ArrowLeft/Right (Home/End) when focus is inside the root",
+                    "autoplay pauses on hover/focus; disabled under reduced motion",
                     "dot hit targets are 24×24 (visual pip via ::before)",
                 ),
+                composes_with=("aspect-ratio", "button", "card", "badge"),
             ),
         ),
         Hyperpart(

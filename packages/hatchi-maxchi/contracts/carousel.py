@@ -1,4 +1,7 @@
-"""HYPERPART: carousel — slide strip with prev/next/dots (DOM-local state)."""
+"""HYPERPART: carousel — slide strip with prev/next/dots (DOM-local state).
+
+See docs/decisions/0009-carousel-stage-and-motion.md for wrap / autoplay / stage.
+"""
 
 from contracts._kit import DomContract, Node, Present
 
@@ -7,12 +10,14 @@ DOM_CONTRACT = DomContract(
     root="[data-dz-carousel]",
     nodes=(
         Node("[data-dz-carousel]", attrs={}),
-        # Optional index stamp on the root (controller keeps it in sync).
         Node("[data-dz-carousel-index]", attrs={"data-dz-carousel-index": Present()}),
         Node("[data-dz-carousel-prev]", attrs={}),
         Node("[data-dz-carousel-next]", attrs={}),
-        # Active slide marker (also mirrored as data-active after prefix strip).
         Node("[data-dz-active]", attrs={}),
+        # Optional chrome / policy (present when authored)
+        Node("[data-dz-carousel-wrap]", attrs={"data-dz-carousel-wrap": Present()}),
+        Node("[data-dz-carousel-interval]", attrs={"data-dz-carousel-interval": Present()}),
+        Node("[data-dz-carousel-status]", attrs={}),
     ),
 )
 

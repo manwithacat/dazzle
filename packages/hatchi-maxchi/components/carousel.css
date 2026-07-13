@@ -1,17 +1,10 @@
 /* HYPERPART: carousel */
 /*
- * Server-rendered content strip — media, HTML fragments, or both. Active
- * slide is data-dz-active; index lives on the root as data-dz-carousel-index
- * (dz-carousel.js keeps both in sync).
+ * Content strip — media and/or HTML fragments. Decision 0009.
  *
- * Viewport aspect is fixed (16/9); media of other dimensions object-fit:
- * contain so wide / tall / square assets letterbox honestly. Rich slides
- * (cards, hx-* actions) use overflow auto inside the same viewport.
- *
- * Controller (dz-carousel.js): prev / next / dots update data-dz-active,
- * aria-current on dots, and disabled ends (clamp, not wrap). Product hosts
- * may re-render the strip over the wire; the controller is the local
- * affordance when the page stays put.
+ * Stage: .dz-carousel__viewport (default 16/9; data-dz-ratio presets).
+ * Media: contain by default; cover via composing aspect-ratio inside a slide.
+ * Motion: wrap/autoplay are controller attrs (clamp default; loop + interval opt-in).
  */
 
 .dz-carousel {
@@ -19,7 +12,16 @@
   flex-direction: column;
   gap: var(--space-sm);
   width: 100%;
+  /* Gallery / marketing stage — wide enough for media + caption chrome */
+  max-width: 42rem;
+}
+
+.dz-carousel[data-dz-size="sm"] {
   max-width: 28rem;
+}
+
+.dz-carousel[data-dz-size="lg"] {
+  max-width: 56rem;
 }
 
 .dz-carousel__viewport {
@@ -28,8 +30,22 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--colour-border);
   background: var(--colour-surface-muted);
-  /* Stable stage: mixed media aspect ratios letterbox inside this box. */
+  /* Stable stage: mixed media letterboxes inside this box (contain). */
   aspect-ratio: 16 / 9;
+}
+
+/* Same presets as aspect-ratio Hyperpart — stage geometry only. */
+.dz-carousel__viewport[data-dz-ratio="1/1"] {
+  aspect-ratio: 1 / 1;
+}
+.dz-carousel__viewport[data-dz-ratio="4/3"] {
+  aspect-ratio: 4 / 3;
+}
+.dz-carousel__viewport[data-dz-ratio="16/9"] {
+  aspect-ratio: 16 / 9;
+}
+.dz-carousel__viewport[data-dz-ratio="21/9"] {
+  aspect-ratio: 21 / 9;
 }
 
 .dz-carousel__track {
@@ -54,7 +70,7 @@
   display: flex;
 }
 
-/* Full-bleed media slide — image/SVG fills the stage, fit=contain. */
+/* Full-bleed media slide — letterbox (contain). */
 .dz-carousel__slide--media {
   padding: 0;
   background: var(--colour-bg);
@@ -81,6 +97,19 @@
   display: block;
 }
 
+/* Cover frame: compose aspect-ratio inside the media slot (crops to fill). */
+.dz-carousel__media--cover {
+  padding: 0;
+  align-items: stretch;
+}
+.dz-carousel__media--cover .dz-aspect-ratio {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  background: var(--colour-bg);
+}
+
 /* Hypermedia / mixed content: card, CTA, form fragment, etc. */
 .dz-carousel__slide--rich {
   flex-direction: column;
@@ -99,11 +128,19 @@
   line-height: var(--leading-normal);
 }
 
+.dz-carousel__status {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+  text-align: center;
+}
+
 .dz-carousel__controls {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
+  flex-wrap: wrap;
 }
 
 .dz-carousel__btn {
@@ -163,4 +200,8 @@
 .dz-carousel__dot[aria-current="true"]::before {
   background: var(--colour-brand);
   width: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Autoplay is disabled in JS; no slide transition chrome today. */
 }
