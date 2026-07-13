@@ -32,6 +32,7 @@ See issue #1064 for the full decomposition plan.
 from __future__ import annotations
 
 import json
+import re
 from typing import TYPE_CHECKING
 
 from dazzle.render.fragment.context import RenderContext
@@ -362,10 +363,21 @@ class _RenderShellMixin:
     def _emit_nav_item(self, n: NavItem, ctx: RenderContext) -> str:
         """`<li>` wrapping an `<a>` with `aria-current="page"` when active.
         Mirrors the legacy template's nav-link convention so existing
-        `[aria-current="page"]` CSS keys off the same attribute."""
+        `[aria-current="page"]` CSS keys off the same attribute.
+
+        TR-20: expose ``aria-label`` + ``data-dz-nav`` so Playwright/agents can
+        target a single nav entry without brittle ``a:has-text(...)`` when
+        labels are nested in icon+span chrome (or duplicated in the page).
+        """
         href = ctx.escape_attr(n.href.value)
         label = ctx.escape(n.label)
         current_attr = ' aria-current="page"' if n.active else ""
+        # Stable slug from last path segment (e.g. /app/system → system).
+        path = (n.href.value or "").rstrip("/")
+        slug = path.rsplit("/", 1)[-1] if path else ""
+        slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", slug).strip("-").lower()
+        nav_attr = f' data-dz-nav="{ctx.escape_attr(slug)}"' if slug else ""
+        aria_attr = f' aria-label="{ctx.escape_attr(n.label)}"'
         # HaTchi-MaXchi Phase 3 (TASTE-6): every nav item carries a
         # registry icon — authored names win, otherwise inferred from the
         # label. Inline SVG; inference is registry-closed so this seam
@@ -373,7 +385,7 @@ class _RenderShellMixin:
         icon_html = lucide_icon_html(n.icon or infer_nav_icon(n.label), cls="dz-nav-link__icon")
         return (
             f'<li class="dz-nav-item">'
-            f'<a class="dz-nav-link" href="{href}"{current_attr}>'
+            f'<a class="dz-nav-link" href="{href}"{aria_attr}{nav_attr}{current_attr}>'
             f"{icon_html}"
             f'<span class="dz-nav-link__label">{label}</span>'
             f"</a></li>"

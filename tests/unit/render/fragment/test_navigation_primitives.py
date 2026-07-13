@@ -59,6 +59,14 @@ def test_nav_item_label_is_escaped() -> None:
     assert "&lt;script&gt;" in html
 
 
+def test_nav_item_exposes_aria_label_and_data_dz_nav() -> None:
+    """TR-20: stable hooks for agents/Playwright (avoid fragile has-text alone)."""
+    html = _render(NavItem(label="Systems", href=URL("/app/system")))
+    assert 'aria-label="Systems"' in html
+    assert 'data-dz-nav="system"' in html
+    assert 'href="/app/system"' in html
+
+
 def test_nav_item_href_uses_typed_url() -> None:
     """Href is a typed URL so disallowed schemes can't slip through."""
     with pytest.raises(ValueError, match="disallowed scheme"):
