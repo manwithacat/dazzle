@@ -2688,14 +2688,17 @@ Every snippet is the live example — copy it into any htmx4 app.
     # turn the server-emitted <pre class="mermaid"> into SVG; Dazzle does this in
     # the host emitter. Without it the live demo is raw source text (coherence
     # HMC-059).
-    _MERMAID_BOOT = """
-<script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: true, securityLevel: "loose", theme: "neutral" });
-</script>
-""".strip()
+    # Inline after opener script with no blank line when absent — a bare
+    # ``{extra}\n</body>`` left ``\\n\\n</body>`` on every part page and broke
+    # gallery byte-identity (HM package suite / monorepo gate).
+    _MERMAID_BOOT = (
+        '\n<script type="module">\n'
+        'import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";\n'
+        'mermaid.initialize({ startOnLoad: true, securityLevel: "loose", theme: "neutral" });\n'
+        "</script>"
+    )
     for c, section in part_sections:
-        extra_boot = _MERMAID_BOOT if c.id == "diagram" else ""
+        boot_tail = _MERMAID_BOOT if c.id == "diagram" else ""
         part_doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -2722,8 +2725,7 @@ mermaid.initialize({ startOnLoad: true, securityLevel: "loose", theme: "neutral"
 </main>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>
-<script>{opener_js}</script>
-{extra_boot}
+<script>{opener_js}</script>{boot_tail}
 </body>
 </html>"""
         (hp_dir / f"{c.id}.html").write_text(part_doc + "\n", encoding="utf-8")
