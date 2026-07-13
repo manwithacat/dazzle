@@ -73,7 +73,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 438 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 440 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 443 | USED |
-| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 393 | STALE (lag 41 since @393) |
+| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 451 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 394 | STALE (lag 40 since @394) |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 395 | STALE (lag 39 since @395) |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 397 | STALE (lag 37 since @397) |
