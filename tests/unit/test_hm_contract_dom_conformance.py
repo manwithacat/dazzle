@@ -1448,6 +1448,11 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.content import Icon
 
         return r.render(Icon(name="check", size="md"))
+    if part_id == "link":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.interactive import Link
+
+        return r.render(Link(label="Home", href=URL("/app")))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
