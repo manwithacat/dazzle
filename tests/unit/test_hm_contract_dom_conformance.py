@@ -1661,6 +1661,15 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.data import KanbanBoard
 
         return r.render(KanbanBoard(columns=(("todo", (Text(body="A"),)),)))
+    if part_id == "status_list_region":
+        from dazzle.render.fragment.primitives.data import StatusList, StatusListEntry
+
+        return r.render(
+            StatusList(
+                entries=(StatusListEntry(title="OK", state="positive"),),
+                empty_message="none",
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

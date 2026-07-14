@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 111 |
+| Modules | 112 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -109,6 +109,7 @@ blast radius (who embeds / refuses this part).
 | `split` | `split` | `.dz-split` | .dz-split[] | — |
 | `stack` | `stack` | `.dz-stack` | .dz-stack[] | — |
 | `status_list` | `status-list` | `[data-dz-status-entry]` | [data-dz-status-entry][data-dz-state=one_of:neutral\|positive\|warning\|destructive\|accent, data-dz-status-entry=present] | StatusListEntry(caption:str:opt; icon_html:str:opt; state:Literal:opt; title:str:req) |
+| `status_list_region` | `status-list-region` | `.dz-status-list-region` | .dz-status-list-region[] | — |
 | `submit` | `submit` | `.dz-submit` | .dz-submit[] | — |
 | `surface` | `surface` | `.dz-surface` | .dz-surface[] | — |
 | `tabs` | `tabs` | `[data-dz-tabs]` | [data-dz-tabs][]; [data-dz-tab-target][data-dz-tab-target=present] | — |

@@ -569,6 +569,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "kanban_board",
         True,
     ),  # FragmentRenderer._emit_kanban_board packing shell
+    (
+        "contracts/status_list_region.py",
+        "status_list_region",
+        True,
+    ),  # FragmentRenderer._emit_status_list packing shell
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
