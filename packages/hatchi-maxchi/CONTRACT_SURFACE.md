@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 90 |
+| Modules | 91 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -46,6 +46,7 @@ blast radius (who embeds / refuses this part).
 | `entity_card` | `entity-card` | `[data-dz-entity-card]` | [data-dz-entity-card][data-dz-entity-card=present] | EntityCard(body_html:str:opt; region_name:str:opt) |
 | `filter_bar` | `filter-bar` | `.dz-filter-bar` | .dz-filter-bar[] | — |
 | `form_field` | `form-field` | `.dz-form-field` | .dz-form-field[] | — |
+| `form_section` | `form-section` | `.dz-form-section` | .dz-form-section[] | — |
 | `form_stack` | `form-stack` | `.dz-form-stack` | .dz-form-stack[] | — |
 | `funnel` | `funnel` | `[data-dz-funnel]` | [data-dz-funnel][data-dz-funnel=present] | Funnel(empty_message:str:opt; stages:list[FunnelStage]:opt; total:int:opt); FunnelStage(count:int:opt; label:str:req) |
 | `grid` | `grid` | `[data-dz-grid]` | — | — |

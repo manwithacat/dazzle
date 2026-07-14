@@ -1491,6 +1491,16 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.forms import Submit
 
         return r.render(Submit(label="Save"))
+    if part_id == "form_section":
+        from dazzle.render.fragment.primitives.forms import Field, FormSection
+
+        return r.render(
+            FormSection(
+                title="Details",
+                fields=(Field(name="title", label="Title", kind="text"),),
+                note="Optional note",
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
