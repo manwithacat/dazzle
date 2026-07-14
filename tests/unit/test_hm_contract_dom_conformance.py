@@ -1812,6 +1812,13 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
             "<p>Hello</p></div></div></div>"
         )
+    if part_id == "breadcrumb":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-135).
+        return (
+            '<nav class="dz-breadcrumb" aria-label="Breadcrumb"><ol>'
+            '<li><a href="#">Home</a></li><li><a href="#">Invoices</a></li>'
+            '<li aria-current="page">INV-0042</li></ol></nav>'
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

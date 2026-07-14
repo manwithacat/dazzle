@@ -3004,6 +3004,8 @@ def select(source: str, id: str) -> str:
             '<nav class="dz-breadcrumb" aria-label="Breadcrumb"><ol>'
             '<li><a href="#">Home</a></li><li><a href="#">Invoices</a></li>'
             '<li aria-current="page">INV-0042</li></ol></nav>',
+            notes="Dual-lock root .dz-breadcrumb (HMC-135).",
+            contracts=("contracts/breadcrumb.py",),
         ),
         Hyperpart(
             "accordion",
