@@ -12,9 +12,9 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Controllers | 24 |
 | Contract modules | 115 |
 | Dual-lock schema+DOM | 41 |
-| Dual-lock DOM-only | 71 |
+| Dual-lock DOM-only | 72 |
 | Dual-lock deferred | 1 |
-| Contract with no dual-lock row | 2 |
+| Contract with no dual-lock row | 1 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 
@@ -93,7 +93,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `money` | `money.py` | `dz-money.js` | yes | yes | yes | **schema+DOM** |
 | `nav_group` | `nav_group.py` | `—` | yes | no | no | **DOM-only** |
 | `nav_item` | `nav_item.py` | `—` | yes | no | no | **DOM-only** |
-| `navigation_menu` | `navigation_menu.py` | `dz-navigation-menu.js` | yes | no | no | **none** |
+| `navigation_menu` | `navigation_menu.py` | `dz-navigation-menu.js` | yes | no | no | **DOM-only** |
 | `pagination` | `pagination.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `pdf` | `pdf.py` | `dz-pdf.js` | yes | no | no | **DOM-only** |
 | `pipeline` | `pipeline.py` | `—` | yes | yes | yes | **schema+DOM** |

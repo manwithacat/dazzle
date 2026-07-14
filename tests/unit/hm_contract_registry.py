@@ -599,6 +599,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "menubar",
         True,
     ),  # HM gallery menubar (no FragmentRenderer emit yet)
+    (
+        "contracts/navigation_menu.py",
+        "navigation_menu",
+        True,
+    ),  # HM gallery navigation-menu (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

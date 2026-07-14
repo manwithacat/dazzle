@@ -1744,6 +1744,14 @@ def _emit_root_only_html(part_id: str) -> str:
             '<a href="#" role="menuitem">New</a>'
             "</div></details></div>"
         )
+    if part_id == "navigation_menu":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-127).
+        return (
+            '<nav class="dz-navigation-menu" data-dz-navigation-menu aria-label="Product">'
+            '<ul class="dz-navigation-menu__list">'
+            '<li class="dz-navigation-menu__item"><a href="#">Home</a></li>'
+            "</ul></nav>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
