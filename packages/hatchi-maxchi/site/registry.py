@@ -2503,8 +2503,10 @@ def select(source: str, id: str) -> str:
             "</div></div>",
             notes="PLACEHOLDER — shadcn parity (HMC-035). Opens on :hover / "
             ":focus-within; coarse pointers rely on focus. Distinct from "
-            "popover (explicit open). No JS controller.",
+            "popover (explicit open). Dual-lock root .dz-hover-card (HMC-133). "
+            "No JS controller.",
             tags=("overlay",),
+            contracts=("contracts/hover_card.py",),
         ),
         Hyperpart(
             "carousel",

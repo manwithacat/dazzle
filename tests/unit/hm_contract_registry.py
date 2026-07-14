@@ -629,6 +629,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "aspect_ratio",
         True,
     ),  # HM gallery aspect-ratio (no FragmentRenderer emit yet)
+    (
+        "contracts/hover_card.py",
+        "hover_card",
+        True,
+    ),  # HM gallery hover-card (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

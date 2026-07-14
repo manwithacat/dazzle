@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 119 |
+| Modules | 120 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -68,6 +68,7 @@ blast radius (who embeds / refuses this part).
 | `heading` | `heading` | `.dz-heading` | .dz-heading[] | — |
 | `heatmap` | `heatmap` | `[data-dz-heatmap]` | [data-dz-heatmap][data-dz-heatmap=present] | Heatmap(columns:list[str]:opt; empty_message:str:opt; rows:list[HeatmapRow]:opt; thresholds:list[float]:opt; total:int:opt); HeatmapRow(cells:list[float]:opt; label:str:req) |
 | `histogram` | `histogram` | `[data-dz-histogram]` | [data-dz-histogram][data-dz-histogram=present] | Histogram(bins:list[HistogramBin]:opt; empty_message:str:opt; label:str:opt; svg_html:str:opt); HistogramBin(count:int:opt; high:float:opt; label:str:req; low:float:opt) |
+| `hover_card` | `hover-card` | `.dz-hover-card` | .dz-hover-card[] | — |
 | `icon` | `icon` | `.dz-icon` | .dz-icon[] | — |
 | `inline_edit` | `inline-edit` | `.dz-inline-edit` | .dz-inline-edit[] | — |
 | `interactive` | `interactive` | `.dz-interactive` | .dz-interactive[] | — |

@@ -1789,6 +1789,16 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="dz-aspect-ratio" data-dz-ratio="16/9" '
             'aria-label="16:9 frame"><span>16:9</span></div>'
         )
+    if part_id == "hover_card":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-133).
+        return (
+            '<div class="dz-hover-card" data-dz-hover-card>'
+            '<button type="button" class="dz-hover-card__trigger">@maya</button>'
+            '<div class="dz-hover-card__content" role="tooltip">'
+            '<p class="dz-hover-card__title">Maya Reyes</p>'
+            '<p class="dz-hover-card__description">Operations lead</p>'
+            "</div></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
