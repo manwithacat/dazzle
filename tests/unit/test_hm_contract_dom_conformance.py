@@ -1501,6 +1501,10 @@ def _emit_root_only_html(part_id: str) -> str:
                 note="Optional note",
             )
         )
+    if part_id == "form_stepper":
+        from dazzle.render.fragment.primitives.forms import FormStepper
+
+        return r.render(FormStepper(sections=("Details", "Review", "Confirm")))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 91 |
+| Modules | 92 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -48,6 +48,7 @@ blast radius (who embeds / refuses this part).
 | `form_field` | `form-field` | `.dz-form-field` | .dz-form-field[] | — |
 | `form_section` | `form-section` | `.dz-form-section` | .dz-form-section[] | — |
 | `form_stack` | `form-stack` | `.dz-form-stack` | .dz-form-stack[] | — |
+| `form_stepper` | `form-stepper` | `.dz-form-stepper` | .dz-form-stepper[] | — |
 | `funnel` | `funnel` | `[data-dz-funnel]` | [data-dz-funnel][data-dz-funnel=present] | Funnel(empty_message:str:opt; stages:list[FunnelStage]:opt; total:int:opt); FunnelStage(count:int:opt; label:str:req) |
 | `grid` | `grid` | `[data-dz-grid]` | — | — |
 | `grid_cols` | `grid-cols` | `[data-dz-grid]` | [data-dz-grid-col-toggle][data-dz-grid-col-toggle=present]; [data-dz-col][data-dz-col=present]; [data-dz-grid-cols-reset][] | — |
