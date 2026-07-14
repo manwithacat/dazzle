@@ -1902,6 +1902,16 @@ def _emit_root_only_html(part_id: str) -> str:
             '<span class="dz-grid-cell-field-label">Region:</span> North</p>'
             "</div></div>"
         )
+    if part_id == "item":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-145).
+        return (
+            '<div class="dz-item" data-dz-item data-dz-variant="outline">'
+            '<span class="dz-item__media" aria-hidden="true">MR</span>'
+            '<div class="dz-item__content">'
+            '<div class="dz-item__title">Maya Reyes</div>'
+            '<div class="dz-item__description">Operations · North grid</div>'
+            "</div></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

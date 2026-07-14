@@ -2497,9 +2497,10 @@ def select(source: str, id: str) -> str:
             '<button type="button" class="dz-button" data-dz-variant="ghost" '
             'data-dz-size="sm">View</button></div></div></div>',
             notes="PLACEHOLDER — shadcn parity (HMC-033). Flex row anatomy only; "
-            "no controller. Actions stop at product buttons. Dual-lock when a "
-            "stable Dazzle list-row path needs it.",
+            "no controller. Actions stop at product buttons. Dual-lock root "
+            ".dz-item (HMC-145).",
             tags=("data", "layout"),
+            contracts=("contracts/item.py",),
         ),
         Hyperpart(
             "hover-card",
