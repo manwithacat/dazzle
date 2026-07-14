@@ -286,7 +286,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<span class="dz-alert__icon">{svg:triangle-alert}</span>'
             '<div class="dz-alert__body"><div class="dz-alert__title">Payment method expiring</div>'
             '<div class="dz-alert__description">Your card ending 4242 expires next month.</div></div></div>',
+            notes="Dual-lock root .dz-alert (HMC-140).",
             tags=("identity",),
+            contracts=("contracts/alert.py",),
         ),
         Hyperpart(
             "card",

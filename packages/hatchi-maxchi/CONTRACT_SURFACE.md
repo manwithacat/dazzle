@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 125 |
+| Modules | 126 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -19,6 +19,7 @@ blast radius (who embeds / refuses this part).
 | `activity_feed` | `activity-feed` | `[data-dz-activity-row]` | [data-dz-activity-row][data-dz-activity-row=present] | ActivityRow(actor:str:opt; description:str:req; time_str:str:req) |
 | `activity_feed_list` | `activity-feed-list` | `.dz-activity-feed` | .dz-activity-feed[] | — |
 | `add_card_row` | `add-card-row` | `.dz-add-card-row` | .dz-add-card-row[] | — |
+| `alert` | `alert` | `.dz-alert` | .dz-alert[] | — |
 | `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
 | `aspect_ratio` | `aspect-ratio` | `.dz-aspect-ratio` | .dz-aspect-ratio[] | — |
 | `auto_grid` | `auto_grid` | `.dz-auto-grid` | .dz-auto-grid[] | — |

@@ -1851,6 +1851,16 @@ def _emit_root_only_html(part_id: str) -> str:
             '<span class="hm-demo-muted">Published</span>'
             "</div></div>"
         )
+    if part_id == "alert":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-140).
+        return (
+            '<div class="dz-alert" data-dz-tone="warning" role="alert">'
+            '<span class="dz-alert__icon" aria-hidden="true">!</span>'
+            '<div class="dz-alert__body">'
+            '<div class="dz-alert__title">Payment method expiring</div>'
+            '<div class="dz-alert__description">'
+            "Your card ending 4242 expires next month.</div></div></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
