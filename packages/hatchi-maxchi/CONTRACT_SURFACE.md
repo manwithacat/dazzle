@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 68 |
+| Modules | 69 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -21,6 +21,7 @@ blast radius (who embeds / refuses this part).
 | `bar_chart` | `bar-chart` | `[data-dz-bar-chart]` | [data-dz-bar-chart][data-dz-bar-chart=present] | BarChart(rows:list[BarChartRow]:opt); BarChartRow(count:int:opt; label:str:req; label_html:str:opt; width_pct:int:opt) |
 | `bar_track` | `bar-track` | `[data-dz-bar-track]` | [data-dz-bar-track][data-dz-bar-track=present] | BarTrack(max_value:float:opt; rows:list[BarTrackRow]:opt); BarTrackRow(fill_pct:float:opt; formatted:str:opt; label:str:req; value:float:opt) |
 | `box_plot` | `box-plot` | `[data-dz-box-plot]` | [data-dz-box-plot][data-dz-box-plot=present] | BoxPlot(empty_message:str:opt; groups:list[BoxPlotGroup]:opt; label:str:opt; svg_html:str:opt); BoxPlotGroup(label:str:req; max:float:opt; median:float:opt; min:float:opt; q1:float:opt; q3:float:opt; samples:int:opt) |
+| `bulk_actions` | `bulk-actions` | `.dz-bulk-actions` | .dz-bulk-actions[] | — |
 | `bullet` | `bullet` | `[data-dz-bullet]` | [data-dz-bullet][data-dz-bullet=present] | Bullet(bands:list[BulletBand]:opt; empty_message:str:opt; max_value:float:opt; rows:list[BulletRow]:opt); BulletBand(color:Literal:opt; from_value:float:req; label:str:opt; to_value:float:req); BulletRow(actual:float:req; label:str:req; target:float\|None:opt) |
 | `button` | `button` | `.dz-button` | .dz-button[] | — |
 | `calendar` | `calendar` | `[data-dz-calendar]` | [data-dz-calendar][data-dz-calendar=present] | Calendar(body_html:str:opt; events:list[CalendarEvent]:opt; view:Literal:opt); CalendarEvent(label:str:req; when:str:opt) |

@@ -354,6 +354,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/toolbar.py", "toolbar", True),  # FragmentRenderer._emit_toolbar
     ("contracts/card_picker.py", "card_picker", True),  # FragmentRenderer._emit_card_picker
     ("contracts/add_card_row.py", "add_card_row", True),  # FragmentRenderer._emit_add_card_row
+    (
+        "contracts/bulk_actions.py",
+        "bulk_actions",
+        True,
+    ),  # FragmentRenderer._emit_bulk_action_toolbar
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
