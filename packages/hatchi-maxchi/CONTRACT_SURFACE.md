@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 75 |
+| Modules | 76 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -78,6 +78,7 @@ blast radius (who embeds / refuses this part).
 | `slider` | `slider` | `[data-dz-slider]` | [data-dz-slider][]; [data-dz-range-value][] | — |
 | `sparkline` | `sparkline` | `[data-dz-sparkline]` | [data-dz-sparkline][data-dz-sparkline=present] | Sparkline(empty_message:str:opt; points:list[tuple[str,float]]:opt) |
 | `status_list` | `status-list` | `[data-dz-status-entry]` | [data-dz-status-entry][data-dz-state=one_of:neutral\|positive\|warning\|destructive\|accent, data-dz-status-entry=present] | StatusListEntry(caption:str:opt; icon_html:str:opt; state:Literal:opt; title:str:req) |
+| `surface` | `surface` | `.dz-surface` | .dz-surface[] | — |
 | `tabs` | `tabs` | `[data-dz-tabs]` | [data-dz-tabs][]; [data-dz-tab-target][data-dz-tab-target=present] | — |
 | `tags` | `tags` | `[data-dz-tags]` | [data-dz-tags][name=present] | TagsField(field_id:str:req; label:str:req; name:str:req; placeholder:str:opt; tags:list[str]:opt) |
 | `task_inbox` | `task-inbox` | `[data-dz-task-inbox]` | [data-dz-task-inbox][data-dz-task-inbox=present] | TaskInbox(body_html:str:opt; region_name:str:opt) |

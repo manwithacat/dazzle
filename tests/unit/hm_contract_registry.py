@@ -389,6 +389,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "related_group",
         True,
     ),  # FragmentRenderer._emit_related_cards / _files
+    (
+        "contracts/surface.py",
+        "surface",
+        True,
+    ),  # FragmentRenderer._emit_surface
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
