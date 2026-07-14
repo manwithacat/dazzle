@@ -327,6 +327,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<code>dz-card-delta</code>.",
             tags=("layout",),
             composes=("auto-grid",),
+            contracts=("contracts/card.py",),
         ),
         Hyperpart(
             "pagination",

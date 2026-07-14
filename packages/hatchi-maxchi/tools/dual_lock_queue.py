@@ -58,6 +58,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_workspace_overflow": "menu",  # details.dz-menu More ⋯ (#1491)
     "_emit_badge": "badge",
     "_emit_button": "button",
+    "_emit_card": "card",
 }
 
 

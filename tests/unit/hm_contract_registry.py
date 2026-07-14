@@ -349,6 +349,7 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/menu.py", "menu", True),  # workspace overflow More ⋯ (#1491)
     ("contracts/badge.py", "badge", True),  # FragmentRenderer._emit_badge
     ("contracts/button.py", "button", True),  # FragmentRenderer._emit_button
+    ("contracts/card.py", "card", True),  # FragmentRenderer._emit_card
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
