@@ -454,6 +454,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "form_field",
         True,
     ),  # FragmentRenderer._emit_field
+    (
+        "contracts/form_stack.py",
+        "form_stack",
+        True,
+    ),  # FragmentRenderer._emit_form_stack
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

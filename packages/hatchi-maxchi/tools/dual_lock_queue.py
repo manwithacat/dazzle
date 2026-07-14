@@ -84,6 +84,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_region": "region",
     "_emit_interactive": "interactive",
     "_emit_field": "form_field",
+    "_emit_form_stack": "form_stack",
 }
 
 

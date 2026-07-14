@@ -1473,6 +1473,20 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.forms import Field
 
         return r.render(Field(name="title", label="Title", kind="text"))
+    if part_id == "form_stack":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.forms import Field, FormStack, Submit
+
+        return r.render(
+            FormStack(
+                action=URL("/api/tickets"),
+                method="POST",
+                fields=(Field(name="title", label="Title", kind="text"),),
+                submit=Submit(label="Save"),
+                entity_name="Ticket",
+                mode="create",
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
