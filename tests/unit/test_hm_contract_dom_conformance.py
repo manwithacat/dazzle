@@ -1837,6 +1837,20 @@ def _emit_root_only_html(part_id: str) -> str:
             "so lines stay scannable on any screen.</p>"
             "</div>"
         )
+    if part_id == "separator":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-138).
+        return (
+            '<div class="hm-stack hm-measure">'
+            '<p class="hm-demo-muted">Account details</p>'
+            '<hr class="dz-separator">'
+            '<p class="hm-demo-muted">Billing and invoices</p>'
+            '<div class="hm-demo-row">'
+            '<span class="hm-demo-muted">Draft</span>'
+            '<div class="dz-separator--vertical" role="separator" '
+            'aria-orientation="vertical"></div>'
+            '<span class="hm-demo-muted">Published</span>'
+            "</div></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

@@ -4543,7 +4543,9 @@ def select(source: str, id: str) -> str:
             "</div></div>",
             notes="The horizontal rule is a native <code>&lt;hr&gt;</code> (implicitly "
             "<code>role=separator</code>); the vertical divider is a zero-width element with an "
-            "explicit <code>role=separator</code> + <code>aria-orientation=&quot;vertical&quot;</code>.",
+            "explicit <code>role=separator</code> + <code>aria-orientation=&quot;vertical&quot;</code>. "
+            "Dual-lock root .dz-separator (HMC-138).",
+            contracts=("contracts/separator.py",),
         ),
         Hyperpart(
             "icon",

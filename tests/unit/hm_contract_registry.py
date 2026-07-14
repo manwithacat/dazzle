@@ -654,6 +654,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "center",
         True,
     ),  # HM gallery center (no FragmentRenderer emit yet)
+    (
+        "contracts/separator.py",
+        "separator",
+        True,
+    ),  # HM gallery separator (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
