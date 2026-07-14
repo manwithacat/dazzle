@@ -101,6 +101,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_workspace_context_selector": "workspace_context",
     "_emit_detail_grid": "detail_grid",
     "_emit_action_grid": "action_grid_region",
+    "_emit_pivot_table": "pivot_table",
 }
 
 

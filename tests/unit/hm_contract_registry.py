@@ -539,6 +539,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "action_grid_region",
         True,
     ),  # FragmentRenderer._emit_action_grid packing shell
+    (
+        "contracts/pivot_table.py",
+        "pivot_table",
+        True,
+    ),  # FragmentRenderer._emit_pivot_table
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
