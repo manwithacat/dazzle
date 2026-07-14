@@ -1783,6 +1783,12 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="dz-accordion__panel">Body</div></details>'
             "</div>"
         )
+    if part_id == "aspect_ratio":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-132).
+        return (
+            '<div class="dz-aspect-ratio" data-dz-ratio="16/9" '
+            'aria-label="16:9 frame"><span>16:9</span></div>'
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

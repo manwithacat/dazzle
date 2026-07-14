@@ -2453,8 +2453,10 @@ def select(source: str, id: str) -> str:
             'color:var(--colour-brand-text);font-size:var(--text-xs);">4:3</span></div>'
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-036). Pure CSS aspect-ratio + "
-            "data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). No controller.",
+            "data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). Dual-lock root "
+            ".dz-aspect-ratio (HMC-132). No controller.",
             tags=("layout", "media"),
+            contracts=("contracts/aspect_ratio.py",),
         ),
         Hyperpart(
             "item",

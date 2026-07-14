@@ -31,16 +31,48 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/aspect_ratio.py`
+
+- **Required root:** `.dz-aspect-ratio` (part `aspect-ratio`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-aspect-ratio` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: aspect-ratio — media frame that locks width/height.
+
+Dual-lock unit is the frame root. ``data-dz-ratio`` presets and child
+fill (object-fit) are host-owned. Class ``.dz-aspect-ratio`` is the stable
+substrate root (gallery CSS; no FragmentRenderer emit yet).
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="aspect-ratio",
+    root=".dz-aspect-ratio",
+    nodes=(Node(".dz-aspect-ratio", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
-PLACEHOLDER — shadcn parity (HMC-036). Pure CSS aspect-ratio + data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). No controller.
+PLACEHOLDER — shadcn parity (HMC-036). Pure CSS aspect-ratio + data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). Dual-lock root .dz-aspect-ratio (HMC-132). No controller.
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/aspect_ratio.py`
