@@ -1722,6 +1722,18 @@ def _emit_root_only_html(part_id: str) -> str:
                 ),
             )
         )
+    if part_id == "carousel":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-125).
+        return (
+            '<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0" '
+            'data-dz-carousel-wrap="none" data-dz-carousel-interval="0" '
+            'aria-roledescription="carousel" aria-label="Fixture">'
+            '<button type="button" data-dz-carousel-prev aria-label="Previous"></button>'
+            '<div class="dz-carousel__slide" data-dz-active></div>'
+            '<button type="button" data-dz-carousel-next aria-label="Next"></button>'
+            '<p data-dz-carousel-status aria-live="polite">Slide 1 of 1</p>'
+            "</div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
