@@ -1696,9 +1696,16 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<code>aria-current=&quot;step&quot;</code>) — the live navigation "
             "behaviour is the <code>wizard</code> Hyperpart "
             "(<code>dz-wizard.js</code>; the dzWizard Alpine island retired in "
-            "Tier F4d).",
+            "Tier F4d). Dual-lock: form_errors + form_stepper + form_section + "
+            "form_field (HMC-143).",
             tags=("forms",),
             composes=("field",),
+            contracts=(
+                "contracts/form_errors.py",
+                "contracts/form_stepper.py",
+                "contracts/form_section.py",
+                "contracts/form_field.py",
+            ),
         ),
         Hyperpart(
             "wizard",

@@ -674,6 +674,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "chart_legend",
         True,
     ),  # HM gallery chart-legend (no FragmentRenderer emit yet)
+    (
+        "contracts/form_errors.py",
+        "form_errors",
+        True,
+    ),  # HM form-chrome error summary (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

@@ -1881,6 +1881,17 @@ def _emit_root_only_html(part_id: str) -> str:
             '<span class="dz-chart-legend-name">Costs</span></li>'
             "</ul>"
         )
+    if part_id == "form_errors":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-143).
+        return (
+            '<div class="dz-form-errors" role="alert">'
+            '<div class="dz-form-errors-body">'
+            '<h3 class="dz-form-errors-title">Validation Error</h3>'
+            '<ul class="dz-form-errors-list" role="list">'
+            "<li>Name is required</li>"
+            "<li>Start date must be before end date</li>"
+            "</ul></div></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
