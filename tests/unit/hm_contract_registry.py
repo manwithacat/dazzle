@@ -479,6 +479,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "kpi",
         True,
     ),  # FragmentRenderer._emit_kpi
+    (
+        "contracts/file_upload.py",
+        "file_upload",
+        True,
+    ),  # FragmentRenderer._emit_file_upload
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
