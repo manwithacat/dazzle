@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Example HM surface fleet audit** — `scripts/example_hm_surface_audit.py`
+  rebuilds every `examples/*` via `build-ui` and scores HTML for pre-HM
+  residuals (Alpine `x-*`, dead Tailwind spinner utilities). Exit 0 only when
+  the fleet is pure `dz-*`/`data-dz-*`. Wired into the `example-apps` improve
+  lane as Tier 0 so agents don't treat gitignored stale `dnr-ui/` snapshots as
+  product gaps. `examples/README.md` documents the HM surface contract.
+
 ### Changed
+- **SearchBox primitive docstring** — dropped stale Alpine `x-show` wording;
+  live emit is dual-locked `data-dz-search-box` (controller + CSS).
 - **search-box → schema+DOM dual-lock** — HM `contracts/search_box.py`
   (`SearchBox`, root `data-dz-search-box`); HTMX endpoint/coaching stay on the
   seam model; sole-emitter owns the region chrome.

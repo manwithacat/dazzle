@@ -1488,9 +1488,10 @@ class SearchBox:
       - A search `<input type="search">` with HTMX wiring that hits
         the FTS endpoint on every keystroke (250ms debounce) and
         swaps the result list under the input.
-      - A results `<div role="region" aria-live="polite">` that's
-        empty initially with a coaching message shown via Alpine
-        `x-show="!q"` (hidden once the user starts typing).
+      - A results `<div role="region" aria-live="polite">` that starts
+        with a coaching empty-state; the dual-locked SearchBox Hyperpart
+        (`data-dz-search-box`) owns show/hide via CSS + the controller
+        (no Alpine).
 
     The endpoint authoritatively applies scope predicates so the
     user sees only RBAC-filtered results. The result-row rendering
