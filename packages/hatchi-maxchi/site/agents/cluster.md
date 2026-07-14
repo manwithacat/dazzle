@@ -27,11 +27,42 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/cluster.py`
+
+- **Required root:** `.dz-cluster` (part `cluster`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-cluster` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: cluster — horizontal wrapping group (substrate Row).
+
+Dual-lock unit is the cluster root. Gap rides ``data-dz-gap``; optional
+``data-dz-align``. Child fragments are host-owned. Class ``.dz-cluster`` is
+the stable substrate root (``_emit_row``).
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="cluster",
+    root=".dz-cluster",
+    nodes=(Node(".dz-cluster", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
@@ -40,3 +71,4 @@ Flex row + flex-wrap + gap. data-dz-gap as on stack. data-dz-align (center|start
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/cluster.py`

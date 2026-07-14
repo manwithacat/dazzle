@@ -1430,6 +1430,10 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.layout import Stack
 
         return r.render(Stack(children=(Text("A"), Text("B")), gap="md"))
+    if part_id == "cluster":
+        from dazzle.render.fragment.primitives.layout import Row
+
+        return r.render(Row(children=(Text("A"), Text("B")), gap="md"))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

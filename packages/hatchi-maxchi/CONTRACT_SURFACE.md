@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 77 |
+| Modules | 78 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -28,6 +28,7 @@ blast radius (who embeds / refuses this part).
 | `card` | `card` | `.dz-card` | .dz-card[] | — |
 | `card_picker` | `card-picker` | `.dz-card-picker` | .dz-card-picker[] | — |
 | `carousel` | `carousel` | `[data-dz-carousel]` | [data-dz-carousel][]; [data-dz-carousel-index][data-dz-carousel-index=present]; [data-dz-carousel-prev][]; [data-dz-carousel-next][]; [data-dz-active][]; [data-dz-carousel-wrap][data-dz-carousel-wrap=present]; [data-dz-carousel-interval][data-dz-carousel-interval=present]; [data-dz-carousel-status][] | — |
+| `cluster` | `cluster` | `.dz-cluster` | .dz-cluster[] | — |
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
 | `cohort_strip` | `cohort-strip` | `[data-dz-cohort-strip]` | [data-dz-cohort-strip][data-dz-cohort-strip=present] | CohortStrip(body_html:str:opt; region_name:str:opt) |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |

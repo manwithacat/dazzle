@@ -73,6 +73,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_related_files": "related_group",
     "_emit_surface": "surface",
     "_emit_stack": "stack",
+    "_emit_row": "cluster",  # Row → .dz-cluster Hyperpart
 }
 
 

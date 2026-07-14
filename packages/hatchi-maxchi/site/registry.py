@@ -3379,6 +3379,7 @@ def select(source: str, id: str) -> str:
             "the line. Never fixes widths — that's what makes it safe for "
             "translation-length and zoom changes.",
             tags=("layout",),
+            contracts=("contracts/cluster.py",),
         ),
         Hyperpart(
             "sidebar-layout",

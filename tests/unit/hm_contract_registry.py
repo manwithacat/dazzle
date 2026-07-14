@@ -399,6 +399,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "stack",
         True,
     ),  # FragmentRenderer._emit_stack
+    (
+        "contracts/cluster.py",
+        "cluster",
+        True,
+    ),  # FragmentRenderer._emit_row → .dz-cluster
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
