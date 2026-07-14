@@ -1768,6 +1768,12 @@ def _emit_root_only_html(part_id: str) -> str:
             '<span class="dz-switch__track" aria-hidden="true"></span>'
             "<span>Email notifications</span></label>"
         )
+    if part_id == "toggle":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-130).
+        return (
+            '<button type="button" class="dz-toggle" data-dz-toggle '
+            'aria-pressed="true"><strong>B</strong> Bold</button>'
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

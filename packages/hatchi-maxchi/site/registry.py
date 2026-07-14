@@ -2389,8 +2389,9 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-032). Distinct from switch "
             "(form boolean) and toggle-group (exclusive radios). Server sets "
-            "aria-pressed; click-to-flip controller deferred.",
+            "aria-pressed; dual-lock root [data-dz-toggle] (HMC-130).",
             tags=("form", "interactive"),
+            contracts=("contracts/toggle.py",),
         ),
         Hyperpart(
             "kbd",
