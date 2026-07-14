@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 115 |
+| Modules | 116 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -115,6 +115,7 @@ blast radius (who embeds / refuses this part).
 | `status_list_region` | `status-list-region` | `.dz-status-list-region` | .dz-status-list-region[] | — |
 | `submit` | `submit` | `.dz-submit` | .dz-submit[] | — |
 | `surface` | `surface` | `.dz-surface` | .dz-surface[] | — |
+| `switch` | `switch` | `[data-dz-switch]` | [data-dz-switch][data-dz-switch=present] | — |
 | `tabs` | `tabs` | `[data-dz-tabs]` | [data-dz-tabs][]; [data-dz-tab-target][data-dz-tab-target=present] | — |
 | `tags` | `tags` | `[data-dz-tags]` | [data-dz-tags][name=present] | TagsField(field_id:str:req; label:str:req; name:str:req; placeholder:str:opt; tags:list[str]:opt) |
 | `task_inbox` | `task-inbox` | `[data-dz-task-inbox]` | [data-dz-task-inbox][data-dz-task-inbox=present] | TaskInbox(body_html:str:opt; region_name:str:opt) |

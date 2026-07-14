@@ -2368,9 +2368,10 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-031). No controller: native "
             "checkbox + CSS track/thumb. Label text is a sibling span so the "
-            "whole control is a click target. Dual-lock deferred until a Dazzle "
-            "form-field path emits data-dz-switch.",
+            "whole control is a click target. Dual-lock root [data-dz-switch] "
+            "(HMC-129); Dazzle form-field emit still optional.",
             tags=("form", "interactive"),
+            contracts=("contracts/switch.py",),
         ),
         Hyperpart(
             "toggle",

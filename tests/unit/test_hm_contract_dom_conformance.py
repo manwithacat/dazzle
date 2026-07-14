@@ -1760,6 +1760,14 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="dz-popover__content">Popover body</div>'
             "</details>"
         )
+    if part_id == "switch":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-129).
+        return (
+            '<label class="dz-switch">'
+            '<input type="checkbox" name="notify" data-dz-switch checked>'
+            '<span class="dz-switch__track" aria-hidden="true"></span>'
+            "<span>Email notifications</span></label>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
