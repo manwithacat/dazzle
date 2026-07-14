@@ -1618,6 +1618,20 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.data import DashboardGrid
 
         return r.render(DashboardGrid(cards=(), edit_enabled=False))
+    if part_id == "workspace_shell":
+        from dazzle.render.fragment.primitives.content import Text
+        from dazzle.render.fragment.primitives.data import WorkspaceShell
+
+        return r.render(
+            WorkspaceShell(
+                workspace_name="main",
+                title="Home",
+                body=Text(body="Body"),
+                primary_actions=(),
+                overflow_actions=(),
+                fold_count=0,
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

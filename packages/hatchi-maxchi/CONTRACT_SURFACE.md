@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 107 |
+| Modules | 108 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -119,6 +119,7 @@ blast radius (who embeds / refuses this part).
 | `tree` | `tree` | `[data-dz-tree]` | [data-dz-tree][data-dz-tree=present] | Tree(body_html:str:opt) |
 | `wizard` | `wizard` | `[data-dz-wizard]` | [data-dz-wizard][data-dz-step=present]; [data-dz-stage][data-dz-stage=present]; [data-dz-state][data-dz-state=one_of:complete\|current\|pending] | — |
 | `workspace_context` | `workspace-context` | `.dz-workspace-context` | .dz-workspace-context[] | — |
+| `workspace_shell` | `workspace-shell` | `.dz-workspace` | .dz-workspace[] | — |
 | `workspace_toolbar` | `workspace-toolbar` | `.dz-workspace-toolbar` | .dz-workspace-toolbar[] | — |
 
 ## Related

@@ -549,6 +549,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "dashboard_grid",
         True,
     ),  # FragmentRenderer._emit_dashboard_grid
+    (
+        "contracts/workspace_shell.py",
+        "workspace_shell",
+        True,
+    ),  # FragmentRenderer._emit_workspace_shell
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
