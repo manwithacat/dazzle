@@ -439,6 +439,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "layout_grid",
         True,
     ),  # FragmentRenderer._emit_grid → .dz-grid (not data-dz-grid)
+    (
+        "contracts/region.py",
+        "region",
+        True,
+    ),  # FragmentRenderer._emit_region
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
