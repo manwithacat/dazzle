@@ -54,7 +54,8 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle/http/` | **HTTP runtime** (FastAPI: API, auth, channels, events, grants). Renamed from `back/` in ADR-0041 (2026-06-20). |
 | `src/dazzle/page/` | **Page-orchestration layer** — page/route renderers (`*_renderer.py`), converters, + static JS/CSS assets. Calls *down* into `render/` (the typed Fragment substrate → HTML via `dazzle.render.html.esc`). No Jinja2 since #1042 (ADR-0023). Renamed from `ui/` in ADR-0041. |
 | `src/dazzle/render/` | Pure rendering: AppSpec → Fragment → HTML, no I/O (serverless-testable). The four-layer stack is `http → page → render → core` (ADR-0038/0041). |
-| `packages/hatchi-maxchi/` | Design system (Hyperparts); own `stems/` + `AGENTS.md`. Standalone CI (behaviour/visual/WCAG) must stay green — Dazzle CI job **HaTchi-MaXchi standalone CI (mirror)** and post-sync wait use `scripts/hm_standalone_ci_status.py` so a red HM main fails Dazzle transitively |
+| `packages/hatchi-maxchi/` | **Frontend design system** (Hyperparts, dual-locks, component CSS/controllers). Own `stems/` + `AGENTS.md`. New UI chrome goes here — not under `dazzle.page` (ADR-0053 / #1585). Standalone CI must stay green — Dazzle CI job **HaTchi-MaXchi standalone CI (mirror)** uses `scripts/hm_standalone_ci_status.py` so a red HM main fails Dazzle transitively |
+| `src/dazzle/page/` | Page host + **product glue** (CSRF, toast, auth islands, theme shell CSS) — not a second component library. Package was `dazzle_ui` pre-ADR-0041; that path is dead |
 | `examples/*/` | Apps; each should carry `stems/` for domain judgement |
 
 ## Project Layout Convention

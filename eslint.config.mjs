@@ -1,9 +1,8 @@
 // Structural ESLint only -- no style opinions.
-// Globs:
+// Globs (ADR-0053 / #1585 — HM owns design-system UI; page is product glue):
 //   packages/hatchi-maxchi/controllers  -- HM Hyperpart controllers (decision 0010)
-//   src/dazzle/page/**/js               -- product page runtime JS (ADR-0041: was dazzle_ui)
-// Dead path src/dazzle_ui/** is intentionally not listed; residual references
-// elsewhere are tracked for audit/removal.
+//   src/dazzle/page/**/js               -- product page runtime JS (ADR-0041 rename)
+// Path src/dazzle_ui/** does not exist — never re-add it.
 
 const browserGlobals = {
   window: "readonly",
