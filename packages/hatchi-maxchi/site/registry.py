@@ -3450,8 +3450,9 @@ def select(source: str, id: str) -> str:
             "<code>data-dz-measure</code>: <code>prose</code> (65ch), "
             "<code>wide</code> (90ch), <code>full</code> (no cap, still a "
             "centring context). This is the published form of the measure the "
-            "gallery's own chrome uses.",
+            "gallery's own chrome uses. Dual-lock root .dz-center (HMC-137).",
             tags=("layout",),
+            contracts=("contracts/center.py",),
         ),
         Hyperpart(
             "app-shell",

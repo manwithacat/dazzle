@@ -1828,6 +1828,15 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="hm-demo-box">E</div>'
             "</div>"
         )
+    if part_id == "center":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-137).
+        return (
+            '<div class="dz-center" data-dz-measure="prose">'
+            '<p class="hm-demo-muted">A comfortable reading measure tops out '
+            "around 65 characters; this block centres itself and caps its width "
+            "so lines stay scannable on any screen.</p>"
+            "</div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

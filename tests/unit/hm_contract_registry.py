@@ -649,6 +649,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "auto_grid",
         True,
     ),  # HM gallery auto-grid (no FragmentRenderer emit yet)
+    (
+        "contracts/center.py",
+        "center",
+        True,
+    ),  # HM gallery center (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
