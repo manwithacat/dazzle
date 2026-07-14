@@ -3008,8 +3008,9 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-043). No map SDK. "
             "Position with host CSS (absolute over a map/plan). Tones via "
-            "<code>data-dz-tone</code>.",
+            "<code>data-dz-tone</code>. Dual-lock root .dz-marker (HMC-146).",
             tags=("media",),
+            contracts=("contracts/marker.py",),
         ),
         # ── Navigation / Data ────────────────────────────────────────────
         Hyperpart(

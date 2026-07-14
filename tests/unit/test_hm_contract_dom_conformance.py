@@ -1912,6 +1912,13 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="dz-item__description">Operations · North grid</div>'
             "</div></div>"
         )
+    if part_id == "marker":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-146).
+        return (
+            '<span class="dz-marker" data-dz-marker>'
+            '<span class="dz-marker__pin" aria-hidden="true"></span>'
+            '<span class="dz-marker__label">HQ</span></span>'
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

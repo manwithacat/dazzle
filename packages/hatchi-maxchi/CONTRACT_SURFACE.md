@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 131 |
+| Modules | 132 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -88,6 +88,7 @@ blast radius (who embeds / refuses this part).
 | `layout_grid` | `layout-grid` | `.dz-grid` | .dz-grid[] | — |
 | `link` | `link` | `.dz-link` | .dz-link[] | — |
 | `list_region` | `list-region` | `[data-dz-list-region]` | [data-dz-list-region][data-dz-list-region=present] | ListRegion(body_html:str:opt) |
+| `marker` | `marker` | `.dz-marker` | .dz-marker[] | — |
 | `master_detail` | `master-detail` | `[data-dz-master-detail]` | [data-dz-master-detail][]; [data-dz-master-detail-list-body][]; [data-dz-master-detail-detail-body][] | — |
 | `menu` | `menu` | `details.dz-menu, .dz-menu` | details.dz-menu, .dz-menu[] | — |
 | `menubar` | `menubar` | `[data-dz-menubar]` | [data-dz-menubar][data-dz-menubar=present] | — |
