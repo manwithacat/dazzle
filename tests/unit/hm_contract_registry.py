@@ -579,6 +579,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "kanban_region",
         True,
     ),  # FragmentRenderer._emit_kanban_region
+    (
+        "contracts/data_list_scroll.py",
+        "data_list_scroll",
+        True,
+    ),  # FragmentRenderer._emit_data_list_scroll
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

@@ -1688,6 +1688,22 @@ def _emit_root_only_html(part_id: str) -> str:
                 empty_message="No items",
             )
         )
+    if part_id == "data_list_scroll":
+        from dazzle.render.fragment.primitives.data import DataListScroll, Table
+
+        return r.render(
+            DataListScroll(
+                table=Table(columns=("A",), rows=()),
+                table_id="t1",
+                page_size=10,
+                aria_label="Items",
+                empty_title="Empty",
+                empty_description="None",
+                empty_action_href="",
+                empty_action_label="",
+                paginated=False,
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
