@@ -459,6 +459,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "form_stack",
         True,
     ),  # FragmentRenderer._emit_form_stack
+    (
+        "contracts/submit.py",
+        "submit",
+        True,
+    ),  # FragmentRenderer._emit_submit
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
