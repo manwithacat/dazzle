@@ -514,6 +514,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "metrics_grid",
         True,
     ),  # FragmentRenderer._emit_metrics_grid
+    (
+        "contracts/nav_item.py",
+        "nav_item",
+        True,
+    ),  # FragmentRenderer._emit_nav_item
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

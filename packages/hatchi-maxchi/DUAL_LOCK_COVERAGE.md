@@ -10,9 +10,9 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 |--------|------:|
 | Component CSS modules | 75 |
 | Controllers | 24 |
-| Contract modules | 100 |
+| Contract modules | 101 |
 | Dual-lock schema+DOM | 41 |
-| Dual-lock DOM-only | 54 |
+| Dual-lock DOM-only | 55 |
 | Dual-lock deferred | 1 |
 | Contract with no dual-lock row | 4 |
 
@@ -84,6 +84,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `metrics` | `metrics.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `metrics_grid` | `metrics_grid.py` | `—` | yes | no | no | **DOM-only** |
 | `money` | `money.py` | `dz-money.js` | yes | yes | yes | **schema+DOM** |
+| `nav_item` | `nav_item.py` | `—` | yes | no | no | **DOM-only** |
 | `navigation_menu` | `navigation_menu.py` | `dz-navigation-menu.js` | yes | no | no | **none** |
 | `pagination` | `pagination.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `pdf` | `pdf.py` | `dz-pdf.js` | yes | no | no | **DOM-only** |

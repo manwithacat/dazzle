@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 100 |
+| Modules | 101 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -75,6 +75,7 @@ blast radius (who embeds / refuses this part).
 | `metrics` | `metrics` | `[data-dz-metric-key]` | [data-dz-metric-key][data-dz-metric-key=present] | MetricTile(delta_direction:Literal:opt; delta_pct:float:opt; delta_period_label:str:opt; delta_sentiment:Literal:opt; delta_value:str:opt; label:str:req; metric_key:str:opt; tone:Literal:opt; value:str:req) |
 | `metrics_grid` | `metrics-grid` | `.dz-metrics-grid` | .dz-metrics-grid[] | — |
 | `money` | `money` | `[data-dz-money]` | [data-dz-money][data-dz-currency=present, data-dz-scale=present] | MoneyField(currency:str:opt; field_id:str:opt; major_display:str:opt; minor_value:int:opt; name:str:req; scale:int:opt) |
+| `nav_item` | `nav-item` | `.dz-nav-item` | .dz-nav-item[] | — |
 | `navigation_menu` | `navigation-menu` | `[data-dz-navigation-menu]` | [data-dz-navigation-menu][data-dz-navigation-menu=present] | — |
 | `pagination` | `pagination` | `[data-dz-pagination]` | [data-dz-pagination][data-dz-grid-pagination=present, data-dz-grid-total=present, data-dz-pagination=present] | Pagination(pages_html:str:opt; rows_label:str:opt; total:int:opt) |
 | `pdf` | `pdf` | `[data-dz-pdf]` | [data-dz-pdf][data-dz-pdf-lib=present, data-dz-pdf-src=present]; [data-dz-pdf-viewer][] | — |
