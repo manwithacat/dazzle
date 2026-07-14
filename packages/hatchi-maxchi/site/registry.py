@@ -3267,6 +3267,7 @@ def select(source: str, id: str) -> str:
             "from the menu/button icons). Copy the whole thing — it is just nested markup.",
             tags=("composite",),
             composes=("button", "toggle-group", "menu"),
+            contracts=("contracts/toolbar.py",),
         ),
         Hyperpart(
             "master-detail",
