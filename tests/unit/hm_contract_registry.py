@@ -489,6 +489,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "ref_picker",
         True,
     ),  # FragmentRenderer._emit_ref_picker
+    (
+        "contracts/rich_text.py",
+        "rich_text",
+        True,
+    ),  # FragmentRenderer._emit_rich_text
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

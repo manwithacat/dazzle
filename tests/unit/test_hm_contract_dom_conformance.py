@@ -1521,6 +1521,10 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.forms import RefPicker
 
         return r.render(RefPicker(name="owner", label="Owner", ref_api=URL("/api/users")))
+    if part_id == "rich_text":
+        from dazzle.render.fragment.primitives.forms import RichTextField
+
+        return r.render(RichTextField(name="body", label="Body"))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

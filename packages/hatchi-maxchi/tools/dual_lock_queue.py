@@ -91,6 +91,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_kpi": "kpi",
     "_emit_file_upload": "file_upload",
     "_emit_ref_picker": "ref_picker",
+    "_emit_rich_text": "rich_text",
 }
 
 
