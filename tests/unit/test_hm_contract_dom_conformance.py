@@ -1465,6 +1465,10 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.containers import Region
 
         return r.render(Region(kind="list", body=Text("Region body")))
+    if part_id == "interactive":
+        from dazzle.render.fragment.primitives.interactive import Interactive
+
+        return r.render(Interactive(child=Text("Click me")))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

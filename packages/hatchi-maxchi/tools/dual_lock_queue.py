@@ -82,6 +82,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_inline_edit": "inline_edit",
     "_emit_grid": "layout_grid",  # layout Grid → .dz-grid (not data table grid)
     "_emit_region": "region",
+    "_emit_interactive": "interactive",
 }
 
 

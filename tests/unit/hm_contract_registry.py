@@ -444,6 +444,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "region",
         True,
     ),  # FragmentRenderer._emit_region
+    (
+        "contracts/interactive.py",
+        "interactive",
+        True,
+    ),  # FragmentRenderer._emit_interactive
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
