@@ -1505,6 +1505,10 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.forms import FormStepper
 
         return r.render(FormStepper(sections=("Details", "Review", "Confirm")))
+    if part_id == "kpi":
+        from dazzle.render.fragment.primitives.data import KPI
+
+        return r.render(KPI(label="Open", value="12", trend="up", delta="+2"))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

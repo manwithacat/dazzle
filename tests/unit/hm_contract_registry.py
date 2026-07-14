@@ -474,6 +474,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "form_stepper",
         True,
     ),  # FragmentRenderer._emit_form_stepper
+    (
+        "contracts/kpi.py",
+        "kpi",
+        True,
+    ),  # FragmentRenderer._emit_kpi
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
