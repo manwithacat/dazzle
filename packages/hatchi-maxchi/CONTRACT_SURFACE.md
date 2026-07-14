@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 132 |
+| Modules | 133 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -93,6 +93,7 @@ blast radius (who embeds / refuses this part).
 | `menu` | `menu` | `details.dz-menu, .dz-menu` | details.dz-menu, .dz-menu[] | — |
 | `menubar` | `menubar` | `[data-dz-menubar]` | [data-dz-menubar][data-dz-menubar=present] | — |
 | `message` | `message` | `.dz-message` | .dz-message[] | — |
+| `message_scroller` | `message_scroller` | `.dz-message-scroller` | .dz-message-scroller[] | — |
 | `metrics` | `metrics` | `[data-dz-metric-key]` | [data-dz-metric-key][data-dz-metric-key=present] | MetricTile(delta_direction:Literal:opt; delta_pct:float:opt; delta_period_label:str:opt; delta_sentiment:Literal:opt; delta_value:str:opt; label:str:req; metric_key:str:opt; tone:Literal:opt; value:str:req) |
 | `metrics_grid` | `metrics-grid` | `.dz-metrics-grid` | .dz-metrics-grid[] | — |
 | `money` | `money` | `[data-dz-money]` | [data-dz-money][data-dz-currency=present, data-dz-scale=present] | MoneyField(currency:str:opt; field_id:str:opt; major_display:str:opt; minor_value:int:opt; name:str:req; scale:int:opt) |

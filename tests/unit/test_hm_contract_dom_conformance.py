@@ -1919,6 +1919,21 @@ def _emit_root_only_html(part_id: str) -> str:
             '<span class="dz-marker__pin" aria-hidden="true"></span>'
             '<span class="dz-marker__label">HQ</span></span>'
         )
+    if part_id == "message_scroller":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-147).
+        return (
+            '<div class="dz-message-scroller" data-dz-message-scroller '
+            'role="log" aria-label="Conversation" aria-live="polite" tabindex="0">'
+            '<div class="dz-message" data-dz-message data-dz-from="in">'
+            '<span class="dz-message__media" aria-hidden="true">MR</span>'
+            '<div class="dz-message__body">'
+            '<div class="dz-message__meta">'
+            '<span class="dz-message__author">Maya Reyes</span>'
+            '<time class="dz-message__time" datetime="2026-07-12T10:02">10:02</time>'
+            "</div>"
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
+            "<p>Hello</p></div></div></div></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

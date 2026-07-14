@@ -694,6 +694,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "marker",
         True,
     ),  # HM gallery marker (no FragmentRenderer emit yet)
+    (
+        "contracts/message_scroller.py",
+        "message_scroller",
+        True,
+    ),  # HM gallery message-scroller (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

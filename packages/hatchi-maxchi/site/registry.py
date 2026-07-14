@@ -2901,8 +2901,14 @@ def select(source: str, id: str) -> str:
             notes="PLACEHOLDER — shadcn parity (HMC-042). "
             "<code>role=log</code> + <code>aria-live=polite</code> for "
             "assistive updates. Auto-scroll-to-bottom controller deferred; "
-            "prefer append-at-end + optional host scrollIntoView.",
+            "prefer append-at-end + optional host scrollIntoView. Dual-lock "
+            "root .dz-message-scroller (HMC-147).",
             tags=("media", "chat", "interactive"),
+            contracts=(
+                "contracts/message_scroller.py",
+                "contracts/message.py",
+                "contracts/bubble.py",
+            ),
         ),
         Hyperpart(
             "navigation-menu",
