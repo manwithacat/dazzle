@@ -1404,6 +1404,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                 ),
             ),
             mock="/mock/drawer/detail",
+            contracts=("contracts/drawer.py",),
         ),
         # ── Forms ────────────────────────────────────────────────────────
         Hyperpart(

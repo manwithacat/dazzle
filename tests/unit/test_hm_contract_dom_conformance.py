@@ -1310,6 +1310,10 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.containers import Card
 
         return r.render(Card(body=Text("Card body")))
+    if part_id == "drawer":
+        from dazzle.render.fragment.primitives.containers import Drawer
+
+        return r.render(Drawer(body=Text("Drawer body"), side="right"))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
