@@ -379,6 +379,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "topbar",
         True,
     ),  # FragmentRenderer._emit_topbar
+    (
+        "contracts/sidebar.py",
+        "sidebar",
+        True,
+    ),  # FragmentRenderer._emit_sidebar
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
