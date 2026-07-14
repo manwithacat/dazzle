@@ -105,6 +105,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_dashboard_grid": "dashboard_grid",
     "_emit_workspace_shell": "workspace_shell",
     "_emit_queue_region": "queue_region",
+    "_emit_activity_feed": "activity_feed_list",
 }
 
 

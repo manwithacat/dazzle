@@ -9,13 +9,14 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 109 |
+| Modules | 110 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
 | `action_grid` | `action-grid` | `[data-dz-action-card]` | [data-dz-action-card][data-dz-action-card=present, data-dz-tone=one_of:neutral\|positive\|warning\|destructive\|accent] | ActionCard(count:int\|None:opt; icon_html:str:opt; label:str:req; tone:Literal:opt; url:str:opt) |
 | `action_grid_region` | `action-grid-region` | `.dz-action-grid-region` | .dz-action-grid-region[] | — |
 | `activity_feed` | `activity-feed` | `[data-dz-activity-row]` | [data-dz-activity-row][data-dz-activity-row=present] | ActivityRow(actor:str:opt; description:str:req; time_str:str:req) |
+| `activity_feed_list` | `activity-feed-list` | `.dz-activity-feed` | .dz-activity-feed[] | — |
 | `add_card_row` | `add-card-row` | `.dz-add-card-row` | .dz-add-card-row[] | — |
 | `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
 | `badge` | `badge` | `.dz-badge` | .dz-badge[] | — |

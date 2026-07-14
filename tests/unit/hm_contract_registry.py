@@ -559,6 +559,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "queue_region",
         True,
     ),  # FragmentRenderer._emit_queue_region packing shell
+    (
+        "contracts/activity_feed_list.py",
+        "activity_feed_list",
+        True,
+    ),  # FragmentRenderer._emit_activity_feed packing shell
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
