@@ -59,13 +59,13 @@ entity Contact "Contact":
 
   display_field: email
   id: uuid pk
-  first_name: str(100) required
-  last_name: str(100) required
-  email: email unique required
-  phone: str(20)
+  first_name: str(100) required pii(category=identity)
+  last_name: str(100) required pii(category=identity)
+  email: email unique required pii(category=contact)
+  phone: str(20) pii(category=contact)
   company: str(200)
   job_title: str(150)
-  notes: text
+  notes: text pii(category=freeform)
   is_favorite: bool=false
   created_at: datetime auto_add
   updated_at: datetime auto_update

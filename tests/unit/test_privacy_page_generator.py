@@ -186,6 +186,26 @@ class TestROPA:
         assert "Stripe Payments" in ropa
 
 
+class TestSyncSiteContent:
+    def test_writes_privacy_and_cookies_under_site_content(
+        self, sample_appspec, tmp_path: Path
+    ) -> None:
+        from dazzle.compliance.analytics.privacy_page import sync_privacy_site_content
+
+        artefacts = generate_privacy_page_markdown(sample_appspec)
+        paths = sync_privacy_site_content(tmp_path, artefacts)
+        privacy = paths["privacy"]
+        cookies = paths["cookies"]
+        assert privacy == tmp_path / "site/content/legal/privacy.md"
+        assert cookies == tmp_path / "site/content/legal/cookies.md"
+        assert privacy.is_file()
+        assert cookies.is_file()
+        assert privacy.read_text(encoding="utf-8") == artefacts.privacy_policy
+        assert cookies.read_text(encoding="utf-8") == artefacts.cookie_policy
+        # ROPA is pack-only — not synced to public site content.
+        assert not (tmp_path / "site/content/legal/ropa.md").exists()
+
+
 class TestAutoBlockMerge:
     def test_auto_blocks_replaced(self) -> None:
         existing = """# Privacy

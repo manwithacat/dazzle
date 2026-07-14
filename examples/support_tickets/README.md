@@ -74,9 +74,7 @@ optional `subprocessor` declarations):
 
 ```bash
 dazzle compliance privacy -o docs/privacy
-# Refresh public site routes from the pack:
-cp docs/privacy/privacy_policy.md site/content/legal/privacy.md
-cp docs/privacy/cookie_policy.md  site/content/legal/cookies.md
+# writes docs/privacy/* and (by default) site/content/legal/{privacy,cookies}.md
 ```
 
 | Artefact | Where | Served? |
@@ -87,7 +85,7 @@ cp docs/privacy/cookie_policy.md  site/content/legal/cookies.md
 
 `<!-- DZ-AUTO:… -->` blocks are regenerated; prose outside them is author-owned
 (`--regenerate-facts` preserves edits). Footer links Privacy + Cookies on the
-public site.
+public site. Use `--no-sync-site` if you only want the pack.
 
 ## Key DSL Patterns
 

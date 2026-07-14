@@ -576,3 +576,36 @@ def write_privacy_artefacts(
         "cookie_policy": cookie_path,
         "ropa": ropa_path,
     }
+
+
+# SiteSpec serves markdown from ``site/content/`` (see ContentSourceSpec).
+# Compliance pack lives at ``docs/privacy/``; these are the public-route names.
+SITE_PRIVACY_REL = "site/content/legal/privacy.md"
+SITE_COOKIES_REL = "site/content/legal/cookies.md"
+
+
+def sync_privacy_site_content(
+    project_root: Any,
+    artefacts: PrivacyPageArtefacts,
+) -> dict[str, Any]:
+    """Copy privacy + cookie markdown into SiteSpec-served paths.
+
+    Writes::
+
+        <project_root>/site/content/legal/privacy.md
+        <project_root>/site/content/legal/cookies.md
+
+    ROPA stays pack-only under ``docs/privacy/ropa.md`` (GDPR Art. 30
+    controller record — not a public SaaS marketing URL).
+
+    Returns the written paths keyed by ``privacy`` / ``cookies``.
+    """
+    from pathlib import Path
+
+    root = Path(project_root)
+    privacy_path = root / SITE_PRIVACY_REL
+    cookies_path = root / SITE_COOKIES_REL
+    privacy_path.parent.mkdir(parents=True, exist_ok=True)
+    privacy_path.write_text(artefacts.privacy_policy, encoding="utf-8")
+    cookies_path.write_text(artefacts.cookie_policy, encoding="utf-8")
+    return {"privacy": privacy_path, "cookies": cookies_path}

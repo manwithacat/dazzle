@@ -170,6 +170,14 @@ def privacy_cmd(
             "already exists at the output path."
         ),
     ),
+    sync_site: bool = typer.Option(
+        True,
+        "--sync-site/--no-sync-site",
+        help=(
+            "Also write site/content/legal/{privacy,cookies}.md for SiteSpec "
+            "public routes /privacy and /cookies (default: on)."
+        ),
+    ),
 ) -> None:
     """Generate privacy policy, cookie policy, and ROPA from the AppSpec.
 
@@ -180,42 +188,69 @@ def privacy_cmd(
         <out_dir>/cookie_policy.md
         <out_dir>/ropa.md
 
-    Re-running overwrites the three files by default. With
+    By default also syncs the public-route copies:
+
+        site/content/legal/privacy.md
+        site/content/legal/cookies.md
+
+    (ROPA stays pack-only — controller Art. 30 record, not a marketing URL.)
+
+    Re-running overwrites the three pack files by default. With
     ``--regenerate-facts``, any existing ``privacy_policy.md`` has only its
     DZ-AUTO delimited sections refreshed — author-edited content outside
-    those blocks is preserved.
+    those blocks is preserved. Site copies always receive the full current
+    privacy/cookie text (including merged facts when regenerating).
     """
+    from dataclasses import replace
+
     from dazzle.compliance.analytics import (
         generate_privacy_page_markdown,
         merge_regenerated_into_existing,
+        sync_privacy_site_content,
     )
 
     root = project_dir.resolve()
     spec = load_project_appspec(root)
     artefacts = generate_privacy_page_markdown(spec)
 
-    target_dir = (root / out_dir).resolve()
+    # Resolve --out against the project root (not process CWD) so
+    # `dazzle compliance privacy -p examples/foo` always lands in that project.
+    target_dir = out_dir if out_dir.is_absolute() else (root / out_dir)
+    target_dir = target_dir.resolve()
     target_dir.mkdir(parents=True, exist_ok=True)
 
     privacy_path = target_dir / "privacy_policy.md"
+    privacy_body = artefacts.privacy_policy
     if regenerate_facts and privacy_path.exists():
-        merged = merge_regenerated_into_existing(
+        privacy_body = merge_regenerated_into_existing(
             privacy_path.read_text(encoding="utf-8"),
             artefacts.privacy_policy,
         )
-        privacy_path.write_text(merged, encoding="utf-8")
+        privacy_path.write_text(privacy_body, encoding="utf-8")
     else:
-        privacy_path.write_text(artefacts.privacy_policy, encoding="utf-8")
+        privacy_path.write_text(privacy_body, encoding="utf-8")
 
     (target_dir / "cookie_policy.md").write_text(artefacts.cookie_policy, encoding="utf-8")
     (target_dir / "ropa.md").write_text(artefacts.ropa, encoding="utf-8")
 
+    site_note = ""
+    if sync_site:
+        # Site copies use the same text legal will publish (merged body when
+        # --regenerate-facts was used).
+        site_artefacts = replace(artefacts, privacy_policy=privacy_body)
+        site_paths = sync_privacy_site_content(root, site_artefacts)
+        site_note = (
+            f"\n  [cyan]site[/cyan] {site_paths['privacy'].relative_to(root)}\n"
+            f"  [cyan]site[/cyan] {site_paths['cookies'].relative_to(root)}"
+        )
+
     console.print(
         f"[green]Generated compliance artefacts at[/green] {target_dir}\n"
-        f"  [cyan]privacy_policy.md[/cyan] ({len(artefacts.privacy_policy)} chars)\n"
+        f"  [cyan]privacy_policy.md[/cyan] ({len(privacy_body)} chars)\n"
         f"  [cyan]cookie_policy.md[/cyan] ({len(artefacts.cookie_policy)} chars)\n"
         f"  [cyan]ropa.md[/cyan]           ({len(artefacts.ropa)} chars)\n"
         f"  [dim]blocks: {', '.join(artefacts.block_names)}[/dim]"
+        f"{site_note}"
     )
 
 

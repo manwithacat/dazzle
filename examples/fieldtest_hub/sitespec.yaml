@@ -16,6 +16,19 @@ pages:
         primary_cta:
           label: "Get Started"
           href: "/login"
+  - route: "/cookies"
+    type: markdown
+    title: "Cookie Policy"
+    source:
+      format: md
+      path: legal/cookies.md
+
+legal:
+  privacy:
+    route: "/privacy"
+    source:
+      format: md
+      path: legal/privacy.md
 
 layout:
   nav:
@@ -25,7 +38,13 @@ layout:
       - label: "Sign In"
         href: "/login"
   footer:
-    columns: []
+    columns:
+      - title: Legal
+        links:
+          - label: "Privacy"
+            href: "/privacy"
+          - label: "Cookies"
+            href: "/cookies"
     disclaimer: "FieldTest Hub Demo"
 
 auth_pages:

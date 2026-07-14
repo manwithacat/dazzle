@@ -15,12 +15,14 @@ layout:
       label: "Get Started"
       href: "/app"
   footer:
-    copyright: "2025 AI Ticket Classifier"
-    links:
-      - label: "Privacy"
-        href: "/privacy"
-      - label: "Terms"
-        href: "/terms"
+    columns:
+      - title: Legal
+        links:
+          - label: "Privacy"
+            href: "/privacy"
+          - label: "Cookies"
+            href: "/cookies"
+    disclaimer: "AI Ticket Classifier"
 
 pages:
   - route: "/"
@@ -52,3 +54,16 @@ pages:
         primary_cta:
           label: "Get Started Free"
           href: "/signup"
+  - route: "/cookies"
+    type: markdown
+    title: "Cookie Policy"
+    source:
+      format: md
+      path: legal/cookies.md
+
+legal:
+  privacy:
+    route: "/privacy"
+    source:
+      format: md
+      path: legal/privacy.md

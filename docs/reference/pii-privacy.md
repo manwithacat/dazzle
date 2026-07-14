@@ -55,7 +55,9 @@ Closed vocabulary — the parser rejects any value outside this list.
 
 ### What the annotation does
 
-- **Compile-time**: feeds the privacy page, ROPA, cookie policy generators.
+- **Compile-time**: feeds the privacy page, ROPA, cookie policy generators
+  (`dazzle compliance privacy` → `docs/privacy/*`, and by default
+  `site/content/legal/{privacy,cookies}.md` for public `/privacy` + `/cookies`).
 - **Runtime (analytics)**: PII-annotated values are stripped from events
   unless the surface opts in: `analytics: include_pii: [email]` (per-surface
   whitelist — no blanket app-level opt-in).

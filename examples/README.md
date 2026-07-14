@@ -19,6 +19,21 @@ matters. New-app template notes: monorepo `stems/app-template/`. Agents:
 reconstruct domain judgement from `stems/INDEX.md` before expanding the DSL.
 Gate: `tests/unit/test_stems_layout.py`.
 
+### Privacy / data-protection pack (SaaS legal pages)
+
+Examples with a public `sitespec.yaml` ship a **compliance pack** derived from
+DSL `pii()` annotations:
+
+```bash
+cd examples/<app>
+dazzle compliance privacy -o docs/privacy
+# → docs/privacy/{privacy_policy,cookie_policy,ropa}.md
+# → site/content/legal/{privacy,cookies}.md  (SiteSpec /privacy + /cookies)
+```
+
+Footer **Legal** links point at those routes. ROPA stays pack-only (Art. 30
+controller record). See `support_tickets` for the fullest walkthrough.
+
 ### HM surfaces (HaTchi-MaXchi)
 
 Example UIs are **HM-shaped**: pages compose Hyperparts (see ADR-0053), not

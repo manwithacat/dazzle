@@ -115,9 +115,9 @@ entity Tester "Tester":
   patterns: profile, assignment
   display_field: name
   id: uuid pk
-  name: str(200) required
-  email: str(255) required unique
-  location: str(200) required
+  name: str(200) required pii(category=identity)
+  email: str(255) required unique pii(category=contact)
+  location: str(200) required pii(category=location)
   skill_level: enum[casual,enthusiast,engineer]=casual
   joined_at: datetime auto_add
   active: bool=true

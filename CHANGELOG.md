@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`dazzle compliance privacy --sync-site`** (default on) — writes
+  `site/content/legal/{privacy,cookies}.md` next to the `docs/privacy/` pack
+  so SiteSpec public routes stay in lockstep. `--no-sync-site` for pack-only.
+- **Example fleet privacy packs** — `pii()` annotations + committed
+  `docs/privacy/*` + `/privacy`/`/cookies` SiteSpec routes + Legal footer on
+  `simple_task`, `contact_manager`, `fieldtest_hub`, `ops_dashboard`,
+  `llm_ticket_classifier`, and `support_tickets` (ROPA pack-only).
 - **support_tickets privacy compliance pack** — committed `docs/privacy/`
   (privacy notice, cookie policy, ROPA) from `dazzle compliance privacy`,
   `pii(category=…)` on User + SlaWaiver identity/contact fields, public
