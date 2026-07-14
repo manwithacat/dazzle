@@ -1444,6 +1444,10 @@ def _emit_root_only_html(part_id: str) -> str:
         return r.render(Split(start=Text("Start"), end=Text("End")))
     if part_id == "text":
         return r.render(Text("Hello"))
+    if part_id == "icon":
+        from dazzle.render.fragment.primitives.content import Icon
+
+        return r.render(Icon(name="check", size="md"))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

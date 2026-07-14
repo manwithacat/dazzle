@@ -419,6 +419,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "text",
         True,
     ),  # FragmentRenderer._emit_text
+    (
+        "contracts/icon.py",
+        "icon",
+        True,
+    ),  # FragmentRenderer._emit_icon
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

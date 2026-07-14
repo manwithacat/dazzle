@@ -77,6 +77,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_heading": "heading",
     "_emit_split": "split",
     "_emit_text": "text",
+    "_emit_icon": "icon",
 }
 
 
