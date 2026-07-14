@@ -394,6 +394,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "surface",
         True,
     ),  # FragmentRenderer._emit_surface
+    (
+        "contracts/stack.py",
+        "stack",
+        True,
+    ),  # FragmentRenderer._emit_stack
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

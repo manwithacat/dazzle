@@ -1426,6 +1426,10 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.containers import Surface
 
         return r.render(Surface(header=Text("Header"), body=Text("Body")))
+    if part_id == "stack":
+        from dazzle.render.fragment.primitives.layout import Stack
+
+        return r.render(Stack(children=(Text("A"), Text("B")), gap="md"))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

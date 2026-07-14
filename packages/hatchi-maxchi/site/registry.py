@@ -3358,6 +3358,7 @@ def select(source: str, id: str) -> str:
             "token scale); unset = <code>md</code>. Nest freely: a stack inside a "
             "stack is the normal way to vary rhythm between groups.",
             tags=("layout",),
+            contracts=("contracts/stack.py",),
         ),
         Hyperpart(
             "cluster",
