@@ -1957,6 +1957,9 @@ def _emit_root_only_html(part_id: str) -> str:
             '<label class="hm-inline">'
             '<input type="checkbox" class="dz-checkbox" checked> Checkbox</label>'
         )
+    if part_id == "kbd":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-151).
+        return '<kbd class="dz-kbd">⌘K</kbd>'
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

@@ -2426,8 +2426,10 @@ def select(source: str, id: str) -> str:
             "<strong>spatially secondary</strong> — layout roles "
             "<em>adjacent</em> (flex gap next to a label) vs <em>trailing</em> "
             "(row end via <code>margin-inline-start: auto</code>). Not disclosure "
-            "iconography. Styles in <code>hm-core.css</code>; pure presentation.",
+            "iconography. Styles in <code>hm-core.css</code>; pure presentation. "
+            "Dual-lock root .dz-kbd (HMC-151).",
             tags=("docs",),
+            contracts=("contracts/kbd.py",),
             guidance=Guidance(
                 seams=(
                     '`<kbd class="dz-kbd">` — always the house chip, never bare Unicode',

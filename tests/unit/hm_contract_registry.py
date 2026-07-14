@@ -714,6 +714,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "controls",
         True,
     ),  # HM gallery selection controls (no FragmentRenderer emit yet)
+    (
+        "contracts/kbd.py",
+        "kbd",
+        True,
+    ),  # HM gallery kbd (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
