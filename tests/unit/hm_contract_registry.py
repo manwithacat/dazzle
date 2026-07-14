@@ -499,6 +499,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "csv_export_button",
         True,
     ),  # FragmentRenderer._emit_csv_export_button
+    (
+        "contracts/sort_header.py",
+        "sort_header",
+        True,
+    ),  # FragmentRenderer._emit_sort_header
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

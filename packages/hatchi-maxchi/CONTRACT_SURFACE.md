@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 97 |
+| Modules | 98 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -93,6 +93,7 @@ blast radius (who embeds / refuses this part).
 | `skeleton` | `skeleton` | `[data-dz-skeleton]` | [data-dz-skeleton][data-dz-skeleton=present] | Skeleton(body_html:str:opt; lines:int:opt) |
 | `skip_link` | `skip-link` | `.dz-skip-link` | .dz-skip-link[] | — |
 | `slider` | `slider` | `[data-dz-slider]` | [data-dz-slider][]; [data-dz-range-value][] | — |
+| `sort_header` | `sort-header` | `.dz-list-sort-link` | .dz-list-sort-link[] | — |
 | `sparkline` | `sparkline` | `[data-dz-sparkline]` | [data-dz-sparkline][data-dz-sparkline=present] | Sparkline(empty_message:str:opt; points:list[tuple[str,float]]:opt) |
 | `split` | `split` | `.dz-split` | .dz-split[] | — |
 | `stack` | `stack` | `.dz-stack` | .dz-stack[] | — |
