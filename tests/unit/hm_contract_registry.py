@@ -404,6 +404,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "cluster",
         True,
     ),  # FragmentRenderer._emit_row → .dz-cluster
+    (
+        "contracts/heading.py",
+        "heading",
+        True,
+    ),  # FragmentRenderer._emit_heading
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

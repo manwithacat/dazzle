@@ -74,6 +74,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_surface": "surface",
     "_emit_stack": "stack",
     "_emit_row": "cluster",  # Row → .dz-cluster Hyperpart
+    "_emit_heading": "heading",
 }
 
 
