@@ -90,6 +90,48 @@ matching markup from your endpoint. (Vocabulary from *Hypermedia Systems*:
 a request/response round-trip is a "hypermedia exchange"; the individual
 `hx-*` control that initiates it is an "affordance".)
 
+### Dual-locks — if Zod is for JSON, this is for the fragment
+
+If you come from React / SPA land, you already have tools for *half* of this
+problem — just not under one name, and not usually aimed at **HTML as the
+wire format**.
+
+| You're used to… | Rough HM analogue |
+|-----------------|-------------------|
+| **Zod / Yup / PropTypes** — "this value matches a schema" | **Schema half** of a dual-lock: a Pydantic model for host-trusted props (when the part has real data, not only a root) |
+| **Testing Library / Playwright** — `getByRole`, `data-testid` asserts | **DOM half**: `DOM_CONTRACT` — root selector + required attrs (`data-dz-*`, stable classes) checked against emitted HTML |
+| **TS props on a component** | "What the host may put in" — but enforced on **server-rendered markup**, not a client component instance |
+| **Storybook + Chromatic** | Gallery exemplars + optional visual smoke; dual-lock is the **structural** CI gate, not the pixel judge |
+| **OpenAPI for endpoints** | Closer to the **exchange contract** above (request/response). Dual-lock is the *partial* side |
+
+A **dual-lock** is the pair of gates that freeze **one Hyperpart** so design
+system and host (e.g. [Dazzle](https://github.com/manwithacat/dazzle)) cannot
+silently drift:
+
+1. **DOM contract** (`contracts/<part>.py` → `DOM_CONTRACT`) — the markup shape
+   is machine-checkable. Exemplars and host emissions must `validate_dom`.
+2. **Schema** (optional Pydantic models + `render()`) — the data shape that
+   produces that markup. Present when there is a real emit path; absent on
+   many gallery substrates (**DOM-only** dual-locks).
+
+**"Dual"** is load-bearing only when both halves exist (**schema+DOM**). A
+**DOM-only** dual-lock is still a first-class CI contract on the stable root —
+think "public DOM API for this part" — not a half-finished Zod schema.
+
+**Why invent a term?** Neither half is novel. The *pairing* is what SPA
+mental models under-name: in React the component *owns* the DOM, so a props
+schema is enough; the tree re-derives markup. In hypermedia, **the fragment
+is the API** — clients swap HTML, they do not re-render from a client state
+graph. Freezing **data shape + markup shape** (or at least the stable root)
+is how multi-host design systems and coding agents stay honest under
+velocity. Inventory: [`DUAL_LOCK_COVERAGE.md`](./DUAL_LOCK_COVERAGE.md);
+authoring path: [`contracts/AUTHORING.md`](./contracts/AUTHORING.md).
+
+One sentence for a SPA colleague:
+
+> Zod contracts JSON. A dual-lock contracts a Hyperpart's **HTML** (and,
+> when present, the model that renders it) — both checked in CI.
+
 ### One unit, distributed by the build — the manifest keeps it legible
 
 A Hyperpart's code is physically scattered *by build necessity*: its CSS
@@ -129,7 +171,7 @@ layers, invention ladder). Procedures: `docs/agent/`. Constitution:
 |------|--------|---------|
 | `tools/consumer_map.py --write` | `CONSUMER_MAP.md` | Reverse composition index + explicit non-compositions |
 | `tools/contract_surface.py --write` | `CONTRACT_SURFACE.md` | DOM/model surface breaking-change detector |
-| `tools/dual_lock_coverage.py --write` | `DUAL_LOCK_COVERAGE.md` | Dual-lock tier inventory |
+| `tools/dual_lock_coverage.py --write` | `DUAL_LOCK_COVERAGE.md` | Dual-lock inventory (schema+DOM vs DOM-only) — see [Dual-locks](#dual-locks--if-zod-is-for-json-this-is-for-the-fragment) |
 
 `tests/test_hyperpart_cohesion.py` fails CI if the manifest and the markers
 disagree (unowned controller, orphan marker, interactive Hyperpart with no
