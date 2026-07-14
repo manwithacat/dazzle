@@ -1594,6 +1594,15 @@ def _emit_root_only_html(part_id: str) -> str:
                 )
             )
         )
+    if part_id == "action_grid_region":
+        from dazzle.render.fragment.primitives.data import ActionCard, ActionGrid
+
+        return r.render(
+            ActionGrid(
+                cards=(ActionCard(label="New", url="/create", tone="neutral", icon="plus"),),
+                empty_message="No actions",
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

@@ -534,6 +534,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "detail_grid",
         True,
     ),  # FragmentRenderer._emit_detail_grid
+    (
+        "contracts/action_grid_region.py",
+        "action_grid_region",
+        True,
+    ),  # FragmentRenderer._emit_action_grid packing shell
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
