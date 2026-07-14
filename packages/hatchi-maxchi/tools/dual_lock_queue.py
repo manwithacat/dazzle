@@ -193,9 +193,13 @@ def _gallery_with_contracts() -> set[str]:
         return set()
     text = SITE_REGISTRY.read_text(encoding="utf-8")
     contracted: set[str] = set()
+    # Do not span across the next Hyperpart( — non-greedy [\s\S]*? would
+    # otherwise attribute a later part's contracts= to an earlier uncontracted
+    # Hyperpart (false positive) and skip the true owner (false negative).
     for m in re.finditer(
-        r'Hyperpart\(\s*"([a-z0-9-]+)"[\s\S]*?contracts=\(([^)]*)\)',
+        r'Hyperpart\(\s*"([a-z0-9-]+)"(?:(?!Hyperpart\().)*?contracts=\(([^)]*)\)',
         text,
+        flags=re.DOTALL,
     ):
         if "contracts/" in m.group(2):
             contracted.add(m.group(1))

@@ -1448,13 +1448,17 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "invalid field needs no modifier class — the red border keys off "
             "<code>aria-invalid=&quot;true&quot;</code>, the same attribute assistive tech reads. "
             "The colour group uses <code>data-dz-color-group</code> so <code>dz-color.js</code> "
-            "can mirror the swatch into the hex readout (contract: contracts/color.py).",
+            "can mirror the swatch into the hex readout (contract: contracts/color.py). "
+            "Dual-lock: form triad <code>contracts/form_field.py</code> + colour "
+            "<code>contracts/color.py</code> (HMC-139).",
             tags=("forms",),
             # The colour widget's hex-readout mirror rides the field family
             # (delegated input listener on .dz-form-color-input; Tier F4e —
             # replaced the last inline Alpine x-data straggler).
             extensions=("controllers/dz-color.js",),
-            contracts=("contracts/color.py",),
+            # Dual-lock: form triad = form_field (.dz-form-field); colour swatch
+            # = color (HMC-139). Gallery id "field" maps to form_field stem.
+            contracts=("contracts/form_field.py", "contracts/color.py"),
         ),
         Hyperpart(
             "slider",
