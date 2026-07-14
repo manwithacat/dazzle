@@ -15,13 +15,11 @@ Consumed by: `/improve hm-convergence` → strategy `dual_lock_expand`.
 
 | # | stem | kind | pri | dual-lock | contract | css | gallery | emitters | action |
 |--:|------|------|----:|-----------|:--------:|:---:|:-------:|----------|--------|
-| 1 | `message` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 2 | `message_scroller` | gallery_uncontracted | 35 | missing | no | yes | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 3 | `auto_grid` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 4 | `breadcrumb` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 5 | `center` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 6 | `field` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
-| 7 | `separator` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 1 | `auto_grid` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 2 | `breadcrumb` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 3 | `center` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 4 | `field` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
+| 5 | `separator` | gallery_uncontracted | 50 | missing | no | no | yes | `—` | Optional: scaffold root-only DOM contract when a Dazzle emission path exists; otherwise leave as CSS-only gallery surface. |
 
 ## Kind legend
 
@@ -32,4 +30,4 @@ Consumed by: `/improve hm-convergence` → strategy `dual_lock_expand`.
 | `emitter_uncontracted` | FragmentRenderer `_emit_*` ready, no contract |
 | `gallery_uncontracted` | Registry Hyperpart without `contracts=` |
 
-**Queue depth:** 7 candidates (showing 7).
+**Queue depth:** 5 candidates (showing 5).

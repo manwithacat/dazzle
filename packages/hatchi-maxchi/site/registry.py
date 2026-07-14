@@ -2839,8 +2839,10 @@ def select(source: str, id: str) -> str:
             "</div></div></div>",
             notes="PLACEHOLDER — shadcn parity (HMC-041). Composes "
             "bubble. Live chat = server re-render / OOB append into "
-            "message-scroller, not client message state.",
+            "message-scroller, not client message state. Dual-lock root "
+            ".dz-message (HMC-134).",
             tags=("media", "chat"),
+            contracts=("contracts/message.py",),
         ),
         Hyperpart(
             "message-scroller",

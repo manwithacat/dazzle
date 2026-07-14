@@ -634,6 +634,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "hover_card",
         True,
     ),  # HM gallery hover-card (no FragmentRenderer emit yet)
+    (
+        "contracts/message.py",
+        "message",
+        True,
+    ),  # HM gallery message (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
