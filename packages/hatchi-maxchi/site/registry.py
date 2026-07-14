@@ -261,6 +261,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<button class="dz-button" data-dz-variant="ghost">Learn more</button>'
             '<button class="dz-button" data-dz-variant="destructive">Delete</button>'
             "</div>",
+            contracts=("contracts/button.py",),
         ),
         Hyperpart(
             "badge",
