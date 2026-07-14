@@ -79,6 +79,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_text": "text",
     "_emit_icon": "icon",
     "_emit_link": "link",
+    "_emit_inline_edit": "inline_edit",
 }
 
 

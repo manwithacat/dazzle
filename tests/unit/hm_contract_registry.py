@@ -429,6 +429,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "link",
         True,
     ),  # FragmentRenderer._emit_link
+    (
+        "contracts/inline_edit.py",
+        "inline_edit",
+        True,
+    ),  # FragmentRenderer._emit_inline_edit
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
