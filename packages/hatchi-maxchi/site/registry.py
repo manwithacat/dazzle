@@ -2813,8 +2813,10 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-040). "
             "<code>data-dz-from=in|out</code> picks surface colour. Prefer "
-            "message Hyperpart for avatar + meta; bubble is the content shell only.",
+            "message Hyperpart for avatar + meta; bubble is the content shell only. "
+            "Dual-lock root .dz-bubble (HMC-141).",
             tags=("media", "chat"),
+            contracts=("contracts/bubble.py",),
         ),
         Hyperpart(
             "message",

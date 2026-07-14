@@ -1861,6 +1861,12 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="dz-alert__description">'
             "Your card ending 4242 expires next month.</div></div></div>"
         )
+    if part_id == "bubble":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-141).
+        return (
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
+            "<p>Can we reschedule the walkthrough to Thursday?</p></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

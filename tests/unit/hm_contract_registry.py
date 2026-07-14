@@ -664,6 +664,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "alert",
         True,
     ),  # HM gallery alert (no FragmentRenderer emit yet)
+    (
+        "contracts/bubble.py",
+        "bubble",
+        True,
+    ),  # HM gallery bubble (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
