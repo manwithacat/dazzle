@@ -544,6 +544,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "pivot_table",
         True,
     ),  # FragmentRenderer._emit_pivot_table
+    (
+        "contracts/dashboard_grid.py",
+        "dashboard_grid",
+        True,
+    ),  # FragmentRenderer._emit_dashboard_grid
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
