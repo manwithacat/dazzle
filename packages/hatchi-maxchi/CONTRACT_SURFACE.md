@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 110 |
+| Modules | 111 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -69,6 +69,7 @@ blast radius (who embeds / refuses this part).
 | `inline_edit` | `inline-edit` | `.dz-inline-edit` | .dz-inline-edit[] | — |
 | `interactive` | `interactive` | `.dz-interactive` | .dz-interactive[] | — |
 | `kanban` | `kanban` | `[data-dz-kanban-card]` | [data-dz-kanban-card][data-dz-kanban-card=present] | KanbanCard(attention_level:str:opt; attention_message:str:opt; fields_html:str:opt; title:str:req) |
+| `kanban_board` | `kanban-board` | `.dz-kanban` | .dz-kanban[] | — |
 | `kpi` | `kpi` | `.dz-kpi` | .dz-kpi[] | — |
 | `layout_grid` | `layout-grid` | `.dz-grid` | .dz-grid[] | — |
 | `link` | `link` | `.dz-link` | .dz-link[] | — |

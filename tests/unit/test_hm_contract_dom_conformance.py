@@ -1656,6 +1656,11 @@ def _emit_root_only_html(part_id: str) -> str:
                 empty_message="none",
             )
         )
+    if part_id == "kanban_board":
+        from dazzle.render.fragment.primitives.content import Text
+        from dazzle.render.fragment.primitives.data import KanbanBoard
+
+        return r.render(KanbanBoard(columns=(("todo", (Text(body="A"),)),)))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
