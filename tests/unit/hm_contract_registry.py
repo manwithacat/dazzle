@@ -434,6 +434,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "inline_edit",
         True,
     ),  # FragmentRenderer._emit_inline_edit
+    (
+        "contracts/layout_grid.py",
+        "layout_grid",
+        True,
+    ),  # FragmentRenderer._emit_grid → .dz-grid (not data-dz-grid)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
