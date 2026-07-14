@@ -1734,6 +1734,16 @@ def _emit_root_only_html(part_id: str) -> str:
             '<p data-dz-carousel-status aria-live="polite">Slide 1 of 1</p>'
             "</div>"
         )
+    if part_id == "menubar":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-126).
+        return (
+            '<div class="dz-menubar" data-dz-menubar role="navigation" aria-label="App">'
+            '<details class="dz-menubar__item">'
+            '<summary class="dz-menubar__trigger">File</summary>'
+            '<div class="dz-menubar__panel" role="menu" aria-label="File">'
+            '<a href="#" role="menuitem">New</a>'
+            "</div></details></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

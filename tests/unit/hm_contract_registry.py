@@ -594,6 +594,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "carousel",
         True,
     ),  # HM gallery carousel (no FragmentRenderer emit yet)
+    (
+        "contracts/menubar.py",
+        "menubar",
+        True,
+    ),  # HM gallery menubar (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
