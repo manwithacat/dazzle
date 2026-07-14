@@ -61,6 +61,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_card": "card",
     "_emit_drawer": "drawer",
     "_emit_toolbar": "toolbar",
+    "_emit_card_picker": "card_picker",
 }
 
 

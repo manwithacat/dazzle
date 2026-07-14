@@ -1324,6 +1324,22 @@ def _emit_root_only_html(part_id: str) -> str:
                 actions=(Button(label="New", variant="primary"),),
             )
         )
+    if part_id == "card_picker":
+        from dazzle.render.fragment.primitives.data import CardPicker, CardPickerEntry
+
+        return r.render(
+            CardPicker(
+                catalog_json="[]",
+                entries=(
+                    CardPickerEntry(
+                        name="metrics",
+                        title="Metrics",
+                        entity="Ticket",
+                        display="KPI",
+                    ),
+                ),
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
