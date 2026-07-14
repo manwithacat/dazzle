@@ -484,6 +484,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "file_upload",
         True,
     ),  # FragmentRenderer._emit_file_upload
+    (
+        "contracts/ref_picker.py",
+        "ref_picker",
+        True,
+    ),  # FragmentRenderer._emit_ref_picker
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

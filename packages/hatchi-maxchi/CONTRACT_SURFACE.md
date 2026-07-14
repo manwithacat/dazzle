@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 94 |
+| Modules | 95 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -82,6 +82,7 @@ blast radius (who embeds / refuses this part).
 | `progress` | `progress-region` | `[data-dz-progress-region]` | [data-dz-progress-region][data-dz-progress-region=present] | Progress(complete_count:int:opt; complete_pct:float:opt; stages:list[ProgressStage]:opt; total:int:opt); ProgressStage(complete:bool:opt; count:int:opt; name:str:req) |
 | `queue` | `queue` | `[data-dz-queue-row]` | [data-dz-queue-row][data-dz-queue-row=present] | QueueRow(actions_html:str:opt; attention_level:str:opt; attention_message:str:opt; badges_html:str:opt; date_html:str:opt; title:str:req) |
 | `radar` | `radar` | `[data-dz-radar]` | [data-dz-radar][data-dz-radar=present] | Radar(axes:list[RadarAxis]:opt; empty_message:str:opt; label:str:opt; peak_display:str:opt; svg_html:str:opt); RadarAxis(label:str:req; value:float:opt) |
+| `ref_picker` | `ref-picker` | `.dz-ref-picker` | .dz-ref-picker[] | — |
 | `region` | `region` | `.dz-region` | .dz-region[] | — |
 | `related_group` | `related-group` | `.dz-related-group` | .dz-related-group[] | — |
 | `search_box` | `search-box` | `[data-dz-search-box]` | [data-dz-search-box][data-dz-search-box=present] | SearchBox(coaching_message:str:opt; endpoint:str:opt; label:str:opt; name:str:opt; placeholder:str:opt; results_html:str:opt) |
