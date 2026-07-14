@@ -1561,6 +1561,17 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.navigation import NavItem
 
         return r.render(NavItem(label="Home", href=URL("/app/home"), active=True))
+    if part_id == "nav_group":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.navigation import NavGroup, NavItem
+
+        return r.render(
+            NavGroup(
+                label="Ops",
+                items=(NavItem(label="Home", href=URL("/app/home")),),
+                collapsed=False,
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

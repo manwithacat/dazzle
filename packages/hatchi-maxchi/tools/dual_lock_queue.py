@@ -97,6 +97,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_column_visibility_menu": "column_visibility_menu",
     "_emit_metrics_grid": "metrics_grid",
     "_emit_nav_item": "nav_item",
+    "_emit_nav_group": "nav_group",
 }
 
 

@@ -519,6 +519,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "nav_item",
         True,
     ),  # FragmentRenderer._emit_nav_item
+    (
+        "contracts/nav_group.py",
+        "nav_group",
+        True,
+    ),  # FragmentRenderer._emit_nav_group
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
