@@ -1960,6 +1960,14 @@ def _emit_root_only_html(part_id: str) -> str:
     if part_id == "kbd":
         # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-151).
         return '<kbd class="dz-kbd">⌘K</kbd>'
+    if part_id == "sidebar_layout":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-152).
+        return (
+            '<div class="dz-sidebar-layout" style="--dz-sidebar-width: 12rem">'
+            '<div class="hm-demo-box">Side (12rem)</div>'
+            '<div class="hm-demo-box">Content</div>'
+            "</div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

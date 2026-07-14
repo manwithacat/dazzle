@@ -3443,8 +3443,10 @@ def select(source: str, id: str) -> str:
             "when the content can't hold that minimum on the line, it wraps to a "
             'full-width row. <code>data-dz-side="end"</code> puts the side '
             "after the content. No media query: the breakpoint is the CONTENT'S "
-            "minimum, so the same markup works in a page, a card, or a drawer.",
+            "minimum, so the same markup works in a page, a card, or a drawer. "
+            "Dual-lock root .dz-sidebar-layout (HMC-152).",
             tags=("layout",),
+            contracts=("contracts/sidebar_layout.py",),
         ),
         Hyperpart(
             "auto-grid",

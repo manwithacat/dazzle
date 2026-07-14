@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 137 |
+| Modules | 138 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -123,6 +123,7 @@ blast radius (who embeds / refuses this part).
 | `search_select` | `search-select` | `[data-dz-widget="search_select"]` | [data-dz-widget="search_select"][] | SearchResultRow(id:str:req; media_html:str:opt; name:str:req; results_target:str:req; secondary:str:opt; select_url:str:req); SearchSelectShell(blur_grace_ms:int:opt; confirm_hold_ms:int:opt; debounce_ms:int:opt; field_id:str:opt; field_name:str:req; initial_label:str:opt; initial_value:str:opt; input_id:str:opt; placeholder:str:opt; prompt:str:opt; results_id:str:opt; search_url:str:req) |
 | `separator` | `separator` | `.dz-separator, .dz-separator--vertical` | .dz-separator, .dz-separator--vertical[] | — |
 | `sidebar` | `sidebar` | `.dz-sidebar` | .dz-sidebar[] | — |
+| `sidebar_layout` | `sidebar_layout` | `.dz-sidebar-layout` | .dz-sidebar-layout[] | — |
 | `skeleton` | `skeleton` | `[data-dz-skeleton]` | [data-dz-skeleton][data-dz-skeleton=present] | Skeleton(body_html:str:opt; lines:int:opt) |
 | `skip_link` | `skip-link` | `.dz-skip-link` | .dz-skip-link[] | — |
 | `slider` | `slider` | `[data-dz-slider]` | [data-dz-slider][]; [data-dz-range-value][] | — |
