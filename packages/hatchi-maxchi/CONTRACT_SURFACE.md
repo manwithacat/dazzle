@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 108 |
+| Modules | 109 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -90,6 +90,7 @@ blast radius (who embeds / refuses this part).
 | `profile_card` | `profile-card` | `[data-dz-profile-card]` | [data-dz-profile-card][data-dz-profile-card=present] | ProfileCard(avatar_url:str:opt; facts:list[str]:opt; initials:str:opt; primary:str:opt; secondary:str:opt; stats:list[tuple[str,str]]:opt) |
 | `progress` | `progress-region` | `[data-dz-progress-region]` | [data-dz-progress-region][data-dz-progress-region=present] | Progress(complete_count:int:opt; complete_pct:float:opt; stages:list[ProgressStage]:opt; total:int:opt); ProgressStage(complete:bool:opt; count:int:opt; name:str:req) |
 | `queue` | `queue` | `[data-dz-queue-row]` | [data-dz-queue-row][data-dz-queue-row=present] | QueueRow(actions_html:str:opt; attention_level:str:opt; attention_message:str:opt; badges_html:str:opt; date_html:str:opt; title:str:req) |
+| `queue_region` | `queue-region` | `.dz-queue-region` | .dz-queue-region[] | — |
 | `radar` | `radar` | `[data-dz-radar]` | [data-dz-radar][data-dz-radar=present] | Radar(axes:list[RadarAxis]:opt; empty_message:str:opt; label:str:opt; peak_display:str:opt; svg_html:str:opt); RadarAxis(label:str:req; value:float:opt) |
 | `ref_picker` | `ref-picker` | `.dz-ref-picker` | .dz-ref-picker[] | — |
 | `region` | `region` | `.dz-region` | .dz-region[] | — |

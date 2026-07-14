@@ -1632,6 +1632,21 @@ def _emit_root_only_html(part_id: str) -> str:
                 fold_count=0,
             )
         )
+    if part_id == "queue_region":
+        from dazzle.render.fragment.primitives.data import QueueRegion
+
+        return r.render(
+            QueueRegion(
+                rows=(),
+                total=0,
+                metrics=(),
+                transitions=(),
+                queue_status_field="status",
+                queue_api_endpoint="/api/q",
+                region_name="review",
+                empty_message="empty",
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

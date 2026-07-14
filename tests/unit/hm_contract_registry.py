@@ -554,6 +554,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "workspace_shell",
         True,
     ),  # FragmentRenderer._emit_workspace_shell
+    (
+        "contracts/queue_region.py",
+        "queue_region",
+        True,
+    ),  # FragmentRenderer._emit_queue_region packing shell
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
