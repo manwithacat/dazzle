@@ -584,6 +584,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "data_list_scroll",
         True,
     ),  # FragmentRenderer._emit_data_list_scroll
+    (
+        "contracts/queue_filters.py",
+        "queue_filters",
+        True,
+    ),  # FragmentRenderer._emit_filter_bar
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

@@ -1704,6 +1704,24 @@ def _emit_root_only_html(part_id: str) -> str:
                 paginated=False,
             )
         )
+    if part_id == "queue_filters":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.data import FilterBar, FilterColumn
+
+        return r.render(
+            FilterBar(
+                endpoint=URL("/api/list"),
+                region_name="tickets",
+                columns=(
+                    FilterColumn(
+                        key="status",
+                        label="Status",
+                        options=(("open", "Open"),),
+                        selected="",
+                    ),
+                ),
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
