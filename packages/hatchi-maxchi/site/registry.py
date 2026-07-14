@@ -3821,6 +3821,7 @@ def select(source: str, id: str) -> str:
             "rows, so badges/dates match.",
             tags=("data",),
             composes=("tabs", "badge"),
+            contracts=("contracts/related_group.py",),
         ),
         Hyperpart(
             "metrics",

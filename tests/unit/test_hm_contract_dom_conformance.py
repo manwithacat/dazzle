@@ -1404,6 +1404,24 @@ def _emit_root_only_html(part_id: str) -> str:
                 items=(NavItem(label="Home", href=URL("/app"), active=True),),
             )
         )
+    if part_id == "related_group":
+        from dazzle.render.fragment.primitives.data import RelatedGroup, RelatedTab
+
+        return r.render(
+            RelatedGroup(
+                group_id="invoices",
+                label="Invoices",
+                display="status_cards",
+                tabs=(
+                    RelatedTab(
+                        tab_id="open",
+                        label="Open",
+                        headers=("Number", "Total", "Status"),
+                        rows=(("INV-1", "£100", "Open"),),
+                    ),
+                ),
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
