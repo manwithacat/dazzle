@@ -1387,6 +1387,10 @@ def _emit_root_only_html(part_id: str) -> str:
                 ),
             )
         )
+    if part_id == "skip_link":
+        from dazzle.render.fragment.primitives.navigation import SkipLink
+
+        return r.render(SkipLink(target="#main", text="Skip to content"))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

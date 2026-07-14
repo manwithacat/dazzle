@@ -66,6 +66,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_bulk_action_toolbar": "bulk_actions",
     "_emit_workspace_toolbar": "workspace_toolbar",
     "_emit_list_filter_bar": "filter_bar",
+    "_emit_skip_link": "skip_link",
 }
 
 
