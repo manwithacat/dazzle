@@ -83,6 +83,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_grid": "layout_grid",  # layout Grid → .dz-grid (not data table grid)
     "_emit_region": "region",
     "_emit_interactive": "interactive",
+    "_emit_field": "form_field",
 }
 
 

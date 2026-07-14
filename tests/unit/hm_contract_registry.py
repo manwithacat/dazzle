@@ -449,6 +449,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "interactive",
         True,
     ),  # FragmentRenderer._emit_interactive
+    (
+        "contracts/form_field.py",
+        "form_field",
+        True,
+    ),  # FragmentRenderer._emit_field
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
