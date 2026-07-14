@@ -92,6 +92,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_file_upload": "file_upload",
     "_emit_ref_picker": "ref_picker",
     "_emit_rich_text": "rich_text",
+    "_emit_csv_export_button": "csv_export_button",
 }
 
 

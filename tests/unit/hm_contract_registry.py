@@ -494,6 +494,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "rich_text",
         True,
     ),  # FragmentRenderer._emit_rich_text
+    (
+        "contracts/csv_export_button.py",
+        "csv_export_button",
+        True,
+    ),  # FragmentRenderer._emit_csv_export_button
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

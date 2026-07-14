@@ -1525,6 +1525,17 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.forms import RichTextField
 
         return r.render(RichTextField(name="body", label="Body"))
+    if part_id == "csv_export_button":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.data import CsvExportButton
+
+        return r.render(
+            CsvExportButton(
+                endpoint=URL("/api/export"),
+                filename="rows.csv",
+                label="Export CSV",
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
