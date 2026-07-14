@@ -1947,6 +1947,9 @@ def _emit_root_only_html(part_id: str) -> str:
             'class="dz-auth-input-code" maxlength="6" placeholder="000000">'
             "</div></form></div>"
         )
+    if part_id == "avatar":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-149).
+        return '<span class="dz-avatar" data-dz-size="lg">HM</span>'
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

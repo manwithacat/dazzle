@@ -3163,6 +3163,8 @@ def select(source: str, id: str) -> str:
             '<div class="hm-demo-row">'
             '<span class="dz-avatar-group"><span class="dz-avatar">JD</span><span class="dz-avatar">AK</span><span class="dz-avatar">+3</span></span>'
             '<span class="dz-avatar" data-dz-size="lg">HM</span></div>',
+            notes="Dual-lock root .dz-avatar (HMC-149).",
+            contracts=("contracts/avatar.py",),
         ),
         Hyperpart(
             "progress",

@@ -704,6 +704,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "two_factor",
         True,
     ),  # HM gallery two-factor panel (no FragmentRenderer emit yet)
+    (
+        "contracts/avatar.py",
+        "avatar",
+        True,
+    ),  # HM gallery avatar (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
