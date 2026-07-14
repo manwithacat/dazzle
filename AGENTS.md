@@ -54,8 +54,8 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle/http/` | **HTTP runtime** (FastAPI: API, auth, channels, events, grants). Renamed from `back/` in ADR-0041 (2026-06-20). |
 | `src/dazzle/page/` | **Page-orchestration layer** — page/route renderers (`*_renderer.py`), converters, + static JS/CSS assets. Calls *down* into `render/` (the typed Fragment substrate → HTML via `dazzle.render.html.esc`). No Jinja2 since #1042 (ADR-0023). Renamed from `ui/` in ADR-0041. |
 | `src/dazzle/render/` | Pure rendering: AppSpec → Fragment → HTML, no I/O (serverless-testable). The four-layer stack is `http → page → render → core` (ADR-0038/0041). |
-| `packages/hatchi-maxchi/` | **Frontend design system** (Hyperparts, dual-locks, component CSS/controllers). Own `stems/` + `AGENTS.md`. New UI chrome goes here — not under `dazzle.page` (ADR-0053 / #1585). Standalone CI must stay green — Dazzle CI job **HaTchi-MaXchi standalone CI (mirror)** uses `scripts/hm_standalone_ci_status.py` so a red HM main fails Dazzle transitively |
-| `src/dazzle/page/` | Page host + **product glue** (CSRF, toast, auth islands, theme shell CSS) — not a second component library. Package was `dazzle_ui` pre-ADR-0041; that path is dead |
+| `packages/hatchi-maxchi/` | **Frontend design system** (Hyperparts, dual-locks, component CSS/controllers, gallery). Own `stems/` + `AGENTS.md`. **Pages compose Hyperparts** from the gallery; novel UX is invented *inside* HM shapes (invention ladder + dual-lock), not as one-offs under page (ADR-0053 / #1585). Standalone CI must stay green — Dazzle CI job **HaTchi-MaXchi standalone CI (mirror)** uses `scripts/hm_standalone_ci_status.py` so a red HM main fails Dazzle transitively |
+| `src/dazzle/page/` | Page **host** + residual product glue (CSRF, toast host, analytics, capability islands). **Not** a second component library — user-visible chrome stranded here should be **promoted** to Hyperparts. Package was `dazzle_ui` pre-ADR-0041; that path is dead |
 | `examples/*/` | Apps; each should carry `stems/` for domain judgement |
 
 ## Project Layout Convention
