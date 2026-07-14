@@ -1548,6 +1548,10 @@ def _emit_root_only_html(part_id: str) -> str:
                 region_name="tickets",
             )
         )
+    if part_id == "column_visibility_menu":
+        from dazzle.render.fragment.primitives.data import ColumnVisibilityMenu
+
+        return r.render(ColumnVisibilityMenu(columns=(("title", "Title"), ("status", "Status"))))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

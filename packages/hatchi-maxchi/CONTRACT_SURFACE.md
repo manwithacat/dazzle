@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 98 |
+| Modules | 99 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -32,6 +32,7 @@ blast radius (who embeds / refuses this part).
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
 | `cohort_strip` | `cohort-strip` | `[data-dz-cohort-strip]` | [data-dz-cohort-strip][data-dz-cohort-strip=present] | CohortStrip(body_html:str:opt; region_name:str:opt) |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |
+| `column_visibility_menu` | `column-visibility-menu` | `.dz-table-col-menu` | .dz-table-col-menu[] | — |
 | `combobox` | `combobox` | `[data-dz-combobox]` | [data-dz-combobox][name=present] | ComboboxField(field_id:str:req; label:str:req; name:str:req; options:list[ComboboxOption]:req; placeholder:str:opt; selected:str:opt); ComboboxOption(label:str:req; value:str:req) |
 | `command` | `command` | `[data-dz-command]` | [data-dz-command][] | — |
 | `confirm` | `confirm` | `[hx-confirm]` | [hx-confirm][hx-confirm=present] | — |

@@ -504,6 +504,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "sort_header",
         True,
     ),  # FragmentRenderer._emit_sort_header
+    (
+        "contracts/column_visibility_menu.py",
+        "column_visibility_menu",
+        True,
+    ),  # FragmentRenderer._emit_column_visibility_menu
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
