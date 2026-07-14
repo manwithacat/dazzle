@@ -414,6 +414,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "split",
         True,
     ),  # FragmentRenderer._emit_split
+    (
+        "contracts/text.py",
+        "text",
+        True,
+    ),  # FragmentRenderer._emit_text
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

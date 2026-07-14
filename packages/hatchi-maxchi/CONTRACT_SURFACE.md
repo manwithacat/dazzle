@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 80 |
+| Modules | 81 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -86,6 +86,7 @@ blast radius (who embeds / refuses this part).
 | `tabs` | `tabs` | `[data-dz-tabs]` | [data-dz-tabs][]; [data-dz-tab-target][data-dz-tab-target=present] | — |
 | `tags` | `tags` | `[data-dz-tags]` | [data-dz-tags][name=present] | TagsField(field_id:str:req; label:str:req; name:str:req; placeholder:str:opt; tags:list[str]:opt) |
 | `task_inbox` | `task-inbox` | `[data-dz-task-inbox]` | [data-dz-task-inbox][data-dz-task-inbox=present] | TaskInbox(body_html:str:opt; region_name:str:opt) |
+| `text` | `text` | `.dz-text` | .dz-text[] | — |
 | `time_series` | `time-series` | `[data-dz-time-series]` | [data-dz-time-series][data-dz-time-series=present] | TimeSeries(empty_message:str:opt; label:str:opt; legend_html:str:opt; peak_display:str:opt; points:list[TimeSeriesPoint]:opt; series:list[TimeSeriesLayer]:opt; svg_html:str:opt; view:Literal:opt); TimeSeriesLayer(name:str:req; points:list[TimeSeriesPoint]:opt); TimeSeriesPoint(label:str:req; value:float:opt) |
 | `timeline` | `timeline` | `[data-dz-timeline-item]` | [data-dz-timeline-item][data-dz-timeline-item=present] | TimelineEvent(bullet_html:str:opt; date_label:str:opt; fields_html:str:opt; title:str:req) |
 | `toolbar` | `toolbar` | `.dz-toolbar` | .dz-toolbar[] | — |
