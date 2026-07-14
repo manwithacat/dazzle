@@ -359,6 +359,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "bulk_actions",
         True,
     ),  # FragmentRenderer._emit_bulk_action_toolbar
+    (
+        "contracts/workspace_toolbar.py",
+        "workspace_toolbar",
+        True,
+    ),  # FragmentRenderer._emit_workspace_toolbar
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

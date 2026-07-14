@@ -1366,6 +1366,10 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.data import BulkActionToolbar
 
         return r.render(BulkActionToolbar(endpoint="/api/tickets"))
+    if part_id == "workspace_toolbar":
+        from dazzle.render.fragment.primitives.data import WorkspaceToolbar
+
+        return r.render(WorkspaceToolbar())
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
