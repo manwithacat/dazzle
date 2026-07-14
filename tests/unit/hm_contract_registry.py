@@ -509,6 +509,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "column_visibility_menu",
         True,
     ),  # FragmentRenderer._emit_column_visibility_menu
+    (
+        "contracts/metrics_grid.py",
+        "metrics_grid",
+        True,
+    ),  # FragmentRenderer._emit_metrics_grid
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

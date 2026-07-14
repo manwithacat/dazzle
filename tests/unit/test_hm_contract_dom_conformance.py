@@ -1552,6 +1552,10 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.data import ColumnVisibilityMenu
 
         return r.render(ColumnVisibilityMenu(columns=(("title", "Title"), ("status", "Status"))))
+    if part_id == "metrics_grid":
+        from dazzle.render.fragment.primitives.data import MetricsGrid, MetricTile
+
+        return r.render(MetricsGrid(tiles=(MetricTile(label="Open", value="12"),)))
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

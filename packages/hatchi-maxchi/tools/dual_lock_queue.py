@@ -95,6 +95,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_csv_export_button": "csv_export_button",
     "_emit_sort_header": "sort_header",
     "_emit_column_visibility_menu": "column_visibility_menu",
+    "_emit_metrics_grid": "metrics_grid",
 }
 
 
