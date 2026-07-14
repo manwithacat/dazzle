@@ -1370,6 +1370,23 @@ def _emit_root_only_html(part_id: str) -> str:
         from dazzle.render.fragment.primitives.data import WorkspaceToolbar
 
         return r.render(WorkspaceToolbar())
+    if part_id == "filter_bar":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.data import FilterColumn, ListFilterBar
+
+        return r.render(
+            ListFilterBar(
+                tbody_id="list-body",
+                endpoint=URL("/api/tickets"),
+                columns=(
+                    FilterColumn(
+                        key="status",
+                        label="Status",
+                        options=(("open", "Open"), ("closed", "Closed")),
+                    ),
+                ),
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

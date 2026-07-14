@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 70 |
+| Modules | 71 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -43,6 +43,7 @@ blast radius (who embeds / refuses this part).
 | `drawer` | `drawer` | `.dz-drawer` | .dz-drawer[] | — |
 | `empty_state` | `empty-state` | `[data-dz-empty-state]` | [data-dz-empty-state][data-dz-empty-state=present] | EmptyState(action_html:str:opt; description:str:opt; icon_html:str:opt; title:str:opt) |
 | `entity_card` | `entity-card` | `[data-dz-entity-card]` | [data-dz-entity-card][data-dz-entity-card=present] | EntityCard(body_html:str:opt; region_name:str:opt) |
+| `filter_bar` | `filter-bar` | `.dz-filter-bar` | .dz-filter-bar[] | — |
 | `funnel` | `funnel` | `[data-dz-funnel]` | [data-dz-funnel][data-dz-funnel=present] | Funnel(empty_message:str:opt; stages:list[FunnelStage]:opt; total:int:opt); FunnelStage(count:int:opt; label:str:req) |
 | `grid` | `grid` | `[data-dz-grid]` | — | — |
 | `grid_cols` | `grid-cols` | `[data-dz-grid]` | [data-dz-grid-col-toggle][data-dz-grid-col-toggle=present]; [data-dz-col][data-dz-col=present]; [data-dz-grid-cols-reset][] | — |

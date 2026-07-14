@@ -364,6 +364,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "workspace_toolbar",
         True,
     ),  # FragmentRenderer._emit_workspace_toolbar
+    (
+        "contracts/filter_bar.py",
+        "filter_bar",
+        True,
+    ),  # FragmentRenderer._emit_list_filter_bar
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
