@@ -619,6 +619,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "toggle",
         True,
     ),  # HM gallery toggle (no FragmentRenderer emit yet)
+    (
+        "contracts/accordion.py",
+        "accordion",
+        True,
+    ),  # HM gallery accordion (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

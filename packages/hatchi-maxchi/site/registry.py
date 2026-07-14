@@ -3024,6 +3024,7 @@ def select(source: str, id: str) -> str:
             "<code>aria-expanded</code> wiring: details/summary carry it. "
             "Drop <code>name=</code> only when multi-open FAQ is intentional.",
             tags=("interactive",),
+            contracts=("contracts/accordion.py",),
             guidance=Guidance(
                 seams=(
                     "`details.dz-accordion__item` + shared `name=` for exclusive group",

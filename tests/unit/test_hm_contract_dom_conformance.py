@@ -1774,6 +1774,15 @@ def _emit_root_only_html(part_id: str) -> str:
             '<button type="button" class="dz-toggle" data-dz-toggle '
             'aria-pressed="true"><strong>B</strong> Bold</button>'
         )
+    if part_id == "accordion":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-131).
+        return (
+            '<div class="dz-accordion">'
+            '<details class="dz-accordion__item" name="fixture-acc" open>'
+            '<summary class="dz-accordion__trigger">Section</summary>'
+            '<div class="dz-accordion__panel">Body</div></details>'
+            "</div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
