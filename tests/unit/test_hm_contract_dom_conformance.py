@@ -1572,6 +1572,16 @@ def _emit_root_only_html(part_id: str) -> str:
                 collapsed=False,
             )
         )
+    if part_id == "workspace_context":
+        from dazzle.render.fragment.primitives.data import WorkspaceContextSelector
+
+        return r.render(
+            WorkspaceContextSelector(
+                label="Tenant",
+                workspace_name="main",
+                options_url="/api/ctx",
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

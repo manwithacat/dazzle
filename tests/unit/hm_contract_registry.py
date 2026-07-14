@@ -524,6 +524,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "nav_group",
         True,
     ),  # FragmentRenderer._emit_nav_group
+    (
+        "contracts/workspace_context.py",
+        "workspace_context",
+        True,
+    ),  # FragmentRenderer._emit_workspace_context_selector
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
