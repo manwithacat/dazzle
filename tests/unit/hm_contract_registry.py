@@ -374,6 +374,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "skip_link",
         True,
     ),  # FragmentRenderer._emit_skip_link
+    (
+        "contracts/topbar.py",
+        "topbar",
+        True,
+    ),  # FragmentRenderer._emit_topbar
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.
