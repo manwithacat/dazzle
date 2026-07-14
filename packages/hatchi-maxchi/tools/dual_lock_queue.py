@@ -99,6 +99,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_nav_item": "nav_item",
     "_emit_nav_group": "nav_group",
     "_emit_workspace_context_selector": "workspace_context",
+    "_emit_detail_grid": "detail_grid",
 }
 
 

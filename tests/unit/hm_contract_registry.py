@@ -529,6 +529,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "workspace_context",
         True,
     ),  # FragmentRenderer._emit_workspace_context_selector
+    (
+        "contracts/detail_grid.py",
+        "detail_grid",
+        True,
+    ),  # FragmentRenderer._emit_detail_grid
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

@@ -1582,6 +1582,18 @@ def _emit_root_only_html(part_id: str) -> str:
                 options_url="/api/ctx",
             )
         )
+    if part_id == "detail_grid":
+        from dazzle.render.fragment.primitives.content import Text
+        from dazzle.render.fragment.primitives.data import DetailGrid
+
+        return r.render(
+            DetailGrid(
+                rows=(
+                    ("Name", Text(body="Ada")),
+                    ("Status", Text(body="Open")),
+                )
+            )
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

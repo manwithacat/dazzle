@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 103 |
+| Modules | 104 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -41,6 +41,7 @@ blast radius (who embeds / refuses this part).
 | `dashboard_card` | `dashboard-card` | `[data-dz-dashboard-card]` | [data-dz-dashboard-card][data-dz-dashboard-card=present] | DashboardCard(attrs:str:opt; body_html:str:opt) |
 | `date_range` | `date-range` | `[data-dz-date-range]` | [data-dz-date-range][data-dz-date-range=present] | DateRange(date_from:str:opt; date_to:str:opt; endpoint:str:opt; region_name:str:opt; target:str:opt) |
 | `day_timeline` | `day-timeline` | `[data-dz-day-timeline]` | [data-dz-day-timeline][data-dz-day-timeline=present] | DayTimeline(body_html:str:opt; region_name:str:opt) |
+| `detail_grid` | `detail-grid` | `.dz-detail-region` | .dz-detail-region[] | — |
 | `diagram` | `diagram` | `[data-dz-diagram]` | [data-dz-diagram][data-dz-diagram=present] | Diagram(edges:list[tuple[str,str]]:opt; mermaid_source:str:opt; nodes:list[str]:opt) |
 | `dialog` | `dialog` | `[data-dz-dialog-open]` | [data-dz-dialog-open][data-dz-dialog-open=present] | — |
 | `drawer` | `drawer` | `.dz-drawer` | .dz-drawer[] | — |
