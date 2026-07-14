@@ -1934,6 +1934,19 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
             "<p>Hello</p></div></div></div></div>"
         )
+    if part_id == "two_factor":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-148).
+        return (
+            '<div class="dz-auth-card">'
+            '<h1 class="dz-auth-card-title">Set Up 2FA</h1>'
+            '<p class="dz-auth-card-subtitle">Aurora Ops</p>'
+            '<form class="dz-auth-form">'
+            '<div class="dz-auth-field">'
+            '<label for="hm-2fa-code" class="dz-auth-label">Enter code from app</label>'
+            '<input type="text" id="hm-2fa-code" inputmode="numeric" '
+            'class="dz-auth-input-code" maxlength="6" placeholder="000000">'
+            "</div></form></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
