@@ -137,6 +137,12 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_time_series": "time_series",
     "_emit_timeline": "timeline",
     "_emit_app_shell": "app_shell",
+    # Residual dual-lock wires (cycle 575)
+    "_emit_widget_combobox": "combobox",
+    "_emit_create_button": "button",
+    "_emit_action_card": "action_grid",
+    "_emit_confirm_gate": "confirm_panel",
+    "_emit_lazy_tab_panel": "tabs",
 }
 
 
