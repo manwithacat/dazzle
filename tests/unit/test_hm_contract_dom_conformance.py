@@ -1976,6 +1976,12 @@ def _emit_root_only_html(part_id: str) -> str:
             '<label><input type="radio" name="hm-view"><span>Board</span></label>'
             "</fieldset>"
         )
+    if part_id == "tooltip":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-154).
+        return (
+            '<button type="button" class="dz-button" data-dz-variant="outline" '
+            'data-dz-tooltip="Saved 2 minutes ago">Hover me</button>'
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

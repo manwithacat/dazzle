@@ -729,6 +729,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "toggle_group",
         True,
     ),  # HM gallery toggle-group (no FragmentRenderer emit yet)
+    (
+        "contracts/tooltip.py",
+        "tooltip",
+        True,
+    ),  # HM gallery tooltip (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

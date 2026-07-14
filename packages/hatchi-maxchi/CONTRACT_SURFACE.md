@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 139 |
+| Modules | 140 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -145,6 +145,7 @@ blast radius (who embeds / refuses this part).
 | `toggle` | `toggle` | `[data-dz-toggle]` | [data-dz-toggle][data-dz-toggle=present] | — |
 | `toggle_group` | `toggle_group` | `.dz-toggle-group` | .dz-toggle-group[] | — |
 | `toolbar` | `toolbar` | `.dz-toolbar` | .dz-toolbar[] | — |
+| `tooltip` | `tooltip` | `[data-dz-tooltip]` | [data-dz-tooltip][data-dz-tooltip=present] | — |
 | `topbar` | `topbar` | `.dz-topbar` | .dz-topbar[] | — |
 | `tree` | `tree` | `[data-dz-tree]` | [data-dz-tree][data-dz-tree=present] | Tree(body_html:str:opt) |
 | `two_factor` | `two_factor` | `.dz-auth-card` | .dz-auth-card[] | — |
