@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 138 |
+| Modules | 139 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -143,6 +143,7 @@ blast radius (who embeds / refuses this part).
 | `time_series` | `time-series` | `[data-dz-time-series]` | [data-dz-time-series][data-dz-time-series=present] | TimeSeries(empty_message:str:opt; label:str:opt; legend_html:str:opt; peak_display:str:opt; points:list[TimeSeriesPoint]:opt; series:list[TimeSeriesLayer]:opt; svg_html:str:opt; view:Literal:opt); TimeSeriesLayer(name:str:req; points:list[TimeSeriesPoint]:opt); TimeSeriesPoint(label:str:req; value:float:opt) |
 | `timeline` | `timeline` | `[data-dz-timeline-item]` | [data-dz-timeline-item][data-dz-timeline-item=present] | TimelineEvent(bullet_html:str:opt; date_label:str:opt; fields_html:str:opt; title:str:req) |
 | `toggle` | `toggle` | `[data-dz-toggle]` | [data-dz-toggle][data-dz-toggle=present] | — |
+| `toggle_group` | `toggle_group` | `.dz-toggle-group` | .dz-toggle-group[] | — |
 | `toolbar` | `toolbar` | `.dz-toolbar` | .dz-toolbar[] | — |
 | `topbar` | `topbar` | `.dz-topbar` | .dz-topbar[] | — |
 | `tree` | `tree` | `[data-dz-tree]` | [data-dz-tree][data-dz-tree=present] | Tree(body_html:str:opt) |

@@ -1968,6 +1968,14 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="hm-demo-box">Content</div>'
             "</div>"
         )
+    if part_id == "toggle_group":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-153).
+        return (
+            '<fieldset class="dz-toggle-group" role="radiogroup">'
+            '<label><input type="radio" name="hm-view" checked><span>List</span></label>'
+            '<label><input type="radio" name="hm-view"><span>Board</span></label>'
+            "</fieldset>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

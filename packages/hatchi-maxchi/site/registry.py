@@ -2366,6 +2366,8 @@ def select(source: str, id: str) -> str:
             '<label><input type="radio" name="hm-view" checked><span>{icon:list} List</span></label>'
             '<label><input type="radio" name="hm-view"><span>{icon:kanban} Board</span></label>'
             '<label><input type="radio" name="hm-view"><span>{icon:calendar} Calendar</span></label></fieldset>',
+            notes="Dual-lock root .dz-toggle-group (HMC-153).",
+            contracts=("contracts/toggle_group.py",),
         ),
         Hyperpart(
             "switch",
