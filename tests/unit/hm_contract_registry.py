@@ -669,6 +669,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "bubble",
         True,
     ),  # HM gallery bubble (no FragmentRenderer emit yet)
+    (
+        "contracts/chart_legend.py",
+        "chart_legend",
+        True,
+    ),  # HM gallery chart-legend (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

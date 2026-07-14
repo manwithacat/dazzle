@@ -1867,6 +1867,20 @@ def _emit_root_only_html(part_id: str) -> str:
             '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
             "<p>Can we reschedule the walkthrough to Thursday?</p></div>"
         )
+    if part_id == "chart_legend":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-142).
+        return (
+            '<ul class="dz-chart-legend">'
+            '<li class="dz-chart-legend-item">'
+            '<span class="dz-chart-legend-swatch" '
+            'style="background:var(--colour-brand)"></span>'
+            '<span class="dz-chart-legend-name">Revenue</span></li>'
+            '<li class="dz-chart-legend-item">'
+            '<span class="dz-chart-legend-swatch" '
+            'style="background:var(--colour-success)"></span>'
+            '<span class="dz-chart-legend-name">Costs</span></li>'
+            "</ul>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

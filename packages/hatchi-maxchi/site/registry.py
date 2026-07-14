@@ -3988,8 +3988,10 @@ def select(source: str, id: str) -> str:
             "<code>&lt;ul&gt;</code> of swatch + mono series-name items, and a "
             "mono summary line of bucket/series counts and the peak. The swatch "
             "background is the series colour the chart body uses for its "
-            "strokes — inline, per series, server-assigned.",
+            "strokes — inline, per series, server-assigned. Dual-lock root "
+            ".dz-chart-legend (HMC-142).",
             tags=("data", "chart"),
+            contracts=("contracts/chart_legend.py",),
         ),
         Hyperpart(
             "radar",
