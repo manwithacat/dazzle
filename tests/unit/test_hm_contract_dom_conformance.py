@@ -1819,6 +1819,15 @@ def _emit_root_only_html(part_id: str) -> str:
             '<li><a href="#">Home</a></li><li><a href="#">Invoices</a></li>'
             '<li aria-current="page">INV-0042</li></ol></nav>'
         )
+    if part_id == "auto_grid":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-136).
+        return (
+            '<div class="dz-auto-grid" style="--dz-grid-min: 9rem">'
+            '<div class="hm-demo-box">A</div><div class="hm-demo-box">B</div>'
+            '<div class="hm-demo-box">C</div><div class="hm-demo-box">D</div>'
+            '<div class="hm-demo-box">E</div>'
+            "</div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

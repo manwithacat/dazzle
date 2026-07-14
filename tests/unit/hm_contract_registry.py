@@ -644,6 +644,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "breadcrumb",
         True,
     ),  # HM gallery breadcrumb (no FragmentRenderer emit yet)
+    (
+        "contracts/auto_grid.py",
+        "auto_grid",
+        True,
+    ),  # HM gallery auto-grid (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

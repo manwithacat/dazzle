@@ -3431,8 +3431,10 @@ def select(source: str, id: str) -> str:
             "inner <code>min()</code> stops overflow when the container is "
             "narrower than the minimum (the classic auto-fit footgun). "
             "<code>--dz-grid-min</code> is a PUBLIC knob; gap rides "
-            "<code>data-dz-gap</code> as on stack.",
+            "<code>data-dz-gap</code> as on stack. Dual-lock root "
+            ".dz-auto-grid (HMC-136).",
             tags=("layout",),
+            contracts=("contracts/auto_grid.py",),
         ),
         Hyperpart(
             "center",
