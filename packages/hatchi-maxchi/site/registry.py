@@ -1419,6 +1419,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<label class="hm-inline"><input type="radio" class="dz-radio" checked> Radio</label>'
             '<label class="hm-inline"><input type="checkbox" class="dz-switch" checked> Switch</label>'
             "</div>",
+            notes="Dual-lock roots .dz-checkbox / .dz-radio / .dz-switch (HMC-150). "
+            "Switch also dual-locks via contracts/switch.py ([data-dz-switch]).",
+            contracts=("contracts/controls.py", "contracts/switch.py"),
         ),
         Hyperpart(
             "field",

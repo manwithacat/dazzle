@@ -9,7 +9,7 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 135 |
+| Modules | 136 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
@@ -48,6 +48,7 @@ blast radius (who embeds / refuses this part).
 | `command` | `command` | `[data-dz-command]` | [data-dz-command][] | — |
 | `confirm` | `confirm` | `[hx-confirm]` | [hx-confirm][hx-confirm=present] | — |
 | `confirm_panel` | `confirm-panel` | `[data-dz-confirm-gate]` | [data-dz-confirm-gate][data-dz-required-count=present]; [data-dz-required="true"][data-dz-required=present] | — |
+| `controls` | `controls` | `.dz-checkbox, .dz-radio, .dz-switch` | .dz-checkbox, .dz-radio, .dz-switch[] | — |
 | `csv_export_button` | `csv-export-button` | `.dz-list-csv-button` | .dz-list-csv-button[] | — |
 | `dashboard_card` | `dashboard-card` | `[data-dz-dashboard-card]` | [data-dz-dashboard-card][data-dz-dashboard-card=present] | DashboardCard(attrs:str:opt; body_html:str:opt) |
 | `dashboard_grid` | `dashboard-grid` | `.dz-dashboard-grid` | .dz-dashboard-grid[] | — |
