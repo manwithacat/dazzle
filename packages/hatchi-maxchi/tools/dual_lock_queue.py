@@ -108,6 +108,7 @@ _EMIT_TO_STEM: dict[str, str] = {
     "_emit_activity_feed": "activity_feed_list",
     "_emit_kanban_board": "kanban_board",
     "_emit_status_list": "status_list_region",
+    "_emit_kanban_region": "kanban_region",
 }
 
 
