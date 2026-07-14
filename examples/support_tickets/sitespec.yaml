@@ -16,6 +16,24 @@ pages:
         primary_cta:
           label: "Get Started"
           href: "/login"
+  # Public cookie policy (served from site/content/; source of truth is
+  # docs/privacy/cookie_policy.md from `dazzle compliance privacy`).
+  - route: "/cookies"
+    type: markdown
+    title: "Cookie Policy"
+    source:
+      format: md
+      path: legal/cookies.md
+
+# De-facto mandatory SaaS legal surfaces. Content lives under
+# site/content/legal/ (SiteSpec path convention). Keep in sync with the
+# compliance pack at docs/privacy/ (regenerated from pii() + subprocessor DSL).
+legal:
+  privacy:
+    route: "/privacy"
+    source:
+      format: md
+      path: legal/privacy.md
 
 layout:
   nav:
@@ -25,7 +43,13 @@ layout:
       - label: "Sign In"
         href: "/login"
   footer:
-    columns: []
+    columns:
+      - title: Legal
+        links:
+          - label: "Privacy"
+            href: "/privacy"
+          - label: "Cookies"
+            href: "/cookies"
     disclaimer: "Support Tickets Demo"
 
 auth_pages:

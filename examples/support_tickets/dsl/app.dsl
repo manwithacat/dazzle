@@ -46,8 +46,11 @@ entity User "User":
   patterns: authentication, authorization
 
   id: uuid pk
-  email: str(255) required unique
-  name: str(200) required
+  # pii() feeds `dazzle compliance privacy` → docs/privacy/* (privacy notice,
+  # cookie policy, ROPA) and analytics PII stripping. Contact/identity are the
+  # load-bearing demo annotations for a data-protection-aware SaaS example.
+  email: str(255) required unique pii(category=contact)
+  name: str(200) required pii(category=identity)
   role: enum[customer,agent,manager]=customer
   is_active: bool = true
   created_at: datetime auto_add

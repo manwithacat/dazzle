@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **support_tickets privacy compliance pack** — committed `docs/privacy/`
+  (privacy notice, cookie policy, ROPA) from `dazzle compliance privacy`,
+  `pii(category=…)` on User + SlaWaiver identity/contact fields, public
+  `/privacy` + `/cookies` SiteSpec routes, footer links. Demo of de-facto
+  mandatory data-protection pages on an example SaaS surface.
 - **Example HM surface fleet audit** — `scripts/example_hm_surface_audit.py`
   rebuilds every `examples/*` via `build-ui` and scores HTML for pre-HM
   residuals (Alpine `x-*`, dead Tailwind spinner utilities). Exit 0 only when

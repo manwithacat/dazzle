@@ -12,8 +12,8 @@ entity SlaWaiver "SLA Waiver":
   breach_summary: text required
   waiver_terms: text required
   signatory_role: str(120) required
-  signatory_name: str(200) required
-  signatory_email: email required
+  signatory_name: str(200) required pii(category=identity)
+  signatory_email: email required pii(category=contact)
 
   signable: true
   signing_validator: app.signing.validator.validate_sla_waiver
