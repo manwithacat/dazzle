@@ -679,6 +679,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "form_errors",
         True,
     ),  # HM form-chrome error summary (no FragmentRenderer emit yet)
+    (
+        "contracts/grid_list.py",
+        "grid_list",
+        True,
+    ),  # HM gallery grid-list (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

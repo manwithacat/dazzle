@@ -4345,8 +4345,10 @@ def select(source: str, id: str) -> str:
             "(1 column, then 2 at 40rem, 3 at 64rem). The "
             "<code>is-clickable</code> hover/cursor affordance is styled but "
             "currently a LEGACY reserve — the substrate grid emitter does not "
-            "yet wire cell drill URLs (follow-up on the Dazzle side).",
+            "yet wire cell drill URLs (follow-up on the Dazzle side). Dual-lock "
+            "root .dz-grid-list (HMC-144).",
             tags=("data",),
+            contracts=("contracts/grid_list.py",),
         ),
         Hyperpart(
             "list-region",

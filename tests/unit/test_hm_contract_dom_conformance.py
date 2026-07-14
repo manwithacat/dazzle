@@ -1892,6 +1892,16 @@ def _emit_root_only_html(part_id: str) -> str:
             "<li>Start date must be before end date</li>"
             "</ul></div></div>"
         )
+    if part_id == "grid_list":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-144).
+        return (
+            '<div class="dz-grid-list">'
+            '<div class="dz-grid-cell">'
+            '<h4 class="dz-grid-cell-title">Aurora Substation</h4>'
+            '<p class="dz-grid-cell-field">'
+            '<span class="dz-grid-cell-field-label">Region:</span> North</p>'
+            "</div></div>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell
