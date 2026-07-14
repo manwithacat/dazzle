@@ -1752,6 +1752,14 @@ def _emit_root_only_html(part_id: str) -> str:
             '<li class="dz-navigation-menu__item"><a href="#">Home</a></li>'
             "</ul></nav>"
         )
+    if part_id == "popover":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-128).
+        return (
+            '<details class="dz-popover">'
+            '<summary class="dz-button" data-dz-variant="secondary">Open</summary>'
+            '<div class="dz-popover__content">Popover body</div>'
+            "</details>"
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

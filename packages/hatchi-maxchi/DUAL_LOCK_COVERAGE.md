@@ -12,9 +12,9 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 | Controllers | 24 |
 | Contract modules | 115 |
 | Dual-lock schema+DOM | 41 |
-| Dual-lock DOM-only | 72 |
+| Dual-lock DOM-only | 73 |
 | Dual-lock deferred | 1 |
-| Contract with no dual-lock row | 1 |
+| Contract with no dual-lock row | 0 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 
@@ -99,7 +99,7 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 | `pipeline` | `pipeline.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `pivot` | `pivot.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `pivot_table` | `pivot_table.py` | `—` | yes | no | no | **DOM-only** |
-| `popover` | `popover.py` | `—` | yes | no | no | **none** |
+| `popover` | `popover.py` | `—` | yes | no | no | **DOM-only** |
 | `profile_card` | `profile_card.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `progress` | `progress.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `queue` | `queue.py` | `—` | yes | yes | yes | **schema+DOM** |
