@@ -44,11 +44,14 @@ SELF_AUDIT_EVERY = 15
 CAPABILITY_SWEEP_EVERY = 20
 
 # Opportunistic intervals (Grok scheduler min is 60s).
-INTERVAL_HOT = "2m"  # CI green + work, REGRESSION, CI red repair
+INTERVAL_HOT = "2m"  # CI green + work, REGRESSION, CI red repair, open bugs
 INTERVAL_CI_POLL = "3m"  # waiting for main CI after deploy
 INTERVAL_WORK = "5m"  # backlog / explore / cadence, no CI urgency
 INTERVAL_FAIL = "10m"
-INTERVAL_SLOW = "2h"
+# Quiet product state still re-probes GitHub inbox regularly so newly filed
+# issues are not left waiting an arbitrary multi-hour gap.
+INTERVAL_INBOX_POLL = "15m"
+INTERVAL_SLOW = "2h"  # reserved; prefer INTERVAL_INBOX_POLL when chain continues
 
 # Driver Step 1 "actionable" statuses + TR rows that still justify a hot chain.
 ACTIONABLE_STATUSES = frozenset(
@@ -250,7 +253,12 @@ def _has_work(
     github_heat: str | None = None,
 ) -> tuple[bool, str]:
     """Whether the next cycle has product/governance work worth a hot chain."""
-    if github_heat in ("dependabot_merge", "consumer_bug", "dependabot_ci_red"):
+    if github_heat in (
+        "dependabot_merge",
+        "consumer_bug",
+        "owner_bug",
+        "dependabot_ci_red",
+    ):
         return True, f"github_inbox={github_heat}"
     if int(counts.get("urgent", 0)) > 0:
         return True, "regression"
@@ -336,6 +344,14 @@ def decide(
             "github_consumer_bug",
             fire_immediately=True,
         )
+    if github_heat == "owner_bug":
+        # Owner/pilot open bugs (e.g. CyFuture pilot labels) — same urgency as
+        # consumer bugs so the chain does not wait on STALE map work.
+        return _sched(
+            INTERVAL_HOT,
+            "github_owner_bug",
+            fire_immediately=True,
+        )
     if github_heat == "dependabot_ci_red":
         return _sched(
             INTERVAL_HOT,
@@ -405,16 +421,18 @@ def decide(
         return _sched(INTERVAL_WORK, f"work_remaining {work_why}")
 
     # Quiet: explore cap + no actionable + cadences not due.
+    # Still schedule a near-term one-shot so Step 0c3 re-polls GitHub for new
+    # issues (rather than an arbitrary multi-hour wait).
     blocked = int(counts.get("blocked", 0))
     if blocked > 0:
         return _sched(
-            INTERVAL_SLOW,
-            f"only_blocked_or_settled blocked={blocked} explore={explore_used}/{EXPLORE_CAP}",
+            INTERVAL_INBOX_POLL,
+            f"only_blocked_inbox_reprobe blocked={blocked} explore={explore_used}/{EXPLORE_CAP}",
         )
 
     return _sched(
-        INTERVAL_SLOW,
-        f"all_clear_or_explore_cap explore={explore_used}/{EXPLORE_CAP}",
+        INTERVAL_INBOX_POLL,
+        f"inbox_reprobe_poll explore={explore_used}/{EXPLORE_CAP}",
     )
 
 

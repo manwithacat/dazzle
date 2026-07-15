@@ -4,15 +4,16 @@
 **Probe:** `uv run python scripts/improve_github_inbox.py`
 **Budget:** `0` when triage-only; `1` if a fix is implemented this cycle.
 
-Poll GitHub for **incoming bugs from downstream Dazzle consumers** (external
-authors + bug-shaped issues) and act. Complements standalone `/issues` — this
-strategy is the improve-loop's **inbox intake** so consumer pain is not starved
-by explore STALE-clear.
+Poll GitHub for **actionable open bugs** — downstream consumer reports **and**
+owner/pilot-filed bugs (e.g. CyFuture `pilot:cyfuture`) — and act. Complements
+standalone `/issues`; this strategy is the improve-loop's **inbox intake** so
+open bugs are not starved by explore STALE-clear or multi-hour idle waits.
 
 ## When the driver picks this
 
-Step 0c3 / selection rule **consumer-bugs**: inbox `heat` is `consumer_bug`, or
-`recommended[0].kind == "consumer_issue"` with `bug_shaped: true`.
+Step 0c3 claims this strategy when inbox `heat` is `consumer_bug` **or**
+`owner_bug`, or `recommended[0].kind` is `consumer_issue` / `owner_issue` with
+`bug_shaped: true`.
 
 Also forceable when the operator wants an intake-only cycle.
 
@@ -22,13 +23,17 @@ Also forceable when the operator wants an intake-only cycle.
 |-------|-----|-------|----------------|
 | `consumer_bug` | author ≠ owner **or** consumer label | bug-shaped title/labels | **Autonomous fix** if clear (Tier 1); else investigate + comment + leave open |
 | `consumer_other` | external author | not clearly a bug | Comment with analysis; do **not** implement features without human fork |
-| `owner_bug` | owner (`manwithacat`) | bug-shaped | Prefer `/issues` routing or implement if small + clear (same Tier 1 rules) |
+| `owner_bug` | owner (`manwithacat`), incl. pilot labels | bug-shaped | **Autonomous fix** if clear (Tier 1) — same bar as consumer bugs; do **not** soft-defer to `/issues` |
 | `deferred_future` | any | `future` label, not a bug | Skip (log only) |
 
 **Bug-shaped:** labels ∈ {bug, regression, crash, security, blocker, …} **or**
 title matches `bug|crash|fail|broken|error|exception|regress|traceback|…`.
 
 **Consumer author:** login ≠ project owner and not Dependabot.
+
+**Heat:** probe sets `consumer_bug` when any consumer bug-shaped issue is open;
+else `owner_bug` when any owner bug-shaped issue is open. Both keep the
+self-schedule chain hot (`fire_immediately` / 2m).
 
 ## Playbook (one cycle → one primary issue)
 
@@ -39,8 +44,9 @@ uv run python scripts/improve_github_inbox.py
 # JSON also at .dazzle/improve-github-inbox.json
 ```
 
-Pick `primary` when `kind == "consumer_issue"`, else first `consumer_issues[]`
-with `bug_shaped: true`.
+Pick `primary` when `kind` ∈ {`consumer_issue`, `owner_issue`}, else first
+`consumer_issues[]` / `owner_bugs[]` with `bug_shaped: true`. Prefer consumer
+bugs when both exist (probe heat already ranks them higher).
 
 ### 2. Load issue
 
@@ -85,7 +91,8 @@ Log `lane: consumer-issues`. Summarize issue #, author, tier, action taken.
 ## Hard rules
 
 - **One issue per cycle** (plus trivial already-fixed closes).
-- **Do not** treat owner `future` enhancements as consumer bugs.
+- **Do not** treat owner `future` enhancements as bugs for implement.
+- **Owner/pilot bugs are first-class** — same Tier 1 bar as consumer bugs.
 - **Dependabot is not a consumer** — handled by `github_prs`.
 - Coordinate with `/issues`: same lock file; if another session holds the lock, skip implement.
-- Prefer consumer bugs over STALE capability re-stamps.
+- Prefer open bugs (consumer **or** owner) over STALE capability re-stamps.

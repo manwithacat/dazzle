@@ -118,3 +118,64 @@ def test_classify_consumer_bug_primary(inbox):
     assert out["counts"]["consumer_bugs"] >= 1
     assert out["primary"]["kind"] == "consumer_issue"
     assert out["primary"]["issue"] == 99
+
+
+def test_classify_owner_bug_primary_and_heat(inbox):
+    """Owner/pilot bugs must heat the inbox so /improve claims them (not idle)."""
+    issues = [
+        {
+            "number": 1590,
+            "title": "HM steps section: dz-step-connector inside flex item crushes columns",
+            "author": {"login": "manwithacat"},
+            "labels": [
+                {"name": "bug"},
+                {"name": "framework"},
+                {"name": "pilot:cyfuture"},
+                {"name": "cyfuture"},
+            ],
+            "url": "https://github.com/manwithacat/dazzle/issues/1590",
+        },
+        {
+            "number": 1591,
+            "title": "HM site nav: dz-nav-items no wrap/hamburger causes mobile overflow",
+            "author": {"login": "manwithacat"},
+            "labels": [
+                {"name": "bug"},
+                {"name": "pilot:cyfuture"},
+            ],
+            "url": "https://github.com/manwithacat/dazzle/issues/1591",
+        },
+    ]
+    out = inbox.classify(issues=issues, prs=[], owner_login="manwithacat")
+    assert out["heat"] == "owner_bug"
+    assert out["counts"]["owner_bugs"] == 2
+    assert out["primary"] is not None
+    assert out["primary"]["kind"] == "owner_issue"
+    assert out["primary"]["issue"] == 1590
+    assert out["primary"]["playbook"] == "improve/strategies/consumer_issues.md"
+    kinds = {r["kind"] for r in out["recommended"]}
+    assert "owner_issue" in kinds
+    assert len([r for r in out["recommended"] if r["kind"] == "owner_issue"]) == 2
+
+
+def test_classify_consumer_bug_outranks_owner_bug(inbox):
+    issues = [
+        {
+            "number": 10,
+            "title": "Owner-only regression",
+            "author": {"login": "manwithacat"},
+            "labels": [{"name": "bug"}],
+            "url": "https://example/10",
+        },
+        {
+            "number": 11,
+            "title": "Crash on serve from customer",
+            "author": {"login": "acme-dev"},
+            "labels": [{"name": "bug"}],
+            "url": "https://example/11",
+        },
+    ]
+    out = inbox.classify(issues=issues, prs=[], owner_login="manwithacat")
+    assert out["heat"] == "consumer_bug"
+    assert out["primary"]["kind"] == "consumer_issue"
+    assert out["primary"]["issue"] == 11

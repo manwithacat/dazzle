@@ -137,11 +137,12 @@ def test_decide_ci_red_repair_soon(sched):
     assert "ci_red" in d["reason"]
 
 
-def test_decide_explore_cap_slow_poll(sched):
+def test_decide_explore_cap_inbox_reprobe(sched):
+    """Quiet product state still re-polls GitHub regularly (not a multi-hour wait)."""
     d = sched.decide(**_base(ci="unavailable"))
     assert d["action"] == "schedule"
-    assert d["interval"] == "2h"
-    assert "explore_cap" in d["reason"] or "all_clear" in d["reason"]
+    assert d["interval"] == "15m"
+    assert "inbox_reprobe" in d["reason"]
 
 
 def test_decide_self_audit_due_work_interval(sched):
@@ -173,6 +174,20 @@ def test_decide_github_dependabot_heat(sched):
     assert d["interval"] == "2m"
     assert d["fire_immediately"] is True
     assert "dependabot" in d["reason"]
+
+
+def test_decide_github_owner_bug_heat(sched):
+    d = sched.decide(**_base(github_heat="owner_bug", explore_used=100))
+    assert d["interval"] == "2m"
+    assert d["fire_immediately"] is True
+    assert "owner_bug" in d["reason"]
+
+
+def test_decide_github_consumer_bug_heat(sched):
+    d = sched.decide(**_base(github_heat="consumer_bug", explore_used=100))
+    assert d["interval"] == "2m"
+    assert d["fire_immediately"] is True
+    assert "consumer_bug" in d["reason"]
 
 
 def test_decide_stop(sched):

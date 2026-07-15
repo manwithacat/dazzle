@@ -3,6 +3,7 @@
 
 Feeds Step 0c3 / selection rules:
   - **consumer bugs** (downstream authors, bug-shaped issues) → high priority intake
+  - **owner / pilot bugs** (owner-filed bug-shaped, incl. pilot:cyfuture) → same intake
   - **Dependabot PRs** ready to merge (CI green, not draft) → auto-merge candidate
   - other open PRs → process/review queue (not auto-merged)
 
@@ -404,6 +405,24 @@ def classify(
                 "playbook": "improve/strategies/consumer_issues.md",
             }
         )
+    # Owner / pilot bugs are first-class improve work (not deferred to /issues only).
+    # Without this, heat stays idle while open bugs sit behind STALE map re-stamps.
+    for iss in owner_bugs[:5]:
+        if not iss.get("bug_shaped"):
+            continue
+        recommended.append(
+            {
+                "priority": 2,
+                "kind": "owner_issue",
+                "issue": iss["number"],
+                "title": iss["title"],
+                "author": iss["author"],
+                "url": iss["url"],
+                "bug_shaped": True,
+                "labels": iss.get("labels") or [],
+                "playbook": "improve/strategies/consumer_issues.md",
+            }
+        )
     for pr in dependabot_blocked:
         if pr.get("action") == "investigate_ci":
             recommended.append(
@@ -437,6 +456,10 @@ def classify(
         heat = "dependabot_merge"
     elif any(i.get("bug_shaped") for i in consumer_bugs):
         heat = "consumer_bug"
+    elif any(i.get("bug_shaped") for i in owner_bugs):
+        # Owner-filed bugs (incl. pilot:cyfuture) keep the chain hot so inbox
+        # is not starved by explore STALE-clear or 2h all-clear waits.
+        heat = "owner_bug"
     elif any(p.get("action") == "investigate_ci" for p in dependabot_blocked):
         heat = "dependabot_ci_red"
     elif consumer_bugs or other_prs:

@@ -1,4 +1,4 @@
-Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → **CodeQL open-alert snapshot** (remediate if high/error open) → **GitHub inbox** (consumer bugs + open PRs / Dependabot) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome → **self-schedule the next one-shot** (opportunistic CI-aware interval).
+Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → **CodeQL open-alert snapshot** (remediate if high/error open) → **GitHub inbox** (consumer + owner/pilot bugs + open PRs / Dependabot) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome → **self-schedule the next one-shot** (opportunistic CI-aware interval; ~15m inbox re-probe when quiet).
 
 Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, CodeQL gate, GitHub inbox, signal bus, log, self-schedule).
 
@@ -115,12 +115,13 @@ uv run python scripts/improve_github_inbox.py
 | **`dependabot_merge`** (Dependabot PR, checks green, not draft) | **This cycle is github-prs.** Follow `improve/strategies/github_prs.md`: re-confirm checks → `gh pr merge --squash --delete-branch` (up to 2 PRs). Log `lane: github-prs`. `budget_consumed: 0`. Apply Step 3–4 and exit (or continue only if nothing merged and heat cleared). |
 | **`dependabot_ci_red`** | **This cycle is github-prs.** Investigate PR checks (flake re-run vs real break). Do not merge red. Log `lane: github-prs`. |
 | **`consumer_bug`** (downstream author and/or consumer label, bug-shaped) | **This cycle is consumer-issues.** Follow `improve/strategies/consumer_issues.md`: one issue, Tier-1 fix if clear else analysis comment. Log `lane: consumer-issues`. |
+| **`owner_bug`** (owner-filed bug-shaped, incl. `pilot:cyfuture` / pilot labels) | **This cycle is consumer-issues** (same playbook). Owner/pilot open bugs are **first-class** improve work — claim one issue, Tier-1 fix if clear. Do **not** leave them idle behind STALE map re-stamps or defer to a separate `/issues` session. Log `lane: consumer-issues`. |
 | **`inbox_nonzero`** only (human PRs / non-bug consumer noise) | Log summary under **github:**; **continue** selection (do not burn the whole cycle unless nothing else is actionable). |
 | **Probe failure / `gh` unavailable** | Log **github: unavailable**; continue. |
 
 **Dependabot policy:** routine bot dependency bumps **auto-merge when CI is green** (see playbook gates — non-ignorable check failures block merge). Non-Dependabot PRs are **never** auto-merged by this strategy.
 
-**Consumer bug policy:** bugs from authors other than the project owner (and issues labeled consumer/external/customer) are **first-class improve work** — not deferred to a separate `/issues` session. Features / design-only requests still get analysis comments only (Tier 2/3).
+**Issue bug policy:** bug-shaped issues — whether from downstream authors **or** the project owner (including pilot-labeled CyFuture findings) — are **first-class improve work**. Step 0c3 claims the cycle when inbox heat is `consumer_bug` or `owner_bug`. Features / design-only / `future`-labeled work still skips implement. Quiet product state still self-schedules ~15m so Step 0c3 re-polls GitHub regularly rather than waiting multi-hour all-clear gaps.
 
 Forceable via `/improve github-prs` or `/improve consumer-issues`.
 
@@ -176,7 +177,7 @@ Selection priority:
    5. Else oldest `last_run_at` lane ordinary **explore phase**
 8. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit. The log entry must name the two renewal routes so the loop never looks permanently stuck: the budget resets automatically on the next `dazzle-updated` release signal, or manually via `/improve --reset-budget`.
 
-**GitHub inbox note:** Dependabot-ready merges and consumer bugs are claimed in **Step 0c3** (before this list). If 0c3 only logged a non-blocking inbox summary, do not re-pick github-prs unless heat remains and product selection is empty.
+**GitHub inbox note:** Dependabot-ready merges, consumer bugs, and owner/pilot bugs are claimed in **Step 0c3** (before this list). If 0c3 only logged a non-blocking inbox summary, do not re-pick github-prs unless heat remains and product selection is empty.
 
 Record the choice. Bias from signals, TR-drain, or capability-coverage must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N"; "picked hm-convergence to expand dual-locks — STALE 24 cycles"; "picked framework-ux for TR-50 OPEN_FRAMEWORK high") so future operators can audit.
 
