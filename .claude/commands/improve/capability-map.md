@@ -51,14 +51,14 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 458 | STALE (lag 191 since @458) |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 655 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 487 | STALE (lag 162 since @487) |
-| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 471 | STALE (lag 178 since @471) |
+| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 656 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 653 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 654 | USED |
-| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 473 | STALE (lag 176 since @473) |
+| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 656 | USED |
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 655 | USED |
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 655 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 654 | USED |
-| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 474 | STALE (lag 175 since @474) |
+| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 656 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 650 | USED |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 490 | STALE (lag 159 since @490) |
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 490 | STALE (lag 159 since @490) |
@@ -72,8 +72,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 484 | STALE (lag 165 since @484) |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 485 | STALE (lag 164 since @485) |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 655 | USED |
-| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 472 | STALE (lag 177 since @472) |
-| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 475 | STALE (lag 174 since @475) |
+| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 656 | USED |
+| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 656 | USED |
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 491 | STALE (lag 158 since @491) |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 492 | STALE (lag 157 since @492) |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 493 | STALE (lag 156 since @493) |
@@ -239,6 +239,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > **Cycle 654 (2026-07-15) example-apps STALE-clear.** support_tickets: `discovery report` exit 0; `deploy plan` (Postgres+s3); `test-design coverage-actions` exit 0. Stamped discovery, deploy plan, test-design **USED@654**.
 
 > **Cycle 655 (2026-07-15) framework-ux STALE-clear.** `fitness code` + `fitness vitality` (support_tickets); `rbac matrix`; `sentinel scan`; `inspect project`. Stamped fitness engine/CLI, sentinel scan, rbac **USED@655**.
+
+> **Cycle 656 (2026-07-15) multi-lane STALE-clear.** coverage 61/61; composition audit 100; pulse run 68% launch-ready; fragment-audit support_tickets; rhythm gaps; schema summary. Stamped coverage, pulse, composition, fragment-audit, rhythm **USED@656**.
 ---
 
 
