@@ -448,33 +448,12 @@ workspace ticket_queue "Ticket Queue":
     empty: "No open tickets"
 
 workspace agent_dashboard "Agent Dashboard":
-  purpose: "Personal dashboard for support agents"
+  # TR-51 / cycle 715 trial: managers land here and expected open queue + SLA
+  # signal first. Keep ticket work + lifecycle metrics above comment noise.
+  purpose: "Personal dashboard for support agents and managers"
   stage: "dual_pane_flow"
 
-  activity_timeline:
-    source: Comment
-    sort: created_at desc
-    limit: 30
-    display: timeline
-    action: comment_detail
-    empty: "No activity yet"
-
-  ticket_history:
-    source: Ticket
-    sort: updated_at desc
-    limit: 20
-    display: timeline
-    action: ticket_detail
-    empty: "No tickets logged yet"
-
-  recent_comments:
-    source: Comment
-    sort: created_at desc
-    limit: 10
-    display: list
-    action: comment_detail
-    empty: "No recent comments"
-
+  # ── Work first: assigned + pending tickets ──────────────────────────
   my_assigned:
     source: Ticket
     filter: assigned_to = current_user and status = in_progress
@@ -493,15 +472,7 @@ workspace agent_dashboard "Agent Dashboard":
     action: ticket_detail
     empty: "No tickets pending closure"
 
-  # Comment activity feed — live-updating stream
-  comment_activity:
-    source: Comment
-    display: activity_feed
-    sort: created_at desc
-    limit: 20
-    empty: "No recent comments"
-
-  # Resolution progress — funnel of tickets through lifecycle stages
+  # ── Lifecycle / SLA signal ──────────────────────────────────────────
   resolution_funnel:
     source: Ticket
     display: funnel_chart
@@ -510,12 +481,43 @@ workspace agent_dashboard "Agent Dashboard":
       count: count(Ticket)
     empty: "No tickets"
 
-  # Stage progress for the current ticket backlog
   backlog_progress:
     source: Ticket
     display: progress
     group_by: status
     empty: "No backlog"
+
+  ticket_history:
+    source: Ticket
+    sort: updated_at desc
+    limit: 20
+    display: timeline
+    action: ticket_detail
+    empty: "No tickets logged yet"
+
+  # ── Activity last (comment noise) ───────────────────────────────────
+  recent_comments:
+    source: Comment
+    sort: created_at desc
+    limit: 10
+    display: list
+    action: comment_detail
+    empty: "No recent comments"
+
+  comment_activity:
+    source: Comment
+    display: activity_feed
+    sort: created_at desc
+    limit: 20
+    empty: "No recent comments"
+
+  activity_timeline:
+    source: Comment
+    sort: created_at desc
+    limit: 30
+    display: timeline
+    action: comment_detail
+    empty: "No activity yet"
 
 workspace my_tickets "My Tickets":
   purpose: "Customer view of their submitted tickets"
