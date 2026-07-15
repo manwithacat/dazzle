@@ -66,6 +66,38 @@ def _lookup_faker_method(field_name: str) -> str | None:
     return None
 
 
+def _legacy_placeholder_prefix(value: str) -> bool:
+    """True if *value* looks like the old UX-seed placeholders trials rejected.
+
+    Faker free-text methods (``sentence`` / ``paragraph``) can randomly start
+    with the word "Test" or "UX" — same prefix tokens we banned when we left
+    hand-rolled ``"Test first_name 1"`` / ``"UX …"`` strings. Re-roll those.
+    """
+    low = value.lower().lstrip()
+    return low.startswith("test ") or low.startswith("ux ")
+
+
+def _example_fallback(field_name: str, index: int) -> str:
+    pretty = field_name.replace("_", " ").title()
+    return f"Example {pretty} {index + 1}"
+
+
+def _faker_sentence(*, nb_words: int = 4) -> str:
+    assert _faker is not None
+    return _faker.sentence(nb_words=nb_words).rstrip(".")
+
+
+def _safe_free_text(field_name: str, index: int, *, nb_words: int = 4) -> str:
+    """Faker free text that is long enough and not a legacy placeholder prefix."""
+    assert _faker is not None
+    value = _faker_sentence(nb_words=nb_words)
+    for _ in range(6):
+        if len(value) >= 3 and not _legacy_placeholder_prefix(value):
+            return value
+        value = _faker_sentence(nb_words=max(nb_words, 5))
+    return _example_fallback(field_name, index)
+
+
 def realistic_str(
     field_name: str,
     index: int = 0,
@@ -110,32 +142,24 @@ def realistic_str(
         elif method == "postcode":
             value = _faker.postcode()
         elif method == "sentence_short":
-            value = _faker.sentence(nb_words=4).rstrip(".")
+            # title/subject/heading — free text; ban "Test …" / "UX …" prefixes
+            value = _safe_free_text(field_name, index, nb_words=4)
         elif method == "paragraph":
             value = _faker.paragraph()
+            if _legacy_placeholder_prefix(value) or len(value) < 3:
+                value = _safe_free_text(field_name, index, nb_words=8)
         elif method == "url":
             value = _faker.url()
         elif method == "user_name":
             value = _faker.user_name()
         else:
-            # Faker available but no name hint — use a short sentence
-            # which reads as realistic-but-generic. Faker can occasionally
-            # emit 1–2 char sentences (e.g. "On.") depending on RNG state
-            # and prior consumers of the process-global Faker; re-roll so
-            # UX seeds never look like empty placeholders (#CI py3.12 flake).
-            value = _faker.sentence(nb_words=4).rstrip(".")
-            for _ in range(4):
-                if len(value) >= 3:
-                    break
-                value = _faker.sentence(nb_words=5).rstrip(".")
-            if len(value) < 3:
-                pretty = field_name.replace("_", " ").title()
-                value = f"Example {pretty} {index + 1}"
+            # Faker available but no name hint — short sentence; re-roll
+            # short strings and banned "Test "/"UX " prefixes (CI flake).
+            value = _safe_free_text(field_name, index, nb_words=4)
     else:
         # Faker missing — use the "Example" prefix so strings look
         # intentional rather than leaked from a fixture.
-        pretty = field_name.replace("_", " ").title()
-        value = f"Example {pretty} {index + 1}"
+        value = _example_fallback(field_name, index)
 
     if max_length is not None and len(value) > max_length:
         value = value[:max_length]
