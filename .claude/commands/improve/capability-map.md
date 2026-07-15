@@ -50,7 +50,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 675 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 682 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 677 | USED |
-| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 672 | USED |
+| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 694 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 679 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 675 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 676 | USED |
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 694 (2026-07-15) test-suite STALE-clear.** `dazzle sentinel mutate --suite security` **PASS** — all 5 modules ≥ floor (crypto 83%, rbac 71%, csrf 85%, rls 100%, predicate 77%). Stamped sentinel mutate **USED@694**.
 > **Cycle 692 (2026-07-15) hm-convergence dual_lock STALE-clear.** Floors GREEN; dual_lock queue=0; coherence queue=0. Re-ran coverage+queue write; `hm_visual_smoke --dazzle-emit` PASS. dual_lock **671 STALE → 692 USED**.
 > **Capability-sweep cycle 691 (2026-07-15).** Sweep due (21 cycles since 670; self-audit last@678 lag 13).
 > Re-derived inventory: skills/commands/strategies/CLI **unchanged** vs cycle 670. **No newly-built UNOWNED.** Inbox owner_bug heat is Step 0c3 extension (already mapped GitHub inbox@690).
