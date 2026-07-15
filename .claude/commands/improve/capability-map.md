@@ -59,7 +59,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 699 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 698 | USED |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 700 | USED |
-| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 692 | USED |
+| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 712 | USED |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 704 | USED |
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 704 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 712 (2026-07-15) hm-convergence dual_lock STALE-clear.** Floors GREEN; dual_lock queue=0; coherence queue=0; shadcn gaps=0. Re-ran coverage+queue write; `hm_visual_smoke --dazzle-emit` PASS. dual_lock **692 → 712 USED**.
 > **Capability-sweep cycle 711 (2026-07-15).** Sweep due (20 cycles since 691; self-audit last@708 lag 3).
 > Re-derived inventory: skills/commands/strategies/CLI **unchanged** vs cycle 691. **No newly-built UNOWNED.** Owner_bug inbox heat remains Step 0c3 extension.
 > **STALE recompute (threshold last-exercised ≤691):** **0 flip(s)** USED→STALE.
