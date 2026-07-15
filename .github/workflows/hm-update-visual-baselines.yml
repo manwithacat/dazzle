@@ -33,7 +33,7 @@ jobs:
           --rootdir=.
           -p no:cacheprovider
       # Main is PR-protected; bot push is rejected. Upload for local commit/push.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-baselines
           path: packages/hatchi-maxchi/tests/baselines/linux/
