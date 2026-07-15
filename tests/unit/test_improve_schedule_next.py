@@ -39,6 +39,8 @@ def _base(**kwargs):
         "deployed": False,
         "force_stop": False,
         "ci": "unavailable",
+        # Isolate from live .dazzle/improve-github-inbox.json on the machine
+        "github_heat": "",
     }
     d.update(kwargs)
     return d
@@ -164,6 +166,13 @@ def test_decide_work_remaining_no_ci(sched):
     )
     assert d["interval"] == "5m"
     assert "work_remaining" in d["reason"]
+
+
+def test_decide_github_dependabot_heat(sched):
+    d = sched.decide(**_base(github_heat="dependabot_merge", explore_used=100))
+    assert d["interval"] == "2m"
+    assert d["fire_immediately"] is True
+    assert "dependabot" in d["reason"]
 
 
 def test_decide_stop(sched):

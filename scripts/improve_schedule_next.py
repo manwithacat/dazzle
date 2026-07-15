@@ -37,6 +37,7 @@ BACKLOG = ROOT / "dev_docs" / "improve-backlog.md"
 LOG = ROOT / "dev_docs" / "improve-log.md"
 EXPLORE_COUNT = ROOT / ".dazzle" / "improve-explore-count"
 STATE = ROOT / ".dazzle" / "improve-schedule-state.json"
+GITHUB_INBOX = ROOT / ".dazzle" / "improve-github-inbox.json"
 
 EXPLORE_CAP = 100
 SELF_AUDIT_EVERY = 15
@@ -222,6 +223,23 @@ def probe_ci_main() -> dict[str, Any]:
         return {"ci": "unavailable", "detail": str(exc)}
 
 
+def _github_inbox_heat() -> str | None:
+    """Read last inbox probe heat if fresh enough (file mtime < 2h)."""
+    try:
+        if not GITHUB_INBOX.exists():
+            return None
+        age = datetime.now(UTC).timestamp() - GITHUB_INBOX.stat().st_mtime
+        if age > 2 * 3600:
+            return None
+        data = json.loads(GITHUB_INBOX.read_text(encoding="utf-8"))
+        heat = str(data.get("heat") or "")
+        if heat and heat != "idle":
+            return heat
+    except (OSError, json.JSONDecodeError, ValueError, TypeError):
+        return None
+    return None
+
+
 def _has_work(
     *,
     counts: dict[str, int],
@@ -229,8 +247,11 @@ def _has_work(
     current_cycle: int | None,
     last_self_audit: int | None,
     last_capability_sweep: int | None,
+    github_heat: str | None = None,
 ) -> tuple[bool, str]:
     """Whether the next cycle has product/governance work worth a hot chain."""
+    if github_heat in ("dependabot_merge", "consumer_bug", "dependabot_ci_red"):
+        return True, f"github_inbox={github_heat}"
     if int(counts.get("urgent", 0)) > 0:
         return True, "regression"
     if int(counts.get("actionable", 0)) > 0:
@@ -243,6 +264,8 @@ def _has_work(
             return True, "self_audit_due"
         if last_capability_sweep is None or (nxt - last_capability_sweep) >= CAPABILITY_SWEEP_EVERY:
             return True, "capability_sweep_due"
+    if github_heat and github_heat != "idle":
+        return True, f"github_inbox={github_heat}"
     return False, "idle"
 
 
@@ -257,10 +280,12 @@ def decide(
     deployed: bool,
     force_stop: bool,
     ci: str = "unavailable",
+    github_heat: str | None = None,
 ) -> dict:
     """Return schedule decision (action, interval, fire_immediately, reason).
 
     ``ci`` ∈ {green, red, in_progress, unavailable}.
+    ``github_heat`` optional override (tests); default reads inbox state file.
     """
     ci = (ci or "unavailable").lower()
 
@@ -296,12 +321,35 @@ def decide(
             fire_immediately=True,
         )
 
+    if github_heat is None:
+        github_heat = _github_inbox_heat()
+    # Dependabot ready / consumer bugs — fire ASAP even before generic work heat.
+    if github_heat == "dependabot_merge":
+        return _sched(
+            INTERVAL_HOT,
+            "github_dependabot_merge_ready",
+            fire_immediately=True,
+        )
+    if github_heat == "consumer_bug":
+        return _sched(
+            INTERVAL_HOT,
+            "github_consumer_bug",
+            fire_immediately=True,
+        )
+    if github_heat == "dependabot_ci_red":
+        return _sched(
+            INTERVAL_HOT,
+            "github_dependabot_ci_red",
+            fire_immediately=True,
+        )
+
     has_work, work_why = _has_work(
         counts=counts,
         explore_used=max(0, min(explore_used, EXPLORE_CAP)),
         current_cycle=current_cycle,
         last_self_audit=last_self_audit,
         last_capability_sweep=last_capability_sweep,
+        github_heat=github_heat,
     )
 
     # --- CI-opportunistic path (post-deploy or always when status is known) ---

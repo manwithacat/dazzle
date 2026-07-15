@@ -1,11 +1,11 @@
-Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → **CodeQL open-alert snapshot** (remediate if high/error open) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome → **self-schedule the next one-shot** (adaptive interval; durable chain, not a fixed `/loop` ticker).
+Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → **CodeQL open-alert snapshot** (remediate if high/error open) → **GitHub inbox** (consumer bugs + open PRs / Dependabot) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome → **self-schedule the next one-shot** (opportunistic CI-aware interval).
 
-Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, CodeQL gate, signal bus, log, self-schedule).
+Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, CodeQL gate, GitHub inbox, signal bus, log, self-schedule).
 
 ARGUMENTS: $ARGUMENTS
 
 If `$ARGUMENTS` is empty: driver picks the lane.
-If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep; `trial-signals` forces the TR-action drain strategy; `cimonitor` forces the CI-badge gate playbook even when main is green — re-check + report only unless red; `codeql` forces the CodeQL open-alert poll + remediate playbook.)
+If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep; `trial-signals` forces the TR-action drain strategy; `cimonitor` forces the CI-badge gate playbook even when main is green — re-check + report only unless red; `codeql` forces the CodeQL open-alert poll + remediate playbook; `consumer-issues` / `github-prs` force GitHub inbox strategies.)
 If `$ARGUMENTS` is `<lane> <strategy>`: force that lane and that sub-strategy.
 If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (no cycle).
 If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count`, log the manual reset, and exit (no cycle). Operator escape hatch — use when the cap was reached but exploration should continue (e.g. after a large framework change that a release signal didn't capture).
@@ -32,6 +32,7 @@ If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count
 | `.dazzle/improve.lock` | PID + timestamp; 15-min TTL |
 | `.dazzle/improve-explore-count` | Single counter shared across all lanes' explore phases (cap 100) |
 | `.dazzle/improve-schedule-state.json` | Last self-schedule decision (interval, reason, scheduler_create payload) |
+| `.dazzle/improve-github-inbox.json` | Last issues+PRs poll (`scripts/improve_github_inbox.py`) |
 | `.dazzle/signals/` | Cross-lane signal bus (existing `ux_cycle_signals` infrastructure) |
 
 All gitignored (under `.dazzle/` or `dev_docs` local state as noted).
@@ -96,9 +97,32 @@ gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/code-scanni
 | **Zero open** | Log `codeql: clean`; continue. |
 | **`gh` / API failure** | Log `codeql: unavailable`; continue. |
 
-**Preemption order:** CI red (0c) > CodeQL high/error (0c2) > REGRESSION > self-audit > … Fleet-visible Security findings outrank product explore but never jump ahead of a red CI badge.
+**Preemption order:** CI red (0c) > CodeQL high/error (0c2) > GitHub inbox (0c3) > REGRESSION > self-audit > … Fleet-visible Security findings outrank product explore but never jump ahead of a red CI badge.
 
 Forceable via `/improve codeql` (always poll; remediate any open alerts, not only high).
+
+### Step 0c3: GitHub inbox — consumer issues + PRs (always when 0c/0c2 did not claim repair)
+
+Cheap poll of open issues and PRs. Machine probe:
+
+```bash
+uv run python scripts/improve_github_inbox.py
+# JSON → stdout + .dazzle/improve-github-inbox.json
+```
+
+| Inbox heat / primary | Driver action |
+|----------------------|---------------|
+| **`dependabot_merge`** (Dependabot PR, checks green, not draft) | **This cycle is github-prs.** Follow `improve/strategies/github_prs.md`: re-confirm checks → `gh pr merge --squash --delete-branch` (up to 2 PRs). Log `lane: github-prs`. `budget_consumed: 0`. Apply Step 3–4 and exit (or continue only if nothing merged and heat cleared). |
+| **`dependabot_ci_red`** | **This cycle is github-prs.** Investigate PR checks (flake re-run vs real break). Do not merge red. Log `lane: github-prs`. |
+| **`consumer_bug`** (downstream author and/or consumer label, bug-shaped) | **This cycle is consumer-issues.** Follow `improve/strategies/consumer_issues.md`: one issue, Tier-1 fix if clear else analysis comment. Log `lane: consumer-issues`. |
+| **`inbox_nonzero`** only (human PRs / non-bug consumer noise) | Log summary under **github:**; **continue** selection (do not burn the whole cycle unless nothing else is actionable). |
+| **Probe failure / `gh` unavailable** | Log **github: unavailable**; continue. |
+
+**Dependabot policy:** routine bot dependency bumps **auto-merge when CI is green** (see playbook gates — non-ignorable check failures block merge). Non-Dependabot PRs are **never** auto-merged by this strategy.
+
+**Consumer bug policy:** bugs from authors other than the project owner (and issues labeled consumer/external/customer) are **first-class improve work** — not deferred to a separate `/issues` session. Features / design-only requests still get analysis comments only (Tier 2/3).
+
+Forceable via `/improve github-prs` or `/improve consumer-issues`.
 
 ### Step 0d: Read signals
 
@@ -125,7 +149,7 @@ See **State compaction** above. Skip silently when both files are under the thre
 
 ### Step 1: Pick a lane
 
-If Step 0c already claimed this cycle for CI repair, or Step 0c2 claimed it for CodeQL repair, skip Step 1–2 (already handled).
+If Step 0c already claimed this cycle for CI repair, Step 0c2 for CodeQL repair, or Step 0c3 claimed it for github-prs / consumer-issues, skip Step 1–2 (already handled).
 
 If `$ARGUMENTS` forces a lane, skip to Step 2.
 
@@ -138,7 +162,7 @@ For each lane, compute two numbers from the unified backlog:
 
 Selection priority:
 
-1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge or CodeQL high/error already preempted this step via 0c / 0c2.
+1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge or CodeQL high/error already preempted this step via 0c / 0c2; GitHub inbox (0c3) already ran if it claimed the cycle.
 2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`.
 3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute `STALE` (last-exercised ≥20 cycles behind the current cycle). Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt.
 4. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
@@ -151,6 +175,8 @@ Selection priority:
    4. Any `OWNED-IDLE` that has been exercised before but not for ≥20 cycles (treat like STALE)
    5. Else oldest `last_run_at` lane ordinary **explore phase**
 8. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit. The log entry must name the two renewal routes so the loop never looks permanently stuck: the budget resets automatically on the next `dazzle-updated` release signal, or manually via `/improve --reset-budget`.
+
+**GitHub inbox note:** Dependabot-ready merges and consumer bugs are claimed in **Step 0c3** (before this list). If 0c3 only logged a non-blocking inbox summary, do not re-pick github-prs unless heat remains and product selection is empty.
 
 Record the choice. Bias from signals, TR-drain, or capability-coverage must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N"; "picked hm-convergence to expand dual-locks — STALE 24 cycles"; "picked framework-ux for TR-50 OPEN_FRAMEWORK high") so future operators can audit.
 
@@ -330,6 +356,7 @@ When invoked with `--status`, skip the cycle and emit:
 Budget: X/100
 Lock: free | held by PID since TIME
 CI badge (main): green | red (run #id) | in_progress | unavailable
+GitHub inbox: heat=… consumer_bugs=N dependabot_ready=N (from improve_github_inbox.py)
 Last cycle: N — lane: {name} — outcome: {status}
 
 Lane:           Actionable    Last run     Likely next?
@@ -352,6 +379,8 @@ Read-only — does not modify state, log, or lock. Status mode **does** run the 
 /improve framework-ux                   # force a lane
 /improve framework-ux contract_audit    # force lane + sub-strategy
 /improve cimonitor                      # force CI snapshot (+ repair if red)
+/improve github-prs                     # Dependabot / open PR processing
+/improve consumer-issues                # downstream consumer bug intake
 /improve --status                       # status report, no cycle (no schedule)
 /improve --reset-budget                 # clear explore cap (no cycle)
 # Prefer self-schedule (Step 6) over a fixed ticker. Alternatives:

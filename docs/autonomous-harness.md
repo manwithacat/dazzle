@@ -155,6 +155,12 @@ durable watchdog (`scripts/improve_watchdog_prompt.md`) re-arms the chain if
 it dies. Session-bound alternative: `/loop 30m /improve`. Read-only:
 `/improve --status`.
 
+**GitHub inbox (Step 0c3):** every cycle polls open issues + PRs via
+`scripts/improve_github_inbox.py`. Downstream **consumer bugs** are first-class
+work (`improve/strategies/consumer_issues.md`). **Dependabot** PRs with green
+checks auto-merge (`improve/strategies/github_prs.md`); human PRs are reviewed
+but not auto-merged.
+
 #### `/issues`
 **Source:** `.claude/commands/issues.md`
 
