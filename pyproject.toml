@@ -417,6 +417,10 @@ dazzle = ["py.typed"]
 # OFL 1.1 requires the licence file to accompany font distribution.
 "dazzle.page.runtime" = ["static/**/*.woff2", "static/fonts/OFL.txt"]
 "dazzle.page.runtime.static" = ["**/*.js", "**/*.css", "**/*.mjs"]
+# Agent-command TOML definitions (#1589): dazzle agent sync/seed load
+# definitions/*.toml via Path relative to loader.py. definitions/ has no
+# __init__.py so packages.find omits it — same class as #1032/#1308/#1572.
+"dazzle.services.agent_commands" = ["definitions/*.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/dazzle/http/tests"]
