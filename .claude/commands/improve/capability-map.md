@@ -49,14 +49,14 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 698 | USED |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 697 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 682 | USED |
-| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 677 | USED |
+| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 699 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 694 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 679 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 697 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 698 | USED |
 | `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 679 | USED |
-| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 677 | USED |
-| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 677 | USED |
+| `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 699 | USED |
+| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 699 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 698 | USED |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 679 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 692 | USED |
@@ -71,7 +71,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 483 | STALE (lag 208 since @483) |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 688 | USED |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 485 | STALE (lag 206 since @485) |
-| `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 677 | USED |
+| `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 699 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 679 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 679 | USED |
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 682 | USED |
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 699 (2026-07-15) framework-ux STALE-clear.** support_tickets: `fitness code` + `fitness vitality`; `rbac matrix`; `sentinel scan`; `inspect project`. Stamped fitness engine/CLI, sentinel scan, rbac **USED@699**.
 > **Cycle 698 (2026-07-15) example-apps STALE-clear.** support_tickets: `discovery report` exit 0; `deploy plan` (Postgres+s3); `test-design coverage-actions` exit 0. Stamped discovery, deploy plan, test-design **USED@698**.
 > **Cycle 697 (2026-07-15) example-apps STALE-clear.** support_tickets: `validate`+`lint` exit 0 (warnings only); `story list` 18 stories; `conformance summary` 481 cases. Stamped validate/lint, story, conformance **USED@697**.
 > **Cycle 696 (2026-07-15) hm-convergence STALE-clear gallery_probes.** Discover multi-details 3/3 catalog_ok. Run **6/6 PASS** (menubar/nav/accordion exclusive; tree multi_open; menubar/nav dismiss). Stamped gallery probes **USED@696**.
