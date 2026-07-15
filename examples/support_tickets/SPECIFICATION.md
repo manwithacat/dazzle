@@ -54,12 +54,13 @@ Agent Console. Managers alone can delete tickets or comments.
 Four workspaces organise the work. The **Ticket Queue** is the agents' home
 for managing incoming tickets: a summary, a kanban board of tickets, and the
 ticket list. The **Agent Dashboard** is the personal dashboard for support
-agents — ticket and comment timelines, work lists, an activity feed, a
-resolution funnel, and progress tracking. **My Tickets** is the customer's
-view of their own submitted tickets. The **Agent Console** — shared by
-administrators, managers, and agents — lets you pick an agent and see the
-tickets assigned to them, the comments on those tickets, and comparison
-charts of both.
+agents and managers — assigned and pending ticket work and lifecycle metrics
+first (resolution funnel and backlog progress), then ticket history, with
+comment activity and timelines last so day-one orientation is not buried under
+noise. **My Tickets** is the customer's view of their own submitted tickets.
+The **Agent Console** — shared by administrators, managers, and agents — lets
+you pick an agent and see the tickets assigned to them, the comments on those
+tickets, and comparison charts of both.
 
 ## How work flows through it
 
@@ -128,4 +129,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:085292f77eaacdac1cbc7077d65d228aa43b21bcef5ecab90fca7b25957b4282 -->
+<!-- dazzle-spec-brief: sha256:d6adfed390bf78fde00dee86fef2126903593f541974e95e88f5168b621e4fb4 -->
