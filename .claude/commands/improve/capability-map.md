@@ -47,9 +47,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 482 | STALE (lag 167 since @482) |
 | **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 507 | STALE (lag 142 since @507) |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 462 | STALE (lag 187 since @462) |
-| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 457 | STALE (lag 172 since @457) |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 458 | STALE (lag 171 since @458) |
-| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 459 | STALE (lag 170 since @459) |
+| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 457 | STALE (lag 192 since @457) |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 458 | STALE (lag 191 since @458) |
+| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 459 | STALE (lag 190 since @459) |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 487 | STALE (lag 162 since @487) |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 471 | STALE (lag 178 since @471) |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 456 | STALE (lag 193 since @456) |
@@ -76,9 +76,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 475 | STALE (lag 174 since @475) |
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 491 | STALE (lag 158 since @491) |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 492 | STALE (lag 157 since @492) |
-| MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 493 | STALE (lag 136 since @493) |
-| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 494 | STALE (lag 135 since @494) |
-| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 455 | STALE (lag 174 since @455) |
+| MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 493 | STALE (lag 156 since @493) |
+| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 494 | STALE (lag 155 since @494) |
+| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 455 | STALE (lag 194 since @455) |
 | **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 496 | STALE (lag 153 since @496) |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
