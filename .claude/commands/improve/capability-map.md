@@ -46,18 +46,18 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 688 | USED |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 482 | STALE (lag 209 since @482) |
 | **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 688 | USED |
-| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 676 | USED |
+| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 698 | USED |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 697 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 682 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 677 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 694 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 679 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 697 | USED |
-| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 676 | USED |
+| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 698 | USED |
 | `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 679 | USED |
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 677 | USED |
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 677 | USED |
-| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 676 | USED |
+| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 698 | USED |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 679 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 692 | USED |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 684 | USED |
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 698 (2026-07-15) example-apps STALE-clear.** support_tickets: `discovery report` exit 0; `deploy plan` (Postgres+s3); `test-design coverage-actions` exit 0. Stamped discovery, deploy plan, test-design **USED@698**.
 > **Cycle 697 (2026-07-15) example-apps STALE-clear.** support_tickets: `validate`+`lint` exit 0 (warnings only); `story list` 18 stories; `conformance summary` 481 cases. Stamped validate/lint, story, conformance **USED@697**.
 > **Cycle 696 (2026-07-15) hm-convergence STALE-clear gallery_probes.** Discover multi-details 3/3 catalog_ok. Run **6/6 PASS** (menubar/nav/accordion exclusive; tree multi_open; menubar/nav dismiss). Stamped gallery probes **USED@696**.
 > **Cycle 695 (2026-07-15) hm-convergence STALE-clear taste-panel (subscription).** Floors GREEN; `hm_visual_smoke --dazzle-emit` PASS; host-Read scores ingested mean **7.4** (no metered taste-panel). Stamped taste-panel **USED@695**.
