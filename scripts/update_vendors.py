@@ -7,12 +7,14 @@ via the helpers in ``vendor_manifest.py``. The companion drift gate in
 ``tests/unit/test_vendor_hash_drift.py`` then catches any divergence between
 on-disk vendored files and the pinned manifest.
 
-This script handles lucide (auto-update) and the manually-pinned htmx 4 set —
-the core (``update_htmx``, a no-op report) plus the three vendored htmx-4
-extensions (``update_htmx_extensions``: ``hx-preload`` / ``hx-optimistic`` /
-``hx-upsert``), all pinned to ``HTMX_PINNED_VERSION`` and bumped together at GA
-(#1409). Other vendored files (flatpickr, pdfjs, etc.) are vendored
-manually — use ``scripts/update_vendor_hashes.py`` after replacing them by hand.
+This script handles lucide (auto-update) and the **manually-pinned** htmx 4
+set — the core (``update_htmx``) plus the three vendored htmx-4 extensions
+(``update_htmx_extensions``: ``hx-preload`` / ``hx-optimistic`` / ``hx-upsert``),
+all locked to ``HTMX_PINNED_VERSION``. Bump that constant and re-run this
+script to track successive 4.x betas until GA (#1409); the cron must **not**
+auto-advance the pin. Other vendored files (flatpickr, pdfjs, etc.) are
+vendored manually — use ``scripts/update_vendor_hashes.py`` after replacing
+them by hand.
 """
 
 from __future__ import annotations
@@ -169,9 +171,10 @@ def _read_head(path: Path, lines: int = 5) -> str:
     return "\n".join(text.splitlines()[:lines])
 
 
-# htmx is manually pinned to a 4.x beta (shipped v0.83.0, #1405). Bump this
-# together with the vendored htmx.min.js when moving to GA (#1409).
-HTMX_PINNED_VERSION = "4.0.0-beta4"
+# htmx is manually pinned to a 4.x beta (shipped v0.83.0 → beta4, #1405).
+# Track successive betas by bumping this constant + re-running update_vendors
+# until GA (#1409). Cron must never auto-advance the pin (only re-syncs it).
+HTMX_PINNED_VERSION = "4.0.0-beta5"
 
 
 def _detect_lucide_version() -> str | None:
@@ -193,30 +196,28 @@ def _tag_version(tag: str) -> str:
 
 
 def update_htmx(*, check_only: bool) -> None:
-    """htmx is PINNED to a manually-vendored 4.x beta — auto-update is a no-op.
+    """Vendor the pinned htmx 4.x core from the jsdelivr CDN.
 
-    htmx 2.0.9 → 4.0.0-beta4 shipped in v0.83.0 (#1405). The cron must NOT
-    touch htmx:
+    Pin is deliberate (``HTMX_PINNED_VERSION``) — we track successive 4.x
+    betas until GA (#1409). Cron must **not** auto-advance to a newer beta:
 
-    - ``_latest_stable_release`` deliberately skips pre-releases, so it cannot
-      track v4 betas — and pointing it at ``v2.`` (as it used to) would
-      *downgrade* the vendored beta back to htmx 2.x on the next run.
-    - The beta → GA bump is a deliberate, browser-gated decision tracked in
-      #1409, not something the cron should make.
+    - ``_latest_stable_release`` skips pre-releases, so it cannot track v4
+      betas — and must never be pointed at ``v2.`` (would downgrade the
+      vendored beta back to htmx 2.x).
+    - Bumping the pin is an operator decision; this function only re-syncs
+      the bytes for whatever pin is currently set.
     - All htmx-2 extension files were dropped in the migration (native morph /
-      ``hx-status`` / ``hx-sse`` + Dazzle bridges replace them), so there is
-      nothing to fetch — fetching the old set would resurrect deleted files
-      and trip the vendor-hash drift gate.
+      ``hx-status`` / ``hx-sse`` + Dazzle bridges replace them).
 
-    So this reports the pinned version and returns without downloading. When
-    bumping to GA (#1409), update both the vendored ``htmx.min.js`` and
-    ``HTMX_PINNED_VERSION`` together.
+    Fetch path matches the extensions: ``htmx.org@<pin>/dist/htmx.min.js``.
     """
-    del check_only  # no-op regardless of dry-run
-    print(
-        f"htmx: pinned to {HTMX_PINNED_VERSION} (manually vendored; "
-        "auto-update skipped, GA bump tracked in #1409)"
-    )
+    print(f"htmx: pinned to {HTMX_PINNED_VERSION} (core + extensions re-synced at pin)")
+    if check_only:
+        return
+    cdn_url = f"https://cdn.jsdelivr.net/npm/htmx.org@{HTMX_PINNED_VERSION}/dist/htmx.min.js"
+    data = _download(cdn_url)
+    _save_vendor("htmx.min.js", data)
+    print(f"  downloaded htmx.min.js ({len(data)} bytes) from {cdn_url}")
 
 
 # htmx-4 extensions vendored for the #1491 H-class UX-maturity work (preload-drill
@@ -225,7 +226,7 @@ def update_htmx(*, check_only: bool) -> None:
 # and a `<meta name="htmx-config" content='{"extensions": "..."}'>` can restrict
 # which load. Pinned to HTMX_PINNED_VERSION (the same manually-vendored beta as the
 # core) so the pair never drifts; re-fetching at the pin is idempotent. Bump these
-# together with the core at GA (#1409).
+# together with the core when advancing the pin (betas until GA, #1409).
 HTMX_EXTENSIONS = ("hx-preload", "hx-optimistic", "hx-upsert")
 
 

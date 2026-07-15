@@ -99,7 +99,7 @@ _HM_REPO = "https://github.com/manwithacat/hatchi-maxchi"
 _HM_PAGES = "https://manwithacat.github.io/hatchi-maxchi"
 _HM_MONOREPO = "https://github.com/manwithacat/dazzle/tree/main/packages/hatchi-maxchi"
 # Fallback when the monorepo vendor pin file is not present (standalone tree).
-_HTMX_PIN_FALLBACK = "4.0.0-beta4"
+_HTMX_PIN_FALLBACK = "4.0.0-beta5"
 
 _ICON_RE = re.compile(r"\{icon:([a-z0-9-]+)\}")
 _SVG_RE = re.compile(r"\{svg:([a-z0-9-]+)\}")

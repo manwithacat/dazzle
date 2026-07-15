@@ -5,7 +5,7 @@
 
 These are the first two **Class-(H)** primitives — *declarative wrappers over native
 htmx-4 triggers + vendored extensions*, no bespoke per-app JS (SSR+htmx doctrine,
-Locality of Behaviour). htmx **4.0.0-beta4 is already the vendored runtime**, so
+Locality of Behaviour). htmx **4.x beta is already the vendored runtime** (pinned `HTMX_PINNED_VERSION`, currently 4.0.0-beta5), so
 the native layer is buildable today; this design also vendors two new beta
 extensions (`hx-optimistic`, `hx-upsert`) — a deliberate, accepted bet on the
 4.x beta extension API ahead of GA (#1409).

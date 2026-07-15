@@ -28,7 +28,7 @@ with very different cost/risk.
 
 ## The htmx-4 examination — does it express our learned requirements?
 
-Read against the htmx-4 (`four-dev`, 4.0.0-beta4) source + extension set. The
+Read against the htmx-4 (`four-dev`, pin `HTMX_PINNED_VERSION` / currently 4.0.0-beta5) source + extension set. The
 answer is **yes for the interaction layer, no for the data layer** (the data
 layer was never htmx's job).
 

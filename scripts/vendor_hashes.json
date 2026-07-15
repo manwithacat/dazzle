@@ -5,9 +5,9 @@
     "description": "SHA-256 of every file in src/dazzle/page/runtime/static/vendor/. CI gate test_vendor_hashes.py recomputes these and fails on drift; scripts/update_vendors.py regenerates entries it touches (htmx core + 4 extensions, idiomorph, lucide) as part of its auto-update PR. Other entries (lucide, pdfjs, etc.) are vendored manually \u2014 to update one of those, run scripts/update_vendor_hashes.py after replacing the file."
   },
   "files": {
-    "htmx.min.js": "sha256:26382eb1b57b52105e4e9394799e79ac1f52548cc32d4c58d34eabd34f0c46f0",
-    "hx-optimistic.min.js": "sha256:97999dab71c9077302bee8ca984603e21a11bd3386b4fea794e2171dbfd5fc06",
-    "hx-preload.min.js": "sha256:591775522e87425b8c4b02148e4d7e120feb4bdab364c44d093ba67bfab1456f",
+    "htmx.min.js": "sha256:192d2d425dda6834bd15973a10f55940cea217a3a840f3f819ffd16063be9a68",
+    "hx-optimistic.min.js": "sha256:695061ea0909c856ca0c5c40efefef8c504fdc81dd34e0a1d2f2c6e609c1c24d",
+    "hx-preload.min.js": "sha256:7b08d98f0e2c6981293fc219c68f634caad230dec99dc43c1c74bf1d91534dc5",
     "hx-upsert.min.js": "sha256:9e516c6608f765b568559a4caed3c3121eff2702fb7ce012f21775639d2699c3",
     "lucide.min.js": "sha256:cbb50509a5c804a7cf1f03ef33bf2e1fee07868b013955e996779de3ee472e4d",
     "pdfjs/pdf.min.mjs": "sha256:44ec6f011027ee77791386b66c14876a5fc29e20bf0433c07c6726fff7212b72",

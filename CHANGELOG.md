@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **htmx 4.0.0-beta4 → 4.0.0-beta5.** Vendored core + `hx-preload` /
+  `hx-optimistic` / `hx-upsert` re-synced at the pin
+  (`HTMX_PINNED_VERSION`); `update_htmx` now fetches the pinned core from
+  jsDelivr (same path as extensions) so beta bumps are one constant + re-run.
+  Policy: track successive 4.x betas until GA (#1409); cron does not
+  auto-advance the pin.
+
 ## [0.104.0] - 2026-07-15
 
 ### Added
