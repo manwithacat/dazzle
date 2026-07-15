@@ -48,7 +48,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 507 | STALE (lag 142 since @507) |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 654 | USED |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 653 | USED |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 458 | STALE (lag 191 since @458) |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 657 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 655 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 487 | STALE (lag 162 since @487) |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 656 | USED |
@@ -74,9 +74,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 655 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 656 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 656 | USED |
-| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 491 | STALE (lag 158 since @491) |
-| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 492 | STALE (lag 157 since @492) |
-| MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 493 | STALE (lag 156 since @493) |
+| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 657 | USED |
+| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 657 | USED |
+| MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 657 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 494 | STALE (lag 155 since @494) |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 455 | STALE (lag 194 since @455) |
 | **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 496 | STALE (lag 153 since @496) |
@@ -241,6 +241,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > **Cycle 655 (2026-07-15) framework-ux STALE-clear.** `fitness code` + `fitness vitality` (support_tickets); `rbac matrix`; `sentinel scan`; `inspect project`. Stamped fitness engine/CLI, sentinel scan, rbac **USED@655**.
 
 > **Cycle 656 (2026-07-15) multi-lane STALE-clear.** coverage 61/61; composition audit 100; pulse run 68% launch-ready; fragment-audit support_tickets; rhythm gaps; schema summary. Stamped coverage, pulse, composition, fragment-audit, rhythm **USED@656**.
+
+> **Cycle 657 (2026-07-15) STALE-clear process/compliance/MCP dsl+policy.** process propose; compliance gaps+evidence; MCP dsl validate/lint/modules; fidelity score 0.99; policy analyze. Stamped process, compliance, MCP dsl, policy **USED@657**. semantics still no handler module (STALE).
 ---
 
 
