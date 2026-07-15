@@ -119,8 +119,18 @@ def realistic_str(
             value = _faker.user_name()
         else:
             # Faker available but no name hint — use a short sentence
-            # which reads as realistic-but-generic.
-            value = _faker.sentence(nb_words=3).rstrip(".")
+            # which reads as realistic-but-generic. Faker can occasionally
+            # emit 1–2 char sentences (e.g. "On.") depending on RNG state
+            # and prior consumers of the process-global Faker; re-roll so
+            # UX seeds never look like empty placeholders (#CI py3.12 flake).
+            value = _faker.sentence(nb_words=4).rstrip(".")
+            for _ in range(4):
+                if len(value) >= 3:
+                    break
+                value = _faker.sentence(nb_words=5).rstrip(".")
+            if len(value) < 3:
+                pretty = field_name.replace("_", " ").title()
+                value = f"Example {pretty} {index + 1}"
     else:
         # Faker missing — use the "Example" prefix so strings look
         # intentional rather than leaked from a fixture.
@@ -129,6 +139,11 @@ def realistic_str(
 
     if max_length is not None and len(value) > max_length:
         value = value[:max_length]
+        # Truncation can re-introduce the short-string problem (e.g. max_length=2).
+        # Callers that pass tiny max_length accept short results; for normal
+        # ceilings keep a minimum readable token when possible.
+        if len(value) < 3 and max_length >= 3:
+            value = (value + "…")[:max_length]
     return value
 
 
