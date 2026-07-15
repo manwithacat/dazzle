@@ -1,6 +1,6 @@
 # Cookie Policy — Contact Manager
 
-**Last updated:** 2026-07-14
+**Last updated:** 2026-07-15
 
 This page lists every cookie this service may set, the subprocessor that sets it, the category it falls under (per our consent banner), and its purpose. Essential (functional) cookies are always on; the rest fire only when you grant consent.
 

@@ -1,6 +1,6 @@
 # Privacy Notice — Team Task Manager
 
-**Last updated:** 2026-07-14
+**Last updated:** 2026-07-15
 
 This notice explains how we handle your personal data. The sections below list every kind of data we collect, who we share it with, how long we keep it, and the rights you have under GDPR and equivalent laws.
 

@@ -21,18 +21,22 @@ Gate: `tests/unit/test_stems_layout.py`.
 
 ### Privacy / data-protection pack (SaaS legal pages)
 
-Examples with a public `sitespec.yaml` ship a **compliance pack** derived from
-DSL `pii()` annotations:
+Every example ships a public `sitespec.yaml` with de-facto SaaS legal routes
+(`/privacy`, `/cookies`, `/terms`) and a **compliance pack** derived from DSL
+`pii()` annotations:
 
 ```bash
 cd examples/<app>
 dazzle compliance privacy -o docs/privacy
 # → docs/privacy/{privacy_policy,cookie_policy,ropa}.md
-# → site/content/legal/{privacy,cookies}.md  (SiteSpec /privacy + /cookies)
+# → site/content/legal/{privacy,cookies}.md  (always refreshed)
+# → site/content/legal/terms.md              (scaffold if missing)
 ```
 
-Footer **Legal** links point at those routes. ROPA stays pack-only (Art. 30
-controller record). See `support_tickets` for the fullest walkthrough.
+Footer **Legal** links Privacy / Cookies / Terms. ROPA stays pack-only
+(Art. 30 controller record). Terms use the framework SaaS template (brand
+substituted) — edit freely; re-runs do not overwrite an existing terms.md.
+See `support_tickets` for the fullest walkthrough.
 
 ### HM surfaces (HaTchi-MaXchi)
 

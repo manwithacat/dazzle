@@ -1,6 +1,7 @@
 """Dazzle compliance documentation CLI commands."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import typer
@@ -147,6 +148,50 @@ def render_cmd(
     console.print(f"[green]Rendered:[/green] {written}")
 
 
+def _brand_from_sitespec(root: Path, fallback_product: str) -> tuple[str, str, str]:
+    """Read brand fields from sitespec.yaml when present (best-effort)."""
+    import yaml
+
+    product = fallback_product
+    company = f"{product} Demo"
+    support = "support@example.com"
+    sitespec_path = root / "sitespec.yaml"
+    if not sitespec_path.is_file():
+        return product, company, support
+    try:
+        raw = yaml.safe_load(sitespec_path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return product, company, support
+    brand = raw.get("brand") or {}
+    product = brand.get("product_name") or product
+    company = brand.get("company_legal_name") or f"{product} Demo"
+    support = brand.get("support_email") or support
+    return product, company, support
+
+
+def _maybe_scaffold_terms(
+    root: Path,
+    spec: object,
+    scaffold_fn: Callable[..., Path | None],
+) -> str:
+    """Scaffold terms.md if missing; return a one-line console note.
+
+    ``scaffold_fn`` is ``scaffold_terms_of_service`` injected by the caller so
+    this helper adds no deferred dazzle.* import (ratchet #1438).
+    """
+    product = str(getattr(spec, "title", None) or getattr(spec, "name", None) or root.name)
+    product, company, support = _brand_from_sitespec(root, product)
+    terms_path = scaffold_fn(
+        root,
+        product_name=product,
+        company_legal_name=company,
+        support_email=support,
+    )
+    if terms_path is not None:
+        return f"\n  [cyan]site[/cyan] {terms_path.relative_to(root)} [dim](terms scaffold)[/dim]"
+    return "\n  [dim]terms.md already present — left unchanged[/dim]"
+
+
 @compliance_app.command(name="privacy")
 def privacy_cmd(
     project_dir: Path = typer.Option(  # noqa: B008
@@ -178,6 +223,15 @@ def privacy_cmd(
             "public routes /privacy and /cookies (default: on)."
         ),
     ),
+    scaffold_terms: bool = typer.Option(
+        True,
+        "--scaffold-terms/--no-scaffold-terms",
+        help=(
+            "When syncing site content, also write site/content/legal/terms.md "
+            "from the default SaaS template if missing (default: on with "
+            "--sync-site). Terms are brand-substituted, not pii()-derived."
+        ),
+    ),
 ) -> None:
     """Generate privacy policy, cookie policy, and ROPA from the AppSpec.
 
@@ -192,6 +246,7 @@ def privacy_cmd(
 
         site/content/legal/privacy.md
         site/content/legal/cookies.md
+        site/content/legal/terms.md   (scaffold if missing)
 
     (ROPA stays pack-only — controller Art. 30 record, not a marketing URL.)
 
@@ -199,13 +254,15 @@ def privacy_cmd(
     ``--regenerate-facts``, any existing ``privacy_policy.md`` has only its
     DZ-AUTO delimited sections refreshed — author-edited content outside
     those blocks is preserved. Site copies always receive the full current
-    privacy/cookie text (including merged facts when regenerating).
+    privacy/cookie text (including merged facts when regenerating). Terms
+    are only written when missing unless you delete them first.
     """
     from dataclasses import replace
 
     from dazzle.compliance.analytics import (
         generate_privacy_page_markdown,
         merge_regenerated_into_existing,
+        scaffold_terms_of_service,
         sync_privacy_site_content,
     )
 
@@ -243,6 +300,8 @@ def privacy_cmd(
             f"\n  [cyan]site[/cyan] {site_paths['privacy'].relative_to(root)}\n"
             f"  [cyan]site[/cyan] {site_paths['cookies'].relative_to(root)}"
         )
+        if scaffold_terms:
+            site_note += _maybe_scaffold_terms(root, spec, scaffold_terms_of_service)
 
     console.print(
         f"[green]Generated compliance artefacts at[/green] {target_dir}\n"

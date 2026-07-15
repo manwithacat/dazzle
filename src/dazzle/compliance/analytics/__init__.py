@@ -39,6 +39,7 @@ from .privacy_page import (
     PrivacyPageArtefacts,
     generate_privacy_page_markdown,
     merge_regenerated_into_existing,
+    scaffold_terms_of_service,
     sync_privacy_site_content,
     write_privacy_artefacts,
 )
@@ -129,6 +130,7 @@ __all__ = [
     "parse_consent_cookie",
     "resolve_active_providers",
     "strip_pii",
+    "scaffold_terms_of_service",
     "sync_privacy_site_content",
     "write_privacy_artefacts",
 ]

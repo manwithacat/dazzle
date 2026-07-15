@@ -12,7 +12,7 @@ pages:
     sections:
       - type: hero
         headline: "Hardware Field Testing Platform"
-        subhead: "Manage devices, track issues, and coordinate testers in one place."
+        subhead: "Distributed beta testing for hardware devices"
         primary_cta:
           label: "Get Started"
           href: "/login"
@@ -23,12 +23,19 @@ pages:
       format: md
       path: legal/cookies.md
 
+# SaaS legal surfaces — content from `dazzle compliance privacy`
+# (docs/privacy pack + site/content/legal/{privacy,cookies,terms}.md).
 legal:
   privacy:
     route: "/privacy"
     source:
       format: md
       path: legal/privacy.md
+  terms:
+    route: "/terms"
+    source:
+      format: md
+      path: legal/terms.md
 
 layout:
   nav:
@@ -45,6 +52,8 @@ layout:
             href: "/privacy"
           - label: "Cookies"
             href: "/cookies"
+          - label: "Terms"
+            href: "/terms"
     disclaimer: "FieldTest Hub Demo"
 
 auth_pages:

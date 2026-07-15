@@ -74,18 +74,19 @@ optional `subprocessor` declarations):
 
 ```bash
 dazzle compliance privacy -o docs/privacy
-# writes docs/privacy/* and (by default) site/content/legal/{privacy,cookies}.md
+# writes docs/privacy/* and (by default) site/content/legal/{privacy,cookies,terms}.md
 ```
 
 | Artefact | Where | Served? |
 |----------|--------|---------|
 | Privacy notice | `docs/privacy/privacy_policy.md` | `/privacy` via SiteSpec `legal.privacy` |
 | Cookie policy | `docs/privacy/cookie_policy.md` | `/cookies` |
+| Terms of Service | `site/content/legal/terms.md` | `/terms` (scaffold if missing) |
 | ROPA (GDPR Art. 30) | `docs/privacy/ropa.md` | Controller record only (not public) |
 
 `<!-- DZ-AUTO:… -->` blocks are regenerated; prose outside them is author-owned
-(`--regenerate-facts` preserves edits). Footer links Privacy + Cookies on the
-public site. Use `--no-sync-site` if you only want the pack.
+(`--regenerate-facts` preserves edits). Footer links Privacy + Cookies + Terms.
+Use `--no-sync-site` / `--no-scaffold-terms` to skip site copies.
 
 ## Key DSL Patterns
 

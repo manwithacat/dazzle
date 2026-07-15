@@ -57,7 +57,8 @@ Closed vocabulary — the parser rejects any value outside this list.
 
 - **Compile-time**: feeds the privacy page, ROPA, cookie policy generators
   (`dazzle compliance privacy` → `docs/privacy/*`, and by default
-  `site/content/legal/{privacy,cookies}.md` for public `/privacy` + `/cookies`).
+  `site/content/legal/{privacy,cookies}.md` for public `/privacy` + `/cookies`,
+  plus a Terms of Service scaffold at `site/content/legal/terms.md` if missing).
 - **Runtime (analytics)**: PII-annotated values are stripped from events
   unless the surface opts in: `analytics: include_pii: [email]` (per-surface
   whitelist — no blanket app-level opt-in).

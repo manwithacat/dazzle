@@ -1,0 +1,67 @@
+version: 1
+
+brand:
+  product_name: "HR Records"
+  tagline: "Personnel records and org structure"
+  company_legal_name: "HR Records Demo"
+  support_email: "support@example.com"
+
+pages:
+  - route: "/"
+    type: landing
+    sections:
+      - type: hero
+        headline: "HR Records"
+        subhead: "Personnel records and org structure"
+        primary_cta:
+          label: "Get Started"
+          href: "/login"
+  - route: "/cookies"
+    type: markdown
+    title: "Cookie Policy"
+    source:
+      format: md
+      path: legal/cookies.md
+
+# SaaS legal surfaces — content from `dazzle compliance privacy`
+# (docs/privacy pack + site/content/legal/{privacy,cookies,terms}.md).
+legal:
+  privacy:
+    route: "/privacy"
+    source:
+      format: md
+      path: legal/privacy.md
+  terms:
+    route: "/terms"
+    source:
+      format: md
+      path: legal/terms.md
+
+layout:
+  nav:
+    public:
+      - label: "Home"
+        href: "/"
+      - label: "Sign In"
+        href: "/login"
+  footer:
+    columns:
+      - title: Legal
+        links:
+          - label: "Privacy"
+            href: "/privacy"
+          - label: "Cookies"
+            href: "/cookies"
+          - label: "Terms"
+            href: "/terms"
+    disclaimer: "HR Records Demo"
+
+auth_pages:
+  login:
+    route: "/login"
+    mode: generated
+    enabled: true
+  signup:
+    route: "/signup"
+    mode: generated
+    enabled: true

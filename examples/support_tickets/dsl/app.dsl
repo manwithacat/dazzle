@@ -73,7 +73,7 @@ entity Ticket "Support Ticket":
   id: uuid pk
   ticket_number: str(20) unique
   title: str(200) required
-  description: text required
+  description: text required pii(category=freeform)
   status: enum[open,in_progress,resolved,closed]=open
   priority: enum[low,medium,high,critical]=medium
   category: enum[bug,feature,inquiry,other]=other
@@ -166,7 +166,7 @@ entity Comment "Comment":
   id: uuid pk
   ticket: ref Ticket required
   author: ref User required
-  content: text required
+  content: text required pii(category=freeform)
   is_internal: bool = false
   created_at: datetime auto_add
 

@@ -1,6 +1,6 @@
 # Record of Processing Activities — Support Tickets
 
-**Last updated:** 2026-07-14
+**Last updated:** 2026-07-15
 
 This document records the processing activities for the controller as required by GDPR Article 30. Each row describes one processing activity: what data, for what purpose, who handles it, how long it is retained, and what legal basis supports the processing.
 
@@ -8,7 +8,7 @@ This document records the processing activities for the controller as required b
 
 | Activity | Data categories | Recipients | Jurisdiction | Retention | Legal basis |
 |---|---|---|---|---|---|
-| Service operations | contact, identity | (no external subprocessors) | - | see retention policy | contract / legitimate interest |
+| Service operations | contact, identity, freeform | (no external subprocessors) | - | see retention policy | contract / legitimate interest |
 
 <!-- DZ-AUTO:end -->
 

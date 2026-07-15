@@ -10,13 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`dazzle compliance privacy --scaffold-terms`** (default on with
+  `--sync-site`) — writes `site/content/legal/terms.md` from the framework
+  SaaS template when missing (brand-substituted; never overwrites author
+  edits). Completes the de-facto legal trio with privacy + cookies.
 - **`dazzle compliance privacy --sync-site`** (default on) — writes
   `site/content/legal/{privacy,cookies}.md` next to the `docs/privacy/` pack
   so SiteSpec public routes stay in lockstep. `--no-sync-site` for pack-only.
-- **Example fleet privacy packs** — `pii()` annotations + committed
-  `docs/privacy/*` + `/privacy`/`/cookies` SiteSpec routes + Legal footer on
-  `simple_task`, `contact_manager`, `fieldtest_hub`, `ops_dashboard`,
-  `llm_ticket_classifier`, and `support_tickets` (ROPA pack-only).
+- **Example fleet legal shell (all 12 apps)** — every example has
+  `sitespec.yaml` with `/privacy`, `/cookies`, `/terms`, Legal footer, and a
+  committed privacy pack. New sitespecs for `project_tracker`, `design_studio`,
+  `hr_records`, `invoice_ops`, `acme_billing`, `domain_join_co`. Broader
+  `pii()` on freeform ticket/comment bodies and remaining identity/contact
+  fields. ROPA remains pack-only.
 - **support_tickets privacy compliance pack** — committed `docs/privacy/`
   (privacy notice, cookie policy, ROPA) from `dazzle compliance privacy`,
   `pii(category=…)` on User + SlaWaiver identity/contact fields, public

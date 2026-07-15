@@ -1,6 +1,6 @@
 # Privacy Notice — Support Tickets
 
-**Last updated:** 2026-07-14
+**Last updated:** 2026-07-15
 
 This notice explains how we handle your personal data. The sections below list every kind of data we collect, who we share it with, how long we keep it, and the rights you have under GDPR and equivalent laws.
 
@@ -23,6 +23,13 @@ Our legal basis for each processing activity is declared in the subprocessor tab
 |---|---|---|
 | SLA Waiver | signatory_name | User identification and account security |
 | User | name | User identification and account security |
+
+### Free-form notes
+
+| Entity | Field | Purpose |
+|---|---|---|
+| Comment | content | User-entered content (may contain PII) |
+| Support Ticket | description | User-entered content (may contain PII) |
 
 <!-- DZ-AUTO:end -->
 

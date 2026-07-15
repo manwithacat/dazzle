@@ -206,6 +206,38 @@ class TestSyncSiteContent:
         assert not (tmp_path / "site/content/legal/ropa.md").exists()
 
 
+class TestScaffoldTerms:
+    def test_writes_terms_when_missing(self, tmp_path: Path) -> None:
+        from dazzle.compliance.analytics.privacy_page import scaffold_terms_of_service
+
+        path = scaffold_terms_of_service(
+            tmp_path,
+            product_name="Acme App",
+            company_legal_name="Acme Corp",
+            support_email="legal@acme.example",
+        )
+        assert path is not None
+        assert path == tmp_path / "site/content/legal/terms.md"
+        text = path.read_text(encoding="utf-8")
+        assert "Terms of Service" in text
+        assert "Acme App" in text
+        assert "Acme Corp" in text
+        assert "legal@acme.example" in text
+
+    def test_skips_existing_terms_unless_overwrite(self, tmp_path: Path) -> None:
+        from dazzle.compliance.analytics.privacy_page import scaffold_terms_of_service
+
+        first = scaffold_terms_of_service(tmp_path, product_name="First")
+        assert first is not None
+        first.write_text("AUTHOR TERMS\n", encoding="utf-8")
+        second = scaffold_terms_of_service(tmp_path, product_name="Second")
+        assert second is None
+        assert first.read_text(encoding="utf-8") == "AUTHOR TERMS\n"
+        third = scaffold_terms_of_service(tmp_path, product_name="Third", overwrite=True)
+        assert third is not None
+        assert "Third" in third.read_text(encoding="utf-8")
+
+
 class TestAutoBlockMerge:
     def test_auto_blocks_replaced(self) -> None:
         existing = """# Privacy
