@@ -48,7 +48,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 688 | USED |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 698 | USED |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 697 | USED |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 682 | USED |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 703 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 699 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 694 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 700 | USED |
@@ -74,9 +74,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 699 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 700 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 700 | USED |
-| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 682 | USED |
-| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 682 | USED |
-| MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 682 | USED |
+| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 703 | USED |
+| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 703 | USED |
+| MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 703 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 684 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 684 | USED |
 | **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 684 | USED |
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 703 (2026-07-15) example-apps + framework-ux STALE-clear.** support_tickets: process propose; compliance gaps+evidence; story scope-fidelity; schema; ux maturity; rbac matrix. Stamped process, compliance, MCP dsl, policy **USED@703**.
 > **Cycle 700 (2026-07-15) framework-ux + example-apps STALE-clear.** coverage 61/61; composition audit 100; pulse radar 68% launch-ready; fragment-audit; rhythm gaps. Stamped coverage, pulse, composition, fragment-audit, rhythm **USED@700**.
 > **Cycle 699 (2026-07-15) framework-ux STALE-clear.** support_tickets: `fitness code` + `fitness vitality`; `rbac matrix`; `sentinel scan`; `inspect project`. Stamped fitness engine/CLI, sentinel scan, rbac **USED@699**.
 > **Cycle 698 (2026-07-15) example-apps STALE-clear.** support_tickets: `discovery report` exit 0; `deploy plan` (Postgres+s3); `test-design coverage-actions` exit 0. Stamped discovery, deploy plan, test-design **USED@698**.
