@@ -41,7 +41,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 477 | STALE (lag 172 since @477) |
 | `dazzle qa trial` | CLI | trials | 463 | STALE (lag 186 since @463) |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 476 | STALE (lag 173 since @476) |
-| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 512 | STALE (lag 137 since @512) |
+| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 652 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 479 | STALE (lag 170 since @479) |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 481 | STALE (lag 168 since @481) |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 482 | STALE (lag 167 since @482) |
@@ -155,6 +155,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > rolled cold. Prefer dual_lock product continue under explore cap, or STALE-clear highest lag
 > when budget renews (semantics@455, story@456 deepest). Explore **100/100**. Next sweep ~**569**.
 
+
+> **Cycle 652 (2026-07-15) hm-convergence gallery_probes STALE-clear.** Discover: multi-details 3/3 catalog_ok. Run: **6/6 PASS** (menubar, navigation_menu, accordion exclusive; tree multi_open; menubar/nav dismiss). gallery probes last-exercised **652 → USED**.
 
 > **Capability-sweep cycle 486 (2026-07-13).** Sweep due (20 cycles since 466). Re-derived
 > inventory: MCP consolidated tools **34** (unchanged); skills/commands tree unchanged; no new
