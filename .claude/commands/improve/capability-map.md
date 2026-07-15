@@ -38,9 +38,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 675 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 687 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 669 | USED |
+| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 689 | USED |
 | `dazzle qa trial` | CLI | trials | 463 | STALE (lag 186 since @463) |
-| `dazzle qa login` | CLI | (support for qa capture/verify) | 668 | USED |
+| `dazzle qa login` | CLI | (support for qa capture/verify) | 689 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 674 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 673 | USED |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 688 | USED |
@@ -96,6 +96,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 689 (2026-07-15) example-apps STALE-clear.** support_tickets: `qa login manager` exit 0; `qa capture --above-fold` **6 screens**. Stamped qa login + qa capture **USED@689**.
 > **Cycle 688 (2026-07-15) hm-convergence + smells STALE-clear.** coherence queue=0 mean=8.7; fitness code (smells substrate); component-vision subscription re-score mean 7.2. Stamped component-vision, hyperpart coherence, /smells **USED@688**.
 > **Cycle 687 (2026-07-15) framework-ux STALE-clear.** support_tickets: `ux verify --contracts` **60/0/38**; `--structural` inventory 383. GitHub inbox polled idle. Stamped ux verify + GitHub inbox **USED@687**.
 > **Cycle 684 (2026-07-15) multi STALE-clear.** floors GREEN; shadcn gaps 0; `dazzle sweep examples` exit 0; MCP semantics extract/validate_events/extract_guards OK; CodeQL poll clean; test_intelligence KG present (coverage handler needs init in-process). Stamped semantics, sweep/nightly, shadcn, zero-floor, CodeQL, test_intelligence **USED@684**.
