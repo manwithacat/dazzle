@@ -59,7 +59,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 469 | STALE (lag 180 since @469) |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 461 | STALE (lag 188 since @461) |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 474 | STALE (lag 175 since @474) |
-| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 608 | STALE (lag 41 since @608) |
+| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 650 | USED |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 490 | STALE (lag 159 since @490) |
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 490 | STALE (lag 159 since @490) |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
@@ -140,6 +140,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > Prefer dual_lock product continue or STALE-clear highest lag when budget renews. Explore **100/100**.
 > Next sweep ~**589**.
 
+
+> **Cycle 650 (2026-07-15) hm-convergence dual_lock STALE-clear.** Floors GREEN; coherence queue=0; dual_lock queue=0; shadcn gaps=0. Re-ran coverage+queue write; `hm_visual_smoke --dazzle-emit` PASS (playwright chromium). dual_lock last-exercised **650 → USED**.
 
 > **Capability-sweep cycle 549 (2026-07-14).** Sweep due (20 cycles since 529; self-audit 543
 > ran mid-window). Re-derived inventory: `dazzle --help` quality surface intact; skills
