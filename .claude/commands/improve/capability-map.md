@@ -60,11 +60,11 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 698 | USED |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 700 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 692 | USED |
-| `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 684 | USED |
-| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 684 | USED |
+| `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 704 | USED |
+| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 704 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
-| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 684 | USED |
+| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 704 | USED |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
 | `qa-trial` skill | skill | trials (downstream authoring) | 488 | STALE (lag 203 since @488) |
@@ -77,9 +77,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 703 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 703 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 703 | USED |
-| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 684 | USED |
-| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 684 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 684 | USED |
+| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 704 | USED |
+| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 704 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 704 | USED |
 | **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 690 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 704 (2026-07-15) multi STALE-clear.** floors GREEN; shadcn gaps 0; `dazzle sweep examples` exit 0; MCP semantics extract/validate_events/guards OK; CodeQL 0 open; test_intelligence KG present. Stamped semantics, sweep/nightly, shadcn, zero-floor, CodeQL, test_intelligence **USED@704**.
 > **Cycle 703 (2026-07-15) example-apps + framework-ux STALE-clear.** support_tickets: process propose; compliance gaps+evidence; story scope-fidelity; schema; ux maturity; rbac matrix. Stamped process, compliance, MCP dsl, policy **USED@703**.
 > **Cycle 700 (2026-07-15) framework-ux + example-apps STALE-clear.** coverage 61/61; composition audit 100; pulse radar 68% launch-ready; fragment-audit; rhythm gaps. Stamped coverage, pulse, composition, fragment-audit, rhythm **USED@700**.
 > **Cycle 699 (2026-07-15) framework-ux STALE-clear.** support_tickets: `fitness code` + `fitness vitality`; `rbac matrix`; `sentinel scan`; `inspect project`. Stamped fitness engine/CLI, sentinel scan, rbac **USED@699**.
