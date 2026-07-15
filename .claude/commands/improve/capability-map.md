@@ -97,7 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
-> **Cycle 697 (2026-07-15) example-apps STALE-clear.** support_tickets: `validate`+`lint` exit 0 (warnings only); `story list` 30 stories; `conformance summary` 481 cases. Stamped validate/lint, story, conformance **USED@697**.
+> **Cycle 697 (2026-07-15) example-apps STALE-clear.** support_tickets: `validate`+`lint` exit 0 (warnings only); `story list` 18 stories; `conformance summary` 481 cases. Stamped validate/lint, story, conformance **USED@697**.
 > **Cycle 696 (2026-07-15) hm-convergence STALE-clear gallery_probes.** Discover multi-details 3/3 catalog_ok. Run **6/6 PASS** (menubar/nav/accordion exclusive; tree multi_open; menubar/nav dismiss). Stamped gallery probes **USED@696**.
 > **Cycle 695 (2026-07-15) hm-convergence STALE-clear taste-panel (subscription).** Floors GREEN; `hm_visual_smoke --dazzle-emit` PASS; host-Read scores ingested mean **7.4** (no metered taste-panel). Stamped taste-panel **USED@695**.
 > **Cycle 694 (2026-07-15) test-suite STALE-clear.** `dazzle sentinel mutate --suite security` **PASS** — all 5 modules ≥ floor (crypto 83%, rbac 71%, csrf 85%, rls 100%, predicate 77%). Stamped sentinel mutate **USED@694**.
