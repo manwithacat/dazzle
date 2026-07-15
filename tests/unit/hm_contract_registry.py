@@ -346,6 +346,394 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
     ("contracts/pdf.py", "pdf", True),  # render_pdf_viewer_component (#1582)
     ("contracts/wizard.py", "wizard", True),  # experience form multi-section (#1582)
     ("contracts/master_detail.py", "master_detail", True),  # dual_pane_flow shell (#1580 C)
+    ("contracts/menu.py", "menu", True),  # workspace overflow More ⋯ (#1491)
+    ("contracts/badge.py", "badge", True),  # FragmentRenderer._emit_badge
+    ("contracts/button.py", "button", True),  # FragmentRenderer._emit_button
+    ("contracts/card.py", "card", True),  # FragmentRenderer._emit_card
+    ("contracts/drawer.py", "drawer", True),  # FragmentRenderer._emit_drawer + slide_over
+    ("contracts/toolbar.py", "toolbar", True),  # FragmentRenderer._emit_toolbar
+    ("contracts/card_picker.py", "card_picker", True),  # FragmentRenderer._emit_card_picker
+    ("contracts/add_card_row.py", "add_card_row", True),  # FragmentRenderer._emit_add_card_row
+    (
+        "contracts/bulk_actions.py",
+        "bulk_actions",
+        True,
+    ),  # FragmentRenderer._emit_bulk_action_toolbar
+    (
+        "contracts/workspace_toolbar.py",
+        "workspace_toolbar",
+        True,
+    ),  # FragmentRenderer._emit_workspace_toolbar
+    (
+        "contracts/filter_bar.py",
+        "filter_bar",
+        True,
+    ),  # FragmentRenderer._emit_list_filter_bar
+    (
+        "contracts/skip_link.py",
+        "skip_link",
+        True,
+    ),  # FragmentRenderer._emit_skip_link
+    (
+        "contracts/topbar.py",
+        "topbar",
+        True,
+    ),  # FragmentRenderer._emit_topbar
+    (
+        "contracts/sidebar.py",
+        "sidebar",
+        True,
+    ),  # FragmentRenderer._emit_sidebar
+    (
+        "contracts/related_group.py",
+        "related_group",
+        True,
+    ),  # FragmentRenderer._emit_related_cards / _files
+    (
+        "contracts/surface.py",
+        "surface",
+        True,
+    ),  # FragmentRenderer._emit_surface
+    (
+        "contracts/stack.py",
+        "stack",
+        True,
+    ),  # FragmentRenderer._emit_stack
+    (
+        "contracts/cluster.py",
+        "cluster",
+        True,
+    ),  # FragmentRenderer._emit_row → .dz-cluster
+    (
+        "contracts/heading.py",
+        "heading",
+        True,
+    ),  # FragmentRenderer._emit_heading
+    (
+        "contracts/split.py",
+        "split",
+        True,
+    ),  # FragmentRenderer._emit_split
+    (
+        "contracts/text.py",
+        "text",
+        True,
+    ),  # FragmentRenderer._emit_text
+    (
+        "contracts/icon.py",
+        "icon",
+        True,
+    ),  # FragmentRenderer._emit_icon
+    (
+        "contracts/link.py",
+        "link",
+        True,
+    ),  # FragmentRenderer._emit_link
+    (
+        "contracts/inline_edit.py",
+        "inline_edit",
+        True,
+    ),  # FragmentRenderer._emit_inline_edit
+    (
+        "contracts/layout_grid.py",
+        "layout_grid",
+        True,
+    ),  # FragmentRenderer._emit_grid → .dz-grid (not data-dz-grid)
+    (
+        "contracts/region.py",
+        "region",
+        True,
+    ),  # FragmentRenderer._emit_region
+    (
+        "contracts/interactive.py",
+        "interactive",
+        True,
+    ),  # FragmentRenderer._emit_interactive
+    (
+        "contracts/form_field.py",
+        "form_field",
+        True,
+    ),  # FragmentRenderer._emit_field
+    (
+        "contracts/form_stack.py",
+        "form_stack",
+        True,
+    ),  # FragmentRenderer._emit_form_stack
+    (
+        "contracts/submit.py",
+        "submit",
+        True,
+    ),  # FragmentRenderer._emit_submit
+    (
+        "contracts/form_section.py",
+        "form_section",
+        True,
+    ),  # FragmentRenderer._emit_form_section
+    (
+        "contracts/form_stepper.py",
+        "form_stepper",
+        True,
+    ),  # FragmentRenderer._emit_form_stepper
+    (
+        "contracts/kpi.py",
+        "kpi",
+        True,
+    ),  # FragmentRenderer._emit_kpi
+    (
+        "contracts/file_upload.py",
+        "file_upload",
+        True,
+    ),  # FragmentRenderer._emit_file_upload
+    (
+        "contracts/ref_picker.py",
+        "ref_picker",
+        True,
+    ),  # FragmentRenderer._emit_ref_picker
+    (
+        "contracts/rich_text.py",
+        "rich_text",
+        True,
+    ),  # FragmentRenderer._emit_rich_text
+    (
+        "contracts/csv_export_button.py",
+        "csv_export_button",
+        True,
+    ),  # FragmentRenderer._emit_csv_export_button
+    (
+        "contracts/sort_header.py",
+        "sort_header",
+        True,
+    ),  # FragmentRenderer._emit_sort_header
+    (
+        "contracts/column_visibility_menu.py",
+        "column_visibility_menu",
+        True,
+    ),  # FragmentRenderer._emit_column_visibility_menu
+    (
+        "contracts/metrics_grid.py",
+        "metrics_grid",
+        True,
+    ),  # FragmentRenderer._emit_metrics_grid
+    (
+        "contracts/nav_item.py",
+        "nav_item",
+        True,
+    ),  # FragmentRenderer._emit_nav_item
+    (
+        "contracts/nav_group.py",
+        "nav_group",
+        True,
+    ),  # FragmentRenderer._emit_nav_group
+    (
+        "contracts/workspace_context.py",
+        "workspace_context",
+        True,
+    ),  # FragmentRenderer._emit_workspace_context_selector
+    (
+        "contracts/detail_grid.py",
+        "detail_grid",
+        True,
+    ),  # FragmentRenderer._emit_detail_grid
+    (
+        "contracts/action_grid_region.py",
+        "action_grid_region",
+        True,
+    ),  # FragmentRenderer._emit_action_grid packing shell
+    (
+        "contracts/pivot_table.py",
+        "pivot_table",
+        True,
+    ),  # FragmentRenderer._emit_pivot_table
+    (
+        "contracts/dashboard_grid.py",
+        "dashboard_grid",
+        True,
+    ),  # FragmentRenderer._emit_dashboard_grid
+    (
+        "contracts/workspace_shell.py",
+        "workspace_shell",
+        True,
+    ),  # FragmentRenderer._emit_workspace_shell
+    (
+        "contracts/queue_region.py",
+        "queue_region",
+        True,
+    ),  # FragmentRenderer._emit_queue_region packing shell
+    (
+        "contracts/activity_feed_list.py",
+        "activity_feed_list",
+        True,
+    ),  # FragmentRenderer._emit_activity_feed packing shell
+    (
+        "contracts/kanban_board.py",
+        "kanban_board",
+        True,
+    ),  # FragmentRenderer._emit_kanban_board packing shell
+    (
+        "contracts/status_list_region.py",
+        "status_list_region",
+        True,
+    ),  # FragmentRenderer._emit_status_list packing shell
+    (
+        "contracts/kanban_region.py",
+        "kanban_region",
+        True,
+    ),  # FragmentRenderer._emit_kanban_region
+    (
+        "contracts/data_list_scroll.py",
+        "data_list_scroll",
+        True,
+    ),  # FragmentRenderer._emit_data_list_scroll
+    (
+        "contracts/queue_filters.py",
+        "queue_filters",
+        True,
+    ),  # FragmentRenderer._emit_filter_bar
+    (
+        "contracts/carousel.py",
+        "carousel",
+        True,
+    ),  # HM gallery carousel (no FragmentRenderer emit yet)
+    (
+        "contracts/menubar.py",
+        "menubar",
+        True,
+    ),  # HM gallery menubar (no FragmentRenderer emit yet)
+    (
+        "contracts/navigation_menu.py",
+        "navigation_menu",
+        True,
+    ),  # HM gallery navigation-menu (no FragmentRenderer emit yet)
+    (
+        "contracts/popover.py",
+        "popover",
+        True,
+    ),  # HM gallery popover (no FragmentRenderer emit yet)
+    (
+        "contracts/switch.py",
+        "switch",
+        True,
+    ),  # HM gallery switch (no FragmentRenderer emit yet)
+    (
+        "contracts/toggle.py",
+        "toggle",
+        True,
+    ),  # HM gallery toggle (no FragmentRenderer emit yet)
+    (
+        "contracts/accordion.py",
+        "accordion",
+        True,
+    ),  # HM gallery accordion (no FragmentRenderer emit yet)
+    (
+        "contracts/aspect_ratio.py",
+        "aspect_ratio",
+        True,
+    ),  # HM gallery aspect-ratio (no FragmentRenderer emit yet)
+    (
+        "contracts/hover_card.py",
+        "hover_card",
+        True,
+    ),  # HM gallery hover-card (no FragmentRenderer emit yet)
+    (
+        "contracts/message.py",
+        "message",
+        True,
+    ),  # HM gallery message (no FragmentRenderer emit yet)
+    (
+        "contracts/breadcrumb.py",
+        "breadcrumb",
+        True,
+    ),  # HM gallery breadcrumb (no FragmentRenderer emit yet)
+    (
+        "contracts/auto_grid.py",
+        "auto_grid",
+        True,
+    ),  # HM gallery auto-grid (no FragmentRenderer emit yet)
+    (
+        "contracts/center.py",
+        "center",
+        True,
+    ),  # HM gallery center (no FragmentRenderer emit yet)
+    (
+        "contracts/separator.py",
+        "separator",
+        True,
+    ),  # HM gallery separator (no FragmentRenderer emit yet)
+    (
+        "contracts/alert.py",
+        "alert",
+        True,
+    ),  # HM gallery alert (no FragmentRenderer emit yet)
+    (
+        "contracts/bubble.py",
+        "bubble",
+        True,
+    ),  # HM gallery bubble (no FragmentRenderer emit yet)
+    (
+        "contracts/chart_legend.py",
+        "chart_legend",
+        True,
+    ),  # HM gallery chart-legend (no FragmentRenderer emit yet)
+    (
+        "contracts/form_errors.py",
+        "form_errors",
+        True,
+    ),  # HM form-chrome error summary (no FragmentRenderer emit yet)
+    (
+        "contracts/grid_list.py",
+        "grid_list",
+        True,
+    ),  # HM gallery grid-list (no FragmentRenderer emit yet)
+    (
+        "contracts/item.py",
+        "item",
+        True,
+    ),  # HM gallery item (no FragmentRenderer emit yet)
+    (
+        "contracts/marker.py",
+        "marker",
+        True,
+    ),  # HM gallery marker (no FragmentRenderer emit yet)
+    (
+        "contracts/message_scroller.py",
+        "message_scroller",
+        True,
+    ),  # HM gallery message-scroller (no FragmentRenderer emit yet)
+    (
+        "contracts/two_factor.py",
+        "two_factor",
+        True,
+    ),  # HM gallery two-factor panel (no FragmentRenderer emit yet)
+    (
+        "contracts/avatar.py",
+        "avatar",
+        True,
+    ),  # HM gallery avatar (no FragmentRenderer emit yet)
+    (
+        "contracts/controls.py",
+        "controls",
+        True,
+    ),  # HM gallery selection controls (no FragmentRenderer emit yet)
+    (
+        "contracts/kbd.py",
+        "kbd",
+        True,
+    ),  # HM gallery kbd (no FragmentRenderer emit yet)
+    (
+        "contracts/sidebar_layout.py",
+        "sidebar_layout",
+        True,
+    ),  # HM gallery sidebar-layout (no FragmentRenderer emit yet)
+    (
+        "contracts/toggle_group.py",
+        "toggle_group",
+        True,
+    ),  # HM gallery toggle-group (no FragmentRenderer emit yet)
+    (
+        "contracts/tooltip.py",
+        "tooltip",
+        True,
+    ),  # HM gallery tooltip (no FragmentRenderer emit yet)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

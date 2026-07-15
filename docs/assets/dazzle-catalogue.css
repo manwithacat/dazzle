@@ -8736,7 +8736,9 @@ button.dz-item:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-2xs) var(--space-xs);
+  /* --space-2xs does not exist in tokens.css (invalidates the whole gap
+     declaration → author/time collide: "Maya Reyes10:02"). Use xs/sm. */
+  gap: var(--space-xs) var(--space-sm);
   font-size: var(--text-xs, 0.75rem);
   color: var(--colour-text-muted, var(--colour-text-secondary, #6b7280));
 }
@@ -10598,19 +10600,13 @@ dz-onboarding-step {
   color: var(--colour-text-muted);
 }
 
-/* status_cards — responsive 1/2/3-col card grid */
+/* status_cards — auto-fit so invoice id + amount stay readable (minmax
+ * floor ~14rem). Fixed 2/3-col tracks in a narrow gallery column were
+ * clipping primary amounts mid-value (coherence HMC-063). */
 .dz-related-status-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: var(--space-md);
-}
-
-@media (min-width: 40rem) {
-  .dz-related-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (min-width: 64rem) {
-  .dz-related-status-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 .dz-related-status-card {
@@ -10635,25 +10631,32 @@ dz-onboarding-step {
 
 .dz-related-status-card-text {
   min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
 }
 
 .dz-related-status-card-primary {
+  display: block;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--colour-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Prefer wrap over ellipsis on money/id — amounts must stay legible */
+  white-space: normal;
+  overflow: visible;
   margin: 0;
+  line-height: 1.35;
 }
 
 .dz-related-status-card-secondary {
+  display: block;
   font-size: var(--text-xs);
   color: var(--colour-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
   margin: 0;
+  line-height: 1.35;
 }
 
 .dz-related-status-card-badge {
@@ -14158,10 +14161,11 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
  *
  * Progressive enhancement over a real `<input type="text" data-dz-tags>`
  * carrying a comma-joined value: with JS off the native input is fully
- * usable (the user types "a, b, c"; the server splits on comma). On first
- * interaction controllers/dz-tags.js wraps it in a `.dz-tags` root — a
- * role=list of removable chips + a borderless entry input — and hides the
- * native input (kept in the DOM as the submit value + no-JS fallback). The
+ * usable (the user types "a, b, c"; the server splits on comma). Controllers
+ * wrap it in a `.dz-tags` root on ready when the value is seeded, otherwise
+ * on first interaction — a role=list of removable chips + a borderless entry
+ * input — and hide the native input (kept in the DOM as the submit value +
+ * no-JS fallback). The
  * `.dz-tags` box carries the input chrome + focus-within ring + aria-invalid;
  * the entry is borderless inside it. Chrome mirrors the combobox /
  * search-select family. */

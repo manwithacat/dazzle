@@ -12,8 +12,8 @@ entity EngagementLetter "Engagement Letter":
   party: str(200) required
   scope_summary: text required
   effective_date: date required
-  signatory_name: str(200) required
-  signatory_email: email required
+  signatory_name: str(200) required pii(category=identity)
+  signatory_email: email required pii(category=contact)
 
   signable: true
   signing_validator: app.signing.validator.validate_engagement_letter

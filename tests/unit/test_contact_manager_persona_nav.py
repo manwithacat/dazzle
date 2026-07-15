@@ -35,7 +35,13 @@ def test_contact_manager_user_persona_has_curated_nav() -> None:
     assert model.auto_discovered is False
 
     group_labels = [g.label for g in model.groups]
-    assert group_labels == ["Contacts", "Browse"]
+    # TR-2: Home first so the sidebar matches the post-login landing.
+    assert group_labels == ["Home", "Contacts", "Browse"]
+
+    # "Home" group → the `home` workspace page.
+    home_group = next(g for g in model.groups if g.label == "Home")
+    home_link = next(link for link in home_group.links if link.entity == "home")
+    assert home_link.route == "/workspaces/home"
 
     # "Contacts" group → the Contact entity's list surface.
     contacts_group = next(g for g in model.groups if g.label == "Contacts")

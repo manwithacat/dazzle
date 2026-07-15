@@ -68,16 +68,49 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/two_factor.py`
+
+- **Required root:** `.dz-auth-card` (part `two_factor`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-auth-card` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: two_factor — 2FA enrolment/settings auth card.
+
+Dual-lock unit is the auth-card root. QR container, code input, recovery
+grid, and factor status rows are host-owned. Class ``.dz-auth-card`` is the
+stable substrate root (gallery CSS / two-factor panel; no FragmentRenderer
+emit yet).
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="two_factor",
+    root=".dz-auth-card",
+    nodes=(Node(".dz-auth-card", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
-In Dazzle the enrolment flow is driven by ID-anchored vanilla JS (dz-2fa-setup.js/-settings.js against JSON endpoints): the QR image lands CLASSLESS in dz-auth-qr-container (the container styles it), recovery pills and status rows are JS-created (shown here with status badges; the Dazzle settings JS renders dz-button action controls in that slot), and the error/success alerts toggle via the native hidden attribute on stable ids. The code input reserves letter-spacing for six digits. Wrap full pages in dz-auth-page for the centered layout.
+In Dazzle the enrolment flow is driven by ID-anchored vanilla JS (dz-2fa-setup.js/-settings.js against JSON endpoints): the QR image lands CLASSLESS in dz-auth-qr-container (the container styles it), recovery pills and status rows are JS-created (shown here with status badges; the Dazzle settings JS renders dz-button action controls in that slot), and the error/success alerts toggle via the native hidden attribute on stable ids. The code input reserves letter-spacing for six digits. Wrap full pages in dz-auth-page for the centered layout. Dual-lock root .dz-auth-card (HMC-148).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/two_factor.py`

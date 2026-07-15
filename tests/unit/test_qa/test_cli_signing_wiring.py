@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from dazzle.cli.qa import (
     _REALISTIC_SEED_OVERRIDES,
     _build_signing_seed_batch,
@@ -233,7 +235,7 @@ def test_seed_expired_token_state_mints_already_expired(tmp_path: Path):
 
 
 def test_seed_already_signed_posts_production_sign(tmp_path: Path):
-    """TR-50: token_state='already_signed' seeds then POSTs /api/sign/..."""
+    """TR-49/50: already_signed seeds, POSTs /api/sign, asserts Download on re-open."""
     entity = MagicMock(signable=True)
     entity.name = "SlaWaiver"
     entity.fields = []
@@ -246,10 +248,17 @@ def test_seed_already_signed_posts_production_sign(tmp_path: Path):
     sign_resp = MagicMock()
     sign_resp.raise_for_status = MagicMock()
     sign_resp.status_code = 200
+    open_resp = MagicMock()
+    open_resp.status_code = 200
+    open_resp.text = (
+        '<html><a href="/sign/SlaWaiver/row-id-3/signed-copy?token=tok">'
+        "Download your signed copy</a></html>"
+    )
 
     with (
         patch("dazzle.cli.qa.mint_token", return_value="tok-fresh") as mint,
         patch("httpx.post", side_effect=[seed_resp, sign_resp]) as mock_post,
+        patch("httpx.get", return_value=open_resp) as mock_get,
         patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
     ):
         docs = _seed_signable_rows(
@@ -265,6 +274,40 @@ def test_seed_already_signed_posts_production_sign(tmp_path: Path):
     assert "/api/sign/SlaWaiver/row-id-3" in sign_call[0][0]
     assert sign_call[1]["json"]["token"] == "tok-fresh"
     assert "signature_png_b64" in sign_call[1]["json"]
+    mock_get.assert_called_once()
+    assert "/sign/SlaWaiver/row-id-3" in mock_get.call_args[0][0]
+
+
+def test_seed_already_signed_raises_without_download_cta(tmp_path: Path):
+    """TR-49: pre-sign must fail loud if re-open has no Download path."""
+    entity = MagicMock(signable=True)
+    entity.name = "SlaWaiver"
+    entity.fields = []
+    app_spec = MagicMock()
+    app_spec.domain.entities = [entity]
+
+    seed_resp = MagicMock()
+    seed_resp.raise_for_status = MagicMock()
+    seed_resp.json.return_value = {"created": {"signable_row": {"id": "row-id-4"}}}
+    sign_resp = MagicMock()
+    sign_resp.raise_for_status = MagicMock()
+    open_resp = MagicMock()
+    open_resp.status_code = 200
+    open_resp.text = "<html>Document unavailable</html>"
+
+    with (
+        patch("dazzle.cli.qa.mint_token", return_value="tok-fresh"),
+        patch("httpx.post", side_effect=[seed_resp, sign_resp]),
+        patch("httpx.get", return_value=open_resp),
+        patch.dict(os.environ, {"SIGNING_TOKEN_SECRET": "s"}),
+        pytest.raises(RuntimeError, match="TR-49 already_signed"),
+    ):
+        _seed_signable_rows(
+            app_spec=app_spec,
+            base_url="http://localhost:3000",
+            signatory_email="a@b.com",
+            token_state="already_signed",
+        )
 
 
 def test_expired_token_actually_fails_verification(tmp_path: Path):

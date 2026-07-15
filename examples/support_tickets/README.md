@@ -59,9 +59,34 @@ support_tickets/
 ├── SPEC.md              # Product specification
 ├── README.md            # This file
 ├── dazzle.toml          # Project configuration
+├── sitespec.yaml        # Public site shell (landing + /privacy + /cookies)
+├── docs/privacy/        # Compliance pack (privacy notice, cookie policy, ROPA)
+├── site/content/legal/  # Served markdown for /privacy and /cookies
 └── dsl/
     └── app.dsl          # DAZZLE DSL definition
 ```
+
+## Privacy & data protection (SaaS legal pack)
+
+Any SaaS that claims data-protection awareness needs a public privacy notice
+and cookie policy. Dazzle derives them from DSL `pii()` annotations (and
+optional `subprocessor` declarations):
+
+```bash
+dazzle compliance privacy -o docs/privacy
+# writes docs/privacy/* and (by default) site/content/legal/{privacy,cookies,terms}.md
+```
+
+| Artefact | Where | Served? |
+|----------|--------|---------|
+| Privacy notice | `docs/privacy/privacy_policy.md` | `/privacy` via SiteSpec `legal.privacy` |
+| Cookie policy | `docs/privacy/cookie_policy.md` | `/cookies` |
+| Terms of Service | `site/content/legal/terms.md` | `/terms` (scaffold if missing) |
+| ROPA (GDPR Art. 30) | `docs/privacy/ropa.md` | Controller record only (not public) |
+
+`<!-- DZ-AUTO:… -->` blocks are regenerated; prose outside them is author-owned
+(`--regenerate-facts` preserves edits). Footer links Privacy + Cookies + Terms.
+Use `--no-sync-site` / `--no-scaffold-terms` to skip site copies.
 
 ## Key DSL Patterns
 

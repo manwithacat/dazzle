@@ -1,0 +1,67 @@
+version: 1
+
+brand:
+  product_name: "Acme Billing"
+  tagline: "Multi-tenant billing and memberships"
+  company_legal_name: "Acme Billing Demo"
+  support_email: "support@example.com"
+
+pages:
+  - route: "/"
+    type: landing
+    sections:
+      - type: hero
+        headline: "Acme Billing"
+        subhead: "Multi-tenant billing and memberships"
+        primary_cta:
+          label: "Get Started"
+          href: "/login"
+  - route: "/cookies"
+    type: markdown
+    title: "Cookie Policy"
+    source:
+      format: md
+      path: legal/cookies.md
+
+# SaaS legal surfaces — content from `dazzle compliance privacy`
+# (docs/privacy pack + site/content/legal/{privacy,cookies,terms}.md).
+legal:
+  privacy:
+    route: "/privacy"
+    source:
+      format: md
+      path: legal/privacy.md
+  terms:
+    route: "/terms"
+    source:
+      format: md
+      path: legal/terms.md
+
+layout:
+  nav:
+    public:
+      - label: "Home"
+        href: "/"
+      - label: "Sign In"
+        href: "/login"
+  footer:
+    columns:
+      - title: Legal
+        links:
+          - label: "Privacy"
+            href: "/privacy"
+          - label: "Cookies"
+            href: "/cookies"
+          - label: "Terms"
+            href: "/terms"
+    disclaimer: "Acme Billing Demo"
+
+auth_pages:
+  login:
+    route: "/login"
+    mode: generated
+    enabled: true
+  signup:
+    route: "/signup"
+    mode: generated
+    enabled: true

@@ -19,6 +19,7 @@ import typer
 from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 from dazzle.core.manifest import load_manifest
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
+from dazzle.log_setup import ensure_dazzle_logging_configured
 from dazzle.qa.capture import build_capture_plan, capture_screenshots, write_manifest
 from dazzle.qa.signing_seed import (
     SeededDoc,
@@ -39,6 +40,46 @@ qa_app = typer.Typer(
     help="QA toolkit — visual quality evaluation and screenshot capture.",
     no_args_is_help=True,
 )
+
+
+# Third-party loggers that drown trial stdout when root is DEBUG (TR-47).
+_TRIAL_QUIET_LOGGERS = (
+    "httpx",
+    "httpcore",
+    "h11",
+    "hpack",
+    "faker",
+    "urllib3",
+    "asyncio",
+    "anthropic",
+    "openai",
+    "mcp",
+    "anyio",
+)
+
+
+def _configure_trial_logging() -> None:
+    """Keep ``dazzle qa trial`` stdout report-shaped, not a DEBUG dump.
+
+    TR-47: with root at DEBUG, faker locale probes, httpcore wire logs, and
+    anthropic request options (including full system prompts + tool schemas)
+    flood stdout — noise for operators and a secret-leak surface. Default
+    trial logging is INFO for ``dazzle.*``; noisy libraries are WARNING.
+    Opt into DEBUG via ``DAZZLE_LOG_LEVEL=DEBUG``.
+    """
+    import logging
+
+    desired = os.environ.get("DAZZLE_LOG_LEVEL", "INFO").upper()
+    ensure_dazzle_logging_configured(level=desired)
+
+    root = logging.getLogger()
+    # Pull root back from DEBUG unless the operator asked for it.
+    if desired != "DEBUG" and (root.level == logging.NOTSET or root.level < logging.INFO):
+        root.setLevel(logging.INFO)
+
+    quiet = logging.WARNING if desired != "DEBUG" else logging.DEBUG
+    for name in _TRIAL_QUIET_LOGGERS:
+        logging.getLogger(name).setLevel(quiet)
 
 
 # Patterns for classifying seed circuit-breaker failures (#1207).
@@ -787,8 +828,10 @@ def _seed_signable_rows(
         token = mint_token(record_id=row_id, email=effective_email, expires_hours=expires_hours)
 
         if token_state == "already_signed":
-            # TR-50: pre-sign through the real API so the row is status=signed
-            # with signed_document artifact (#1571 completion page works).
+            # TR-49 / #1571: pre-sign through the real API so the row is
+            # status=signed with a durable signed_document (completion page
+            # + Download). Persistence uses FileService.upload with a
+            # storage-only fallback when metadata fails (see signing routes).
             sign_url = f"{base_url}/api/sign/{entity.name}/{row_id}"
             sign_resp = httpx.post(
                 sign_url,
@@ -800,6 +843,19 @@ def _seed_signable_rows(
                 timeout=30.0,
             )
             sign_resp.raise_for_status()
+            # Fail loud if re-open still has no download CTA (harness contract).
+            open_url = f"{base_url}/sign/{entity.name}/{row_id}"
+            open_resp = httpx.get(open_url, params={"token": token}, timeout=15.0)
+            open_body = open_resp.text or ""
+            if open_resp.status_code != 200 or (
+                "signed-copy" not in open_body and "Download" not in open_body
+            ):
+                raise RuntimeError(
+                    f"TR-49 already_signed pre-sign did not yield a downloadable "
+                    f"completion page for {entity.name}/{row_id} "
+                    f"(HTTP {open_resp.status_code}, body={open_body[:200]!r}). "
+                    f"Check FileService / dazzle_files / signing storage."
+                )
 
         docs.append(
             SeededDoc(
@@ -1274,6 +1330,9 @@ def qa_trial(
         # → dev_docs/qa-trial-<scenario>-<timestamp>.md
 
     """
+    # TR-47: before any library import that may log at DEBUG.
+    _configure_trial_logging()
+
     import sys
     import time
     import tomllib

@@ -12,10 +12,30 @@ pages:
     sections:
       - type: hero
         headline: "Customer Support Made Simple"
-        subhead: "Track tickets, manage SLAs, and resolve issues faster with our support system."
+        subhead: "Track and resolve customer issues efficiently"
         primary_cta:
           label: "Get Started"
           href: "/login"
+  - route: "/cookies"
+    type: markdown
+    title: "Cookie Policy"
+    source:
+      format: md
+      path: legal/cookies.md
+
+# SaaS legal surfaces — content from `dazzle compliance privacy`
+# (docs/privacy pack + site/content/legal/{privacy,cookies,terms}.md).
+legal:
+  privacy:
+    route: "/privacy"
+    source:
+      format: md
+      path: legal/privacy.md
+  terms:
+    route: "/terms"
+    source:
+      format: md
+      path: legal/terms.md
 
 layout:
   nav:
@@ -25,7 +45,15 @@ layout:
       - label: "Sign In"
         href: "/login"
   footer:
-    columns: []
+    columns:
+      - title: Legal
+        links:
+          - label: "Privacy"
+            href: "/privacy"
+          - label: "Cookies"
+            href: "/cookies"
+          - label: "Terms"
+            href: "/terms"
     disclaimer: "Support Tickets Demo"
 
 auth_pages:

@@ -58,7 +58,39 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/accordion.py`
+
+- **Required root:** `.dz-accordion` (part `accordion`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-accordion` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: accordion — native details group (single-open via name=).
+
+Dual-lock unit is the accordion root. Item open state, panel body, and
+shared ``name=`` exclusive-open policy are host-owned. Class
+``.dz-accordion`` is the stable substrate root (gallery CSS; no
+FragmentRenderer emit yet).
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="accordion",
+    root=".dz-accordion",
+    nodes=(Node(".dz-accordion", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
@@ -67,3 +99,4 @@ Open intent: exclusive via native name= on peer <details> (stem details-open-int
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/accordion.py`

@@ -47,8 +47,8 @@ entity User "User":
 
   display_field: name
   id: uuid pk
-  email: email required
-  name: str(120) required
+  email: email required pii(category=contact)
+  name: str(120) required pii(category=identity)
   tenant_id: ref Tenant required
   created_at: datetime auto_add
 
@@ -84,7 +84,7 @@ entity Supplier "Supplier":
   id: uuid pk
   tenant_id: ref Tenant required
   name: str(160) required
-  contact_email: email required
+  contact_email: email required pii(category=contact)
   region: enum[emea,amer,apac]=emea
   created_at: datetime auto_add
   updated_at: datetime auto_update

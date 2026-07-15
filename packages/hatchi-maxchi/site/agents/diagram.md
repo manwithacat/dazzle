@@ -88,7 +88,7 @@ def render(d: Diagram) -> str:
 
 ## Notes
 
-Dual-lock root is data-dz-diagram (contracts/diagram.py). The gallery shows the raw source (Mermaid is not loaded here); in Dazzle the emitter appends the Mermaid loader script and the library swaps the <pre> for SVG at runtime — the source styling only matters for the initial paint flash. The wrapper owns overflow; dz-diagram-empty is the no-data paragraph.
+Dual-lock root is data-dz-diagram (contracts/diagram.py). The gallery part page loads Mermaid from a CDN module (build_site gallery-only bootstrap) so the live demo renders SVG the same way Dazzle does when the host emitter appends the Mermaid loader. The library swaps the <pre class=mermaid> for SVG at runtime — source styling only matters for the initial paint flash. The wrapper owns overflow; dz-diagram-empty is the no-data paragraph.
 
 ## Source files
 

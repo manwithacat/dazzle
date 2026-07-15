@@ -54,12 +54,44 @@ This Hyperpart has **no server exchange** — presentation or client chrome only
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/kbd.py`
+
+- **Required root:** `.dz-kbd` (part `kbd`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-kbd` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: kbd — keyboard shortcut chip for docs and command chrome.
+
+Dual-lock unit is the kbd root. Glyph content and layout role (adjacent vs
+trailing) are host-owned. Class ``.dz-kbd`` is the stable substrate root
+(gallery / hm-core; no FragmentRenderer emit yet).
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="kbd",
+    root=".dz-kbd",
+    nodes=(Node(".dz-kbd", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
-Stem shortcut-hint-chrome: keyboard chips are visually secondary (mono, small, muted keycap) and spatially secondary — layout roles adjacent (flex gap next to a label) vs trailing (row end via margin-inline-start: auto). Not disclosure iconography. Styles in hm-core.css; pure presentation.
+Stem shortcut-hint-chrome: keyboard chips are visually secondary (mono, small, muted keycap) and spatially secondary — layout roles adjacent (flex gap next to a label) vs trailing (row end via margin-inline-start: auto). Not disclosure iconography. Styles in hm-core.css; pure presentation. Dual-lock root .dz-kbd (HMC-151).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/kbd.py`

@@ -123,8 +123,8 @@ entity Ticket "Support Ticket":
   display_field: subject
   id: uuid pk
   subject: str(200) required
-  description: text required
-  customer_email: str(100) required
+  description: text required pii(category=freeform)
+  customer_email: str(100) required pii(category=contact)
   status: enum[open, in_progress, resolved, closed] = open
   created_at: datetime auto_add
   updated_at: datetime auto_update

@@ -1280,6 +1280,708 @@ def _emit_root_only_html(part_id: str) -> str:
             action_url="/api/tickets",
         )
         return _render_form_step_body(SimpleNamespace(transitions=[]), SimpleNamespace(form=form))
+    if part_id == "menu":
+        # Workspace heading overflow (#1491) emits details.dz-menu (HM menu Hyperpart).
+        from dazzle.render.fragment.primitives.data import (
+            WorkspacePrimaryAction,
+            WorkspaceShell,
+        )
+
+        return r.render(
+            WorkspaceShell(
+                workspace_name="ops",
+                title="Command center",
+                body=Text(""),
+                overflow_actions=(
+                    WorkspacePrimaryAction(label="Export", route="/app/export"),
+                    WorkspacePrimaryAction(label="Settings", route="/app/settings"),
+                ),
+            )
+        )
+    if part_id == "badge":
+        from dazzle.render.fragment.primitives.content import Badge
+
+        return r.render(Badge(label="Approved", variant="success"))
+    if part_id == "button":
+        from dazzle.render.fragment.primitives.interactive import Button
+
+        return r.render(Button(label="Save changes", variant="primary"))
+    if part_id == "card":
+        from dazzle.render.fragment.primitives.containers import Card
+
+        return r.render(Card(body=Text("Card body")))
+    if part_id == "drawer":
+        from dazzle.render.fragment.primitives.containers import Drawer
+
+        return r.render(Drawer(body=Text("Drawer body"), side="right"))
+    if part_id == "toolbar":
+        from dazzle.render.fragment.primitives.containers import Toolbar
+        from dazzle.render.fragment.primitives.interactive import Button
+
+        return r.render(
+            Toolbar(
+                label="Editor actions",
+                actions=(Button(label="New", variant="primary"),),
+            )
+        )
+    if part_id == "card_picker":
+        from dazzle.render.fragment.primitives.data import CardPicker, CardPickerEntry
+
+        return r.render(
+            CardPicker(
+                catalog_json="[]",
+                entries=(
+                    CardPickerEntry(
+                        name="metrics",
+                        title="Metrics",
+                        entity="Ticket",
+                        display="KPI",
+                    ),
+                ),
+            )
+        )
+    if part_id == "add_card_row":
+        from dazzle.render.fragment.primitives.data import (
+            AddCardRow,
+            CardPicker,
+            CardPickerEntry,
+        )
+
+        return r.render(
+            AddCardRow(
+                picker=CardPicker(
+                    catalog_json="[]",
+                    entries=(
+                        CardPickerEntry(
+                            name="metrics",
+                            title="Metrics",
+                            entity="Ticket",
+                            display="KPI",
+                        ),
+                    ),
+                )
+            )
+        )
+    if part_id == "bulk_actions":
+        from dazzle.render.fragment.primitives.data import BulkActionToolbar
+
+        return r.render(BulkActionToolbar(endpoint="/api/tickets"))
+    if part_id == "workspace_toolbar":
+        from dazzle.render.fragment.primitives.data import WorkspaceToolbar
+
+        return r.render(WorkspaceToolbar())
+    if part_id == "filter_bar":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.data import FilterColumn, ListFilterBar
+
+        return r.render(
+            ListFilterBar(
+                tbody_id="list-body",
+                endpoint=URL("/api/tickets"),
+                columns=(
+                    FilterColumn(
+                        key="status",
+                        label="Status",
+                        options=(("open", "Open"), ("closed", "Closed")),
+                    ),
+                ),
+            )
+        )
+    if part_id == "skip_link":
+        from dazzle.render.fragment.primitives.navigation import SkipLink
+
+        return r.render(SkipLink(target="#main", text="Skip to content"))
+    if part_id == "topbar":
+        from dazzle.render.fragment.primitives.navigation import Topbar
+
+        return r.render(Topbar(title="App", show_sidebar_toggle=False))
+    if part_id == "sidebar":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.navigation import NavItem, Sidebar
+
+        return r.render(
+            Sidebar(
+                items=(NavItem(label="Home", href=URL("/app"), active=True),),
+            )
+        )
+    if part_id == "related_group":
+        from dazzle.render.fragment.primitives.data import RelatedGroup, RelatedTab
+
+        return r.render(
+            RelatedGroup(
+                group_id="invoices",
+                label="Invoices",
+                display="status_cards",
+                tabs=(
+                    RelatedTab(
+                        tab_id="open",
+                        label="Open",
+                        headers=("Number", "Total", "Status"),
+                        rows=(("INV-1", "£100", "Open"),),
+                    ),
+                ),
+            )
+        )
+    if part_id == "surface":
+        from dazzle.render.fragment.primitives.containers import Surface
+
+        return r.render(Surface(header=Text("Header"), body=Text("Body")))
+    if part_id == "stack":
+        from dazzle.render.fragment.primitives.layout import Stack
+
+        return r.render(Stack(children=(Text("A"), Text("B")), gap="md"))
+    if part_id == "cluster":
+        from dazzle.render.fragment.primitives.layout import Row
+
+        return r.render(Row(children=(Text("A"), Text("B")), gap="md"))
+    if part_id == "heading":
+        from dazzle.render.fragment.primitives.content import Heading
+
+        return r.render(Heading(body="Section title", level=2))
+    if part_id == "split":
+        from dazzle.render.fragment.primitives.layout import Split
+
+        return r.render(Split(start=Text("Start"), end=Text("End")))
+    if part_id == "text":
+        return r.render(Text("Hello"))
+    if part_id == "icon":
+        from dazzle.render.fragment.primitives.content import Icon
+
+        return r.render(Icon(name="check", size="md"))
+    if part_id == "link":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.interactive import Link
+
+        return r.render(Link(label="Home", href=URL("/app")))
+    if part_id == "inline_edit":
+        from dazzle.render.fragment.primitives.interactive import InlineEdit
+
+        return r.render(InlineEdit(field_name="title", value="Hello", placeholder="Enter title"))
+    if part_id == "layout_grid":
+        from dazzle.render.fragment.primitives.layout import Grid
+
+        return r.render(Grid(children=(Text("A"), Text("B"), Text("C")), columns=3))
+    if part_id == "region":
+        from dazzle.render.fragment.primitives.containers import Region
+
+        return r.render(Region(kind="list", body=Text("Region body")))
+    if part_id == "interactive":
+        from dazzle.render.fragment.primitives.interactive import Interactive
+
+        return r.render(Interactive(child=Text("Click me")))
+    if part_id == "form_field":
+        from dazzle.render.fragment.primitives.forms import Field
+
+        return r.render(Field(name="title", label="Title", kind="text"))
+    if part_id == "form_stack":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.forms import Field, FormStack, Submit
+
+        return r.render(
+            FormStack(
+                action=URL("/api/tickets"),
+                method="POST",
+                fields=(Field(name="title", label="Title", kind="text"),),
+                submit=Submit(label="Save"),
+                entity_name="Ticket",
+                mode="create",
+            )
+        )
+    if part_id == "submit":
+        from dazzle.render.fragment.primitives.forms import Submit
+
+        return r.render(Submit(label="Save"))
+    if part_id == "form_section":
+        from dazzle.render.fragment.primitives.forms import Field, FormSection
+
+        return r.render(
+            FormSection(
+                title="Details",
+                fields=(Field(name="title", label="Title", kind="text"),),
+                note="Optional note",
+            )
+        )
+    if part_id == "form_stepper":
+        from dazzle.render.fragment.primitives.forms import FormStepper
+
+        return r.render(FormStepper(sections=("Details", "Review", "Confirm")))
+    if part_id == "kpi":
+        from dazzle.render.fragment.primitives.data import KPI
+
+        return r.render(KPI(label="Open", value="12", trend="up", delta="+2"))
+    if part_id == "file_upload":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.forms import FileUpload
+
+        return r.render(
+            FileUpload(name="attach", label="Attachment", upload_url=URL("/api/upload"))
+        )
+    if part_id == "ref_picker":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.forms import RefPicker
+
+        return r.render(RefPicker(name="owner", label="Owner", ref_api=URL("/api/users")))
+    if part_id == "rich_text":
+        from dazzle.render.fragment.primitives.forms import RichTextField
+
+        return r.render(RichTextField(name="body", label="Body"))
+    if part_id == "csv_export_button":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.data import CsvExportButton
+
+        return r.render(
+            CsvExportButton(
+                endpoint=URL("/api/export"),
+                filename="rows.csv",
+                label="Export CSV",
+            )
+        )
+    if part_id == "sort_header":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.data import SortHeader
+
+        return r.render(
+            SortHeader(
+                label="Title",
+                column_key="title",
+                endpoint=URL("/api/list"),
+                region_name="tickets",
+            )
+        )
+    if part_id == "column_visibility_menu":
+        from dazzle.render.fragment.primitives.data import ColumnVisibilityMenu
+
+        return r.render(ColumnVisibilityMenu(columns=(("title", "Title"), ("status", "Status"))))
+    if part_id == "metrics_grid":
+        from dazzle.render.fragment.primitives.data import MetricsGrid, MetricTile
+
+        return r.render(MetricsGrid(tiles=(MetricTile(label="Open", value="12"),)))
+    if part_id == "nav_item":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.navigation import NavItem
+
+        return r.render(NavItem(label="Home", href=URL("/app/home"), active=True))
+    if part_id == "nav_group":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.navigation import NavGroup, NavItem
+
+        return r.render(
+            NavGroup(
+                label="Ops",
+                items=(NavItem(label="Home", href=URL("/app/home")),),
+                collapsed=False,
+            )
+        )
+    if part_id == "workspace_context":
+        from dazzle.render.fragment.primitives.data import WorkspaceContextSelector
+
+        return r.render(
+            WorkspaceContextSelector(
+                label="Tenant",
+                workspace_name="main",
+                options_url="/api/ctx",
+            )
+        )
+    if part_id == "detail_grid":
+        from dazzle.render.fragment.primitives.content import Text
+        from dazzle.render.fragment.primitives.data import DetailGrid
+
+        return r.render(
+            DetailGrid(
+                rows=(
+                    ("Name", Text(body="Ada")),
+                    ("Status", Text(body="Open")),
+                )
+            )
+        )
+    if part_id == "action_grid_region":
+        from dazzle.render.fragment.primitives.data import ActionCard, ActionGrid
+
+        return r.render(
+            ActionGrid(
+                cards=(ActionCard(label="New", url="/create", tone="neutral", icon="plus"),),
+                empty_message="No actions",
+            )
+        )
+    if part_id == "pivot_table":
+        from dazzle.render.fragment.primitives.data import PivotTable
+
+        return r.render(
+            PivotTable(
+                label="By status",
+                columns=("A", "B"),
+                rows=("r1",),
+                cells={("r1", "A"): 1, ("r1", "B"): 2},
+            )
+        )
+    if part_id == "dashboard_grid":
+        from dazzle.render.fragment.primitives.data import DashboardGrid
+
+        return r.render(DashboardGrid(cards=(), edit_enabled=False))
+    if part_id == "workspace_shell":
+        from dazzle.render.fragment.primitives.content import Text
+        from dazzle.render.fragment.primitives.data import WorkspaceShell
+
+        return r.render(
+            WorkspaceShell(
+                workspace_name="main",
+                title="Home",
+                body=Text(body="Body"),
+                primary_actions=(),
+                overflow_actions=(),
+                fold_count=0,
+            )
+        )
+    if part_id == "queue_region":
+        from dazzle.render.fragment.primitives.data import QueueRegion
+
+        return r.render(
+            QueueRegion(
+                rows=(),
+                total=0,
+                metrics=(),
+                transitions=(),
+                queue_status_field="status",
+                queue_api_endpoint="/api/q",
+                region_name="review",
+                empty_message="empty",
+            )
+        )
+    if part_id == "activity_feed_list":
+        from dazzle.render.fragment.primitives.data import ActivityFeed
+
+        return r.render(
+            ActivityFeed(
+                items=(("10:00", "Ada", "opened"),),
+                empty_message="none",
+            )
+        )
+    if part_id == "kanban_board":
+        from dazzle.render.fragment.primitives.content import Text
+        from dazzle.render.fragment.primitives.data import KanbanBoard
+
+        return r.render(KanbanBoard(columns=(("todo", (Text(body="A"),)),)))
+    if part_id == "status_list_region":
+        from dazzle.render.fragment.primitives.data import StatusList, StatusListEntry
+
+        return r.render(
+            StatusList(
+                entries=(StatusListEntry(title="OK", state="positive"),),
+                empty_message="none",
+            )
+        )
+    if part_id == "kanban_region":
+        from dazzle.render.fragment.primitives.data import (
+            KanbanCard,
+            KanbanColumn,
+            KanbanRegion,
+        )
+
+        return r.render(
+            KanbanRegion(
+                columns=(
+                    KanbanColumn(
+                        label="Todo",
+                        cards=(KanbanCard(title="A", fields=()),),
+                    ),
+                ),
+                empty_message="No items",
+            )
+        )
+    if part_id == "data_list_scroll":
+        from dazzle.render.fragment.primitives.data import DataListScroll, Table
+
+        return r.render(
+            DataListScroll(
+                table=Table(columns=("A",), rows=()),
+                table_id="t1",
+                page_size=10,
+                aria_label="Items",
+                empty_title="Empty",
+                empty_description="None",
+                empty_action_href="",
+                empty_action_label="",
+                paginated=False,
+            )
+        )
+    if part_id == "queue_filters":
+        from dazzle.render.fragment.htmx import URL
+        from dazzle.render.fragment.primitives.data import FilterBar, FilterColumn
+
+        return r.render(
+            FilterBar(
+                endpoint=URL("/api/list"),
+                region_name="tickets",
+                columns=(
+                    FilterColumn(
+                        key="status",
+                        label="Status",
+                        options=(("open", "Open"),),
+                        selected="",
+                    ),
+                ),
+            )
+        )
+    if part_id == "carousel":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-125).
+        return (
+            '<div class="dz-carousel" data-dz-carousel data-dz-carousel-index="0" '
+            'data-dz-carousel-wrap="none" data-dz-carousel-interval="0" '
+            'aria-roledescription="carousel" aria-label="Fixture">'
+            '<button type="button" data-dz-carousel-prev aria-label="Previous"></button>'
+            '<div class="dz-carousel__slide" data-dz-active></div>'
+            '<button type="button" data-dz-carousel-next aria-label="Next"></button>'
+            '<p data-dz-carousel-status aria-live="polite">Slide 1 of 1</p>'
+            "</div>"
+        )
+    if part_id == "menubar":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-126).
+        return (
+            '<div class="dz-menubar" data-dz-menubar role="navigation" aria-label="App">'
+            '<details class="dz-menubar__item">'
+            '<summary class="dz-menubar__trigger">File</summary>'
+            '<div class="dz-menubar__panel" role="menu" aria-label="File">'
+            '<a href="#" role="menuitem">New</a>'
+            "</div></details></div>"
+        )
+    if part_id == "navigation_menu":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-127).
+        return (
+            '<nav class="dz-navigation-menu" data-dz-navigation-menu aria-label="Product">'
+            '<ul class="dz-navigation-menu__list">'
+            '<li class="dz-navigation-menu__item"><a href="#">Home</a></li>'
+            "</ul></nav>"
+        )
+    if part_id == "popover":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-128).
+        return (
+            '<details class="dz-popover">'
+            '<summary class="dz-button" data-dz-variant="secondary">Open</summary>'
+            '<div class="dz-popover__content">Popover body</div>'
+            "</details>"
+        )
+    if part_id == "switch":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-129).
+        return (
+            '<label class="dz-switch">'
+            '<input type="checkbox" name="notify" data-dz-switch checked>'
+            '<span class="dz-switch__track" aria-hidden="true"></span>'
+            "<span>Email notifications</span></label>"
+        )
+    if part_id == "toggle":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-130).
+        return (
+            '<button type="button" class="dz-toggle" data-dz-toggle '
+            'aria-pressed="true"><strong>B</strong> Bold</button>'
+        )
+    if part_id == "accordion":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-131).
+        return (
+            '<div class="dz-accordion">'
+            '<details class="dz-accordion__item" name="fixture-acc" open>'
+            '<summary class="dz-accordion__trigger">Section</summary>'
+            '<div class="dz-accordion__panel">Body</div></details>'
+            "</div>"
+        )
+    if part_id == "aspect_ratio":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-132).
+        return (
+            '<div class="dz-aspect-ratio" data-dz-ratio="16/9" '
+            'aria-label="16:9 frame"><span>16:9</span></div>'
+        )
+    if part_id == "hover_card":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-133).
+        return (
+            '<div class="dz-hover-card" data-dz-hover-card>'
+            '<button type="button" class="dz-hover-card__trigger">@maya</button>'
+            '<div class="dz-hover-card__content" role="tooltip">'
+            '<p class="dz-hover-card__title">Maya Reyes</p>'
+            '<p class="dz-hover-card__description">Operations lead</p>'
+            "</div></div>"
+        )
+    if part_id == "message":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-134).
+        return (
+            '<div class="dz-message" data-dz-message data-dz-from="in">'
+            '<span class="dz-message__media" aria-hidden="true">MR</span>'
+            '<div class="dz-message__body">'
+            '<div class="dz-message__meta">'
+            '<span class="dz-message__author">Maya Reyes</span>'
+            '<time class="dz-message__time" datetime="2026-07-12T10:02">10:02</time>'
+            "</div>"
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
+            "<p>Hello</p></div></div></div>"
+        )
+    if part_id == "breadcrumb":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-135).
+        return (
+            '<nav class="dz-breadcrumb" aria-label="Breadcrumb"><ol>'
+            '<li><a href="#">Home</a></li><li><a href="#">Invoices</a></li>'
+            '<li aria-current="page">INV-0042</li></ol></nav>'
+        )
+    if part_id == "auto_grid":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-136).
+        return (
+            '<div class="dz-auto-grid" style="--dz-grid-min: 9rem">'
+            '<div class="hm-demo-box">A</div><div class="hm-demo-box">B</div>'
+            '<div class="hm-demo-box">C</div><div class="hm-demo-box">D</div>'
+            '<div class="hm-demo-box">E</div>'
+            "</div>"
+        )
+    if part_id == "center":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-137).
+        return (
+            '<div class="dz-center" data-dz-measure="prose">'
+            '<p class="hm-demo-muted">A comfortable reading measure tops out '
+            "around 65 characters; this block centres itself and caps its width "
+            "so lines stay scannable on any screen.</p>"
+            "</div>"
+        )
+    if part_id == "separator":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-138).
+        return (
+            '<div class="hm-stack hm-measure">'
+            '<p class="hm-demo-muted">Account details</p>'
+            '<hr class="dz-separator">'
+            '<p class="hm-demo-muted">Billing and invoices</p>'
+            '<div class="hm-demo-row">'
+            '<span class="hm-demo-muted">Draft</span>'
+            '<div class="dz-separator--vertical" role="separator" '
+            'aria-orientation="vertical"></div>'
+            '<span class="hm-demo-muted">Published</span>'
+            "</div></div>"
+        )
+    if part_id == "alert":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-140).
+        return (
+            '<div class="dz-alert" data-dz-tone="warning" role="alert">'
+            '<span class="dz-alert__icon" aria-hidden="true">!</span>'
+            '<div class="dz-alert__body">'
+            '<div class="dz-alert__title">Payment method expiring</div>'
+            '<div class="dz-alert__description">'
+            "Your card ending 4242 expires next month.</div></div></div>"
+        )
+    if part_id == "bubble":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-141).
+        return (
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
+            "<p>Can we reschedule the walkthrough to Thursday?</p></div>"
+        )
+    if part_id == "chart_legend":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-142).
+        return (
+            '<ul class="dz-chart-legend">'
+            '<li class="dz-chart-legend-item">'
+            '<span class="dz-chart-legend-swatch" '
+            'style="background:var(--colour-brand)"></span>'
+            '<span class="dz-chart-legend-name">Revenue</span></li>'
+            '<li class="dz-chart-legend-item">'
+            '<span class="dz-chart-legend-swatch" '
+            'style="background:var(--colour-success)"></span>'
+            '<span class="dz-chart-legend-name">Costs</span></li>'
+            "</ul>"
+        )
+    if part_id == "form_errors":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-143).
+        return (
+            '<div class="dz-form-errors" role="alert">'
+            '<div class="dz-form-errors-body">'
+            '<h3 class="dz-form-errors-title">Validation Error</h3>'
+            '<ul class="dz-form-errors-list" role="list">'
+            "<li>Name is required</li>"
+            "<li>Start date must be before end date</li>"
+            "</ul></div></div>"
+        )
+    if part_id == "grid_list":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-144).
+        return (
+            '<div class="dz-grid-list">'
+            '<div class="dz-grid-cell">'
+            '<h4 class="dz-grid-cell-title">Aurora Substation</h4>'
+            '<p class="dz-grid-cell-field">'
+            '<span class="dz-grid-cell-field-label">Region:</span> North</p>'
+            "</div></div>"
+        )
+    if part_id == "item":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-145).
+        return (
+            '<div class="dz-item" data-dz-item data-dz-variant="outline">'
+            '<span class="dz-item__media" aria-hidden="true">MR</span>'
+            '<div class="dz-item__content">'
+            '<div class="dz-item__title">Maya Reyes</div>'
+            '<div class="dz-item__description">Operations · North grid</div>'
+            "</div></div>"
+        )
+    if part_id == "marker":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-146).
+        return (
+            '<span class="dz-marker" data-dz-marker>'
+            '<span class="dz-marker__pin" aria-hidden="true"></span>'
+            '<span class="dz-marker__label">HQ</span></span>'
+        )
+    if part_id == "message_scroller":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-147).
+        return (
+            '<div class="dz-message-scroller" data-dz-message-scroller '
+            'role="log" aria-label="Conversation" aria-live="polite" tabindex="0">'
+            '<div class="dz-message" data-dz-message data-dz-from="in">'
+            '<span class="dz-message__media" aria-hidden="true">MR</span>'
+            '<div class="dz-message__body">'
+            '<div class="dz-message__meta">'
+            '<span class="dz-message__author">Maya Reyes</span>'
+            '<time class="dz-message__time" datetime="2026-07-12T10:02">10:02</time>'
+            "</div>"
+            '<div class="dz-bubble" data-dz-bubble data-dz-from="in">'
+            "<p>Hello</p></div></div></div></div>"
+        )
+    if part_id == "two_factor":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-148).
+        return (
+            '<div class="dz-auth-card">'
+            '<h1 class="dz-auth-card-title">Set Up 2FA</h1>'
+            '<p class="dz-auth-card-subtitle">Aurora Ops</p>'
+            '<form class="dz-auth-form">'
+            '<div class="dz-auth-field">'
+            '<label for="hm-2fa-code" class="dz-auth-label">Enter code from app</label>'
+            '<input type="text" id="hm-2fa-code" inputmode="numeric" '
+            'class="dz-auth-input-code" maxlength="6" placeholder="000000">'
+            "</div></form></div>"
+        )
+    if part_id == "avatar":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-149).
+        return '<span class="dz-avatar" data-dz-size="lg">HM</span>'
+    if part_id == "controls":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-150).
+        # Multi-root contract matches any of checkbox/radio/switch classes.
+        return (
+            '<label class="hm-inline">'
+            '<input type="checkbox" class="dz-checkbox" checked> Checkbox</label>'
+        )
+    if part_id == "kbd":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-151).
+        return '<kbd class="dz-kbd">⌘K</kbd>'
+    if part_id == "sidebar_layout":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-152).
+        return (
+            '<div class="dz-sidebar-layout" style="--dz-sidebar-width: 12rem">'
+            '<div class="hm-demo-box">Side (12rem)</div>'
+            '<div class="hm-demo-box">Content</div>'
+            "</div>"
+        )
+    if part_id == "toggle_group":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-153).
+        return (
+            '<fieldset class="dz-toggle-group" role="radiogroup">'
+            '<label><input type="radio" name="hm-view" checked><span>List</span></label>'
+            '<label><input type="radio" name="hm-view"><span>Board</span></label>'
+            "</fieldset>"
+        )
+    if part_id == "tooltip":
+        # Gallery substrate fixture — no FragmentRenderer emit yet (HMC-154).
+        return (
+            '<button type="button" class="dz-button" data-dz-variant="outline" '
+            'data-dz-tooltip="Saved 2 minutes ago">Hover me</button>'
+        )
     if part_id == "master_detail":
         # dual_pane_flow LIST+DETAIL pair → HM master-detail shell
         from dazzle.page.runtime.dual_pane_master_detail import render_master_detail_shell

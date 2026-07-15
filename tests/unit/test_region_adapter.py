@@ -1969,6 +1969,39 @@ def test_activity_feed_dispatches_through_timeline() -> None:
     assert "Saved record" in html
 
 
+def test_activity_feed_accepts_comment_content_field() -> None:
+    """TR-8 / #852: Comment rows use `content` not `description`/`title`.
+
+    Empty description previously raised ActivityRow validation and soft-failed
+    the whole region as "Typed primitive render failed".
+    """
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {
+                "content": "Customer asked about SLA credit",
+                "created_at": "2026-05-07T09:00:00",
+                "author": {"name": "Alex Agent"},
+            },
+            {
+                "content": "  ",  # blank — skipped, must not crash region
+                "created_at": "2026-05-07T09:05:00",
+            },
+            {
+                "body": "Internal note only",
+                "created_at": "2026-05-07T09:10:00",
+                "user": "Sam Manager",
+            },
+        ]
+    }
+    fragment = adapter.build(_FakeRegion("comment_activity", display="activity_feed"), ctx)
+    html = _render(fragment)
+    assert "Typed primitive render failed" not in html
+    assert "Customer asked about SLA credit" in html
+    assert "Internal note only" in html
+    assert "Alex Agent" in html or "Sam Manager" in html
+
+
 # ───────────────── CohortStrip (#1018, v0.67.7) ───────────────────
 
 

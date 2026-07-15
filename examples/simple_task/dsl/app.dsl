@@ -31,8 +31,8 @@ entity User "Team Member":
   patterns: authentication, authorization, profile
   display_field: name
   id: uuid pk
-  email: str(200) unique required
-  name: str(100) required
+  email: str(200) unique required pii(category=contact)
+  name: str(100) required pii(category=identity)
   role: enum[admin,manager,member]=member
   department: str(50)
   avatar_url: str(500)

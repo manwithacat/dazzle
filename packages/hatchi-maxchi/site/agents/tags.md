@@ -85,7 +85,7 @@ def render(field: TagsField) -> str:
 
 ## Notes
 
-Progressive enhancement: the server renders a plain <input type="text" data-dz-tags> whose value is a COMMA-JOINED tag string — usable and submittable with no JS (type a, b, c; the server splits on comma), native required intact. On first interaction dz-tags.js wraps it in a .dz-tags root — a role="list" of removable chips + a borderless entry — and hides the native input (kept in the DOM as the submitted value). Every add/remove rewrites the native input to the comma-joined chip list and fires change, so the submit shape never changes. Type + Enter or comma creates a chip (trim/dedup/skip-empty); paste splits on comma/newline; × or Backspace-on-empty removes a chip; add/remove is announced via a visually-hidden aria-live region.
+Progressive enhancement: the server renders a plain <input type="text" data-dz-tags> whose value is a COMMA-JOINED tag string — usable and submittable with no JS (type a, b, c; the server splits on comma), native required intact. Seeded non-empty values enhance on DOM ready; empty fields enhance on first interaction. dz-tags.js wraps the input in a .dz-tags root — a role="list" of removable chips + a borderless entry — and hides the native input (kept in the DOM as the submitted value). Every add/remove rewrites the native input to the comma-joined chip list and fires change, so the submit shape never changes. Type + Enter or comma creates a chip (trim/dedup/skip-empty); paste splits on comma/newline; × or Backspace-on-empty removes a chip; add/remove is announced via a visually-hidden aria-live region.
 
 ## Source files
 

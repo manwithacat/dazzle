@@ -1,10 +1,7 @@
 # Dazzle DNR Local Mode Requirements
-# Install with: pip install -r requirements.txt
-# Or use: uv pip install -r requirements.txt (recommended)
-#
-# For isolated environments:
+# Prefer the uv deploy layout (`dazzle deploy heroku`) over this file.
+# If you keep requirements.txt for local mode:
 #   uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
-#   pyenv virtualenv 3.12 myapp && pyenv local myapp && pip install -r requirements.txt
 
 # Core runtime dependencies
 dazzle>=0.9.4

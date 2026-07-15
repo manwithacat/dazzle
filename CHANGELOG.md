@@ -9,7 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.104.0] - 2026-07-15
+
+### Added
+- **`dazzle compliance privacy --scaffold-terms`** (default on with
+  `--sync-site`) — writes `site/content/legal/terms.md` from the framework
+  SaaS template when missing (brand-substituted; never overwrites author
+  edits). Completes the de-facto legal trio with privacy + cookies.
+- **`dazzle compliance privacy --sync-site`** (default on) — writes
+  `site/content/legal/{privacy,cookies}.md` next to the `docs/privacy/` pack
+  so SiteSpec public routes stay in lockstep. `--no-sync-site` for pack-only.
+- **Example fleet legal shell (all 12 apps)** — every example has
+  `sitespec.yaml` with `/privacy`, `/cookies`, `/terms`, Legal footer, and a
+  committed privacy pack. New sitespecs for `project_tracker`, `design_studio`,
+  `hr_records`, `invoice_ops`, `acme_billing`, `domain_join_co`. Broader
+  `pii()` on freeform ticket/comment bodies and remaining identity/contact
+  fields. ROPA remains pack-only.
+- **support_tickets privacy compliance pack** — committed `docs/privacy/`
+  (privacy notice, cookie policy, ROPA) from `dazzle compliance privacy`,
+  `pii(category=…)` on User + SlaWaiver identity/contact fields, public
+  `/privacy` + `/cookies` SiteSpec routes, footer links. Demo of de-facto
+  mandatory data-protection pages on an example SaaS surface.
+- **Example HM surface fleet audit** — `scripts/example_hm_surface_audit.py`
+  rebuilds every `examples/*` via `build-ui` and scores HTML for pre-HM
+  residuals (Alpine `x-*`, dead Tailwind spinner utilities). Exit 0 only when
+  the fleet is pure `dz-*`/`data-dz-*`. Wired into the `example-apps` improve
+  lane as Tier 0 so agents don't treat gitignored stale `dnr-ui/` snapshots as
+  product gaps. `examples/README.md` documents the HM surface contract.
+
 ### Changed
+- **uv-only local Python toolchain** — `[tool.uv] python-preference = "only-managed"`; Makefile/`scripts/ci_local.sh`/`setup-dazzle` force uv-managed Python from `.python-version` (3.14), prefer `~/.local/bin/uv` over pyenv shims, and route install/dev-install/security/build through `uv run`. Docs and app templates drop pyenv/`pip install -e` dual paths. Primary local + Heroku target stays 3.14; floor remains >=3.12.
+- **Pillow >=12.3.0** (signing + viewport extras) — clears pip-audit PYSEC-2026-2253–2257 (font/GD decompression-bomb and Windows shell-injection fixes).
+- **JWT Hypothesis fuzz tests** — `deadline=None` on all `@settings` so cold-import / first-example latency cannot flake Tier-1 (`DeadlineExceeded` under the default 200ms cap).
+- **SearchBox primitive docstring** — dropped stale Alpine `x-show` wording;
+  live emit is dual-locked `data-dz-search-box` (controller + CSS).
 - **search-box → schema+DOM dual-lock** — HM `contracts/search_box.py`
   (`SearchBox`, root `data-dz-search-box`); HTMX endpoint/coaching stay on the
   seam model; sole-emitter owns the region chrome.
@@ -96,6 +129,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `render_search_result_row` (HM-faithful anatomy: `role=option`,
   `data-dz-result-id`, optional media, body wrapper). Registry:
   `CONTRACT_MODELS` (was DOM-only).
+
+### Security
+- **Pillow 12.2.0 → 12.3.0** — five known advisories (PCF/BDF/FontFile/GD bomb allocation + WindowsViewer cmd injection). Lower bounds on optional extras raised so the lock cannot resolve the vulnerable release.
 
 ## [0.103.0] - 2026-07-11
 

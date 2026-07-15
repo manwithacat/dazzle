@@ -22,6 +22,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Match Makefile / [tool.uv]: uv-managed Python only. Prefer a real uv binary
+# over pyenv shims (repo `.python-version` is for uv + Heroku, not pyenv).
+export UV_MANAGED_PYTHON="${UV_MANAGED_PYTHON:-1}"
+export PYENV_VERSION="${PYENV_VERSION:-system}"
+if [ -x "${HOME}/.local/bin/uv" ]; then
+  UV="${UV:-${HOME}/.local/bin/uv}"
+else
+  UV="${UV:-uv}"
+fi
+
 # ── CI extras (from .github/workflows/ci.yml + setup-dazzle/action.yml) ──────
 # type-check job:
 EXTRAS_TYPE="dev,llm,mcp,mobile,postgres,pitch,i18n,viewport,perf,lsp"
@@ -54,21 +64,21 @@ _run_uv() {
     # shellcheck disable=SC2086
     PATH="$ROOT/.venv/bin:$PATH" "$@"
   else
-    uv run "$@"
+    "$UV" run "$@"
   fi
 }
 
 cmd_sync_type() {
   _log "uv sync --python ${CI_PYTHON} --frozen (type-check extras)"
   # shellcheck disable=SC2046
-  uv sync --python "$CI_PYTHON" --frozen $(_uv_extra_flags "$EXTRAS_TYPE")
+  "$UV" sync --python "$CI_PYTHON" --frozen $(_uv_extra_flags "$EXTRAS_TYPE")
   _ok "type-check extras synced (Python ${CI_PYTHON})"
 }
 
 cmd_sync_test() {
   _log "uv sync --python ${CI_PYTHON} --frozen (python-tests extras)"
   # shellcheck disable=SC2046
-  uv sync --python "$CI_PYTHON" --frozen $(_uv_extra_flags "$EXTRAS_TEST")
+  "$UV" sync --python "$CI_PYTHON" --frozen $(_uv_extra_flags "$EXTRAS_TEST")
   _ok "python-tests extras synced (Python ${CI_PYTHON})"
 }
 
@@ -127,12 +137,12 @@ cmd_unit_full() {
 cmd_security() {
   _log "bandit (CI: medium severity on src/) + pip-audit hard-fail"
   # setup-dazzle venv has no pip; match CI (`uv pip install bandit[toml]`).
-  uv pip install 'bandit[toml]' pip-audit
+  "$UV" pip install 'bandit[toml]' pip-audit
   # lint job scans all of src/; security-tests also scans http/runtime.
   # Full-tree medium is the stricter of the two local mirrors.
   _run_uv bandit -c pyproject.toml -r src/ --severity-level medium
   # Freeze snapshot (same rationale as ci.yml — editable dazzle-dsl breaks pip-audit).
-  uv pip freeze --exclude-editable > /tmp/dazzle-audit-reqs.txt
+  "$UV" pip freeze --exclude-editable > /tmp/dazzle-audit-reqs.txt
   # MAL-2026-4750: same ignore as CI (fastapi/fastar false positive).
   _run_uv pip-audit --strict --desc --no-deps --disable-pip \
     --ignore-vuln MAL-2026-4750 \
@@ -172,7 +182,7 @@ print(f\"RBAC matrix OK: {len(cells)} cells, 0 unprotected\")
 cmd_docs() {
   _log "mkdocs build --strict  (docs.yml; /ship also runs this)"
   if [ -f requirements-docs.txt ]; then
-    uv run --with-requirements requirements-docs.txt mkdocs build --strict
+    "$UV" run --with-requirements requirements-docs.txt mkdocs build --strict
   else
     _run_uv mkdocs build --strict
   fi

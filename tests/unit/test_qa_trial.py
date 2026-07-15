@@ -538,6 +538,66 @@ class TestFrictionClustering:
         out = render_trial_report(report)
         assert "Friction observations (1 · 1 near-duplicates clustered)" in out
 
+    def test_praise_issue_board_paraphrases_cluster(self) -> None:
+        """TR-32: four praise framings of the same Issue Board filters surface.
+
+        Positive wording diverges more than friction; SequenceMatcher alone
+        at 0.65 let all four through. Soft praise floors + token Jaccard collapse
+        them when URL (+ optional shared evidence) matches.
+        """
+        evidence = (
+            "Issue Board filters: Device, Category, Severity, Status; "
+            "table rows for issuereport list"
+        )
+        friction = [
+            {
+                "category": "praise",
+                "description": (
+                    "The Issue Board is exactly what I need — Device/Category/"
+                    "Severity/Status filters make triage straightforward."
+                ),
+                "url": "/app/issuereport",
+                "evidence": evidence,
+                "severity": "low",
+            },
+            {
+                "category": "praise",
+                "description": (
+                    "I love how the Issue Board lets me filter by Device, Category, "
+                    "Severity and Status without leaving the page."
+                ),
+                "url": "/app/issuereport",
+                "evidence": evidence,
+                "severity": "low",
+            },
+            {
+                "category": "praise",
+                "description": (
+                    "Great Issue Board experience: filtering Device/Category/"
+                    "Severity/Status keeps the queue scannable for a manager."
+                ),
+                "url": "/app/issuereport",
+                "evidence": evidence + "  ",  # whitespace noise
+                "severity": "low",
+            },
+            {
+                "category": "praise",
+                "description": (
+                    "As an eng manager the Issue Board filters (Device, Category, "
+                    "Severity, Status) are the highlight of the product."
+                ),
+                "url": "/app/issuereport",
+                "evidence": evidence,
+                "severity": "low",
+            },
+        ]
+        report = build_trial_report(
+            scenario_name="s", user_identity="EM", friction=friction, verdict="v"
+        )
+        out = render_trial_report(report)
+        assert "Friction observations (1 · 3 near-duplicates clustered)" in out
+        assert "*reported:* ×4" in out
+
     def test_cross_category_collapse_on_shared_evidence(self) -> None:
         """#1073: cycle 120 ops_dashboard recorded 5 near-identical 'No alerts'
         entries spanning 3 categories (missing × 3, confusion × 1, other × 1).
@@ -817,3 +877,42 @@ class TestSeedPreflightAndCircuitBreaker:
         assert "Seed aborted" in out.err
         assert "10 consecutive failures" in out.err
         assert "dazzle demo verify" in out.err
+
+
+# ---------------------------------------------------------------------------
+# Trial logging quieting (TR-47)
+# ---------------------------------------------------------------------------
+
+
+class TestConfigureTrialLogging:
+    """TR-47: trial stdout must not run at root DEBUG with chatty libs."""
+
+    def test_quiets_noisy_loggers_and_root_debug(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import logging
+
+        from dazzle.cli.qa import _configure_trial_logging
+
+        monkeypatch.delenv("DAZZLE_LOG_LEVEL", raising=False)
+        root = logging.getLogger()
+        # Simulate a dependency that flipped root to DEBUG.
+        root.setLevel(logging.DEBUG)
+        logging.getLogger("httpx").setLevel(logging.DEBUG)
+        logging.getLogger("faker").setLevel(logging.DEBUG)
+        logging.getLogger("anthropic").setLevel(logging.DEBUG)
+
+        _configure_trial_logging()
+
+        assert root.level == logging.INFO or root.level > logging.DEBUG
+        assert logging.getLogger("httpx").level == logging.WARNING
+        assert logging.getLogger("faker").level == logging.WARNING
+        assert logging.getLogger("anthropic").level == logging.WARNING
+        assert logging.getLogger("httpcore").level == logging.WARNING
+
+    def test_respects_explicit_debug_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import logging
+
+        from dazzle.cli.qa import _configure_trial_logging
+
+        monkeypatch.setenv("DAZZLE_LOG_LEVEL", "DEBUG")
+        _configure_trial_logging()
+        assert logging.getLogger("httpx").level == logging.DEBUG

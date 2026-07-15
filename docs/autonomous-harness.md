@@ -147,7 +147,19 @@ Cross-lane signals wired into the driver: `ux-component-shipped` from framework-
 
 Selection priority: REGRESSION rows first → signal-biased pick → highest actionable_count > 0 → oldest-run lane's explore phase → housekeeping idle if explore budget at cap.
 
-Designed to run under `/loop 30m /improve` for recurring; `/improve --status` for read-only state.
+**Self-scheduling (preferred):** each cycle ends with Step 6 —
+`scripts/improve_schedule_next.py` → one-shot `scheduler_create` with
+**opportunistic** intervals (CI-aware: poll ~3m while main is yellow, fire
+soon when green; hot 2–5m when work remains; 2h only when idle). A daily
+durable watchdog (`scripts/improve_watchdog_prompt.md`) re-arms the chain if
+it dies. Session-bound alternative: `/loop 30m /improve`. Read-only:
+`/improve --status`.
+
+**GitHub inbox (Step 0c3):** every cycle polls open issues + PRs via
+`scripts/improve_github_inbox.py`. Downstream **consumer bugs** are first-class
+work (`improve/strategies/consumer_issues.md`). **Dependabot** PRs with green
+checks auto-merge (`improve/strategies/github_prs.md`); human PRs are reviewed
+but not auto-merged.
 
 #### `/issues`
 **Source:** `.claude/commands/issues.md`
