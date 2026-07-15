@@ -36,7 +36,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
-| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 489 | STALE (lag 160 since @489) |
+| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 653 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 460 | STALE (lag 189 since @460) |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 477 | STALE (lag 172 since @477) |
 | `dazzle qa trial` | CLI | trials | 463 | STALE (lag 186 since @463) |
@@ -47,12 +47,12 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 482 | STALE (lag 167 since @482) |
 | **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 507 | STALE (lag 142 since @507) |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 462 | STALE (lag 187 since @462) |
-| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 457 | STALE (lag 192 since @457) |
+| MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 653 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 458 | STALE (lag 191 since @458) |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 459 | STALE (lag 190 since @459) |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 487 | STALE (lag 162 since @487) |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 471 | STALE (lag 178 since @471) |
-| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 456 | STALE (lag 193 since @456) |
+| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 653 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 467 | STALE (lag 182 since @467) |
 | `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 473 | STALE (lag 176 since @473) |
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 468 | STALE (lag 181 since @468) |
@@ -168,6 +168,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > again — prefer highest lag next (sentinel mutate@447, qa-trial skill@448, validate@449).
 > Explore budget at sweep: **90/100**. Next sweep due ~**506**.
 
+
+> **Cycle 653 (2026-07-15) example-apps STALE-clear.** support_tickets: `dazzle validate`+`lint` exit 0 (warnings only); `story list` 10 stories; `conformance summary` 481 cases; HM surface HM_OK 12/12. Stamped validate/lint, story, conformance **USED@653**.
 
 > **Capability-sweep cycle 466 (2026-07-13).** Sweep due (32 cycles since 434; self-audit 465
 > ran first). Re-derived inventory: quality CLI surface intact; MCP consolidated tools **34**
