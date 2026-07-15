@@ -59,7 +59,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 655 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 654 | USED |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 656 | USED |
-| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 650 | USED |
+| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 650 | STALE (lag 20 since @650) |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 658 | USED |
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 658 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
@@ -82,6 +82,21 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 658 | USED |
 | **GitHub inbox** (consumer issues + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 664 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
+
+
+> **Capability-sweep cycle 670 (2026-07-15).** Sweep due (21 cycles since 649; self-audit 663).
+> Re-derived inventory: skills (dsl-authoring, phase-contract, qa-trial, spec-narrate, stems) +
+> agents skills (bump/check/cimonitor/docs-update/ship/smells/…) + commands
+> (improve/fuzz/smells/xproject/issues/ship/check/bump/cimonitor/docs-update) + improve strategies
+> (incl. github_prs, consumer_issues, self_audit, owned_idle_exercise) **unchanged**. CLI quality
+> surface intact (`dazzle --help`). **No newly-built UNOWNED.** New infra since 649 already mapped:
+> GitHub inbox@664, schedule_next/watchdog (driver Step 6, not UNOWNED). htmx pin beta5 is vendor,
+> not a capability row.
+> **STALE recompute (threshold last-exercised ≤650):** **1 flip** USED→STALE —
+> dual_lock@650 lag **20**. **already STALE:** 10 (deepest qa trial@463 lag 207).
+> **still USED (hot):** gallery@652 … qa capture@669. Explore **13/100**.
+> Prefer STALE-clear dual_lock (hm-convergence) or highest-lag product STALE (qa trial blocked on
+> grok-cli → taste/vision subscription path or sentinel mutate). Next sweep ~**690**.
 
 > **Capability-sweep cycle 649 (2026-07-15).** Sweep due (20 cycles since 629; self-audit 648
 > mid-window). Re-derived inventory: skills (dsl-authoring, phase-contract, qa-trial, spec-narrate,
