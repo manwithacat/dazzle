@@ -60,11 +60,11 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 654 | USED |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 656 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 650 | USED |
-| `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 490 | STALE (lag 159 since @490) |
-| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 490 | STALE (lag 159 since @490) |
+| `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 658 | USED |
+| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 658 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
-| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 478 | STALE (lag 171 since @478) |
+| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 658 | USED |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
 | `qa-trial` skill | skill | trials (downstream authoring) | 488 | STALE (lag 161 since @488) |
@@ -77,9 +77,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 657 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 657 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 657 | USED |
-| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 494 | STALE (lag 155 since @494) |
-| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 455 | STALE (lag 194 since @455) |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 496 | STALE (lag 153 since @496) |
+| MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 658 | USED |
+| MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 658 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 658 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 > **Capability-sweep cycle 649 (2026-07-15).** Sweep due (20 cycles since 629; self-audit 648
@@ -243,6 +243,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > **Cycle 656 (2026-07-15) multi-lane STALE-clear.** coverage 61/61; composition audit 100; pulse run 68% launch-ready; fragment-audit support_tickets; rhythm gaps; schema summary. Stamped coverage, pulse, composition, fragment-audit, rhythm **USED@656**.
 
 > **Cycle 657 (2026-07-15) STALE-clear process/compliance/MCP dsl+policy.** process propose; compliance gaps+evidence; MCP dsl validate/lint/modules; fidelity score 0.99; policy analyze. Stamped process, compliance, MCP dsl, policy **USED@657**. semantics still no handler module (STALE).
+
+> **Cycle 658 (2026-07-15) STALE-clear semantics/sweep/test_intelligence/codeql/shadcn/zero-floor.** MCP semantics via event_first_tools (extract/validate_events/guards); `dazzle sweep examples` exit 0; test_intelligence after KG init; CodeQL poll clean; shadcn gaps 0; HM floor GREEN. Stamped six capabilities **USED@658**.
 ---
 
 
