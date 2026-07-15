@@ -38,7 +38,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 653 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 665 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 477 | STALE (lag 172 since @477) |
+| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 669 | USED |
 | `dazzle qa trial` | CLI | trials | 463 | STALE (lag 186 since @463) |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 668 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 652 | USED |
@@ -144,6 +144,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 669 (2026-07-15) example-apps STALE-clear.** support_tickets: `qa capture --above-fold` **6 screens** under `.dazzle/qa/screenshots/` (ticket_queue/agent_dashboard/my_tickets × Timestamped/Auditable). Stamped qa capture **USED@669**.
 > **Cycle 668 (2026-07-15) example-apps STALE-clear.** support_tickets: `dazzle serve` + `qa login` for manager/agent/admin/customer exit 0; magic-link GET → 303. Stamped qa login **USED@668**.
 > **Cycle 665 (2026-07-15) framework-ux STALE-clear.** support_tickets: `dazzle serve` + `ux verify --contracts` **60 passed / 0 failed / 38 pending**; `ux verify --structural` inventory 383. Stamped ux verify **USED@665**.
 
