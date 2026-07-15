@@ -37,7 +37,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 697 | USED |
-| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 687 | USED |
+| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 707 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 689 | USED |
 | `dazzle qa trial` | CLI | trials | 463 | STALE (lag 228 since @463) |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 689 | USED |
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 707 (2026-07-15) framework-ux STALE-clear.** support_tickets: `ux verify --contracts` **60/0/38**; `--structural` inventory 383. Stamped ux verify **USED@707**.
 > **Cycle 706 (2026-07-15) standalone /xproject STALE-clear.** Scouted siblings with dazzle.toml: pennydreadful, AegisMark, cyfuture. validate+lint exit 0 all three; pulse radar AegisMark 98% / cyfuture 94% launch-ready (pennydreadful pulse exit 1, non-blocking). Stamped /xproject **USED@706**.
 > **Cycle 705 (2026-07-15) standalone /fuzz STALE-clear.** Boot-stderr scrape 4 apps (support_tickets, simple_task, contact_manager, fieldtest_hub) — clean start/stop; no hard signatures (duplicate route / text-shaped / Traceback). Stamped /fuzz **USED@705**.
 > **Cycle 704 (2026-07-15) multi STALE-clear.** floors GREEN; shadcn gaps 0; `dazzle sweep examples` exit 0; MCP semantics extract/validate_events/guards OK; CodeQL 0 open; test_intelligence KG present. Stamped semantics, sweep/nightly, shadcn, zero-floor, CodeQL, test_intelligence **USED@704**.
