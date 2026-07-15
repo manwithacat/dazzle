@@ -91,11 +91,9 @@ dazzle serve
 ### Environment Setup
 
 ```bash
-# Using uv (recommended)
+# uv is the supported toolchain (matches Heroku's uv buildpack)
 uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
-
-# Or using pip
-python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+# Prefer: dazzle deploy heroku  → pyproject.toml + uv.lock + .python-version
 ```
 
 ## DSL Quick Reference

@@ -42,10 +42,10 @@ properties that are normally scattered across hand-written code become
 ## Setup (~5 min)
 
 ```bash
-# From a clone of the repo (uv is the canonical toolchain):
-uv sync --extra dev --extra llm --extra mcp
-# pip still works:           pip install -e ".[dev,llm,mcp]"
-# Or the published package:  pip install dazzle-dsl
+# From a clone of the repo (uv only — see docs/contributing/dev-setup.md):
+make dev-install
+# or: uv sync --extra dev --extra llm --extra mcp
+# Published package: uv pip install dazzle-dsl
 
 cd examples/support_tickets        # a small multi-role app used below
 ```

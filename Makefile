@@ -2,17 +2,40 @@
 #
 # Usage: make <target>
 # Run 'make help' to see all available targets
+#
+# Python toolchain: uv is the single source of truth (same as Heroku's uv
+# buildpack). `.python-version` pins the primary interpreter (3.14). Do not
+# use pyenv/virtualenv/pip-install-editable for this repo — see
+# docs/contributing/dev-setup.md.
 
 .PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core sync-ci-type sync-ci-test pre-commit
+
+# Prefer a real uv binary over pyenv shims. A committed `.python-version` of
+# `3.14` is correct for uv + Heroku but makes pyenv abort when that version is
+# not installed *in pyenv* — even for non-Python tools on the shim path.
+UV := $(firstword $(wildcard $(HOME)/.local/bin/uv) $(shell command -v uv 2>/dev/null))
+ifeq ($(UV),)
+$(error uv not found. Install: curl -LsSf https://astral.sh/uv/install.sh | sh)
+endif
+
+# Refuse system/pyenv interpreters; provision via `uv python install`.
+export UV_MANAGED_PYTHON := 1
+# If pyenv shims are still on PATH, don't hard-fail on the repo pin.
+export PYENV_VERSION := system
+
+# Day-to-day local extras (CI jobs use frozen lists via setup-dazzle / ci_local.sh).
+DEV_EXTRAS := --extra dev --extra llm --extra mcp --extra mobile --extra postgres --extra perf --extra saml --extra lsp
 
 # Default target
 help:
 	@echo "DAZZLE Development Commands"
 	@echo "============================"
 	@echo ""
+	@echo "Toolchain: uv + .python-version (primary 3.14; floor >=3.12). UV=$(UV)"
+	@echo ""
 	@echo "Setup:"
-	@echo "  install          Install DAZZLE in development mode"
-	@echo "  dev-install      Install with all dev dependencies + pre-commit hooks"
+	@echo "  install          uv sync --extra dev (managed Python from .python-version)"
+	@echo "  dev-install      Full local extras + pre-commit hooks"
 	@echo "  sync-ci-type     uv sync --frozen with CI type-check extras (Python 3.12)"
 	@echo "  sync-ci-test     uv sync --frozen with CI python-tests extras (Python 3.12)"
 	@echo ""
@@ -51,32 +74,37 @@ help:
 # =============================================================================
 
 install:
-	pip install -e ".[dev,llm]"
+	$(UV) python install
+	$(UV) sync --extra dev
+	@echo ""
+	@echo "Synced .venv from uv.lock (Python from .python-version)."
+	@echo "Activate with: source .venv/bin/activate   — or prefix commands with: uv run …"
 
 dev-install:
-	pip install -e ".[dev,llm]"
-	pip install pygls || true
-	pre-commit install
-	pre-commit install --hook-type pre-push
+	$(UV) python install
+	$(UV) sync $(DEV_EXTRAS)
+	$(UV) run pre-commit install
+	$(UV) run pre-commit install --hook-type pre-push
 	@echo ""
-	@echo "Development environment ready!"
+	@echo "Development environment ready (uv-managed Python + full local extras)."
 	@echo "Pre-commit hooks installed for commit and push."
+	@echo "Activate with: source .venv/bin/activate   — or use: make test / uv run …"
 
 # =============================================================================
 # Code Quality
 # =============================================================================
 
 lint:
-	uv run ruff check src/ tests/
+	$(UV) run ruff check src/ tests/
 
 format:
-	uv run ruff format src/ tests/
+	$(UV) run ruff format src/ tests/
 
 format-check:
-	uv run ruff format --check src/ tests/
+	$(UV) run ruff format --check src/ tests/
 
 type-check:
-	uv run mypy src/dazzle
+	$(UV) run mypy src/dazzle
 
 # CI type-check job uses Python 3.12 + maximal extras (pitch/i18n/viewport/…).
 # A thin local venv lies — missing stubs flip warn_return_any / unused-ignores.
@@ -91,23 +119,23 @@ sync-ci-test:
 
 security:
 	@echo "=== Bandit Security Check ==="
-	bandit -c pyproject.toml -r src/ --severity-level medium
+	$(UV) run bandit -c pyproject.toml -r src/ --severity-level medium
 	@echo ""
 	@echo "=== Dependency Vulnerability Scan (soft — use make ci-core for hard-fail) ==="
-	pip-audit --strict --desc on || true
+	$(UV) run pip-audit --strict --desc on || true
 
 spell:
-	codespell --skip '*.json,*.min.js' --ignore-words-list 'doubleclick' src/ tests/ docs/ examples/
+	$(UV) run codespell --skip '*.json,*.min.js' --ignore-words-list 'doubleclick' src/ tests/ docs/ examples/
 
 # =============================================================================
 # Testing
 # =============================================================================
 
 test:
-	uv run pytest tests/ -v
+	$(UV) run pytest tests/ -v
 
 test-fast:
-	uv run pytest tests/ -x -q --ignore=tests/integration/ -m "not slow"
+	$(UV) run pytest tests/ -x -q --ignore=tests/integration/ -m "not slow"
 
 # Fast infrastructure-drift gate used by /ux-cycle (cycles 312 + 314).
 # Runs the 4 horizontal-discipline lints + snapshot tests + card-safety invariants
@@ -123,14 +151,14 @@ test-ux-preflight:
 	@# the structural anchor for UI changes. The 4 remaining tests still
 	@# guard meaningful invariants (canonical-pointer linkage, template
 	@# None-safety, external-resource SRI, IR↔field-reader parity).
-	uv run pytest tests/unit/test_canonical_pointer_lint.py \
+	$(UV) run pytest tests/unit/test_canonical_pointer_lint.py \
 	       tests/unit/test_template_none_safety.py \
 	       tests/unit/test_external_resource_lint.py \
 	       tests/unit/test_ir_field_reader_parity.py \
 	       tests/unit/test_typed_runtime_no_jinja.py \
 	       -q
 	@# src/dazzle_page/ merged into src/dazzle/page/ in v0.67.98 (#1055).
-	uv run mypy src/dazzle/page/ --ignore-missing-imports
+	$(UV) run mypy src/dazzle/page/ --ignore-missing-imports
 	@# Non-blocking dist/ drift warning (cycle 319, silent-drift class 3).
 	@# Cycle 317 gap doc flagged dist/ accumulating across ~20 cycles; this
 	@# surfaces it on every preflight but doesn't fail the cycle — runs
@@ -150,7 +178,7 @@ test-ux-preflight:
 #
 # Path note: src/dazzle_http/ → src/dazzle/http/ at v0.67.98 (#1055).
 test-ux-deep: test-ux-preflight
-	uv run mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle/http/ \
+	$(UV) run mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp src/dazzle/http/ \
 	     --ignore-missing-imports --exclude 'eject'
 
 # On-demand half-finished-internals audit. Not part of preflight — regenerates
@@ -159,16 +187,16 @@ test-ux-deep: test-ux-preflight
 # #834 (hot_reload.py). Expected FP rate is high (cycle 328 measured ~83% for
 # module orphans); report format supports human skimming, not blocking CI.
 audit-internals:
-	uv run python tests/unit/audit_internals.py
+	$(UV) run python tests/unit/audit_internals.py
 
 test-integration:
-	uv run pytest tests/integration/ -v
+	$(UV) run pytest tests/integration/ -v
 
 test-all:
-	uv run pytest tests/ -v --cov=src/dazzle --cov-report=term-missing
+	$(UV) run pytest tests/ -v --cov=src/dazzle --cov-report=term-missing
 
 coverage:
-	uv run pytest tests/ -v --cov=src/dazzle --cov-report=html --cov-report=term-missing
+	$(UV) run pytest tests/ -v --cov=src/dazzle --cov-report=html --cov-report=term-missing
 	@echo ""
 	@echo "Coverage report: htmlcov/index.html"
 
@@ -177,8 +205,8 @@ coverage:
 # =============================================================================
 
 build:
-	python -m build
-	twine check dist/*
+	$(UV) run python -m build
+	$(UV) run twine check dist/*
 	@echo ""
 	@echo "Build artifacts in dist/"
 
@@ -187,12 +215,12 @@ examples:
 	@for dir in examples/*/; do \
 		if [ -f "$${dir}dazzle.toml" ]; then \
 			echo "Validating $${dir}..."; \
-			cd "$${dir}" && dazzle validate && cd - > /dev/null || exit 1; \
+			cd "$${dir}" && $(UV) run dazzle validate && cd - > /dev/null || exit 1; \
 		fi \
 	done
 	@echo ""
 	@echo "=== Building simple_task Example ==="
-	cd examples/simple_task && dazzle build --stack micro
+	cd examples/simple_task && $(UV) run dazzle build --stack micro
 	@echo ""
 	@echo "All examples validated!"
 
@@ -217,7 +245,7 @@ ci: lint format-check type-check security test-all examples
 	@echo "=== Legacy make ci finished. Prefer 'make ci-core' for GitHub concordance. ==="
 
 pre-commit:
-	pre-commit run --all-files
+	$(UV) run pre-commit run --all-files
 
 # =============================================================================
 # Maintenance
@@ -231,5 +259,5 @@ clean:
 	@echo "Cleaned build artifacts"
 
 update-deps:
-	pre-commit autoupdate
-	pip list --outdated
+	$(UV) run pre-commit autoupdate
+	$(UV) pip list --outdated

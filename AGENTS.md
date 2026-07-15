@@ -101,29 +101,31 @@ If those can't be answered, the change isn't blocked, but it carries an explicit
 
 ### Dev Setup
 ```bash
-uv sync --extra dev --extra llm --extra mcp   # Create .venv + editable install from uv.lock
-# then: source .venv/bin/activate   (or prefix commands with `uv run`)
-# pip still works if you prefer: pip install -e ".[dev,llm,mcp]"
+# uv is the only supported local toolchain (same as Heroku's uv buildpack).
+# .python-version pins primary Python 3.14; [tool.uv] python-preference = only-managed.
+make dev-install              # uv python install + uv sync (full local extras) + pre-commit
+# or: uv sync --extra dev --extra llm --extra mcp …
+source .venv/bin/activate     # optional; else prefix with `uv run` / use make targets
 ```
-**uv is the canonical toolchain.** After changing deps in `pyproject.toml`, run
-`uv lock` and commit the updated `uv.lock` in the same change — CI syncs with `--frozen` and
-fails on lock drift. A uv `.venv` has no `pip`; use `uv pip install <tool>` for one-off tooling.
+**Do not use pyenv or `pip install -e` for this repo.** After changing deps in
+`pyproject.toml`, run `uv lock` and commit the updated `uv.lock` in the same change —
+CI syncs with `--frozen` and fails on lock drift. A uv `.venv` has no `pip`; use
+`uv pip install <tool>` for one-off tooling. Details: `docs/contributing/dev-setup.md`.
 
 ```bash
 # Run app (against your own Postgres + Redis via DATABASE_URL / REDIS_URL)
-dazzle serve
+uv run dazzle serve
 
 # Validate
-dazzle validate               # Parse and validate DSL
-dazzle lint                   # Extended checks
+uv run dazzle validate        # Parse and validate DSL
+uv run dazzle lint            # Extended checks
 
 # Test
-pytest tests/ -m "not e2e"    # Unit tests
-pytest tests/ -m e2e          # E2E tests
+make test-fast                # or: uv run pytest tests/ -m "not e2e"
+uv run pytest tests/ -m e2e
 
 # Lint
-ruff check src/ tests/ --fix && ruff format src/ tests/
-mypy src/dazzle
+make lint format              # or: uv run ruff … / uv run mypy src/dazzle
 ```
 
 ## DSL Quick Reference
@@ -481,4 +483,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.103.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.104.0 | **Python**: 3.12+ | **Status**: Production Ready

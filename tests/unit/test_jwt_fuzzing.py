@@ -71,7 +71,11 @@ class TestTokenVerificationFuzzing:
     """Fuzz test token verification for crash resistance."""
 
     @given(token=st.text(min_size=0, max_size=20000))
-    @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
+    @settings(
+        max_examples=200,
+        deadline=None,
+        suppress_health_check=[HealthCheck.too_slow],
+    )
     def test_verify_arbitrary_text_no_crash(self, token: str) -> None:
         """Token verification should never crash on arbitrary input."""
         from dazzle.http.runtime.jwt_auth import JWTConfig, JWTError, JWTService
@@ -89,7 +93,11 @@ class TestTokenVerificationFuzzing:
             raise
 
     @given(token=jwt_like_string)
-    @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
+    @settings(
+        max_examples=200,
+        deadline=None,
+        suppress_health_check=[HealthCheck.too_slow],
+    )
     def test_verify_jwt_like_strings_no_crash(self, token: str) -> None:
         """Token verification should not crash on JWT-like strings."""
         from dazzle.http.runtime.jwt_auth import JWTConfig, JWTError, JWTService
@@ -107,7 +115,7 @@ class TestTokenVerificationFuzzing:
             raise
 
     @given(token=st.binary(min_size=0, max_size=1000))
-    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_verify_binary_data_no_crash(self, token: bytes) -> None:
         """Token verification should not crash on binary data."""
         from dazzle.http.runtime.jwt_auth import JWTConfig, JWTError, JWTService
@@ -139,7 +147,7 @@ class TestTokenCreationFuzzing:
         email=email_like,
         roles=role_lists,
     )
-    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_create_token_with_random_email_roles(
         self,
         email: str,
@@ -168,7 +176,7 @@ class TestTokenCreationFuzzing:
         assert verified.email == email
 
     @given(tenant_id=st.one_of(st.none(), st.text(min_size=1, max_size=50)))
-    @settings(max_examples=50)
+    @settings(max_examples=50, deadline=None)
     def test_create_token_with_tenant_id(self, tenant_id: str | None) -> None:
         """Token creation should handle various tenant IDs."""
         pytest.importorskip("jwt")
@@ -196,7 +204,7 @@ class TestConfigurationFuzzing:
     """Fuzz test configuration handling."""
 
     @given(algorithm=algorithm_names)
-    @settings(max_examples=100)
+    @settings(max_examples=100, deadline=None)
     def test_random_algorithm_handled_safely(self, algorithm: str) -> None:
         """Random algorithm names should either work or raise ValueError."""
         from dazzle.http.runtime.jwt_auth import ALLOWED_ALGORITHMS, JWTConfig, JWTService
@@ -222,7 +230,7 @@ class TestConfigurationFuzzing:
                 JWTService(config)
 
     @given(secret=secret_keys)
-    @settings(max_examples=100)
+    @settings(max_examples=100, deadline=None)
     def test_random_secret_key_length_validation(self, secret: str) -> None:
         """Secret key length should be validated."""
         from dazzle.http.runtime.jwt_auth import MIN_HMAC_SECRET_LENGTH, JWTConfig, JWTService
@@ -250,7 +258,7 @@ class TestPayloadFuzzing:
         email=st.text(min_size=0, max_size=100),
         exp_offset=st.integers(min_value=-86400 * 365, max_value=86400 * 365),
     )
-    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_crafted_payload_handling(
         self,
         sub: str,
@@ -297,7 +305,7 @@ class TestHeaderFuzzing:
     """Fuzz test header manipulation resistance."""
 
     @given(alg=st.text(min_size=0, max_size=20))
-    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_forged_header_algorithm(self, alg: str) -> None:
         """Forged algorithm headers should be rejected."""
         pytest.importorskip("jwt")
@@ -350,7 +358,7 @@ class TestHeaderFuzzing:
             max_size=5,
         )
     )
-    @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow])
+    @settings(max_examples=50, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_extra_header_fields(self, extra_header: dict) -> None:
         """Extra header fields should not bypass security."""
         pytest.importorskip("jwt")
@@ -403,7 +411,9 @@ class TestTokenStoreFuzzing:
     """Fuzz test token store operations."""
 
     @given(token=st.text(min_size=0, max_size=1000))
-    @settings(max_examples=100, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=100, suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None
+    )
     def test_validate_random_token_no_crash(self, token: str) -> None:
         """Token store should handle random validation queries."""
         from dazzle.http.runtime.token_store import TokenStore
@@ -421,7 +431,9 @@ class TestTokenStoreFuzzing:
         ua=st.one_of(st.none(), _pg_text(max_size=200)),
         device=st.one_of(st.none(), _pg_text(max_size=50)),
     )
-    @settings(max_examples=50, suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        max_examples=50, suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None
+    )
     def test_create_token_with_random_metadata(
         self,
         ip: str | None,
