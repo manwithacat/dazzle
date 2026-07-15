@@ -51,14 +51,14 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 657 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 677 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 672 | USED |
-| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 656 | USED |
+| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 679 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 675 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 676 | USED |
-| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 656 | USED |
+| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 679 | USED |
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 677 | USED |
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 677 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 676 | USED |
-| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 656 | USED |
+| `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 679 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 671 | USED |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 658 | USED |
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 658 | USED |
@@ -72,8 +72,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 484 | STALE (lag 165 since @484) |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 485 | STALE (lag 164 since @485) |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 677 | USED |
-| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 656 | USED |
-| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 656 | USED |
+| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 679 | USED |
+| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 679 | USED |
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 657 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 657 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 657 | USED |
@@ -91,6 +91,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 679 (2026-07-15) framework-ux + example-apps STALE-clear.** coverage 61/61; composition audit 100; pulse radar; fragment-audit; rhythm gaps. Stamped coverage, pulse, composition, fragment-audit, rhythm **USED@679**.
 > **Cycle 677 (2026-07-15) framework-ux STALE-clear.** support_tickets: `fitness code` + `fitness vitality`; `rbac matrix`; `sentinel scan`; `inspect project`. Stamped fitness engine/CLI, sentinel scan, rbac **USED@677**.
 > **Cycle 676 (2026-07-15) example-apps STALE-clear.** support_tickets: `discovery report` exit 0; `deploy plan` exit 0; `test-design coverage-actions` exit 0. Stamped discovery, deploy plan, test-design **USED@676**.
 > **Cycle 675 (2026-07-15) example-apps STALE-clear.** support_tickets: `validate`+`lint` exit 0; `story list` 18; `conformance summary` 481 cases. Stamped validate/lint, story, conformance **USED@675**.
