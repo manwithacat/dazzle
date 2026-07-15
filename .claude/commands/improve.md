@@ -1,6 +1,6 @@
-Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → **CodeQL open-alert snapshot** (remediate if high/error open) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome.
+Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local preflight → **CI badge snapshot** (repair if main is red) → **CodeQL open-alert snapshot** (remediate if high/error open) → signals → pick the highest-leverage lane → hand off to its playbook → record outcome → **self-schedule the next one-shot** (adaptive interval; durable chain, not a fixed `/loop` ticker).
 
-Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, CodeQL gate, signal bus, log, /loop).
+Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, CodeQL gate, signal bus, log, self-schedule).
 
 ARGUMENTS: $ARGUMENTS
 
@@ -31,9 +31,10 @@ If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count
 | `dev_docs/improve-log-archive.md` | Cycle-log entries older than the last 25, moved by `scripts/improve_compact.py` |
 | `.dazzle/improve.lock` | PID + timestamp; 15-min TTL |
 | `.dazzle/improve-explore-count` | Single counter shared across all lanes' explore phases (cap 100) |
+| `.dazzle/improve-schedule-state.json` | Last self-schedule decision (interval, reason, scheduler_create payload) |
 | `.dazzle/signals/` | Cross-lane signal bus (existing `ux_cycle_signals` infrastructure) |
 
-All gitignored.
+All gitignored (under `.dazzle/` or `dev_docs` local state as noted).
 
 **State compaction.** The driver reads the backlog + log every cycle, so settled
 material is pure context burn. When either working file exceeds **100 KB**, run
@@ -222,6 +223,67 @@ rm -f .dazzle/improve.lock
 
 One-paragraph summary: lane chosen, outcome, what changed, budget remaining, next-cycle hint (which lane is likely next based on current backlog state).
 
+### Step 6: Self-schedule (mandatory — keep the chain alive)
+
+After Step 5 text is ready (lock already released). Port of CyFuture's one-shot
+self-chain: each cycle arms the **next** fire rather than relying on a fixed
+`/loop` ticker or a `recurring: true` improve job.
+
+#### 6a. Decide
+
+```bash
+uv run python scripts/improve_schedule_next.py --result PASS
+# or: --result FAIL   /  --deployed 1   /  --stop
+```
+
+JSON stdout is also written to `.dazzle/improve-schedule-state.json` (gitignored).
+
+#### 6b. Act
+
+| `action` | What to do |
+|----------|------------|
+| `schedule` | Call **`scheduler_create`** with the fields from `scheduler_create` in the JSON (`interval`, `prompt`, `recurring: false`, `fire_immediately: false`, `durable: true`) |
+| `stop` | Do **not** schedule. Note stop reason in the cycle log line below |
+
+#### 6c. Log the chain
+
+Append to this cycle's `improve-log.md` entry (or a trailing line):
+
+```
+**Next:** schedule {interval} job_id={id} reason={reason}
+# or: **Next:** STOP reason={reason}
+```
+
+#### Adaptive intervals (encoded in the script)
+
+| Situation | Interval |
+|-----------|----------|
+| REGRESSION rows | `15m` |
+| Actionable backlog / explore budget remaining | `15m` |
+| Self-audit or capability-sweep due next cycle | `15m` |
+| Just deployed / shipped runtime change (`--deployed 1`) | `20m` |
+| Cycle failed | `30m` |
+| Explore at cap + no actionable + cadences not due | `2h` |
+| Human/framework escalate (`--stop`) | no schedule |
+
+#### Overlap hygiene
+
+- Prefer **one** pending `/improve` one-shot at a time.
+- Do **not** `scheduler_create(..., recurring=true)` for the main chain.
+- If `scheduler_list` shows multiple competing `/improve` one-shots, delete extras and keep one.
+
+#### Dead-man's switch (ops)
+
+A **daily** durable recurring task should remain armed (create once if missing):
+
+- Interval: `1d`, `recurring: true`, `durable: true`, `fire_immediately: false`
+- Prompt: contents of `scripts/improve_watchdog_prompt.md`
+- Purpose: if the self-chain dies (crash before Step 6, 7-day durable expiry), re-arm a one-shot
+
+If no daily improve watchdog exists when you finish REPORT, create it once from that file.
+
+`--status` and `--reset-budget` modes **skip** Step 6 (no cycle → no chain advance).
+
 ## Cross-lane signal contract
 
 | Kind | Emitted by | Consumed by |
@@ -245,6 +307,7 @@ Lanes declare which kinds they emit and consume in their own files. Driver wires
 - **Always CI snapshot.** Step 0c every cycle; red completed badge → repair cycle, not explore.
 - **Commit every cycle that modifies tracked files.** Even failure cycles commit if they updated notes.
 - **Explore budget is global.** A lane's explore phase always increments the shared counter. CI repair does not consume explore budget.
+- **Self-schedule every full cycle.** Step 6 is mandatory after REPORT (except `--status` / `--reset-budget`). Use one-shots only; never `recurring: true` for the main chain.
 
 ## Status mode
 
@@ -274,12 +337,15 @@ Read-only — does not modify state, log, or lock. Status mode **does** run the 
 ## Usage
 
 ```bash
-/improve                                # driver picks the lane (after CI snapshot)
+/improve                                # one cycle + self-schedule next one-shot
 /improve framework-ux                   # force a lane
 /improve framework-ux contract_audit    # force lane + sub-strategy
 /improve cimonitor                      # force CI snapshot (+ repair if red)
-/improve --status                       # status report, no cycle
-/loop 6m /improve                       # recurring; CI gate + lane-pickup each fire
+/improve --status                       # status report, no cycle (no schedule)
+/improve --reset-budget                 # clear explore cap (no cycle)
+# Prefer self-schedule (Step 6) over a fixed ticker. Alternatives:
+#   /loop 6m /improve                   # session-bound fixed interval
+# Daily dead-man: scripts/improve_watchdog_prompt.md (durable recurring 1d)
 ```
 
 ## Consolidation status
