@@ -41,7 +41,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 669 | USED |
 | `dazzle qa trial` | CLI | trials | 463 | STALE (lag 186 since @463) |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 668 | USED |
-| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 652 | USED |
+| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 674 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 673 | USED |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 481 | STALE (lag 168 since @481) |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 482 | STALE (lag 167 since @482) |
@@ -87,6 +87,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 674 (2026-07-15) hm-convergence STALE-clear gallery_probes.** Discover multi-details 3/3 catalog_ok. Run **6/6 PASS** (menubar/nav/accordion exclusive; tree multi_open; menubar/nav dismiss). Stamped gallery probes **USED@674**.
 > **Cycle 673 (2026-07-15) hm-convergence STALE-clear taste-panel (subscription).** `hm_visual_smoke --dazzle-emit` PASS; host-Read scores ingested mean **7.2** (no metered taste-panel). Stamped taste-panel **USED@673**.
 > **Cycle 672 (2026-07-15) test-suite STALE-clear.** `dazzle sentinel mutate --suite security` **PASS** — all 5 modules ≥ floor (crypto 83%, rbac 71%, csrf 85%, rls 100%, predicate 77%). Stamped sentinel mutate **USED@672**.
 > **Cycle 671 (2026-07-15) hm-convergence dual_lock STALE-clear.** Floors GREEN; dual_lock queue=0; coherence queue=0; shadcn gaps=0. Re-ran coverage+queue write; `hm_visual_smoke --dazzle-emit` PASS. dual_lock **650 STALE → 671 USED**.
