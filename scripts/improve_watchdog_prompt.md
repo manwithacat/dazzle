@@ -16,8 +16,8 @@ Dazzle /improve dead-man's switch (daily).
    - self-audit / capability-sweep would be due on the next cycle (see schedule script reasons), OR
    - only slow-poll situations (explore at cap, all-clear) still deserve a `2h` re-arm:
    then call `scheduler_create` with the fields from `scripts/improve_schedule_next.py` JSON
-   (`scheduler_create` object: interval, prompt, `recurring=false`, `fire_immediately=false`,
-   `durable=true`).
+   (`scheduler_create` object: interval, prompt, recurring, **fire_immediately**, durable —
+   honor `fire_immediately: true` when CI is green and work remains).
 5. If a healthy `/improve` one-shot is already pending, **no-op** (do not schedule a second).
 6. Do **not** run a full improve cycle in this watchdog turn unless the chain has been dead
    for **>24h** and work remains — then run one `/improve` and self-schedule as usual at REPORT.

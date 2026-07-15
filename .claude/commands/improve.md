@@ -233,16 +233,21 @@ self-chain: each cycle arms the **next** fire rather than relying on a fixed
 
 ```bash
 uv run python scripts/improve_schedule_next.py --result PASS
-# or: --result FAIL   /  --deployed 1   /  --stop
+# or: --result FAIL
+#     --deployed 1          # this cycle pushed code
+#     --ci auto|green|red|in_progress|unavailable   # default auto via `gh`
+#     --stop
 ```
 
 JSON stdout is also written to `.dazzle/improve-schedule-state.json` (gitignored).
+The script **probes main CI** (`gh run list --workflow ci.yml --branch main`) unless
+`--ci` is set — do not invent a fixed 15–20m wait after every push.
 
 #### 6b. Act
 
 | `action` | What to do |
 |----------|------------|
-| `schedule` | Call **`scheduler_create`** with the fields from `scheduler_create` in the JSON (`interval`, `prompt`, `recurring: false`, `fire_immediately: false`, `durable: true`) |
+| `schedule` | Call **`scheduler_create`** with **all** fields from `scheduler_create` in the JSON (`interval`, `prompt`, `recurring`, **`fire_immediately`**, `durable`). Honor `fire_immediately: true` when present (CI green / repair / regression). |
 | `stop` | Do **not** schedule. Note stop reason in the cycle log line below |
 
 #### 6c. Log the chain
@@ -250,22 +255,28 @@ JSON stdout is also written to `.dazzle/improve-schedule-state.json` (gitignored
 Append to this cycle's `improve-log.md` entry (or a trailing line):
 
 ```
-**Next:** schedule {interval} job_id={id} reason={reason}
+**Next:** schedule {interval} fire_immediately={bool} job_id={id} reason={reason} ci={status}
 # or: **Next:** STOP reason={reason}
 ```
 
-#### Adaptive intervals (encoded in the script)
+#### Opportunistic intervals (encoded in the script)
 
-| Situation | Interval |
-|-----------|----------|
-| REGRESSION rows | `15m` |
-| Actionable backlog / explore budget remaining | `15m` |
-| Self-audit or capability-sweep due next cycle | `15m` |
-| Just deployed / shipped runtime change (`--deployed 1`) | `20m` |
-| Cycle failed | `30m` |
-| Explore at cap + no actionable + cadences not due | `2h` |
-| Human/framework escalate (`--stop`) | no schedule |
+Not a fixed ticker. Heat + **main CI badge** choose the delay:
 
+| Situation | Interval | `fire_immediately` |
+|-----------|----------|--------------------|
+| REGRESSION rows | `2m` | yes |
+| CI **green** + work remains (esp. after `--deployed 1`) | `2m` | **yes** |
+| CI **red** (repair soon) | `2m` | yes |
+| CI **in_progress** after deploy | `3m` poll | no |
+| Actionable / explore budget / self-audit or sweep due | `5m` | no |
+| Cycle failed | `10m` | no |
+| Explore at cap + no actionable + cadences not due | `2h` | no |
+| Human/framework escalate (`--stop`) | — | — |
+
+**Intent:** after a push, re-arm a short **CI poll** while the badge is yellow; when
+CI turns green, the next one-shot should fire ASAP so product explore is not
+blocked by a 20m settle timer.
 #### Overlap hygiene
 
 - Prefer **one** pending `/improve` one-shot at a time.

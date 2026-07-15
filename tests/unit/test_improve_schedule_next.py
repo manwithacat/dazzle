@@ -28,6 +28,22 @@ def sched():
     return _load()
 
 
+def _base(**kwargs):
+    d = {
+        "counts": {"urgent": 0, "actionable": 0, "blocked": 0, "settled": 50},
+        "explore_used": 100,
+        "current_cycle": 647,
+        "last_self_audit": 640,
+        "last_capability_sweep": 635,
+        "result": "PASS",
+        "deployed": False,
+        "force_stop": False,
+        "ci": "unavailable",
+    }
+    d.update(kwargs)
+    return d
+
+
 def test_parse_backlog_counts_actionable_and_urgent(sched):
     text = """
 ## Lane: framework-ux
@@ -59,77 +75,104 @@ def test_parse_log_meta(sched):
     assert meta["last_capability_sweep"] == 630
 
 
-def test_decide_regression_hot(sched):
+def test_decide_regression_hot_immediate(sched):
     d = sched.decide(
-        counts={"urgent": 1, "actionable": 1, "blocked": 0, "settled": 0},
-        explore_used=100,
-        current_cycle=647,
-        last_self_audit=633,
-        last_capability_sweep=629,
-        result="PASS",
-        deployed=False,
-        force_stop=False,
+        **_base(
+            counts={"urgent": 1, "actionable": 1, "blocked": 0, "settled": 0},
+        )
     )
     assert d["action"] == "schedule"
-    assert d["interval"] == "15m"
+    assert d["interval"] == "2m"
+    assert d["fire_immediately"] is True
     assert "regression" in d["reason"]
 
 
 def test_decide_fail_backoff(sched):
+    d = sched.decide(**_base(result="FAIL", explore_used=0))
+    assert d["interval"] == "10m"
+    assert d["fire_immediately"] is False
+
+
+def test_decide_ci_waiting_after_deploy(sched):
     d = sched.decide(
-        counts={"urgent": 0, "actionable": 0, "blocked": 0, "settled": 10},
-        explore_used=0,
-        current_cycle=10,
-        last_self_audit=1,
-        last_capability_sweep=1,
-        result="FAIL",
-        deployed=False,
-        force_stop=False,
+        **_base(
+            deployed=True,
+            ci="in_progress",
+            explore_used=2,
+            counts={"urgent": 0, "actionable": 1, "blocked": 0, "settled": 0},
+        )
     )
-    assert d["interval"] == "30m"
+    assert d["interval"] == "3m"
+    assert d["fire_immediately"] is False
+    assert "ci_waiting" in d["reason"]
+
+
+def test_decide_ci_green_opportunistic_immediate(sched):
+    d = sched.decide(
+        **_base(
+            deployed=True,
+            ci="green",
+            explore_used=2,
+            counts={"urgent": 0, "actionable": 3, "blocked": 0, "settled": 0},
+        )
+    )
+    assert d["interval"] == "2m"
+    assert d["fire_immediately"] is True
+    assert "ci_green" in d["reason"]
+
+
+def test_decide_ci_red_repair_soon(sched):
+    d = sched.decide(
+        **_base(
+            deployed=True,
+            ci="red",
+            counts={"urgent": 0, "actionable": 0, "blocked": 0, "settled": 10},
+            explore_used=50,
+        )
+    )
+    assert d["interval"] == "2m"
+    assert d["fire_immediately"] is True
+    assert "ci_red" in d["reason"]
 
 
 def test_decide_explore_cap_slow_poll(sched):
-    d = sched.decide(
-        counts={"urgent": 0, "actionable": 0, "blocked": 0, "settled": 50},
-        explore_used=100,
-        current_cycle=647,
-        last_self_audit=640,  # next 648 − 640 = 8 < 15
-        last_capability_sweep=635,  # next 648 − 635 = 13 < 20
-        result="PASS",
-        deployed=False,
-        force_stop=False,
-    )
+    d = sched.decide(**_base(ci="unavailable"))
     assert d["action"] == "schedule"
     assert d["interval"] == "2h"
     assert "explore_cap" in d["reason"] or "all_clear" in d["reason"]
 
 
-def test_decide_self_audit_due(sched):
+def test_decide_self_audit_due_work_interval(sched):
     d = sched.decide(
-        counts={"urgent": 0, "actionable": 0, "blocked": 0, "settled": 50},
-        explore_used=100,
-        current_cycle=647,
-        last_self_audit=633,  # next 648 − 633 = 15 → due
-        last_capability_sweep=629,
-        result="PASS",
-        deployed=False,
-        force_stop=False,
+        **_base(
+            last_self_audit=633,  # next 648 − 633 = 15 → due
+            last_capability_sweep=629,
+            ci="unavailable",
+        )
     )
-    assert d["interval"] == "15m"
+    assert d["interval"] == "5m"
     assert "self_audit_due" in d["reason"]
+
+
+def test_decide_work_remaining_no_ci(sched):
+    d = sched.decide(
+        **_base(
+            counts={"urgent": 0, "actionable": 4, "blocked": 0, "settled": 0},
+            explore_used=10,
+            ci="unavailable",
+        )
+    )
+    assert d["interval"] == "5m"
+    assert "work_remaining" in d["reason"]
 
 
 def test_decide_stop(sched):
     d = sched.decide(
-        counts={"urgent": 0, "actionable": 5, "blocked": 0, "settled": 0},
-        explore_used=0,
-        current_cycle=1,
-        last_self_audit=None,
-        last_capability_sweep=None,
-        result="PASS",
-        deployed=False,
-        force_stop=True,
+        **_base(
+            counts={"urgent": 0, "actionable": 5, "blocked": 0, "settled": 0},
+            explore_used=0,
+            force_stop=True,
+        )
     )
     assert d["action"] == "stop"
     assert d["interval"] is None
@@ -151,10 +194,17 @@ def test_main_smoke(sched, tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(sched, "LOG", log)
     monkeypatch.setattr(sched, "EXPLORE_COUNT", explore)
     monkeypatch.setattr(sched, "STATE", state)
+    monkeypatch.setattr(
+        sched,
+        "probe_ci_main",
+        lambda: {"ci": "green", "detail": "test"},
+    )
 
-    rc = sched.main(["--result", "PASS"])
+    rc = sched.main(["--result", "PASS", "--ci", "green"])
     assert rc == 0
     out = capsys.readouterr().out
     assert '"action": "schedule"' in out
     assert state.exists()
-    assert "scheduler_create" in state.read_text(encoding="utf-8")
+    body = state.read_text(encoding="utf-8")
+    assert "scheduler_create" in body
+    assert "fire_immediately" in body
