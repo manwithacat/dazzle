@@ -33,16 +33,48 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/chart_legend.py`
+
+- **Required root:** `.dz-chart-legend` (part `chart_legend`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-chart-legend` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: chart_legend — shared multi-series chart legend (swatch + name).
+
+Dual-lock unit is the legend list root. Items, swatch colours, series names,
+and the optional summary line are host-owned. Class ``.dz-chart-legend`` is
+the stable substrate root (gallery CSS; no FragmentRenderer emit yet).
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="chart_legend",
+    root=".dz-chart-legend",
+    nodes=(Node(".dz-chart-legend", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
-Every SVG chart (line / area / radar / box-plot) ends with this pair instead of restyling it per chart: a <ul> of swatch + mono series-name items, and a mono summary line of bucket/series counts and the peak. The swatch background is the series colour the chart body uses for its strokes — inline, per series, server-assigned.
+Every SVG chart (line / area / radar / box-plot) ends with this pair instead of restyling it per chart: a <ul> of swatch + mono series-name items, and a mono summary line of bucket/series counts and the peak. The swatch background is the series colour the chart body uses for its strokes — inline, per series, server-assigned. Dual-lock root .dz-chart-legend (HMC-142).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/chart_legend.py`

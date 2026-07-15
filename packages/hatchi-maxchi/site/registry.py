@@ -261,6 +261,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<button class="dz-button" data-dz-variant="ghost">Learn more</button>'
             '<button class="dz-button" data-dz-variant="destructive">Delete</button>'
             "</div>",
+            contracts=("contracts/button.py",),
         ),
         Hyperpart(
             "badge",
@@ -274,6 +275,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<span class="dz-badge" data-dz-tone="neutral">Draft</span>'
             "</div>",
             tags=("identity",),
+            contracts=("contracts/badge.py",),
         ),
         Hyperpart(
             "alert",
@@ -284,7 +286,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<span class="dz-alert__icon">{svg:triangle-alert}</span>'
             '<div class="dz-alert__body"><div class="dz-alert__title">Payment method expiring</div>'
             '<div class="dz-alert__description">Your card ending 4242 expires next month.</div></div></div>',
+            notes="Dual-lock root .dz-alert (HMC-140).",
             tags=("identity",),
+            contracts=("contracts/alert.py",),
         ),
         Hyperpart(
             "card",
@@ -325,6 +329,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<code>dz-card-delta</code>.",
             tags=("layout",),
             composes=("auto-grid",),
+            contracts=("contracts/card.py",),
         ),
         Hyperpart(
             "pagination",
@@ -1080,6 +1085,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "CSS-only visual hint (`data-dz-tooltip`) — zero JS. A hint, not an "
             "accessible tooltip: keep it non-critical (no touch/SR/keyboard path).",
             '<button class="dz-button" data-dz-variant="outline" data-dz-tooltip="Saved 2 minutes ago">Hover me</button>',
+            notes="Dual-lock root [data-dz-tooltip] (HMC-154).",
+            contracts=("contracts/tooltip.py",),
         ),
         Hyperpart(
             "dialog",
@@ -1401,6 +1408,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                 ),
             ),
             mock="/mock/drawer/detail",
+            contracts=("contracts/drawer.py",),
         ),
         # ── Forms ────────────────────────────────────────────────────────
         Hyperpart(
@@ -1413,6 +1421,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<label class="hm-inline"><input type="radio" class="dz-radio" checked> Radio</label>'
             '<label class="hm-inline"><input type="checkbox" class="dz-switch" checked> Switch</label>'
             "</div>",
+            notes="Dual-lock roots .dz-checkbox / .dz-radio / .dz-switch (HMC-150). "
+            "Switch also dual-locks via contracts/switch.py ([data-dz-switch]).",
+            contracts=("contracts/controls.py", "contracts/switch.py"),
         ),
         Hyperpart(
             "field",
@@ -1444,13 +1455,17 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "invalid field needs no modifier class — the red border keys off "
             "<code>aria-invalid=&quot;true&quot;</code>, the same attribute assistive tech reads. "
             "The colour group uses <code>data-dz-color-group</code> so <code>dz-color.js</code> "
-            "can mirror the swatch into the hex readout (contract: contracts/color.py).",
+            "can mirror the swatch into the hex readout (contract: contracts/color.py). "
+            "Dual-lock: form triad <code>contracts/form_field.py</code> + colour "
+            "<code>contracts/color.py</code> (HMC-139).",
             tags=("forms",),
             # The colour widget's hex-readout mirror rides the field family
             # (delegated input listener on .dz-form-color-input; Tier F4e —
             # replaced the last inline Alpine x-data straggler).
             extensions=("controllers/dz-color.js",),
-            contracts=("contracts/color.py",),
+            # Dual-lock: form triad = form_field (.dz-form-field); colour swatch
+            # = color (HMC-139). Gallery id "field" maps to form_field stem.
+            contracts=("contracts/form_field.py", "contracts/color.py"),
         ),
         Hyperpart(
             "slider",
@@ -1686,9 +1701,16 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "<code>aria-current=&quot;step&quot;</code>) — the live navigation "
             "behaviour is the <code>wizard</code> Hyperpart "
             "(<code>dz-wizard.js</code>; the dzWizard Alpine island retired in "
-            "Tier F4d).",
+            "Tier F4d). Dual-lock: form_errors + form_stepper + form_section + "
+            "form_field (HMC-143).",
             tags=("forms",),
             composes=("field",),
+            contracts=(
+                "contracts/form_errors.py",
+                "contracts/form_stepper.py",
+                "contracts/form_section.py",
+                "contracts/form_field.py",
+            ),
         ),
         Hyperpart(
             "wizard",
@@ -1961,9 +1983,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "error/success alerts toggle via the native <code>hidden</code> "
             "attribute on stable ids. The code input reserves letter-spacing for six "
             "digits. Wrap full pages in <code>dz-auth-page</code> for the "
-            "centered layout.",
+            "centered layout. Dual-lock root .dz-auth-card (HMC-148).",
             tags=("forms",),
             composes=("button", "badge"),
+            contracts=("contracts/two_factor.py",),
         ),
         Hyperpart(
             "search-select",
@@ -2262,11 +2285,13 @@ def select(source: str, id: str) -> str:
             "<code>&lt;input type=&quot;text&quot; data-dz-tags&gt;</code> whose "
             "value is a COMMA-JOINED tag string — usable and submittable with no "
             "JS (type <code>a, b, c</code>; the server splits on comma), native "
-            "<code>required</code> intact. On first interaction "
-            "<code>dz-tags.js</code> wraps it in a <code>.dz-tags</code> root — a "
-            "<code>role=&quot;list&quot;</code> of removable chips + a borderless "
-            "entry — and hides the native input (kept in the DOM as the submitted "
-            "value). Every add/remove rewrites the native input to the "
+            "<code>required</code> intact. Seeded non-empty values enhance on "
+            "DOM ready; empty fields enhance on first interaction. "
+            "<code>dz-tags.js</code> wraps the input in a <code>.dz-tags</code> "
+            "root — a <code>role=&quot;list&quot;</code> of removable chips + a "
+            "borderless entry — and hides the native input (kept in the DOM as "
+            "the submitted value). Every add/remove rewrites the native input to "
+            "the "
             "comma-joined chip list and fires <code>change</code>, so the submit "
             "shape never changes. Type + Enter or comma creates a chip "
             "(trim/dedup/skip-empty); paste splits on comma/newline; × or "
@@ -2343,6 +2368,8 @@ def select(source: str, id: str) -> str:
             '<label><input type="radio" name="hm-view" checked><span>{icon:list} List</span></label>'
             '<label><input type="radio" name="hm-view"><span>{icon:kanban} Board</span></label>'
             '<label><input type="radio" name="hm-view"><span>{icon:calendar} Calendar</span></label></fieldset>',
+            notes="Dual-lock root .dz-toggle-group (HMC-153).",
+            contracts=("contracts/toggle_group.py",),
         ),
         Hyperpart(
             "switch",
@@ -2362,9 +2389,10 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-031). No controller: native "
             "checkbox + CSS track/thumb. Label text is a sibling span so the "
-            "whole control is a click target. Dual-lock deferred until a Dazzle "
-            "form-field path emits data-dz-switch.",
+            "whole control is a click target. Dual-lock root [data-dz-switch] "
+            "(HMC-129); Dazzle form-field emit still optional.",
             tags=("form", "interactive"),
+            contracts=("contracts/switch.py",),
         ),
         Hyperpart(
             "toggle",
@@ -2382,8 +2410,9 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-032). Distinct from switch "
             "(form boolean) and toggle-group (exclusive radios). Server sets "
-            "aria-pressed; click-to-flip controller deferred.",
+            "aria-pressed; dual-lock root [data-dz-toggle] (HMC-130).",
             tags=("form", "interactive"),
+            contracts=("contracts/toggle.py",),
         ),
         Hyperpart(
             "kbd",
@@ -2401,8 +2430,10 @@ def select(source: str, id: str) -> str:
             "<strong>spatially secondary</strong> — layout roles "
             "<em>adjacent</em> (flex gap next to a label) vs <em>trailing</em> "
             "(row end via <code>margin-inline-start: auto</code>). Not disclosure "
-            "iconography. Styles in <code>hm-core.css</code>; pure presentation.",
+            "iconography. Styles in <code>hm-core.css</code>; pure presentation. "
+            "Dual-lock root .dz-kbd (HMC-151).",
             tags=("docs",),
+            contracts=("contracts/kbd.py",),
             guidance=Guidance(
                 seams=(
                     '`<kbd class="dz-kbd">` — always the house chip, never bare Unicode',
@@ -2445,8 +2476,10 @@ def select(source: str, id: str) -> str:
             'color:var(--colour-brand-text);font-size:var(--text-xs);">4:3</span></div>'
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-036). Pure CSS aspect-ratio + "
-            "data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). No controller.",
+            "data-dz-ratio presets (1/1, 4/3, 16/9, 21/9). Dual-lock root "
+            ".dz-aspect-ratio (HMC-132). No controller.",
             tags=("layout", "media"),
+            contracts=("contracts/aspect_ratio.py",),
         ),
         Hyperpart(
             "item",
@@ -2474,9 +2507,10 @@ def select(source: str, id: str) -> str:
             '<button type="button" class="dz-button" data-dz-variant="ghost" '
             'data-dz-size="sm">View</button></div></div></div>',
             notes="PLACEHOLDER — shadcn parity (HMC-033). Flex row anatomy only; "
-            "no controller. Actions stop at product buttons. Dual-lock when a "
-            "stable Dazzle list-row path needs it.",
+            "no controller. Actions stop at product buttons. Dual-lock root "
+            ".dz-item (HMC-145).",
             tags=("data", "layout"),
+            contracts=("contracts/item.py",),
         ),
         Hyperpart(
             "hover-card",
@@ -2493,8 +2527,10 @@ def select(source: str, id: str) -> str:
             "</div></div>",
             notes="PLACEHOLDER — shadcn parity (HMC-035). Opens on :hover / "
             ":focus-within; coarse pointers rely on focus. Distinct from "
-            "popover (explicit open). No JS controller.",
+            "popover (explicit open). Dual-lock root .dz-hover-card (HMC-133). "
+            "No JS controller.",
             tags=("overlay",),
+            contracts=("contracts/hover_card.py",),
         ),
         Hyperpart(
             "carousel",
@@ -2795,8 +2831,10 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-040). "
             "<code>data-dz-from=in|out</code> picks surface colour. Prefer "
-            "message Hyperpart for avatar + meta; bubble is the content shell only.",
+            "message Hyperpart for avatar + meta; bubble is the content shell only. "
+            "Dual-lock root .dz-bubble (HMC-141).",
             tags=("media", "chat"),
+            contracts=("contracts/bubble.py",),
         ),
         Hyperpart(
             "message",
@@ -2827,8 +2865,10 @@ def select(source: str, id: str) -> str:
             "</div></div></div>",
             notes="PLACEHOLDER — shadcn parity (HMC-041). Composes "
             "bubble. Live chat = server re-render / OOB append into "
-            "message-scroller, not client message state.",
+            "message-scroller, not client message state. Dual-lock root "
+            ".dz-message (HMC-134).",
             tags=("media", "chat"),
+            contracts=("contracts/message.py",),
         ),
         Hyperpart(
             "message-scroller",
@@ -2871,8 +2911,14 @@ def select(source: str, id: str) -> str:
             notes="PLACEHOLDER — shadcn parity (HMC-042). "
             "<code>role=log</code> + <code>aria-live=polite</code> for "
             "assistive updates. Auto-scroll-to-bottom controller deferred; "
-            "prefer append-at-end + optional host scrollIntoView.",
+            "prefer append-at-end + optional host scrollIntoView. Dual-lock "
+            "root .dz-message-scroller (HMC-147).",
             tags=("media", "chat", "interactive"),
+            contracts=(
+                "contracts/message_scroller.py",
+                "contracts/message.py",
+                "contracts/bubble.py",
+            ),
         ),
         Hyperpart(
             "navigation-menu",
@@ -2978,8 +3024,9 @@ def select(source: str, id: str) -> str:
             "</div>",
             notes="PLACEHOLDER — shadcn parity (HMC-043). No map SDK. "
             "Position with host CSS (absolute over a map/plan). Tones via "
-            "<code>data-dz-tone</code>.",
+            "<code>data-dz-tone</code>. Dual-lock root .dz-marker (HMC-146).",
             tags=("media",),
+            contracts=("contracts/marker.py",),
         ),
         # ── Navigation / Data ────────────────────────────────────────────
         Hyperpart(
@@ -2990,6 +3037,8 @@ def select(source: str, id: str) -> str:
             '<nav class="dz-breadcrumb" aria-label="Breadcrumb"><ol>'
             '<li><a href="#">Home</a></li><li><a href="#">Invoices</a></li>'
             '<li aria-current="page">INV-0042</li></ol></nav>',
+            notes="Dual-lock root .dz-breadcrumb (HMC-135).",
+            contracts=("contracts/breadcrumb.py",),
         ),
         Hyperpart(
             "accordion",
@@ -3016,6 +3065,7 @@ def select(source: str, id: str) -> str:
             "<code>aria-expanded</code> wiring: details/summary carry it. "
             "Drop <code>name=</code> only when multi-open FAQ is intentional.",
             tags=("interactive",),
+            contracts=("contracts/accordion.py",),
             guidance=Guidance(
                 seams=(
                     "`details.dz-accordion__item` + shared `name=` for exclusive group",
@@ -3122,6 +3172,8 @@ def select(source: str, id: str) -> str:
             '<div class="hm-demo-row">'
             '<span class="dz-avatar-group"><span class="dz-avatar">JD</span><span class="dz-avatar">AK</span><span class="dz-avatar">+3</span></span>'
             '<span class="dz-avatar" data-dz-size="lg">HM</span></div>',
+            notes="Dual-lock root .dz-avatar (HMC-149).",
+            contracts=("contracts/avatar.py",),
         ),
         Hyperpart(
             "progress",
@@ -3261,6 +3313,7 @@ def select(source: str, id: str) -> str:
             "from the menu/button icons). Copy the whole thing — it is just nested markup.",
             tags=("composite",),
             composes=("button", "toggle-group", "menu"),
+            contracts=("contracts/toolbar.py",),
         ),
         Hyperpart(
             "master-detail",
@@ -3351,6 +3404,7 @@ def select(source: str, id: str) -> str:
             "token scale); unset = <code>md</code>. Nest freely: a stack inside a "
             "stack is the normal way to vary rhythm between groups.",
             tags=("layout",),
+            contracts=("contracts/stack.py",),
         ),
         Hyperpart(
             "cluster",
@@ -3371,6 +3425,7 @@ def select(source: str, id: str) -> str:
             "the line. Never fixes widths — that's what makes it safe for "
             "translation-length and zoom changes.",
             tags=("layout",),
+            contracts=("contracts/cluster.py",),
         ),
         Hyperpart(
             "sidebar-layout",
@@ -3392,8 +3447,10 @@ def select(source: str, id: str) -> str:
             "when the content can't hold that minimum on the line, it wraps to a "
             'full-width row. <code>data-dz-side="end"</code> puts the side '
             "after the content. No media query: the breakpoint is the CONTENT'S "
-            "minimum, so the same markup works in a page, a card, or a drawer.",
+            "minimum, so the same markup works in a page, a card, or a drawer. "
+            "Dual-lock root .dz-sidebar-layout (HMC-152).",
             tags=("layout",),
+            contracts=("contracts/sidebar_layout.py",),
         ),
         Hyperpart(
             "auto-grid",
@@ -3411,8 +3468,10 @@ def select(source: str, id: str) -> str:
             "inner <code>min()</code> stops overflow when the container is "
             "narrower than the minimum (the classic auto-fit footgun). "
             "<code>--dz-grid-min</code> is a PUBLIC knob; gap rides "
-            "<code>data-dz-gap</code> as on stack.",
+            "<code>data-dz-gap</code> as on stack. Dual-lock root "
+            ".dz-auto-grid (HMC-136).",
             tags=("layout",),
+            contracts=("contracts/auto_grid.py",),
         ),
         Hyperpart(
             "center",
@@ -3428,8 +3487,9 @@ def select(source: str, id: str) -> str:
             "<code>data-dz-measure</code>: <code>prose</code> (65ch), "
             "<code>wide</code> (90ch), <code>full</code> (no cap, still a "
             "centring context). This is the published form of the measure the "
-            "gallery's own chrome uses.",
+            "gallery's own chrome uses. Dual-lock root .dz-center (HMC-137).",
             tags=("layout",),
+            contracts=("contracts/center.py",),
         ),
         Hyperpart(
             "app-shell",
@@ -3814,6 +3874,7 @@ def select(source: str, id: str) -> str:
             "rows, so badges/dates match.",
             tags=("data",),
             composes=("tabs", "badge"),
+            contracts=("contracts/related_group.py",),
         ),
         Hyperpart(
             "metrics",
@@ -3956,8 +4017,10 @@ def select(source: str, id: str) -> str:
             "<code>&lt;ul&gt;</code> of swatch + mono series-name items, and a "
             "mono summary line of bucket/series counts and the peak. The swatch "
             "background is the series colour the chart body uses for its "
-            "strokes — inline, per series, server-assigned.",
+            "strokes — inline, per series, server-assigned. Dual-lock root "
+            ".dz-chart-legend (HMC-142).",
             tags=("data", "chart"),
+            contracts=("contracts/chart_legend.py",),
         ),
         Hyperpart(
             "radar",
@@ -3965,12 +4028,8 @@ def select(source: str, id: str) -> str:
             "Data",
             "Polar multi-axis profile — spokes share a scale; the polygon is server-rendered SVG.",
             '<div class="dz-radar-region hm-measure-lg" data-dz-radar>'
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" '
-            'role="img" aria-label="Radar — 3 spokes">'
-            '<polygon points="60,20 100,90 20,90" fill="var(--colour-brand)" '
-            'fill-opacity="0.25" stroke="var(--colour-brand)"/>'
-            "</svg>"
-            '<p class="dz-chart-summary">3 spokes · 1 series · peak 90</p>'
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" class="dz-radar-svg dz-chart-svg" role="img" aria-label="Coverage radar — 5 spokes, peak 90"><polygon points="160.0,128.0 190.43380852144492,150.11145618000168 178.80912807335915,185.88854381999832 141.19087192664085,185.88854381999832 129.56619147855508,150.11145618000168" fill="none" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.6"/><polygon points="160.0,96.0 220.86761704288983,140.22291236000336 197.6182561467183,211.77708763999664 122.38174385328173,211.77708763999664 99.13238295711017,140.22291236000336" fill="none" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.6"/><polygon points="160.0,64.0 251.30142556433475,130.33436854000504 216.4273842200774,237.66563145999496 103.57261577992259,237.66563145999496 68.69857443566525,130.33436854000507" fill="none" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.6"/><polygon points="160.0,32.0 281.73523408577967,120.44582472000673 235.23651229343656,263.5541752799933 84.76348770656345,263.5541752799933 38.264765914220334,120.44582472000675" fill="none" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.6"/><line x1="160.0" y1="160.0" x2="160.0" y2="32.0" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.7"/><line x1="160.0" y1="160.0" x2="281.73523408577967" y2="120.44582472000673" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.7"/><line x1="160.0" y1="160.0" x2="235.23651229343656" y2="263.5541752799933" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.7"/><line x1="160.0" y1="160.0" x2="84.76348770656345" y2="263.5541752799933" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.7"/><line x1="160.0" y1="160.0" x2="38.264765914220334" y2="120.44582472000675" stroke="var(--colour-border)" stroke-width="0.5" stroke-opacity="0.7"/><polygon points="160.0,46.22222222222223 247.91989128417418,131.43309563111598 235.23651229343656,263.5541752799933 101.48271266066047,240.54213632888366 85.60624583646798,135.82800399555967" fill="var(--colour-brand)" fill-opacity="0.15" stroke="var(--colour-brand)" stroke-width="1.5" stroke-linejoin="round"/><circle cx="160.0" cy="46.22222222222223" r="3" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>Auth value: 80</title></circle><circle cx="247.91989128417418" cy="131.43309563111598" r="3" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>API value: 65</title></circle><circle cx="235.23651229343656" cy="263.5541752799933" r="3" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>UI value: 90</title></circle><circle cx="101.48271266066047" cy="240.54213632888366" r="3" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>Data value: 70</title></circle><circle cx="85.60624583646798" cy="135.82800399555967" r="3" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>Ops value: 55</title></circle><text x="160.0" y="18.0" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">Auth</text><text x="295.05002531391176" y="116.11958679875747" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">API</text><text x="243.46550582553118" y="274.8804132012425" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">UI</text><text x="76.53449417446883" y="274.8804132012425" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">Data</text><text x="24.949974686088183" y="116.1195867987575" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">Ops</text></svg>'
+            '<p class="dz-chart-summary">5 spokes · 1 series · peak 90</p>'
             "</div>",
             notes="Dual-lock root is <code>data-dz-radar</code> "
             "(<code>contracts/radar.py</code>). Geometry rides trusted "
@@ -4308,8 +4367,10 @@ def select(source: str, id: str) -> str:
             "(1 column, then 2 at 40rem, 3 at 64rem). The "
             "<code>is-clickable</code> hover/cursor affordance is styled but "
             "currently a LEGACY reserve — the substrate grid emitter does not "
-            "yet wire cell drill URLs (follow-up on the Dazzle side).",
+            "yet wire cell drill URLs (follow-up on the Dazzle side). Dual-lock "
+            "root .dz-grid-list (HMC-144).",
             tags=("data",),
+            contracts=("contracts/grid_list.py",),
         ),
         Hyperpart(
             "list-region",
@@ -4493,11 +4554,12 @@ def select(source: str, id: str) -> str:
             "</pre>"
             "</div>",
             notes="Dual-lock root is <code>data-dz-diagram</code> "
-            "(<code>contracts/diagram.py</code>). The gallery shows the raw "
-            "source (Mermaid is not loaded here); in Dazzle the emitter appends "
-            "the Mermaid loader script and the library swaps the "
-            "<code>&lt;pre&gt;</code> for SVG at runtime — the source styling "
-            "only matters for the initial paint flash. The wrapper owns "
+            "(<code>contracts/diagram.py</code>). The gallery part page loads "
+            "Mermaid from a CDN module (build_site gallery-only bootstrap) so "
+            "the live demo renders SVG the same way Dazzle does when the host "
+            "emitter appends the Mermaid loader. The library swaps the "
+            "<code>&lt;pre class=mermaid&gt;</code> for SVG at runtime — source "
+            "styling only matters for the initial paint flash. The wrapper owns "
             "overflow; <code>dz-diagram-empty</code> is the no-data paragraph.",
             tags=("data",),
             contracts=("contracts/diagram.py",),
@@ -4522,7 +4584,9 @@ def select(source: str, id: str) -> str:
             "</div></div>",
             notes="The horizontal rule is a native <code>&lt;hr&gt;</code> (implicitly "
             "<code>role=separator</code>); the vertical divider is a zero-width element with an "
-            "explicit <code>role=separator</code> + <code>aria-orientation=&quot;vertical&quot;</code>.",
+            "explicit <code>role=separator</code> + <code>aria-orientation=&quot;vertical&quot;</code>. "
+            "Dual-lock root .dz-separator (HMC-138).",
+            contracts=("contracts/separator.py",),
         ),
         Hyperpart(
             "icon",

@@ -56,11 +56,43 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/card.py`
+
+- **Required root:** `.dz-card` (part `card`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-card` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: card — bordered surface wrapping content.
+
+Dual-lock unit is the surface root. Header/body/footer slots and BEM
+token modifiers (``dz-card--radius-*`` etc.) are host-owned. Gallery KPI
+tiles use ``dz-card`` + content classes; substrate ``Card`` emits
+``dz-card`` + optional ``dz-card__header|body|footer``.
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="card",
+    root=".dz-card",
+    nodes=(Node(".dz-card", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
@@ -69,3 +101,4 @@ A card is a surface, not a layout. One card in a full-width preview looks clumsy
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/card.py`

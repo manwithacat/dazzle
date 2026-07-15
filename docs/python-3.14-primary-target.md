@@ -80,7 +80,21 @@ Both were non-Dazzle issues; both fixed portably with **no api-surface baseline 
   `dazzle deploy heroku` `runtime.txt` (pip path) and `.python-version` (uv path). The generated
   Heroku `pyproject.toml` keeps `requires-python = ">=3.12"` — apps still *support* 3.12, they *deploy* on 3.14.
 
-## 6. Not done (deliberately)
+## 6. Local toolchain alignment (uv only)
+
+Local development matches the Heroku uv path:
+
+| Pin / policy | Value |
+|---|---|
+| `.python-version` | `3.14` (uv + Heroku; **not** a pyenv venv name) |
+| `runtime.txt` | `python-3.14` (legacy pip Heroku path only) |
+| `[tool.uv] python-preference` | `only-managed` — refuse system/pyenv interpreters |
+| Makefile / `scripts/ci_local.sh` | `UV_MANAGED_PYTHON=1`, prefer `~/.local/bin/uv` over pyenv shims |
+
+Bootstrap: `make dev-install` (or `uv python install && uv sync …`). See
+`docs/contributing/dev-setup.md`. Do not use pyenv or `pip install -e` for this repo.
+
+## 7. Not done (deliberately)
 
 - **Floor move to `>=3.13`/`>=3.14`** — still a separate product decision (drops older support; unlocks PEP 695
   + `from __future__ import annotations` cleanup). See `docs/migration-findings.md` §8 slice 6.

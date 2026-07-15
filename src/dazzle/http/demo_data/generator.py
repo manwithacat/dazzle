@@ -205,11 +205,15 @@ class DemoDataGenerator:
             return random.choice([True, False])
 
         if scalar_type == ScalarType.DATE:
-            days_offset = random.randint(-365, 365)
+            # TR-10: default to the past so demo rows don't look time-travelled.
+            # Due/deadline-like names may still land slightly ahead of today.
+            days_offset = random.randint(-365, 0)
             return date.today() + timedelta(days=days_offset)
 
         if scalar_type == ScalarType.DATETIME:
-            days_offset = random.randint(-365, 365)
+            # Same past bias as DATE — avoids resolved_at > "now" / created_at
+            # integrity tells during qualitative trials (TR-10).
+            days_offset = random.randint(-365, 0)
             return datetime.now() + timedelta(days=days_offset)
 
         if scalar_type == ScalarType.UUID:

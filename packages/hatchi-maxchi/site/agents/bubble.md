@@ -34,16 +34,48 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/bubble.py`
+
+- **Required root:** `.dz-bubble` (part `bubble`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-bubble` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: bubble — chat bubble content shell (inbound/outbound).
+
+Dual-lock unit is the bubble root. Body copy and ``data-dz-from`` orientation
+are host-owned. Class ``.dz-bubble`` is the stable substrate root (gallery CSS;
+no FragmentRenderer emit yet). Compose inside message rows for full chat UI.
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="bubble",
+    root=".dz-bubble",
+    nodes=(Node(".dz-bubble", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
-PLACEHOLDER — shadcn parity (HMC-040). data-dz-from=in|out picks surface colour. Prefer message Hyperpart for avatar + meta; bubble is the content shell only.
+PLACEHOLDER — shadcn parity (HMC-040). data-dz-from=in|out picks surface colour. Prefer message Hyperpart for avatar + meta; bubble is the content shell only. Dual-lock root .dz-bubble (HMC-141).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/bubble.py`

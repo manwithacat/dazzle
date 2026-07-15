@@ -9,71 +9,150 @@ add/remove/rename a required DOM attr or model field, this file changes
 and CI fails until you regenerate *and* check `CONSUMER_MAP.md` for
 blast radius (who embeds / refuses this part).
 
-| Modules | 61 |
+| Modules | 140 |
 
 | Module | Part | Root | Nodes (attr constraints) | Models (field:type:req) |
 |--------|------|------|--------------------------|-------------------------|
+| `accordion` | `accordion` | `.dz-accordion` | .dz-accordion[] | — |
 | `action_grid` | `action-grid` | `[data-dz-action-card]` | [data-dz-action-card][data-dz-action-card=present, data-dz-tone=one_of:neutral\|positive\|warning\|destructive\|accent] | ActionCard(count:int\|None:opt; icon_html:str:opt; label:str:req; tone:Literal:opt; url:str:opt) |
+| `action_grid_region` | `action-grid-region` | `.dz-action-grid-region` | .dz-action-grid-region[] | — |
 | `activity_feed` | `activity-feed` | `[data-dz-activity-row]` | [data-dz-activity-row][data-dz-activity-row=present] | ActivityRow(actor:str:opt; description:str:req; time_str:str:req) |
+| `activity_feed_list` | `activity-feed-list` | `.dz-activity-feed` | .dz-activity-feed[] | — |
+| `add_card_row` | `add-card-row` | `.dz-add-card-row` | .dz-add-card-row[] | — |
+| `alert` | `alert` | `.dz-alert` | .dz-alert[] | — |
 | `app_shell` | `app-shell` | `[data-dz-sidebar]` | [data-dz-sidebar][data-dz-sidebar=one_of:open\|closed]; [data-dz-sidebar-toggle][] | — |
+| `aspect_ratio` | `aspect-ratio` | `.dz-aspect-ratio` | .dz-aspect-ratio[] | — |
+| `auto_grid` | `auto_grid` | `.dz-auto-grid` | .dz-auto-grid[] | — |
+| `avatar` | `avatar` | `.dz-avatar` | .dz-avatar[] | — |
+| `badge` | `badge` | `.dz-badge` | .dz-badge[] | — |
 | `bar_chart` | `bar-chart` | `[data-dz-bar-chart]` | [data-dz-bar-chart][data-dz-bar-chart=present] | BarChart(rows:list[BarChartRow]:opt); BarChartRow(count:int:opt; label:str:req; label_html:str:opt; width_pct:int:opt) |
 | `bar_track` | `bar-track` | `[data-dz-bar-track]` | [data-dz-bar-track][data-dz-bar-track=present] | BarTrack(max_value:float:opt; rows:list[BarTrackRow]:opt); BarTrackRow(fill_pct:float:opt; formatted:str:opt; label:str:req; value:float:opt) |
 | `box_plot` | `box-plot` | `[data-dz-box-plot]` | [data-dz-box-plot][data-dz-box-plot=present] | BoxPlot(empty_message:str:opt; groups:list[BoxPlotGroup]:opt; label:str:opt; svg_html:str:opt); BoxPlotGroup(label:str:req; max:float:opt; median:float:opt; min:float:opt; q1:float:opt; q3:float:opt; samples:int:opt) |
+| `breadcrumb` | `breadcrumb` | `.dz-breadcrumb` | .dz-breadcrumb[] | — |
+| `bubble` | `bubble` | `.dz-bubble` | .dz-bubble[] | — |
+| `bulk_actions` | `bulk-actions` | `.dz-bulk-actions` | .dz-bulk-actions[] | — |
 | `bullet` | `bullet` | `[data-dz-bullet]` | [data-dz-bullet][data-dz-bullet=present] | Bullet(bands:list[BulletBand]:opt; empty_message:str:opt; max_value:float:opt; rows:list[BulletRow]:opt); BulletBand(color:Literal:opt; from_value:float:req; label:str:opt; to_value:float:req); BulletRow(actual:float:req; label:str:req; target:float\|None:opt) |
+| `button` | `button` | `.dz-button` | .dz-button[] | — |
 | `calendar` | `calendar` | `[data-dz-calendar]` | [data-dz-calendar][data-dz-calendar=present] | Calendar(body_html:str:opt; events:list[CalendarEvent]:opt; view:Literal:opt); CalendarEvent(label:str:req; when:str:opt) |
+| `card` | `card` | `.dz-card` | .dz-card[] | — |
+| `card_picker` | `card-picker` | `.dz-card-picker` | .dz-card-picker[] | — |
 | `carousel` | `carousel` | `[data-dz-carousel]` | [data-dz-carousel][]; [data-dz-carousel-index][data-dz-carousel-index=present]; [data-dz-carousel-prev][]; [data-dz-carousel-next][]; [data-dz-active][]; [data-dz-carousel-wrap][data-dz-carousel-wrap=present]; [data-dz-carousel-interval][data-dz-carousel-interval=present]; [data-dz-carousel-status][] | — |
+| `center` | `center` | `.dz-center` | .dz-center[] | — |
+| `chart_legend` | `chart_legend` | `.dz-chart-legend` | .dz-chart-legend[] | — |
+| `cluster` | `cluster` | `.dz-cluster` | .dz-cluster[] | — |
 | `code` | `code` | `[data-dz-code]` | [data-dz-code][data-dz-code=present]; [data-dz-code-copy][data-dz-code-copy=present] | — |
 | `cohort_strip` | `cohort-strip` | `[data-dz-cohort-strip]` | [data-dz-cohort-strip][data-dz-cohort-strip=present] | CohortStrip(body_html:str:opt; region_name:str:opt) |
 | `color` | `color` | `[data-dz-color-group]` | [data-dz-color-group][] | — |
+| `column_visibility_menu` | `column-visibility-menu` | `.dz-table-col-menu` | .dz-table-col-menu[] | — |
 | `combobox` | `combobox` | `[data-dz-combobox]` | [data-dz-combobox][name=present] | ComboboxField(field_id:str:req; label:str:req; name:str:req; options:list[ComboboxOption]:req; placeholder:str:opt; selected:str:opt); ComboboxOption(label:str:req; value:str:req) |
 | `command` | `command` | `[data-dz-command]` | [data-dz-command][] | — |
 | `confirm` | `confirm` | `[hx-confirm]` | [hx-confirm][hx-confirm=present] | — |
 | `confirm_panel` | `confirm-panel` | `[data-dz-confirm-gate]` | [data-dz-confirm-gate][data-dz-required-count=present]; [data-dz-required="true"][data-dz-required=present] | — |
+| `controls` | `controls` | `.dz-checkbox, .dz-radio, .dz-switch` | .dz-checkbox, .dz-radio, .dz-switch[] | — |
+| `csv_export_button` | `csv-export-button` | `.dz-list-csv-button` | .dz-list-csv-button[] | — |
 | `dashboard_card` | `dashboard-card` | `[data-dz-dashboard-card]` | [data-dz-dashboard-card][data-dz-dashboard-card=present] | DashboardCard(attrs:str:opt; body_html:str:opt) |
+| `dashboard_grid` | `dashboard-grid` | `.dz-dashboard-grid` | .dz-dashboard-grid[] | — |
+| `data_list_scroll` | `data-list-scroll` | `.dz-table` | .dz-table[] | — |
 | `date_range` | `date-range` | `[data-dz-date-range]` | [data-dz-date-range][data-dz-date-range=present] | DateRange(date_from:str:opt; date_to:str:opt; endpoint:str:opt; region_name:str:opt; target:str:opt) |
 | `day_timeline` | `day-timeline` | `[data-dz-day-timeline]` | [data-dz-day-timeline][data-dz-day-timeline=present] | DayTimeline(body_html:str:opt; region_name:str:opt) |
+| `detail_grid` | `detail-grid` | `.dz-detail-region` | .dz-detail-region[] | — |
 | `diagram` | `diagram` | `[data-dz-diagram]` | [data-dz-diagram][data-dz-diagram=present] | Diagram(edges:list[tuple[str,str]]:opt; mermaid_source:str:opt; nodes:list[str]:opt) |
 | `dialog` | `dialog` | `[data-dz-dialog-open]` | [data-dz-dialog-open][data-dz-dialog-open=present] | — |
+| `drawer` | `drawer` | `.dz-drawer` | .dz-drawer[] | — |
 | `empty_state` | `empty-state` | `[data-dz-empty-state]` | [data-dz-empty-state][data-dz-empty-state=present] | EmptyState(action_html:str:opt; description:str:opt; icon_html:str:opt; title:str:opt) |
 | `entity_card` | `entity-card` | `[data-dz-entity-card]` | [data-dz-entity-card][data-dz-entity-card=present] | EntityCard(body_html:str:opt; region_name:str:opt) |
+| `file_upload` | `file-upload` | `[data-dz-widget="file-upload"]` | [data-dz-widget="file-upload"][] | — |
+| `filter_bar` | `filter-bar` | `.dz-filter-bar` | .dz-filter-bar[] | — |
+| `form_errors` | `form_errors` | `.dz-form-errors` | .dz-form-errors[] | — |
+| `form_field` | `form-field` | `.dz-form-field` | .dz-form-field[] | — |
+| `form_section` | `form-section` | `.dz-form-section` | .dz-form-section[] | — |
+| `form_stack` | `form-stack` | `.dz-form-stack` | .dz-form-stack[] | — |
+| `form_stepper` | `form-stepper` | `.dz-form-stepper` | .dz-form-stepper[] | — |
 | `funnel` | `funnel` | `[data-dz-funnel]` | [data-dz-funnel][data-dz-funnel=present] | Funnel(empty_message:str:opt; stages:list[FunnelStage]:opt; total:int:opt); FunnelStage(count:int:opt; label:str:req) |
 | `grid` | `grid` | `[data-dz-grid]` | — | — |
 | `grid_cols` | `grid-cols` | `[data-dz-grid]` | [data-dz-grid-col-toggle][data-dz-grid-col-toggle=present]; [data-dz-col][data-dz-col=present]; [data-dz-grid-cols-reset][] | — |
 | `grid_edit` | `grid-edit` | `[data-dz-grid][data-dz-grid-edit-url]` | [data-dz-grid-edit][data-dz-edit-kind=one_of:text\|date\|bool\|select, data-dz-edit-label=present, data-dz-edit-options=json_pairs(when:data-dz-edit-kind=select), data-dz-edit-value=present] | GridEditCell(col:str:req; kind:Literal:req; label:str:req; options:list[tuple[str,str]]\|None:opt; value:str:req) |
+| `grid_list` | `grid_list` | `.dz-grid-list` | .dz-grid-list[] | — |
 | `grid_region` | `grid-region` | `[data-dz-grid-region]` | [data-dz-grid-region][data-dz-grid-region=present] | GridRegion(body_html:str:opt) |
 | `grid_resize` | `grid-resize` | `[data-dz-grid]` | [data-dz-grid-resize][data-dz-grid-resize=present]; col[data-dz-col], [data-dz-col][data-dz-col=present] | — |
+| `heading` | `heading` | `.dz-heading` | .dz-heading[] | — |
 | `heatmap` | `heatmap` | `[data-dz-heatmap]` | [data-dz-heatmap][data-dz-heatmap=present] | Heatmap(columns:list[str]:opt; empty_message:str:opt; rows:list[HeatmapRow]:opt; thresholds:list[float]:opt; total:int:opt); HeatmapRow(cells:list[float]:opt; label:str:req) |
 | `histogram` | `histogram` | `[data-dz-histogram]` | [data-dz-histogram][data-dz-histogram=present] | Histogram(bins:list[HistogramBin]:opt; empty_message:str:opt; label:str:opt; svg_html:str:opt); HistogramBin(count:int:opt; high:float:opt; label:str:req; low:float:opt) |
+| `hover_card` | `hover-card` | `.dz-hover-card` | .dz-hover-card[] | — |
+| `icon` | `icon` | `.dz-icon` | .dz-icon[] | — |
+| `inline_edit` | `inline-edit` | `.dz-inline-edit` | .dz-inline-edit[] | — |
+| `interactive` | `interactive` | `.dz-interactive` | .dz-interactive[] | — |
+| `item` | `item` | `.dz-item` | .dz-item[] | — |
 | `kanban` | `kanban` | `[data-dz-kanban-card]` | [data-dz-kanban-card][data-dz-kanban-card=present] | KanbanCard(attention_level:str:opt; attention_message:str:opt; fields_html:str:opt; title:str:req) |
+| `kanban_board` | `kanban-board` | `.dz-kanban` | .dz-kanban[] | — |
+| `kanban_region` | `kanban-region` | `.dz-kanban-board` | .dz-kanban-board[] | — |
+| `kbd` | `kbd` | `.dz-kbd` | .dz-kbd[] | — |
+| `kpi` | `kpi` | `.dz-kpi` | .dz-kpi[] | — |
+| `layout_grid` | `layout-grid` | `.dz-grid` | .dz-grid[] | — |
+| `link` | `link` | `.dz-link` | .dz-link[] | — |
 | `list_region` | `list-region` | `[data-dz-list-region]` | [data-dz-list-region][data-dz-list-region=present] | ListRegion(body_html:str:opt) |
+| `marker` | `marker` | `.dz-marker` | .dz-marker[] | — |
 | `master_detail` | `master-detail` | `[data-dz-master-detail]` | [data-dz-master-detail][]; [data-dz-master-detail-list-body][]; [data-dz-master-detail-detail-body][] | — |
 | `menu` | `menu` | `details.dz-menu, .dz-menu` | details.dz-menu, .dz-menu[] | — |
 | `menubar` | `menubar` | `[data-dz-menubar]` | [data-dz-menubar][data-dz-menubar=present] | — |
+| `message` | `message` | `.dz-message` | .dz-message[] | — |
+| `message_scroller` | `message_scroller` | `.dz-message-scroller` | .dz-message-scroller[] | — |
 | `metrics` | `metrics` | `[data-dz-metric-key]` | [data-dz-metric-key][data-dz-metric-key=present] | MetricTile(delta_direction:Literal:opt; delta_pct:float:opt; delta_period_label:str:opt; delta_sentiment:Literal:opt; delta_value:str:opt; label:str:req; metric_key:str:opt; tone:Literal:opt; value:str:req) |
+| `metrics_grid` | `metrics-grid` | `.dz-metrics-grid` | .dz-metrics-grid[] | — |
 | `money` | `money` | `[data-dz-money]` | [data-dz-money][data-dz-currency=present, data-dz-scale=present] | MoneyField(currency:str:opt; field_id:str:opt; major_display:str:opt; minor_value:int:opt; name:str:req; scale:int:opt) |
+| `nav_group` | `nav-group` | `.dz-nav-group` | .dz-nav-group[] | — |
+| `nav_item` | `nav-item` | `.dz-nav-item` | .dz-nav-item[] | — |
 | `navigation_menu` | `navigation-menu` | `[data-dz-navigation-menu]` | [data-dz-navigation-menu][data-dz-navigation-menu=present] | — |
 | `pagination` | `pagination` | `[data-dz-pagination]` | [data-dz-pagination][data-dz-grid-pagination=present, data-dz-grid-total=present, data-dz-pagination=present] | Pagination(pages_html:str:opt; rows_label:str:opt; total:int:opt) |
 | `pdf` | `pdf` | `[data-dz-pdf]` | [data-dz-pdf][data-dz-pdf-lib=present, data-dz-pdf-src=present]; [data-dz-pdf-viewer][] | — |
 | `pipeline` | `pipeline` | `[data-dz-pipeline]` | [data-dz-pipeline][data-dz-pipeline=present] | Pipeline(body_html:str:opt) |
 | `pivot` | `pivot` | `[data-dz-pivot]` | [data-dz-pivot][data-dz-pivot=present] | PivotTable(dim_headers:list[str]:opt; empty_message:str:opt; measure_headers:list[str]:opt; rows:list[list[str]]:opt) |
+| `pivot_table` | `pivot-table` | `.dz-pivot-table` | .dz-pivot-table[] | — |
 | `popover` | `popover` | `details.dz-popover, .dz-popover` | details.dz-popover, .dz-popover[] | — |
 | `profile_card` | `profile-card` | `[data-dz-profile-card]` | [data-dz-profile-card][data-dz-profile-card=present] | ProfileCard(avatar_url:str:opt; facts:list[str]:opt; initials:str:opt; primary:str:opt; secondary:str:opt; stats:list[tuple[str,str]]:opt) |
 | `progress` | `progress-region` | `[data-dz-progress-region]` | [data-dz-progress-region][data-dz-progress-region=present] | Progress(complete_count:int:opt; complete_pct:float:opt; stages:list[ProgressStage]:opt; total:int:opt); ProgressStage(complete:bool:opt; count:int:opt; name:str:req) |
 | `queue` | `queue` | `[data-dz-queue-row]` | [data-dz-queue-row][data-dz-queue-row=present] | QueueRow(actions_html:str:opt; attention_level:str:opt; attention_message:str:opt; badges_html:str:opt; date_html:str:opt; title:str:req) |
+| `queue_filters` | `queue-filters` | `.dz-queue-filters` | .dz-queue-filters[] | — |
+| `queue_region` | `queue-region` | `.dz-queue-region` | .dz-queue-region[] | — |
 | `radar` | `radar` | `[data-dz-radar]` | [data-dz-radar][data-dz-radar=present] | Radar(axes:list[RadarAxis]:opt; empty_message:str:opt; label:str:opt; peak_display:str:opt; svg_html:str:opt); RadarAxis(label:str:req; value:float:opt) |
+| `ref_picker` | `ref-picker` | `.dz-ref-picker` | .dz-ref-picker[] | — |
+| `region` | `region` | `.dz-region` | .dz-region[] | — |
+| `related_group` | `related-group` | `.dz-related-group` | .dz-related-group[] | — |
+| `rich_text` | `rich-text` | `[data-dz-widget="richtext"]` | [data-dz-widget="richtext"][] | — |
 | `search_box` | `search-box` | `[data-dz-search-box]` | [data-dz-search-box][data-dz-search-box=present] | SearchBox(coaching_message:str:opt; endpoint:str:opt; label:str:opt; name:str:opt; placeholder:str:opt; results_html:str:opt) |
 | `search_select` | `search-select` | `[data-dz-widget="search_select"]` | [data-dz-widget="search_select"][] | SearchResultRow(id:str:req; media_html:str:opt; name:str:req; results_target:str:req; secondary:str:opt; select_url:str:req); SearchSelectShell(blur_grace_ms:int:opt; confirm_hold_ms:int:opt; debounce_ms:int:opt; field_id:str:opt; field_name:str:req; initial_label:str:opt; initial_value:str:opt; input_id:str:opt; placeholder:str:opt; prompt:str:opt; results_id:str:opt; search_url:str:req) |
+| `separator` | `separator` | `.dz-separator, .dz-separator--vertical` | .dz-separator, .dz-separator--vertical[] | — |
+| `sidebar` | `sidebar` | `.dz-sidebar` | .dz-sidebar[] | — |
+| `sidebar_layout` | `sidebar_layout` | `.dz-sidebar-layout` | .dz-sidebar-layout[] | — |
 | `skeleton` | `skeleton` | `[data-dz-skeleton]` | [data-dz-skeleton][data-dz-skeleton=present] | Skeleton(body_html:str:opt; lines:int:opt) |
+| `skip_link` | `skip-link` | `.dz-skip-link` | .dz-skip-link[] | — |
 | `slider` | `slider` | `[data-dz-slider]` | [data-dz-slider][]; [data-dz-range-value][] | — |
+| `sort_header` | `sort-header` | `.dz-list-sort-link` | .dz-list-sort-link[] | — |
 | `sparkline` | `sparkline` | `[data-dz-sparkline]` | [data-dz-sparkline][data-dz-sparkline=present] | Sparkline(empty_message:str:opt; points:list[tuple[str,float]]:opt) |
+| `split` | `split` | `.dz-split` | .dz-split[] | — |
+| `stack` | `stack` | `.dz-stack` | .dz-stack[] | — |
 | `status_list` | `status-list` | `[data-dz-status-entry]` | [data-dz-status-entry][data-dz-state=one_of:neutral\|positive\|warning\|destructive\|accent, data-dz-status-entry=present] | StatusListEntry(caption:str:opt; icon_html:str:opt; state:Literal:opt; title:str:req) |
+| `status_list_region` | `status-list-region` | `.dz-status-list-region` | .dz-status-list-region[] | — |
+| `submit` | `submit` | `.dz-submit` | .dz-submit[] | — |
+| `surface` | `surface` | `.dz-surface` | .dz-surface[] | — |
+| `switch` | `switch` | `[data-dz-switch]` | [data-dz-switch][data-dz-switch=present] | — |
 | `tabs` | `tabs` | `[data-dz-tabs]` | [data-dz-tabs][]; [data-dz-tab-target][data-dz-tab-target=present] | — |
 | `tags` | `tags` | `[data-dz-tags]` | [data-dz-tags][name=present] | TagsField(field_id:str:req; label:str:req; name:str:req; placeholder:str:opt; tags:list[str]:opt) |
 | `task_inbox` | `task-inbox` | `[data-dz-task-inbox]` | [data-dz-task-inbox][data-dz-task-inbox=present] | TaskInbox(body_html:str:opt; region_name:str:opt) |
+| `text` | `text` | `.dz-text` | .dz-text[] | — |
 | `time_series` | `time-series` | `[data-dz-time-series]` | [data-dz-time-series][data-dz-time-series=present] | TimeSeries(empty_message:str:opt; label:str:opt; legend_html:str:opt; peak_display:str:opt; points:list[TimeSeriesPoint]:opt; series:list[TimeSeriesLayer]:opt; svg_html:str:opt; view:Literal:opt); TimeSeriesLayer(name:str:req; points:list[TimeSeriesPoint]:opt); TimeSeriesPoint(label:str:req; value:float:opt) |
 | `timeline` | `timeline` | `[data-dz-timeline-item]` | [data-dz-timeline-item][data-dz-timeline-item=present] | TimelineEvent(bullet_html:str:opt; date_label:str:opt; fields_html:str:opt; title:str:req) |
+| `toggle` | `toggle` | `[data-dz-toggle]` | [data-dz-toggle][data-dz-toggle=present] | — |
+| `toggle_group` | `toggle_group` | `.dz-toggle-group` | .dz-toggle-group[] | — |
+| `toolbar` | `toolbar` | `.dz-toolbar` | .dz-toolbar[] | — |
+| `tooltip` | `tooltip` | `[data-dz-tooltip]` | [data-dz-tooltip][data-dz-tooltip=present] | — |
+| `topbar` | `topbar` | `.dz-topbar` | .dz-topbar[] | — |
 | `tree` | `tree` | `[data-dz-tree]` | [data-dz-tree][data-dz-tree=present] | Tree(body_html:str:opt) |
+| `two_factor` | `two_factor` | `.dz-auth-card` | .dz-auth-card[] | — |
 | `wizard` | `wizard` | `[data-dz-wizard]` | [data-dz-wizard][data-dz-step=present]; [data-dz-stage][data-dz-stage=present]; [data-dz-state][data-dz-state=one_of:complete\|current\|pending] | — |
+| `workspace_context` | `workspace-context` | `.dz-workspace-context` | .dz-workspace-context[] | — |
+| `workspace_shell` | `workspace-shell` | `.dz-workspace` | .dz-workspace[] | — |
+| `workspace_toolbar` | `workspace-toolbar` | `.dz-workspace-toolbar` | .dz-workspace-toolbar[] | — |
 
 ## Related
 

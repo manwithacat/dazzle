@@ -191,6 +191,10 @@ class LocalStorageBackend(StorageBackend):
     def name(self) -> str:
         return "local"
 
+    def _full_path(self, storage_key: str) -> Path:
+        """Map a storage key to a path guaranteed under ``base_path``."""
+        return resolve_under_base(self.base_path, storage_key)
+
     async def store(
         self,
         file: BinaryIO,
@@ -202,12 +206,14 @@ class LocalStorageBackend(StorageBackend):
         file_id = uuid4()
         safe_filename = secure_filename(filename)
 
-        # Organize by date for easy cleanup
+        # Organize by date for easy cleanup. Prefix is sanitised so a tainted
+        # path_prefix cannot escape base_path (CodeQL py/path-injection).
         date_path = datetime.now().strftime("%Y/%m/%d")
-        relative_path = f"{path_prefix}/{date_path}" if path_prefix else date_path
+        safe_prefix = sanitize_storage_relpath(path_prefix)
+        relative_path = f"{safe_prefix}/{date_path}" if safe_prefix else date_path
         storage_key = f"{relative_path}/{file_id}_{safe_filename}"
 
-        full_path = self.base_path / storage_key
+        full_path = self._full_path(storage_key)
         full_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Read and write file content
@@ -229,14 +235,14 @@ class LocalStorageBackend(StorageBackend):
 
     async def retrieve(self, storage_key: str) -> bytes:
         """Retrieve file from local filesystem."""
-        full_path = self.base_path / storage_key
+        full_path = self._full_path(storage_key)
         if not full_path.exists():
             raise FileNotFoundError(f"File not found: {storage_key}")
         return full_path.read_bytes()
 
     async def stream(self, storage_key: str) -> AsyncIterator[bytes]:
         """Stream file in chunks."""
-        full_path = self.base_path / storage_key
+        full_path = self._full_path(storage_key)
         if not full_path.exists():
             raise FileNotFoundError(f"File not found: {storage_key}")
 
@@ -251,7 +257,7 @@ class LocalStorageBackend(StorageBackend):
     async def read_range(
         self, storage_key: str, start: int, end: int | None
     ) -> AsyncIterator[bytes]:
-        full_path = self.base_path / storage_key
+        full_path = self._full_path(storage_key)
         if not full_path.exists():
             raise FileNotFoundError(f"File not found: {storage_key}")
         chunk_size = 64 * 1024
@@ -269,7 +275,10 @@ class LocalStorageBackend(StorageBackend):
 
     async def delete(self, storage_key: str) -> bool:
         """Delete file from local filesystem."""
-        full_path = self.base_path / storage_key
+        try:
+            full_path = self._full_path(storage_key)
+        except ValueError:
+            return False
         if full_path.exists():
             full_path.unlink()
             return True
@@ -277,7 +286,9 @@ class LocalStorageBackend(StorageBackend):
 
     def get_url(self, storage_key: str) -> str:
         """Get URL for file access."""
-        return f"{self.base_url}/{storage_key}"
+        # URL surface uses the sanitised key so callers never embed raw input.
+        safe_key = sanitize_storage_relpath(storage_key)
+        return f"{self.base_url}/{safe_key}"
 
 
 # =============================================================================
@@ -357,9 +368,10 @@ class S3StorageBackend(StorageBackend):
         safe_filename = secure_filename(filename)
 
         date_path = datetime.now().strftime("%Y/%m/%d")
+        safe_prefix = sanitize_storage_relpath(path_prefix)
         storage_key = (
-            f"{path_prefix}/{date_path}/{file_id}_{safe_filename}"
-            if path_prefix
+            f"{safe_prefix}/{date_path}/{file_id}_{safe_filename}"
+            if safe_prefix
             else f"{date_path}/{file_id}_{safe_filename}"
         )
 
@@ -938,6 +950,56 @@ def secure_filename(filename: str) -> str:
         filename = "unnamed_file"
 
     return filename
+
+
+def sanitize_storage_relpath(path: str) -> str:
+    """Sanitize a relative storage path (prefix or key).
+
+    Drops absolute roots, ``..`` / empty / ``.`` segments, and characters that
+    are unsafe in a storage key. Result is always relative (no leading slash).
+    """
+    text = str(path or "").replace("\\", "/").strip()
+    if not text:
+        return ""
+    # Strip Unix absolute and Windows drive roots so join never re-roots.
+    while text.startswith("/"):
+        text = text[1:]
+    if len(text) >= 2 and text[1] == ":":
+        text = text[2:].lstrip("/")
+    segments: list[str] = []
+    for raw in text.split("/"):
+        if not raw or raw in (".", ".."):
+            continue
+        # Per-segment basename + charset scrub (not full secure_filename —
+        # empty after scrub means "drop segment", not "unnamed_file").
+        seg = Path(raw).name
+        seg = re.sub(r"[^\w.\-]", "_", seg).lstrip(".")
+        if not seg or seg in (".", "..") or ".." in seg:
+            continue
+        if len(seg) > 120:
+            seg = seg[:120]
+        segments.append(seg)
+    return "/".join(segments)
+
+
+def resolve_under_base(base_path: Path, relative: str) -> Path:
+    """Resolve ``relative`` under ``base_path``; raise if it escapes the root.
+
+    Normalises (resolves ``..`` / symlinks when present) then checks containment
+    with :meth:`pathlib.Path.is_relative_to`. Used by local file storage so
+    user-influenced prefixes/keys cannot write or read outside the storage root
+    (CWE-22 / CodeQL ``py/path-injection``).
+    """
+    base = base_path.resolve()
+    cleaned = sanitize_storage_relpath(relative)
+    if not cleaned:
+        raise ValueError("storage path is empty after sanitization")
+    # Join cleaned segments only — never pass raw user strings to Path().
+    candidate = base.joinpath(*cleaned.split("/"))
+    resolved = candidate.resolve()
+    if not resolved.is_relative_to(base):
+        raise ValueError(f"storage path escapes root: {relative!r}")
+    return resolved
 
 
 # =============================================================================

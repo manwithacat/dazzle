@@ -1,54 +1,67 @@
-# SiteSpec for LLM Ticket Classifier
-# Public site pages configuration
+version: 1
 
 brand:
   product_name: "AI Ticket Classifier"
-
-layout:
-  nav:
-    items:
-      - label: "Features"
-        href: "#features"
-      - label: "How It Works"
-        href: "#how-it-works"
-    cta:
-      label: "Get Started"
-      href: "/app"
-  footer:
-    copyright: "2025 AI Ticket Classifier"
-    links:
-      - label: "Privacy"
-        href: "/privacy"
-      - label: "Terms"
-        href: "/terms"
+  tagline: "Automatically classify, prioritize, and route support tickets using LLM intelligence"
+  company_legal_name: "AI Ticket Classifier Demo"
+  support_email: "support@example.com"
 
 pages:
   - route: "/"
-    title: "Home"
+    type: landing
     sections:
       - type: hero
         headline: "AI-Powered Ticket Classification"
         subhead: "Automatically classify, prioritize, and route support tickets using LLM intelligence"
         primary_cta:
-          label: "Try It Now"
-          href: "/app"
-        secondary_cta:
-          label: "Learn More"
-          href: "#features"
-      - type: features
-        headline: "Intelligent Support Automation"
-        items:
-          - title: "Smart Classification"
-            body: "Automatically categorize tickets into billing, technical, feature requests, and more"
-          - title: "Priority Assessment"
-            body: "AI-powered urgency detection with reasoning explanations"
-          - title: "Sentiment Analysis"
-            body: "Understand customer emotions to prioritize frustrated users"
-          - title: "Response Suggestions"
-            body: "Get AI-generated response templates tailored to each ticket"
-      - type: cta
-        headline: "Ready to automate your support?"
-        body: "Start classifying tickets in minutes with our LLM-powered system"
-        primary_cta:
-          label: "Get Started Free"
-          href: "/signup"
+          label: "Get Started"
+          href: "/login"
+  - route: "/cookies"
+    type: markdown
+    title: "Cookie Policy"
+    source:
+      format: md
+      path: legal/cookies.md
+
+# SaaS legal surfaces — content from `dazzle compliance privacy`
+# (docs/privacy pack + site/content/legal/{privacy,cookies,terms}.md).
+legal:
+  privacy:
+    route: "/privacy"
+    source:
+      format: md
+      path: legal/privacy.md
+  terms:
+    route: "/terms"
+    source:
+      format: md
+      path: legal/terms.md
+
+layout:
+  nav:
+    public:
+      - label: "Home"
+        href: "/"
+      - label: "Sign In"
+        href: "/login"
+  footer:
+    columns:
+      - title: Legal
+        links:
+          - label: "Privacy"
+            href: "/privacy"
+          - label: "Cookies"
+            href: "/cookies"
+          - label: "Terms"
+            href: "/terms"
+    disclaimer: "AI Ticket Classifier Demo"
+
+auth_pages:
+  login:
+    route: "/login"
+    mode: generated
+    enabled: true
+  signup:
+    route: "/signup"
+    mode: generated
+    enabled: true

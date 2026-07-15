@@ -38,6 +38,50 @@ from dazzle.render.fragment.region._shared import (
     _wrap_surface,
 )
 
+# Body fields for activity-feed description (first non-empty wins).
+# Comment entities use `content`; generic feeds often use description/title.
+_ACTIVITY_DESCRIPTION_KEYS = (
+    "description",
+    "action",
+    "title",
+    "content",
+    "body",
+    "message",
+    "text",
+    "summary",
+)
+_ACTIVITY_ACTOR_KEYS = ("actor", "user", "author", "signatory_name", "created_by")
+
+
+def _activity_description(item: dict[str, Any]) -> str:
+    """Resolve a non-empty description string from a feed row dict."""
+    for key in _ACTIVITY_DESCRIPTION_KEYS:
+        raw = item.get(key)
+        if raw is None:
+            continue
+        text = str(raw).strip()
+        if text:
+            return text
+    return ""
+
+
+def _activity_actor_label(item: dict[str, Any]) -> str:
+    """Resolve actor display string (scalar or nested name/email)."""
+    for key in _ACTIVITY_ACTOR_KEYS:
+        raw = item.get(key)
+        if raw is None or raw == "":
+            continue
+        if isinstance(raw, dict):
+            for sub in ("name", "email", "label", "title", "display"):
+                v = raw.get(sub)
+                if v is not None and str(v).strip():
+                    return str(v).strip()
+            continue
+        text = str(raw).strip()
+        if text:
+            return text
+    return ""
+
 
 class _BuildersTimelineMixin:
     """Mixin adding the 4 timeline-family `_build_*` methods to
@@ -132,11 +176,10 @@ class _BuildersTimelineMixin:
         paths produce the same relative-time labels.
 
         ctx shape:
-            items: list of dicts with keys:
-              - description: action description (required)
-              - created_at: datetime (rendered via `timeago` filter)
-              - actor or user: optional actor name
-              - action / title: fallback description fields
+            items: list of entity/row dicts. Description is resolved from
+              description | action | title | content | body | message | text |
+              summary (first non-empty string). Actor from actor | user |
+              author (string or nested display). created_at via timeago.
         """
         from dazzle.render.filters import _timeago_filter
 
@@ -158,13 +201,22 @@ class _BuildersTimelineMixin:
                     continue
                 created = item.get("created_at")
                 time_str = _timeago_filter(created) if created else ""
-                actor_raw = item.get("actor") or item.get("user") or ""
-                actor = str(actor_raw) if actor_raw else ""
-                description = str(
-                    item.get("description") or item.get("action") or item.get("title") or ""
-                )
+                actor = _activity_actor_label(item)
+                description = _activity_description(item)
+                if not description:
+                    # ActivityRow forbids empty description — skip rather than
+                    # crash the whole region (TR-8 comment_activity / Comment.content).
+                    continue
                 rows.append((time_str, actor, description))
-            body = ActivityFeed(items=tuple(rows))
+            if not rows:
+                empty_msg = (
+                    ctx.get("empty_message")
+                    or getattr(region, "empty_message", None)
+                    or "No activity yet"
+                )
+                body = ActivityFeed(items=(), empty_message=str(empty_msg))
+            else:
+                body = ActivityFeed(items=tuple(rows))
 
         return _wrap_surface(title, "report", body)
 

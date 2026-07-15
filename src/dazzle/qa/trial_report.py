@@ -28,6 +28,7 @@ items become issues and which are "correct by design."
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from difflib import SequenceMatcher
@@ -39,11 +40,25 @@ if TYPE_CHECKING:
 _CATEGORY_ORDER = ("bug", "missing", "confusion", "aesthetic", "praise", "other")
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 _CLUSTER_SIMILARITY_THRESHOLD = 0.65
+# TR-32: praise rephrases more freely than friction; lower SequenceMatcher
+# floor and rely on token Jaccard so "Issue Board is great" / "filters on
+# the Issue Board make triage easy" still collapse when URL+evidence align.
+_PRAISE_SIMILARITY_THRESHOLD = 0.50
+_TOKEN_JACCARD_THRESHOLD = 0.45
+_PRAISE_TOKEN_JACCARD_THRESHOLD = 0.38
 # #1073 — Secondary collapse pass keyed on shared evidence rather than
 # category/description. Catches the cross-category dedup miss observed
 # in cycles 3, 112, and 120 where the same DOM excerpt was filed under
 # different categories (bug/missing/confusion/other) with varied wording.
 _EVIDENCE_PREFIX_LEN = 80
+_EVIDENCE_SOFT_RATIO = 0.80
+_STOPWORDS = frozenset(
+    """
+    a an the and or but if then else when while for of on in to from by with
+    as at is are was were be been being this that these those it its i me my
+    we our you your they them their really very just also more most such
+    """.split()
+)
 
 
 @dataclass
@@ -86,20 +101,61 @@ def _title_from_description(desc: str, max_chars: int = 80) -> str:
     return head
 
 
+def _norm_ws(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def _token_set(text: str) -> set[str]:
+    tokens = re.findall(r"[a-z0-9]+", _norm_ws(text))
+    return {t for t in tokens if len(t) > 2 and t not in _STOPWORDS}
+
+
+def _jaccard(a: set[str], b: set[str]) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def _descriptions_similar(a: str, b: str, *, category: str) -> bool:
+    """True when two observation descriptions are near-duplicates.
+
+    Praise uses a softer floor (TR-32) because positive framings rephrase
+    more while still pointing at the same surface.
+    """
+    a_n, b_n = _norm_ws(a), _norm_ws(b)
+    if not a_n or not b_n:
+        return False
+    thr = _PRAISE_SIMILARITY_THRESHOLD if category == "praise" else _CLUSTER_SIMILARITY_THRESHOLD
+    if SequenceMatcher(None, a_n, b_n).ratio() >= thr:
+        return True
+    j_thr = _PRAISE_TOKEN_JACCARD_THRESHOLD if category == "praise" else _TOKEN_JACCARD_THRESHOLD
+    return _jaccard(_token_set(a_n), _token_set(b_n)) >= j_thr
+
+
+def _evidence_similar(a: str, b: str) -> bool:
+    """DOM evidence match — exact prefix or soft full-string similarity."""
+    a_n, b_n = _norm_ws(a), _norm_ws(b)
+    if not a_n or not b_n:
+        return False
+    if a_n[:_EVIDENCE_PREFIX_LEN] == b_n[:_EVIDENCE_PREFIX_LEN]:
+        return True
+    return SequenceMatcher(None, a_n[:200], b_n[:200]).ratio() >= _EVIDENCE_SOFT_RATIO
+
+
 def _cluster_friction(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Collapse near-duplicate friction entries.
 
-    Two-pass collapse (#1073):
+    Two-pass collapse (#1073, TR-32):
 
     1. **Same-category pass**: groups entries with the same ``category``
-       and ``url`` whose descriptions have a ``SequenceMatcher`` ratio
-       above the threshold. The original v0.57.83 algorithm.
+       and ``url`` whose descriptions are similar via SequenceMatcher
+       and/or token Jaccard (praise uses softer floors).
     2. **Cross-category evidence pass**: collapses surviving clusters
-       that share the same ``url`` + ``evidence`` prefix (first 80 chars,
-       normalised). Fires when the agent split one observable phenomenon
+       that share the same ``url`` + similar ``evidence`` (prefix or soft
+       ratio). Fires when the agent split one observable phenomenon
        across multiple categories (`missing` + `other` + `confusion`)
        because the description phrasing varied, even though the DOM
-       evidence is identical. Symptom from cycle 120 ops_dashboard run.
+       evidence is the same phenomenon.
 
     The first entry in each group becomes canonical and gets a
     ``similar_count`` field; the rest are dropped from the rendered
@@ -110,7 +166,7 @@ def _cluster_friction(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for entry in items:
         category = entry.get("category", "other")
         url = (entry.get("url") or "").strip()
-        description = (entry.get("description") or "").strip().lower()
+        description = entry.get("description") or ""
 
         matched = False
         for canonical in clusters:
@@ -118,9 +174,11 @@ def _cluster_friction(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 continue
             if (canonical.get("url") or "").strip() != url:
                 continue
-            canonical_desc = (canonical.get("description") or "").strip().lower()
-            ratio = SequenceMatcher(None, canonical_desc, description).ratio()
-            if ratio >= _CLUSTER_SIMILARITY_THRESHOLD:
+            if _descriptions_similar(
+                canonical.get("description") or "",
+                description,
+                category=str(category),
+            ):
                 canonical["similar_count"] = canonical.get("similar_count", 1) + 1
                 matched = True
                 break
@@ -128,28 +186,25 @@ def _cluster_friction(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not matched:
             clusters.append(dict(entry))
 
-    # Pass 2 — cross-category collapse keyed on (url, evidence prefix).
-    # Evidence is the DOM excerpt the agent attached; identical evidence
-    # means identical observation regardless of category framing.
+    # Pass 2 — cross-category collapse keyed on (url, similar evidence).
     if not clusters:
         return clusters
 
-    def _evidence_key(entry: dict[str, Any]) -> tuple[str, str]:
-        url = (entry.get("url") or "").strip()
-        evidence = (entry.get("evidence") or "").strip().lower()
-        return (url, evidence[:_EVIDENCE_PREFIX_LEN])
-
     collapsed: list[dict[str, Any]] = []
     for canonical in clusters:
-        key = _evidence_key(canonical)
+        url = (canonical.get("url") or "").strip()
+        evidence = canonical.get("evidence") or ""
         # An entry with empty url or evidence has no cross-category dedup
         # signal — pass it through unmolested.
-        if not key[0] or not key[1]:
+        if not url or not _norm_ws(evidence):
             collapsed.append(canonical)
             continue
         matched = False
         for prior in collapsed:
-            if _evidence_key(prior) == key:
+            prior_url = (prior.get("url") or "").strip()
+            if prior_url != url:
+                continue
+            if _evidence_similar(prior.get("evidence") or "", evidence):
                 prior["similar_count"] = prior.get("similar_count", 1) + canonical.get(
                     "similar_count", 1
                 )

@@ -167,7 +167,40 @@ Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **sta
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/drawer.py`
+
+- **Required root:** `.dz-drawer` (part `drawer`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-drawer` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: drawer — edge-anchored panel (native dialog or aside).
+
+Dual-lock unit is the drawer surface root. Gallery demos use
+``<dialog class="dz-drawer">`` opened via ``data-dz-dialog-open``; the
+substrate ``Drawer`` primitive emits ``<aside class="dz-drawer …">``.
+Slide-over peek also uses ``dialog.dz-drawer``. Class ``.dz-drawer`` is the
+stable cross-path selector.
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="drawer",
+    root=".dz-drawer",
+    nodes=(Node(".dz-drawer", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
@@ -176,3 +209,4 @@ Opened by shared dz-dialog.js ([data-dz-dialog-open]); close is native. Chrome s
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/drawer.py`

@@ -158,18 +158,42 @@
           },
           {
             "field_name": "title",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 3,
-              "max_words": 8
+              "values": [
+                "Cannot reset password after SSO cutover",
+                "Invoice PDF download returns blank page",
+                "Mobile app crashes on iOS 18.2 when opening tickets",
+                "SLA clock not pausing during customer wait",
+                "Webhook retries flooding partner API",
+                "Dashboard filters ignore priority=critical",
+                "Two-factor setup email never arrives",
+                "CSV export truncates ticket descriptions",
+                "Agent console shows stale assignment badge",
+                "Customer portal 403 on shared ticket links",
+                "Search by ticket number misses hyphenated IDs",
+                "Bulk close leaves child comments orphaned"
+              ]
             }
           },
           {
             "field_name": "description",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 5,
-              "max_words": 20
+              "values": [
+                "Customer reports they completed SSO login but the reset-password form still rejects their email as unknown. Reproduced on Chrome and Safari.",
+                "Finance team downloads invoice PDFs from the portal; the file opens but every page is blank. Started after Tuesday deploy.",
+                "On-call engineer sees crash reports from iOS 18.2 only when opening an existing ticket from push notification.",
+                "When an agent waits for customer reply, SLA should pause. Timers keep running and false breaches fire overnight.",
+                "Partner webhook endpoint returns 429; our retry storm is still hammering it every 30s despite backoff settings.",
+                "Selecting priority=critical on the ops dashboard still lists medium tickets. Filter chip appears selected but query ignores it.",
+                "New agents cannot finish 2FA setup \u2014 the enrollment email never arrives and resend is a no-op in the UI.",
+                "Exporting the ticket queue to CSV cuts long descriptions mid-sentence, so audit packages are incomplete.",
+                "After reassignment, the badge still shows the previous agent until a full page refresh.",
+                "Shared public ticket links from last week now return 403 for customers even when the token is unexpired.",
+                "Typing TKT-0042 in global search returns zero hits; the same ticket is visible in the list view.",
+                "Closing a parent ticket in bulk leaves comments on children with broken ticket FKs in the activity feed."
+              ]
             }
           },
           {
@@ -248,10 +272,22 @@
           },
           {
             "field_name": "resolution",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "Reset identity mapping and confirmed password flow end-to-end.",
+                "Fixed PDF renderer null font path; redeployed invoice service.",
+                "Shipped iOS hotfix for notification deep-link crash.",
+                "Enabled SLA pause on pending-customer state.",
+                "Capped webhook retries and added exponential jitter.",
+                "Corrected priority filter query binding on dashboard.",
+                "Restored mailer credentials; 2FA emails delivering again.",
+                "CSV export now streams full description fields.",
+                "Invalidated assignment cache on reassignment events.",
+                "Renewed portal signing secret for shared links.",
+                "Indexed hyphenated ticket numbers for FTS.",
+                "Bulk close now cascades comment reparenting safely."
+              ]
             }
           },
           {
@@ -310,10 +346,25 @@
           },
           {
             "field_name": "content",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "Reached out to the customer for a HAR capture of the failed login.",
+                "Confirmed repro on staging with the same SSO IdP config.",
+                "Escalated to platform team \u2014 looking at the mail queue lag.",
+                "Customer replied: issue only happens after 5pm local time.",
+                "Temporary workaround: use the desktop app until the iOS build lands.",
+                "Internal note: do not restart the webhook worker mid-incident.",
+                "Customer accepted the SLA credit draft; waiting on finance sign-off.",
+                "Root cause looks like a bad cache key after the region failover.",
+                "Posted status update in #support-ops \u2014 ETA 2 hours.",
+                "Verified fix on production with the original reporter.",
+                "Need manager approval before we force-reset their MFA devices.",
+                "Closing the loop: monitoring for 24h with no recurrence.",
+                "Asked agent to attach the failed PDF from their laptop download folder.",
+                "Priority bumped to high after three more accounts reported the same.",
+                "Shared runbook link for pausing SLAs during maintenance windows."
+              ]
             }
           },
           {

@@ -24,6 +24,33 @@ DSL gaps in `examples/*/`: validation errors, lint violations, conformance gaps,
 
 Rows in `## Lane: example-apps` with status ∈ {`PENDING`, `IN_PROGRESS`}.
 
+## HM surface gate (fleet)
+
+Example apps are **HM-owned surfaces**: pages compose Hyperparts (ADR-0053). Live
+`dazzle build-ui` / serve emit pure `dz-*` / `data-dz-*` markup. Pre-HM residuals
+(Alpine `x-*`, dead Tailwind `opacity-25/75`) in a local `examples/*/dnr-ui/` tree
+are almost always a **stale preview**, not a live emit bug — those dirs are
+gitignored and must not be grepped as truth.
+
+**Machine check (rebuild + score):**
+
+```bash
+python scripts/example_hm_surface_audit.py          # rebuild all → .dazzle/example-hm-audit/
+python scripts/example_hm_surface_audit.py --status # one-line for cycle logs
+python scripts/example_hm_surface_audit.py --app simple_task --json
+```
+
+- Exit 0 + `HM_OK` for every app → surface is improve-accessible (contracts,
+  dual-lock, visual_tier2, ux verify all see the same substrate).
+- Exit 1 / `FAIL` with `alpine>0` or `tw>0` → **framework residual** (file under
+  `framework-ux` / `hm-convergence`, not a per-app DSL gap) unless the hits are
+  project-authored custom HTML outside the emitter.
+- `BUILD_ERROR` → validate/lint the app first (Tier 1).
+
+When a trial/visual finding says "Alpine residual" or "non-HM markup", re-run the
+audit on a **fresh** rebuild before filing an example-apps row. Stale `dnr-ui/`
+snapshots are not gaps.
+
 ## Playbook
 
 ### 1. OBSERVE
@@ -83,6 +110,19 @@ Verify the gap closed. For visual_quality fixes, optionally re-run the Tier-2 vi
 ### 6. EXPLORE / TIERED GAP DISCOVERY (when backlog clean)
 
 Tiered to manage cost — start free, escalate only when the previous tier is exhausted.
+
+#### Tier 0 (when HM purity is in doubt, free-ish): HM surface audit
+
+```bash
+python scripts/example_hm_surface_audit.py --status
+# or per-app:
+python scripts/example_hm_surface_audit.py --app <app>
+```
+
+If the fleet is `HM_OK`, skip residual-markup investigations and go to Tier 1.
+If `FAIL`, treat as framework residual unless custom project HTML is the source
+(see **HM surface gate** above). Do **not** open `visual_quality` rows for stale
+`dnr-ui/` Alpine — delete the local tree or rebuild; `examples/*/dnr-ui/` is gitignored.
 
 #### Tier 1 (every cycle, free): Re-scan DSL gaps
 

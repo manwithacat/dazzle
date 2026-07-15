@@ -69,11 +69,42 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/related_group.py`
+
+- **Required root:** `.dz-related-group` (part `related-group`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-related-group` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: related-group — detail-page related-entity block.
+
+Dual-lock unit is the group root for status_cards / file_list displays
+(``.dz-related-group``). Table display composes tabs Hyperpart. Nested
+tabs, create rows, and drill links are host-owned.
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="related-group",
+    root=".dz-related-group",
+    nodes=(Node(".dz-related-group", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
@@ -82,3 +113,4 @@ One dz-related-group per related entity. The tab strip IS the tabs Hyperpart (dz
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/related_group.py`

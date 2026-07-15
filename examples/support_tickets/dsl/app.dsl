@@ -46,8 +46,11 @@ entity User "User":
   patterns: authentication, authorization
 
   id: uuid pk
-  email: str(255) required unique
-  name: str(200) required
+  # pii() feeds `dazzle compliance privacy` → docs/privacy/* (privacy notice,
+  # cookie policy, ROPA) and analytics PII stripping. Contact/identity are the
+  # load-bearing demo annotations for a data-protection-aware SaaS example.
+  email: str(255) required unique pii(category=contact)
+  name: str(200) required pii(category=identity)
   role: enum[customer,agent,manager]=customer
   is_active: bool = true
   created_at: datetime auto_add
@@ -70,7 +73,7 @@ entity Ticket "Support Ticket":
   id: uuid pk
   ticket_number: str(20) unique
   title: str(200) required
-  description: text required
+  description: text required pii(category=freeform)
   status: enum[open,in_progress,resolved,closed]=open
   priority: enum[low,medium,high,critical]=medium
   category: enum[bug,feature,inquiry,other]=other
@@ -163,7 +166,7 @@ entity Comment "Comment":
   id: uuid pk
   ticket: ref Ticket required
   author: ref User required
-  content: text required
+  content: text required pii(category=freeform)
   is_internal: bool = false
   created_at: datetime auto_add
 

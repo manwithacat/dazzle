@@ -71,12 +71,16 @@ runs:
         EXTRAS: ${{ inputs.extras }}
         OPTIONAL_PIP: ${{ inputs.optional-pip }}
         PYVER: ${{ inputs.python-version }}
+        # Match local [tool.uv] python-preference = only-managed: provision via uv,
+        # never fall back to a preinstalled system interpreter of the wrong patch.
+        UV_MANAGED_PYTHON: "1"
       run: |
         EXTRA_FLAGS=""
         IFS=',' read -ra _extras <<< "$EXTRAS"
         for e in "${_extras[@]}"; do
           [ -n "$e" ] && EXTRA_FLAGS="$EXTRA_FLAGS --extra $e"
         done
+        uv python install "$PYVER"
         uv sync --python "$PYVER" --frozen $EXTRA_FLAGS
         # Put the synced venv on PATH so subsequent bare `python`/`pytest`
         # steps resolve to it without needing `uv run` everywhere.

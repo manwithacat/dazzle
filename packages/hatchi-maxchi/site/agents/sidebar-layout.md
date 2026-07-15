@@ -30,16 +30,49 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/sidebar_layout.py`
+
+- **Required root:** `.dz-sidebar-layout` (part `sidebar_layout`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-sidebar-layout` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: sidebar_layout — two-pane flex wrap (side + fluid content).
+
+Dual-lock unit is the layout root. Side/content children, ``--dz-sidebar-width``,
+and ``data-dz-side`` are host-owned. Class ``.dz-sidebar-layout`` is the stable
+substrate root (gallery layout primitive; no FragmentRenderer emit yet).
+Distinct from contracts/sidebar.py (``.dz-sidebar`` nav rail).
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="sidebar_layout",
+    root=".dz-sidebar-layout",
+    nodes=(Node(".dz-sidebar-layout", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
-The Every-Layout sidebar: flex + wrap; the side gets flex-basis: var(--dz-sidebar-width) (a PUBLIC knob — set it inline or at :root), the content gets flex-grow: 999 with min-inline-size: var(--dz-sidebar-content-min, 50%) — when the content can't hold that minimum on the line, it wraps to a full-width row. data-dz-side="end" puts the side after the content. No media query: the breakpoint is the CONTENT'S minimum, so the same markup works in a page, a card, or a drawer.
+The Every-Layout sidebar: flex + wrap; the side gets flex-basis: var(--dz-sidebar-width) (a PUBLIC knob — set it inline or at :root), the content gets flex-grow: 999 with min-inline-size: var(--dz-sidebar-content-min, 50%) — when the content can't hold that minimum on the line, it wraps to a full-width row. data-dz-side="end" puts the side after the content. No media query: the breakpoint is the CONTENT'S minimum, so the same markup works in a page, a card, or a drawer. Dual-lock root .dz-sidebar-layout (HMC-152).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/sidebar_layout.py`

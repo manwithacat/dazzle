@@ -29,8 +29,8 @@ persona member "Team Member":
 entity User "Team Member":
   display_field: name
   id: uuid pk
-  email: str(200) unique required
-  name: str(100) required
+  email: str(200) unique required pii(category=contact)
+  name: str(100) required pii(category=identity)
   role: enum[admin,manager,member]=member
   department: str(50)
   is_active: bool=true

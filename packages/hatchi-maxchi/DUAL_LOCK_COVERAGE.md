@@ -10,11 +10,11 @@ Regenerate: `python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write`
 |--------|------:|
 | Component CSS modules | 75 |
 | Controllers | 24 |
-| Contract modules | 61 |
+| Contract modules | 140 |
 | Dual-lock schema+DOM | 41 |
-| Dual-lock DOM-only | 14 |
+| Dual-lock DOM-only | 98 |
 | Dual-lock deferred | 1 |
-| Contract with no dual-lock row | 5 |
+| Contract with no dual-lock row | 0 |
 
 Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 
@@ -22,67 +22,146 @@ Source of dual-lock columns: monorepo `tests/unit/hm_contract_registry.py`.
 
 | Part | Contract | Controller | DOM_CONTRACT | Model | render() | Dual-lock |
 |------|----------|------------|--------------|-------|----------|-----------|
+| `accordion` | `accordion.py` | `—` | yes | no | no | **DOM-only** |
 | `action_grid` | `action_grid.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `action_grid_region` | `action_grid_region.py` | `—` | yes | no | no | **DOM-only** |
 | `activity_feed` | `activity_feed.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `activity_feed_list` | `activity_feed_list.py` | `—` | yes | no | no | **DOM-only** |
+| `add_card_row` | `add_card_row.py` | `—` | yes | no | no | **DOM-only** |
+| `alert` | `alert.py` | `—` | yes | no | no | **DOM-only** |
 | `app_shell` | `app_shell.py` | `dz-app-shell.js` | yes | no | no | **DOM-only** |
+| `aspect_ratio` | `aspect_ratio.py` | `—` | yes | no | no | **DOM-only** |
+| `auto_grid` | `auto_grid.py` | `—` | yes | no | no | **DOM-only** |
+| `avatar` | `avatar.py` | `—` | yes | no | no | **DOM-only** |
+| `badge` | `badge.py` | `—` | yes | no | no | **DOM-only** |
 | `bar_chart` | `bar_chart.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `bar_track` | `bar_track.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `box_plot` | `box_plot.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `breadcrumb` | `breadcrumb.py` | `—` | yes | no | no | **DOM-only** |
+| `bubble` | `bubble.py` | `—` | yes | no | no | **DOM-only** |
+| `bulk_actions` | `bulk_actions.py` | `—` | yes | no | no | **DOM-only** |
 | `bullet` | `bullet.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `button` | `button.py` | `—` | yes | no | no | **DOM-only** |
 | `calendar` | `calendar.py` | `—` | yes | yes | yes | **schema+DOM** |
-| `carousel` | `carousel.py` | `dz-carousel.js` | yes | no | no | **none** |
+| `card` | `card.py` | `—` | yes | no | no | **DOM-only** |
+| `card_picker` | `card_picker.py` | `—` | yes | no | no | **DOM-only** |
+| `carousel` | `carousel.py` | `dz-carousel.js` | yes | no | no | **DOM-only** |
+| `center` | `center.py` | `—` | yes | no | no | **DOM-only** |
+| `chart_legend` | `chart_legend.py` | `—` | yes | no | no | **DOM-only** |
+| `cluster` | `cluster.py` | `—` | yes | no | no | **DOM-only** |
 | `code` | `code.py` | `dz-code.js` | yes | no | no | **deferred** |
 | `cohort_strip` | `cohort_strip.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `color` | `color.py` | `dz-color.js` | yes | no | no | **DOM-only** |
+| `column_visibility_menu` | `column_visibility_menu.py` | `—` | yes | no | no | **DOM-only** |
 | `combobox` | `combobox.py` | `dz-combobox.js` | yes | yes | yes | **schema+DOM** |
 | `command` | `command.py` | `dz-command.js` | yes | no | no | **DOM-only** |
 | `confirm` | `confirm.py` | `dz-confirm.js` | yes | no | no | **DOM-only** |
 | `confirm_panel` | `confirm_panel.py` | `—` | yes | no | no | **DOM-only** |
+| `controls` | `controls.py` | `—` | yes | no | no | **DOM-only** |
+| `csv_export_button` | `csv_export_button.py` | `—` | yes | no | no | **DOM-only** |
 | `dashboard_card` | `dashboard_card.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `dashboard_grid` | `dashboard_grid.py` | `—` | yes | no | no | **DOM-only** |
+| `data_list_scroll` | `data_list_scroll.py` | `—` | yes | no | no | **DOM-only** |
 | `date_range` | `date_range.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `day_timeline` | `day_timeline.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `detail_grid` | `detail_grid.py` | `—` | yes | no | no | **DOM-only** |
 | `diagram` | `diagram.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `dialog` | `dialog.py` | `dz-dialog.js` | yes | no | no | **DOM-only** |
+| `drawer` | `drawer.py` | `—` | yes | no | no | **DOM-only** |
 | `empty_state` | `empty_state.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `entity_card` | `entity_card.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `file_upload` | `file_upload.py` | `—` | yes | no | no | **DOM-only** |
+| `filter_bar` | `filter_bar.py` | `—` | yes | no | no | **DOM-only** |
+| `form_errors` | `form_errors.py` | `—` | yes | no | no | **DOM-only** |
+| `form_field` | `form_field.py` | `—` | yes | no | no | **DOM-only** |
+| `form_section` | `form_section.py` | `—` | yes | no | no | **DOM-only** |
+| `form_stack` | `form_stack.py` | `—` | yes | no | no | **DOM-only** |
+| `form_stepper` | `form_stepper.py` | `—` | yes | no | no | **DOM-only** |
 | `funnel` | `funnel.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `grid` | `grid.py` | `dz-grid.js` | yes | no | no | **DOM-only** |
 | `grid_cols` | `grid_cols.py` | `dz-grid-cols.js` | yes | no | no | **DOM-only** |
 | `grid_edit` | `grid_edit.py` | `dz-grid-edit.js` | yes | yes | yes | **schema+DOM** |
+| `grid_list` | `grid_list.py` | `—` | yes | no | no | **DOM-only** |
 | `grid_region` | `grid_region.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `grid_resize` | `grid_resize.py` | `dz-grid-resize.js` | yes | no | no | **DOM-only** |
+| `heading` | `heading.py` | `—` | yes | no | no | **DOM-only** |
 | `heatmap` | `heatmap.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `histogram` | `histogram.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `hover_card` | `hover_card.py` | `—` | yes | no | no | **DOM-only** |
+| `icon` | `icon.py` | `—` | yes | no | no | **DOM-only** |
+| `inline_edit` | `inline_edit.py` | `—` | yes | no | no | **DOM-only** |
+| `interactive` | `interactive.py` | `—` | yes | no | no | **DOM-only** |
+| `item` | `item.py` | `—` | yes | no | no | **DOM-only** |
 | `kanban` | `kanban.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `kanban_board` | `kanban_board.py` | `—` | yes | no | no | **DOM-only** |
+| `kanban_region` | `kanban_region.py` | `—` | yes | no | no | **DOM-only** |
+| `kbd` | `kbd.py` | `—` | yes | no | no | **DOM-only** |
+| `kpi` | `kpi.py` | `—` | yes | no | no | **DOM-only** |
+| `layout_grid` | `layout_grid.py` | `—` | yes | no | no | **DOM-only** |
+| `link` | `link.py` | `—` | yes | no | no | **DOM-only** |
 | `list_region` | `list_region.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `marker` | `marker.py` | `—` | yes | no | no | **DOM-only** |
 | `master_detail` | `master_detail.py` | `dz-master-detail.js` | yes | no | no | **DOM-only** |
-| `menu` | `menu.py` | `—` | yes | no | no | **none** |
-| `menubar` | `menubar.py` | `dz-menubar.js` | yes | no | no | **none** |
+| `menu` | `menu.py` | `—` | yes | no | no | **DOM-only** |
+| `menubar` | `menubar.py` | `dz-menubar.js` | yes | no | no | **DOM-only** |
+| `message` | `message.py` | `—` | yes | no | no | **DOM-only** |
+| `message_scroller` | `message_scroller.py` | `—` | yes | no | no | **DOM-only** |
 | `metrics` | `metrics.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `metrics_grid` | `metrics_grid.py` | `—` | yes | no | no | **DOM-only** |
 | `money` | `money.py` | `dz-money.js` | yes | yes | yes | **schema+DOM** |
-| `navigation_menu` | `navigation_menu.py` | `dz-navigation-menu.js` | yes | no | no | **none** |
+| `nav_group` | `nav_group.py` | `—` | yes | no | no | **DOM-only** |
+| `nav_item` | `nav_item.py` | `—` | yes | no | no | **DOM-only** |
+| `navigation_menu` | `navigation_menu.py` | `dz-navigation-menu.js` | yes | no | no | **DOM-only** |
 | `pagination` | `pagination.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `pdf` | `pdf.py` | `dz-pdf.js` | yes | no | no | **DOM-only** |
 | `pipeline` | `pipeline.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `pivot` | `pivot.py` | `—` | yes | yes | yes | **schema+DOM** |
-| `popover` | `popover.py` | `—` | yes | no | no | **none** |
+| `pivot_table` | `pivot_table.py` | `—` | yes | no | no | **DOM-only** |
+| `popover` | `popover.py` | `—` | yes | no | no | **DOM-only** |
 | `profile_card` | `profile_card.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `progress` | `progress.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `queue` | `queue.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `queue_filters` | `queue_filters.py` | `—` | yes | no | no | **DOM-only** |
+| `queue_region` | `queue_region.py` | `—` | yes | no | no | **DOM-only** |
 | `radar` | `radar.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `ref_picker` | `ref_picker.py` | `—` | yes | no | no | **DOM-only** |
+| `region` | `region.py` | `—` | yes | no | no | **DOM-only** |
+| `related_group` | `related_group.py` | `—` | yes | no | no | **DOM-only** |
+| `rich_text` | `rich_text.py` | `—` | yes | no | no | **DOM-only** |
 | `search_box` | `search_box.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `search_select` | `search_select.py` | `dz-search-select.js` | yes | yes | yes | **schema+DOM** |
+| `separator` | `separator.py` | `—` | yes | no | no | **DOM-only** |
+| `sidebar` | `sidebar.py` | `—` | yes | no | no | **DOM-only** |
+| `sidebar_layout` | `sidebar_layout.py` | `—` | yes | no | no | **DOM-only** |
 | `skeleton` | `skeleton.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `skip_link` | `skip_link.py` | `—` | yes | no | no | **DOM-only** |
 | `slider` | `slider.py` | `dz-slider.js` | yes | no | no | **DOM-only** |
+| `sort_header` | `sort_header.py` | `—` | yes | no | no | **DOM-only** |
 | `sparkline` | `sparkline.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `split` | `split.py` | `—` | yes | no | no | **DOM-only** |
+| `stack` | `stack.py` | `—` | yes | no | no | **DOM-only** |
 | `status_list` | `status_list.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `status_list_region` | `status_list_region.py` | `—` | yes | no | no | **DOM-only** |
+| `submit` | `submit.py` | `—` | yes | no | no | **DOM-only** |
+| `surface` | `surface.py` | `—` | yes | no | no | **DOM-only** |
+| `switch` | `switch.py` | `—` | yes | no | no | **DOM-only** |
 | `tabs` | `tabs.py` | `dz-tabs.js` | yes | no | no | **DOM-only** |
 | `tags` | `tags.py` | `dz-tags.js` | yes | yes | yes | **schema+DOM** |
 | `task_inbox` | `task_inbox.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `text` | `text.py` | `—` | yes | no | no | **DOM-only** |
 | `time_series` | `time_series.py` | `—` | yes | yes | yes | **schema+DOM** |
 | `timeline` | `timeline.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `toggle` | `toggle.py` | `—` | yes | no | no | **DOM-only** |
+| `toggle_group` | `toggle_group.py` | `—` | yes | no | no | **DOM-only** |
+| `toolbar` | `toolbar.py` | `—` | yes | no | no | **DOM-only** |
+| `tooltip` | `tooltip.py` | `—` | yes | no | no | **DOM-only** |
+| `topbar` | `topbar.py` | `—` | yes | no | no | **DOM-only** |
 | `tree` | `tree.py` | `—` | yes | yes | yes | **schema+DOM** |
+| `two_factor` | `two_factor.py` | `—` | yes | no | no | **DOM-only** |
 | `wizard` | `wizard.py` | `dz-wizard.js` | yes | no | no | **DOM-only** |
+| `workspace_context` | `workspace_context.py` | `—` | yes | no | no | **DOM-only** |
+| `workspace_shell` | `workspace_shell.py` | `—` | yes | no | no | **DOM-only** |
+| `workspace_toolbar` | `workspace_toolbar.py` | `—` | yes | no | no | **DOM-only** |
 
 ## Priority notes (Phase B)
 

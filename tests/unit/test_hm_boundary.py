@@ -62,6 +62,9 @@ SANCTIONED = {
     # Gallery interaction probes: monorepo entry that runpy-delegates to
     # packages/hatchi-maxchi/tools/gallery_probes.py (same class as visual smoke).
     "scripts/hm_gallery_probes.py",
+    # Hyperpart coherence drain queue: ranks .dazzle sweep findings; writes
+    # packages/hatchi-maxchi/COHERENCE_QUEUE.md (measurement/governance, not runtime).
+    "scripts/hm_coherence_queue.py",
     # Cross-repo CI mirror: public Actions API for hatchi-maxchi main (governance).
     "scripts/hm_standalone_ci_status.py",
     # Design-context facade names the HM families path in *generated doc prose*

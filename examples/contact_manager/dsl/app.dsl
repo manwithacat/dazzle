@@ -25,7 +25,8 @@ persona admin "Administrator":
 # `admin` is left without a binding so it auto-discovers its sidebar
 # from accessible workspaces — exercising both nav paths in one app.
 persona user "User":
-  default_workspace: contacts
+  # TR-2: land on a welcome/overview workspace, not a bare contact list.
+  default_workspace: home
   uses nav contact_nav
 
 # Curated sidebar for the `user` persona (#1324). Each item is a bare
@@ -33,6 +34,9 @@ persona user "User":
 # list surface, a workspace to its page. Both targets here are real —
 # Contact has a `mode: list` surface and `contacts` is a declared workspace.
 nav contact_nav:
+  # TR-2: Home first so the sidebar matches the post-login landing.
+  group "Home":
+    home
   group "Contacts":
     Contact
   # #1324 FR-4: the "Browse" group is hidden unless the tenant enables the
@@ -55,13 +59,13 @@ entity Contact "Contact":
 
   display_field: email
   id: uuid pk
-  first_name: str(100) required
-  last_name: str(100) required
-  email: email unique required
-  phone: str(20)
+  first_name: str(100) required pii(category=identity)
+  last_name: str(100) required pii(category=identity)
+  email: email unique required pii(category=contact)
+  phone: str(20) pii(category=contact)
   company: str(200)
   job_title: str(150)
-  notes: text
+  notes: text pii(category=freeform)
   is_favorite: bool=false
   created_at: datetime auto_add
   updated_at: datetime auto_update
@@ -179,9 +183,36 @@ search on Contact:
   highlight: true
   tokenizer: english
 
+# TR-2: first-run / post-login welcome — overview before the dense list.
+workspace home "Home":
+  purpose: "Welcome overview for your contact directory"
+  access: persona(user, admin)
+
+  directory_stats:
+    source: Contact
+    aggregate:
+      total_contacts: count(Contact)
+
+  recent_contacts:
+    source: Contact
+    sort: last_name asc, first_name asc
+    limit: 8
+    display: list
+    action: contact_detail
+    empty: "No contacts yet. Open Contacts or use New Contact to add your first person or company."
+
+  ux:
+    as user:
+      purpose: "See a friendly overview before diving into the full list"
+      focus: directory_stats, recent_contacts
+    as admin:
+      purpose: "Directory overview"
+      focus: directory_stats, recent_contacts
+
 # Workspace with list + detail pattern
 workspace contacts "Contacts":
   purpose: "Browse contacts and view details"
+  access: persona(user, admin)
   stage: "dual_pane_flow"
 
   # Search signal — htmx-driven box that hits /api/fts/Contact.

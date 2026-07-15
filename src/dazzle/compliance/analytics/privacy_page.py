@@ -37,6 +37,7 @@ from dazzle.core.ir import (
     PIICategory,
     SubprocessorSpec,
 )
+from dazzle.core.sitespec_loader import DEFAULT_TERMS_TEMPLATE
 
 AUTO_START = '<!-- DZ-AUTO:start name="{name}" -->'
 AUTO_END = "<!-- DZ-AUTO:end -->"
@@ -576,3 +577,74 @@ def write_privacy_artefacts(
         "cookie_policy": cookie_path,
         "ropa": ropa_path,
     }
+
+
+# SiteSpec serves markdown from ``site/content/`` (see ContentSourceSpec).
+# Compliance pack lives at ``docs/privacy/``; these are the public-route names.
+SITE_PRIVACY_REL = "site/content/legal/privacy.md"
+SITE_COOKIES_REL = "site/content/legal/cookies.md"
+SITE_TERMS_REL = "site/content/legal/terms.md"
+
+
+def sync_privacy_site_content(
+    project_root: Any,
+    artefacts: PrivacyPageArtefacts,
+) -> dict[str, Any]:
+    """Copy privacy + cookie markdown into SiteSpec-served paths.
+
+    Writes::
+
+        <project_root>/site/content/legal/privacy.md
+        <project_root>/site/content/legal/cookies.md
+
+    ROPA stays pack-only under ``docs/privacy/ropa.md`` (GDPR Art. 30
+    controller record — not a public SaaS marketing URL).
+
+    Returns the written paths keyed by ``privacy`` / ``cookies``.
+    """
+    from pathlib import Path
+
+    root = Path(project_root)
+    privacy_path = root / SITE_PRIVACY_REL
+    cookies_path = root / SITE_COOKIES_REL
+    privacy_path.parent.mkdir(parents=True, exist_ok=True)
+    privacy_path.write_text(artefacts.privacy_policy, encoding="utf-8")
+    cookies_path.write_text(artefacts.cookie_policy, encoding="utf-8")
+    return {"privacy": privacy_path, "cookies": cookies_path}
+
+
+def scaffold_terms_of_service(
+    project_root: Any,
+    *,
+    product_name: str,
+    company_legal_name: str | None = None,
+    support_email: str | None = None,
+    overwrite: bool = False,
+) -> Any | None:
+    """Write a demo Terms of Service under SiteSpec-served ``legal/terms.md``.
+
+    Terms are **not** derived from ``pii()`` (unlike the privacy pack). They
+    use the framework's default SaaS terms template with brand substitution.
+    Existing author-edited terms are left alone unless ``overwrite=True``.
+
+    Returns the path written, or ``None`` if skipped (already exists).
+    """
+    from datetime import datetime
+    from pathlib import Path
+
+    root = Path(project_root)
+    path = root / SITE_TERMS_REL
+    if path.exists() and not overwrite:
+        return None
+
+    company = company_legal_name or f"{product_name} Demo"
+    email = support_email or "support@example.com"
+    body = (
+        DEFAULT_TERMS_TEMPLATE.replace("{{product_name}}", product_name)
+        .replace("{{company_legal_name}}", company)
+        .replace("{{support_email}}", email)
+        .replace("{{year}}", str(datetime.now().year))
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+    return path

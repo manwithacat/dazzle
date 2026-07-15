@@ -54,7 +54,8 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle/http/` | **HTTP runtime** (FastAPI: API, auth, channels, events, grants). Renamed from `back/` in ADR-0041 (2026-06-20). |
 | `src/dazzle/page/` | **Page-orchestration layer** — page/route renderers (`*_renderer.py`), converters, + static JS/CSS assets. Calls *down* into `render/` (the typed Fragment substrate → HTML via `dazzle.render.html.esc`). No Jinja2 since #1042 (ADR-0023). Renamed from `ui/` in ADR-0041. |
 | `src/dazzle/render/` | Pure rendering: AppSpec → Fragment → HTML, no I/O (serverless-testable). The four-layer stack is `http → page → render → core` (ADR-0038/0041). |
-| `packages/hatchi-maxchi/` | Design system (Hyperparts); own `stems/` + `AGENTS.md`. Standalone CI (behaviour/visual/WCAG) must stay green — Dazzle CI job **HaTchi-MaXchi standalone CI (mirror)** and post-sync wait use `scripts/hm_standalone_ci_status.py` so a red HM main fails Dazzle transitively |
+| `packages/hatchi-maxchi/` | **Frontend design system** (Hyperparts, dual-locks, component CSS/controllers, gallery). Own `stems/` + `AGENTS.md`. **Pages compose Hyperparts** from the gallery; novel UX is invented *inside* HM shapes (invention ladder + dual-lock), not as one-offs under page (ADR-0053 / #1585). Standalone CI must stay green — Dazzle CI job **HaTchi-MaXchi standalone CI (mirror)** uses `scripts/hm_standalone_ci_status.py` so a red HM main fails Dazzle transitively |
+| `src/dazzle/page/` | Page **host** + residual product glue (CSRF, toast host, analytics, capability islands). **Not** a second component library — user-visible chrome stranded here should be **promoted** to Hyperparts. Package was `dazzle_ui` pre-ADR-0041; that path is dead |
 | `examples/*/` | Apps; each should carry `stems/` for domain judgement |
 
 ## Project Layout Convention
@@ -100,29 +101,31 @@ If those can't be answered, the change isn't blocked, but it carries an explicit
 
 ### Dev Setup
 ```bash
-uv sync --extra dev --extra llm --extra mcp   # Create .venv + editable install from uv.lock
-# then: source .venv/bin/activate   (or prefix commands with `uv run`)
-# pip still works if you prefer: pip install -e ".[dev,llm,mcp]"
+# uv is the only supported local toolchain (same as Heroku's uv buildpack).
+# .python-version pins primary Python 3.14; [tool.uv] python-preference = only-managed.
+make dev-install              # uv python install + uv sync (full local extras) + pre-commit
+# or: uv sync --extra dev --extra llm --extra mcp …
+source .venv/bin/activate     # optional; else prefix with `uv run` / use make targets
 ```
-**uv is the canonical toolchain.** After changing deps in `pyproject.toml`, run
-`uv lock` and commit the updated `uv.lock` in the same change — CI syncs with `--frozen` and
-fails on lock drift. A uv `.venv` has no `pip`; use `uv pip install <tool>` for one-off tooling.
+**Do not use pyenv or `pip install -e` for this repo.** After changing deps in
+`pyproject.toml`, run `uv lock` and commit the updated `uv.lock` in the same change —
+CI syncs with `--frozen` and fails on lock drift. A uv `.venv` has no `pip`; use
+`uv pip install <tool>` for one-off tooling. Details: `docs/contributing/dev-setup.md`.
 
 ```bash
 # Run app (against your own Postgres + Redis via DATABASE_URL / REDIS_URL)
-dazzle serve
+uv run dazzle serve
 
 # Validate
-dazzle validate               # Parse and validate DSL
-dazzle lint                   # Extended checks
+uv run dazzle validate        # Parse and validate DSL
+uv run dazzle lint            # Extended checks
 
 # Test
-pytest tests/ -m "not e2e"    # Unit tests
-pytest tests/ -m e2e          # E2E tests
+make test-fast                # or: uv run pytest tests/ -m "not e2e"
+uv run pytest tests/ -m e2e
 
 # Lint
-ruff check src/ tests/ --fix && ruff format src/ tests/
-mypy src/dazzle
+make lint format              # or: uv run ruff … / uv run mypy src/dazzle
 ```
 
 ## DSL Quick Reference
@@ -480,4 +483,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.103.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.104.0 | **Python**: 3.12+ | **Status**: Production Ready
