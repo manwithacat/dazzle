@@ -39,7 +39,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 697 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 707 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 710 | USED |
-| `dazzle qa trial` | CLI | trials | 463 | STALE (lag 248 since @463) |
+| `dazzle qa trial` | CLI | trials | 715 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 710 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 696 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 695 | USED |
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 715 (2026-07-15) trials STALE-clear.** support_tickets `manager_evaluation` via `--llm-driver grok-cli` (subscription). Fixed grok-cli max_turns default 4→20 (agent 32) — was false-blocking trials after cycle 666. Trial complete: 1 friction (med confusion, agent_dashboard timeline-first). Stamped qa trial **USED@715**.
 > **Cycle 714 (2026-07-15) test-suite STALE-clear.** `dazzle sentinel mutate --suite security` **PASS** — all 5 modules ≥ floor (crypto 83%, rbac 71%, csrf 85%, rls 100%, predicate 77%). Stamped sentinel mutate **USED@714**.
 > **Cycle 713 (2026-07-15) hm-convergence property-vision STALE-clear.** support_tickets sitespec landing capture; subscription host-Read mean **7.6** (family stripe-like SaaS; no metered property-vision). Stamped property-vision **USED@713**.
 > **Cycle 712 (2026-07-15) hm-convergence dual_lock STALE-clear.** Floors GREEN; dual_lock queue=0; coherence queue=0; shadcn gaps=0. Re-ran coverage+queue write; `hm_visual_smoke --dazzle-emit` PASS. dual_lock **692 → 712 USED**.

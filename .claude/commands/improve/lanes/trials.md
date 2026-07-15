@@ -57,7 +57,13 @@ Update `.dazzle/trials-rotation.json`; increment cycle counter.
 ### 2. TRIAL
 
 ```bash
-cd examples/<app> && dazzle qa trial --scenario <scenario_name> --fresh-db
+cd examples/<app>
+# Prefer an available subscription CLI. Examples often pin [llm] driver=claude-cli;
+# on Grok-only hosts use --llm-driver grok-cli (or DAZZLE_LLM_DRIVER=grok-cli).
+# Never skip trials solely because a prior cycle aborted — re-probe:
+#   python -c "from dazzle.llm.driver import call_subscription_cli; print(call_subscription_cli('grok-cli','Reply: OK')[0])"
+export DATABASE_URL="${DATABASE_URL:-postgresql://localhost:5432/dazzle_<app>}"  # app DB, not dazzle_test
+dazzle qa trial --scenario <scenario_name> --fresh-db --llm-driver grok-cli
 ```
 
 Capture stdout + the generated markdown report path (`dev_docs/qa-trial-<scenario>-<ts>.md`).

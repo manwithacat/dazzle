@@ -776,6 +776,9 @@ class DazzleAgent:
             "\n\n".join(parts),
             system_prompt=system_prompt,
             model=self._model,
+            # grok-cli headless burns turns when built-ins are denied; trial
+            # step-1 aborted under the previous default of 4 (cycle 666/715).
+            max_turns=32 if self._llm_driver == "grok-cli" else 8,
         )
 
     # Back-compat alias for callers/tests that still name the Claude path.

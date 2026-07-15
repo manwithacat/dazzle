@@ -319,7 +319,11 @@ def call_grok_cli(
     system_prompt: str | None = None,
     model: str | None = None,
     timeout: int = 300,
-    max_turns: int = 4,
+    # Higher than claude-cli's 4: trial/agent prompts + denied built-in tool
+    # attempts burn turns under Grok's headless runner (observed: max_turns=4
+    # → "max turns reached" on first qa-trial step; 20 succeeds on the same
+    # prompt shape). Pure one-shot smokes still work with any budget.
+    max_turns: int = 20,
 ) -> tuple[str, int]:
     """Run one completion through the Grok Build CLI (subscription-billed).
 
