@@ -80,7 +80,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 684 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 684 | USED |
 | **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 684 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 687 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 690 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 690 (2026-07-15) consumer-issues.** owner_bug heat: fixed #1590 steps equal columns + #1591 nav wrap. GitHub inbox **USED@690**.
 > **Cycle 689 (2026-07-15) example-apps STALE-clear.** support_tickets: `qa login manager` exit 0; `qa capture --above-fold` **6 screens**. Stamped qa login + qa capture **USED@689**.
 > **Cycle 688 (2026-07-15) hm-convergence + smells STALE-clear.** coherence queue=0 mean=8.7; fitness code (smells substrate); component-vision subscription re-score mean 7.2. Stamped component-vision, hyperpart coherence, /smells **USED@688**.
 > **Cycle 687 (2026-07-15) framework-ux STALE-clear.** support_tickets: `ux verify --contracts` **60/0/38**; `--structural` inventory 383. GitHub inbox polled idle. Stamped ux verify + GitHub inbox **USED@687**.

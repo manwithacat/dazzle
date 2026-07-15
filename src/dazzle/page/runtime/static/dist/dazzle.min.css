@@ -10900,7 +10900,10 @@ backdrop-filter: blur(10px);
 border-bottom: 1px solid var(--dz-border-subtle);
 }
 .dz-site-nav {
-max-width: 72rem;
+max-width: min(72rem, 100%);
+width: 100%;
+min-width: 0;
+box-sizing: border-box;
 margin: 0 auto;
 padding: 1rem 1.5rem;
 display: flex;
@@ -10913,11 +10916,29 @@ font-size: var(--text-lg);
 font-weight: 700;
 color: var(--dz-logo-color);
 text-decoration: none;
+flex-shrink: 0;
+min-width: 0;
 }
 .dz-nav-items {
 display: flex;
 align-items: center;
 gap: 1.5rem;
+flex-wrap: wrap;
+min-width: 0;
+max-width: 100%;
+}
+@media (max-width: 767px) {
+.dz-site-nav {
+flex-wrap: wrap;
+gap: 0.75rem 1rem;
+}
+.dz-nav-items {
+flex: 1 1 100%;
+width: 100%;
+max-width: 100%;
+gap: 0.4rem 0.75rem;
+justify-content: flex-start;
+}
 }
 .dz-nav-link {
 font-size: var(--text-sm);
@@ -11290,29 +11311,22 @@ width: 100%;
 @media (min-width: 1024px) {
 .dz-section-steps-list {
 flex-direction: row;
-align-items: center;
-gap: 0;
+align-items: flex-start;
+justify-content: space-between;
+gap: 1.5rem;
 }
 }
 .dz-step-connector {
 display: none;
 }
-@media (min-width: 1024px) {
-.dz-step-connector {
-display: block;
-flex: 1;
-margin: 0 0.75rem;
-height: 1px;
-background: var(--dz-border-default, var(--colour-border));
-}
-}
 .dz-step-item {
 display: flex;
 gap: 1rem;
 align-items: flex-start;
+min-width: 0;
 }
 .dz-step-item.is-not-last {
-flex: 1;
+flex: initial;
 }
 .dz-step-number {
 width: 2.5rem;
@@ -11327,6 +11341,10 @@ font-weight: 700;
 font-size: var(--text-base);
 flex-shrink: 0;
 }
+.dz-step-content {
+min-width: 0;
+width: 100%;
+}
 .dz-step-content h3 {
 font-size: var(--text-base);
 font-weight: 600;
@@ -11339,16 +11357,35 @@ line-height: var(--dz-line-height-body, 1.6);
 font-size: var(--text-sm);
 }
 @media (min-width: 1024px) {
-.dz-step-item {
+.dz-step-item,
+.dz-step-item.is-not-last {
+flex: 1 1 0;
+min-width: 0;
 flex-direction: column;
 align-items: center;
 text-align: center;
 gap: 0.75rem;
+position: relative;
+}
+.dz-step-item.is-not-last .dz-step-connector {
+display: block;
+position: absolute;
+top: 1.5rem;
+left: calc(50% + 1.75rem);
+width: calc(50% + 0.75rem);
+height: 1px;
+margin: 0;
+flex: none;
+background: var(--dz-border-default, var(--colour-border));
+pointer-events: none;
 }
 .dz-step-number {
 width: 3rem;
 height: 3rem;
 font-size: var(--text-lg);
+}
+.dz-step-content {
+text-align: center;
 }
 .dz-step-content h3 {
 font-size: var(--text-lg);
