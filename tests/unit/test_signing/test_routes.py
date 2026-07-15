@@ -105,8 +105,11 @@ def _app_with_routes(
 class _MockFileService:
     """Minimal async file service. Records uploads + returns a fake URL."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, fail_upload: bool = False) -> None:
         self.uploads: list[dict[str, Any]] = []
+        self.fail_upload = fail_upload
+        self.storage: Any = None
+        self.metadata_store: Any = None
 
     async def upload(
         self,
@@ -119,6 +122,9 @@ class _MockFileService:
         path_prefix: str = "",
     ) -> Any:
         from types import SimpleNamespace
+
+        if self.fail_upload:
+            raise RuntimeError("simulated FileService.upload failure (TR-49)")
 
         data = file.read()
         self.uploads.append(
@@ -133,6 +139,9 @@ class _MockFileService:
             }
         )
         return SimpleNamespace(url=f"/files/{filename}")
+
+    def get_metadata(self, file_id: Any) -> Any:
+        return None
 
 
 @pytest.fixture(autouse=True)
@@ -486,6 +495,44 @@ class TestFullSignFlow:
         # The entity row's signed_document field carries the URL.
         _, patch = repo.update_calls[0]
         assert patch["signed_document"] == f"/files/Contract-{record_id}.pdf"
+
+    def test_sign_storage_fallback_when_upload_fails(self, tmp_path: Any) -> None:
+        """TR-49: metadata/upload failure still leaves a durable signed_document URL."""
+        pytest.importorskip("fpdf")
+        pytest.importorskip("pyhanko")
+        from dazzle.http.runtime.file_storage import LocalStorageBackend
+
+        record_id = str(uuid4())
+        file_service = _MockFileService(fail_upload=True)
+        file_service.storage = LocalStorageBackend(tmp_path, "/files")
+        app, repo = _app_with_routes(
+            {record_id: {"status": "viewed"}},
+            file_service=file_service,
+        )
+        client = TestClient(app)
+        token = mint_token(record_id, "alice@example.com")
+
+        resp = client.post(
+            f"/api/sign/Contract/{record_id}",
+            json={"token": token, "signatory_name": "Alice"},
+        )
+        assert resp.status_code == 200
+        _, patch = repo.update_calls[0]
+        assert patch["status"] == "signed"
+        url = patch.get("signed_document")
+        assert url and str(url).startswith("/files/"), f"expected durable URL, got {url!r}"
+
+        # Re-open completion page offers download CTA.
+        open_resp = client.get(f"/sign/Contract/{record_id}", params={"token": token})
+        assert open_resp.status_code == 200
+        assert "Download your signed copy" in open_resp.text
+        assert "signed-copy" in open_resp.text
+
+        # Signed-copy endpoint serves PDF via storage fallback (no metadata).
+        copy = client.get(f"/sign/Contract/{record_id}/signed-copy", params={"token": token})
+        assert copy.status_code == 200
+        assert copy.headers["content-type"].startswith("application/pdf")
+        assert copy.content.startswith(b"%PDF-")
 
     def test_signing_template_provides_document_body(self) -> None:
         """When signing_template is set, the framework calls the project
@@ -952,7 +999,7 @@ class _CopyFileService(_MockFileService):
         self._entity_id = entity_id
         self.data = b"%PDF-1.7 signed-copy-bytes"
 
-    async def get_metadata(self, file_id: Any) -> Any:
+    def get_metadata(self, file_id: Any) -> Any:
         from types import SimpleNamespace
 
         if str(file_id) != str(self.file_id):

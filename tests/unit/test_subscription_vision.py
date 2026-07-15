@@ -9,9 +9,12 @@ import pytest
 
 from dazzle.qa.subscription_vision import (
     LIGHT_DIMENSION_KEYS,
+    build_hyperpart_coherence_prompt,
     build_subscription_score_prompt,
+    parse_hyperpart_coherence,
     parse_subscription_scores,
     scores_from_smoke_manifest,
+    write_coherence,
     write_scores,
 )
 
@@ -92,3 +95,66 @@ def test_write_and_smoke_manifest(tmp_path: Path) -> None:
     assert blob["ship_gate"] is False
     assert blob["billing"] == "subscription-host-read"
     assert blob["scores"][0]["mean"] == 6.0
+
+
+def test_hyperpart_coherence_prompt_and_parse(tmp_path: Path) -> None:
+    prompt = build_hyperpart_coherence_prompt(
+        [{"image_id": "button", "path": "/tmp/button.png", "label": "button"}],
+        findings_path="/tmp/c.json",
+        batch_label="batch 1/2",
+    )
+    assert "coherent" in prompt.lower()
+    assert "subscription" in prompt.lower()
+    assert "metered" in prompt.lower() or "taste-panel" in prompt
+    assert "/tmp/button.png" in prompt
+    assert "batch 1/2" in prompt
+
+    results = parse_hyperpart_coherence(
+        [
+            {
+                "image_id": "button",
+                "path": "/tmp/button.png",
+                "coherent": True,
+                "score": 8,
+                "issues": [],
+                "notes": "ok",
+            },
+            {
+                "image_id": "wizard",
+                "path": "/tmp/wizard.png",
+                "coherent": True,
+                "score": 9,
+                "issues": [
+                    {
+                        "severity": "high",
+                        "category": "empty_demo",
+                        "description": "demo blank",
+                    }
+                ],
+            },
+        ]
+    )
+    assert results[0].coherent is True
+    assert results[1].coherent is False  # high issue forces incoherent
+    assert results[1].score == 9
+    out = write_coherence(results, tmp_path / "coherence.json")
+    blob = json.loads(out.read_text(encoding="utf-8"))
+    assert blob["kind"] == "hyperpart_coherence"
+    assert blob["n_incoherent"] == 1
+    assert blob["ship_gate"] is False
+
+
+def test_discover_hyperpart_pages() -> None:
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[2] / "scripts" / "hm_pages_vision.py"
+    spec = importlib.util.spec_from_file_location("hm_pages_vision", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    pages = mod.discover_hyperpart_pages()
+    assert len(pages) >= 50
+    stems = {n for n, _ in pages}
+    assert "button" in stems
+    assert "money" in stems
+    assert all(rel.startswith("/hyperparts/") for _, rel in pages)

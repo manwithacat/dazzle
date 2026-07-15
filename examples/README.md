@@ -19,6 +19,42 @@ matters. New-app template notes: monorepo `stems/app-template/`. Agents:
 reconstruct domain judgement from `stems/INDEX.md` before expanding the DSL.
 Gate: `tests/unit/test_stems_layout.py`.
 
+### Privacy / data-protection pack (SaaS legal pages)
+
+Every example ships a public `sitespec.yaml` with de-facto SaaS legal routes
+(`/privacy`, `/cookies`, `/terms`) and a **compliance pack** derived from DSL
+`pii()` annotations:
+
+```bash
+cd examples/<app>
+dazzle compliance privacy -o docs/privacy
+# → docs/privacy/{privacy_policy,cookie_policy,ropa}.md
+# → site/content/legal/{privacy,cookies}.md  (always refreshed)
+# → site/content/legal/terms.md              (scaffold if missing)
+```
+
+Footer **Legal** links Privacy / Cookies / Terms. ROPA stays pack-only
+(Art. 30 controller record). Terms use the framework SaaS template (brand
+substituted) — edit freely; re-runs do not overwrite an existing terms.md.
+See `support_tickets` for the fullest walkthrough.
+
+### HM surfaces (HaTchi-MaXchi)
+
+Example UIs are **HM-shaped**: pages compose Hyperparts (see ADR-0053), not
+hand-rolled Alpine/Tailwind. Live emit is pure `dz-*` / `data-dz-*` markup.
+
+```bash
+# Rebuild every example and score for pre-HM residuals (Alpine / dead TW)
+python scripts/example_hm_surface_audit.py
+python scripts/example_hm_surface_audit.py --status   # one-line for logs
+```
+
+`examples/*/dnr-ui/` is **gitignored** local preview output from
+`dazzle build-ui`. Never treat a stale `dnr-ui/` tree as the product surface —
+regenerate or run the audit. This is what makes the fleet accessible to
+`/improve` tooling (dual-lock, contracts, visual_tier2) without false
+"non-HM example" noise.
+
 ---
 
 ## Learning Path
@@ -27,14 +63,13 @@ The examples are organized in a progressive learning sequence. Each builds on co
 
 ### Learning sequence
 
-| Level | Example | Entities | Key Concepts |
-|-------|---------|----------|--------------|
-| 1. **Beginner** | [simple_task](simple_task/) | 1 | Entity basics, CRUD surfaces, workspaces, attention signals |
-| 2. **Beginner+** | [contact_manager](contact_manager/) | 1 | DUAL_PANE_FLOW archetype, signal weighting, list+detail pattern |
-| 3. **Intermediate** | [support_tickets](support_tickets/) | 3 | Entity relationships (refs), indexes, multi-entity surfaces |
-| 4. **Intermediate+** | [ops_dashboard](ops_dashboard/) | 2 | Personas, COMMAND_CENTER archetype, engine hints |
-| 5. **Advanced** | [fieldtest_hub](fieldtest_hub/) | 6 | Complex domain, persona scoping, access rules, attention signals |
-| 6. **Reference** | [pra](pra/) | 132 | Kitchen-sink corpus exercising every DSL construct — ledgers, processes, services, LLM, state machines |
+| Level | Example | Key Concepts |
+|-------|---------|--------------|
+| 1. **Beginner** | [simple_task](simple_task/) | Entity basics, CRUD surfaces, workspaces, attention signals |
+| 2. **Beginner+** | [contact_manager](contact_manager/) | DUAL_PANE_FLOW archetype, signal weighting, list+detail pattern |
+| 3. **Intermediate** | [support_tickets](support_tickets/) | Entity relationships (refs), indexes, multi-entity surfaces |
+| 4. **Intermediate+** | [ops_dashboard](ops_dashboard/) | Personas, COMMAND_CENTER archetype, engine hints |
+| 5. **Advanced** | [fieldtest_hub](fieldtest_hub/) | Complex domain, persona scoping, access rules, attention signals |
 
 ### Topic-focused demos
 
@@ -42,11 +77,13 @@ These apps each foreground one capability rather than building toward a complete
 
 | Demo | Showcases |
 |------|-----------|
-| [component_showcase](component_showcase/) | Every widget type on a single entity — visual regression target |
-| [project_tracker](project_tracker/) | UX component expansion (Quill, Flatpickr, Tom Select) on a project-management domain |
+| [project_tracker](project_tracker/) | PM domain + rich form widgets (combobox/tags/date) on HM Hyperparts |
 | [design_studio](design_studio/) | Color pickers, rich text, asset management |
 | [llm_ticket_classifier](llm_ticket_classifier/) | LLM intents (classification + extraction) with deterministic-first integration |
-| [custom_renderer](custom_renderer/) | Project-side renderer extension — the link-time allowlist + runtime registration contract |
+| [invoice_ops](invoice_ops/) | Invoice workflow keystone — processes, events, services |
+| [acme_billing](acme_billing/) | Multi-tenant billing domain + RBAC / compliance fixtures |
+| [hr_records](hr_records/) | Personnel records / org chart |
+| [domain_join_co](domain_join_co/) | Verified domain-join onboarding flow |
 
 ---
 

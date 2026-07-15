@@ -31,11 +31,41 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 - copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
 - no Server exchange on this part — pure presentation or client chrome
-- no typed contracts/ module yet — the partial is the surface of record
+- satisfy the DOM contract tables (CI stop-ship)
 
 ## DOM contract
 
-No typed dual-lock module in `contracts/` for this part yet. Treat **Copy this** as the required surface — preserve root class and `data-*` modifiers. Author `contracts/<part>.py` when CI should stop-ship attribute drift (`contracts/AUTHORING.md`).
+What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
+
+### `contracts/stack.py`
+
+- **Required root:** `.dz-stack` (part `stack`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-stack` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: stack — vertical layout group.
+
+Dual-lock unit is the stack root. Gap scale rides ``data-dz-gap``. Child
+fragments are host-owned. Class ``.dz-stack`` is the stable substrate root.
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="stack",
+    root=".dz-stack",
+    nodes=(Node(".dz-stack", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
 
 ## Notes
 
@@ -44,3 +74,4 @@ Flex column + gap — margins stay on the children's insides, so any fragment co
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/stack.py`

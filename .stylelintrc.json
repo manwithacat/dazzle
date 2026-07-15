@@ -10,23 +10,20 @@
       }
     ],
     "custom-property-pattern": [
-      "^(colour-|space-|text-|leading-|weight-|radius-|shadow-|ease-|duration-|width-|neutral-|brand-|success-|warning-|danger-|flow-).*",
+      "^(colour-|space-|text-|leading-|weight-|radius-|shadow-|ease-|duration-|width-|neutral-|brand-|success-|warning-|danger-|flow-|dz-|hm-).*",
       {
-        "message": "Custom properties use Dazzle's vocabulary (--colour-*, --space-*, etc.). UK English only."
+        "message": "Custom properties use design-token vocabulary (--colour-*, --space-*, etc.). UK English only."
       }
     ]
   },
   "ignoreFiles": [
-    "src/dazzle_ui/runtime/static/css/dazzle-bundle.css",
-    "src/dazzle_ui/runtime/static/css/dazzle-framework.css",
-    "src/dazzle_ui/runtime/static/css/dazzle-layer.css",
-    "src/dazzle_ui/runtime/static/css/design-system.css",
-    "src/dazzle_ui/runtime/static/css/dz.css",
-    "src/dazzle_ui/runtime/static/css/dz-tones.css",
-    "src/dazzle_ui/runtime/static/css/dz-widgets.css",
-    "src/dazzle_ui/runtime/static/css/site-sections.css",
-    "src/dazzle_ui/runtime/static/css/feedback-widget.css",
-    "src/dazzle_ui/runtime/static/css/themes/**",
+    "packages/hatchi-maxchi/dist/**",
+    "packages/hatchi-maxchi/site/**",
+    "src/dazzle/page/runtime/static/css/dazzle.css",
+    "src/dazzle/page/runtime/static/css/dazzle-framework.css",
+    "src/dazzle/page/runtime/static/css/reset.css",
+    "src/dazzle/page/runtime/static/css/themes/**",
+    "src/dazzle/page/runtime/static/dist/**",
     "dist/**",
     "node_modules/**",
     "examples/**",
@@ -34,7 +31,7 @@
   ],
   "overrides": [
     {
-      "files": ["src/dazzle_ui/runtime/static/css/components/**/*.css"],
+      "files": ["packages/hatchi-maxchi/components/**/*.css"],
       "rules": {
         "declaration-property-value-disallowed-list": {
           "/.*/": [
@@ -43,7 +40,7 @@
             "/^rgb\\(/",
             "/^hsl\\([0-9]/"
           ],
-          "message": "Component CSS must reference design tokens, not literal values. Define new tokens in tokens.css if the existing scale doesn't fit."
+          "message": "Component CSS must reference design tokens, not literal values. Define new tokens in packages/hatchi-maxchi/tokens/ if the existing scale doesn't fit."
         }
       }
     }

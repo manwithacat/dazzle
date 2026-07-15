@@ -28,8 +28,8 @@ persona reviewer "Reviewer":
 entity User "User":
   display_field: name
   id: uuid pk
-  email: str(200) unique required
-  name: str(100) required
+  email: str(200) unique required pii(category=contact)
+  name: str(100) required pii(category=identity)
   role: enum[admin,designer,reviewer]=designer
   created_at: datetime auto_add
 

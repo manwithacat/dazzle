@@ -7,10 +7,83 @@ formatted for the /__test__/seed endpoint.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.testing.ux.seed_values import realistic_email, realistic_str
+
+# Terminal lifecycle statuses — timestamps like resolved_at only make sense here.
+_TERMINAL_STATUSES = frozenset(
+    {
+        "resolved",
+        "closed",
+        "completed",
+        "done",
+        "cancelled",
+        "canceled",
+        "rejected",
+        "archived",
+    }
+)
+_TERMINAL_TS_TOKENS = ("resolved", "closed", "completed", "ended", "finished", "cancelled")
+_FUTURE_OK_TOKENS = ("due", "deadline", "expires", "expiry", "scheduled", "starts", "start_")
+
+
+def _past_datetime_iso(*, days_ago: int, hour: int = 10) -> str:
+    """UTC datetime strictly in the past (TR-10: no future seed timestamps)."""
+    days_ago = max(1, days_ago)
+    dt = datetime.now(UTC) - timedelta(days=days_ago, hours=(hour % 12))
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _past_date_iso(*, days_ago: int) -> str:
+    days_ago = max(1, days_ago)
+    return (datetime.now(UTC).date() - timedelta(days=days_ago)).isoformat()
+
+
+def _datetime_for_field(field_name: str, index: int) -> str:
+    """Field-aware past (or short-horizon due) datetimes relative to *now*."""
+    name = field_name.lower()
+    if any(tok in name for tok in _FUTURE_OK_TOKENS):
+        # Due dates may be slightly in the future — still bounded.
+        days = (index % 14) + 1
+        dt = datetime.now(UTC) + timedelta(days=days)
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if any(tok in name for tok in _TERMINAL_TS_TOKENS):
+        # Resolved/closed: 7–34 days ago (before "now", after typical created).
+        return _past_datetime_iso(days_ago=7 + (index % 28), hour=14)
+    if "created" in name:
+        return _past_datetime_iso(days_ago=45 + index * 3, hour=9)
+    if "updated" in name:
+        return _past_datetime_iso(days_ago=3 + index, hour=11)
+    # Generic datetime: recent past
+    return _past_datetime_iso(days_ago=(index % 28) + 1, hour=10)
+
+
+def _scrub_lifecycle_timestamps(data: dict[str, Any]) -> None:
+    """Drop terminal timestamps/resolution on non-terminal rows (TR-10).
+
+    Avoids open tickets with resolved_at in the past (or before created_at when
+    created_at is DB auto_add=now), which trials read as broken integrity.
+    """
+    status = str(data.get("status") or "").lower()
+    if status in _TERMINAL_STATUSES:
+        return
+    for key in list(data.keys()):
+        lower = key.lower()
+        if any(tok in lower for tok in _TERMINAL_TS_TOKENS) and (
+            lower.endswith("_at") or lower in ("resolution", "outcome", "close_reason")
+        ):
+            data.pop(key, None)
+        elif lower == "resolution" and status in {
+            "open",
+            "in_progress",
+            "new",
+            "pending",
+            "triage",
+        }:
+            data.pop(key, None)
 
 
 def _generate_field_value(field_name: str, field_type: str, entity_name: str, index: int) -> Any:
@@ -20,7 +93,8 @@ def _generate_field_value(field_name: str, field_type: str, entity_name: str, in
     fixtures don't look obviously artificial ("Test first_name 1")
     during qualitative evaluation — see #809. Non-string types keep
     their deterministic shape (UUIDs, dates) so fixture ids remain
-    reproducible across runs.
+    reproducible across runs. Datetimes are *relative to now* (TR-10)
+    so seeds never look future-dated next to auto_add created_at.
     """
     t = field_type.lower()
 
@@ -41,9 +115,12 @@ def _generate_field_value(field_name: str, field_type: str, entity_name: str, in
     if t == "bool":
         return True
     if "date" in t and "time" not in t:
-        return f"2026-01-{(index % 28) + 1:02d}"
+        name = field_name.lower()
+        if any(tok in name for tok in _FUTURE_OK_TOKENS):
+            return (datetime.now(UTC).date() + timedelta(days=(index % 14) + 1)).isoformat()
+        return _past_date_iso(days_ago=(index % 28) + 7)
     if "datetime" in t:
-        return f"2026-01-{(index % 28) + 1:02d}T10:00:00Z"
+        return _datetime_for_field(field_name, index)
     if "uuid" in t:
         return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{entity_name}.{field_name}.{index}"))
     if "url" in t:
@@ -160,6 +237,9 @@ def generate_seed_payload(
                 value = _generate_field_value(field.name, type_str, entity.name, i)
                 if value is not None:
                     data[field.name] = value
+
+            # TR-10: open/in_progress rows must not carry resolved_at/resolution.
+            _scrub_lifecycle_timestamps(data)
 
             fixture: dict[str, Any] = {
                 "id": fixture_id,

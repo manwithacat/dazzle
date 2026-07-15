@@ -190,7 +190,10 @@ def test_already_signed(running_signable_app) -> None:  # type: ignore[no-untype
 
     The second sign attempt should fail (document already in terminal status).
     The verifier should see status=signed in the DB and grade=pass.
+    TR-49: re-open of the original link offers Download of the signed copy.
     """
+    import httpx
+
     app = running_signable_app
     by_name, sink = _make_tools_and_sink(app)
     doc = app.seeded_docs[0]
@@ -198,6 +201,26 @@ def test_already_signed(running_signable_app) -> None:  # type: ignore[no-untype
     # First signature.
     by_name["open_signing_link"].handler(entity=doc.entity, id=doc.id, token=doc.token)
     by_name["sign_document"].handler(authority_confirmed=True)
+
+    # TR-49: re-open completion page must offer durable download (not terminal dead-end).
+    reopen = httpx.get(
+        f"{app.base_url}/sign/{doc.entity}/{doc.id}",
+        params={"token": doc.token},
+        timeout=15.0,
+    )
+    assert reopen.status_code == 200, reopen.text[:300]
+    assert "Document unavailable" not in reopen.text
+    assert "signed-copy" in reopen.text or "Download" in reopen.text, (
+        f"TR-49 expected Download CTA on re-open, body={reopen.text[:400]!r}"
+    )
+    copy = httpx.get(
+        f"{app.base_url}/sign/{doc.entity}/{doc.id}/signed-copy",
+        params={"token": doc.token},
+        timeout=15.0,
+    )
+    assert copy.status_code == 200, copy.text[:300]
+    assert copy.headers.get("content-type", "").startswith("application/pdf")
+    assert copy.content.startswith(b"%PDF-")
 
     # Second attempt (document already signed — server returns 409).
     by_name["open_signing_link"].handler(entity=doc.entity, id=doc.id, token=doc.token)

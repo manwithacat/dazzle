@@ -46,8 +46,8 @@ entity User "User":
 
   display_field: name
   id: uuid pk
-  email: email required
-  name: str(120) required
+  email: email required pii(category=contact)
+  name: str(120) required pii(category=identity)
   org: ref Organization required
   created_at: datetime auto_add
 

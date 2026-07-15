@@ -2392,7 +2392,22 @@ body { background: var(--colour-bg); color: var(--colour-text);
 .hm-bp-open { margin-inline-start: auto; font-size: var(--text-sm); color: var(--colour-brand); text-decoration: none; }
 .hm-bp-stage { display: flex; justify-content: center; background: var(--colour-bg); border: 1px solid var(--colour-border); border-radius: var(--radius-md); padding: .75rem; }
 .hm-bp-frame { width: 100%; height: 40rem; max-width: 100%; border: 0; border-radius: var(--radius-sm); background: var(--colour-surface); transition: width var(--duration-base) var(--ease-out); }
-.hm-hp-frame { display: block; inline-size: 100%; block-size: 22rem; border: 1px solid var(--colour-border); border-radius: var(--radius-md); background: var(--colour-surface); }
+/* Framed Hyperparts (app-shell): desktop open-rail needs ≥64rem layout
+   width. The iframe is at least that wide; .hm-preview scrolls and must
+   stay keyboard-focusable (tabindex on the wrapper — axe
+   scrollable-region-focusable). */
+.hm-preview:has(.hm-hp-frame) {
+  overflow-x: auto;
+}
+.hm-hp-frame {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 64rem;
+  block-size: 28rem;
+  border: 1px solid var(--colour-border);
+  border-radius: var(--radius-md);
+  background: var(--colour-surface);
+}
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
 .hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }
@@ -2489,6 +2504,8 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         if c.framed:
             hp_dir = out_dir / "hyperparts"
             hp_dir.mkdir(exist_ok=True)
+            # Desktop open-rail MQ needs ≥64rem *iframe layout* width — see
+            # .hm-hp-frame min-inline-size (not body min-width; MQ ignores that).
             hp_live_doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -2535,6 +2552,17 @@ window.addEventListener('storage', function (e) {{
         )
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         deps = _dependency_chips(c)
+        # tabindex+role when framed: overflow-x scroll region must be keyboard
+        # accessible (axe scrollable-region-focusable).
+        if c.framed:
+            preview = (
+                f'<div class="hm-preview" tabindex="0" role="region" '
+                f'aria-label="{_html.escape(c.title)} live preview — '
+                f'scroll horizontally for the full desktop frame">'
+                f"{framed_live_part}</div>"
+            )
+        else:
+            preview = f'<div class="hm-preview">{framed_live_part}</div>'
         # Linear part page (no accordions): demo → copy → exchange → how-to
         # → DOM contract → notes → files. Same order as agents/<id>.md.
         part_sections.append(
@@ -2545,7 +2573,7 @@ window.addEventListener('storage', function (e) {{
                     f"<h2>{_html.escape(c.title)}{tag}{deps}</h2>"
                     f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
                     f"{_epistemic_html(c)}"
-                    f'<div class="hm-preview">{framed_live_part}</div>'
+                    f"{preview}"
                     f'<section class="hm-ref" id="copy"><h3>Copy this</h3>'
                     f"{snippet_block}</section>"
                     # Linear skeleton on EVERY part (empty states when N/A):
@@ -2567,11 +2595,20 @@ window.addEventListener('storage', function (e) {{
         # SIMPLE gallery section (spec decision 5): demo + snippet + link.
         # No exchanges/contract/guidance/anatomy disclosures on the index.
         # Index uses site-root relative links (framed_live / live_index).
+        if c.framed:
+            idx_preview = (
+                f'<div class="hm-preview" tabindex="0" role="region" '
+                f'aria-label="{_html.escape(c.title)} live preview — '
+                f'scroll horizontally for the full desktop frame">'
+                f"{framed_live}</div>"
+            )
+        else:
+            idx_preview = f'<div class="hm-preview">{framed_live}</div>'
         body_parts.append(
             f'<section class="hm-comp" id="{c.id}">'
             f"<h2>{_html.escape(c.title)}{tag}</h2>"
             f'<p class="blurb">{apply_prefix(_html.escape(c.blurb), prefix)}</p>'
-            f'<div class="hm-preview">{framed_live}</div>'
+            f"{idx_preview}"
             f"{snippet_block}"
             f'<p class="hm-more"><a href="hyperparts/{c.id}">Full reference: '
             f"contracts, guidance, anatomy →</a></p></section>"
@@ -2684,7 +2721,21 @@ Every snippet is the live example — copy it into any htmx4 app.
         '<label><input type="radio" name="hm-theme" data-hm-theme="dark" '
         "onclick=\"hmTheme('dark')\"><span>Dark</span></label></div></div>"
     )
+    # Gallery-only CDN bootstraps (not shipped in dist). Diagram needs Mermaid to
+    # turn the server-emitted <pre class="mermaid"> into SVG; Dazzle does this in
+    # the host emitter. Without it the live demo is raw source text (coherence
+    # HMC-059).
+    # Inline after opener script with no blank line when absent — a bare
+    # ``{extra}\n</body>`` left ``\\n\\n</body>`` on every part page and broke
+    # gallery byte-identity (HM package suite / monorepo gate).
+    _MERMAID_BOOT = (
+        '\n<script type="module">\n'
+        'import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";\n'
+        'mermaid.initialize({ startOnLoad: true, securityLevel: "loose", theme: "neutral" });\n'
+        "</script>"
+    )
     for c, section in part_sections:
+        boot_tail = _MERMAID_BOOT if c.id == "diagram" else ""
         part_doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -2711,7 +2762,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 </main>
 </div>
 <script src="../hatchi-maxchi.js" defer></script>
-<script>{opener_js}</script>
+<script>{opener_js}</script>{boot_tail}
 </body>
 </html>"""
         (hp_dir / f"{c.id}.html").write_text(part_doc + "\n", encoding="utf-8")
@@ -2743,14 +2794,19 @@ Every snippet is the live example — copy it into any htmx4 app.
             continue  # real page already exists
         if not any(c.id == canonical_id for c, _ in part_sections):
             continue
+        # Always target ``{canonical}.html`` so file:// Playwright captures and
+        # plain static servers resolve the meta-refresh (bare ``grid`` 404s /
+        # white-screens under file://; GitHub Pages may extension-strip, but
+        # ``.html`` works on both).
+        dest = f"{canonical_id}.html"
         alias_doc = f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{_html.escape(alias_id)} → {_html.escape(canonical_id)} — HaTchi-MaXchi</title>
-<meta http-equiv="refresh" content="0; url={canonical_id}">
-<link rel="canonical" href="{canonical_id}">
+<meta http-equiv="refresh" content="0; url={dest}">
+<link rel="canonical" href="{dest}">
 <link rel="stylesheet" href="../hatchi-maxchi.css">
 <style>{PAGE_CSS}</style>
 <script>{theme_js}</script>
@@ -2767,7 +2823,7 @@ Every snippet is the live example — copy it into any htmx4 app.
   {theme_toggle}
 </div>
 <p class="blurb">{_html.escape(reason)}</p>
-<p><a class="button" data-variant="primary" href="{canonical_id}">
+<p><a class="button" data-variant="primary" href="{dest}">
 Open the <code>{_html.escape(canonical_id)}</code> Hyperpart →</a></p>
 <footer style="border-block-start:1px solid var(--colour-border);padding-block:2rem;color:var(--colour-text-muted);font-size:var(--text-sm)">
 Alias page generated by <code>site/build_site.py</code> so dual-lock / agent

@@ -7,13 +7,15 @@
  * The server renders a plain `<input type="text" data-dz-tags>` whose value
  * is a COMMA-JOINED tag string (e.g. "alpha,beta") — fully usable with JS
  * OFF (the user types "a, b, c"; the server splits on comma), and it is the
- * submitted value + native `required`. On first interaction
- * (pointerdown / focusin) we build a sibling chips UI: a `role="list"` of
- * removable chips + a borderless text entry, wrapped in a `.dz-tags` root.
- * The native input STAYS in the DOM (still submits) but leaves the visual
- * layer; on every add/remove we rewrite its `.value` to the comma-joined
- * chip list and fire `change`, so the form + any listeners see the exact
- * same control they always did — the submit contract never changes.
+ * submitted value + native `required`. Seeded values (SSR / gallery demos)
+ * enhance on DOM ready so chips paint without a click; empty fields still
+ * enhance on first interaction (pointerdown / focusin). The chips UI is a
+ * `role="list"` of removable chips + a borderless text entry, wrapped in a
+ * `.dz-tags` root. The native input STAYS in the DOM (still submits) but
+ * leaves the visual layer; on every add/remove we rewrite its `.value` to
+ * the comma-joined chip list and fire `change`, so the form + any listeners
+ * see the exact same control they always did — the submit contract never
+ * changes.
  *
  * Enhance-once is marked with `data-dz-enhanced` on the root. a11y: the
  * chips are a `role="list"` of `role="listitem"` chips, each with a
@@ -188,7 +190,24 @@
     return native.closest(".dz-tags[data-dz-enhanced]") || enhance(native);
   }
 
-  // ── Enhance-on-first-interaction ─────────────────────────────────────
+  // ── Seeded values → chips without interaction ───────────────────────
+  // Gallery demos and SSR fields with a non-empty comma value should show
+  // chips on first paint. Empty fields stay progressive (enhance on first
+  // pointer/focus). Also re-run after htmx swaps bring in new markup.
+  function enhanceSeeded() {
+    document.querySelectorAll("input[data-dz-tags]").forEach(function (native) {
+      if (native.closest(".dz-tags[data-dz-enhanced]")) return;
+      if (parseTags(native.value).length) enhance(native);
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", enhanceSeeded);
+  } else {
+    enhanceSeeded();
+  }
+  document.addEventListener("htmx:afterSettle", enhanceSeeded);
+
+  // ── Enhance-on-first-interaction (empty / not-yet-enhanced) ──────────
   // A pointerdown on the bare input would focus it; enhance first and swallow
   // the event, then focus our entry.
   document.addEventListener(

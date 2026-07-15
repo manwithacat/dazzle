@@ -1,6 +1,7 @@
 /* dz-2fa-settings.js — client behavior for the typed 2FA settings view.
  *
- * Extracted from src/dazzle_ui/templates/site/auth/2fa_settings.html as
+ * Product auth glue (not an HM Hyperpart). Was historically inlined in
+ * page templates under the pre-ADR-0041 dazzle_ui tree; extracted as
  * part of the Jinja2 retirement Phase 1.D.2 (v0.67.37). Same DOM
  * contract as the legacy template: targets the same element IDs and
  * follows the same fetch-driven status-and-controls flow for

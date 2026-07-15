@@ -27,7 +27,21 @@ Two playbooks — both bill cognition to the **host harness subscription**
 |-------|---------|-------|----------------|
 | Example-app fleet | `dazzle qa capture` | Subagent **Reads** PNGs → findings JSON | `.claude/commands/improve/strategies/visual_tier2_subagent.md` |
 | HM dual-lock exemplars | `scripts/hm_visual_smoke.py` | Subagent **Reads** PNG → taste dimension scores | `scripts/hm_subscription_vision.py` |
-| HM GitHub Pages gallery | `scripts/hm_pages_vision.py --capture` | Subagent **Reads** PNGs → findings + scores | `scripts/hm_pages_vision.py` |
+| HM GitHub Pages gallery (curated) | `scripts/hm_pages_vision.py --capture` | Subagent **Reads** PNGs → findings + scores | `scripts/hm_pages_vision.py` |
+| **All Hyperparts (~90) coherence** | `hm_pages_vision.py --capture --all-hyperparts` | Subagent **Reads** PNGs → coherent? + score + issues | `improve/strategies/hyperpart_coherence.md` |
+| **Coherence drain queue** | (uses last sweep) | Rank + backlog seed `coherence_drain <stem>` | `scripts/hm_coherence_queue.py` + HMC rows |
+
+`/improve` **hm-convergence** pick order (floors green): **drain** if
+`hm_coherence_queue.py --status` shows `queue>0` or PENDING `coherence_drain *`
+rows; else **investigate** if sweep missing/stale; else dual-lock / probes.
+
+**Why images for Hyperpart coherence.** Dumping each gallery page as HTML/text
+and asking a model “is this coherent?” burns discrete tokens on markup the eye
+never sees. A viewport PNG is a compact continuous representation of the same
+surface — capture is free local Playwright; judgment bills to the host
+subscription Read path. Prefer this over metered `component-vision` for fleet
+sweeps. Full taste dimensions remain available when you want rubric parity;
+coherence is the cheaper “looks intact?” gate.
 
 ```bash
 # Dual-lock smoke → subscription scores

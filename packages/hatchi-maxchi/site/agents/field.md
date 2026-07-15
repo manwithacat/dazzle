@@ -48,6 +48,37 @@ No extended guidance authored yet — start from Copy this and the dependency ch
 
 What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent attrs outside the tables. Python modules under `contracts/` are **package-internal dual-locks** (`from contracts._kit import …`) — not FastAPI business handlers. App servers implement **Server exchange** endpoints; this section constrains the HTML those endpoints return.
 
+### `contracts/form_field.py`
+
+- **Required root:** `.dz-form-field` (part `form-field`)
+
+| Node | Attr | Constraint |
+|---|---|---|
+| `.dz-form-field` | `—` | — |
+
+#### Module source
+
+Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
+
+```python
+"""HYPERPART: form-field — plain form field wrapper.
+
+Dual-lock unit is the field root. Label, input, help, and a11y attrs are
+host-owned. Class ``.dz-form-field`` is the stable substrate root
+(``_emit_field``). Distinct from specialized widgets (combobox/tags/…).
+"""
+
+from contracts._kit import DomContract, Node
+
+DOM_CONTRACT = DomContract(
+    part="form-field",
+    root=".dz-form-field",
+    nodes=(Node(".dz-form-field", attrs={}),),
+)
+
+__all__ = ["DOM_CONTRACT"]
+```
+
 ### `contracts/color.py`
 
 - **Required root:** `[data-dz-color-group]` (part `color`)
@@ -76,9 +107,10 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch into the hex readout (contract: contracts/color.py).
+Reuses the dz-form-* family (label / hint / input / error). The invalid field needs no modifier class — the red border keys off aria-invalid="true", the same attribute assistive tech reads. The colour group uses data-dz-color-group so dz-color.js can mirror the swatch into the hex readout (contract: contracts/color.py). Dual-lock: form triad contracts/form_field.py + colour contracts/color.py (HMC-139).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
+- `contracts/form_field.py`
 - `contracts/color.py`

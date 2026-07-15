@@ -24,31 +24,21 @@ We welcome all kinds of contributions:
    cd dazzle
    ```
 
-2. **Set Up Python Environment**
+2. **Set Up Python Environment (uv only)**
    ```bash
-   # Requires Python 3.12+ (uv provisions it automatically).
-   uv sync --extra dev        # creates .venv + editable install from uv.lock
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   # Install uv: https://docs.astral.sh/uv/getting-started/installation/
+   # Primary interpreter is 3.14 (.python-version); floor remains >=3.12.
+   make dev-install           # uv-managed Python + full local extras + pre-commit
+   source .venv/bin/activate  # optional; Windows: .venv\Scripts\activate
    ```
+   Do **not** use pyenv or `pip install -e` here — see
+   [docs/contributing/dev-setup.md](docs/contributing/dev-setup.md).
 
-3. **Development Dependencies**
-   `uv sync` (above) already installed them from `uv.lock`. Prefer pip instead?
+3. **Verify Installation**
    ```bash
-   python3 -m venv venv && source venv/bin/activate && pip install -e ".[dev]"
-   ```
-
-4. **Install Pre-commit Hooks** (recommended)
-   ```bash
-   pip install pre-commit
-   pre-commit install
-   ```
-
-   This will automatically run linting, formatting, and type checking before each commit.
-
-5. **Verify Installation**
-   ```bash
-   dazzle --help
-   pytest
+   uv run dazzle --help
+   make test-ux-preflight
+   uv run pytest tests/unit -m "not slow" -x
    ```
 
 ### Making Your First Contribution

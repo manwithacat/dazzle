@@ -4,43 +4,66 @@ Set up a local development environment for contributing to Dazzle.
 
 ## Prerequisites
 
-- Python 3.12+
+- **[uv](https://docs.astral.sh/uv/)** — single source of truth for Python and dependencies
+  (same toolchain Heroku uses via the uv buildpack)
 - Node.js 18+ (for JavaScript tests)
 - Git
+- Postgres + Redis for full app serve (optional for unit tests)
+
+**Do not use pyenv, virtualenvwrapper, or bare `pip install -e` for this repo.**
+The committed `.python-version` pins the **primary** interpreter (`3.14`) for
+uv and Heroku. That file is *not* a pyenv virtualenv name; if pyenv is on your
+`PATH`, prefer `make` / `uv run` (they force uv-managed Python) or
+`export PYENV_VERSION=system` in this directory.
+
+Support floor remains **Python >= 3.12** (`requires-python`); CI matrices
+3.12 / 3.13 / 3.14. Local default and production deploy target is **3.14**.
 
 ## Clone and Install
 
 ```bash
-# Clone the repository
+# Install uv once (if needed): https://docs.astral.sh/uv/getting-started/installation/
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 git clone https://github.com/manwithacat/dazzle.git
 cd dazzle
 
-# Create the venv + editable install from uv.lock (uv is the canonical toolchain)
-uv sync --extra dev
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-# (pip alternative: python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]")
+# Provision the pinned interpreter + .venv from uv.lock
+make dev-install
+# equivalent:
+#   uv python install          # reads .python-version → 3.14
+#   uv sync --extra dev --extra llm --extra mcp --extra mobile \
+#           --extra postgres --extra perf --extra saml --extra lsp
+#   uv run pre-commit install && uv run pre-commit install --hook-type pre-push
+
+source .venv/bin/activate   # optional; or prefix with `uv run` / use make targets
 
 # Install Node dependencies
 npm install
-
-# Install pre-commit hooks
-pre-commit install
 ```
+
+`[tool.uv] python-preference = "only-managed"` in `pyproject.toml` means uv
+**never** falls back to a system or pyenv interpreter. After changing
+dependencies in `pyproject.toml`, run `uv lock` and commit `uv.lock` in the
+same change — CI syncs with `--frozen`.
 
 ## Verify Installation
 
 ```bash
 # Check Dazzle works
-dazzle --version
+uv run dazzle --version
 
-# Run tests
-pytest tests/unit -m "not slow" -x
+# Fast gates (used by /improve and agent loops)
+make test-ux-preflight
 
-# Run JavaScript tests
+# Unit tests
+uv run pytest tests/unit -m "not slow" -x
+
+# JavaScript tests
 npm test
 
 # Type check
-mypy src/dazzle
+uv run mypy src/dazzle
 npx tsc --noEmit -p src/dazzle/page/runtime/static/js/
 ```
 
@@ -58,21 +81,9 @@ dazzle/
 │   │   ├── mcp/                   # MCP server
 │   │   │   └── server/
 │   │   │       └── handlers/      # Tool handlers by domain
-│   │   │           ├── project.py   # Project management
-│   │   │           ├── dsl.py       # DSL validation/inspection
-│   │   │           ├── knowledge.py # Concept lookup
-│   │   │           ├── status.py    # MCP + runtime status
-│   │   │           ├── api_packs.py # External API packs
-│   │   │           └── stories.py   # Story generation
-│   │   ├── back/                  # FastAPI backend runtime
-│   │   │   ├── runtime/           # Server and API generation
-│   │   │   └── converters/        # AppSpec → BackendSpec
-│   │   ├── ui/                    # Server-rendered UI runtime
-│   │   │   ├── runtime/
-│   │   │   │   ├── combined_server.py  # HTTP server
-│   │   │   │   ├── site_renderer.py    # Site/auth page HTML
-│   │   │   │   └── static/             # JS/CSS assets
-│   │   │   └── converters/        # AppSpec → typed Fragment trees
+│   │   ├── http/                  # FastAPI backend runtime
+│   │   ├── page/                  # Server-rendered UI runtime
+│   │   ├── render/                # Pure AppSpec → Fragment → HTML
 │   │   └── eject/                 # Code generation adapters
 ├── tests/
 │   ├── unit/                      # Unit tests
@@ -89,7 +100,7 @@ dazzle/
 
 ```bash
 cd examples/simple_task
-dazzle serve
+uv run dazzle serve
 ```
 
 ### Making Changes
@@ -101,13 +112,14 @@ dazzle serve
 
 2. Make changes and run tests:
    ```bash
-   pytest tests/unit -x
+   uv run pytest tests/unit -x
+   # or: make test-fast
    ```
 
 3. Format and lint:
    ```bash
-   ruff check src/ tests/ --fix
-   ruff format src/ tests/
+   make lint format
+   # or: uv run ruff check src/ tests/ --fix && uv run ruff format src/ tests/
    ```
 
 4. Commit (pre-commit hooks run automatically):
@@ -134,7 +146,8 @@ These run automatically on commit:
 To run manually:
 
 ```bash
-pre-commit run --all-files
+make pre-commit
+# or: uv run pre-commit run --all-files
 ```
 
 ## Code Style
@@ -158,34 +171,55 @@ See [AGENTS.md](https://github.com/manwithacat/dazzle/blob/main/AGENTS.md) for d
 
 ```bash
 # Fast tests (no subprocess)
-pytest tests/unit -m "not slow" -x --tb=short
+uv run pytest tests/unit -m "not slow" -x --tb=short
 
 # Specific test file
-pytest tests/unit/test_parser.py -v
-
-# Tests matching pattern
-pytest -k "test_entity" -v
+uv run pytest tests/unit/test_parser.py -v
 
 # Coverage report
-pytest --cov=src/dazzle --cov-report=html
-open htmlcov/index.html
+make coverage
 
 # Type check
-mypy src/dazzle/core src/dazzle/cli
+uv run mypy src/dazzle/core src/dazzle/cli
+
+# Local CI concordance (see local-ci-concordance.md)
+make ci-fast    # tier 0 — what /ship runs
+make ci-core    # tier 1 — closer to GitHub CI
 ```
 
 ## Troubleshooting
 
-### Import errors
+### `pyenv: version '3.14' is not installed`
+
+The repo `.python-version` is for **uv / Heroku**, not pyenv. Either:
 
 ```bash
-pip install -e ".[dev]" --force-reinstall
+# Preferred: never call bare python/pytest; use make or uv run
+make test-ux-preflight
+uv run pytest tests/unit -x
+
+# Or silence pyenv for this shell
+export PYENV_VERSION=system
 ```
+
+Do **not** install 3.14 into pyenv “to fix” the project — use
+`uv python install` (already done by `make install` / `make dev-install`).
+
+### Import errors / missing extras
+
+```bash
+make dev-install
+# or re-sync a thinner set:
+uv sync --extra dev
+```
+
+A uv `.venv` has **no** `pip`. One-off tools: `uv pip install <tool>` or add an
+extra and `uv lock`.
 
 ### Pre-commit failures
 
 ```bash
-pre-commit run --all-files -v
+uv run pre-commit run --all-files -v
 ```
 
 ### JavaScript type errors
@@ -196,5 +230,7 @@ npx tsc --noEmit -p src/dazzle/page/runtime/static/js/
 
 ## See Also
 
+- [Python 3.14 primary target](../python-3.14-primary-target.md)
+- [Local CI concordance](local-ci-concordance.md)
 - [Testing Guide](testing.md)
 - [Adding a Feature](adding-a-feature.md)

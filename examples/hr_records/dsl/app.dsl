@@ -134,9 +134,9 @@ entity Person "Person":
 
   display_field: legal_name
   id: uuid pk
-  legal_name: str(200) required
-  preferred_name: str(100)
-  email: email required unique
+  legal_name: str(200) required pii(category=identity)
+  preferred_name: str(100) pii(category=identity)
+  email: email required unique pii(category=contact)
   started_at: date required
   ended_at: date    # NULL = currently employed
 
