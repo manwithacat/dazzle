@@ -89,7 +89,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > New infrastructure (not product capabilities): `scripts/improve_schedule_next.py` + watchdog —
 > driver Step 6 self-chain, not UNOWNED. CLI quality surface intact. **No newly-built UNOWNED.**
 > **STALE recompute (threshold last-exercised ≤629):** **0 flips** USED→STALE (still **0 USED**).
-> dual_lock@608 lag **41** (was 21 @629). **already STALE:** 34 (deepest story@456 lag 193).
+> dual_lock@608 lag **41** (was 21 @629). **already STALE:** 40 (deepest semantics@455 lag 194).
 > **Governance:** explore budget renewed on dazzle-updated v0.104.0 (cycle 648 reset). Prefer
 > STALE-clear dual_lock / highest-lag product STALE when product lanes run. Next sweep ~**669**.
 
