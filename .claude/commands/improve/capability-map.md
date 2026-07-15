@@ -37,7 +37,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 653 | USED |
-| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 460 | STALE (lag 189 since @460) |
+| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 665 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 477 | STALE (lag 172 since @477) |
 | `dazzle qa trial` | CLI | trials | 463 | STALE (lag 186 since @463) |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 476 | STALE (lag 173 since @476) |
@@ -141,6 +141,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 > Prefer dual_lock product continue or STALE-clear highest lag when budget renews. Explore **100/100**.
 > Next sweep ~**589**.
 
+
+
+> **Cycle 665 (2026-07-15) framework-ux STALE-clear.** support_tickets: `dazzle serve` + `ux verify --contracts` **60 passed / 0 failed / 38 pending**; `ux verify --structural` inventory 383. Stamped ux verify **USED@665**.
 
 > **Cycle 650 (2026-07-15) hm-convergence dual_lock STALE-clear.** Floors GREEN; coherence queue=0; dual_lock queue=0; shadcn gaps=0. Re-ran coverage+queue write; `hm_visual_smoke --dazzle-emit` PASS (playwright chromium). dual_lock last-exercised **650 → USED**.
 
