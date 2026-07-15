@@ -70,7 +70,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `qa-trial` skill | skill | trials (downstream authoring) | 488 | STALE (lag 203 since @488) |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 705 | USED |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 688 | USED |
-| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 485 | STALE (lag 206 since @485) |
+| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 706 | USED |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 699 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 700 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 700 | USED |
@@ -97,6 +97,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+> **Cycle 706 (2026-07-15) standalone /xproject STALE-clear.** Scouted siblings with dazzle.toml: pennydreadful, AegisMark, cyfuture. validate+lint exit 0 all three; pulse radar AegisMark 98% / cyfuture 94% launch-ready (pennydreadful pulse exit 1, non-blocking). Stamped /xproject **USED@706**.
 > **Cycle 705 (2026-07-15) standalone /fuzz STALE-clear.** Boot-stderr scrape 4 apps (support_tickets, simple_task, contact_manager, fieldtest_hub) — clean start/stop; no hard signatures (duplicate route / text-shaped / Traceback). Stamped /fuzz **USED@705**.
 > **Cycle 704 (2026-07-15) multi STALE-clear.** floors GREEN; shadcn gaps 0; `dazzle sweep examples` exit 0; MCP semantics extract/validate_events/guards OK; CodeQL 0 open; test_intelligence KG present. Stamped semantics, sweep/nightly, shadcn, zero-floor, CodeQL, test_intelligence **USED@704**.
 > **Cycle 703 (2026-07-15) example-apps + framework-ux STALE-clear.** support_tickets: process propose; compliance gaps+evidence; story scope-fidelity; schema; ux maturity; rbac matrix. Stamped process, compliance, MCP dsl, policy **USED@703**.
