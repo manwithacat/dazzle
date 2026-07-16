@@ -110,26 +110,58 @@ def htmx_response(
     return HTMLResponse(content=content, status_code=status_code, headers=headers)
 
 
+# Mutation toast titles / default body copy (showToast detail → dz-toast host).
+_MUTATION_TOAST_TITLE: dict[str, str] = {
+    "created": "Created",
+    "updated": "Saved",
+    "deleted": "Deleted",
+}
+_MUTATION_TOAST_MESSAGE: dict[str, str] = {
+    "created": "{entity} was created",
+    "updated": "{entity} was updated",
+    "deleted": "{entity} was deleted",
+}
+
+
 def htmx_trigger_headers(
     entity_name: str,
     action: str,
     message: str | None = None,
+    *,
+    title: str | None = None,
+    view_url: str | None = None,
 ) -> dict[str, str]:
     """Build HX-Trigger header dict for entity mutation responses.
+
+    Fires ``entity{Action}`` plus ``showToast`` with structured slots the
+    ``dz-toast`` host understands (title, message, optional actions).
 
     Args:
         entity_name: Name of the entity (e.g. "Task").
         action: Mutation action ("created", "updated", "deleted").
-        message: Optional toast message. If None, auto-generated.
+        message: Optional toast body. If None, auto-generated.
+        title: Optional toast title. If None, action-derived default.
+        view_url: When set (and no full-page redirect is taking the user
+            there already), emit a "View" action link on the toast.
 
     Returns:
         Dictionary with "HX-Trigger" key ready to pass to Response headers.
     """
     event_name = f"entity{action.capitalize()}"
-    toast_message = message or f"{entity_name} {action} successfully"
+    toast_title = title or _MUTATION_TOAST_TITLE.get(action, action.capitalize())
+    toast_message = message or _MUTATION_TOAST_MESSAGE.get(
+        action, f"{entity_name} {action} successfully"
+    ).format(entity=entity_name)
+    toast: dict[str, Any] = {
+        "message": toast_message,
+        "type": "success",
+        "title": toast_title,
+    }
+    if view_url:
+        toast["actions"] = [{"label": "View", "href": view_url}]
     trigger = {
         event_name: {"entity": entity_name},
-        "showToast": {"message": toast_message, "type": "success"},
+        "showToast": toast,
     }
     return {"HX-Trigger": json.dumps(trigger)}
 
@@ -202,7 +234,13 @@ def htmx_error_response(
         status_code=status_code,
         retarget="#form-errors",
         reswap="innerHTML",
-        triggers={"showToast": {"message": "Please fix the errors below", "type": "error"}},
+        triggers={
+            "showToast": {
+                "title": "Validation error",
+                "message": "Please fix the errors below",
+                "type": "error",
+            }
+        },
     )
 
 
@@ -295,7 +333,13 @@ def htmx_toast_error_response(errors: list[str]) -> HTMLResponse:
     return htmx_response(
         "",
         status_code=200,
-        triggers={"showToast": {"message": message, "type": "error"}},
+        triggers={
+            "showToast": {
+                "title": "Couldn't complete",
+                "message": message,
+                "type": "error",
+            }
+        },
     )
 
 

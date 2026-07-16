@@ -224,7 +224,13 @@ def _render_table_sentinel(table: dict[str, Any]) -> str:
 
 
 def _with_htmx_triggers(
-    request: Any, result: Any, entity_name: str, action: str, redirect_url: str | None = None
+    request: Any,
+    result: Any,
+    entity_name: str,
+    action: str,
+    redirect_url: str | None = None,
+    *,
+    view_url: str | None = None,
 ) -> Any:
     """Wrap a mutation result with HX-Trigger headers for HTMX requests.
 
@@ -238,6 +244,8 @@ def _with_htmx_triggers(
         entity_name: Name of the entity (e.g. "Task").
         action: Mutation action ("created", "updated", "deleted").
         redirect_url: Optional URL for HX-Redirect header (post-create navigation).
+        view_url: Optional detail URL for a toast "View" action. Suppressed when
+            ``redirect_url`` already navigates the browser to the same place.
     """
 
     if not _is_htmx_request(request):
@@ -254,7 +262,13 @@ def _with_htmx_triggers(
     else:
         body = result
 
-    headers = htmx_trigger_headers(entity_name, action)
+    # Offer View only when the user is staying put (no redirect) or redirect
+    # lands somewhere other than the detail URL.
+    toast_view = view_url
+    if toast_view and redirect_url and toast_view.rstrip("/") == redirect_url.rstrip("/"):
+        toast_view = None
+
+    headers = htmx_trigger_headers(entity_name, action, view_url=toast_view)
     if redirect_url:
         headers["HX-Redirect"] = redirect_url
     return JSONResponse(content=body, headers=headers)

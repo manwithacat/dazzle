@@ -630,6 +630,7 @@ class RouteGenerator:
                         storage_bindings=self.entity_storage_bindings.get(entity_name or "")
                         or None,
                     ),
+                    entity_slug=_entity_slug,
                     file_service=self.file_service if _file_fields else None,
                     file_fields=_file_fields,
                 )
@@ -875,7 +876,9 @@ def generate_crud_routes(
         # read-only view back into the panel cell itself. Suppress HX-Redirect so
         # only the HX-Trigger toast/refresh headers ride along; otherwise settle
         # to the current page as before.
-        redirect_url = None if is_peek_request(request) else _htmx_current_url(request)
+        peek = is_peek_request(request)
+        redirect_url = None if peek else _htmx_current_url(request)
+        # Simple CRUD helper has no entity_slug; titled toast still ships.
         return _with_htmx_triggers(
             request, result, entity_name, "updated", redirect_url=redirect_url
         )

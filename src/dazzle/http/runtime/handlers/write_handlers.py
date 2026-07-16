@@ -33,6 +33,7 @@ from pydantic import BaseModel
 
 from dazzle.http.runtime.audit_wrap import _wrap_with_auth
 from dazzle.http.runtime.document_routes import verify_file_triple
+from dazzle.http.runtime.htmx import is_peek_request
 from dazzle.http.runtime.htmx_render import _with_htmx_triggers
 from dazzle.http.runtime.http_errors import require_found
 from dazzle.http.runtime.repository import ConstraintViolationError
@@ -396,8 +397,14 @@ def create_create_handler(
                 return {"status": "duplicate", "message": "Already submitted"}
             raise
 
+        detail_url = _build_redirect_url(result)
         return _with_htmx_triggers(
-            request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
+            request,
+            result,
+            entity_name,
+            "created",
+            redirect_url=detail_url,
+            view_url=detail_url,
         )
 
     return _wrap_with_auth(
@@ -416,6 +423,7 @@ def create_create_handler(
 def create_update_handler(
     spec: "RouteSpec",
     *,
+    entity_slug: str = "",
     file_service: Any = None,
     file_fields: list[str] | None = None,
 ) -> Callable[..., Any]:
@@ -425,6 +433,8 @@ def create_update_handler(
     ``spec.input_schema`` is required for update handlers.
 
     Args:
+        entity_slug: URL slug for ``/app/{slug}/{id}`` detail links. Used for
+            peek save-and-stay toast "View" actions when no HX-Redirect fires.
         file_service: When provided with ``file_fields``, each file-field
             value in the request body is triple-verified against its stored
             metadata before the write proceeds (#1551). Guards are inactive
@@ -540,8 +550,18 @@ def create_update_handler(
         if auth_ctx is not None:
             kwargs["auth_context"] = auth_ctx
         result = require_found(await service.execute(**kwargs))
+        # #1494 peek save-and-stay: suppress full-page redirect; offer View
+        # on the titled toast so the operator can open the full detail page.
+        peek = is_peek_request(request)
+        detail_url = f"/app/{entity_slug}/{id}" if entity_slug else None
+        redirect_url = None if peek else _htmx_current_url(request)
         return _with_htmx_triggers(
-            request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
+            request,
+            result,
+            entity_name,
+            "updated",
+            redirect_url=redirect_url,
+            view_url=detail_url if peek else None,
         )
 
     return _wrap_with_auth(

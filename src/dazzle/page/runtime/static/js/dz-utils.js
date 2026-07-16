@@ -87,12 +87,19 @@
 (function () {
   "use strict";
   // ── Client toast dispatch + CSV download (window.dz utilities) ─────
-  // Global toast function (backward compat with dz.toast)
+  // Global toast function (backward compat with dz.toast). Accepts either
+  // (message, type) or a single detail object { message, type?, title?, actions? }
+  // so callers can use structured slots without clobbering the dz-toast host.
   window.dz = window.dz || {};
   window.dz.toast = (message, type = "info") => {
+    const detail =
+      message && typeof message === "object"
+        ? message
+        : { message, type };
     const el = document.getElementById("dz-toast");
-    if (el)
-      el.dispatchEvent(new CustomEvent("toast", { detail: { message, type } }));
+    if (el) el.dispatchEvent(new CustomEvent("toast", { detail }));
+    else
+      document.dispatchEvent(new CustomEvent("showToast", { detail }));
   };
 
   /**
