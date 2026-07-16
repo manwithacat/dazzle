@@ -771,14 +771,16 @@ class DazzleAgent:
             else:
                 parts.append(text)
 
+        # grok-cli: trial step-1 has aborted on max_turns=4 (cycle 666/715)
+        # and wall-clock timeout=300s on large flattened prompts (cycle 720).
+        grok = self._llm_driver == "grok-cli"
         return call_subscription_cli(
             self._llm_driver,
             "\n\n".join(parts),
             system_prompt=system_prompt,
             model=self._model,
-            # grok-cli headless burns turns when built-ins are denied; trial
-            # step-1 aborted under the previous default of 4 (cycle 666/715).
-            max_turns=32 if self._llm_driver == "grok-cli" else 8,
+            max_turns=32 if grok else 8,
+            timeout=600 if grok else 300,
         )
 
     # Back-compat alias for callers/tests that still name the Claude path.

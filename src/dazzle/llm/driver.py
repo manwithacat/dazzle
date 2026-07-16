@@ -318,7 +318,9 @@ def call_grok_cli(
     *,
     system_prompt: str | None = None,
     model: str | None = None,
-    timeout: int = 300,
+    # Trial/agent prompts can exceed 300s wall-clock under headless Grok
+    # (cycle 720: step-1 timeout with max_turns already raised).
+    timeout: int = 600,
     # Higher than claude-cli's 4: trial/agent prompts + denied built-in tool
     # attempts burn turns under Grok's headless runner (observed: max_turns=4
     # → "max turns reached" on first qa-trial step; 20 succeeds on the same
