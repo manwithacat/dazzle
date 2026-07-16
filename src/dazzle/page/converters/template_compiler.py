@@ -919,9 +919,10 @@ def _compile_list_surface(
     table_id = f"dt-{surface.name}"
 
     # Derive inline-editable columns from field types.
-    # Editable: text, bool, badge (enum), date.
+    # Editable: text, bool, badge (enum), date, datetime (date-time editor).
     # Not editable: pk, ref, computed, sensitive, money, _id FK columns.
-    _EDITABLE_COL_TYPES = {"text", "bool", "badge", "date"}
+    # Keep in lockstep with server.py C2.3 (entity_htmx_meta inline_editable).
+    _EDITABLE_COL_TYPES = {"text", "bool", "badge", "date", "datetime"}
     _NON_EDITABLE_KEYS = {"id", "created_at", "updated_at"}
     inline_editable = [
         col.key

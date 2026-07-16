@@ -48,6 +48,8 @@ def _plausible_value(col: dict[str, Any]) -> Any:
         return True
     if ctype == "date":
         return "2026-01-01"
+    if ctype == "datetime":
+        return "2026-07-16T01:30:24.001035+00:00"
     if ctype in ("number", "money", "currency"):
         return 1
     if ctype == "file":
@@ -83,7 +85,7 @@ def test_list_surface_renders_a_hydrated_row(app, surface, entity, enums) -> Non
     inline_editable = [
         str(c.get("key", ""))
         for c in cols
-        if str(c.get("type", "")) in ("text", "bool", "badge", "date")
+        if str(c.get("type", "")) in ("text", "bool", "badge", "date", "datetime")
         and str(c.get("key", "")) not in ("id", "created_at", "updated_at")
         and not str(c.get("key", "")).endswith("_id")
         and (str(c.get("type", "")) != "badge" or c.get("filter_options"))
@@ -115,3 +117,44 @@ def test_matrix_exercises_the_1573_shape() -> None:
             if str(c.get("type", "")) == "badge" and c.get("filter_options"):
                 hits += 1
     assert hits >= 1, "no badge-with-options column in the matrix — gate lost its teeth"
+
+
+def test_datetime_column_humanises_and_is_inline_editable() -> None:
+    """#1597: datetime cols must not render raw ISO or stamp edit-kind=text.
+
+    ``build_surface_columns`` keeps type=datetime; C2.3 marks the field
+    inline-editable; the cell editor uses kind=date (date-time capable) while
+    display is UK date+time via ``_render_cell_display``.
+    """
+    cols = [
+        {"key": "title", "type": "text", "label": "Title"},
+        {"key": "assigned_at", "type": "datetime", "label": "Assigned"},
+    ]
+    inline_editable = [
+        str(c.get("key", ""))
+        for c in cols
+        if str(c.get("type", "")) in ("text", "bool", "badge", "date", "datetime")
+        and str(c.get("key", "")) not in ("id", "created_at", "updated_at")
+        and not str(c.get("key", "")).endswith("_id")
+    ]
+    assert "assigned_at" in inline_editable
+    row = {
+        "id": str(uuid.uuid4()),
+        "title": "Task",
+        "assigned_at": "2026-07-16T01:30:24.001035+00:00",
+    }
+    table = {
+        "columns": cols,
+        "entity_name": "Task",
+        "api_endpoint": "/tasks",
+        "table_id": "t-task_list",
+        "detail_url_template": "/app/task/{id}",
+        "inline_editable": inline_editable,
+    }
+    html = render_data_table_rows(build_data_table(table, [row]))
+    # Visible cell text is humanised (raw ISO may still sit in data-dz-edit-value).
+    assert ">16 Jul 2026 01:30<" in html
+    assert 'data-dz-edit-kind="date"' in html  # datetime → date editor
+    assert 'data-dz-grid-edit="assigned_at"' in html
+    # title may still be text; assigned_at must not be
+    assert 'data-dz-grid-edit="assigned_at" data-dz-edit-kind="text"' not in html

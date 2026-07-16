@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics / task_inbox; HR workspaces lead with headcount/compensation metrics.
 
 ### Fixed
+- **List datetime inline-edit alignment** — SSR `template_compiler` C2.3
+  editable set includes `datetime` (match HTMX `server.py`); list-fragment
+  gate + regression assert humanised display and non-text edit-kind (#1597).
 - **List row drill keeps AppShell** — default HTMX target for list/workspace
   row drill is `#main-content` (not `body`), matching sidebar nav so content
   fragments no longer wipe the SaaS chrome on list→detail.
