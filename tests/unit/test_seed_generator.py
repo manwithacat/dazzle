@@ -126,9 +126,11 @@ class TestGenerateSeedRows:
             self._make_template(window_start=-1, window_end=1), reference_date=ref
         )
         is_current = {r["name"]: r["is_current"] for r in rows}
-        assert is_current["2024/25"] == "false"
-        assert is_current["2025/26"] == "true"
-        assert is_current["2026/27"] == "false"
+        # Boolean expressions return real bools (not "true"/"false" strings)
+        # so repository create does not choke on bool columns.
+        assert is_current["2024/25"] is False
+        assert is_current["2025/26"] is True
+        assert is_current["2026/27"] is False
 
     def test_financial_year_format(self) -> None:
         from dazzle.core.ir.seed import SeedFieldTemplate

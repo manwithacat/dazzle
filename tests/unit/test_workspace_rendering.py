@@ -736,7 +736,7 @@ class TestBuildSurfaceColumns:
         col_map = {c["key"]: c for c in columns}
         assert col_map["title"]["type"] == "text"
         assert col_map["status"]["type"] == "badge"
-        assert col_map["created_at"]["type"] == "date"
+        assert col_map["created_at"]["type"] == "datetime"
         assert col_map["completed"]["type"] == "bool"
 
 
