@@ -28,9 +28,14 @@ Every one of these six kinds of record can be browsed, inspected in detail, crea
 
 ## Where work happens
 
-**Engineering Dashboard** — comprehensive field-testing oversight for engineers and managers. It layers many views over the same records: lists, a kanban board, and a tabbed list of Issue Reports; Devices as a list, kanban, timeline, tree, diagram, and map; Firmware Releases as a list, kanban, and timeline; Tasks as a list and kanban; and a directory of Testers.
+**Engineering Dashboard** — field-testing oversight for engineers and managers,
+job-shaped first: fleet and issue metrics, an open **triage queue** of reports
+by severity, critical-issue and open-task queues, then secondary demos (kanban
+boards, timelines, device tree, diagram, map, and tester directory).
 
-**Tester Dashboard** — the personal field-testing hub. A tester lands on their assigned Devices, their Issue Reports, a timeline of their Test Sessions, and their Tasks.
+**Tester Dashboard** — the personal field-testing hub. A tester lands on
+personal metrics, queues of assigned Devices, their Issue Reports, and Tasks,
+plus a timeline of their Test Sessions.
 
 ## How work flows through it
 
@@ -46,7 +51,7 @@ Twenty-six authored scenarios pin these flows down, spanning all three active ro
 - When a Field Tester reports a device issue, an Issue Report is created referencing the Device and the tester, and it starts life as open.
 - When a Field Tester logs a test session, the session records the device, tester, environment, and duration, and appears in the tester's dashboard.
 - When a Field Tester views their devices, they see only Devices whose assigned tester is themselves, and can click through to log a session or report an issue.
-- When an Engineer triages recent issue reports, they see all open reports sorted by severity and can move a report from open to triaged.
+- When an Engineer triages recent issue reports, they see open reports in the triage queue sorted by severity and can move a report from open to triaged.
 - When an Engineer links a firmware release to a device batch, devices matching that batch show the new firmware version; when an Engineer marks a device as recalled, its associated testers are notified.
 - When a Manager reviews team workload, they see open Tasks grouped by assignee and can reassign a Task from one engineer to another; a Manager tracking release progress sees releases newest-first with counts of drafted versus released versus deprecated.
 

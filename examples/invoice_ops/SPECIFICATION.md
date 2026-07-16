@@ -65,12 +65,12 @@ visibility rule reads, in effect, "its tenant is the signed-in user's tenant".
 
 ## Where work happens
 
-The **Finance Operations** workspace is the shared home screen for day-to-day
-invoice throughput. It shows the invoice pipeline as a funnel across lifecycle
-stages, payment-attempt health at a glance, and the two queues that need a
-person: invoices awaiting approval (largest amounts first) and open disputes.
-Each queue row opens the invoice itself, so triage and action happen in one
-place.
+The **Finance Operations** workspace is the shared home for every persona —
+requester, approver, finance, auditor, and admins. It opens with invoice
+metrics (submitted, approved, disputed, paid), the lifecycle funnel, and real
+review queues: awaiting approval, ready to pay, and open disputes, plus a
+payment-attempt health chart. Each queue row opens the invoice itself, so
+triage and action happen in one place rather than a flat invoice list.
 
 ## How work flows through it
 

@@ -73,11 +73,11 @@ material through the record screens themselves.
 
 ## Where work happens
 
-**Acme Billing** — the single workspace, serving administrators, organization
-owners, and auditors. Its purpose is to manage organizations, projects,
-invoices, and team memberships, and it presents all four side by side: a list
-of organizations, a list of projects, a list of invoices, and a list of
-memberships.
+**Acme Billing** — the single workspace for administrators, organization
+owners, and auditors. It opens with portfolio metrics (organizations,
+projects, invoices, memberships) and an invoice review queue, then the entity
+lists for organizations, projects, and memberships — pressure and open
+billing work before dense administration.
 
 ## How work flows through it
 

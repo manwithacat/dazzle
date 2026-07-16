@@ -28,29 +28,31 @@ context or decisions — each comment is always tied to its task and its author.
 ## Who uses it
 
 **Administrators** have full system access for task and user management. They
-aim to manage all tasks, configure team settings, and view analytics, working
-across the Task Board, the Admin Dashboard, and the Team Overview. They alone
-can add, change, or remove Team Member accounts.
+aim to manage all tasks, configure team settings, and view analytics. They
+land on the **Admin Dashboard** — task and team metrics plus urgent and
+overdue work queues — and also use the Task Board and Team Overview. They
+alone can add, change, or remove Team Member accounts.
 
-**Team Managers** oversee team tasks and assignments — assigning tasks to the
-team, tracking progress, and reviewing completed work — from the Task Board
-and the Team Overview. Like administrators, they can see every task and every
-Team Member.
+**Team Managers** oversee team tasks and assignments — assigning work,
+tracking progress, and reviewing completed work. They land on **Team
+Overview**: team metrics and review, unassigned, and in-progress queues —
+not a flat dump of every task. Like administrators, they can see every task
+and every Team Member.
 
-**Team Members** work on assigned tasks: completing them, updating their
-status, and requesting help, from the Task Board and their personal My Work
-view. A Team Member sees only tasks where they are the assignee or the
-creator, and can update only those.
+**Team Members** work on assigned tasks: completing them, updating status,
+and requesting help. They land on **My Work** — personal metrics and WIP/todo
+queues, with completed history as a list. A Team Member sees only tasks where
+they are the assignee or the creator, and can update only those.
 
 ## Where work happens
 
-Work is organised into four workspaces. The **Task Board** — shared by all
-three roles — is for managing tasks visually: a kanban board of tasks, a task
-timeline, and the comment stream. The **Admin Dashboard** gives
-administrators a system-wide overview of tasks and Team Members. The **Team
-Overview**, for administrators and managers, monitors team progress and
-workload through several task views. **My Work** is the personal view of each
-person's assigned tasks.
+Work is organised into four job-shaped workspaces. The **Task Board** —
+shared by all three roles — is for managing flow visually: a kanban board of
+tasks, a due-date timeline, and recent comments. The **Admin Dashboard** is
+the administrator home: metrics for tasks and users, plus urgent and overdue
+queues. The **Team Overview** is the manager home: metrics and queues for
+review, unassigned, and in-progress work. **My Work** is each person's
+assigned pressure strip and work queues.
 
 ## How work flows through it
 

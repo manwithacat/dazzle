@@ -27,13 +27,17 @@ Around these, the product provides seventeen capabilities: browsing, creating, v
 
 **Team Members** work on assigned tasks. They see all projects, milestones, comments, and attachments, and can create tasks, comment, and upload files — but their task list and their editing rights extend only to Tasks where the assignee is the signed-in user.
 
-All three roles work in the same two places: the Dashboard and the Project Board.
+Admins and Project Managers land on the **Dashboard**; Team Members land on
+the **Project Board**. Both places stay available to everyone with access.
 
 ## Where work happens
 
-**Dashboard** gives the whole team the project and task overview: a grid of Projects beside a kanban board of Tasks.
+**Dashboard** is the portfolio home: task metrics first, an open-task review
+queue, a grid of Projects, and a kanban of task flow — metrics and queues
+before dense boards.
 
-**Project Board** is where task and milestone management happens day to day: a kanban board of Tasks alongside the list of Milestones.
+**Project Board** is day-to-day delivery: board metrics, a kanban of Tasks, an
+unassigned work queue, and the Milestone list.
 
 ## How work flows through it
 

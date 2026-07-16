@@ -63,15 +63,15 @@ dedicated screens — fourteen in all, from the staff directory to
 
 ## Where work happens
 
-- **Staff Directory** — the shared entry point for all four roles: current
-  employees, filterable by department and level.
+- **Staff Directory** — shared entry for all four roles: headcount metrics
+  (people, departments, roles) first, then current staff and recent starters.
 - **Person Detail** — a career timeline, showing a person's employment history
   and salary history side by side. Open to all four roles, with each seeing
   only what their visibility rules allow.
 - **Org Chart** — the department tree and manager hierarchy, with role
   listings; used by HR admins and line managers.
-- **Compensation Review** — salary band analysis by department and role level,
-  for HR admins and finance.
+- **Compensation Review** — finance/HR home for salary work: compensation
+  metrics strip, then the active salary list for band analysis.
 - **Time Machine** — an HR-admin-only workspace that re-projects employment,
   salary, and reporting-line views as of any chosen date: append
   `?as_of=YYYY-MM-DD` and every region shows the organisation as it stood on

@@ -48,20 +48,20 @@ created, and edited through dedicated screens — fifteen in all.
 - **Designer** — creates and manages design assets.
 - **Reviewer** — reviews and approves assets.
 
-All three roles work in the same two places: the Studio Dashboard and the Asset
-Gallery. Visibility of every kind of record — users, brands, assets, campaigns,
-and feedback — is governed by declared rules; under the current rules, all
-three roles can see all records, and that grant is itself an explicit,
-auditable declaration rather than an accident of screen design.
+Admins and designers land on the **Studio Dashboard**; reviewers land on the
+**Asset Gallery** so review pressure is first. Visibility of every kind of
+record — users, brands, assets, campaigns, and feedback — is governed by
+declared rules; under the current rules, all three roles can see all records,
+and that grant is itself an explicit, auditable declaration.
 
 ## Where work happens
 
-**Studio Dashboard** — the shared home for admins, designers, and reviewers: a
-grid of brands, a grid of design assets, and campaign metrics, giving the whole
-team one view of the studio's output.
+**Studio Dashboard** — portfolio metrics (assets, in-review, brands, campaigns)
+first, then brand and asset grids and campaign metrics for the studio's output.
 
-**Asset Gallery** — where the asset pipeline is worked: a grid of design assets
-alongside a queue of assets, serving the same three roles.
+**Asset Gallery** — gallery metrics (draft / in review / approved), the asset
+grid, and a **review queue** limited to assets in review so reviewers work the
+pile rather than scanning every draft.
 
 ## How work flows through it
 

@@ -24,14 +24,16 @@ Letter** is a signed engagement letter or NDA between the firm and a contact
 ## Who uses it
 
 **Administrators** have oversight of the system. **Users** do the everyday
-work — browsing, searching, and maintaining contacts — from the Contacts
-workspace.
+work — browsing, searching, and maintaining contacts — landing on **Home**
+for overview, then **Contacts** for dual-pane browse.
 
 ## Where work happens
 
-Everything happens in one place: the **Contacts** workspace, built for
-browsing contacts and viewing details. It combines a contact search box, the
-contact list, and a detail panel for the selected contact.
+**Home** is the welcome overview: directory metrics (total and favourites), a
+favourites queue for starred contacts, and a short alphabetical sample of the
+directory. **Contacts** is the dual-pane browse surface: search, a favourites
+queue strip, the full contact list, and a detail panel for the selected
+contact.
 
 ## How work flows through it
 
@@ -40,8 +42,9 @@ new contact, it is saved and confirmed on screen. Browsing shows every
 contact sorted alphabetically by name, and a case-insensitive search narrows
 the list to contacts whose name, email, or company matches. Opening a contact
 shows its full details, with a breadcrumb back to the list. A User can mark a
-contact as a favourite, which sorts it to the top of the list; edits to an
-existing contact are saved with the time of the change recorded.
+contact as a favourite so it appears in the Home and Contacts favourites
+queues; edits to an existing contact are saved with the time of the change
+recorded.
 
 ## The technical foundation
 
