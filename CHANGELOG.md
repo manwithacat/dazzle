@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   example lists the non-active **device attention** queue (TR-35).
 - **fieldtest_hub SPEC.md** — product-brief UI section matches job workspaces
   (engineering metrics + device attention / triage queues; tester personal queues).
+- **support_tickets + contact_manager SPEC.md** — product briefs lead with job
+  homes (ticket queue / manager ops / my tickets; home metrics + favourites queue)
+  instead of list-first dashboards.
 
 ### Fixed
 - **PreToolUse hooks under system Python 3.9 / multi-harness payloads** —

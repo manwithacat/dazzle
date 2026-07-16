@@ -130,17 +130,29 @@ The system should be simple enough that anyone on the team can use it without tr
 
 ## User Interface
 
-### Pages I Need
+### Where work happens (job workspaces)
 
-1. **Ticket List** (Main dashboard)
-   - Shows all tickets in a table
-   - Columns: Title, Status, Priority, Created By, When Created
-   - Color coding for priority (red for critical, etc.)
-   - Filter options: Show Only Unassigned, Show Only Mine
-   - "Create New Ticket" button
-   - Click any ticket to see details
+1. **Ticket Queue** (agent home)
+   - Summary metrics for open work
+   - Review **queue** of open tickets (not a flat entity list as the primary)
+   - Kanban of open statuses as secondary
+   - Create-ticket affordance from the workspace
 
-2. **Ticket Detail**
+2. **Manager Ops** (manager home)
+   - Team/SLA metrics and readiness strip
+   - Focused **critical** and **unassigned** queues
+   - Funnel of ticket statuses
+
+3. **My Tickets** (customer home)
+   - Personal open/WIP counts
+   - Open-cases **queue** plus full history list
+
+4. **Agent Dashboard / Agent Console** (supporting)
+   - Personal claimed-work view; agent console for managers/admins to inspect an agent's load
+
+### Supporting surfaces (CRUD / detail)
+
+5. **Ticket Detail**
    - Full ticket information
    - All comments shown chronologically
    - Who created it, who's assigned
@@ -148,21 +160,21 @@ The system should be simple enough that anyone on the team can use it without tr
    - Buttons: Edit, Delete, Add Comment
    - Option to change assignment
 
-3. **Create Ticket Form**
+6. **Create Ticket Form**
    - Fields: Title (required), Description (required), Priority
    - Who created it: filled in automatically
    - Status: automatically "Open"
    - Assigned to: blank (will be assigned by staff)
    - Simple, fast to fill out
 
-4. **Edit Ticket Form**
+7. **Edit Ticket Form**
    - Update title and description
    - Change status (staff can move through workflow)
    - Change priority (if it becomes more/less urgent)
    - Reassign to different person
    - Shows who created it (can't change)
 
-5. **Delete Confirmation**
+8. **Delete Confirmation**
    - "Are you sure?" page
    - Shows ticket title
    - Warning if there are comments

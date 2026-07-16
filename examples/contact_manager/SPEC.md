@@ -55,10 +55,19 @@ A person in the user's professional or personal network.
 
 ## User Interface Specification
 
+### Where work happens
+
+1. **Home** — welcome overview: directory **metrics** (total + favourites), a
+   **favourites queue** for starred contacts, and a short alphabetical sample
+   of the directory (not a bare full-table landing).
+
+2. **Contacts** — dual-pane browse surface (below).
+
 ### Primary Pattern: Dual-Pane Flow
 
 The application uses a **master-detail** pattern:
-- **Left pane**: Scrollable list of contacts for browsing
+- **Left pane**: Scrollable list of contacts for browsing, with a favourites
+  queue strip above the directory
 - **Right pane**: Full details of the currently selected contact
 - **Mobile**: Stacked view with detail sliding over list
 
