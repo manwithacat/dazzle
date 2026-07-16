@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+## [0.104.9] - 2026-07-16
+
+### Fixed
+- **#1603 data-table HTMX row drill substitutes FK placeholders** — rich
+  CRUD `_data_row` path now shares `_resolve_row_links` / `format_map` so
+  `open: Contact via contact` emits `hx-get="/app/contact/<uuid>"` instead
+  of a literal `{contact}` placeholder; null FKs skip the link.
+- **#1599 create form `source=` always emits search-select** — pack
+  resolution no longer silently falls back to plain text; endpoint always
+  includes `?source=<pack>`; form builder receives fragment_sources at boot;
+  `search_trigger=` also registers fragment sources. Characterization tests
+  cover data-table open-via HTML and full FieldContext → typeahead HTML.
+
 ## [0.104.8] - 2026-07-16
 
 ### Fixed

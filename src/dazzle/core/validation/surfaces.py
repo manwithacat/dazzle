@@ -260,23 +260,36 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 source_ref = options.get("source")
                 trigger = options.get("search_trigger")
                 if not source_ref and trigger:
-                    # Prefer explicit pack.op; bare pack → pick a search_* op.
-                    from dazzle.page.field_source_alias import (
-                        resolve_search_trigger_to_source,
-                    )
-
-                    aliased = resolve_search_trigger_to_source(str(trigger))
-                    if aliased:
-                        source_ref = aliased
+                    # #1599: bare pack → first search_* op via pack-ops registry
+                    # (core must not import page/api_kb — #1438 contracts).
+                    trigger_s = str(trigger).strip()
+                    if "." in trigger_s:
+                        source_ref = trigger_s
                     else:
-                        errors.append(
-                            f"Surface '{surface.name}' field '{element.field_name}' "
-                            f"search_trigger='{trigger}' could not be resolved to a "
-                            f"search operation on a known API pack (#1599). Use "
-                            f"source=<pack>.<operation> "
-                            f"(e.g. source=companies_house_lookup.search_companies)"
-                        )
-                        continue
+                        packs = _resolve_pack_ops()
+                        if packs:
+                            ops = packs.get(trigger_s) or set()
+                            if "search_companies" in ops:
+                                source_ref = f"{trigger_s}.search_companies"
+                            else:
+                                search_ops = sorted(o for o in ops if str(o).startswith("search_"))
+                                if search_ops:
+                                    source_ref = f"{trigger_s}.{search_ops[0]}"
+                                else:
+                                    errors.append(
+                                        f"Surface '{surface.name}' field "
+                                        f"'{element.field_name}' "
+                                        f"search_trigger='{trigger}' could not be "
+                                        f"resolved to a search operation on a known "
+                                        f"API pack (#1599). Use "
+                                        f"source=<pack>.<operation> "
+                                        f"(e.g. source=companies_house_lookup"
+                                        f".search_companies)"
+                                    )
+                                    continue
+                        # packs empty (api_kb unavailable) → skip resolve; render
+                        # still aliases when packs load.
+
                 if not source_ref or "." not in str(source_ref):
                     continue
                 source_ref = str(source_ref)

@@ -9,7 +9,40 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 35 tools
+# Count: 36 tools
+
+tool: agent
+  description_hash: 64d89b186111
+  description_len: 244
+  {
+    "properties": {
+      "name": {
+        "description": "Playbook name (default: domain_logic)",
+        "type": "string"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "context",
+          "prove",
+          "playbook"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "story_id": {
+        "description": "Story id for prove (optional; default all accepted)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
 
 tool: agent_commands
   description_hash: 21ccbeb48222

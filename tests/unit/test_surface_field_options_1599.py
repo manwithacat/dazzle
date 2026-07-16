@@ -124,3 +124,39 @@ def test_search_trigger_form_field_is_search_select() -> None:
     f0 = fields[0]
     assert f0.type == "search_select"
     assert f0.source is not None
+    assert "source=companies_house_lookup" in (f0.source.endpoint or "")
+
+
+def test_source_option_renders_search_select_html_not_plain_text() -> None:
+    """#1599 dogfood: create field with source= must emit typeahead markup.
+
+    CyFuture pilot still saw plain ``dz-form-input`` text after v0.104.8 —
+    characterization pins the full FieldContext → HTML contract.
+    """
+    from dazzle.render.fragment.form_field import render_field_context
+
+    surface = _create_surface({"source": "companies_house_lookup.search_companies"})
+    entity = _entity()
+    fields = _build_form_fields(surface, entity)
+    assert fields[0].type == "search_select"
+    assert fields[0].source is not None
+    assert "source=companies_house_lookup" in fields[0].source.endpoint
+
+    html = render_field_context(fields[0], {})
+    assert 'data-dz-widget="search_select"' in html
+    assert 'id="search-input-company_number"' in html
+    assert 'id="search-results-company_number"' in html
+    assert "source=companies_house_lookup" in html
+    # Must not be a bare text input (the pilot regression).
+    assert 'class="dz-form-input"' not in html or "dz-search-select" in html
+
+
+def test_source_survives_missing_pack_as_search_select() -> None:
+    """Declared source= never degrades to text when pack metadata is absent."""
+    surface = _create_surface({"source": "nonexistent_pack_xyz.search_things"})
+    entity = _entity()
+    fields = _build_form_fields(surface, entity)
+    f0 = fields[0]
+    assert f0.type == "search_select"
+    assert f0.source is not None
+    assert "source=nonexistent_pack_xyz" in f0.source.endpoint

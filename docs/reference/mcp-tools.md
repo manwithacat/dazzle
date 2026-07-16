@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 34 tools, 158 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 35 tools, 161 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -13,6 +13,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 
 | Tool | Operations | Summary |
 |------|------------|---------|
+| [`agent`](#agent) | 3 | Agent closed-loop control plane (#1605): context (brownfield map + runtime |
 | [`agent_commands`](#agent_commands) | 3 | Agent development commands: list (available commands with maturity status), get (rendered skill content for a command), check_updates (version comparison for sync) |
 | [`api_pack`](#api_pack) | 3 | API pack operations: list, search, get |
 | [`bootstrap`](#bootstrap) | — | Entry point for 'build me an app' requests |
@@ -49,6 +50,20 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`user_profile`](#user_profile) | 4 | User profile for adaptive persona inference |
 
 ## Per-tool detail
+
+### `agent`
+
+Agent closed-loop control plane (#1605): context (brownfield map + runtime.truth + next_steps), prove (static binding evidence), playbook (domain_logic map→bind→scaffold→prove). Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`.
+
+**Operations (3):** `context`, `prove`, `playbook`
+
+**Parameters:**
+
+- `story_id` *(string)* — Story id for prove (optional; default all accepted)
+- `name` *(string)* — Playbook name (default: domain_logic)
+- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
+
+---
 
 ### `agent_commands`
 

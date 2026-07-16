@@ -520,9 +520,18 @@ def _effective_field_source_ref(element_options: dict[str, Any]) -> str | None:
 def _resolve_field_source(
     source_ref: str,
 ) -> FieldSourceContext | None:
-    """Resolve a source= option (e.g. pack.operation) to a FieldSourceContext."""
-    if not source_ref or "." not in source_ref:
+    """Resolve a source= option (e.g. pack.operation) to a FieldSourceContext.
+
+    #1599: when the author declared ``source=`` / aliased ``search_trigger=``,
+    always emit a typeahead context so create/edit never silently degrade to
+    a plain text input. Pack metadata (display/value keys) is best-effort;
+    the search endpoint always carries ``?source=<pack>`` so HTMX lookup works.
+    """
+    if not source_ref or not str(source_ref).strip():
         return None
+    source_ref = str(source_ref).strip()
+    pack_name = source_ref.split(".", 1)[0]
+    op_name = source_ref.rsplit(".", 1)[-1] if "." in source_ref else ""
 
     # Try the centralised resolver first (uses pre-built fragment_sources)
     source_ctx: FieldSourceContext | None = None
@@ -539,26 +548,31 @@ def _resolve_field_source(
         )
         source_ctx = None
 
-    # Fall back to direct API pack resolution
-    if source_ctx is None:
-        pack_name, op_name = source_ref.rsplit(".", 1)
-        try:
-            from dazzle.api_kb import load_pack
+    # Fall back to direct API pack resolution (keys + endpoint with ?source=)
+    if source_ctx is None and pack_name:
+        source_config: dict[str, Any] = {}
+        if op_name:
+            try:
+                from dazzle.api_kb import load_pack
 
-            pack = load_pack(pack_name)
-            if pack:
-                source_config = pack.generate_fragment_source(op_name)
-                source_ctx = FieldSourceContext(
-                    endpoint="/_dazzle/fragments/search",
-                    display_key=source_config.get("display_key", "name"),
-                    value_key=source_config.get("value_key", "id"),
-                    secondary_key=source_config.get("secondary_key", ""),
-                    autofill=source_config.get("autofill", {}),
+                pack = load_pack(pack_name)
+                if pack:
+                    source_config = pack.generate_fragment_source(op_name)
+            except Exception:
+                logger.warning(
+                    "Failed to resolve field source '%s' via API pack",
+                    source_ref,
+                    exc_info=True,
                 )
-        except Exception:
-            logger.warning(
-                "Failed to resolve field source '%s' via API pack", source_ref, exc_info=True
-            )
+        # Always return a context so form emission becomes search_select —
+        # missing pack metadata must not collapse to plain text (#1599 dogfood).
+        source_ctx = FieldSourceContext(
+            endpoint=f"/_dazzle/fragments/search?source={pack_name}",
+            display_key=source_config.get("display_key", "name"),
+            value_key=source_config.get("value_key", "id"),
+            secondary_key=source_config.get("secondary_key", ""),
+            autofill=source_config.get("autofill", {}),
+        )
 
     return source_ctx
 
@@ -623,8 +637,8 @@ def _build_form_fields(
         source_ref = _effective_field_source_ref(element_options)
         if source_ref:
             source_ctx = _resolve_field_source(source_ref)
-            if source_ctx:
-                form_type = "search_select"
+            # Declared source always becomes search_select (never plain text).
+            form_type = "search_select"
 
         # Widget override from DSL: field name "Label" widget=rich_text
         widget_hint = element_options.get("widget")
@@ -748,8 +762,7 @@ def _build_form_sections(
             source_ref = _effective_field_source_ref(element.options or {})
             if source_ref:
                 source_ctx = _resolve_field_source(source_ref)
-                if source_ctx:
-                    form_type = "search_select"
+                form_type = "search_select"
 
             # Widget override from DSL: field name "Label" widget=rich_text
             widget_hint = element.options.get("widget")

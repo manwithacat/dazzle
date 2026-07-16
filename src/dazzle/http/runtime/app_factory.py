@@ -621,23 +621,27 @@ def build_entity_filter_fields(
 
 
 def build_fragment_sources(appspec: AppSpec) -> dict[str, dict[str, Any]]:
-    """Extract fragment sources from DSL ``source=`` annotations on surface elements.
+    """Extract fragment sources from DSL ``source=`` / ``search_trigger=`` fields.
 
-    Scans all surfaces for elements with ``options.source`` references like
-    ``"pack_name.operation_name"`` and loads the corresponding API pack fragment.
+    Scans all surfaces for elements with ``options.source`` or aliased
+    ``search_trigger`` (#1599) and loads the corresponding API pack fragment.
 
     Returns ``{pack_name: fragment_data}``.
     """
     frag_sources: dict[str, dict[str, Any]] = {}
     try:
         from dazzle.api_kb import load_pack
+        from dazzle.page.field_source_alias import resolve_search_trigger_to_source
 
         for surface in appspec.surfaces:
             for section in getattr(surface, "sections", []):
                 for element in getattr(section, "elements", []):
-                    src_ref = getattr(element, "options", {}).get("source")
-                    if src_ref and "." in src_ref:
-                        pname, opname = src_ref.rsplit(".", 1)
+                    options = getattr(element, "options", {}) or {}
+                    src_ref = options.get("source")
+                    if not src_ref and options.get("search_trigger"):
+                        src_ref = resolve_search_trigger_to_source(str(options["search_trigger"]))
+                    if src_ref and "." in str(src_ref):
+                        pname, opname = str(src_ref).rsplit(".", 1)
                         if pname not in frag_sources:
                             pack = load_pack(pname)
                             if pack:
@@ -773,6 +777,15 @@ def build_server_config(
     # Build fragment sources if not provided by caller
     if fragment_sources is None:
         fragment_sources = build_fragment_sources(appspec)
+
+    # #1599: attach to form field builder so create/edit typeahead resolves
+    # through the same pack registry the HTMX search endpoint uses.
+    try:
+        from dazzle.page.converters.template_compiler import _build_form_fields
+
+        _build_form_fields._fragment_sources = fragment_sources  # type: ignore[attr-defined]
+    except Exception:
+        logger.debug("Could not attach fragment_sources to form builder", exc_info=True)
 
     return ServerConfig(
         database_url=database_url,

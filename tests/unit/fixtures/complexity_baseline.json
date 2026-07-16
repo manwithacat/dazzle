@@ -52,15 +52,15 @@
   "dazzle/agent/core.py": {
     "functions": {
       "AgentTool": 1,
-      "DazzleAgent": 8,
+      "DazzleAgent": 9,
       "DazzleAgent.__init__": 4,
       "DazzleAgent._build_messages": 10,
       "DazzleAgent._build_system_prompt": 6,
       "DazzleAgent._decide": 6,
       "DazzleAgent._decide_via_anthropic": 4,
       "DazzleAgent._decide_via_anthropic_tools": 13,
-      "DazzleAgent._decide_via_claude_cli": 7,
       "DazzleAgent._decide_via_sampling": 7,
+      "DazzleAgent._decide_via_subscription_cli": 9,
       "DazzleAgent._execute_tool": 6,
       "DazzleAgent._get_client": 4,
       "DazzleAgent._parse_action": 11,
@@ -407,6 +407,29 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/agent_loop/__init__.py": {
+    "functions": {},
+    "mi_rank": "A"
+  },
+  "dazzle/agent_loop/core.py": {
+    "functions": {
+      "_coverage_buckets_light": 10,
+      "_static_prove_one": 46,
+      "build_context": 10,
+      "build_playbook": 3,
+      "context_json": 1,
+      "dsl_service_names": 4,
+      "host_inventory": 13,
+      "next_steps": 10,
+      "playbook_json": 1,
+      "process_summary": 11,
+      "prove_json": 1,
+      "prove_stories": 13,
+      "runtime_truth": 5,
+      "story_binding_summary": 9
+    },
+    "mi_rank": "B"
+  },
   "dazzle/api_kb/__init__.py": {
     "functions": {
       "_pack_ops_provider": 3
@@ -552,6 +575,9 @@
       "_seed_improve_backlog": 11,
       "_seed_polish_backlog": 4,
       "_write_backlog_markdown": 2,
+      "closed_loop_context": 3,
+      "closed_loop_playbook": 3,
+      "closed_loop_prove": 3,
       "seed_command": 8,
       "signals_command": 11,
       "sync_command": 6
@@ -651,6 +677,12 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/cli/clean.py": {
+    "functions": {
+      "clean_snapshots_command": 15
+    },
+    "mi_rank": "A"
+  },
   "dazzle/cli/common.py": {
     "functions": {
       "resolve_project": 2,
@@ -660,10 +692,12 @@
   },
   "dazzle/cli/compliance.py": {
     "functions": {
+      "_brand_from_sitespec": 8,
+      "_maybe_scaffold_terms": 4,
       "compile_cmd": 3,
       "evidence_cmd": 3,
       "gaps_cmd": 8,
-      "privacy_cmd": 3,
+      "privacy_cmd": 6,
       "render_cmd": 2,
       "validate_citations_cmd": 3
     },
@@ -824,7 +858,7 @@
   },
   "dazzle/cli/doctor.py": {
     "functions": {
-      "doctor_command": 23
+      "doctor_command": 28
     },
     "mi_rank": "A"
   },
@@ -1144,6 +1178,12 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/cli/prove.py": {
+    "functions": {
+      "prove_story": 11
+    },
+    "mi_rank": "A"
+  },
   "dazzle/cli/pulse.py": {
     "functions": {
       "pulse_decisions": 1,
@@ -1160,6 +1200,7 @@
       "_build_db_reader": 1,
       "_build_signing_seed_batch": 6,
       "_collect_parent_fixtures": 7,
+      "_configure_trial_logging": 6,
       "_diagnose_seed_failures": 5,
       "_minimal_fields_for": 16,
       "_missing_signing_server_deps": 3,
@@ -1170,13 +1211,13 @@
       "_reset_db_for_trial": 1,
       "_resolve_project_dir": 4,
       "_seed_demo_data_for_trial": 31,
-      "_seed_signable_rows": 10,
+      "_seed_signable_rows": 14,
       "qa_capture": 10,
       "qa_component_vision": 3,
       "qa_login": 3,
       "qa_property_vision": 3,
       "qa_taste_panel": 9,
-      "qa_trial": 42
+      "qa_trial": 43
     },
     "mi_rank": "B"
   },
@@ -1435,6 +1476,14 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/cli/scaffold.py": {
+    "functions": {
+      "scaffold_process_step": 11,
+      "scaffold_service": 13,
+      "scaffold_story": 8
+    },
+    "mi_rank": "A"
+  },
   "dazzle/cli/sentinel.py": {
     "functions": {
       "_resolve_root": 2,
@@ -1540,6 +1589,7 @@
   },
   "dazzle/cli/story.py": {
     "functions": {
+      "bind_migrate": 24,
       "generate_tests": 20,
       "list_stories": 10,
       "propose_stories": 27,
@@ -1831,6 +1881,8 @@
       "_summarise_pii_categories": 8,
       "generate_privacy_page_markdown": 8,
       "merge_regenerated_into_existing": 4,
+      "scaffold_terms_of_service": 5,
+      "sync_privacy_site_content": 1,
       "write_privacy_artefacts": 1
     },
     "mi_rank": "A"
@@ -3575,7 +3627,9 @@
       "_StoryState": 1,
       "_build_story": 4,
       "_s_kw_entities": 1,
+      "_s_kw_executed_by": 8,
       "_s_kw_given": 1,
+      "_s_kw_narrative_only": 1,
       "_s_kw_persona": 1,
       "_s_kw_status": 1,
       "_s_kw_then": 1,
@@ -3639,6 +3693,7 @@
       "_kw_emits": 3,
       "_kw_layout": 2,
       "_kw_mode": 1,
+      "_kw_open": 1,
       "_kw_peek": 1,
       "_kw_priority": 1,
       "_kw_refresh": 1,
@@ -5724,6 +5779,21 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/core/local_snapshots.py": {
+    "functions": {
+      "CleanReport": 2,
+      "CleanReport.removed_count": 1,
+      "any_nested_snapshots": 5,
+      "copy_project_material": 2,
+      "has_nested_spec_snapshots": 1,
+      "ignore_for_copytree": 2,
+      "list_snapshot_ids": 5,
+      "prune_snapshots": 12,
+      "remove_all_snapshots": 5,
+      "snapshots_root": 2
+    },
+    "mi_rank": "A"
+  },
   "dazzle/core/manifest.py": {
     "functions": {
       "AuthConfig": 1,
@@ -5767,7 +5837,9 @@
     "mi_rank": "A"
   },
   "dazzle/core/model_defaults.py": {
-    "functions": {},
+    "functions": {
+      "default_model_for_driver": 2
+    },
     "mi_rank": "A"
   },
   "dazzle/core/oklch.py": {
@@ -6449,6 +6521,7 @@
       "_lint_naming_conventions": 8,
       "_lint_nav_group_icon_consistency": 11,
       "_lint_process_effects": 13,
+      "_lint_story_execution_bindings": 11,
       "_lint_workspace_access_declarations": 10,
       "_lint_workspace_personas": 19,
       "_lint_workspace_routing": 9,
@@ -6525,7 +6598,7 @@
       "_inline_step_target_surfaces": 7,
       "register_pack_ops_provider": 1,
       "validate_experiences": 39,
-      "validate_surfaces": 37
+      "validate_surfaces": 62
     },
     "mi_rank": "A"
   },
@@ -9516,13 +9589,13 @@
       "build_entity_filter_fields": 6,
       "build_entity_list_projections": 32,
       "build_entity_search_fields": 12,
-      "build_fragment_sources": 10,
-      "build_server_config": 32,
+      "build_fragment_sources": 13,
+      "build_server_config": 33,
       "create_app": 1,
       "create_app_factory": 19,
       "run_app": 2
     },
-    "mi_rank": "A"
+    "mi_rank": "B"
   },
   "dazzle/http/runtime/approvals_explorer.py": {
     "functions": {
@@ -10976,7 +11049,8 @@
       "FileValidator.validate": 6,
       "LocalStorageBackend": 3,
       "LocalStorageBackend.__init__": 1,
-      "LocalStorageBackend.delete": 2,
+      "LocalStorageBackend._full_path": 1,
+      "LocalStorageBackend.delete": 3,
       "LocalStorageBackend.get_url": 1,
       "LocalStorageBackend.name": 1,
       "LocalStorageBackend.read_range": 8,
@@ -11005,6 +11079,8 @@
       "create_local_file_service": 1,
       "create_s3_file_service": 1,
       "ensure_file_storage_tables": 1,
+      "resolve_under_base": 3,
+      "sanitize_storage_relpath": 13,
       "secure_filename": 3
     },
     "mi_rank": "A"
@@ -11151,7 +11227,7 @@
   },
   "dazzle/http/runtime/handlers/list_handlers.py": {
     "functions": {
-      "_list_handler_body": 81,
+      "_list_handler_body": 83,
       "build_data_table": 11,
       "create_list_handler": 3,
       "list_state_transitions": 5
@@ -11203,7 +11279,7 @@
       "htmx_error_response": 3,
       "htmx_response": 6,
       "htmx_toast_error_response": 2,
-      "htmx_trigger_headers": 2,
+      "htmx_trigger_headers": 4,
       "is_htmx_request": 1,
       "is_peek_request": 3,
       "json_or_htmx_error": 8
@@ -11217,7 +11293,7 @@
       "_render_table_empty": 19,
       "_render_table_pagination": 11,
       "_render_table_sentinel": 9,
-      "_with_htmx_triggers": 5
+      "_with_htmx_triggers": 8
     },
     "mi_rank": "A"
   },
@@ -12219,7 +12295,15 @@
   },
   "dazzle/http/runtime/response_helpers.py": {
     "functions": {
+      "ToastSlots": 1,
       "_append_html": 3,
+      "_toast_actions_html": 3,
+      "_toast_avatar_html": 3,
+      "_toast_body_html": 6,
+      "_toast_default_duration": 3,
+      "_toast_icon_html": 2,
+      "toast_detail_dict": 9,
+      "toast_unit_html": 8,
       "with_oob": 1,
       "with_toast": 1
     },
@@ -12326,13 +12410,18 @@
   "dazzle/http/runtime/route_overrides.py": {
     "functions": {
       "RouteOverrideDescriptor": 1,
+      "RouteOverrideRegistrationError": 2,
+      "RouteOverrideRegistrationError.__init__": 1,
       "_is_full_document": 2,
       "_load_handler": 8,
       "_make_alias_forwarder": 1,
       "_normalise_html_result": 9,
+      "_prepare_override_handler": 7,
+      "_register_one_override": 3,
+      "_route_override_soft": 1,
       "_wrap_with_policy_gate": 1,
       "_wrap_with_response_contract": 1,
-      "build_override_router": 10,
+      "build_override_router": 8,
       "discover_route_overrides": 13,
       "find_unbound_shadowing_overrides": 4,
       "load_extension_routers": 12,
@@ -12470,7 +12559,11 @@
   "dazzle/http/runtime/seed_runner.py": {
     "functions": {
       "_find_uuid_pk_field": 4,
-      "run_seed_templates": 13
+      "_run_seed_templates_in_schema": 10,
+      "_tenancy_isolation_mode": 4,
+      "_tenant_schemas_to_seed": 7,
+      "_upsert_seed_row": 7,
+      "run_seed_templates": 2
     },
     "mi_rank": "A"
   },
@@ -12484,6 +12577,7 @@
       "DazzleBackendApp._build_subsystem_context": 3,
       "DazzleBackendApp._compute_rls_user_attr_names_for_appspec": 3,
       "DazzleBackendApp._create_app": 14,
+      "DazzleBackendApp._ensure_file_service": 2,
       "DazzleBackendApp._lifespan": 6,
       "DazzleBackendApp._load_i18n_translations": 3,
       "DazzleBackendApp._migrate_tenant_schemas": 11,
@@ -12493,13 +12587,13 @@
       "DazzleBackendApp._mount_bulk_routes": 8,
       "DazzleBackendApp._mount_dev_routes": 5,
       "DazzleBackendApp._mount_document_routes": 4,
-      "DazzleBackendApp._mount_file_routes": 10,
+      "DazzleBackendApp._mount_file_routes": 11,
       "DazzleBackendApp._mount_fts_routes": 6,
       "DazzleBackendApp._mount_grant_routes": 5,
       "DazzleBackendApp._mount_locale_routes": 8,
       "DazzleBackendApp._mount_parent_graph_routes": 5,
       "DazzleBackendApp._mount_search_routes": 5,
-      "DazzleBackendApp._mount_signing_routes": 6,
+      "DazzleBackendApp._mount_signing_routes": 10,
       "DazzleBackendApp._mount_test_routes": 4,
       "DazzleBackendApp._reconcile_membership_partition_roots": 4,
       "DazzleBackendApp._resolve_capabilities": 3,
@@ -12509,7 +12603,7 @@
       "DazzleBackendApp._setup_auth": 7,
       "DazzleBackendApp._setup_database": 12,
       "DazzleBackendApp._setup_models": 5,
-      "DazzleBackendApp._setup_routes": 86,
+      "DazzleBackendApp._setup_routes": 90,
       "DazzleBackendApp._setup_services": 8,
       "DazzleBackendApp._should_create_schema_on_startup": 1,
       "DazzleBackendApp._user_ir_entity": 4,
@@ -13368,7 +13462,7 @@
       "build_entity_columns": 1,
       "build_entity_columns_full": 22,
       "build_surface_columns": 36,
-      "field_kind_to_col_type": 10
+      "field_kind_to_col_type": 11
     },
     "mi_rank": "A"
   },
@@ -13933,13 +14027,16 @@
       "TestFileValidator.test_validate_empty_file": 3,
       "TestFileValidator.test_validate_file_too_large": 3,
       "TestFileValidator.test_validate_valid_file": 3,
-      "TestLocalStorageBackend": 3,
+      "TestLocalStorageBackend": 4,
       "TestLocalStorageBackend.test_delete_file": 4,
       "TestLocalStorageBackend.test_delete_not_found": 2,
       "TestLocalStorageBackend.test_get_url": 2,
       "TestLocalStorageBackend.test_retrieve_file": 2,
       "TestLocalStorageBackend.test_retrieve_not_found": 1,
+      "TestLocalStorageBackend.test_retrieve_rejects_traversal_key": 1,
+      "TestLocalStorageBackend.test_sanitize_and_resolve_helpers": 4,
       "TestLocalStorageBackend.test_store_file": 6,
+      "TestLocalStorageBackend.test_store_rejects_traversal_prefix": 5,
       "TestLocalStorageBackend.test_store_with_prefix": 2,
       "TestLocalStorageBackend.test_stream_file": 3,
       "TestSecureFilename": 3,
@@ -14555,15 +14652,17 @@
     "functions": {
       "Completion": 1,
       "LLMAPIClient": 5,
-      "LLMAPIClient.__init__": 14,
+      "LLMAPIClient.__init__": 3,
       "LLMAPIClient._build_system_prompt": 1,
       "LLMAPIClient._build_user_prompt": 1,
       "LLMAPIClient._call_anthropic": 6,
       "LLMAPIClient._call_openai": 6,
+      "LLMAPIClient._default_model": 5,
       "LLMAPIClient._init_client": 6,
-      "LLMAPIClient.analyze_spec": 6,
+      "LLMAPIClient._resolve_credentials": 12,
+      "LLMAPIClient.analyze_spec": 7,
       "LLMAPIClient.complete": 1,
-      "LLMAPIClient.complete_with_usage": 3,
+      "LLMAPIClient.complete_with_usage": 4,
       "LLMAPIClient.estimate_cost": 3,
       "LLMProvider": 1,
       "_strip_code_fence": 4
@@ -14579,11 +14678,20 @@
   "dazzle/llm/driver.py": {
     "functions": {
       "LLMDriverError": 1,
-      "_parse_cli_json_output": 8,
-      "_refuse_cli_in_production": 2,
+      "_extract_text_from_envelope": 12,
+      "_extract_tokens_from_envelope": 8,
+      "_parse_cli_json_output": 4,
+      "_refuse_subscription_in_production": 2,
+      "_subscription_missing_cli_msg": 3,
       "call_claude_cli": 10,
+      "call_grok_cli": 15,
+      "call_subscription_cli": 3,
       "claude_cli_available": 1,
-      "resolve_llm_driver": 11
+      "grok_cli_available": 1,
+      "is_subscription_driver": 1,
+      "pick_available_subscription_driver": 3,
+      "resolve_llm_driver": 11,
+      "subscription_cli_available": 3
     },
     "mi_rank": "A"
   },
@@ -15217,6 +15325,15 @@
       "handle_check_updates": 2,
       "handle_get": 5,
       "handle_list": 2
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/mcp/server/handlers/agent_loop.py": {
+    "functions": {
+      "agent_context_handler": 1,
+      "agent_playbook_handler": 4,
+      "agent_prove_handler": 2,
+      "handle_agent": 8
     },
     "mi_rank": "A"
   },
@@ -16032,6 +16149,7 @@
       "_sem_wrap": 1,
       "dispatch_consolidated_tool": 21,
       "error_response": 1,
+      "handle_agent": 1,
       "handle_api_pack": 3,
       "handle_bootstrap": 3,
       "handle_graph": 2,
@@ -16157,6 +16275,7 @@
   },
   "dazzle/mcp/server/tools_consolidated.py": {
     "functions": {
+      "_tool_agent": 1,
       "_tool_agent_commands": 1,
       "_tool_api_pack": 1,
       "_tool_bootstrap": 1,
@@ -16364,14 +16483,15 @@
       "_build_currency_options": 3,
       "_build_entity_columns": 11,
       "_build_enum_field_options": 6,
-      "_build_form_fields": 40,
+      "_build_form_fields": 39,
       "_build_form_sections": 38,
       "_build_money_field": 5,
       "_build_state_machine_field_options": 7,
       "_compile_custom_surface": 2,
       "_compile_form_surface": 13,
-      "_compile_list_surface": 39,
+      "_compile_list_surface": 40,
       "_compile_view_surface": 49,
+      "_effective_field_source_ref": 3,
       "_enum_semantic_map": 2,
       "_extract_surface_purpose": 6,
       "_field_type_to_column_type": 4,
@@ -16379,7 +16499,8 @@
       "_file_accept_attr": 5,
       "_get_field_spec": 10,
       "_infer_filter_type": 20,
-      "_resolve_field_source": 7,
+      "_list_detail_url_template": 3,
+      "_resolve_field_source": 10,
       "_widget_kind_to_form_type": 1,
       "compile_appspec_to_templates": 102,
       "compile_surface_to_context": 6
@@ -16401,6 +16522,18 @@
       "convert_workspace": 4,
       "convert_workspaces": 2,
       "resolve_persona_workspace_route": 12
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/page/field_source_alias.py": {
+    "functions": {
+      "resolve_search_trigger_to_source": 12
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/page/open_via.py": {
+    "functions": {
+      "resolve_list_detail_url_template": 16
     },
     "mi_rank": "A"
   },
@@ -17280,20 +17413,30 @@
     "functions": {
       "SigningOutcome": 1,
       "_compute_latency": 6,
+      "_expected_outcome_for_seeded_doc": 7,
       "_has_audit_fields": 2,
       "infer_expected_outcome": 5,
-      "verify_signing_outcome": 15
+      "verify_signing_outcome": 11
     },
     "mi_rank": "A"
   },
   "dazzle/qa/subscription_vision.py": {
     "functions": {
+      "HyperpartCoherence": 1,
       "SubscriptionScore": 3,
       "SubscriptionScore.mean": 2,
+      "_clamp_score": 2,
+      "_coherence_entries": 7,
+      "_coherence_from_entry": 14,
+      "_normalize_coherence_issue": 7,
+      "_strip_json_fence": 4,
+      "build_hyperpart_coherence_prompt": 3,
       "build_subscription_score_prompt": 3,
       "load_scores": 3,
+      "parse_hyperpart_coherence": 4,
       "parse_subscription_scores": 25,
       "scores_from_smoke_manifest": 7,
+      "write_coherence": 10,
       "write_scores": 3
     },
     "mi_rank": "A"
@@ -17320,10 +17463,15 @@
   "dazzle/qa/trial_report.py": {
     "functions": {
       "TrialReport": 1,
-      "_cluster_friction": 18,
+      "_cluster_friction": 23,
+      "_descriptions_similar": 6,
+      "_evidence_similar": 4,
       "_first_line": 3,
+      "_jaccard": 3,
+      "_norm_ws": 2,
       "_sort_friction": 1,
       "_title_from_description": 3,
+      "_token_set": 4,
       "build_trial_report": 2,
       "render_trial_report": 23,
       "trial_abort_message": 4
@@ -17780,7 +17928,7 @@
       "_dp": 3,
       "_format_temporal": 4,
       "_friendly_dt": 6,
-      "_infer": 9,
+      "_infer": 10,
       "_relative": 7,
       "_title_case": 1,
       "format_cell": 4
@@ -17829,18 +17977,29 @@
       "bar_track_root_attrs": 1,
       "box_plot_root_attrs": 1,
       "bullet_root_attrs": 1,
+      "calendar_root_attrs": 1,
+      "cohort_strip_root_attrs": 1,
       "combobox_from_form": 2,
       "combobox_marker_attrs": 1,
       "combobox_options_html": 3,
+      "dashboard_card_root_attrs": 1,
+      "date_range_root_attrs": 1,
+      "day_timeline_root_attrs": 1,
+      "diagram_root_attrs": 1,
       "edit_span_attrs": 4,
+      "empty_state_root_attrs": 1,
+      "entity_card_root_attrs": 1,
       "funnel_root_attrs": 1,
+      "grid_region_root_attrs": 1,
       "heatmap_root_attrs": 1,
       "histogram_root_attrs": 1,
       "kanban_card_root_attrs": 1,
+      "list_region_root_attrs": 1,
       "metric_tile_root_attrs": 2,
       "money_from_form": 6,
       "money_root_attrs": 1,
       "pagination_root_attrs": 1,
+      "pipeline_root_attrs": 1,
       "pivot_root_attrs": 1,
       "profile_card_root_attrs": 1,
       "progress_root_attrs": 1,
@@ -17852,12 +18011,23 @@
       "render_bar_track": 7,
       "render_box_plot": 3,
       "render_bullet": 6,
+      "render_calendar": 4,
+      "render_cohort_strip": 1,
+      "render_dashboard_card": 2,
+      "render_date_range": 2,
+      "render_day_timeline": 1,
+      "render_diagram": 4,
+      "render_empty_state": 1,
+      "render_entity_card": 1,
       "render_funnel": 7,
+      "render_grid_region": 1,
       "render_heatmap": 6,
       "render_histogram": 5,
       "render_kanban_card": 2,
+      "render_list_region": 1,
       "render_metric_tile": 14,
       "render_pagination": 6,
+      "render_pipeline": 1,
       "render_pivot_table": 8,
       "render_profile_card": 10,
       "render_progress": 3,
@@ -17866,19 +18036,25 @@
       "render_search_box": 6,
       "render_search_result_list": 4,
       "render_search_result_row": 3,
+      "render_skeleton": 3,
       "render_sparkline": 8,
       "render_status_list_entry": 4,
+      "render_task_inbox": 1,
       "render_time_series": 17,
       "render_timeline_event": 2,
+      "render_tree": 1,
       "search_box_root_attrs": 1,
       "search_select_root_attrs": 1,
       "search_select_shell_from_form": 4,
+      "skeleton_root_attrs": 1,
       "sparkline_root_attrs": 1,
       "status_list_entry_root_attrs": 1,
       "tags_from_form": 3,
       "tags_marker_attrs": 1,
+      "task_inbox_root_attrs": 1,
       "time_series_root_attrs": 1,
-      "timeline_item_root_attrs": 1
+      "timeline_item_root_attrs": 1,
+      "tree_root_attrs": 1
     },
     "mi_rank": "C"
   },
@@ -17899,26 +18075,38 @@
       "Bullet": 1,
       "BulletBand": 1,
       "BulletRow": 1,
+      "Calendar": 1,
+      "CalendarEvent": 1,
+      "CohortStrip": 1,
       "ComboboxField": 7,
       "ComboboxField._pairs": 6,
       "ComboboxOption": 1,
+      "DashboardCard": 1,
+      "DateRange": 1,
+      "DayTimeline": 1,
+      "Diagram": 1,
+      "EmptyState": 1,
+      "EntityCard": 1,
       "Funnel": 1,
       "FunnelStage": 4,
       "FunnelStage._label_nonempty": 3,
       "GridEditCell": 7,
       "GridEditCell._normalise_options": 6,
       "GridEditCell._select_requires_options": 5,
+      "GridRegion": 1,
       "Heatmap": 1,
       "HeatmapRow": 1,
       "Histogram": 1,
       "HistogramBin": 1,
       "KanbanCard": 4,
       "KanbanCard._title_nonempty": 3,
+      "ListRegion": 1,
       "MetricTile": 4,
       "MetricTile._default_key": 2,
       "MetricTile._label_nonempty": 3,
       "MoneyField": 1,
       "Pagination": 1,
+      "Pipeline": 1,
       "PivotTable": 1,
       "ProfileCard": 5,
       "ProfileCard._identity_required": 4,
@@ -17931,16 +18119,19 @@
       "SearchBox": 1,
       "SearchResultRow": 1,
       "SearchSelectShell": 1,
+      "Skeleton": 1,
       "Sparkline": 1,
       "StatusListEntry": 4,
       "StatusListEntry._title_nonempty": 3,
       "TagsField": 5,
       "TagsField._split": 4,
+      "TaskInbox": 1,
       "TimeSeries": 1,
       "TimeSeriesLayer": 1,
       "TimeSeriesPoint": 1,
       "TimelineEvent": 4,
       "TimelineEvent._title_nonempty": 3,
+      "Tree": 1,
       "_metric_slug_key": 2
     },
     "mi_rank": "A"
@@ -18320,11 +18511,13 @@
   },
   "dazzle/render/fragment/region/_builders_timeline.py": {
     "functions": {
-      "_BuildersTimelineMixin": 22,
-      "_BuildersTimelineMixin._build_activity_feed": 14,
+      "_BuildersTimelineMixin": 21,
+      "_BuildersTimelineMixin._build_activity_feed": 12,
       "_BuildersTimelineMixin._build_day_timeline": 16,
       "_BuildersTimelineMixin._build_task_inbox": 26,
-      "_BuildersTimelineMixin._build_timeline": 27
+      "_BuildersTimelineMixin._build_timeline": 27,
+      "_activity_actor_label": 9,
+      "_activity_description": 4
     },
     "mi_rank": "A"
   },
@@ -18343,7 +18536,7 @@
   },
   "dazzle/render/fragment/region/_row_links.py": {
     "functions": {
-      "_resolve_row_links": 4
+      "_resolve_row_links": 6
     },
     "mi_rank": "A"
   },
@@ -18401,8 +18594,8 @@
     "functions": {
       "_RowArchetype": 1,
       "_json_summary": 8,
-      "_render_cell_display": 33,
-      "_render_table_row": 45,
+      "_render_cell_display": 43,
+      "_render_table_row": 47,
       "assemble_list_row": 7,
       "drill_row_attrs": 6,
       "render_data_row": 2,
@@ -18432,13 +18625,13 @@
   },
   "dazzle/render/fragment/renderer/_render_charts.py": {
     "functions": {
-      "_RenderChartsMixin": 6,
+      "_RenderChartsMixin": 5,
       "_RenderChartsMixin._emit": 1,
       "_RenderChartsMixin._emit_bar_chart": 5,
       "_RenderChartsMixin._emit_box_plot": 5,
       "_RenderChartsMixin._emit_bullet": 3,
       "_RenderChartsMixin._emit_calendar_grid": 2,
-      "_RenderChartsMixin._emit_diagram": 4,
+      "_RenderChartsMixin._emit_diagram": 2,
       "_RenderChartsMixin._emit_funnel": 2,
       "_RenderChartsMixin._emit_heatmap": 2,
       "_RenderChartsMixin._emit_histogram": 4,
@@ -18536,7 +18729,7 @@
       "_RenderLayoutMixin._emit_modal": 1,
       "_RenderLayoutMixin._emit_region": 5,
       "_RenderLayoutMixin._emit_row": 3,
-      "_RenderLayoutMixin._emit_skeleton": 2,
+      "_RenderLayoutMixin._emit_skeleton": 1,
       "_RenderLayoutMixin._emit_split": 1,
       "_RenderLayoutMixin._emit_stack": 2,
       "_RenderLayoutMixin._emit_surface": 3,
@@ -18552,9 +18745,9 @@
       "_RenderShellMixin._emit_app_shell": 11,
       "_RenderShellMixin._emit_error_page": 2,
       "_RenderShellMixin._emit_nav_group": 4,
-      "_RenderShellMixin._emit_nav_item": 3,
+      "_RenderShellMixin._emit_nav_item": 6,
       "_RenderShellMixin._emit_page": 10,
-      "_RenderShellMixin._emit_sidebar": 5,
+      "_RenderShellMixin._emit_sidebar": 8,
       "_RenderShellMixin._emit_skip_link": 1,
       "_RenderShellMixin._emit_topbar": 5,
       "_RenderShellMixin._emit_workspace_context_selector": 1,
@@ -18562,6 +18755,7 @@
       "_RenderShellMixin._emit_workspace_overflow": 3,
       "_RenderShellMixin._emit_workspace_shell": 4,
       "_RenderShellMixin._emit_workspace_toolbar": 1,
+      "_RenderShellMixin._sidebar_toggle_button": 1,
       "_RenderShellMixin._usage_action_attr": 1,
       "_load_static": 1
     },
@@ -18738,8 +18932,8 @@
   },
   "dazzle/seed/generator.py": {
     "functions": {
-      "_render_template": 6,
-      "generate_seed_rows": 6,
+      "_render_template": 4,
+      "generate_seed_rows": 10,
       "resolve_match_field": 6
     },
     "mi_rank": "A"
@@ -19080,21 +19274,23 @@
       "_client_ip": 3,
       "_error_page": 1,
       "_expired_recovery_page": 3,
-      "_handle_get": 11,
+      "_handle_get": 10,
       "_handle_post": 14,
       "_handle_resend": 7,
-      "_handle_signed_copy": 11,
+      "_handle_signed_copy": 13,
       "_invoke_resend_hook": 2,
       "_invoke_template": 2,
       "_invoke_validator": 2,
       "_is_expired_but_valid": 2,
       "_lookup_repo": 2,
       "_lookup_signable": 1,
+      "_persist_signed_pdf": 6,
       "_resend_confirmation_page": 1,
       "_resolve_document_body": 6,
       "_resolve_dotted_callable": 3,
+      "_retrieve_signed_pdf_from_storage": 11,
       "_row_get": 2,
-      "_signed_completion_page": 1,
+      "_signed_completion_page": 2,
       "_signing_page": 2,
       "_stub_document_body": 1,
       "_support_line": 5,
@@ -20126,8 +20322,12 @@
   },
   "dazzle/testing/ux/fixtures.py": {
     "functions": {
-      "_generate_field_value": 20,
+      "_datetime_for_field": 7,
+      "_generate_field_value": 22,
       "_get_field_type_str": 4,
+      "_past_date_iso": 1,
+      "_past_datetime_iso": 1,
+      "_scrub_lifecycle_timestamps": 10,
       "generate_seed_payload": 28
     },
     "mi_rank": "A"
@@ -20285,9 +20485,13 @@
   },
   "dazzle/testing/ux/seed_values.py": {
     "functions": {
+      "_example_fallback": 1,
+      "_faker_sentence": 2,
+      "_legacy_placeholder_prefix": 2,
       "_lookup_faker_method": 3,
+      "_safe_free_text": 5,
       "realistic_email": 2,
-      "realistic_str": 20
+      "realistic_str": 24
     },
     "mi_rank": "A"
   },

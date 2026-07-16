@@ -30,8 +30,8 @@ def _resolve_row_links(
         try:
             # #1603: skip drill when a placeholder is missing or null
             # (e.g. open via assigned_to with no assignee).
-            class _NullMap(dict):
-                def __missing__(self, key: str) -> str:  # type: ignore[override]
+            class _NullMap(dict[str, Any]):
+                def __missing__(self, key: str) -> str:
                     raise KeyError(key)
 
             mapping = _NullMap((k, v) for k, v in item.items() if v is not None)

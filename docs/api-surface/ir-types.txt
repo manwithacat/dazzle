@@ -2738,7 +2738,9 @@ ir_class: StorySpec
   optional:
     - description: str | None = None
     - entities: list[str] = []
+    - executed_by: str | None = None
     - given: list[StoryCondition] = []
+    - narrative_only: bool = False
     - source: SourceLocation | None = None
     - status: StoryStatus = <StoryStatus.DRAFT: 'draft'>
     - then: list[StoryCondition] = []
@@ -2895,6 +2897,8 @@ ir_class: SurfaceSpec
     - entity_ref: str | None = None
     - headless: bool = False
     - layout: str = 'wizard'
+    - open_entity: str | None = None
+    - open_via: str | None = None
     - peek: PeekMode | None = None
     - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
     - refresh_interval: int | None = None

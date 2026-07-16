@@ -166,11 +166,13 @@ there requires a row here.
 | `dazzle pitch` | Generate investor pitch materials from DSL |
 | `dazzle process` | Process proposal, storage, and diagramming |
 | `dazzle process-migrate` | Process migration commands for safe DSL version deployments |
+| `dazzle prove` | Static story binding evidence (agent closed loop #1605) |
 | `dazzle pulse` | Project health pulse checks |
 | `dazzle qa` | QA toolkit — visual quality evaluation and screenshot capture |
 | `dazzle quality` | Quality pipeline scaffolding |
 | `dazzle rbac` | RBAC verification and compliance |
 | `dazzle rhythm` | Rhythm analysis and lifecycle management |
+| `dazzle scaffold` | Scaffold domain artefacts from agent closed-loop maps (#1605) |
 | `dazzle sentinel` | SaaS Sentinel — failure-mode detection for Dazzle applications |
 | `dazzle signing` | Provision the native document signing primitive |
 | `dazzle spec` | Compare narrative product spec against DSL state — drift detection |

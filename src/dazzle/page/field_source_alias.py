@@ -7,6 +7,10 @@ operation exists on the pack.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def resolve_search_trigger_to_source(trigger: str) -> str | None:
     """Map ``search_trigger`` pack (or pack.op) to a ``source=`` pack.op ref.
@@ -26,6 +30,7 @@ def resolve_search_trigger_to_source(trigger: str) -> str | None:
 
         pack = load_pack(pack_name)
     except Exception:
+        logger.debug("search_trigger pack load failed for %r", pack_name, exc_info=True)
         return None
     if not pack:
         return None

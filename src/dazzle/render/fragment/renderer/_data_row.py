@@ -33,6 +33,7 @@ from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import GridEditCell, edit_span_attrs
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
+from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.state_affordance import gated_row_transitions
 
 # UK-first defaults (day month year). Full locale plumbing is a follow-up;
@@ -400,8 +401,15 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     drill_attrs = ""
     detail_link_html = ""
     edit_link_html = ""
+    # #1603: substitute all placeholders ({id}, {contact}, {assigned_to}, …)
+    # via the shared format_map helper. {id}-only replace left open: FK hops
+    # as literal hx-get="/app/contact/{contact}" on the HTMX data-table path.
     if detail_url_template:
-        detail_url = detail_url_template.replace("{id}", item_id)
+        _links = _resolve_row_links([item], str(detail_url_template))
+        detail_url = _links[0] if _links else None
+    else:
+        detail_url = None
+    if detail_url:
         detail_url_attr = _html_mod.escape(detail_url, quote=True)
         if peek_expand:
             peek_url_attr = _html_mod.escape(f"{detail_url}?peek=1", quote=True)

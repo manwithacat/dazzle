@@ -106,7 +106,7 @@ def format_date(value: Any, fmt: str = "medium", locale: str | None = None) -> s
         return target.isoformat()
     locale_code = _to_babel_locale(locale or get_current_locale())
     try:
-        return _babel_format_date(target, format=fmt, locale=locale_code)
+        return str(_babel_format_date(target, format=fmt, locale=locale_code))
     except Exception as exc:
         logger.debug("format_date failed for locale=%s fmt=%s: %s", locale_code, fmt, exc)
         if isinstance(target, datetime):
@@ -129,7 +129,7 @@ def format_datetime(value: Any, fmt: str = "medium", locale: str | None = None) 
         )
     locale_code = _to_babel_locale(locale or get_current_locale())
     try:
-        return _babel_format_datetime(target, format=fmt, locale=locale_code)
+        return str(_babel_format_datetime(target, format=fmt, locale=locale_code))
     except Exception as exc:
         logger.debug("format_datetime failed for locale=%s fmt=%s: %s", locale_code, fmt, exc)
         return (
@@ -150,7 +150,7 @@ def format_time(value: Any, fmt: str = "medium", locale: str | None = None) -> s
         return target.isoformat(timespec="seconds")
     locale_code = _to_babel_locale(locale or get_current_locale())
     try:
-        return _babel_format_time(target, format=fmt, locale=locale_code)
+        return str(_babel_format_time(target, format=fmt, locale=locale_code))
     except Exception as exc:
         logger.debug("format_time failed for locale=%s fmt=%s: %s", locale_code, fmt, exc)
         if isinstance(target, datetime):
@@ -176,7 +176,7 @@ def format_number(value: Any, locale: str | None = None) -> str:
         return str(target)
     locale_code = _to_babel_locale(locale or get_current_locale())
     try:
-        return format_decimal(target, locale=locale_code)
+        return str(format_decimal(target, locale=locale_code))
     except Exception as exc:
         logger.debug("format_number failed for locale=%s: %s", locale_code, exc)
         return str(target)
@@ -201,8 +201,8 @@ def format_decimal(value: Any, fmt: str | None = None, locale: str | None = None
     locale_code = _to_babel_locale(locale or get_current_locale())
     try:
         if fmt is None:
-            return _babel_format_decimal(target, locale=locale_code)
-        return _babel_format_decimal(target, format=fmt, locale=locale_code)
+            return str(_babel_format_decimal(target, locale=locale_code))
+        return str(_babel_format_decimal(target, format=fmt, locale=locale_code))
     except Exception as exc:
         logger.debug("format_decimal failed for locale=%s fmt=%s: %s", locale_code, fmt, exc)
         return str(target)
@@ -231,7 +231,7 @@ def format_currency(value: Any, currency: str = "USD", locale: str | None = None
         return f"{currency} {target}"
     locale_code = _to_babel_locale(locale or get_current_locale())
     try:
-        return _babel_format_currency(target, currency, locale=locale_code)
+        return str(_babel_format_currency(target, currency, locale=locale_code))
     except Exception as exc:
         logger.debug(
             "format_currency failed for locale=%s currency=%s: %s",

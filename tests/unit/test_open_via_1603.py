@@ -65,6 +65,49 @@ def test_row_links_format_fk_placeholder() -> None:
     assert links[2] is None  # missing key
 
 
+def test_data_row_htmx_path_substitutes_open_via_fk() -> None:
+    """#1603 dogfood: rich CRUD data-table path must format {contact} etc.
+
+    CyFuture pilot saw literal ``hx-get="/app/contact/{contact}"`` because
+    ``_data_row`` only did ``.replace("{id}", …)``. Row HTML must carry the
+    substituted UUID when the via field is present.
+    """
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    columns = [{"key": "title", "type": "str"}]
+    item = {"id": "task-1", "title": "Call", "contact": "c-uuid-99"}
+    html = render_data_row(
+        columns,
+        item,
+        RowCapabilities(drill=True),
+        detail_url_template="/app/contact/{contact}",
+        entity_name="Task",
+        api_endpoint="/api/tasks",
+    )
+    assert 'hx-get="/app/contact/c-uuid-99"' in html or 'href="/app/contact/c-uuid-99"' in html
+    assert "{contact}" not in html
+
+
+def test_data_row_null_fk_skips_drill_link() -> None:
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    columns = [{"key": "title", "type": "str"}]
+    item = {"id": "task-2", "title": "Orphan", "contact": None}
+    html = render_data_row(
+        columns,
+        item,
+        RowCapabilities(drill=True),
+        detail_url_template="/app/contact/{contact}",
+        entity_name="Task",
+        api_endpoint="/api/tasks",
+    )
+    assert "{contact}" not in html
+    assert 'hx-get="/app/contact/' not in html
+    assert 'href="/app/contact/' not in html
+
+
 def test_simple_task_parses_open_via() -> None:
     appspec = load_project_appspec(SIMPLE)
     task_list = next(s for s in appspec.surfaces if s.name == "task_list")

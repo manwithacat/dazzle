@@ -277,6 +277,7 @@ The table below is drift-gated against the live registry (`tests/unit/test_docs_
 
 | Tool | Operations |
 |------|-----------|
+| `agent` | context, prove, playbook |
 | `agent_commands` | list, get, check_updates |
 | `api_pack` | list, search, get |
 | `bootstrap` | entry point for "build me an app" requests |
@@ -487,4 +488,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.104.8 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.104.9 | **Python**: 3.12+ | **Status**: Production Ready
