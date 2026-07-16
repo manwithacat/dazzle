@@ -327,6 +327,8 @@ class DetailSectionContext(BaseModel):
     title: str
     fields: list[FieldContext] = Field(default_factory=list)
     note: str | None = None
+    # ``strip`` = horizontal status/RAG badges (#1600); empty = field grid.
+    layout: str = ""
 
 
 class DetailContext(BaseModel):

@@ -71,6 +71,36 @@ def test_compile_view_preserves_section_titles() -> None:
     assert {f.name for f in ctx.detail.fields} >= {"name", "email", "role"}
 
 
+def test_section_layout_strip_parses_and_renders_row() -> None:
+    """layout: strip → horizontal status/RAG strip on VIEW (#1600)."""
+    surface = ir.SurfaceSpec(
+        name="user_detail",
+        title="Overview",
+        entity_ref="User",
+        mode=ir.SurfaceMode.VIEW,
+        sections=[
+            ir.SurfaceSection(
+                name="role",
+                title="Role strip",
+                layout="strip",
+                elements=[
+                    ir.SurfaceElement(field_name="role", label="Role"),
+                    ir.SurfaceElement(field_name="name", label="Name"),
+                ],
+            ),
+        ],
+    )
+    page = compile_surface_to_context(surface, _user_entity())
+    assert page.detail is not None
+    assert page.detail.sections[0].layout == "strip"
+    page.detail.item = {"id": "u1", "name": "Ada", "role": "admin"}
+    dctx = _dispatch_ctx_from_detail(page.detail, surface)
+    assert dctx["sections"][0]["layout"] == "strip"
+    html = render_generic_detail(surface, dctx)
+    assert "Role strip" in html
+    assert "admin" in html
+
+
 def test_view_html_emits_section_headings() -> None:
     surface = _overview_surface()
     entity = _user_entity()

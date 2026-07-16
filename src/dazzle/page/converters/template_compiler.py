@@ -1368,6 +1368,7 @@ def _compile_view_surface(
                     title=section.title or section.name.replace("_", " ").title(),
                     fields=sec_fields,
                     note=getattr(section, "note", None),
+                    layout=str(getattr(section, "layout", None) or ""),
                 )
             )
 

@@ -189,6 +189,9 @@ class SurfaceSection(BaseModel):
     # v0.61.88 (#918): section-level explanatory copy. Renders as a muted
     # paragraph below the section heading. None = no note.
     note: str | None = None
+    # #1600 Wedge B: VIEW overview section chrome. ``strip`` = horizontal
+    # RAG/status badges (compliance strip); None/default = stacked field grid.
+    layout: str | None = None
     # v0.71.184 (#1217 Phase 3e.v): polymorphic per-subtype dispatch panel.
     # When set, the renderer inspects `row.kind` and includes the matching
     # subtype surface inline. Valid only on surfaces whose entity is a

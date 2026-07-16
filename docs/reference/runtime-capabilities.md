@@ -190,6 +190,8 @@ operation (e.g. `search_trigger=companies_house_lookup` →
 - **Multi-section overview** (#1600 Wedge B) — multiple `section` blocks stack as
   titled field groups (identity / role / timeline …), then related work below.
   Pair with list `open: Entity via fk` (#1603) for queue → context hub.
+- **Status / RAG strip** — `layout: strip` on a VIEW section renders fields as a
+  horizontal badge row (compliance status, lifecycle flags).
 
 ```dsl
 surface client_overview "Client overview":
@@ -197,7 +199,10 @@ surface client_overview "Client overview":
   mode: view
   section header "Client":
     field name "Name"
-    field status "Status"
+  section compliance "Compliance":
+    layout: strip
+    field vat_status "VAT"
+    field aml_status "AML"
   related work "Work":
     display: table
     show: Engagement

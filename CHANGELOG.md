@@ -10,6 +10,8 @@
   multiple `section` blocks stack titled field groups (not a flat dump) above
   related work. Client/context hubs: `mode: view` + sections + `related` +
   list `open: Entity via fk`. Dogfood: simple_task `user_detail` overview.
+- **#1600 `layout: strip` on VIEW sections** — horizontal RAG/status badge row
+  for compliance strips on client hubs.
 
 ### Fixed
 - **#1603 open-via unwraps hydrated FK dicts** — `_resolve_row_links` extracts

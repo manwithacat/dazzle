@@ -372,6 +372,19 @@ class SurfaceParserMixin:
             note = self.expect(TokenType.STRING).value
             self.skip_newlines()
 
+        # #1600: optional section layout (e.g. layout: strip for RAG/status row).
+        # Allow mixed order with note/visible by scanning once more for layout.
+        layout: str | None = None
+        if self.match(TokenType.LAYOUT):
+            self.advance()
+            self.expect(TokenType.COLON)
+            layout = self.expect_identifier_or_keyword().value
+            if layout not in ("strip", "grid"):
+                self.error(f"section layout must be 'strip' or 'grid', got {layout!r} (#1600)")
+            if layout == "grid":
+                layout = None  # default field grid
+            self.skip_newlines()
+
         elements: list[ir.SurfaceElement] = []
         subtype_panel: ir.SubtypePanelSpec | None = None
         while not self.match(TokenType.DEDENT):
@@ -385,11 +398,21 @@ class SurfaceParserMixin:
                 # v0.71.184 (#1217 Phase 3e.v): polymorphic per-subtype dispatch.
                 subtype_panel = self._parse_subtype_panel()
                 self.skip_newlines()
+            elif self.match(TokenType.LAYOUT):
+                # Trailing layout: after fields is unusual; allow for author order.
+                self.advance()
+                self.expect(TokenType.COLON)
+                layout = self.expect_identifier_or_keyword().value
+                if layout not in ("strip", "grid"):
+                    self.error(f"section layout must be 'strip' or 'grid', got {layout!r} (#1600)")
+                if layout == "grid":
+                    layout = None
+                self.skip_newlines()
             else:
                 token = self.current_token()
                 self.error(
                     f"Unexpected '{token.value}' in surface section — "
-                    f"only 'field' and 'subtype_panel' declarations are supported here"
+                    f"only 'field', 'subtype_panel', and 'layout' are supported here"
                 )
 
         self.expect(TokenType.DEDENT)
@@ -399,6 +422,7 @@ class SurfaceParserMixin:
             elements=elements,
             visible=visible_condition,
             note=note,
+            layout=layout,
             subtype_panel=subtype_panel,
         )
 

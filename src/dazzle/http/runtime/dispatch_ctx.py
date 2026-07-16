@@ -152,6 +152,7 @@ def _detail_sections_from_context(detail: Any) -> list[dict[str, Any]]:
                 "name": getattr(sec, "name", "") or "",
                 "title": getattr(sec, "title", "") or getattr(sec, "name", "") or "",
                 "note": getattr(sec, "note", None) or "",
+                "layout": getattr(sec, "layout", None) or "",
                 "fields": fields_out,
             }
         )

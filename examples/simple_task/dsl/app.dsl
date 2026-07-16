@@ -497,6 +497,7 @@ surface user_detail "Team Member Overview":
     field email "Email"
 
   section role "Role & access":
+    layout: strip
     field role "Role"
     field department "Department"
     field is_active "Active"
