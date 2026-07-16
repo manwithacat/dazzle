@@ -3,35 +3,38 @@
  * HYPERPART: toast
  *
  * Toast stack host — auto-dismiss, hover/focus pause, stack cap, dismiss
- * with leave motion, and client-initiated toasts with server-parity markup.
+ * with leave motion, swipe-dismiss, opt-in enter cue, and client-initiated
+ * toasts with server-parity markup (stem ssr-client-slot-parity).
  *
  * Contract (contracts/toast.py):
  *   Stack:  #dz-toast.dz-toast-stack  [data-dz-toast-cap]
  *   Toast:  .dz-toast[data-dz-toast-level][data-dz-remove-after]
  *   Slots:  .dz-toast__title | .dz-toast__message | .dz-toast__actions
+ *           optional person: data-dz-toast-composition=person + __avatar / __actor
  *   Dismiss: [data-dz-toast-dismiss]
  *
  * Server path: OOB afterbegin into #dz-toast with data-dz-remove-after.
  * Client path: CustomEvent `showToast` (document/body) or `toast` on the
- * stack (window.dz.toast). Detail: { message, type?, title?, actions? }
- * where actions is [{ label, href? }].
+ * stack (window.dz.toast). Detail mirrors ToastSlots:
+ *   { message, type?, title?, actions?, actor?: {name, avatar?},
+ *     duration?, sound? }
  *
- * Timing: default 8s (readable + action-friendly). Leave animation ~300ms
- * before DOM removal. Zero dependencies. Survives htmx swaps.
+ * Sound: unit `data-dz-toast-sound=on` or detail.sound — page must also opt
+ * in via meta dz-sound or data-dz-cue-sound (controllers/dz-cue.js).
+ *
+ * Timing: default 8s / 10s error. Leave ~300ms. Swipe toward stack edge
+ * dismisses (threshold 48px). Zero hard deps. Survives htmx swaps.
  */
 
 (function () {
   "use strict";
 
   var DEFAULT_CAP = 8;
-  /** Decision 0011: readable default (info/success/warning). */
   var DEFAULT_DELAY = "8s";
-  /** Errors get a longer read window when duration is omitted. */
   var ERROR_DELAY = "10s";
-  /** Match CSS --duration-slow leave; hard ceiling if animationend missed. */
   var LEAVE_MS = 320;
+  var SWIPE_PX = 48;
 
-  /** Parse htmx-style timing ("5s", "300ms", bare seconds) → ms. */
   function parseDelayMs(value) {
     if (!value) return 8000;
     var m = String(value)
@@ -47,10 +50,6 @@
     return level === "error" ? ERROR_DELAY : DEFAULT_DELAY;
   }
 
-  /**
-   * Lucide-shaped shapes as [tag, attrs] tuples — built with createElementNS
-   * (DOM construction only; user message still textContent-only).
-   */
   var ICON_SHAPES = {
     info: [
       ["circle", { cx: "12", cy: "12", r: "10" }],
@@ -79,12 +78,6 @@
     ],
   };
 
-  /**
-   * Decorative level icon (decision 0011 phase D). aria-hidden — severity
-   * is also carried by data-dz-toast-level / role / border tone.
-   * @param {string} tone
-   * @returns {HTMLElement}
-   */
   function makeIcon(tone) {
     var shapes = ICON_SHAPES[tone] || ICON_SHAPES.info;
     var wrap = document.createElement("span");
@@ -113,9 +106,32 @@
     return wrap;
   }
 
-  /** Inject icon on OOB/server units that omitted the slot. */
+  function makeAvatar(actorName, avatarUrl) {
+    if (avatarUrl) {
+      var img = document.createElement("img");
+      img.className = "dz-toast__avatar";
+      img.src = String(avatarUrl);
+      img.alt = "";
+      img.width = 32;
+      img.height = 32;
+      img.decoding = "async";
+      return img;
+    }
+    var span = document.createElement("span");
+    span.className = "dz-toast__avatar dz-toast__avatar--fallback";
+    span.setAttribute("aria-hidden", "true");
+    var name = String(actorName || "?").trim();
+    span.textContent = (name.charAt(0) || "?").toUpperCase();
+    return span;
+  }
+
+  function isPersonToast(el) {
+    return el.getAttribute("data-dz-toast-composition") === "person";
+  }
+
   function ensureIcon(el) {
-    if (el.querySelector(".dz-toast__icon, .dz-toast-icon")) return;
+    if (isPersonToast(el)) return;
+    if (el.querySelector(".dz-toast__icon, .dz-toast-icon, .dz-toast__avatar")) return;
     var tone = el.getAttribute("data-dz-toast-level") || "info";
     var body = el.querySelector(".dz-toast__body");
     var icon = makeIcon(tone);
@@ -126,12 +142,6 @@
     }
   }
 
-  /**
-   * Host-owned TTL bar. Duration matches data-dz-remove-after; pause/resume
-   * uses animation-play-state so remaining visual time tracks the timer.
-   * @param {Element} el
-   * @param {number} totalMs
-   */
   function ensureProgress(el, totalMs) {
     var bar = el.querySelector(".dz-toast__progress");
     if (!bar) {
@@ -154,7 +164,6 @@
   }
 
   function toastSelector() {
-    // Prefixed source form; apply_prefix rewrites for unprefixed gallery.
     return ".dz-toast";
   }
 
@@ -169,7 +178,6 @@
     var sel = toastSelector();
     var items = stack.querySelectorAll(sel + ":not(.dz-toast-leave)");
     var cap = capOf(stack);
-    // Stack prepends newest first — drop from the end (oldest).
     while (items.length > cap) {
       var last = items[items.length - 1];
       dismissToast(last);
@@ -177,10 +185,17 @@
     }
   }
 
-  /**
-   * Play leave motion then remove. Safe to call multiple times.
-   * @param {Element} el
-   */
+  function playEnterCue(el) {
+    var unitWants =
+      el.getAttribute("data-dz-toast-sound") === "on" ||
+      el.getAttribute("data-dz-toast-sound") === "true";
+    if (!unitWants) return;
+    var tone = el.getAttribute("data-dz-toast-level") || "info";
+    if (window.dzCue && typeof window.dzCue.play === "function") {
+      window.dzCue.play(tone);
+    }
+  }
+
   function dismissToast(el) {
     if (!el || el.__dzToastLeaving) return;
     el.__dzToastLeaving = true;
@@ -188,6 +203,8 @@
     el.classList.remove("dz-toast-enter");
     el.classList.add("dz-toast-leave");
     setProgressPaused(el, true);
+    el.style.transform = "";
+    el.style.opacity = "";
 
     var done = false;
     function finish() {
@@ -197,21 +214,69 @@
     }
 
     function onEnd(e) {
-      // Ignore bubbled progress/enter ends — only leave motion on the unit.
       if (e && e.target !== el) return;
       if (e && e.animationName && e.animationName.indexOf("toast-out") === -1) return;
       finish();
     }
     el.addEventListener("animationend", onEnd);
-    // Fallback when reduced-motion collapses animation or event is missed.
     setTimeout(finish, LEAVE_MS);
   }
 
   /**
-   * Schedule auto-dismiss with pause/resume. Each toast is scheduled once
-   * (`__dzRemoveScheduled`). Hover or focus on the stack pauses all timers;
-   * leave resumes with remaining time.
+   * Horizontal swipe toward the stack's outer edge → dismiss.
+   * Threshold 48px; ignores mostly-vertical gestures.
    */
+  function wireSwipe(el) {
+    if (el.__dzToastSwipeWired) return;
+    el.__dzToastSwipeWired = true;
+    var startX = 0;
+    var startY = 0;
+    var tracking = false;
+
+    el.addEventListener("pointerdown", function (e) {
+      if (el.__dzToastLeaving) return;
+      if (e.button != null && e.button !== 0) return;
+      tracking = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch (_err) {
+        /* ignore */
+      }
+    });
+
+    el.addEventListener("pointermove", function (e) {
+      if (!tracking || el.__dzToastLeaving) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      // Prefer horizontal
+      if (Math.abs(dx) > Math.abs(dy)) {
+        // Top-right stack: positive dx (outward) feels natural
+        var shift = Math.max(0, dx);
+        el.style.transform = "translateX(" + shift + "px)";
+        el.style.opacity = String(Math.max(0.35, 1 - shift / 120));
+      }
+    });
+
+    function endPointer(e) {
+      if (!tracking) return;
+      tracking = false;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      el.style.transform = "";
+      el.style.opacity = "";
+      if (el.__dzToastLeaving) return;
+      if (dx >= SWIPE_PX && Math.abs(dx) > Math.abs(dy)) {
+        dismissToast(el);
+      }
+    }
+
+    el.addEventListener("pointerup", endPointer);
+    el.addEventListener("pointercancel", endPointer);
+  }
+
   function scheduleOne(el) {
     if (el.__dzRemoveScheduled || el.__dzToastLeaving) return;
     el.__dzRemoveScheduled = true;
@@ -223,6 +288,8 @@
     var paused = false;
 
     ensureProgress(el, total);
+    wireSwipe(el);
+    playEnterCue(el);
 
     function clear() {
       if (timer != null) {
@@ -281,7 +348,6 @@
     if (stack.__dzToastHostWired) return;
     stack.__dzToastHostWired = true;
 
-    // mouseover/out bubble through children (stack itself is pointer-events:none).
     stack.addEventListener("mouseover", function () {
       pauseAll(stack);
     });
@@ -315,7 +381,6 @@
       wireStackOnce(stack);
       forEachToast(stack, function (el) {
         if (!el.classList.contains("dz-toast-enter") && !el.classList.contains("dz-toast-leave")) {
-          // OOB-inserted toasts may lack the enter class — give them motion.
           el.classList.add("dz-toast-enter");
         }
         ensureIcon(el);
@@ -323,13 +388,11 @@
       });
       enforceCap(stack);
     }
-    // Also schedule any data-dz-remove-after outside the stack (legacy).
     var scope = root && root.querySelectorAll ? root : document;
     scope.querySelectorAll("[data-dz-remove-after]").forEach(function (el) {
       if (el.classList && el.classList.contains("dz-toast")) {
         scheduleOne(el);
       } else if (!el.__dzRemoveScheduled) {
-        // Non-toast remove-after (if any): simple timeout, no pause.
         el.__dzRemoveScheduled = true;
         setTimeout(function () {
           el.remove();
@@ -361,19 +424,42 @@
     var title = opts.title || null;
     var actions = opts.actions || null;
     var duration = opts.duration || defaultDelayFor(tone);
+    var actor = opts.actor || null;
+    var actorName = (actor && actor.name) || opts.actor_name || null;
+    var actorAvatar =
+      (actor && (actor.avatar || actor.avatar_url)) || opts.actor_avatar || null;
+    var wantSound = !!(opts.sound || opts.cue);
 
     var toast = document.createElement("div");
     toast.className = "dz-toast dz-toast-enter";
     toast.setAttribute("data-dz-toast-level", tone);
     toast.setAttribute("data-dz-remove-after", duration);
     toast.setAttribute("role", tone === "error" ? "alert" : "status");
+    if (wantSound) toast.setAttribute("data-dz-toast-sound", "on");
 
-    toast.appendChild(makeIcon(tone));
+    var isPerson = !!(actorName && String(actorName).trim());
+    if (isPerson) {
+      toast.setAttribute("data-dz-toast-composition", "person");
+      toast.appendChild(makeAvatar(actorName, actorAvatar));
+    } else {
+      toast.appendChild(makeIcon(tone));
+    }
 
     var body = document.createElement("div");
     body.className = "dz-toast__body";
 
-    if (title) {
+    if (isPerson) {
+      var actorEl = document.createElement("div");
+      actorEl.className = "dz-toast__title dz-toast__actor";
+      actorEl.textContent = String(actorName);
+      body.appendChild(actorEl);
+      if (title) {
+        var sub = document.createElement("div");
+        sub.className = "dz-toast__subtitle";
+        sub.textContent = String(title);
+        body.appendChild(sub);
+      }
+    } else if (title) {
       var titleEl = document.createElement("div");
       titleEl.className = "dz-toast__title";
       titleEl.textContent = String(title);
@@ -424,24 +510,20 @@
     scheduleOne(toast);
   }
 
-  // window.dz.toast(msg, type) → CustomEvent `toast` on the stack (no bubble).
   document.addEventListener(
     "toast",
     function (e) {
       var t = e && e.target;
       if (!t || t.id !== "dz-toast") return;
-      var d = e.detail || {};
-      clientToast(d);
+      clientToast(e.detail || {});
     },
     true,
   );
 
-  // Optimistic rollback / HX-Trigger path — showToast on document/body.
   document.addEventListener(
     "showToast",
     function (e) {
-      var d = (e && e.detail) || {};
-      clientToast(d);
+      clientToast((e && e.detail) || {});
     },
     true,
   );
@@ -449,7 +531,6 @@
   document.addEventListener("htmx:after:swap", function (e) {
     scan(e && e.target);
   });
-  // htmx 2 legacy alias if present
   document.addEventListener("htmx:afterSwap", function (e) {
     scan(e && e.target);
   });
@@ -462,7 +543,6 @@
     scan(document);
   }
 
-  // Optional global for demos / window.dz parity.
   if (typeof window !== "undefined") {
     window.dz = window.dz || {};
     if (typeof window.dz.toast !== "function") {

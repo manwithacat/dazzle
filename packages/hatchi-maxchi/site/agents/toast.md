@@ -48,10 +48,13 @@ This L2 host has no declared hypermedia exchanges in the registry. If you add pe
 - stack host #dz-toast.dz-toast-stack receives OOB afterbegin
 - data-dz-remove-after + data-dz-toast-level on each .dz-toast
 - optional .dz-toast__title / __message / __actions slots
+- person: data-dz-toast-composition=person + __avatar / __actor
 - data-dz-toast-dismiss removes the nearest .dz-toast
 - showToast CustomEvent or window.dz.toast for client path
 - host injects .dz-toast__progress TTL bar (pauses with timer)
 - level icon .dz-toast__icon (inline SVG; host ensures if missing)
+- swipe toward stack edge dismisses (same leave path)
+- data-dz-toast-sound + page dzCue opt-in for enter cue
 
 ### Do / Don't
 
@@ -59,6 +62,7 @@ This L2 host has no declared hypermedia exchanges in the registry. If you add pe
 |---|---|
 | emit structured toasts (title + message + actions) from the exchange response via with_toast | build a client notification SPA store or copy third-party Alpine toast idioms |
 | let hover/focus pause auto-dismiss so users can read or activate actions | force-dismiss while the pointer is over the toast |
+| use actor_name for person composition — not a new severity colour | add data-dz-toast-level=message as a fake tone |
 
 ### Pitfalls
 
@@ -66,12 +70,14 @@ This L2 host has no declared hypermedia exchanges in the registry. If you add pe
 - do not invent Alpine notify stacks — use OOB + this host
 - message text must be textContent (never innerHTML from detail)
 - gallery fire buttons are demo chrome — production uses with_toast or HX-Trigger showToast
+- never enable sound by default on product shells
 
 ### Keyboard / AT
 
 - role=status (or alert for error); aria-live on the stack
 - dismiss control is keyboard-activatable
 - focus inside the stack pauses auto-dismiss
+- sound/haptic cues are opt-in (meta or data-dz-cue-sound)
 
 ### Related parts
 
@@ -104,7 +110,9 @@ title, message, and optional action row are host-owned.
 
 Page chrome (decision 0011 / stem ``page-chrome-toast``): viewport stack,
 default TTL 8s (10s error), pause on hover/focus, leave before remove. TTL
-progress bar is host-injected (not a contract-required node).
+progress bar is host-injected (not a contract-required node). Optional person
+composition (``data-dz-toast-composition=person``) and sound attr are optional
+slots (ssr-client-slot-parity); host swipe-dismiss is pure behaviour.
 
 Server emit: ``dazzle.http.runtime.response_helpers.with_toast``.
 Client emit: ``showToast`` / stack ``toast`` events (``controllers/dz-toast.js``).
@@ -135,7 +143,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Dual-lock root .dz-toast + stack #dz-toast.dz-toast-stack. Decision 0011-toast-page-chrome: viewport host, 8s/10s TTL, pause, leave motion, TTL progress, level icons. Server: with_toast(..., title=…, actions=…). Not Alpine notify — HTMX OOB + CustomEvent.
+Dual-lock root .dz-toast + stack #dz-toast.dz-toast-stack. Decision 0011: viewport host, 8s/10s TTL, pause, leave, TTL progress, icons, person composition (actor_name), swipe-dismiss, opt-in sound via dzCue. Server: with_toast(..., title=…, actions=…, actor_name=…). Not Alpine notify.
 
 ## Source files
 

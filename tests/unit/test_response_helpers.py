@@ -87,6 +87,46 @@ class TestWithToast:
         assert "<svg" in body
         assert 'viewBox="0 0 24 24"' in body
 
+    def test_person_composition_slots(self):
+        resp = HTMLResponse("<p>OK</p>")
+        result = with_toast(
+            resp,
+            "Can you review the PR?",
+            "info",
+            actor_name="Alex Rivera",
+            actor_avatar="https://example.com/a.png",
+            actions=(("Reply", "/threads/1"), ("Dismiss", "")),
+        )
+        body = result.body.decode()
+        assert 'data-dz-toast-composition="person"' in body
+        assert 'class="dz-toast__avatar"' in body
+        assert "Alex Rivera" in body
+        assert "dz-toast__actor" in body
+        assert "dz-toast__icon" not in body  # avatar replaces level icon
+
+    def test_sound_attr_when_requested(self):
+        resp = HTMLResponse("<p>OK</p>")
+        result = with_toast(resp, "Ping", "info", sound=True)
+        assert 'data-dz-toast-sound="on"' in result.body.decode()
+
+    def test_toast_detail_dict_mirrors_slots(self):
+        from dazzle.http.runtime.response_helpers import ToastSlots, toast_detail_dict
+
+        d = toast_detail_dict(
+            ToastSlots(
+                message="Hi",
+                level="success",
+                title="Saved",
+                actor_name="Sam",
+                sound=True,
+            )
+        )
+        assert d["message"] == "Hi"
+        assert d["type"] == "success"
+        assert d["title"] == "Saved"
+        assert d["actor"]["name"] == "Sam"
+        assert d["sound"] is True
+
 
 class TestWithOob:
     def test_appends_oob_swap_to_response(self):

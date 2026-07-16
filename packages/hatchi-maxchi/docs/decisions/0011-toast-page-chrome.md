@@ -61,8 +61,10 @@ Root: `[data-dz-toast-level]` on `.dz-toast` with `data-dz-remove-after`.
 | message | yes in practice | `.dz-toast__message` (text only from client detail) |
 | actions | no | `.dz-toast__actions` → link or dismiss button |
 | icon | shipped default | `.dz-toast__icon` decorative inline SVG; host ensures |
+| actor / avatar | optional | `data-dz-toast-composition=person` + `__avatar` / `__actor` |
 | close | yes (shipped) | `[data-dz-toast-dismiss]` |
 | progress | host-owned | TTL bar; pauses with timer |
+| sound | opt-in | unit `data-dz-toast-sound` + page `dzCue` / meta `dz-sound` |
 
 Roles: `role="status"` by default; **`role="alert"`** for `error`.
 
@@ -119,11 +121,23 @@ same URL. Apps should not invent a parallel toast store.
 | B — Viewport gallery + 8s + leave motion | **Done** | overlay frame, enter/leave, shell stack |
 | C — TTL progress + error 10s + clean Copy this | **Done** | progress bar, demo_shell split |
 | D — Level icons (SSR + client parity) | **Done** | inline SVG `__icon`; host ensures if missing |
-| E — Person / message toast | Later | **separate** optional composition, not a severity — [#1594](https://github.com/manwithacat/dazzle/issues/1594) |
-| F — Sound / swipe-dismiss | Later | opt-in only; a11y / preference gated — [#1595](https://github.com/manwithacat/dazzle/issues/1595) |
+| E — Person / message toast | **Done** | optional composition (`actor_name` / `actor`); not a severity — [#1594](https://github.com/manwithacat/dazzle/issues/1594) |
+| F — Sound / swipe-dismiss | **Done** | swipe → leave path; sound via `dzCue` opt-in — [#1595](https://github.com/manwithacat/dazzle/issues/1595) |
+
+### Generalisation (phases E/F)
+
+| Pattern | Shared surface |
+|---------|----------------|
+| Opt-in sensory cues | `controllers/dz-cue.js` + stem `chrome-cue-opt-in` (mirror of haptic) |
+| SSR ↔ client slots | `ToastSlots` / `toast_unit_html` / `toast_detail_dict` + stem `ssr-client-slot-parity` |
+
+Other Hyperparts should call `window.dzCue.play(kind)` rather than inventing
+AudioContexts. New OOB+event dual-path units should ship a single slot builder
+used by both server HTML and client detail mapping.
 
 ## Not decided here
 
 - Bottom vs top stack placement tokens (product may add `data-dz-toast-placement` later).
 - Cross-tab / service-worker push (out of Hyperpart scope).
 - A fleet notification inbox (different job).
+- dazzle.toml `[ui] sound = true` meta emission (meta/host attrs work today).

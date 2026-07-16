@@ -94,6 +94,14 @@ class TestClientToastBridge:
         assert "dz-toast__icon" in content
         assert "ICON_SHAPES" in content
 
+    def test_person_and_swipe_and_cue_hooks(self) -> None:
+        content = JS_FILE.read_text()
+        assert "makeAvatar" in content
+        assert "data-dz-toast-composition" in content
+        assert "wireSwipe" in content
+        assert "playEnterCue" in content
+        assert "dzCue" in content
+
     def test_dazzle_host_matches_hm_controller(self) -> None:
         """Dual-lock: Dazzle static copy must not drift from HM controller."""
         assert JS_FILE.read_text() == HM_JS.read_text()

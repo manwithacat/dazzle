@@ -6,7 +6,9 @@ title, message, and optional action row are host-owned.
 
 Page chrome (decision 0011 / stem ``page-chrome-toast``): viewport stack,
 default TTL 8s (10s error), pause on hover/focus, leave before remove. TTL
-progress bar is host-injected (not a contract-required node).
+progress bar is host-injected (not a contract-required node). Optional person
+composition (``data-dz-toast-composition=person``) and sound attr are optional
+slots (ssr-client-slot-parity); host swipe-dismiss is pure behaviour.
 
 Server emit: ``dazzle.http.runtime.response_helpers.with_toast``.
 Client emit: ``showToast`` / stack ``toast`` events (``controllers/dz-toast.js``).

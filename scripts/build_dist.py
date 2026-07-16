@@ -132,6 +132,9 @@ JS_SOURCES = [
     # timestamp, component root listing). Bundle cost ~1KB; methods
     # only do work when called.
     STATIC / "js" / "dz-debug.js",
+    # Opt-in sound cues (stem chrome-cue-opt-in); toast and other hosts call
+    # window.dzCue — must load before dz-toast.js.
+    STATIC / "js" / "dz-cue.js",
     # htmx 4 migration: auto-dismiss bridge for OOB toasts (replaces the
     # dropped htmx-2 remove-me extension).
     STATIC / "js" / "dz-toast.js",
@@ -154,6 +157,7 @@ FRAMEWORK_JS = {
     "dz-islands.js",
     "pdf-viewer.js",
     "dz-debug.js",
+    "dz-cue.js",
     "dz-toast.js",
     "site.js",
 }

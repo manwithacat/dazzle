@@ -126,6 +126,7 @@ LAYER_ORDER = "@layer vendor, tokens, base, components;"
 
 JS_SOURCES = [
     "controllers/dz-confirm.js",
+    "controllers/dz-cue.js",  # opt-in sound; toast and other hosts call window.dzCue
     "controllers/dz-toast.js",
     "controllers/dz-command.js",
     "controllers/dz-master-detail.js",

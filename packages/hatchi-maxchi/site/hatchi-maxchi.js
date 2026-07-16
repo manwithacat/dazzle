@@ -807,41 +807,184 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   });
 })();
 
+/* ── controllers/cue.js ── */
+/** @ts-check */
+/**
+ * cue.js — opt-in UI cues (sound) for Hyperparts.
+ *
+ * Parallel to Dazzle's haptic gate (`meta[name=haptic]` / window.dzHaptic):
+ * a **product must opt in** before any sound plays. Controllers call
+ * `window.dzCue.play(kind)` and get a silent no-op when disabled.
+ *
+ * Enable when either is true:
+ *   - `<meta name="sound" content="on">` (page-wide; emit from dazzle.toml later)
+ *   - any host with `data-cue-sound="on"` present in the document
+ *
+ * Never default-on. Respects `prefers-reduced-motion: reduce` (no auto cues).
+ * Uses Web Audio oscillators — **no CDN ding**, no network. Failures are
+ * silent so emit paths never block.
+ *
+ * Kinds: "tap" | "success" | "warning" | "error" | "info"
+ *
+ * Reuse: toast enter, confirm open, command palette open, etc.
+ */
+
+(function () {
+  "use strict";
+
+  function reducedMotion() {
+    return (
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  function metaEnabled() {
+    var meta = document.querySelector('meta[name="sound"]');
+    return !!(meta && meta.getAttribute("content") === "on");
+  }
+
+  function hostEnabled() {
+    return !!document.querySelector('[data-cue-sound="on"]');
+  }
+
+  function isEnabled() {
+    if (reducedMotion()) return false;
+    return metaEnabled() || hostEnabled();
+  }
+
+  /** @type {AudioContext | null} */
+  var sharedCtx = null;
+
+  function getCtx() {
+    if (sharedCtx) return sharedCtx;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try {
+      sharedCtx = new AC();
+    } catch (_e) {
+      return null;
+    }
+    return sharedCtx;
+  }
+
+  /**
+   * Short oscillator blip — no external asset.
+   * @param {number} freqHz
+   * @param {number} durationSec
+   * @param {number} [gain]
+   */
+  function blip(freqHz, durationSec, gain) {
+    if (!isEnabled()) return false;
+    var ctx = getCtx();
+    if (!ctx) return false;
+    try {
+      if (ctx.state === "suspended" && typeof ctx.resume === "function") {
+        ctx.resume();
+      }
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = freqHz;
+      g.gain.value = gain == null ? 0.04 : gain;
+      o.connect(g);
+      g.connect(ctx.destination);
+      var t0 = ctx.currentTime;
+      g.gain.setValueAtTime(g.gain.value, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + durationSec);
+      o.start(t0);
+      o.stop(t0 + durationSec + 0.01);
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  var KINDS = {
+    tap: function () {
+      return blip(660, 0.06);
+    },
+    info: function () {
+      return blip(720, 0.07);
+    },
+    success: function () {
+      return blip(880, 0.08);
+    },
+    warning: function () {
+      return blip(520, 0.1);
+    },
+    error: function () {
+      blip(320, 0.05);
+      setTimeout(function () {
+        blip(280, 0.08);
+      }, 70);
+      return true;
+    },
+  };
+
+  /**
+   * @param {string} [kind]
+   * @returns {boolean}
+   */
+  function play(kind) {
+    var k = kind || "tap";
+    var fn = KINDS[k] || KINDS.tap;
+    try {
+      return !!fn();
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  window.dzCue = {
+    get enabled() {
+      return isEnabled();
+    },
+    play: play,
+    /** @deprecated use play */
+    sound: play,
+  };
+})();
+
 /* ── controllers/toast.js ── */
 /** @ts-check */
 /**
  * HYPERPART: toast
  *
  * Toast stack host — auto-dismiss, hover/focus pause, stack cap, dismiss
- * with leave motion, and client-initiated toasts with server-parity markup.
+ * with leave motion, swipe-dismiss, opt-in enter cue, and client-initiated
+ * toasts with server-parity markup (stem ssr-client-slot-parity).
  *
  * Contract (contracts/toast.py):
  *   Stack:  #toast.toast-stack  [data-toast-cap]
  *   Toast:  .toast[data-toast-level][data-remove-after]
  *   Slots:  .toast__title | .toast__message | .toast__actions
+ *           optional person: data-toast-composition=person + __avatar / __actor
  *   Dismiss: [data-toast-dismiss]
  *
  * Server path: OOB afterbegin into #toast with data-remove-after.
  * Client path: CustomEvent `showToast` (document/body) or `toast` on the
- * stack (window.dz.toast). Detail: { message, type?, title?, actions? }
- * where actions is [{ label, href? }].
+ * stack (window.dz.toast). Detail mirrors ToastSlots:
+ *   { message, type?, title?, actions?, actor?: {name, avatar?},
+ *     duration?, sound? }
  *
- * Timing: default 8s (readable + action-friendly). Leave animation ~300ms
- * before DOM removal. Zero dependencies. Survives htmx swaps.
+ * Sound: unit `data-toast-sound=on` or detail.sound — page must also opt
+ * in via meta sound or data-cue-sound (controllers/cue.js).
+ *
+ * Timing: default 8s / 10s error. Leave ~300ms. Swipe toward stack edge
+ * dismisses (threshold 48px). Zero hard deps. Survives htmx swaps.
  */
 
 (function () {
   "use strict";
 
   var DEFAULT_CAP = 8;
-  /** Decision 0011: readable default (info/success/warning). */
   var DEFAULT_DELAY = "8s";
-  /** Errors get a longer read window when duration is omitted. */
   var ERROR_DELAY = "10s";
-  /** Match CSS --duration-slow leave; hard ceiling if animationend missed. */
   var LEAVE_MS = 320;
+  var SWIPE_PX = 48;
 
-  /** Parse htmx-style timing ("5s", "300ms", bare seconds) → ms. */
   function parseDelayMs(value) {
     if (!value) return 8000;
     var m = String(value)
@@ -857,10 +1000,6 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     return level === "error" ? ERROR_DELAY : DEFAULT_DELAY;
   }
 
-  /**
-   * Lucide-shaped shapes as [tag, attrs] tuples — built with createElementNS
-   * (DOM construction only; user message still textContent-only).
-   */
   var ICON_SHAPES = {
     info: [
       ["circle", { cx: "12", cy: "12", r: "10" }],
@@ -889,12 +1028,6 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     ],
   };
 
-  /**
-   * Decorative level icon (decision 0011 phase D). aria-hidden — severity
-   * is also carried by data-toast-level / role / border tone.
-   * @param {string} tone
-   * @returns {HTMLElement}
-   */
   function makeIcon(tone) {
     var shapes = ICON_SHAPES[tone] || ICON_SHAPES.info;
     var wrap = document.createElement("span");
@@ -923,9 +1056,32 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     return wrap;
   }
 
-  /** Inject icon on OOB/server units that omitted the slot. */
+  function makeAvatar(actorName, avatarUrl) {
+    if (avatarUrl) {
+      var img = document.createElement("img");
+      img.className = "toast__avatar";
+      img.src = String(avatarUrl);
+      img.alt = "";
+      img.width = 32;
+      img.height = 32;
+      img.decoding = "async";
+      return img;
+    }
+    var span = document.createElement("span");
+    span.className = "toast__avatar toast__avatar--fallback";
+    span.setAttribute("aria-hidden", "true");
+    var name = String(actorName || "?").trim();
+    span.textContent = (name.charAt(0) || "?").toUpperCase();
+    return span;
+  }
+
+  function isPersonToast(el) {
+    return el.getAttribute("data-toast-composition") === "person";
+  }
+
   function ensureIcon(el) {
-    if (el.querySelector(".toast__icon, .toast-icon")) return;
+    if (isPersonToast(el)) return;
+    if (el.querySelector(".toast__icon, .toast-icon, .toast__avatar")) return;
     var tone = el.getAttribute("data-toast-level") || "info";
     var body = el.querySelector(".toast__body");
     var icon = makeIcon(tone);
@@ -936,12 +1092,6 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     }
   }
 
-  /**
-   * Host-owned TTL bar. Duration matches data-remove-after; pause/resume
-   * uses animation-play-state so remaining visual time tracks the timer.
-   * @param {Element} el
-   * @param {number} totalMs
-   */
   function ensureProgress(el, totalMs) {
     var bar = el.querySelector(".toast__progress");
     if (!bar) {
@@ -964,7 +1114,6 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   }
 
   function toastSelector() {
-    // Prefixed source form; apply_prefix rewrites for unprefixed gallery.
     return ".toast";
   }
 
@@ -979,7 +1128,6 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var sel = toastSelector();
     var items = stack.querySelectorAll(sel + ":not(.toast-leave)");
     var cap = capOf(stack);
-    // Stack prepends newest first — drop from the end (oldest).
     while (items.length > cap) {
       var last = items[items.length - 1];
       dismissToast(last);
@@ -987,10 +1135,17 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     }
   }
 
-  /**
-   * Play leave motion then remove. Safe to call multiple times.
-   * @param {Element} el
-   */
+  function playEnterCue(el) {
+    var unitWants =
+      el.getAttribute("data-toast-sound") === "on" ||
+      el.getAttribute("data-toast-sound") === "true";
+    if (!unitWants) return;
+    var tone = el.getAttribute("data-toast-level") || "info";
+    if (window.dzCue && typeof window.dzCue.play === "function") {
+      window.dzCue.play(tone);
+    }
+  }
+
   function dismissToast(el) {
     if (!el || el.__dzToastLeaving) return;
     el.__dzToastLeaving = true;
@@ -998,6 +1153,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     el.classList.remove("toast-enter");
     el.classList.add("toast-leave");
     setProgressPaused(el, true);
+    el.style.transform = "";
+    el.style.opacity = "";
 
     var done = false;
     function finish() {
@@ -1007,21 +1164,69 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     }
 
     function onEnd(e) {
-      // Ignore bubbled progress/enter ends — only leave motion on the unit.
       if (e && e.target !== el) return;
       if (e && e.animationName && e.animationName.indexOf("toast-out") === -1) return;
       finish();
     }
     el.addEventListener("animationend", onEnd);
-    // Fallback when reduced-motion collapses animation or event is missed.
     setTimeout(finish, LEAVE_MS);
   }
 
   /**
-   * Schedule auto-dismiss with pause/resume. Each toast is scheduled once
-   * (`__dzRemoveScheduled`). Hover or focus on the stack pauses all timers;
-   * leave resumes with remaining time.
+   * Horizontal swipe toward the stack's outer edge → dismiss.
+   * Threshold 48px; ignores mostly-vertical gestures.
    */
+  function wireSwipe(el) {
+    if (el.__dzToastSwipeWired) return;
+    el.__dzToastSwipeWired = true;
+    var startX = 0;
+    var startY = 0;
+    var tracking = false;
+
+    el.addEventListener("pointerdown", function (e) {
+      if (el.__dzToastLeaving) return;
+      if (e.button != null && e.button !== 0) return;
+      tracking = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch (_err) {
+        /* ignore */
+      }
+    });
+
+    el.addEventListener("pointermove", function (e) {
+      if (!tracking || el.__dzToastLeaving) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      // Prefer horizontal
+      if (Math.abs(dx) > Math.abs(dy)) {
+        // Top-right stack: positive dx (outward) feels natural
+        var shift = Math.max(0, dx);
+        el.style.transform = "translateX(" + shift + "px)";
+        el.style.opacity = String(Math.max(0.35, 1 - shift / 120));
+      }
+    });
+
+    function endPointer(e) {
+      if (!tracking) return;
+      tracking = false;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      el.style.transform = "";
+      el.style.opacity = "";
+      if (el.__dzToastLeaving) return;
+      if (dx >= SWIPE_PX && Math.abs(dx) > Math.abs(dy)) {
+        dismissToast(el);
+      }
+    }
+
+    el.addEventListener("pointerup", endPointer);
+    el.addEventListener("pointercancel", endPointer);
+  }
+
   function scheduleOne(el) {
     if (el.__dzRemoveScheduled || el.__dzToastLeaving) return;
     el.__dzRemoveScheduled = true;
@@ -1033,6 +1238,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var paused = false;
 
     ensureProgress(el, total);
+    wireSwipe(el);
+    playEnterCue(el);
 
     function clear() {
       if (timer != null) {
@@ -1091,7 +1298,6 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     if (stack.__dzToastHostWired) return;
     stack.__dzToastHostWired = true;
 
-    // mouseover/out bubble through children (stack itself is pointer-events:none).
     stack.addEventListener("mouseover", function () {
       pauseAll(stack);
     });
@@ -1125,7 +1331,6 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       wireStackOnce(stack);
       forEachToast(stack, function (el) {
         if (!el.classList.contains("toast-enter") && !el.classList.contains("toast-leave")) {
-          // OOB-inserted toasts may lack the enter class — give them motion.
           el.classList.add("toast-enter");
         }
         ensureIcon(el);
@@ -1133,13 +1338,11 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       });
       enforceCap(stack);
     }
-    // Also schedule any data-remove-after outside the stack (legacy).
     var scope = root && root.querySelectorAll ? root : document;
     scope.querySelectorAll("[data-remove-after]").forEach(function (el) {
       if (el.classList && el.classList.contains("toast")) {
         scheduleOne(el);
       } else if (!el.__dzRemoveScheduled) {
-        // Non-toast remove-after (if any): simple timeout, no pause.
         el.__dzRemoveScheduled = true;
         setTimeout(function () {
           el.remove();
@@ -1171,19 +1374,42 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var title = opts.title || null;
     var actions = opts.actions || null;
     var duration = opts.duration || defaultDelayFor(tone);
+    var actor = opts.actor || null;
+    var actorName = (actor && actor.name) || opts.actor_name || null;
+    var actorAvatar =
+      (actor && (actor.avatar || actor.avatar_url)) || opts.actor_avatar || null;
+    var wantSound = !!(opts.sound || opts.cue);
 
     var toast = document.createElement("div");
     toast.className = "toast toast-enter";
     toast.setAttribute("data-toast-level", tone);
     toast.setAttribute("data-remove-after", duration);
     toast.setAttribute("role", tone === "error" ? "alert" : "status");
+    if (wantSound) toast.setAttribute("data-toast-sound", "on");
 
-    toast.appendChild(makeIcon(tone));
+    var isPerson = !!(actorName && String(actorName).trim());
+    if (isPerson) {
+      toast.setAttribute("data-toast-composition", "person");
+      toast.appendChild(makeAvatar(actorName, actorAvatar));
+    } else {
+      toast.appendChild(makeIcon(tone));
+    }
 
     var body = document.createElement("div");
     body.className = "toast__body";
 
-    if (title) {
+    if (isPerson) {
+      var actorEl = document.createElement("div");
+      actorEl.className = "toast__title toast__actor";
+      actorEl.textContent = String(actorName);
+      body.appendChild(actorEl);
+      if (title) {
+        var sub = document.createElement("div");
+        sub.className = "toast__subtitle";
+        sub.textContent = String(title);
+        body.appendChild(sub);
+      }
+    } else if (title) {
       var titleEl = document.createElement("div");
       titleEl.className = "toast__title";
       titleEl.textContent = String(title);
@@ -1234,24 +1460,20 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     scheduleOne(toast);
   }
 
-  // window.dz.toast(msg, type) → CustomEvent `toast` on the stack (no bubble).
   document.addEventListener(
     "toast",
     function (e) {
       var t = e && e.target;
       if (!t || t.id !== "toast") return;
-      var d = e.detail || {};
-      clientToast(d);
+      clientToast(e.detail || {});
     },
     true,
   );
 
-  // Optimistic rollback / HX-Trigger path — showToast on document/body.
   document.addEventListener(
     "showToast",
     function (e) {
-      var d = (e && e.detail) || {};
-      clientToast(d);
+      clientToast((e && e.detail) || {});
     },
     true,
   );
@@ -1259,7 +1481,6 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   document.addEventListener("htmx:after:swap", function (e) {
     scan(e && e.target);
   });
-  // htmx 2 legacy alias if present
   document.addEventListener("htmx:afterSwap", function (e) {
     scan(e && e.target);
   });
@@ -1272,7 +1493,6 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     scan(document);
   }
 
-  // Optional global for demos / window.dz parity.
   if (typeof window !== "undefined") {
     window.dz = window.dz || {};
     if (typeof window.dz.toast !== "function") {

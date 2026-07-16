@@ -330,31 +330,31 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "</div>"
             "</div>",
             notes="Dual-lock root <code>.dz-toast</code> + stack "
-            "<code>#dz-toast.dz-toast-stack</code>. Decision "
-            "<code>0011-toast-page-chrome</code>: viewport host, 8s/10s TTL, "
-            "pause, leave motion, TTL progress, level icons. Server: "
-            "<code>with_toast(..., title=…, actions=…)</code>. Not Alpine "
-            "notify — HTMX OOB + CustomEvent.",
+            "<code>#dz-toast.dz-toast-stack</code>. Decision 0011: viewport host, "
+            "8s/10s TTL, pause, leave, TTL progress, icons, person composition "
+            "(<code>actor_name</code>), swipe-dismiss, opt-in sound via "
+            "<code>dzCue</code>. Server: <code>with_toast(..., title=…, "
+            "actions=…, actor_name=…)</code>. Not Alpine notify.",
             tags=("feedback", "htmx"),
             controller="controllers/dz-toast.js",
             contracts=("contracts/toast.py",),
             framed=True,
             frame_kind="overlay",
             demo_shell=(
-                '<div class="hm-toast-stage">'
+                '<div class="hm-toast-stage" data-dz-cue-sound="on">'
                 '<header class="hm-toast-stage__bar">'
                 "<strong>Demo app</strong>"
-                '<span class="hm-toast-stage__hint">Toasts pin to the viewport, '
-                "not this content column</span>"
+                '<span class="hm-toast-stage__hint">Viewport overlay · swipe '
+                "right to dismiss · demo enables sound via data-dz-cue-sound</span>"
                 "</header>"
                 '<main class="hm-toast-stage__body">'
-                "<p>Page-chrome feedback — top-right overlay, 8s default "
-                "(10s errors), pause on hover/focus, leave motion.</p>"
+                "<p>Page-chrome feedback — title/actions/icons, person "
+                "composition, 8s/10s TTL, pause, leave motion.</p>"
                 '<div class="hm-demo-row">'
                 '<button type="button" class="dz-button" data-dz-variant="primary" '
                 "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
                 "{detail:{title:'Saved',message:"
-                "'Your changes are live.',type:'success'}}))\">"
+                "'Your changes are live.',type:'success',sound:true}}))\">"
                 "Fire success</button>"
                 '<button type="button" class="dz-button" data-dz-variant="outline" '
                 "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
@@ -363,15 +363,15 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                 "Fire info</button>"
                 '<button type="button" class="dz-button" data-dz-variant="outline" '
                 "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
-                "{detail:{title:'Action needed',message:"
-                "'Storage is getting low.',type:'warning',"
-                "actions:[{label:'Upgrade',href:'#toast'},{label:'Dismiss'}]}}))\">"
-                "Fire warning</button>"
+                "{detail:{message:'Can you review the PR I just submitted?',"
+                "type:'info',actor:{name:'Alex Rivera'},"
+                "actions:[{label:'Reply',href:'#toast'},{label:'Dismiss'}]}}))\">"
+                "Fire person</button>"
                 '<button type="button" class="dz-button" data-dz-variant="outline" '
                 "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
                 "{detail:{title:'Something went wrong',message:"
                 "'Please try again.',type:'error',"
-                "actions:[{label:'Dismiss'}]}}))\">"
+                "actions:[{label:'Dismiss'}],sound:true}}))\">"
                 "Fire error</button>"
                 "</div></main></div>"
             ),
@@ -382,10 +382,13 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "stack host #dz-toast.dz-toast-stack receives OOB afterbegin",
                     "data-dz-remove-after + data-dz-toast-level on each .dz-toast",
                     "optional .dz-toast__title / __message / __actions slots",
+                    "person: data-dz-toast-composition=person + __avatar / __actor",
                     "data-dz-toast-dismiss removes the nearest .dz-toast",
                     "showToast CustomEvent or window.dz.toast for client path",
                     "host injects .dz-toast__progress TTL bar (pauses with timer)",
                     "level icon .dz-toast__icon (inline SVG; host ensures if missing)",
+                    "swipe toward stack edge dismisses (same leave path)",
+                    "data-dz-toast-sound + page dzCue opt-in for enter cue",
                 ),
                 pitfalls=(
                     "do not morph the toast stack — replace/afterbegin only",
@@ -393,6 +396,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "message text must be textContent (never innerHTML from detail)",
                     "gallery fire buttons are demo chrome — production uses "
                     "with_toast or HX-Trigger showToast",
+                    "never enable sound by default on product shells",
                 ),
                 do_dont=(
                     (
@@ -405,11 +409,16 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                         "let hover/focus pause auto-dismiss so users can read or activate actions",
                         "force-dismiss while the pointer is over the toast",
                     ),
+                    (
+                        "use actor_name for person composition — not a new severity colour",
+                        "add data-dz-toast-level=message as a fake tone",
+                    ),
                 ),
                 a11y_keys=(
                     "role=status (or alert for error); aria-live on the stack",
                     "dismiss control is keyboard-activatable",
                     "focus inside the stack pauses auto-dismiss",
+                    "sound/haptic cues are opt-in (meta or data-dz-cue-sound)",
                 ),
                 composes_with=("button", "alert"),
             ),

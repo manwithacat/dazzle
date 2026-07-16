@@ -2026,14 +2026,56 @@ dialog.alert-dialog::backdrop {
   font-size: var(--text-sm);
 }
 
+.toast__subtitle {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--colour-text-muted);
+}
+
 .toast-message,
 .toast__message {
   font-size: var(--text-sm);
   color: var(--colour-text);
 }
 
-.toast__title + .toast__message {
+.toast__title + .toast__message,
+.toast__subtitle + .toast__message {
   color: var(--colour-text-muted);
+}
+
+/* Person / message composition (decision 0011 phase E) — not a severity. */
+.toast__avatar {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  object-fit: cover;
+  background: color-mix(in oklch, var(--colour-brand) 12%, var(--colour-surface));
+  color: var(--colour-brand);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--weight-semibold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-block-start: 0.05rem;
+}
+
+.toast__avatar--fallback {
+  border: 1px solid var(--colour-border);
+}
+
+.toast[data-toast-composition="person"] .toast__actor {
+  font-weight: var(--weight-semibold);
+}
+
+/* Swipe-dismiss feedback (host sets inline transform while dragging). */
+.toast {
+  touch-action: pan-y;
+  user-select: none;
+}
+.toast__body,
+.toast__action,
+.toast__close {
+  user-select: text;
 }
 
 .toast__actions {

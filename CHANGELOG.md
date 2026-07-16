@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Toast phases E/F** (#1594, #1595) — person composition
+  (`with_toast(..., actor_name=, actor_avatar=)` / `showToast` `actor: {name, avatar}`);
+  swipe-to-dismiss; opt-in enter sound via shared `window.dzCue` (meta
+  `dz-sound` or `data-dz-cue-sound`, never default-on). Slot model
+  `ToastSlots` / `toast_unit_html` for SSR↔client parity. Stems:
+  `chrome-cue-opt-in`, `ssr-client-slot-parity`.
+
 ## [0.104.1] - 2026-07-16
 
 ### Fixed

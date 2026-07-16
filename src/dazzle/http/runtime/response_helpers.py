@@ -4,12 +4,18 @@ HTMX OOB swap response helpers.
 Provides utilities for appending out-of-band HTML fragments to any
 HTMLResponse, enabling server-driven toasts, breadcrumbs, and other
 UI updates without client-side logic.
+
+Toast emission follows stem **ssr-client-slot-parity**: one slot model
+(``ToastSlots`` / ``toast_unit_html``) for OOB HTML; client ``showToast``
+detail mirrors the same fields in ``dz-toast.js``.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from html import escape
+from typing import Any
 
 from starlette.responses import HTMLResponse
 
@@ -37,6 +43,128 @@ def _toast_icon_html(level: str) -> str:
     )
 
 
+def _toast_avatar_html(actor_name: str, actor_avatar: str | None) -> str:
+    """Person composition leading media (decision 0011 phase E)."""
+    if actor_avatar:
+        return (
+            f'<img class="dz-toast__avatar" src="{escape(actor_avatar, quote=True)}" '
+            f'alt="" width="32" height="32" decoding="async" />'
+        )
+    # Initials fallback — first grapheme cluster-ish (ASCII-safe slice).
+    initial = (actor_name.strip()[:1] or "?").upper()
+    return (
+        f'<span class="dz-toast__avatar dz-toast__avatar--fallback" '
+        f'aria-hidden="true">{escape(initial)}</span>'
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ToastSlots:
+    """Shared SSR/client slot model for toast units (stem ssr-client-slot-parity).
+
+    Client ``showToast`` detail should use the same field names
+    (``message``, ``type``/``level``, ``title``, ``actions``, ``actor``,
+    ``duration``, ``sound``).
+    """
+
+    message: str
+    level: str = "info"
+    duration: str | None = None
+    title: str | None = None
+    actions: Sequence[tuple[str, str]] | None = None
+    actor_name: str | None = None
+    actor_avatar: str | None = None
+    sound: bool = False
+
+
+def toast_unit_html(slots: ToastSlots) -> str:
+    """Render one ``.dz-toast`` unit (no OOB wrapper) from shared slots."""
+    level = slots.level if slots.level in _TOAST_ICON_PATHS else "info"
+    duration = slots.duration
+    if duration is None:
+        duration = "10s" if level == "error" else "8s"
+    safe_message = escape(slots.message)
+    safe_level = escape(level, quote=True)
+    safe_duration = escape(duration, quote=True)
+    role = "alert" if level == "error" else "status"
+    is_person = bool(slots.actor_name and slots.actor_name.strip())
+
+    leading = (
+        _toast_avatar_html(slots.actor_name or "", slots.actor_avatar)
+        if is_person
+        else _toast_icon_html(level)
+    )
+
+    body_parts: list[str] = ['<div class="dz-toast__body">']
+    if is_person:
+        body_parts.append(
+            f'<div class="dz-toast__title dz-toast__actor">{escape(slots.actor_name or "")}</div>'
+        )
+        if slots.title:
+            body_parts.append(f'<div class="dz-toast__subtitle">{escape(slots.title)}</div>')
+    elif slots.title:
+        body_parts.append(f'<div class="dz-toast__title">{escape(slots.title)}</div>')
+    body_parts.append(f'<div class="dz-toast__message">{safe_message}</div>')
+
+    if slots.actions:
+        body_parts.append('<div class="dz-toast__actions">')
+        for label, href in slots.actions:
+            safe_label = escape(label)
+            if href:
+                body_parts.append(
+                    f'<a class="dz-toast__action" href="{escape(href, quote=True)}">'
+                    f"{safe_label}</a>"
+                )
+            else:
+                body_parts.append(
+                    f'<button type="button" class="dz-toast__action" '
+                    f"data-dz-toast-dismiss>{safe_label}</button>"
+                )
+        body_parts.append("</div>")
+    body_parts.append("</div>")
+    body_html = "".join(body_parts)
+
+    composition = ' data-dz-toast-composition="person"' if is_person else ""
+    sound_attr = ' data-dz-toast-sound="on"' if slots.sound else ""
+
+    return (
+        f'<div class="dz-toast" data-dz-toast-level="{safe_level}" '
+        f'data-dz-remove-after="{safe_duration}" role="{role}"'
+        f"{composition}{sound_attr}>"
+        f"{leading}{body_html}"
+        f'<button type="button" class="dz-toast__close" '
+        f'data-dz-toast-dismiss aria-label="Dismiss"></button>'
+        f"</div>"
+    )
+
+
+def toast_detail_dict(slots: ToastSlots) -> dict[str, Any]:
+    """JSON-serialisable detail for ``HX-Trigger: showToast`` / client parity."""
+    level = slots.level if slots.level in _TOAST_ICON_PATHS else "info"
+    duration = slots.duration
+    if duration is None:
+        duration = "10s" if level == "error" else "8s"
+    detail: dict[str, Any] = {
+        "message": slots.message,
+        "type": level,
+        "duration": duration,
+    }
+    if slots.title:
+        detail["title"] = slots.title
+    if slots.actions:
+        detail["actions"] = [
+            {"label": label, "href": href or None} for label, href in slots.actions
+        ]
+    if slots.actor_name:
+        actor: dict[str, str] = {"name": slots.actor_name}
+        if slots.actor_avatar:
+            actor["avatar"] = slots.actor_avatar
+        detail["actor"] = actor
+    if slots.sound:
+        detail["sound"] = True
+    return detail
+
+
 def with_toast(
     response: HTMLResponse,
     message: str,
@@ -45,6 +173,9 @@ def with_toast(
     *,
     title: str | None = None,
     actions: Sequence[tuple[str, str]] | None = None,
+    actor_name: str | None = None,
+    actor_avatar: str | None = None,
+    sound: bool = False,
 ) -> HTMLResponse:
     """Append an auto-dismissing toast to an HTMX response via OOB swap.
 
@@ -63,51 +194,24 @@ def with_toast(
         actions: Optional ``(label, href)`` pairs. Empty href renders a
             dismiss button (``data-dz-toast-dismiss``); non-empty href is a
             link. Labels and hrefs are escaped.
+        actor_name: Optional person composition (phase E) — avatar + name.
+        actor_avatar: Optional image URL for the actor (decorative alt="").
+        sound: Request an enter cue (phase F); page must opt in via
+            ``meta dz-sound`` or ``data-dz-cue-sound=on`` (stem chrome-cue-opt-in).
     """
-    if duration is None:
-        duration = "10s" if level == "error" else "8s"
-    safe_message = escape(message)
-    safe_level = escape(level, quote=True)
-    safe_duration = escape(duration, quote=True)
-    role = "alert" if level == "error" else "status"
-    icon_html = _toast_icon_html(level if level in _TOAST_ICON_PATHS else "info")
-
-    body_parts: list[str] = ['<div class="dz-toast__body">']
-    if title:
-        body_parts.append(f'<div class="dz-toast__title">{escape(title)}</div>')
-    body_parts.append(f'<div class="dz-toast__message">{safe_message}</div>')
-
-    if actions:
-        body_parts.append('<div class="dz-toast__actions">')
-        for label, href in actions:
-            safe_label = escape(label)
-            if href:
-                body_parts.append(
-                    f'<a class="dz-toast__action" href="{escape(href, quote=True)}">'
-                    f"{safe_label}</a>"
-                )
-            else:
-                body_parts.append(
-                    f'<button type="button" class="dz-toast__action" '
-                    f"data-dz-toast-dismiss>{safe_label}</button>"
-                )
-        body_parts.append("</div>")
-
-    body_parts.append("</div>")
-    body_html = "".join(body_parts)
-
-    # OOB target = the shell's toast stack (`#dz-toast`, _render_shell) —
-    # the wrapper div is consumed by the swap, its children prepended.
-    toast_html = (
-        f'<div hx-swap-oob="afterbegin:#dz-toast">'
-        f'<div class="dz-toast" data-dz-toast-level="{safe_level}" '
-        f'data-dz-remove-after="{safe_duration}" role="{role}">'
-        f"{icon_html}{body_html}"
-        f'<button type="button" class="dz-toast__close" '
-        f'data-dz-toast-dismiss aria-label="Dismiss"></button>'
-        f"</div>"
-        f"</div>"
+    unit = toast_unit_html(
+        ToastSlots(
+            message=message,
+            level=level,
+            duration=duration,
+            title=title,
+            actions=actions,
+            actor_name=actor_name,
+            actor_avatar=actor_avatar,
+            sound=sound,
+        )
     )
+    toast_html = f'<div hx-swap-oob="afterbegin:#dz-toast">{unit}</div>'
     return _append_html(response, toast_html)
 
 
@@ -142,3 +246,12 @@ def _append_html(response: HTMLResponse, fragment: str) -> HTMLResponse:
         if key.lower() != "content-length":
             new_response.headers[key] = value
     return new_response
+
+
+__all__ = [
+    "ToastSlots",
+    "toast_detail_dict",
+    "toast_unit_html",
+    "with_oob",
+    "with_toast",
+]
