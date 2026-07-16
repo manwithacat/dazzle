@@ -78,6 +78,15 @@ class TestWithToast:
         result = with_toast(resp, "Nope", "error")
         assert 'role="alert"' in result.body.decode()
 
+    def test_level_icon_is_decorative_inline_svg(self):
+        resp = HTMLResponse("<p>OK</p>")
+        result = with_toast(resp, "Saved", "success")
+        body = result.body.decode()
+        assert 'class="dz-toast__icon"' in body
+        assert 'aria-hidden="true"' in body
+        assert "<svg" in body
+        assert 'viewBox="0 0 24 24"' in body
+
 
 class TestWithOob:
     def test_appends_oob_swap_to_response(self):

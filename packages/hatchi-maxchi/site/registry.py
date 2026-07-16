@@ -306,11 +306,17 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "Stack host + auto-dismiss notifications — title, body, optional "
             "actions; hover/focus pauses the timer (htmx OOB or client bridge).",
             # Product partial only (decision 0011). Live fire buttons live in
-            # demo_shell so Copy this stays stack + unit.
+            # demo_shell so Copy this stays stack + unit. Icon is inline SVG
+            # (phase D) so apps need no sprite for OOB parity.
             '<div id="dz-toast" class="dz-toast-stack" aria-live="polite" '
             'data-dz-toast-cap="8">'
             '<div class="dz-toast dz-toast-enter" data-dz-toast-level="success" '
             'data-dz-remove-after="8s" role="status">'
+            '<span class="dz-toast__icon" aria-hidden="true">'
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+            '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>'
+            "</svg></span>"
             '<div class="dz-toast__body">'
             '<div class="dz-toast__title">Saved</div>'
             '<div class="dz-toast__message">Your changes are live.</div>'
@@ -326,7 +332,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             notes="Dual-lock root <code>.dz-toast</code> + stack "
             "<code>#dz-toast.dz-toast-stack</code>. Decision "
             "<code>0011-toast-page-chrome</code>: viewport host, 8s/10s TTL, "
-            "pause, leave motion, TTL progress. Server: "
+            "pause, leave motion, TTL progress, level icons. Server: "
             "<code>with_toast(..., title=…, actions=…)</code>. Not Alpine "
             "notify — HTMX OOB + CustomEvent.",
             tags=("feedback", "htmx"),
@@ -379,6 +385,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "data-dz-toast-dismiss removes the nearest .dz-toast",
                     "showToast CustomEvent or window.dz.toast for client path",
                     "host injects .dz-toast__progress TTL bar (pauses with timer)",
+                    "level icon .dz-toast__icon (inline SVG; host ensures if missing)",
                 ),
                 pitfalls=(
                     "do not morph the toast stack — replace/afterbegin only",

@@ -84,7 +84,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `table` | **partial** | `grid,list-region,table` | grid dual-lock + list-region + CSS table |
 | `tabs` | **parity** | `tabs` | DOM-only dual-lock |
 | `textarea` | **partial** | `field,form` | Native textarea via field triad |
-| `toast` | **parity** | `toast` | Dual-lock Hyperpart: stack host, title/actions, pause-on-hover |
+| `toast` | **parity** | `toast` | Page-chrome L2: stack, title/actions/icons, pause, TTL bar, leave (0011) |
 | `toggle` | **parity** | `toggle` | Gallery Hyperpart — button + aria-pressed; distinct from switch/toggle-group |
 | `toggle-group` | **parity** | `toggle-group` | Gallery |
 | `tooltip` | **parity** | `tooltip` | Gallery |

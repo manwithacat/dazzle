@@ -156,6 +156,85 @@
   }
 
   /**
+   * Lucide-shaped shapes as [tag, attrs] tuples — built with createElementNS
+   * (DOM construction only; user message still textContent-only).
+   */
+  var ICON_SHAPES = {
+    info: [
+      ["circle", { cx: "12", cy: "12", r: "10" }],
+      ["path", { d: "M12 16v-4" }],
+      ["path", { d: "M12 8h.01" }],
+    ],
+    success: [
+      ["circle", { cx: "12", cy: "12", r: "10" }],
+      ["path", { d: "m9 12 2 2 4-4" }],
+    ],
+    warning: [
+      [
+        "path",
+        {
+          d:
+            "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
+        },
+      ],
+      ["path", { d: "M12 9v4" }],
+      ["path", { d: "M12 17h.01" }],
+    ],
+    error: [
+      ["circle", { cx: "12", cy: "12", r: "10" }],
+      ["path", { d: "m15 9-6 6" }],
+      ["path", { d: "m9 9 6 6" }],
+    ],
+  };
+
+  /**
+   * Decorative level icon (decision 0011 phase D). aria-hidden — severity
+   * is also carried by data-toast-level / role / border tone.
+   * @param {string} tone
+   * @returns {HTMLElement}
+   */
+  function makeIcon(tone) {
+    var shapes = ICON_SHAPES[tone] || ICON_SHAPES.info;
+    var wrap = document.createElement("span");
+    wrap.className = "toast__icon";
+    wrap.setAttribute("aria-hidden", "true");
+    var NS = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    for (var i = 0; i < shapes.length; i++) {
+      var spec = shapes[i];
+      var node = document.createElementNS(NS, spec[0]);
+      var attrs = spec[1];
+      for (var k in attrs) {
+        if (Object.prototype.hasOwnProperty.call(attrs, k)) {
+          node.setAttribute(k, attrs[k]);
+        }
+      }
+      svg.appendChild(node);
+    }
+    wrap.appendChild(svg);
+    return wrap;
+  }
+
+  /** Inject icon on OOB/server units that omitted the slot. */
+  function ensureIcon(el) {
+    if (el.querySelector(".toast__icon, .toast-icon")) return;
+    var tone = el.getAttribute("data-toast-level") || "info";
+    var body = el.querySelector(".toast__body");
+    var icon = makeIcon(tone);
+    if (body && body.parentNode === el) {
+      el.insertBefore(icon, body);
+    } else {
+      el.insertBefore(icon, el.firstChild);
+    }
+  }
+
+  /**
    * Host-owned TTL bar. Duration matches data-remove-after; pause/resume
    * uses animation-play-state so remaining visual time tracks the timer.
    * @param {Element} el
@@ -347,6 +426,7 @@
           // OOB-inserted toasts may lack the enter class — give them motion.
           el.classList.add("toast-enter");
         }
+        ensureIcon(el);
         scheduleOne(el);
       });
       enforceCap(stack);
@@ -395,6 +475,8 @@
     toast.setAttribute("data-toast-level", tone);
     toast.setAttribute("data-remove-after", duration);
     toast.setAttribute("role", tone === "error" ? "alert" : "status");
+
+    toast.appendChild(makeIcon(tone));
 
     var body = document.createElement("div");
     body.className = "toast__body";

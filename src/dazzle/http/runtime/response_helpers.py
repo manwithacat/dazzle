@@ -13,6 +13,29 @@ from html import escape
 
 from starlette.responses import HTMLResponse
 
+# Inline SVG glyphs (lucide-shaped) — self-contained so OOB toasts work
+# without a page icon sprite. Decorative only (aria-hidden on the wrapper).
+_TOAST_ICON_PATHS: dict[str, str] = {
+    "info": ('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'),
+    "success": ('<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>'),
+    "warning": (
+        '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/>'
+        '<path d="M12 9v4"/><path d="M12 17h.01"/>'
+    ),
+    "error": ('<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>'),
+}
+
+
+def _toast_icon_html(level: str) -> str:
+    """Decorative level icon for a toast unit (decision 0011 phase D)."""
+    paths = _TOAST_ICON_PATHS.get(level) or _TOAST_ICON_PATHS["info"]
+    return (
+        '<span class="dz-toast__icon" aria-hidden="true">'
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        f"{paths}</svg></span>"
+    )
+
 
 def with_toast(
     response: HTMLResponse,
@@ -47,6 +70,7 @@ def with_toast(
     safe_level = escape(level, quote=True)
     safe_duration = escape(duration, quote=True)
     role = "alert" if level == "error" else "status"
+    icon_html = _toast_icon_html(level if level in _TOAST_ICON_PATHS else "info")
 
     body_parts: list[str] = ['<div class="dz-toast__body">']
     if title:
@@ -78,7 +102,7 @@ def with_toast(
         f'<div hx-swap-oob="afterbegin:#dz-toast">'
         f'<div class="dz-toast" data-dz-toast-level="{safe_level}" '
         f'data-dz-remove-after="{safe_duration}" role="{role}">'
-        f"{body_html}"
+        f"{icon_html}{body_html}"
         f'<button type="button" class="dz-toast__close" '
         f'data-dz-toast-dismiss aria-label="Dismiss"></button>'
         f"</div>"

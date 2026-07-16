@@ -130,12 +130,24 @@
   background: color-mix(in oklch, var(--colour-danger) 6%, var(--colour-surface));
 }
 
+/* Level icon — decorative (aria-hidden); severity also on border + progress. */
 .dz-toast-icon,
 .dz-toast__icon {
-  width: 0.875rem;
-  height: 0.875rem;
-  margin-block-start: 0.15rem;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-block-start: 0.1rem;
+  color: var(--colour-text-muted);
+}
+
+.dz-toast__icon svg,
+.dz-toast-icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  display: block;
 }
 
 .dz-toast[data-dz-toast-level="info"] .dz-toast-icon,

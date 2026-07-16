@@ -14,6 +14,7 @@ Stack host + auto-dismiss notifications — title, body, optional actions; hover
 ```html
 <div id="toast" class="toast-stack" aria-live="polite" data-toast-cap="8">
   <div class="toast toast-enter" data-toast-level="success" data-remove-after="8s" role="status">
+    <span class="toast__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span>
     <div class="toast__body">
       <div class="toast__title">Saved</div>
       <div class="toast__message">Your changes are live.</div>
@@ -50,6 +51,7 @@ This L2 host has no declared hypermedia exchanges in the registry. If you add pe
 - data-dz-toast-dismiss removes the nearest .dz-toast
 - showToast CustomEvent or window.dz.toast for client path
 - host injects .dz-toast__progress TTL bar (pauses with timer)
+- level icon .dz-toast__icon (inline SVG; host ensures if missing)
 
 ### Do / Don't
 
@@ -133,7 +135,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Dual-lock root .dz-toast + stack #dz-toast.dz-toast-stack. Decision 0011-toast-page-chrome: viewport host, 8s/10s TTL, pause, leave motion, TTL progress. Server: with_toast(..., title=…, actions=…). Not Alpine notify — HTMX OOB + CustomEvent.
+Dual-lock root .dz-toast + stack #dz-toast.dz-toast-stack. Decision 0011-toast-page-chrome: viewport host, 8s/10s TTL, pause, leave motion, TTL progress, level icons. Server: with_toast(..., title=…, actions=…). Not Alpine notify — HTMX OOB + CustomEvent.
 
 ## Source files
 

@@ -87,6 +87,13 @@ class TestClientToastBridge:
         assert 'ERROR_DELAY = "10s"' in content
         assert "ensureProgress" in content
 
+    def test_level_icon_helpers_are_present(self) -> None:
+        content = JS_FILE.read_text()
+        assert "makeIcon" in content
+        assert "ensureIcon" in content
+        assert "dz-toast__icon" in content
+        assert "ICON_SHAPES" in content
+
     def test_dazzle_host_matches_hm_controller(self) -> None:
         """Dual-lock: Dazzle static copy must not drift from HM controller."""
         assert JS_FILE.read_text() == HM_JS.read_text()
