@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Story → composition playbook** — document correct
+  `cd examples/<app> && dazzle validate` (cwd-based CLI); fieldtest worked
+  example lists the non-active **device attention** queue (TR-35).
+
 ### Fixed
 - **PreToolUse hooks under system Python 3.9 / multi-harness payloads** —
   `file_protection` no longer crashes (exit 1 spam) on every edit; hooks accept

@@ -74,7 +74,11 @@ workspace ticket_queue "Ticket Queue":
     empty: "No open tickets"
 ```
 
-Validate: `uv run dazzle validate examples/<app>`.
+Validate from the app root (CLI uses the current directory):
+
+```bash
+cd examples/<app> && uv run dazzle validate
+```
 
 ### 6. Mirror in HM when the motif is reusable
 
@@ -154,8 +158,9 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 
 **fieldtest_hub**:
 
-- Engineer/manager → `engineering_dashboard` = fleet metrics + triage/critical
-  queues + open task queue (kanban/map/tree retained as secondary demos)
+- Engineer/manager → `engineering_dashboard` = fleet metrics + non-active
+  **device attention** queue + triage/critical queues + open task queue
+  (kanban/map/tree retained as secondary demos)
 - Tester → `tester_dashboard` = personal metrics + assigned device/issue/task queues
 
 **llm_ticket_classifier**:
