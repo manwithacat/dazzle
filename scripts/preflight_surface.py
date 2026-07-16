@@ -86,9 +86,9 @@ Remediation by class (run from repo root, commit the regenerated files):
   UX catalogue CSS
     .venv/bin/python scripts/gen_ux_catalogue.py
 
-  HaTchi-MaXchi gallery (stale site/*)
-    cd packages/hatchi-maxchi && python site/build_site.py
-    # commit site/hatchi-maxchi.css|js and site/index.html
+  Design-system gallery (stale site assets — HM package suite gate)
+    cd packages/hatchi* && python site/build_site.py
+    # commit regenerated site CSS/JS/index under that package
 
 Re-run:
   make preflight-surface

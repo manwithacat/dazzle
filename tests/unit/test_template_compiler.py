@@ -105,7 +105,8 @@ class TestFormFieldSourceOption:
         assert field.name == "company_name"
         assert field.type == "search_select"
         assert field.source is not None
-        assert field.source.endpoint == "/_dazzle/fragments/search"
+        # #1599: endpoint must identify the pack for HTMX search routing
+        assert field.source.endpoint == ("/_dazzle/fragments/search?source=companies_house_lookup")
         assert field.source.display_key == "company_name"
         assert field.source.value_key == "company_number"
 

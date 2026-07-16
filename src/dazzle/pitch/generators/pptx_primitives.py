@@ -80,7 +80,11 @@ def _resolve_colors(brand: BrandColors) -> dict[str, Any]:
 
     def hex_to_rgb(hex_color: str) -> RGBColor:
         h = hex_color.lstrip("#")
-        return RGBColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+        # pptx RGBColor is untyped; CI mypy (3.12) needs no-untyped-call.
+        # Local 3.14 may treat ignore as unused — both codes allowed.
+        return RGBColor(  # type: ignore[no-untyped-call,unused-ignore]
+            int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        )
 
     return {
         "primary": hex_to_rgb(brand.primary),
@@ -88,9 +92,9 @@ def _resolve_colors(brand: BrandColors) -> dict[str, Any]:
         "highlight": hex_to_rgb(brand.highlight),
         "success": hex_to_rgb(brand.success),
         "light": hex_to_rgb(brand.light),
-        "white": RGBColor(0xFF, 0xFF, 0xFF),
+        "white": RGBColor(0xFF, 0xFF, 0xFF),  # type: ignore[no-untyped-call,unused-ignore]
         "dark_text": hex_to_rgb(brand.primary),
-        "muted": RGBColor(0x99, 0x99, 0x99),
+        "muted": RGBColor(0x99, 0x99, 0x99),  # type: ignore[no-untyped-call,unused-ignore]
         "font_family": brand.font_family,
     }
 
@@ -499,7 +503,9 @@ def _add_table(
             if ri % 2 == 0:
                 cell.fill.fore_color.rgb = colors["light"]
             else:
-                cell.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+                cell.fill.fore_color.rgb = RGBColor(  # type: ignore[no-untyped-call,unused-ignore]
+                    0xFF, 0xFF, 0xFF
+                )
 
     final_y = top_inches + row_height * row_count
     lr = LayoutResult(
