@@ -44,23 +44,23 @@ Agent Console, with full visibility of tickets and conversations.
 
 **Support Managers** are team leads monitoring performance and handling
 escalations — watching team metrics, spotting bottlenecks in ticket flow, and
-ensuring quality and customer satisfaction — from the Agent Dashboard and the
-Agent Console. Managers alone can delete tickets or comments.
+ensuring quality and customer satisfaction — from the **Ticket Queue** (team
+open work first) and the Agent Console. Managers alone can delete tickets or
+comments.
 
 **Administrators** oversee the operation from the Agent Console.
 
 ## Where work happens
 
-Four workspaces organise the work. The **Ticket Queue** is the agents' home
-for managing incoming tickets: a summary, a kanban board of tickets, and the
-ticket list. The **Agent Dashboard** is the personal dashboard for support
-agents and managers — assigned and pending ticket work and lifecycle metrics
-first (resolution funnel and backlog progress), then ticket history, with
-comment activity and timelines last so day-one orientation is not buried under
-noise. **My Tickets** is the customer's view of their own submitted tickets.
-The **Agent Console** — shared by administrators, managers, and agents — lets
-you pick an agent and see the tickets assigned to them, the comments on those
-tickets, and comparison charts of both.
+Four workspaces organise the work. The **Ticket Queue** is the home for
+managing incoming tickets — a summary, a kanban board, and the ticket list —
+and is where Support Agents and Support Managers land so the open team queue
+is visible immediately. The **Agent Dashboard** is a personal dashboard for
+day-to-day ticket work — assigned and pending items and lifecycle metrics
+first, comment activity last. **My Tickets** is the customer's view of their
+own submitted tickets. The **Agent Console** — shared by administrators,
+managers, and agents — lets you pick an agent and see the tickets assigned to
+them, the comments on those tickets, and comparison charts of both.
 
 ## How work flows through it
 
@@ -129,4 +129,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:d6adfed390bf78fde00dee86fef2126903593f541974e95e88f5168b621e4fb4 -->
+<!-- dazzle-spec-brief: sha256:52a2272fbd9ea82b997f83bac8124b2df7f9673ec9b1cc574e4660f958b1057a -->

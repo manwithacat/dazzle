@@ -619,7 +619,9 @@ persona manager "Support Manager":
   description: "Team lead monitoring performance and handling escalations"
   goals: "Monitor team metrics and performance", "Identify bottlenecks in ticket flow", "Ensure quality and customer satisfaction"
   proficiency: expert
-  default_workspace: agent_dashboard
+  # TR-52 / cycle 717 trial: managers need the open team queue first (not a
+  # personal "my assigned" dashboard that is empty when seed assigns to agents).
+  default_workspace: ticket_queue
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
@@ -639,7 +641,8 @@ scenario escalation "Escalation Flow":
   as persona agent:
     start_route: "/queue?priority=critical"
   as persona manager:
-    start_route: "/dashboard"
+    # TR-52: manager default is team queue (not empty personal dashboard)
+    start_route: "/queue"
 
 scenario backlog "Backlog Scenario":
   description: "High volume testing with many open tickets"
@@ -647,7 +650,7 @@ scenario backlog "Backlog Scenario":
   as persona agent:
     start_route: "/queue"
   as persona manager:
-    start_route: "/dashboard"
+    start_route: "/queue"
 
 # =============================================================================
 # TOP-LEVEL ENUM — shared severity vocabulary
