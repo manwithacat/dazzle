@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics / task_inbox; HR workspaces lead with headcount/compensation metrics.
 
 ### Fixed
+- **List row drill keeps AppShell** — default HTMX target for list/workspace
+  row drill is `#main-content` (not `body`), matching sidebar nav so content
+  fragments no longer wipe the SaaS chrome on list→detail.
 - **List datetime cells humanised (UK)** — `field_kind_to_col_type` keeps
   `datetime` distinct from `date`; list rows format timestamps as
   `16 Jul 2026 01:30` instead of raw ISO/Postgres timestamptz. Inline edit
