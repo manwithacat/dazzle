@@ -205,8 +205,26 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                                     f"'{element.field_name}': {fmt_err}"
                                 )
 
-        # #1603 — open: Entity via field (list FK hop)
-        if getattr(surface, "open_via", None) or getattr(surface, "open_entity", None):
+        # #1603 / #1600 P2 — open: Entity via field | first_non_null(...) hops
+        open_targets = list(getattr(surface, "open_via_targets", None) or [])
+        if not open_targets and (
+            getattr(surface, "open_via", None) or getattr(surface, "open_entity", None)
+        ):
+            open_targets = [
+                type(
+                    "T",
+                    (),
+                    {
+                        "via": surface.open_via,
+                        "entity": surface.open_entity,
+                    },
+                )()
+            ]
+        if (
+            open_targets
+            or getattr(surface, "open_via", None)
+            or getattr(surface, "open_entity", None)
+        ):
             if surface.mode != ir.SurfaceMode.LIST:
                 errors.append(
                     f"Surface '{surface.name}' declares open: via but mode is not list "
@@ -218,28 +236,32 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 )
             else:
                 entity = appspec.get_entity(surface.entity_ref)
-                via = surface.open_via
-                if entity and via:
-                    fld = entity.get_field(via)
-                    if not fld:
-                        errors.append(
-                            f"Surface '{surface.name}' open via '{via}' — field not on "
-                            f"entity '{entity.name}' (#1603)"
-                        )
-                    else:
-                        ref_ent = getattr(fld.type, "ref_entity", None) if fld.type else None
-                        if surface.open_entity and ref_ent and surface.open_entity != ref_ent:
-                            errors.append(
-                                f"Surface '{surface.name}' open: {surface.open_entity} via "
-                                f"{via} but field refs '{ref_ent}' (#1603)"
-                            )
-                        elif surface.open_entity and not ref_ent:
-                            # allow if open_entity set and field exists (loose)
-                            pass
-                elif not via:
+                if not open_targets:
                     errors.append(
                         f"Surface '{surface.name}' open: missing 'via' field name (#1603)"
                     )
+                elif entity:
+                    for hop in open_targets:
+                        via = getattr(hop, "via", None)
+                        open_entity = getattr(hop, "entity", None)
+                        if not via:
+                            errors.append(
+                                f"Surface '{surface.name}' open: missing 'via' field name (#1603)"
+                            )
+                            continue
+                        fld = entity.get_field(via)
+                        if not fld:
+                            errors.append(
+                                f"Surface '{surface.name}' open via '{via}' — field not on "
+                                f"entity '{entity.name}' (#1603)"
+                            )
+                        else:
+                            ref_ent = getattr(fld.type, "ref_entity", None) if fld.type else None
+                            if open_entity and ref_ent and open_entity != ref_ent:
+                                errors.append(
+                                    f"Surface '{surface.name}' open: {open_entity} via "
+                                    f"{via} but field refs '{ref_ent}' (#1603)"
+                                )
 
         # Validate field options: unsupported keys + source=/search_trigger resolution.
         # #996 — typos and dropped packs fail silently at runtime (plain text).

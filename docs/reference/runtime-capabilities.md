@@ -198,6 +198,9 @@ keys, so host dual-lock remappers are not required for shape mismatches.
 - **Multi-section overview** (#1600 Wedge B) — multiple `section` blocks stack as
   titled field groups (identity / role / timeline …), then related work below.
   Pair with list `open: Entity via fk` (#1603) for queue → context hub.
+  Polymorphic clients: `open: first_non_null(company, sole_trader, partnership)`
+  or pipe-chained `open: Company via company | SoleTrader via sole_trader`
+  (first non-null FK wins; else same-entity fallback).
 - **Status / RAG strip** — `layout: strip` on a VIEW section renders fields as a
   horizontal badge row (compliance status, lifecycle flags).
 
@@ -220,6 +223,13 @@ surface engagement_list "Engagements":
   uses entity Engagement
   mode: list
   open: Company via company   # row → /app/company/{company} hub
+
+# Polymorphic client FKs — first non-null hop (#1600 P2)
+surface subscription_list "Subscriptions":
+  uses entity ClientSubscription
+  mode: list
+  open: first_non_null(company, sole_trader, partnership)
+  # or: open: Company via company | SoleTrader via sole_trader | Partnership via partnership
 ```
 
 One `mode: view` surface per entity owns the detail route (`/app/<entity>/{id}`).

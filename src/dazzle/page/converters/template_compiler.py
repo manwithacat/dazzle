@@ -21,6 +21,7 @@ from dazzle.core.ir.triples import WidgetKind, resolve_widget
 from dazzle.core.strings import to_api_plural
 from dazzle.page import app_paths
 from dazzle.page.open_via import (
+    resolve_list_detail_url_candidates,
     resolve_list_detail_url_template,
     resolve_list_same_entity_detail_template,
 )
@@ -856,9 +857,23 @@ def _list_detail_url_template(
     entity_slug: str,
 ) -> str:
     """List row drill template — same-entity detail or #1603 open-via FK hop."""
-    if surface is not None and getattr(surface, "open_via", None):
+    targets = getattr(surface, "open_via_targets", None) or []
+    if surface is not None and (getattr(surface, "open_via", None) or targets):
         return resolve_list_detail_url_template(surface, entity, app_prefix=app_prefix)
     return app_paths.detail_path(app_prefix, entity_slug)
+
+
+def _list_detail_url_candidates(
+    surface: ir.SurfaceSpec,
+    entity: ir.EntitySpec | None,
+    *,
+    app_prefix: str,
+) -> list[str]:
+    """Ordered open-via hop templates for polymorphic first-non-null (#1600 P2)."""
+    targets = getattr(surface, "open_via_targets", None) or []
+    if surface is not None and (getattr(surface, "open_via", None) or targets):
+        return resolve_list_detail_url_candidates(surface, entity, app_prefix=app_prefix)
+    return []
 
 
 def _extract_surface_purpose(ux: ir.UXSpec | None) -> tuple[str, dict[str, str]]:
@@ -1009,6 +1024,10 @@ def _compile_list_surface(
             create_url=create_url,
             detail_url_template=_list_detail_url_template(
                 surface, entity, app_prefix=app_prefix, entity_slug=entity_slug
+            ),
+            # #1600 P2: multi-hop open-via (first non-null FK)
+            detail_url_candidates=_list_detail_url_candidates(
+                surface, entity, app_prefix=app_prefix
             ),
             # #1614: null open-via FK → same-entity detail (keeps row drill)
             detail_url_fallback_template=resolve_list_same_entity_detail_template(

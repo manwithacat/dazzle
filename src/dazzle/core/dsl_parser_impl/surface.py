@@ -726,8 +726,10 @@ class _SurfaceState:
     # (author wrote no `peek:`); `_kw_peek` sets the explicit value.
     peek: ir.PeekMode | None = None
     # #1603 — open: TargetEntity via fk_field
+    # #1600 P2 — open: first_non_null(...) or pipe-chained hops
     open_entity: str | None = None
     open_via: str | None = None
+    open_via_targets: list[ir.OpenViaTarget] = field(default_factory=list)
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -784,16 +786,59 @@ def _kw_peek(parser: Any, state: _SurfaceState) -> None:
 
 
 def _kw_open(parser: Any, state: _SurfaceState) -> None:
-    """``open: TargetEntity via fk_field`` — list row FK hop (#1603).
+    """List row FK hop(s) — single, pipe-chained, or first_non_null (#1603 / #1600 P2).
 
-    Row click navigates to the target entity's detail using the FK value
-    on the list row, not the list row's own id.
+    Forms::
+
+        open: Company via company
+        open: Company via company | SoleTrader via sole_trader
+        open: first_non_null(company, sole_trader, partnership)
+        open: first_non_null(Company via company, SoleTrader via sole_trader)
+
+    First non-null FK on the row wins at drill time; null chain falls back to
+    same-entity detail (#1614).
     """
     parser.advance()  # consume `open`
     parser.expect(TokenType.COLON)
-    state.open_entity = parser.expect_identifier_or_keyword().value
-    parser.expect(TokenType.VIA)
-    state.open_via = parser.expect_identifier_or_keyword().value
+    targets: list[ir.OpenViaTarget] = []
+    tok = parser.current_token()
+    if tok is not None and tok.value == "first_non_null":
+        parser.advance()
+        parser.expect(TokenType.LPAREN)
+        while not parser.match(TokenType.RPAREN):
+            parser.skip_newlines()
+            if parser.match(TokenType.RPAREN):
+                break
+            first = parser.expect_identifier_or_keyword().value
+            if parser.match(TokenType.VIA):
+                parser.advance()
+                via = parser.expect_identifier_or_keyword().value
+                targets.append(ir.OpenViaTarget(via=via, entity=first))
+            else:
+                # Bare field — entity inferred from ref target at link/compile.
+                targets.append(ir.OpenViaTarget(via=first, entity=None))
+            if parser.match(TokenType.COMMA):
+                parser.advance()
+                continue
+            break
+        parser.expect(TokenType.RPAREN)
+    else:
+        # Entity via field (| Entity via field)*
+        while True:
+            entity = parser.expect_identifier_or_keyword().value
+            parser.expect(TokenType.VIA)
+            via = parser.expect_identifier_or_keyword().value
+            targets.append(ir.OpenViaTarget(via=via, entity=entity))
+            if parser.match(TokenType.PIPE):
+                parser.advance()
+                continue
+            break
+    if not targets:
+        parser.error("open: requires at least one hop (Entity via field or first_non_null(...))")
+    state.open_via_targets = targets
+    # Back-compat single-field views (validation, simple templates)
+    state.open_entity = targets[0].entity
+    state.open_via = targets[0].via
     parser.skip_newlines()
 
 
@@ -1029,6 +1074,7 @@ def _build_surface(
         peek=state.peek,
         open_via=state.open_via,
         open_entity=state.open_entity,
+        open_via_targets=list(state.open_via_targets),
     )
 
 

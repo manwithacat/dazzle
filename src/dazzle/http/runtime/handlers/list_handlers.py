@@ -64,6 +64,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _detail_url_candidates(table_dict: dict[str, Any]) -> tuple[str, ...]:
+    """Normalize open-via hop candidates (#1600 P2) from a table_dict."""
+    raw = table_dict.get("detail_url_candidates") or ()
+    if isinstance(raw, str):
+        return (raw,) if raw else ()
+    return tuple(raw)
+
+
 def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) -> DataTable:
     """Map an http/ HTMX-refresh ``table_dict`` (+ its row items) into the typed
     render/ ``DataTable`` primitive (#1505 P2).
@@ -73,10 +81,11 @@ def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) ->
     ``detail_url_template``), so ``render_data_table_rows(build_data_table(...))``
     is byte-identical to the legacy per-row join.
     """
+    cands = _detail_url_candidates(table_dict)
     caps = RowCapabilities(
         bulk_select=bool(table_dict.get("bulk_actions")),
         inline_editable=tuple(table_dict.get("inline_editable") or ()),
-        drill=bool(table_dict.get("detail_url_template")),
+        drill=bool(table_dict.get("detail_url_template") or cands),
         peek=str(table_dict.get("peek_mode") or "off"),
     )
     return DataTable(
@@ -85,6 +94,7 @@ def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) ->
         entity_name=str(table_dict.get("entity_name") or "Item"),
         api_endpoint=str(table_dict.get("api_endpoint") or ""),
         detail_url_template=str(table_dict.get("detail_url_template") or ""),
+        detail_url_candidates=cands,
         detail_url_fallback_template=str(table_dict.get("detail_url_fallback_template") or ""),
         table_id=str(table_dict.get("table_id") or "dt-table"),
         capabilities=caps,
@@ -134,6 +144,8 @@ def create_list_handler(
     htmx_columns_full: list[dict[str, Any]] | None = None,
     htmx_detail_url: str | None = None,
     htmx_detail_url_by_table_id: dict[str, str] | None = None,
+    htmx_detail_url_candidates: list[str] | None = None,
+    htmx_detail_url_candidates_by_table_id: dict[str, list[str]] | None = None,
     htmx_detail_url_fallback: str | None = None,
     htmx_detail_url_fallback_by_table_id: dict[str, str] | None = None,
     htmx_peek_mode: str | None = None,
@@ -200,6 +212,12 @@ def create_list_handler(
             request.state.htmx_detail_url = htmx_detail_url
         if htmx_detail_url_by_table_id is not None:
             request.state.htmx_detail_url_by_table_id = htmx_detail_url_by_table_id
+        if htmx_detail_url_candidates is not None:
+            request.state.htmx_detail_url_candidates = htmx_detail_url_candidates
+        if htmx_detail_url_candidates_by_table_id is not None:
+            request.state.htmx_detail_url_candidates_by_table_id = (
+                htmx_detail_url_candidates_by_table_id
+            )
         if htmx_detail_url_fallback is not None:
             request.state.htmx_detail_url_fallback = htmx_detail_url_fallback
         if htmx_detail_url_fallback_by_table_id is not None:
@@ -615,6 +633,15 @@ async def _list_handler_body(
             _resolved_detail = _detail_by_tid.get(table_id) or getattr(
                 request.state, "htmx_detail_url", None
             )
+            # #1600 P2: multi-hop candidates (first non-null)
+            _cands_by_tid = (
+                getattr(request.state, "htmx_detail_url_candidates_by_table_id", None) or {}
+            )
+            _resolved_cands = (
+                _cands_by_tid.get(table_id)
+                or getattr(request.state, "htmx_detail_url_candidates", None)
+                or []
+            )
             # #1614: same-entity fallback when open-via FK is null
             _fallback_by_tid = (
                 getattr(request.state, "htmx_detail_url_fallback_by_table_id", None) or {}
@@ -638,6 +665,7 @@ async def _list_handler_body(
                 if hasattr(request.state, "htmx_columns")
                 else [],
                 "detail_url_template": _resolved_detail,
+                "detail_url_candidates": list(_resolved_cands or []),
                 "detail_url_fallback_template": _resolved_fallback,
                 "peek_mode": _resolved_peek,
                 "entity_name": getattr(request.state, "htmx_entity_name", "Item"),

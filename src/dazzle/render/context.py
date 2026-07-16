@@ -102,6 +102,8 @@ class TableContext(BaseModel):
     # persona ``action_primary``). Empty → Fragment uses entity_title.
     create_label: str = ""
     detail_url_template: str | None = None  # e.g. "/tasks/{id}" or open-via hop
+    # #1600 P2: ordered open-via hop templates (first non-null FK wins)
+    detail_url_candidates: list[str] = Field(default_factory=list)
     # #1614: same-entity ``.../{id}`` when open-via FK is null on a row
     detail_url_fallback_template: str | None = None
     rows: list[dict[str, Any]] = Field(default_factory=list)

@@ -1826,19 +1826,24 @@ class DazzleBackendApp:
             # #1603: per-surface open-via detail templates (key both surface.name
             # and dt-{name} — HTMX table_id is `dt-{surface.name}`).
             from dazzle.page.open_via import (
+                resolve_list_detail_url_candidates,
                 resolve_list_detail_url_template,
                 resolve_list_same_entity_detail_template,
             )
 
             detail_url_by_table_id: dict[str, str] = {}
+            detail_url_candidates_by_table_id: dict[str, list[str]] = {}
             detail_url_fallback_by_table_id: dict[str, str] = {}
             _same_entity = resolve_list_same_entity_detail_template(
                 entity, _ls, app_prefix=app_prefix
             )
             for _s in _entity_all_list_surfaces.get(entity.name, []):
                 _tmpl = resolve_list_detail_url_template(_s, entity, app_prefix=app_prefix)
+                _cands = resolve_list_detail_url_candidates(_s, entity, app_prefix=app_prefix)
                 detail_url_by_table_id[_s.name] = _tmpl
                 detail_url_by_table_id[f"dt-{_s.name}"] = _tmpl
+                detail_url_candidates_by_table_id[_s.name] = list(_cands)
+                detail_url_candidates_by_table_id[f"dt-{_s.name}"] = list(_cands)
                 # #1614: always offer same-entity fallback for null open-via FK
                 detail_url_fallback_by_table_id[_s.name] = _same_entity
                 detail_url_fallback_by_table_id[f"dt-{_s.name}"] = _same_entity
@@ -1847,11 +1852,18 @@ class DazzleBackendApp:
                 if _ls is not None
                 else f"{app_prefix}/{slug}/{{id}}"
             )
+            _default_cands = (
+                resolve_list_detail_url_candidates(_ls, entity, app_prefix=app_prefix)
+                if _ls is not None
+                else []
+            )
             entity_htmx_meta[entity.name] = {
                 "columns": cols,
                 "columns_full": cols_full,  # ADR-0050 2d: untruncated (entity-fallback only)
                 "detail_url": _default_detail,
                 "detail_url_by_table_id": detail_url_by_table_id,
+                "detail_url_candidates": list(_default_cands),
+                "detail_url_candidates_by_table_id": detail_url_candidates_by_table_id,
                 "detail_url_fallback": _same_entity,
                 "detail_url_fallback_by_table_id": detail_url_fallback_by_table_id,
                 "entity_name": entity.name,

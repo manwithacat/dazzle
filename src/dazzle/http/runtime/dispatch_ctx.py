@@ -57,6 +57,7 @@ def _dispatch_ctx_from_table(
         "create_label": getattr(table, "create_label", "") or "",
         "entity_title": getattr(table, "entity_title", "") or "",
         "detail_url_template": getattr(table, "detail_url_template", "") or "",
+        "detail_url_candidates": list(getattr(table, "detail_url_candidates", None) or []),
         "detail_url_fallback_template": getattr(table, "detail_url_fallback_template", "") or "",
         "search_enabled": bool(getattr(table, "search_enabled", False)),
         "search_fields": list(getattr(table, "search_fields", []) or []),

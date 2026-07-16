@@ -405,11 +405,15 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     # via the shared format_map helper. #1614: null open-via FK falls back to
     # same-entity detail so the row keeps hx-trigger=click (shields #1613).
     fallback_tmpl = str(table.get("detail_url_fallback_template") or "")
-    if detail_url_template:
+    candidates = table.get("detail_url_candidates") or ()
+    if isinstance(candidates, str):
+        candidates = (candidates,) if candidates else ()
+    if detail_url_template or candidates:
         _links = _resolve_row_links(
             [item],
-            str(detail_url_template),
+            str(detail_url_template or ""),
             fallback_template=fallback_tmpl,
+            candidate_templates=tuple(candidates) if candidates else (),
         )
         detail_url = _links[0] if _links else None
     else:
@@ -676,6 +680,7 @@ def render_data_row(
     entity_name: str = "Item",
     api_endpoint: str = "",
     detail_url_template: str = "",
+    detail_url_candidates: tuple[str, ...] | list[str] = (),
     detail_url_fallback_template: str = "",
     table_id: str = "dt-table",
     state_transitions: tuple[Any, ...] = (),
@@ -696,6 +701,10 @@ def render_data_row(
         # `drill` is the authoritative gate for the whole-row hx-get + view/edit
         # links — the template only flows through when the capability is on.
         "detail_url_template": detail_url_template if caps.drill else "",
+        # #1600 P2: polymorphic open-via hop chain
+        "detail_url_candidates": (
+            tuple(detail_url_candidates) if caps.drill and detail_url_candidates else ()
+        ),
         # #1614: same-entity detail when open-via FK is null
         "detail_url_fallback_template": (detail_url_fallback_template if caps.drill else ""),
         "bulk_actions": caps.bulk_select,
@@ -730,6 +739,7 @@ def render_data_table_rows(dt: DataTable) -> str:
             entity_name=dt.entity_name,
             api_endpoint=dt.api_endpoint,
             detail_url_template=dt.detail_url_template,
+            detail_url_candidates=getattr(dt, "detail_url_candidates", ()) or (),
             detail_url_fallback_template=getattr(dt, "detail_url_fallback_template", "") or "",
             table_id=dt.table_id,
             state_transitions=dt.state_transitions,

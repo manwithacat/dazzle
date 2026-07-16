@@ -9,7 +9,7 @@
 # adding/removing enum members — drifts this baseline. To accept drift:
 # regenerate, review, add a CHANGELOG entry under Added / Changed / Removed.
 
-# Counts: 372 BaseModels, 151 Enums, 23 other (functions / typealiases / constants)
+# Counts: 373 BaseModels, 151 Enums, 23 other (functions / typealiases / constants)
 
 == BaseModels ==
 
@@ -1977,6 +1977,12 @@ ir_class: NotificationTrigger
     - field: str | None = None
     - to_value: str | None = None
 
+ir_class: OpenViaTarget
+  required:
+    - via: str
+  optional:
+    - entity: str | None = None
+
 ir_class: Outcome
   required:
     - kind: OutcomeKind
@@ -2901,6 +2907,7 @@ ir_class: SurfaceSpec
     - layout: str = 'wizard'
     - open_entity: str | None = None
     - open_via: str | None = None
+    - open_via_targets: list[OpenViaTarget] = []
     - peek: PeekMode | None = None
     - priority: BusinessPriority = <BusinessPriority.MEDIUM: 'medium'>
     - refresh_interval: int | None = None

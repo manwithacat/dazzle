@@ -215,6 +215,177 @@ def test_simple_task_parses_open_via() -> None:
     assert tmpl == "/app/user/{assigned_to}"
 
 
+def test_resolve_first_non_null_candidates() -> None:
+    """#1600 P2: multi-hop open produces ordered candidate templates."""
+    surface = ir.SurfaceSpec(
+        name="sub_list",
+        title="Subs",
+        entity_ref="ClientSubscription",
+        mode=ir.SurfaceMode.LIST,
+        open_via="company",
+        open_entity="Company",
+        open_via_targets=[
+            ir.OpenViaTarget(via="company", entity="Company"),
+            ir.OpenViaTarget(via="sole_trader", entity="SoleTrader"),
+            ir.OpenViaTarget(via="partnership", entity="Partnership"),
+        ],
+    )
+    entity = ir.EntitySpec(
+        name="ClientSubscription",
+        title="Sub",
+        fields=[
+            ir.FieldSpec(
+                name="company",
+                type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Company"),
+            ),
+            ir.FieldSpec(
+                name="sole_trader",
+                type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="SoleTrader"),
+            ),
+            ir.FieldSpec(
+                name="partnership",
+                type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Partnership"),
+            ),
+        ],
+    )
+    from dazzle.page.open_via import resolve_list_detail_url_candidates
+
+    cands = resolve_list_detail_url_candidates(surface, entity)
+    assert cands == [
+        "/app/company/{company}",
+        "/app/soletrader/{sole_trader}",
+        "/app/partnership/{partnership}",
+    ]
+    assert resolve_list_detail_url_template(surface, entity) == cands[0]
+
+
+def test_row_links_first_non_null_picks_second_hop() -> None:
+    """#1600 P2: null company → sole_trader hop; all null → fallback."""
+    cands = (
+        "/app/company/{company}",
+        "/app/soletrader/{sole_trader}",
+        "/app/partnership/{partnership}",
+    )
+    fallback = "/app/clientsubscription/{id}"
+    rows = [
+        {"id": "s1", "company": "co-1", "sole_trader": None, "partnership": None},
+        {"id": "s2", "company": None, "sole_trader": "st-9", "partnership": None},
+        {"id": "s3", "company": None, "sole_trader": None, "partnership": "p-2"},
+        {"id": "s4", "company": None, "sole_trader": None, "partnership": None},
+    ]
+    links = _resolve_row_links(
+        rows,
+        cands[0],
+        fallback_template=fallback,
+        candidate_templates=cands,
+    )
+    assert links[0] == "/app/company/co-1"
+    assert links[1] == "/app/soletrader/st-9"
+    assert links[2] == "/app/partnership/p-2"
+    assert links[3] == "/app/clientsubscription/s4"
+
+
+def test_parse_open_first_non_null_bare_fields() -> None:
+    """Parse ``open: first_non_null(company, sole_trader)``."""
+    from dazzle.core.dsl_parser_impl import parse_dsl
+
+    dsl = """
+module test.core
+app test_app "T"
+
+entity Company "Company":
+  id: uuid pk
+  name: str(100)
+
+entity SoleTrader "Sole Trader":
+  id: uuid pk
+  name: str(100)
+
+entity Sub "Sub":
+  id: uuid pk
+  company: ref Company
+  sole_trader: ref SoleTrader
+
+surface sub_list "Subs":
+  uses entity Sub
+  mode: list
+  open: first_non_null(company, sole_trader)
+"""
+    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+    surface = fragment.surfaces[0]
+    assert surface.open_via == "company"
+    assert surface.open_entity is None  # bare fields — entity inferred later
+    assert len(surface.open_via_targets) == 2
+    assert surface.open_via_targets[0].via == "company"
+    assert surface.open_via_targets[0].entity is None
+    assert surface.open_via_targets[1].via == "sole_trader"
+
+
+def test_parse_open_pipe_chain() -> None:
+    """Parse ``open: Company via company | SoleTrader via sole_trader``."""
+    from dazzle.core.dsl_parser_impl import parse_dsl
+
+    dsl = """
+module test.core
+app test_app "T"
+
+entity Company "Company":
+  id: uuid pk
+
+entity SoleTrader "Sole Trader":
+  id: uuid pk
+
+entity Sub "Sub":
+  id: uuid pk
+  company: ref Company
+  sole_trader: ref SoleTrader
+
+surface sub_list "Subs":
+  uses entity Sub
+  mode: list
+  open: Company via company | SoleTrader via sole_trader
+"""
+    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+    surface = fragment.surfaces[0]
+    assert surface.open_via == "company"
+    assert surface.open_entity == "Company"
+    assert [(t.entity, t.via) for t in surface.open_via_targets] == [
+        ("Company", "company"),
+        ("SoleTrader", "sole_trader"),
+    ]
+
+
+def test_data_row_first_non_null_htmx() -> None:
+    """Rich data-table path uses multi-hop candidates."""
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    columns = [{"key": "title", "type": "str"}]
+    item = {
+        "id": "s2",
+        "title": "ST client",
+        "company": None,
+        "sole_trader": "st-uuid",
+        "partnership": None,
+    }
+    html = render_data_row(
+        columns,
+        item,
+        RowCapabilities(drill=True),
+        detail_url_template="/app/company/{company}",
+        detail_url_candidates=(
+            "/app/company/{company}",
+            "/app/soletrader/{sole_trader}",
+            "/app/partnership/{partnership}",
+        ),
+        detail_url_fallback_template="/app/sub/{id}",
+        entity_name="Sub",
+        api_endpoint="/api/subs",
+    )
+    assert 'hx-get="/app/soletrader/st-uuid"' in html
+    assert "{company}" not in html
+
+
 def test_validate_open_via_wrong_mode_errors() -> None:
     from dazzle.core.validation.surfaces import validate_surfaces
 

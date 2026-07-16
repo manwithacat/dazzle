@@ -37,6 +37,20 @@ class RelatedDisplayMode(StrEnum):
     FILE_LIST = "file_list"
 
 
+class OpenViaTarget(BaseModel):
+    """One hop in a list-row open-via chain (#1603 / #1600 polymorphic P2).
+
+    Attributes:
+        via: FK field name on the list entity
+        entity: Target entity for the hop (inferred from the field's ref when None)
+    """
+
+    via: str
+    entity: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class RelatedGroup(BaseModel):
     """A named group of related entities with a shared display mode.
 
@@ -389,8 +403,11 @@ class SurfaceSpec(BaseModel):
     # drills to `/app/user/{assigned_to}` instead of task detail.
     # ``open_via`` is the FK field name on the list entity; ``open_entity``
     # is the target entity (must match the field's ref target when set).
+    # Polymorphic (#1600 P2): ``open_via_targets`` is an ordered first-non-null
+    # chain (single-target still fills open_via/open_entity for back-compat).
     open_via: str | None = None
     open_entity: str | None = None
+    open_via_targets: list[OpenViaTarget] = Field(default_factory=list)
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
     related_groups: list[RelatedGroup] = Field(default_factory=list)

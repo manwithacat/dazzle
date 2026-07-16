@@ -59,6 +59,7 @@ def _resolve_row_links(
     detail_url_template: str,
     *,
     fallback_template: str = "",
+    candidate_templates: tuple[str, ...] | list[str] = (),
 ) -> tuple[str | None, ...]:
     """Issue #1029 phase 1: per-row drill-down URL resolution.
 
@@ -69,25 +70,33 @@ def _resolve_row_links(
     `item[key]` (unwrapping hydrated ref dicts / UUIDs) and emit the
     resolved URL.
 
-    #1614: when the primary template cannot resolve (null open-via FK),
-    try ``fallback_template`` (typically same-entity ``.../{id}``) so the
+    #1600 P2: ``candidate_templates`` is an ordered first-non-null open-via
+    chain (polymorphic client FKs). When non-empty, try each hop before the
+    primary template is used alone.
+
+    #1614: when no candidate resolves (null open-via FKs), try
+    ``fallback_template`` (typically same-entity ``.../{id}``) so the
     row keeps a drill + ``hx-trigger=click`` — which also shields action
     buttons from inheriting tbody ``load`` (#1613).
 
-    Empty template → empty tuple.
+    Empty templates → empty tuple.
     """
-    if not detail_url_template:
+    templates: list[str] = [t for t in (candidate_templates or ()) if t]
+    if not templates and detail_url_template:
+        templates = [detail_url_template]
+    if not templates:
         return ()
     out: list[str | None] = []
     for item in items:
         mapping = _item_format_map(item)
         url: str | None = None
-        try:
-            # #1603: skip drill when a placeholder is missing or null
-            # (e.g. open via assigned_to with no assignee).
-            url = detail_url_template.format_map(mapping)
-        except (KeyError, IndexError, ValueError):
-            url = None
+        for tmpl in templates:
+            try:
+                # #1603: skip hop when a placeholder is missing or null
+                url = tmpl.format_map(mapping)
+                break
+            except (KeyError, IndexError, ValueError):
+                continue
         if not url and fallback_template:
             try:
                 url = fallback_template.format_map(mapping)

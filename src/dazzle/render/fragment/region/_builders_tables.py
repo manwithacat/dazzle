@@ -313,10 +313,24 @@ class _BuildersTablesMixin:
         # Reuses the standalone list's helper so workspace + standalone
         # share one substitution contract.
         row_links: tuple[str | None, ...] = ()
-        if detail_url_template:
+        if detail_url_template or ctx.get("detail_url_candidates"):
             # #1614: optional same-entity fallback when open-via FK is null
+            # #1600 P2: multi-hop open-via candidates (first non-null)
             _fb = str(ctx.get("detail_url_fallback_template") or "")
-            row_links = _resolve_row_links(row_items, detail_url_template, fallback_template=_fb)
+            _raw_cands = ctx.get("detail_url_candidates")
+            _cands: tuple[str, ...]
+            if isinstance(_raw_cands, str):
+                _cands = (_raw_cands,) if _raw_cands else ()
+            elif isinstance(_raw_cands, (list, tuple)):
+                _cands = tuple(str(c) for c in _raw_cands if c)
+            else:
+                _cands = ()
+            row_links = _resolve_row_links(
+                row_items,
+                detail_url_template or "",
+                fallback_template=_fb,
+                candidate_templates=_cands,
+            )
 
         body: Fragment = ListRegion(
             columns=tuple(list_columns),

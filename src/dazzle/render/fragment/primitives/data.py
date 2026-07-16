@@ -126,6 +126,8 @@ class DataTable:
     entity_name: str = "Item"
     api_endpoint: str = ""
     detail_url_template: str = ""
+    # #1600 P2: ordered open-via hop templates (first non-null FK)
+    detail_url_candidates: tuple[str, ...] = ()
     # #1614: same-entity detail when open-via primary template cannot resolve
     detail_url_fallback_template: str = ""
     table_id: str = "dt-table"
