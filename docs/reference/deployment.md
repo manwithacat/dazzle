@@ -50,7 +50,12 @@ dazzle deploy heroku [--pip]
 | default (uv buildpack) | `Procfile`, `pyproject.toml`, `uv.lock`, `.python-version` |
 | `--pip` (legacy) | `requirements.txt`, `runtime.txt` (plus `Procfile`) |
 
-See the [Heroku deployment guide](../guides/heroku.md) for the full walkthrough
+See the [Heroku deployment guide](../guides/heroku.md) for the full walkthrough.
+
+**Product (end-user) docs** are a separate static site — never served from the
+app process or tenant hosts. See the [evergreen product docs site
+recipe](../guides/product-docs-site.md) (MkDocs + Cloudflare + AppSpec drift
+gate).
 (provisioning add-ons, setting config vars, running migrations, and pushing).
 
 ### The process entrypoint — `dazzle serve --production`

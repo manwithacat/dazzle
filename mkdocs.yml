@@ -118,6 +118,7 @@ nav:
       - Agent Workflow: guides/agent-workflow.md
       - Story to Composition: guides/story-to-composition.md
       - Heroku Deployment: guides/heroku.md
+      - Product docs site: guides/product-docs-site.md
       - Observability: guides/observability.md
       - Operations: guides/operations.md
       - Scaling: guides/scaling.md
