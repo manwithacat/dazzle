@@ -458,6 +458,107 @@ def generate_tests(
     typer.echo("  dazzle test dsl-run    # Run the generated tests")
 
 
+@story_app.command("bind-migrate")
+def bind_migrate(
+    unbound_to: str = typer.Option(
+        None,
+        "--unbound-to",
+        help="If set to 'narrative_only', inject narrative_only on accepted+unbound stories",
+    ),
+    report: bool = typer.Option(False, "--report", help="Print binding ratios only"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show would-change without writing"),
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+) -> None:
+    """#1605 pilot helper: report / bulk-honesty for story execution bindings.
+
+    CyFuture-scale walls (~200 accepted, zero binds) need a one-shot migrate
+    so validate hard-fail does not force hand-editing every ST.
+    """
+    import re
+
+    root = Path(manifest).resolve().parent
+    appspec = load_project_appspec(root)
+    from dazzle.agent_loop.core import story_binding_summary
+
+    summary = story_binding_summary(appspec)
+    typer.echo(
+        f"stories={summary['total']} accepted={summary['accepted']} "
+        f"bound={summary['accepted_bound']} narrative_only={summary['accepted_narrative_only']} "
+        f"unbound={len(summary['accepted_unbound'])} "
+        f"narrative_only_ratio={summary['narrative_only_ratio']} "
+        f"executed_by_ratio={summary['executed_by_ratio']} "
+        f"gate={summary['binding_gate']}"
+    )
+    if report or unbound_to is None:
+        if summary["accepted_unbound"]:
+            typer.echo("unbound: " + ", ".join(summary["accepted_unbound"][:40]))
+        if unbound_to is None:
+            return
+
+    if unbound_to != "narrative_only":
+        typer.echo("--unbound-to must be 'narrative_only' (only supported mode)", err=True)
+        raise typer.Exit(1)
+
+    stories_files = list((root / "dsl").rglob("stories.dsl")) if (root / "dsl").is_dir() else []
+    stories_files += list(root.glob("**/stories.dsl"))
+    # unique
+    seen: set[Path] = set()
+    files: list[Path] = []
+    for p in stories_files:
+        rp = p.resolve()
+        if rp not in seen:
+            seen.add(rp)
+            files.append(rp)
+
+    changed = 0
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        lines = text.splitlines(keepends=True)
+        new_lines: list[str] = []
+        story_id: str | None = None
+        i = 0
+        file_changed = False
+        while i < len(lines):
+            line = lines[i]
+            m = re.match(r"^story\s+(ST-\d+)", line)
+            if m:
+                story_id = m.group(1)
+                new_lines.append(line)
+                i += 1
+                continue
+            if story_id and re.match(r"^\s+status:\s*accepted\s*$", line):
+                new_lines.append(line)
+                # look ahead for bind in this block
+                j = i + 1
+                found = False
+                while j < len(lines) and not re.match(r"^story\s+", lines[j]):
+                    if re.match(r"^\s+executed_by:", lines[j]) or re.match(
+                        r"^\s+narrative_only:", lines[j]
+                    ):
+                        found = True
+                        break
+                    j += 1
+                if not found and story_id in summary["accepted_unbound"]:
+                    inject = "  narrative_only: true\n"
+                    if not dry_run:
+                        new_lines.append(inject)
+                    else:
+                        typer.echo(f"would inject narrative_only on {story_id} in {path.name}")
+                    file_changed = True
+                    changed += 1
+                i += 1
+                continue
+            new_lines.append(line)
+            i += 1
+        if file_changed and not dry_run:
+            path.write_text("".join(new_lines), encoding="utf-8")
+            typer.echo(f"updated {path.relative_to(root)}")
+
+    typer.echo(
+        f"bind-migrate: {changed} stories marked narrative_only" + (" (dry-run)" if dry_run else "")
+    )
+
+
 @story_app.command("scope-fidelity")
 def scope_fidelity(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),

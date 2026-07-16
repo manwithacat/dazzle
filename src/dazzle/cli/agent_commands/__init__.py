@@ -11,9 +11,77 @@ import typer
 
 agent_app = typer.Typer(
     name="agent",
-    help="Agent-first development commands.",
+    help=(
+        "Agent-first development commands: closed-loop control plane "
+        "(context/prove/playbook, no mcp extra) plus sync/seed/signals."
+    ),
     no_args_is_help=True,
 )
+
+
+@agent_app.command("context")
+def closed_loop_context(
+    project: Path = typer.Option(
+        Path("."),
+        "--project",
+        "-p",
+        help="Project root (directory with dazzle.toml).",
+    ),
+    pretty: bool = typer.Option(True, "--pretty/--compact"),
+) -> None:
+    """#1605 brownfield map + runtime.truth + next_steps (JSON). No mcp extra."""
+    from dazzle.agent_loop import build_context
+
+    root = project.resolve()
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"Error: {root} has no dazzle.toml", err=True)
+        raise typer.Exit(1)
+    payload = build_context(root)
+    if pretty:
+        typer.echo(json.dumps(payload, indent=2, default=str))
+    else:
+        typer.echo(json.dumps(payload, default=str))
+
+
+@agent_app.command("playbook")
+def closed_loop_playbook(
+    name: str = typer.Argument("domain_logic", help="Playbook name"),
+    body_only: bool = typer.Option(False, "--body", help="Print markdown only"),
+) -> None:
+    """#1605 domain_logic closed-loop playbook. No mcp extra."""
+    from dazzle.agent_loop import build_playbook
+
+    payload = build_playbook(name)
+    if not payload.get("ok"):
+        typer.echo(payload.get("error"), err=True)
+        raise typer.Exit(1)
+    if body_only:
+        typer.echo(payload.get("body", ""))
+    else:
+        typer.echo(json.dumps(payload, indent=2))
+
+
+@agent_app.command("prove")
+def closed_loop_prove(
+    story_id: str = typer.Argument(None, help="Story id (optional)"),
+    project: Path = typer.Option(Path("."), "--project", "-p"),
+    static: bool = typer.Option(
+        True,
+        "--static/--runtime",
+        help="Static binding evidence (default). Runtime not implemented.",
+    ),
+) -> None:
+    """#1605 static binding prove (alias of ``dazzle prove story --static``)."""
+    if not static:
+        typer.echo("Runtime prove is not implemented; use --static.", err=True)
+        raise typer.Exit(2)
+    from dazzle.agent_loop import prove_stories
+
+    root = project.resolve()
+    data = prove_stories(root, story_id=story_id)
+    typer.echo(json.dumps(data, indent=2, default=str))
+    if not data.get("ok"):
+        raise typer.Exit(1)
 
 
 @agent_app.command("sync")

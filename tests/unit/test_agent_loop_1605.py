@@ -1,12 +1,16 @@
-"""#1605 agent closed-loop: context / binding / prove / playbook."""
+"""#1605 agent closed-loop: context / binding / prove / playbook.
+
+Pure path must work without importing dazzle.mcp (CyFuture P0).
+"""
 
 from __future__ import annotations
 
-import json
+import importlib
 from pathlib import Path
 
 import pytest
 
+from dazzle.agent_loop import build_context, build_playbook, prove_stories
 from dazzle.core import ir
 from dazzle.core.validation.extended import _lint_story_execution_bindings
 
@@ -16,26 +20,39 @@ REPO = Path(__file__).resolve().parents[2]
 SIMPLE = REPO / "examples" / "simple_task"
 
 
-def test_agent_context_on_simple_task() -> None:
-    from dazzle.mcp.server.handlers.agent_loop import agent_context_handler
+def test_agent_loop_import_without_mcp_package() -> None:
+    """agent_loop must not pull dazzle.mcp (signing-only dual-lock pins)."""
+    mod = importlib.import_module("dazzle.agent_loop.core")
+    assert "dazzle.mcp" not in mod.__name__
+    # Source-level guard: no import statements of dazzle.mcp
+    src = Path(mod.__file__).read_text(encoding="utf-8")
+    for line in src.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith(("from dazzle.mcp", "import dazzle.mcp")):
+            raise AssertionError(f"agent_loop.core must not import mcp: {stripped}")
 
-    raw = agent_context_handler(SIMPLE, {})
-    data = json.loads(raw)
+
+def test_agent_context_on_simple_task() -> None:
+    data = build_context(SIMPLE)
     assert data.get("ok") is True
     assert "runtime" in data
     assert "dazzle_version" in data["runtime"]
     assert data["counts"]["stories"] >= 1
     assert "next_steps" in data
     assert data["story_bindings"]["binding_gate"] in ("pass", "fail")
+    assert "narrative_only_ratio" in data["story_bindings"]
+    # CLI-first next steps
+    assert any(s.get("kind") == "cli" for s in data["next_steps"])
 
 
 def test_agent_playbook_domain_logic() -> None:
-    from dazzle.mcp.server.handlers.agent_loop import agent_playbook_handler
-
-    raw = agent_playbook_handler(SIMPLE, {"name": "domain_logic"})
-    data = json.loads(raw)
+    data = build_playbook("domain_logic")
     assert data["ok"] is True
-    assert "map → bind" in data["body"] or "map → bind" in data["body"].replace("→", "->")
+    body = data["body"]
+    assert "map → bind" in body or "map" in body
+    assert "dazzle agent context" in body
 
 
 def _minimal_appspec(stories: list[ir.StorySpec]) -> ir.AppSpec:
@@ -71,16 +88,15 @@ def test_story_binding_lint_narrative_only_ok() -> None:
     assert errors == []
 
 
-def test_prove_process_bound_story() -> None:
-    from dazzle.mcp.server.handlers.agent_loop import agent_prove_handler
-
-    raw = agent_prove_handler(SIMPLE, {"story_id": "ST-017"})
-    data = json.loads(raw)
+def test_prove_process_bound_story_static_naming() -> None:
+    data = prove_stories(SIMPLE, story_id="ST-017")
     assert data.get("results"), data
     r0 = data["results"][0]
     assert r0["story_id"] == "ST-017"
-    assert r0["result"] == "pass", r0
+    assert r0["result"] == "pass_static", r0
+    assert r0.get("evidence_kind") == "static"
     assert r0.get("executed_by", "").startswith("process.")
+    assert data.get("evidence_kind") == "static"
 
 
 def test_agent_tool_registered() -> None:

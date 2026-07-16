@@ -487,4 +487,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.104.5 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.104.6 | **Python**: 3.12+ | **Status**: Production Ready

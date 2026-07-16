@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.104.6] - 2026-07-16
+
+### Fixed
+- **#1605 CyFuture P0: agent closed loop installable without mcp extra** —
+  pure ``dazzle.agent_loop`` package; ``dazzle agent context|prove|playbook``
+  and ``dazzle prove story --static`` (results ``pass_static``/``fail_static``);
+  ``dazzle story bind-migrate --report|--unbound-to narrative_only``.
+
 ## [0.104.5] - 2026-07-16
 
 ### Added
