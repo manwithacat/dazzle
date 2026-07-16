@@ -292,8 +292,8 @@
       "description": null,
       "when": [],
       "outcomes": [
-        "Team Manager sees Tasks where assigned_to is null",
-        "Team Manager can click a Task to assign it"
+        "Team Manager sees an unassigned queue of Tasks where assigned_to is null",
+        "Team Manager can open a Task from the queue to assign it"
       ]
     },
     {
@@ -309,12 +309,12 @@
     },
     {
       "id": "ST-018",
-      "title": "Team Manager reviews completed tasks",
+      "title": "Team Manager reviews tasks awaiting review",
       "actor": "manager",
       "description": null,
       "when": [],
       "outcomes": [
-        "Team Manager sees the review queue sorted by updated_at desc",
+        "Team Manager sees the needs_review queue sorted by updated_at",
         "Team Manager can approve a Task to done or send it back to in_progress"
       ]
     },
@@ -336,8 +336,8 @@
       "description": null,
       "when": [],
       "outcomes": [
-        "Team Member sees only Tasks where assigned_to = self or created_by = self",
-        "Task list is grouped by status"
+        "Team Member sees personal metrics and WIP/todo queues for assigned work",
+        "Team Member sees only Tasks scoped to self"
       ]
     }
   ],
@@ -367,10 +367,10 @@
         "admin"
       ],
       "contents": [
-        "list of Task",
-        "list of User",
-        "list of Task",
-        "list of Task"
+        "metrics of Task",
+        "metrics of User",
+        "queue of Task",
+        "queue of Task"
       ]
     },
     {
@@ -383,10 +383,10 @@
         "manager"
       ],
       "contents": [
-        "list of Task",
-        "list of Task",
-        "list of Task",
-        "list of Task"
+        "metrics of Task",
+        "queue of Task",
+        "queue of Task",
+        "queue of Task"
       ]
     },
     {
@@ -396,9 +396,10 @@
       "purpose": "Personal task view for assigned work",
       "personas": [],
       "contents": [
-        "list of Task",
-        "list of Task",
-        "list of Task",
+        "metrics of Task",
+        "queue of Task",
+        "queue of Task",
+        "queue of Task",
         "list of Task"
       ]
     }

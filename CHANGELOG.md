@@ -43,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   import baseline for snapshot hygiene check.
 - **record-page Blueprint WCAG** — drop half-built `role=tablist`/`tabpanel`
   (honest selection-strip; matches tabs Hyperpart doctrine).
+- **Fleet drift after story-UX lifts** — regenerate SPECIFICATION footers for
+  lifted examples, simple_task brief baseline, acme compliance auditspec,
+  CONSUMER_MAP; mark `dz-cue.js` as toast extension for cohesion.
 
 ## [0.104.1] - 2026-07-16
 

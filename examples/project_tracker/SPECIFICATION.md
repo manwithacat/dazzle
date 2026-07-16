@@ -60,4 +60,4 @@ byte-serving route to that boundary, so no new route can stream attachment
 bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:e20fb36222131476c0bfb6cdb2ecdcb8f0577bcee694e497d31eb4f8a841b6d3 -->
+<!-- dazzle-spec-brief: sha256:3a1a2e4b243d6d6be105f0a605968370683133013920637fd320438aa58a3260 -->

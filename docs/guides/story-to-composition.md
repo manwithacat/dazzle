@@ -146,3 +146,8 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 **acme_billing**:
 
 - Admin/owner/auditor → `billing` = portfolio metrics + invoice queue + entity lists
+
+**design_studio**:
+
+- Designer/admin → `studio_dashboard` = portfolio metrics + grids
+- Reviewer → `asset_gallery` = gallery metrics + **review queue** (`status = review`)
