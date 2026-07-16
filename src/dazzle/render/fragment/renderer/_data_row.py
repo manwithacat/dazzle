@@ -504,9 +504,13 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
 
         # C2.1: no per-cell visibility binding — dz-grid-cols.js projects the
         # hidden set onto [data-dz-col] cells after every swap.
+        # #1592: only *interactive* subtrees stop row click (checkbox, actions,
+        # active inline editor). Plain display cells must bubble so the row's
+        # hx-get drill-in / peek works — stopPropagation on every td killed it.
+        cell_stop = ' onclick="event.stopPropagation()"' if col_key in inline_editable else ""
         cell_parts.append(
             f'<td data-dz-col="{col_key_attr}" '  # nosemgrep
-            f'class="{cell_classes}" onclick="event.stopPropagation()">'
+            f'class="{cell_classes}"{cell_stop}>'
             f"{cell_inner}</td>"
         )
 

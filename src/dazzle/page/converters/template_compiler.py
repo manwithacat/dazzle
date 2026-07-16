@@ -980,7 +980,11 @@ def _compile_list_surface(
             search_first=search_first,
             table_id=table_id,
             inline_editable=inline_editable,
-            bulk_actions=True,
+            # #1593: shell must match hydrated rows — bulk select-all / toolbar
+            # only when the list surface declares `ux: bulk_actions:` (same as
+            # server.py entity_htmx_meta). Unconditional True left a lonely
+            # header checkbox with zero row boxes.
+            bulk_actions=bool(ux and getattr(ux, "bulk_actions", None)),
         ),
     )
 

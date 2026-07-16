@@ -1542,12 +1542,11 @@ async def _handle_table(prc: _PageRequestContext) -> None:
     # current persona cannot delete this entity. Closes EX-040 (cycle
     # 223 observation: bulk-action bar shown to fieldtest_hub/tester
     # on 4 entity lists despite delete being engineer-only per DSL).
-    # The template_compiler sets ``bulk_actions=True`` unconditionally
-    # at compile time because there is no request context then; we
-    # resolve per-persona here in the per-request copy, mirroring the
-    # create_url suppression above. ``_user_can_mutate`` correctly
-    # distinguishes "no rules / field-conditioned rules" (allow --
-    # record-level) from "role-gate denies mutation" (suppress).
+    # Compile-time bulk_actions is derived from surface `ux.bulk_actions`
+    # (#1593); we still resolve per-persona here so delete-gated roles
+    # lose the chrome. ``_user_can_mutate`` correctly distinguishes
+    # "no rules / field-conditioned rules" (allow -- record-level) from
+    # "role-gate denies mutation" (suppress).
     if prc.ctx.user_roles is not None and req_table.bulk_actions:
         if _should_suppress_mutations(
             prc.deps, prc.surface_name, prc.auth_ctx, prc.ctx.user_roles

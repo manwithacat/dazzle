@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.104.1] - 2026-07-16
+
+### Fixed
+- **List bulk select-all NOOP without `ux: bulk_actions:`** (#1593) — shell
+  no longer forces `bulk_actions=True` at compile time; matches hydrated row
+  path so select-all / bulk toolbar only appear when DSL opts in.
+- **List row drill-in dead under cell `stopPropagation`** (#1592) — only
+  interactive cells (inline-edit) stop row click; plain display cells bubble
+  so `hx-get` row drill-in / peek works again.
+
 ### Added
 - **`dazzle clean snapshots`** — reclaim gitignored `.dazzle/spec_snapshots/`
   trees (historical ops rollback mirrors; writer retired ADR-0051). Supports
