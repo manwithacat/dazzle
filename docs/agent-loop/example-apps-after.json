@@ -1,0 +1,241 @@
+{
+  "captured_at": "2026-07-16T17:28:58.030952+00:00",
+  "head": "37051220c",
+  "label": "after-1605-sequence",
+  "apps": [
+    {
+      "app": "acme_billing",
+      "stories": 5,
+      "accepted": 0,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 0,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 5,
+        "other": 0
+      }
+    },
+    {
+      "app": "contact_manager",
+      "stories": 6,
+      "accepted": 1,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 1,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 6,
+        "other": 0
+      }
+    },
+    {
+      "app": "design_studio",
+      "stories": 0,
+      "accepted": 0,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 0,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 0,
+        "other": 0
+      }
+    },
+    {
+      "app": "domain_join_co",
+      "stories": 0,
+      "accepted": 0,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 0,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 0,
+        "other": 0
+      }
+    },
+    {
+      "app": "fieldtest_hub",
+      "stories": 26,
+      "accepted": 26,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 26,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 26,
+        "other": 0
+      }
+    },
+    {
+      "app": "hr_records",
+      "stories": 0,
+      "accepted": 0,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 0,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 0,
+        "other": 0
+      }
+    },
+    {
+      "app": "invoice_ops",
+      "stories": 0,
+      "accepted": 0,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 0,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 1,
+      "domain_services": 1,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 0,
+        "other": 0
+      }
+    },
+    {
+      "app": "llm_ticket_classifier",
+      "stories": 0,
+      "accepted": 0,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 0,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 0,
+        "other": 0
+      }
+    },
+    {
+      "app": "ops_dashboard",
+      "stories": 10,
+      "accepted": 0,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 0,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 10,
+        "other": 0
+      }
+    },
+    {
+      "app": "project_tracker",
+      "stories": 0,
+      "accepted": 0,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 0,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 0,
+        "other": 0
+      }
+    },
+    {
+      "app": "simple_task",
+      "stories": 15,
+      "accepted": 7,
+      "accepted_bound": 1,
+      "accepted_narrative_only": 6,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 3,
+      "domain_services": 7,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 1,
+        "uncovered": 14,
+        "other": 0
+      }
+    },
+    {
+      "app": "support_tickets",
+      "stories": 18,
+      "accepted": 11,
+      "accepted_bound": 0,
+      "accepted_narrative_only": 11,
+      "accepted_unbound": [],
+      "binding_gate": "pass",
+      "processes": 0,
+      "domain_services": 0,
+      "agent_context_ok": true,
+      "coverage_buckets": {
+        "covered": 0,
+        "partial": 0,
+        "uncovered": 18,
+        "other": 0
+      }
+    }
+  ],
+  "prove_simple_task_ST017": {
+    "ok": true,
+    "operation": "prove",
+    "checked": 1,
+    "passed": 1,
+    "failed": 0,
+    "results": [
+      {
+        "story_id": "ST-017",
+        "executed_by": "process.task_auto_assignment",
+        "result": "pass",
+        "reason": "process_exists",
+        "evidence": [
+          "process:task_auto_assignment"
+        ]
+      }
+    ]
+  }
+}

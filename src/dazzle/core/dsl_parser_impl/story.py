@@ -395,6 +395,8 @@ class _StoryState:
     when: list[ir.StoryCondition] = field(default_factory=list)
     then: list[ir.StoryCondition] = field(default_factory=list)
     unless: list[ir.StoryException] = field(default_factory=list)
+    executed_by: str | None = None
+    narrative_only: bool = False
 
 
 # ---------- Keyword parsers ---------- #
@@ -458,6 +460,38 @@ def _s_kw_unless(parser: Any, state: _StoryState) -> None:
     state.unless = parser._parse_unless_list()
 
 
+def _s_kw_executed_by(parser: Any, state: _StoryState) -> None:
+    """#1608 — executed_by: process.x.step.y | service.x | surface.x | host_route …"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.STRING):
+        state.executed_by = str(parser.advance().value)
+        parser.skip_newlines()
+        return
+    # Unquoted path until newline. Dots are separate tokens → join without
+    # spaces; host_route METHOD /path needs spaces between tokens.
+    parts: list[str] = []
+    while not parser.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+        parts.append(str(parser.current_token().value))
+        parser.advance()
+    if not parts:
+        state.executed_by = None
+    elif parts[0] == "host_route" or (parts[0] == "host" and len(parts) > 1 and parts[1] == "_"):
+        state.executed_by = " ".join(parts).strip()
+    else:
+        state.executed_by = "".join(parts).strip()
+    parser.skip_newlines()
+
+
+def _s_kw_narrative_only(parser: Any, state: _StoryState) -> None:
+    """#1608 — narrative_only: true|false"""
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    raw = parser.expect_identifier_or_keyword().value.lower()
+    state.narrative_only = raw in ("true", "yes", "1")
+    parser.skip_newlines()
+
+
 # ---------- Dispatch table + on_unknown + builder ---------- #
 
 
@@ -476,6 +510,8 @@ _STORY_KEYWORDS: dict[TokenType, KeywordParser[_StoryState]] = {
 # `entities: json` field in fixtures/pra. (#1559 vocabulary unification.)
 _STORY_IDENT_KEYWORDS: dict[str, KeywordParser[_StoryState]] = {
     "entities": _s_kw_entities,
+    "executed_by": _s_kw_executed_by,
+    "narrative_only": _s_kw_narrative_only,
 }
 
 
@@ -549,5 +585,7 @@ def _build_story(
         when=state.when,
         then=state.then,
         unless=state.unless,
+        executed_by=state.executed_by,
+        narrative_only=state.narrative_only,
         source=loc,
     )

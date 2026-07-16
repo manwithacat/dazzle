@@ -868,6 +868,39 @@ def _tool_user_profile() -> Tool:
     )
 
 
+def _tool_agent() -> Tool:
+    """#1605 agent-first closed loop (read/report only — ADR-0002)."""
+    return Tool(
+        name="agent",
+        description=(
+            "Agent closed-loop control plane (#1605): context (brownfield map + "
+            "runtime.truth + next_steps), prove (static binding evidence), "
+            "playbook (domain_logic map→bind→scaffold→prove). "
+            "Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["context", "prove", "playbook"],
+                    "description": "Operation to perform",
+                },
+                "story_id": {
+                    "type": "string",
+                    "description": "Story id for prove (optional; default all accepted)",
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Playbook name (default: domain_logic)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
 def _tool_bootstrap() -> Tool:
     """Bootstrap (entry point for naive app requests)."""
     return Tool(
@@ -1678,6 +1711,7 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_user_management(),
         _tool_user_profile(),
         _tool_bootstrap(),
+        _tool_agent(),
         _tool_spec_analyze(),
         _tool_graph(),
         _tool_discovery(),

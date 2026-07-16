@@ -1,5 +1,6 @@
 story ST-001 "User creates a new Contact":
   status: accepted
+  narrative_only: true
   persona: user
   trigger: form_submitted
   entities: [Contact]

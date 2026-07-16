@@ -1,0 +1,315 @@
+{
+  "captured_at": "2026-07-16T17:24:21.543862+00:00",
+  "head": "37051220c",
+  "label": "before-1605-sequence",
+  "apps": [
+    {
+      "app": "acme_billing",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/entities.dsl",
+        "dsl/onboarding.dsl",
+        "dsl/personas.dsl",
+        "dsl/stories.dsl",
+        "dsl/surfaces.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 5,
+        "process": 0,
+        "service": 0,
+        "entity": 5,
+        "surface": 20
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "contact_manager",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/onboarding.dsl",
+        "dsl/signing.dsl",
+        "dsl/stories.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 6,
+        "process": 0,
+        "service": 0,
+        "entity": 2,
+        "surface": 4
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "design_studio",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/onboarding.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 0,
+        "process": 0,
+        "service": 0,
+        "entity": 5,
+        "surface": 15
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "domain_join_co",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/domain.dsl",
+        "dsl/onboarding.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 0,
+        "process": 0,
+        "service": 0,
+        "entity": 2,
+        "surface": 3
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "fieldtest_hub",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/onboarding.dsl",
+        "dsl/stories.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 26,
+        "process": 0,
+        "service": 0,
+        "entity": 6,
+        "surface": 24
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "hr_records",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/onboarding.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 0,
+        "process": 0,
+        "service": 0,
+        "entity": 6,
+        "surface": 14
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "invoice_ops",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/entities.dsl",
+        "dsl/events.dsl",
+        "dsl/onboarding.dsl",
+        "dsl/personas.dsl",
+        "dsl/services.dsl",
+        "dsl/surfaces.dsl",
+        "dsl/workflow.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 0,
+        "process": 1,
+        "service": 1,
+        "entity": 7,
+        "surface": 16
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "llm_ticket_classifier",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/onboarding.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 0,
+        "process": 0,
+        "service": 0,
+        "entity": 3,
+        "surface": 3
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "ops_dashboard",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/onboarding.dsl",
+        "dsl/stories.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 10,
+        "process": 0,
+        "service": 1,
+        "entity": 3,
+        "surface": 8
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "project_tracker",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/onboarding.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 0,
+        "process": 0,
+        "service": 0,
+        "entity": 6,
+        "surface": 17
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "simple_task",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        ".dazzle/spec_snapshots/54ab4bc6-659d-4d9d-ac97-e5f8961a436e/dsl/app.dsl",
+        ".dazzle/spec_snapshots/54ab4bc6-659d-4d9d-ac97-e5f8961a436e/dsl/events.dsl",
+        ".dazzle/spec_snapshots/54ab4bc6-659d-4d9d-ac97-e5f8961a436e/dsl/llm.dsl",
+        ".dazzle/spec_snapshots/54ab4bc6-659d-4d9d-ac97-e5f8961a436e/dsl/messaging.dsl",
+        ".dazzle/spec_snapshots/54ab4bc6-659d-4d9d-ac97-e5f8961a436e/dsl/processes.dsl",
+        ".dazzle/spec_snapshots/54ab4bc6-659d-4d9d-ac97-e5f8961a436e/dsl/services.dsl",
+        "dsl/app.dsl",
+        "dsl/events.dsl",
+        "dsl/llm.dsl",
+        "dsl/messaging.dsl",
+        "dsl/onboarding.dsl",
+        "dsl/processes.dsl",
+        "dsl/services.dsl",
+        "dsl/stories.dsl"
+      ],
+      "services_py": [
+        "calculate_overdue_penalty.py"
+      ],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 15,
+        "process": 6,
+        "service": 14,
+        "entity": 6,
+        "surface": 18
+      },
+      "dual_lock": {
+        "host_services": true,
+        "host_routes": false
+      }
+    },
+    {
+      "app": "support_tickets",
+      "has_dazzle_toml": true,
+      "dsl_files": [
+        "dsl/app.dsl",
+        "dsl/onboarding.dsl",
+        "dsl/runtime.dsl",
+        "dsl/signing.dsl",
+        "dsl/stories.dsl"
+      ],
+      "services_py": [],
+      "routes_py": [],
+      "story_handlers": false,
+      "load_error_import": "cannot import name 'find_project_root' from 'dazzle.cli.project' (/Volumes/SSD/Dazzle/src/dazzle/cli/project.py)",
+      "counts_heuristic": {
+        "story": 18,
+        "process": 0,
+        "service": 0,
+        "entity": 4,
+        "surface": 12
+      },
+      "dual_lock": {
+        "host_services": false,
+        "host_routes": false
+      }
+    }
+  ]
+}

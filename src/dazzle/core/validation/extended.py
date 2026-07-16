@@ -518,6 +518,50 @@ def _lint_integration_bindings(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
+def _lint_story_execution_bindings(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """#1605/#1608 — accepted stories need executed_by or narrative_only.
+
+    Returns (errors, warnings). Errors hard-fail validate so ST-xxx is not
+    acceptance theatre. Shape of executed_by is checked lightly here;
+    ``dazzle prove`` / agent prove do deeper target existence checks.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    stories = list(appspec.stories) if appspec.stories else []
+    for story in stories:
+        status = getattr(story.status, "value", story.status)
+        if status != "accepted":
+            continue
+        if getattr(story, "narrative_only", False):
+            if getattr(story, "executed_by", None):
+                warnings.append(
+                    f"Story '{story.story_id}' is narrative_only but also sets "
+                    f"executed_by — prefer one honesty mode"
+                )
+            continue
+        eb = getattr(story, "executed_by", None)
+        if not eb:
+            errors.append(
+                f"Story '{story.story_id}' is accepted but has no execution binding "
+                f"(#1608). Set `executed_by: process.|service.|surface.|host_route …` "
+                f"or `narrative_only: true`."
+            )
+            continue
+        eb_s = str(eb).strip()
+        ok_shape = (
+            eb_s.startswith("process.")
+            or eb_s.startswith("service.")
+            or eb_s.startswith("surface.")
+            or eb_s.lower().startswith("host_route ")
+        )
+        if not ok_shape:
+            errors.append(
+                f"Story '{story.story_id}' executed_by '{eb_s}' has invalid shape "
+                f"(#1608). Expected process.|service.|surface.|host_route METHOD /path"
+            )
+    return errors, warnings
+
+
 def _lint_process_effects(appspec: ir.AppSpec) -> list[str]:
     """Check process step effects reference valid entities and fields."""
     warnings: list[str] = []

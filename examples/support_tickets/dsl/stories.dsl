@@ -1,5 +1,6 @@
 story ST-013 "User creates a new User":
   status: accepted
+  narrative_only: true
   persona: customer
   trigger: form_submitted
   entities: [User]
@@ -11,6 +12,7 @@ story ST-013 "User creates a new User":
 
 story ST-014 "User creates a new Support Ticket":
   status: accepted
+  narrative_only: true
   persona: customer
   trigger: form_submitted
   entities: [Ticket]
@@ -22,6 +24,7 @@ story ST-014 "User creates a new Support Ticket":
 
 story ST-015 "User changes Ticket from open to in_progress":
   status: accepted
+  narrative_only: true
   persona: customer
   trigger: status_changed
   entities: [Ticket]
@@ -32,6 +35,7 @@ story ST-015 "User changes Ticket from open to in_progress":
 
 story ST-016 "User changes Ticket from in_progress to resolved":
   status: accepted
+  narrative_only: true
   persona: customer
   trigger: status_changed
   entities: [Ticket]
@@ -42,6 +46,7 @@ story ST-016 "User changes Ticket from in_progress to resolved":
 
 story ST-017 "User changes Ticket from in_progress to open":
   status: accepted
+  narrative_only: true
   persona: customer
   trigger: status_changed
   entities: [Ticket]
@@ -52,6 +57,7 @@ story ST-017 "User changes Ticket from in_progress to open":
 
 story ST-018 "User creates a new Comment":
   status: accepted
+  narrative_only: true
   persona: customer
   trigger: form_submitted
   entities: [Comment]
@@ -63,6 +69,7 @@ story ST-018 "User creates a new Comment":
 
 story ST-019 "Support Agent works the open ticket queue":
   status: accepted
+  narrative_only: true
   persona: agent
   trigger: user_click
   entities: [Ticket]
@@ -75,6 +82,7 @@ story ST-019 "Support Agent works the open ticket queue":
 
 story ST-020 "Support Agent picks up a ticket":
   status: accepted
+  narrative_only: true
   persona: agent
   trigger: form_submitted
   entities: [Ticket]
@@ -87,6 +95,7 @@ story ST-020 "Support Agent picks up a ticket":
 
 story ST-021 "Support Agent views full ticket detail with comment history":
   status: accepted
+  narrative_only: true
   persona: agent
   trigger: user_click
   entities: [Ticket, Comment]
@@ -98,6 +107,7 @@ story ST-021 "Support Agent views full ticket detail with comment history":
 
 story ST-022 "Support Agent adds an internal note":
   status: accepted
+  narrative_only: true
   persona: agent
   trigger: form_submitted
   entities: [Comment]
@@ -109,6 +119,7 @@ story ST-022 "Support Agent adds an internal note":
 
 story ST-023 "Support Agent resolves a ticket":
   status: accepted
+  narrative_only: true
   persona: agent
   trigger: status_changed
   entities: [Ticket]

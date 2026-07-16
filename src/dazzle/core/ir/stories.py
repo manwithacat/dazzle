@@ -173,6 +173,19 @@ class StorySpec(BaseModel):
     unless: list[StoryException] = Field(default_factory=list, description="Exception branches")
 
     status: StoryStatus = Field(default=StoryStatus.DRAFT, description="Acceptance status")
+    # #1605 / #1608 — execution binding (agent closed loop). Accepted stories
+    # must set executed_by or narrative_only so coverage is not theatre.
+    executed_by: str | None = Field(
+        default=None,
+        description=(
+            "Execution edge: process.<p>[.step.<s>] | service.<name> | "
+            "surface.<name>[.action.<a>] | host_route METHOD /path"
+        ),
+    )
+    narrative_only: bool = Field(
+        default=False,
+        description="Honest non-implement: accepted story is documentation only",
+    )
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
 

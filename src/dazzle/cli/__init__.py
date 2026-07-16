@@ -297,11 +297,13 @@ from dazzle.cli.perf import perf_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
 from dazzle.cli.process_cli import process_app  # noqa: E402
+from dazzle.cli.prove import prove_app  # noqa: E402
 from dazzle.cli.pulse import pulse_app  # noqa: E402
 from dazzle.cli.qa import qa_app  # noqa: E402
 from dazzle.cli.quality import quality_app  # noqa: E402
 from dazzle.cli.rbac import rbac_app  # noqa: E402
 from dazzle.cli.rhythm import rhythm_app  # noqa: E402
+from dazzle.cli.scaffold import scaffold_app  # noqa: E402
 from dazzle.cli.sentinel import sentinel_app  # noqa: E402
 from dazzle.cli.signing import signing_app  # noqa: E402
 from dazzle.cli.spec import spec_app  # noqa: E402
@@ -336,6 +338,8 @@ app.add_typer(docs_app, name="docs")
 app.add_typer(vocab_app, name="vocab")
 app.add_typer(worker_app, name="worker")
 app.add_typer(stubs_app, name="stubs")
+app.add_typer(scaffold_app, name="scaffold")
+app.add_typer(prove_app, name="prove")
 app.add_typer(story_app, name="story")
 app.add_typer(tenant_app, name="tenant")
 app.add_typer(theme_app, name="theme")

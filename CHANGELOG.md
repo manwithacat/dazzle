@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.104.5] - 2026-07-16
+
+### Added
+- **#1605 Agent closed loop (D1–D6)** — MCP `agent` tool (`context` /
+  `prove` / `playbook`), story `executed_by` + `narrative_only` (#1608)
+  with validate hard-fail on accepted+unbound, CLI `dazzle scaffold` +
+  `dazzle prove story`, example-app migration + before/after under
+  `docs/agent-loop/`. Child issues #1606–#1611.
+
 ## [0.104.4] - 2026-07-16
 
 ### Fixed

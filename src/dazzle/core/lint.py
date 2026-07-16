@@ -99,6 +99,13 @@ def lint_appspec(
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
+    # #1605 / #1608 — accepted stories need executed_by or narrative_only
+    from dazzle.core.validation.extended import _lint_story_execution_bindings
+
+    bind_errors, bind_warnings = _lint_story_execution_bindings(appspec)
+    all_errors.extend(bind_errors)
+    all_warnings.extend(bind_warnings)
+
     # #1420 Slice 2: a surface whose op the entity's `expose:` omits is a contradiction.
     from dazzle.core.validation.entities import validate_expose_surface_consistency
 

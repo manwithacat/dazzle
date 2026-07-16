@@ -1333,6 +1333,14 @@ def handle_perf(arguments: dict[str, Any]) -> dict[str, Any]:
 # Main Dispatcher
 # =============================================================================
 
+
+def handle_agent(arguments: dict[str, Any]) -> str:
+    """#1605 agent closed-loop tool (context / prove / playbook)."""
+    from .handlers.agent_loop import handle_agent as _handle
+
+    return _handle(arguments)
+
+
 # Map of consolidated tool names to their handlers
 CONSOLIDATED_TOOL_HANDLERS = {
     "dsl": handle_dsl,
@@ -1369,6 +1377,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "compliance": handle_compliance,
     "agent_commands": handle_agent_commands,
     "perf": handle_perf,
+    "agent": handle_agent,
 }
 
 

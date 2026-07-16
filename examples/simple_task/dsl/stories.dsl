@@ -1,5 +1,6 @@
 story ST-006 "Administrator creates a new Team Member":
   status: accepted
+  narrative_only: true
   persona: admin
   trigger: form_submitted
   entities: [User]
@@ -11,6 +12,7 @@ story ST-006 "Administrator creates a new Team Member":
 
 story ST-007 "Administrator creates a new Task":
   status: accepted
+  narrative_only: true
   persona: admin
   trigger: form_submitted
   entities: [Task]
@@ -22,6 +24,7 @@ story ST-007 "Administrator creates a new Task":
 
 story ST-008 "Administrator changes Task from todo to in_progress":
   status: accepted
+  narrative_only: true
   persona: admin
   trigger: status_changed
   entities: [Task]
@@ -33,6 +36,7 @@ story ST-008 "Administrator changes Task from todo to in_progress":
 
 story ST-009 "Administrator changes Task from in_progress to review":
   status: accepted
+  narrative_only: true
   persona: admin
   trigger: status_changed
   entities: [Task]
@@ -44,6 +48,7 @@ story ST-009 "Administrator changes Task from in_progress to review":
 
 story ST-010 "Administrator changes Task from in_progress to todo":
   status: accepted
+  narrative_only: true
   persona: admin
   trigger: status_changed
   entities: [Task]
@@ -55,6 +60,7 @@ story ST-010 "Administrator changes Task from in_progress to todo":
 
 story ST-011 "Administrator creates a new Task Comment":
   status: accepted
+  narrative_only: true
   persona: admin
   trigger: form_submitted
   entities: [TaskComment]
@@ -116,6 +122,8 @@ story ST-016 "Team Manager views unassigned tasks":
 
 story ST-017 "Team Manager assigns a task to a Team Member":
   persona: manager
+  status: accepted
+  executed_by: process.task_auto_assignment
   trigger: form_submitted
   entities: [Task, User]
   given:

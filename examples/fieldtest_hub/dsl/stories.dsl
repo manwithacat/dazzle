@@ -1,5 +1,6 @@
 story ST-019 "Engineer creates a new Device":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: form_submitted
   entities: [Device]
@@ -11,6 +12,7 @@ story ST-019 "Engineer creates a new Device":
 
 story ST-020 "Engineer changes Device from prototype to active":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [Device]
@@ -21,6 +23,7 @@ story ST-020 "Engineer changes Device from prototype to active":
 
 story ST-021 "Engineer changes Device from active to recalled":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [Device]
@@ -31,6 +34,7 @@ story ST-021 "Engineer changes Device from active to recalled":
 
 story ST-022 "Engineer changes Device from active to retired":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [Device]
@@ -41,6 +45,7 @@ story ST-022 "Engineer changes Device from active to retired":
 
 story ST-023 "Engineer creates a new Tester":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: form_submitted
   entities: [Tester]
@@ -52,6 +57,7 @@ story ST-023 "Engineer creates a new Tester":
 
 story ST-024 "Engineer creates a new Issue Report":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: form_submitted
   entities: [IssueReport]
@@ -63,6 +69,7 @@ story ST-024 "Engineer creates a new Issue Report":
 
 story ST-025 "Engineer changes IssueReport from open to triaged":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [IssueReport]
@@ -73,6 +80,7 @@ story ST-025 "Engineer changes IssueReport from open to triaged":
 
 story ST-026 "Engineer changes IssueReport from triaged to in_progress":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [IssueReport]
@@ -83,6 +91,7 @@ story ST-026 "Engineer changes IssueReport from triaged to in_progress":
 
 story ST-027 "Engineer changes IssueReport from in_progress to fixed":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [IssueReport]
@@ -93,6 +102,7 @@ story ST-027 "Engineer changes IssueReport from in_progress to fixed":
 
 story ST-028 "Engineer creates a new Test Session":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: form_submitted
   entities: [TestSession]
@@ -104,6 +114,7 @@ story ST-028 "Engineer creates a new Test Session":
 
 story ST-029 "Engineer creates a new Firmware Release":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: form_submitted
   entities: [FirmwareRelease]
@@ -115,6 +126,7 @@ story ST-029 "Engineer creates a new Firmware Release":
 
 story ST-030 "Engineer changes FirmwareRelease from draft to released":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [FirmwareRelease]
@@ -125,6 +137,7 @@ story ST-030 "Engineer changes FirmwareRelease from draft to released":
 
 story ST-031 "Engineer changes FirmwareRelease from released to deprecated":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [FirmwareRelease]
@@ -135,6 +148,7 @@ story ST-031 "Engineer changes FirmwareRelease from released to deprecated":
 
 story ST-032 "Engineer changes FirmwareRelease from deprecated to draft":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [FirmwareRelease]
@@ -145,6 +159,7 @@ story ST-032 "Engineer changes FirmwareRelease from deprecated to draft":
 
 story ST-033 "Engineer creates a new Task":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: form_submitted
   entities: [Task]
@@ -156,6 +171,7 @@ story ST-033 "Engineer creates a new Task":
 
 story ST-034 "Engineer changes Task from open to in_progress":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [Task]
@@ -166,6 +182,7 @@ story ST-034 "Engineer changes Task from open to in_progress":
 
 story ST-035 "Engineer changes Task from in_progress to completed":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [Task]
@@ -176,6 +193,7 @@ story ST-035 "Engineer changes Task from in_progress to completed":
 
 story ST-036 "Engineer changes Task from in_progress to open":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [Task]
@@ -186,6 +204,7 @@ story ST-036 "Engineer changes Task from in_progress to open":
 
 story ST-037 "Engineer triages recent issue reports":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: user_click
   entities: [IssueReport]
@@ -198,6 +217,7 @@ story ST-037 "Engineer triages recent issue reports":
 
 story ST-038 "Engineer links firmware release to a device batch":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: form_submitted
   entities: [FirmwareRelease, Device]
@@ -209,6 +229,7 @@ story ST-038 "Engineer links firmware release to a device batch":
 
 story ST-039 "Engineer marks a device as recalled":
   status: accepted
+  narrative_only: true
   persona: engineer
   trigger: status_changed
   entities: [Device]
@@ -221,6 +242,7 @@ story ST-039 "Engineer marks a device as recalled":
 
 story ST-040 "Manager reviews team workload":
   status: accepted
+  narrative_only: true
   persona: manager
   trigger: user_click
   entities: [Task, Tester, Device]
@@ -233,6 +255,7 @@ story ST-040 "Manager reviews team workload":
 
 story ST-041 "Manager tracks release progress":
   status: accepted
+  narrative_only: true
   persona: manager
   trigger: user_click
   entities: [FirmwareRelease]
@@ -245,6 +268,7 @@ story ST-041 "Manager tracks release progress":
 
 story ST-042 "Field Tester reports a device issue":
   status: accepted
+  narrative_only: true
   persona: tester
   trigger: form_submitted
   entities: [IssueReport, Device]
@@ -256,6 +280,7 @@ story ST-042 "Field Tester reports a device issue":
 
 story ST-043 "Field Tester logs a test session":
   status: accepted
+  narrative_only: true
   persona: tester
   trigger: form_submitted
   entities: [TestSession, Device]
@@ -267,6 +292,7 @@ story ST-043 "Field Tester logs a test session":
 
 story ST-044 "Field Tester views devices assigned to them":
   status: accepted
+  narrative_only: true
   persona: tester
   trigger: user_click
   entities: [Device]
