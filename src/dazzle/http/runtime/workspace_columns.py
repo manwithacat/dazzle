@@ -44,8 +44,13 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
         return "badge"
     if kind_val == "bool":
         return "bool"
-    if kind_val in ("date", "datetime"):
+    # Keep date vs datetime distinct so list cells can show UK date-only
+    # ("16 Jul 2026") vs date+time ("16 Jul 2026 01:30"). Collapsing both to
+    # "date" stripped time from assignment timestamps and similar fields.
+    if kind_val == "date":
         return "date"
+    if kind_val == "datetime":
+        return "datetime"
     if kind_val == "money":
         return "currency"
     # State-machine status field renders as badge

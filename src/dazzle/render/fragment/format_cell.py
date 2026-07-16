@@ -90,7 +90,12 @@ def _infer(value: Any, kind: str, currency_code: str) -> str:
     if kind == "badge":
         return _title_case(str(value))
     if kind == "date":
-        return _friendly_dt(value, with_time=isinstance(value, datetime))
+        return _friendly_dt(value, with_time=False)
+    if kind == "datetime":
+        # Strings that parse as datetime keep the time; pure date values stay
+        # date-only. Previously only kind=="date" was handled, so datetime
+        # columns fell through to raw ISO (often with microseconds).
+        return _friendly_dt(value, with_time=True)
     # float/Decimal round to 2dp (the column vocabulary collapses these to "text",
     # so rounding is keyed off the Python value type, not the kind).
     if isinstance(value, (float, Decimal)):

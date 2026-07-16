@@ -1828,7 +1828,7 @@ class DazzleBackendApp:
                 "inline_editable": [
                     str(c.get("key", ""))
                     for c in cols
-                    if str(c.get("type", "")) in ("text", "bool", "badge", "date")
+                    if str(c.get("type", "")) in ("text", "bool", "badge", "date", "datetime")
                     and str(c.get("key", "")) not in ("id", "created_at", "updated_at")
                     and not str(c.get("key", "")).endswith("_id")
                     # A badge cell edits via a <select> built from the column's

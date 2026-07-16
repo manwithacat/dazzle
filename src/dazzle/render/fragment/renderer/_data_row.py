@@ -13,7 +13,9 @@ byte-for-byte by `tests/unit/test_data_row_characterization_1505.py`.
 """
 
 import html as _html_mod
+import re
 from dataclasses import dataclass
+from datetime import date, datetime
 from typing import Any
 
 from dazzle.render.filters import (
@@ -27,10 +29,20 @@ from dazzle.render.filters import (
     badge_icon_html,
     resolve_status_tone,
 )
+from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.fragment.icon_html import lucide_svg_html
 from dazzle.render.fragment.ingest import GridEditCell, edit_span_attrs
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.state_affordance import gated_row_transitions
+
+# UK-first defaults (day month year). Full locale plumbing is a follow-up;
+# these match the stock `_date_filter` default and production UK tenants.
+_UK_DATE = "%d %b %Y"
+_UK_DATETIME = "%d %b %Y %H:%M"
+
+# Raw ISO / Postgres timestamptz leak detector for the text fallback path.
+_ISO_DT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$")
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,13 +230,25 @@ def _render_cell_display(
     """
 
     col_type = str(col.get("type", "") or "")
+    # Explicit `format:` override from the surface field wins over inference
+    # (#1470 Phase 2). List rows previously ignored format_kind and only the
+    # related-group path called format_cell.
+    format_kind = str(col.get("format_kind", "") or "")
+    if format_kind:
+        raw = format_cell(
+            value,
+            col_type or "text",
+            currency_code=str(col.get("currency_code", "") or ""),
+            override=ResolvedFormat(format_kind, col.get("format_arg") or None),
+        )
+        return _html_mod.escape(raw, quote=False)
     # #1491 1d: an empty value renders the em-dash placeholder for the humanised
     # types — a null `number` must NOT fabricate "0" and a null `json` must NOT
     # leak "None" (the detail seam guards upstream; list rows reach here directly).
     if col_type in ("datetime", "number", "json") and value in (None, "", "—"):
         return "—"
     if col_type == "datetime":
-        return _html_mod.escape(_date_filter(value, "%d %b %Y %H:%M"), quote=False)
+        return _html_mod.escape(_date_filter(value, _UK_DATETIME), quote=False)
     if col_type == "number":
         return _html_mod.escape(_metric_number_filter(value), quote=False)
     if col_type == "json":
@@ -248,7 +272,7 @@ def _render_cell_display(
         # `_bool_icon_filter` returns Markup with raw HTML — safe to emit.
         return str(_bool_icon_filter(value))
     if col_type == "date":
-        return _html_mod.escape(_date_filter(value), quote=False)
+        return _html_mod.escape(_date_filter(value, _UK_DATE), quote=False)
     if col_type in ("currency", "money"):
         currency_code = col.get("currency_code") or "GBP"
         return _html_mod.escape(_currency_filter(value, currency_code), quote=False)
@@ -296,6 +320,21 @@ def _render_cell_display(
     # rather than routed through `_truncate_filter` → `_ref_display_name`, which
     # mangles a dict down to one arbitrary value. A float is rounded rather than
     # leaking full binary precision.
+    #
+    # Defensive temporal humanisation: when a column is mistyped as `text`
+    # (e.g. list-projection views that declare every field as text) but the
+    # value is clearly an ISO date/datetime (incl. Postgres timestamptz with
+    # microseconds), format it with the UK default instead of leaking raw ISO.
+    if isinstance(value, datetime):
+        return _html_mod.escape(value.strftime(_UK_DATETIME), quote=False)
+    if isinstance(value, date):
+        return _html_mod.escape(value.strftime(_UK_DATE), quote=False)
+    if isinstance(value, str):
+        s = value.strip()
+        if _ISO_DT_RE.match(s):
+            return _html_mod.escape(_date_filter(s, _UK_DATETIME), quote=False)
+        if _ISO_DATE_RE.match(s):
+            return _html_mod.escape(_date_filter(s, _UK_DATE), quote=False)
     if isinstance(value, (dict, list, tuple)):
         inner = _json_summary(value)
     elif isinstance(value, float):
@@ -472,7 +511,9 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             # Alpine templates; the editor input is built by the controller
             # and the typed buffer lives on the grid root, out of the morph
             # path.
-            kind = {"bool": "bool", "badge": "select", "date": "date"}.get(col_type, "text")
+            kind = {"bool": "bool", "badge": "select", "date": "date", "datetime": "date"}.get(
+                col_type, "text"
+            )
             # A select editor with zero options was never usable — degrade to
             # text before the model (which forbids optionless selects) sees it.
             if kind == "select" and not col.get("filter_options"):
