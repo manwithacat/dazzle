@@ -203,6 +203,8 @@ A TR row is **autonomous-actionable** when **all** of:
 
 Skip (not autonomous): pure aesthetic/confusion without DOM/URL; same-trial contradictions (`NEEDS_REINFORCE`); anything that needs "author intent" (tenancy model, persona RBAC design). Full playbook: `improve/strategies/trial_signal_action.md`.
 
+**Trials / LLM (cycle 666→715 lesson):** Do **not** sticky-skip `dazzle qa trial` or TR FIXED-VERIFY as "blocked on grok/LLM" when a subscription CLI is on PATH. `max turns reached` is product/config (raise grok-cli `max_turns`), not auth BLOCKED. Re-probe with `call_subscription_cli` before any multi-cycle skip; on Grok-only hosts use `--llm-driver grok-cli` even when examples pin `claude-cli`. See `improve/lanes/trials.md` outcome classification.
+
 ### Step 2: Hand off to lane
 
 Read `improve/lanes/{name}.md` and follow its playbook end-to-end. The lane:

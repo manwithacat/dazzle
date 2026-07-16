@@ -60,15 +60,26 @@ Update `.dazzle/trials-rotation.json`; increment cycle counter.
 cd examples/<app>
 # Prefer an available subscription CLI. Examples often pin [llm] driver=claude-cli;
 # on Grok-only hosts use --llm-driver grok-cli (or DAZZLE_LLM_DRIVER=grok-cli).
-# Never skip trials solely because a prior cycle aborted — re-probe:
-#   python -c "from dazzle.llm.driver import call_subscription_cli; print(call_subscription_cli('grok-cli','Reply: OK')[0])"
+# Never skip trials solely because a prior cycle aborted — re-probe before any sticky skip:
+#   python -c "from dazzle.llm.driver import call_subscription_cli, grok_cli_available, claude_cli_available; \
+#     d='grok-cli' if grok_cli_available() else 'claude-cli'; print(d, call_subscription_cli(d,'Reply: OK',max_turns=8)[0][:80])"
 export DATABASE_URL="${DATABASE_URL:-postgresql://localhost:5432/dazzle_<app>}"  # app DB, not dazzle_test
 dazzle qa trial --scenario <scenario_name> --fresh-db --llm-driver grok-cli
 ```
 
 Capture stdout + the generated markdown report path (`dev_docs/qa-trial-<scenario>-<ts>.md`).
 
-If the trial fails (exit code ≠ 0, or report missing): outcome `BLOCKED` with summary of failure mode. Do not retry — next cycle picks next pair.
+**Outcome classification (do not sticky-skip the lane on mislabel):**
+
+| Failure mode | Outcome | Next cycle |
+|--------------|---------|------------|
+| No subscription CLI on PATH and no API key | `BLOCKED` (true infra) | Other lanes until host has `grok`/`claude` or a key |
+| `max turns reached` / empty reply under subscription CLI | **`FAIL`** (product/config) — not BLOCKED | Fix `max_turns` / driver defaults (see `llm/driver.py`), re-run same pair or TR FIXED-VERIFY |
+| Example pin is `claude-cli` but host only has Grok | Override `--llm-driver grok-cli`; do **not** mark blocked | Re-probe + run |
+| Seed / missing optional dep (e.g. signable PDF stack) | `FAIL` or short `BLOCKED` with **named fix** | Install/fix, then retry — do not stamp "blocked on LLM" |
+| Auth truly dead (`grok login` required and probe fails) | `BLOCKED` until re-auth | Re-probe every cycle before skipping |
+
+If the trial fails (exit code ≠ 0, or report missing): return the outcome above with a **one-line root-cause class**. Do not retry in the same cycle — but **do not** carry "blocked on grok/LLM" into later cycles without re-probing the subscription path.
 
 ### 3. TRIAGE
 
@@ -110,3 +121,7 @@ Track this via `improve-log.md` — count consecutive `lane: trials` housekeepin
 - **Always `--fresh-db`.** Stale data corrupts signal (#810).
 - **Never run trials against live tenant data.** `--fresh-db` + example apps means this shouldn't happen, but verify `examples/<app>/.env` points at local Postgres.
 - **Token budget awareness.** Default `dazzle qa trial` burns 50–100k tokens per run.
+- **Subscription path first.** Prefer `grok-cli` / `claude-cli` (`--llm-driver` or `DAZZLE_LLM_DRIVER`). Do not require a metered API key for the default improve loop.
+- **`max turns` ≠ BLOCKED.** Grok headless burns turns on trial-sized prompts; raise driver/agent `max_turns` (cycle 715: driver 20, agent 32) rather than skipping the capability map. Treat max-turns aborts as **product/config FAIL**, not "LLM blocked".
+- **No sticky "blocked on grok" folklore.** A prior cycle's BLOCKED/FAIL does not permanently retire `dazzle qa trial` STALE. Before skipping for "LLM", re-probe `call_subscription_cli` (or `dazzle doctor` driver line). If the probe works, run the trial (with the host's available driver override).
+- **Pin vs host.** Example apps may pin `[llm] driver = "claude-cli"`; on Grok-only hosts always pass `--llm-driver grok-cli`.

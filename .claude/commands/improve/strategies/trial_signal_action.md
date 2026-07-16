@@ -61,5 +61,6 @@ If unreproducible on current main: set status `RESOLVED-STALE` or `NEEDS_REINFOR
 
 - **One TR per cycle.**
 - **No speculative architecture.** If the fix is "redesign signing authority model", stop and mark `needs-human`.
-- **Subscription trial drivers only** for re-trials in the default loop (no metered key required).
+- **Subscription trial drivers only** for re-trials in the default loop (no metered key required). Prefer `--llm-driver grok-cli` when Claude CLI is absent (examples often pin `claude-cli`).
 - **Do not mass-close ancient OPEN_*** rows** without repro — many predate current substrate.
+- **FIXED-VERIFY is not blocked by sticky LLM folklore.** Re-probe subscription CLI; `max turns reached` → fix turns / re-run, do not leave TR in FIXED-VERIFY for cycles "waiting on grok". See `improve/lanes/trials.md` outcome classification.
