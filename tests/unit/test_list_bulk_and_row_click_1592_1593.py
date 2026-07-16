@@ -88,8 +88,12 @@ def test_row_plain_cell_does_not_stop_propagation() -> None:
     assert "stopPropagation" in html  # actions only
 
 
-def test_row_inline_edit_cell_stops_propagation() -> None:
-    """#1592: editable cell still isolates click from row drill-in."""
+def test_row_inline_edit_cell_does_not_stop_propagation() -> None:
+    """#1598: C2.3-editable display cells still bubble single-click for drill.
+
+    Grid edit is dblclick-only; stopPropagation on every inline_editable td
+    made row hx-get dead once C2.3 marked most columns editable.
+    """
     html = _render_table_row(
         {
             "entity_name": "Task",
@@ -102,7 +106,11 @@ def test_row_inline_edit_cell_stops_propagation() -> None:
         {"id": "abc", "title": "Fix the printer"},
     )
     assert "dz-tr-cell-display" in html
-    assert 'class="dz-tr-cell" onclick="event.stopPropagation()"' in html
+    assert 'data-dz-grid-edit="title"' in html
+    assert 'class="dz-tr-cell" onclick="event.stopPropagation()"' not in html
+    # Actions still isolate
+    assert "dz-tr-actions-cell" in html
+    assert "stopPropagation" in html
 
 
 def test_row_without_bulk_has_no_row_checkbox() -> None:
