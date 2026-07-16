@@ -8,7 +8,7 @@
 # use pyenv/virtualenv/pip-install-editable for this repo — see
 # docs/contributing/dev-setup.md.
 
-.PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core sync-ci-type sync-ci-test pre-commit
+.PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core preflight-surface sync-ci-type sync-ci-test pre-commit
 
 # Prefer a real uv binary over pyenv shims. A committed `.python-version` of
 # `3.14` is correct for uv + Heroku but makes pyenv abort when that version is
@@ -60,8 +60,9 @@ help:
 	@echo "  examples         Validate and build example projects"
 	@echo ""
 	@echo "CI/CD (local concordance — see docs/contributing/local-ci-concordance.md):"
-	@echo "  ci-fast          Tier 0: ruff fix + mypy + gate suite + mkdocs (~2–3 min)"
-	@echo "  ci-core          Tier 1: CI lint/type/unit/security/docs mirror (no Postgres/e2e)"
+	@echo "  preflight-surface  Hard gate: API/docs/import/ratchet/HM debt (run before every ship)"
+	@echo "  ci-fast          Tier 0: preflight + ruff + mypy + gate suite + mkdocs (~2–3 min)"
+	@echo "  ci-core          Tier 1: preflight + CI lint/type/unit/security/docs mirror"
 	@echo "  ci               Legacy umbrella (lint + format-check + type-check + security + test-all + examples)"
 	@echo "  pre-commit       Run pre-commit on all files"
 	@echo ""
@@ -228,13 +229,19 @@ examples:
 # CI/CD
 # =============================================================================
 
+# Hard structural/artifact gate — unpaid debt that kept main red while laptops
+# looked green. Mandatory first step of ci-fast / ci-core and /ship.
+preflight-surface:
+	bash scripts/ci_local.sh preflight-surface
+
 # Tier 0 — what `/ship` runs by default (fast; not full GitHub CI).
+# Always runs preflight-surface first.
 ci-fast:
 	bash scripts/ci_local.sh tier0
 
 # Tier 1 — mirrors CI lint + type-check + python-tests + security-tests + docs.
 # Still omits Postgres services, Playwright walks, guide/contracts matrices.
-# Run before tagged releases (especially minor/major).
+# Run before tagged releases (especially minor/major). Always runs preflight-surface first.
 ci-core:
 	bash scripts/ci_local.sh tier1
 

@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Added
+- **`make preflight-surface`** — hard local gate for unpaid structural/artifact
+  debt (API surface, docs drift, deferred imports, import contracts, complexity
+  ratchet, bare-except, catalogue CSS, HM gallery). Runs as the **first** step
+  of `ci-fast` / `ci-core` and is mandatory in `/ship`. Script:
+  `scripts/preflight_surface.py` (prints remediation playbook on failure).
+
 ## [0.104.9] - 2026-07-16
 
 ### Fixed

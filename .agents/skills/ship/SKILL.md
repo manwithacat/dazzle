@@ -7,7 +7,7 @@ Commit all current changes and push to the remote. Follow these steps exactly.
 
 Local ↔ CI concordance is documented in
 `docs/contributing/local-ci-concordance.md`. The single runner is
-`scripts/ci_local.sh` (Makefile: `ci-fast` / `ci-core`).
+`scripts/ci_local.sh` (Makefile: `preflight-surface` / `ci-fast` / `ci-core`).
 
 ## 1. Pre-flight checks
 
@@ -17,9 +17,31 @@ Local ↔ CI concordance is documented in
   then proceed to version bump / gates / tag / push with an empty tree is fine only
   when they explicitly want a version bump of clean history).
 
+### Surface debt gate (mandatory — every ship)
+
+**Before** choosing a tier, unpaid structural/artifact debt must be clear.
+This is the pattern that kept main red while laptops looked green (API
+baselines, docs drift, deferred imports, import contracts, HM gallery,
+catalogue CSS).
+
+```bash
+make preflight-surface
+# → bash scripts/ci_local.sh preflight-surface
+# → python scripts/preflight_surface.py
+```
+
+- **Non-zero exit → fix debt, do not commit or tag.** Remediation text is
+  printed by the script (inspect api --write, docs generate, baselines, HM
+  `site/build_site.py`, etc.).
+- `ci-fast` / `ci-core` already run this **first**; calling it alone is for
+  mid-change checks. Never skip by running ad-hoc pytest only.
+
+If `origin/main` CI is already red for surface debt, **repair main first**
+(or include the repair in this ship) — do not stack another feature tip.
+
 ### Gate tier (required)
 
-Decide the tier from the ship arguments / intent:
+Decide the tier from the ship arguments / intent (each includes preflight-surface):
 
 | Situation | Tier | Command |
 |-----------|------|---------|
@@ -31,6 +53,7 @@ Decide the tier from the ship arguments / intent:
 # Tier 0 — default (~2–3 min, no DB)
 make ci-fast
 # → bash scripts/ci_local.sh tier0
+#    preflight-surface          ← hard structural debt gate
 #    ruff check --fix + format
 #    mypy src/dazzle
 #    pytest tests/unit -m gate
@@ -40,6 +63,7 @@ make ci-fast
 make ci-core
 # → bash scripts/ci_local.sh tier1
 #    uv sync --frozen (CI extras, Python 3.12)
+#    preflight-surface
 #    scripts/build_dist.py
 #    ruff check + format --check
 #    mypy src/dazzle
@@ -74,7 +98,8 @@ Ratchet failures → refactor or regenerate baseline (`dazzle fitness code
   dazzle spec status --fail-on-strict
   ```
 
-- If tier0/tier1 or spec-strict fails, **fix before committing**. Do NOT ship red.
+- If preflight-surface, tier0/tier1, or spec-strict fails, **fix before
+  committing**. Do NOT ship red.
 
 Tier 0 is **not** full GitHub CI: Postgres services, Playwright walks,
 guide-walk matrix, and multi-version python-tests still only run on Actions.

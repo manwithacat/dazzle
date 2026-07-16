@@ -56,10 +56,13 @@ copy the row back from the archive with status `REGRESSION`.
 ### Step 0b: Preflight (always)
 
 ```bash
+make preflight-surface   # structural/artifact debt (API/docs/import/ratchet/HM)
 make test-ux-preflight
 ```
 
-If red, **STOP and fix before continuing** — same rule as old /ux-cycle, applies to every lane now.
+If either is red, **STOP and fix before continuing** — same rule as old /ux-cycle,
+applies to every lane now. Do not start a product lane on unpaid surface debt
+(that is the red-main stacking pattern).
 
 ### Step 0c: CI badge gate (always)
 

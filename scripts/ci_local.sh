@@ -3,11 +3,12 @@
 # `.github/workflows/ci.yml` so "green here" predicts GitHub green.
 #
 # Tiers (see docs/contributing/local-ci-concordance.md):
-#   tier0 / ship-fast  — ~2–3 min, no DB; what `/ship` runs by default
-#   tier1 / ci-core    — lint + type + full non-e2e tests + security + docs
-#                        mirrors python-tests + lint + type-check + security-tests + docs
+#   preflight-surface  — API/docs/import/ratchet/HM debt (FIRST; hard fail)
+#   tier0 / ship-fast  — preflight + ruff + mypy + gate suite + docs
+#   tier1 / ci-core    — preflight + lint + type + full non-e2e + security + docs
 #
 # Usage:
+#   bash scripts/ci_local.sh preflight-surface
 #   bash scripts/ci_local.sh tier0
 #   bash scripts/ci_local.sh tier1
 #   bash scripts/ci_local.sh sync-type    # uv sync CI type-check extras (3.12)
@@ -189,8 +190,24 @@ cmd_docs() {
   _ok "docs build"
 }
 
+cmd_preflight_surface() {
+  # FIRST gate for every ship path. Named so agents cannot "accidentally"
+  # skip unpaid API/docs/import/ratchet/HM debt (the red-main stacking pattern).
+  _log "preflight-surface  (API / docs / import / ratchet / HM debt)"
+  # Prefer repo venv python (matches pytest suite); fall back to uv run.
+  if [ -x "$ROOT/.venv/bin/python" ]; then
+    "$ROOT/.venv/bin/python" "$ROOT/scripts/preflight_surface.py" \
+      || _die "preflight-surface failed — fix structural debt before ship (see remediation above)"
+  else
+    _run_uv python "$ROOT/scripts/preflight_surface.py" \
+      || _die "preflight-surface failed — fix structural debt before ship (see remediation above)"
+  fi
+  _ok "preflight-surface clean"
+}
+
 cmd_tier0() {
-  _log "TIER 0 / ship-fast  (ruff fix, mypy, gate suite, docs)"
+  _log "TIER 0 / ship-fast  (preflight-surface, ruff fix, mypy, gate suite, docs)"
+  cmd_preflight_surface
   cmd_ruff_fix
   cmd_type_check
   cmd_gates
@@ -199,7 +216,7 @@ cmd_tier0() {
 }
 
 cmd_tier1() {
-  _log "TIER 1 / ci-core  (mirrors CI lint + type-check + python-tests + security + docs)"
+  _log "TIER 1 / ci-core  (preflight-surface + CI lint/type/unit/security/docs)"
   # Prefer one frozen 3.12 test sync (superset of lint/security needs for collection).
   if [ "${CI_LOCAL_SKIP_SYNC:-0}" != "1" ]; then
     cmd_sync_test
@@ -208,6 +225,8 @@ cmd_tier1() {
   else
     printf 'WARN: CI_LOCAL_SKIP_SYNC=1 — using current .venv (concordance not guaranteed)\n' >&2
   fi
+  # Surface debt first — before long unit matrix — so unpaid baselines fail fast.
+  cmd_preflight_surface
   cmd_build_dist
   cmd_ruff_check
   cmd_type_check
@@ -224,8 +243,9 @@ usage() {
 Usage: bash scripts/ci_local.sh <command>
 
 Commands:
-  tier0 | ship-fast     Fast pre-ship (ruff fix, mypy, -m gate, mkdocs)
-  tier1 | ci-core       CI core mirror (sync, build_dist, lint, type, unit, security, docs)
+  preflight-surface     Hard structural debt gate (API/docs/import/ratchet/HM)
+  tier0 | ship-fast     preflight + ruff fix + mypy + -m gate + mkdocs
+  tier1 | ci-core       preflight + CI core mirror (sync, lint, type, unit, security, docs)
   sync-type             uv sync --frozen with CI type-check extras (Python 3.12)
   sync-test             uv sync --frozen with CI python-tests extras (Python 3.12)
   type-check            mypy src/dazzle only
@@ -243,6 +263,7 @@ EOF
 main() {
   local cmd="${1:-help}"
   case "$cmd" in
+    preflight-surface|preflight|surface) cmd_preflight_surface ;;
     tier0|ship-fast) cmd_tier0 ;;
     tier1|ci-core)   cmd_tier1 ;;
     sync-type|sync-ci-type) cmd_sync_type ;;
