@@ -8,7 +8,6 @@ using aggregate functions and arithmetic operations.
 
 from __future__ import annotations
 
-from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -18,6 +17,7 @@ from dazzle.http.specs.entity import (
     ComputedExprSpec,
     ComputedFieldSpec,
 )
+from dazzle.i18n.display_locale import as_calendar_date, calendar_today
 
 if TYPE_CHECKING:
     pass
@@ -143,26 +143,12 @@ def _evaluate_date_function(
     if date_value is None:
         return None
 
-    # Convert to date object
-    # Note: must check datetime before date since datetime is a subclass of date
-    target_date: date | None = None
-    if isinstance(date_value, datetime):
-        target_date = date_value.date()
-    elif isinstance(date_value, date):
-        target_date = date_value
-    elif isinstance(date_value, str):
-        try:
-            # Try ISO format
-            if "T" in date_value:
-                target_date = datetime.fromisoformat(date_value.replace("Z", "+00:00")).date()
-            else:
-                target_date = date.fromisoformat(date_value)
-        except ValueError:
-            return None
-    else:
+    # Calendar date for day-deltas: pure dates unchanged; datetimes → tenant TZ.
+    target_date = as_calendar_date(date_value)
+    if target_date is None:
         return None
 
-    today = date.today()
+    today = calendar_today()
 
     if func == AggregateFunctionKind.DAYS_UNTIL:
         return (target_date - today).days

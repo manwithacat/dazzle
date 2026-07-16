@@ -17,6 +17,7 @@ from dazzle.http.specs.entity import (
     InvariantLogicalKind,
     InvariantSpec,
 )
+from dazzle.i18n.display_locale import calendar_today as _calendar_today
 
 
 class InvariantViolationError(Exception):
@@ -215,11 +216,11 @@ def _handle_date_arithmetic(left: Any, right: Any) -> tuple[Any, Any]:
     # If comparing date to timedelta, interpret as date offset from today
     # This handles cases like: due_date > 14 days (meaning due_date > today + 14 days)
     if isinstance(left, date) and isinstance(right, timedelta):
-        # "field > 14 days" means "field > today + 14 days"
-        right = date.today() + right
+        # "field > 14 days" means "field > today + 14 days" (tenant TZ today)
+        right = _calendar_today() + right
     elif isinstance(left, timedelta) and isinstance(right, date):
         # "14 days < field" means "today + 14 days < field"
-        left = date.today() + left
+        left = _calendar_today() + left
 
     return left, right
 

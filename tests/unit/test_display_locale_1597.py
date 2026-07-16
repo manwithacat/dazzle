@@ -82,3 +82,29 @@ def test_money_code_not_overridden_by_profile_currency() -> None:
     p = DisplayLocaleProfile(currency_default="USD")
     # minor units: 12345 → £123.45 when currency_code=GBP
     assert format_cell(12345, "currency", currency_code="GBP", profile=p) == "£123.45"
+
+
+def test_expression_today_and_days_until_use_tenant_calendar() -> None:
+    """#1597 C: attention/days_until share DisplayLocaleProfile.today()."""
+    from dazzle.core.expression_lang.evaluator import evaluate
+    from dazzle.core.expression_lang.parser import parse_expr
+    from dazzle.i18n.display_locale import (
+        calendar_today,
+        reset_display_locale,
+        set_display_locale,
+    )
+
+    # Fixed profile so wall clock is stable across host TZ
+    p = DisplayLocaleProfile(timezone="UTC", date_format="D MMM YYYY")
+    token = set_display_locale(p)
+    try:
+        from datetime import timedelta
+
+        assert evaluate(parse_expr("today()"), {}) == calendar_today()
+        due = calendar_today() + timedelta(days=5)
+        assert evaluate(parse_expr("days_until(due)"), {"due": due}) == 5
+        # datetime target: UTC noon so date is unambiguous under UTC profile
+        dt_due = datetime(due.year, due.month, due.day, 12, 0, tzinfo=UTC)
+        assert evaluate(parse_expr("days_until(due)"), {"due": dt_due}) == 5
+    finally:
+        reset_display_locale(token)

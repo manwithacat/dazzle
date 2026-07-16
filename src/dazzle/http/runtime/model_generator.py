@@ -19,6 +19,7 @@ from dazzle.http.specs.entity import (
     FieldType,
     ScalarType,
 )
+from dazzle.i18n.display_locale import calendar_today
 
 # Try to import relativedelta for months/years arithmetic
 try:
@@ -140,8 +141,8 @@ def _create_date_factory(expr: dict[str, Any]) -> Callable[[], date | datetime]:
         # (#1529 review finding; `today` stays a plain local date).
         if kind == "now":
             base: date | datetime = datetime.now(UTC)
-        else:  # "today"
-            base = date.today()
+        else:  # "today" — tenant-timezone calendar day (#1597 C)
+            base = calendar_today()
 
         # No arithmetic, return base
         if not op:

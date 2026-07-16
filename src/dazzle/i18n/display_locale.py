@@ -123,6 +123,39 @@ def get_display_locale() -> DisplayLocaleProfile:
     return _display_locale_ctx.get()
 
 
+def calendar_today() -> date:
+    """Tenant-timezone calendar day for expressions / attention / relative.
+
+    Prefer this over ``date.today()`` so overdue rules, ``days_until``, and
+    ``format: relative`` share one definition of "today" (#1597 C).
+    """
+    return get_display_locale().today()
+
+
+def as_calendar_date(value: Any) -> date | None:
+    """Coerce a value to a calendar date for day-delta expressions.
+
+    Pure ``date`` values are returned unchanged (no TZ shift). ``datetime``
+    values are converted to the profile timezone, then the wall date is taken.
+    ISO strings are parsed best-effort.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return get_display_locale().to_display_datetime(value).date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        raw = value.strip().replace("Z", "+00:00")
+        try:
+            if "T" in raw or " " in raw:
+                return as_calendar_date(datetime.fromisoformat(raw))
+            return date.fromisoformat(raw[:10])
+        except ValueError:
+            return None
+    return None
+
+
 def set_display_locale(profile: DisplayLocaleProfile) -> Token[DisplayLocaleProfile]:
     """Bind *profile* for the current context; return a reset token."""
     return _display_locale_ctx.set(profile)

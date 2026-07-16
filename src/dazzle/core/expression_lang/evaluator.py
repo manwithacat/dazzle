@@ -6,7 +6,7 @@ Pure evaluation — no I/O, no side effects. Does NOT use Python's eval().
 This is a safe, sandboxed tree-walking interpreter over a typed AST.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from dazzle.core.ir.expressions import (
@@ -22,6 +22,8 @@ from dazzle.core.ir.expressions import (
     UnaryExpr,
     UnaryOp,
 )
+from dazzle.i18n.display_locale import as_calendar_date as _as_calendar_date
+from dazzle.i18n.display_locale import calendar_today as _calendar_today
 
 
 class ExpressionEvalError(Exception):
@@ -207,11 +209,12 @@ def _interpret_func_call(expr: FuncCall, ctx: dict[str, Any]) -> Any:
     if name == "__list__":
         return [_interpret(a, ctx) for a in expr.args]
 
-    # Date functions
+    # Date functions — "today" is tenant-timezone calendar day (#1597 C)
     if name == "today":
-        return date.today()
+        return _calendar_today()
     if name == "now":
-        return datetime.now()
+        # Storage-oriented instant (UTC). Display conversion is separate.
+        return datetime.now(UTC)
 
     if name == "days_until":
         if len(expr.args) != 1:
@@ -219,11 +222,10 @@ def _interpret_func_call(expr: FuncCall, ctx: dict[str, Any]) -> Any:
         target = _interpret(expr.args[0], ctx)
         if target is None:
             return None
-        today = date.today()
-        if isinstance(target, datetime):
-            target = target.date()
-        if isinstance(target, date):
-            return (target - today).days
+        today = _calendar_today()
+        target_d = _as_calendar_date(target)
+        if target_d is not None:
+            return (target_d - today).days
         raise ExpressionEvalError(f"days_until() requires a date, got {type(target).__name__}")
 
     if name == "days_since":
@@ -232,11 +234,10 @@ def _interpret_func_call(expr: FuncCall, ctx: dict[str, Any]) -> Any:
         target = _interpret(expr.args[0], ctx)
         if target is None:
             return None
-        today = date.today()
-        if isinstance(target, datetime):
-            target = target.date()
-        if isinstance(target, date):
-            return (today - target).days
+        today = _calendar_today()
+        target_d = _as_calendar_date(target)
+        if target_d is not None:
+            return (today - target_d).days
         raise ExpressionEvalError(f"days_since() requires a date, got {type(target).__name__}")
 
     # String functions
