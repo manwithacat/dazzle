@@ -12,8 +12,20 @@ Stack host + auto-dismiss notifications — title, body, optional actions; hover
 ## Copy this
 
 ```html
+<div class="hm-toast-stage">
+  <header class="hm-toast-stage__bar"><strong>Demo app</strong><span class="hm-toast-stage__hint">Toasts pin to the viewport, not this content column</span></header>
+  <main class="hm-toast-stage__body">
+    <p>Save, create, and validation feedback appear on the <strong>whole page</strong> — top-right overlay, auto-dismiss after 8s, pause on hover/focus.</p>
+    <div class="hm-demo-row">
+      <button type="button" class="button" data-variant="primary" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{title:'Saved',message:'Your changes are live.',type:'success'}}))">Fire success</button>
+      <button type="button" class="button" data-variant="outline" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{title:'Update available',message:'A new version is ready.',type:'info'}}))">Fire info</button>
+      <button type="button" class="button" data-variant="outline" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{title:'Action needed',message:'Storage is getting low.',type:'warning',actions:[{label:'Upgrade',href:'#toast'},{label:'Dismiss'}]}}))">Fire warning</button>
+      <button type="button" class="button" data-variant="outline" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{title:'Something went wrong',message:'Please try again.',type:'error',actions:[{label:'Dismiss'}]}}))">Fire error</button>
+    </div>
+  </main>
+</div>
 <div id="toast" class="toast-stack" aria-live="polite" data-toast-cap="8">
-  <div class="toast toast-enter" data-toast-level="success" data-remove-after="12s" role="status">
+  <div class="toast toast-enter" data-toast-level="success" data-remove-after="8s" role="status">
     <div class="toast__body">
       <div class="toast__title">Saved</div>
       <div class="toast__message">Your changes are live.</div>
@@ -21,16 +33,6 @@ Stack host + auto-dismiss notifications — title, body, optional actions; hover
     </div>
     <button type="button" class="toast__close" data-toast-dismiss aria-label="Dismiss"></button>
   </div>
-  <div class="toast" data-toast-level="info" data-remove-after="12s" role="status">
-    <div class="toast__body">
-      <div class="toast__message">Message-only toast still works.</div>
-    </div>
-    <button type="button" class="toast__close" data-toast-dismiss aria-label="Dismiss"></button>
-  </div>
-</div>
-<div class="hm-demo-row" style="margin-top:1rem">
-  <button type="button" class="button" data-variant="primary" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{title:'Update available',message:'A new version is ready.',type:'info',duration:'8s'}}))">Fire info toast</button>
-  <button type="button" class="button" data-variant="outline" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{message:'Something went wrong.',type:'error',actions:[{label:'Dismiss'}]}}))">Fire error toast</button>
 </div>
 ```
 
@@ -138,7 +140,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Dual-lock root .dz-toast + stack #dz-toast.dz-toast-stack. Host: pause-on-hover, stack cap, dismiss. Server: with_toast(..., title=…, actions=…). Not Alpine notify — HTMX OOB + CustomEvent.
+Dual-lock root .dz-toast + stack #dz-toast.dz-toast-stack. Host: pause-on-hover, stack cap, enter/leave motion, default 8s dismiss. Server: with_toast(..., title=…, actions=…). Not Alpine notify — HTMX OOB + CustomEvent. Gallery uses frame_kind=overlay so fixed corners stay visible.
 
 ## Source files
 

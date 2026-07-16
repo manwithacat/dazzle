@@ -3,7 +3,7 @@
  * HYPERPART: toast
  *
  * Toast stack host — auto-dismiss, hover/focus pause, stack cap, dismiss
- * clicks, and client-initiated toasts with server-parity markup.
+ * with leave motion, and client-initiated toasts with server-parity markup.
  *
  * Contract (contracts/toast.py):
  *   Stack:  #dz-toast.dz-toast-stack  [data-dz-toast-cap]
@@ -16,22 +16,26 @@
  * stack (window.dz.toast). Detail: { message, type?, title?, actions? }
  * where actions is [{ label, href? }].
  *
- * Zero dependencies. Survives htmx swaps (re-scan after:swap).
+ * Timing: default 8s (readable + action-friendly). Leave animation ~300ms
+ * before DOM removal. Zero dependencies. Survives htmx swaps.
  */
 
 (function () {
   "use strict";
 
   var DEFAULT_CAP = 8;
-  var DEFAULT_DELAY = "5s";
+  /** Penguin-aligned default; long enough to read title + act. */
+  var DEFAULT_DELAY = "8s";
+  /** Match CSS --duration-slow leave; hard ceiling if animationend missed. */
+  var LEAVE_MS = 320;
 
   /** Parse htmx-style timing ("5s", "300ms", bare seconds) → ms. */
   function parseDelayMs(value) {
-    if (!value) return 5000;
+    if (!value) return 8000;
     var m = String(value)
       .trim()
       .match(/^(\d+(?:\.\d+)?)\s*(ms|s)?$/);
-    if (!m) return 5000;
+    if (!m) return 8000;
     var n = parseFloat(m[1]);
     if (m[2] === "ms") return n;
     return n * 1000;
@@ -55,14 +59,37 @@
 
   function enforceCap(stack) {
     var sel = toastSelector();
-    var items = stack.querySelectorAll(sel);
+    var items = stack.querySelectorAll(sel + ":not(.dz-toast-leave)");
     var cap = capOf(stack);
     // Stack prepends newest first — drop from the end (oldest).
     while (items.length > cap) {
       var last = items[items.length - 1];
-      last.remove();
-      items = stack.querySelectorAll(sel);
+      dismissToast(last);
+      items = stack.querySelectorAll(sel + ":not(.dz-toast-leave)");
     }
+  }
+
+  /**
+   * Play leave motion then remove. Safe to call multiple times.
+   * @param {Element} el
+   */
+  function dismissToast(el) {
+    if (!el || el.__dzToastLeaving) return;
+    el.__dzToastLeaving = true;
+    if (typeof el.__dzToastPause === "function") el.__dzToastPause();
+    el.classList.remove("dz-toast-enter");
+    el.classList.add("dz-toast-leave");
+
+    var done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      if (el.parentNode) el.remove();
+    }
+
+    el.addEventListener("animationend", finish, { once: true });
+    // Fallback when reduced-motion collapses animation or event is missed.
+    setTimeout(finish, LEAVE_MS);
   }
 
   /**
@@ -71,7 +98,7 @@
    * leave resumes with remaining time.
    */
   function scheduleOne(el) {
-    if (el.__dzRemoveScheduled) return;
+    if (el.__dzRemoveScheduled || el.__dzToastLeaving) return;
     el.__dzRemoveScheduled = true;
 
     var total = parseDelayMs(el.getAttribute("data-dz-remove-after"));
@@ -90,24 +117,24 @@
     function arm() {
       clear();
       if (remaining <= 0) {
-        el.remove();
+        dismissToast(el);
         return;
       }
       deadline = Date.now() + remaining;
       timer = setTimeout(function () {
-        el.remove();
+        dismissToast(el);
       }, remaining);
     }
 
     el.__dzToastPause = function () {
-      if (paused) return;
+      if (paused || el.__dzToastLeaving) return;
       paused = true;
       remaining = Math.max(0, deadline - Date.now());
       clear();
     };
 
     el.__dzToastResume = function () {
-      if (!paused) return;
+      if (!paused || el.__dzToastLeaving) return;
       paused = false;
       arm();
     };
@@ -159,7 +186,7 @@
       var dismiss = t.closest("[data-dz-toast-dismiss]");
       if (!dismiss || !stack.contains(dismiss)) return;
       var toast = dismiss.closest(toastSelector());
-      if (toast) toast.remove();
+      if (toast) dismissToast(toast);
     });
   }
 
@@ -167,7 +194,13 @@
     var stack = stackEl();
     if (stack) {
       wireStackOnce(stack);
-      forEachToast(stack, scheduleOne);
+      forEachToast(stack, function (el) {
+        if (!el.classList.contains("dz-toast-enter") && !el.classList.contains("dz-toast-leave")) {
+          // OOB-inserted toasts may lack the enter class — give them motion.
+          el.classList.add("dz-toast-enter");
+        }
+        scheduleOne(el);
+      });
       enforceCap(stack);
     }
     // Also schedule any data-dz-remove-after outside the stack (legacy).

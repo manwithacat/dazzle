@@ -607,20 +607,10 @@ a, button, .btn, input, select, textarea, .dz-card, .menu li a {
   display: none;
 }
 
-/* Toast slide-in */
+/* Toast slide-in — keyframes owned by components/toast.css (HYPERPART: toast).
+ * Legacy Daisy-style `.toast .alert` still rides the shared enter motion. */
 .toast .alert {
   animation: dz-toast-in var(--duration-slow) var(--ease-out);
-}
-
-@keyframes dz-toast-in {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 /* =============================================================================

@@ -34,7 +34,7 @@ class TestWithToast:
         body = result.body.decode()
         # htmx 4: dz-toast.js bridge dismisses via data-dz-remove-after
         # (was the remove-me htmx-2 extension).
-        assert 'data-dz-remove-after="5s"' in body
+        assert 'data-dz-remove-after="8s"' in body
 
     def test_escapes_html_in_message(self):
         resp = HTMLResponse("<p>OK</p>")

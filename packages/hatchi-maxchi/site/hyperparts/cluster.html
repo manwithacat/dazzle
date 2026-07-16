@@ -250,8 +250,9 @@ body { background: var(--colour-bg); color: var(--colour-text);
 /* Framed Hyperparts (app-shell): desktop open-rail needs ≥64rem layout
    width. The iframe is at least that wide; .hm-preview scrolls and must
    stay keyboard-focusable (tabindex on the wrapper — axe
-   scrollable-region-focusable). */
-.hm-preview:has(.hm-hp-frame) {
+   scrollable-region-focusable). Overlay frames (toast) use natural
+   viewport width so position:fixed corners stay on-screen. */
+.hm-preview:has(.hm-hp-frame:not(.hm-hp-frame--overlay)) {
   overflow-x: auto;
 }
 .hm-hp-frame {
@@ -263,6 +264,40 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border-radius: var(--radius-md);
   background: var(--colour-surface);
 }
+.hm-hp-frame--overlay {
+  min-inline-size: 0;
+  block-size: 22rem;
+}
+/* Toast gallery stage — fake app surface so fixed stack reads as page chrome. */
+.hm-toast-stage {
+  min-block-size: 18rem;
+  padding: 1.25rem 1.5rem 2rem;
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklch, var(--colour-brand) 4%, var(--colour-bg)) 0%,
+      var(--colour-bg) 8rem);
+}
+.hm-toast-stage__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-block-end: 1rem;
+  padding-block-end: 0.75rem;
+  border-block-end: 1px solid var(--colour-border);
+  font-size: var(--text-sm);
+}
+.hm-toast-stage__hint {
+  color: var(--colour-text-muted);
+  font-size: var(--text-xs, 0.75rem);
+}
+.hm-toast-stage__body {
+  max-width: 36rem;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--colour-text);
+}
+.hm-toast-stage__body p { margin: 0 0 1rem; }
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
 .hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }

@@ -27,20 +27,23 @@
  *   </div>
  *
  * Host behaviour (controllers/dz-toast.js): auto-dismiss via
- * data-dz-remove-after, hover/focus pause, stack cap, dismiss clicks.
+ * data-dz-remove-after (default 8s), hover/focus pause, stack cap,
+ * enter/leave motion, dismiss clicks.
  */
 
-/* ── stack ─────────────────────────────────────────────────────────── */
+/* ── stack — viewport overlay (whole page, not content column) ───── */
 
 .dz-toast-stack {
   position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 50;
+  inset-block-start: 1rem;
+  inset-inline-end: 1rem;
+  z-index: 80;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: var(--space-sm);
-  max-width: min(24rem, calc(100vw - var(--space-xl) * 2));
+  width: min(24rem, calc(100vw - 2rem));
+  max-width: min(24rem, calc(100vw - 2rem));
   /* Children re-enable hits; empty chrome does not steal clicks. */
   pointer-events: none;
 }
@@ -52,7 +55,9 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-md);
-  max-width: 24rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding-inline: var(--space-md);
   padding-block: var(--space-md);
   border-radius: var(--radius-md);
@@ -63,9 +68,7 @@
   box-shadow: var(--shadow-md);
   font-size: var(--text-sm);
   line-height: var(--leading-tight);
-  transition:
-    opacity var(--duration-base) var(--ease-out),
-    transform var(--duration-base) var(--ease-out);
+  will-change: transform, opacity;
 }
 
 .dz-toast[data-dz-toast-level="info"] {
@@ -205,24 +208,84 @@
   outline-offset: 2px;
 }
 
-/* Enter/leave helpers (host may toggle). */
+/* ── motion (Penguin-shaped: slide in from edge, slide out + fade) ──
+ * Enter ~300ms ease-out; leave ~300ms ease-in. Host waits for leave
+ * before DOM remove (see controllers/dz-toast.js). */
+
 .dz-toast-enter {
-  animation: dz-toast-in var(--duration-slow) var(--ease-out);
+  animation: dz-toast-in var(--duration-slow) var(--ease-out) both;
 }
 
 .dz-toast-leave {
-  opacity: 0;
-  transform: translateX(0.75rem);
+  animation: dz-toast-out var(--duration-slow) var(--ease-in) both;
   pointer-events: none;
 }
 
 @keyframes dz-toast-in {
   from {
     opacity: 0;
-    transform: translateY(0.5rem);
+    transform: translateX(1rem) translateY(-0.35rem);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0) translateY(0);
   }
+}
+
+@keyframes dz-toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dz-toast-enter,
+  .dz-toast-leave {
+    animation-duration: 1ms;
+  }
+}
+
+/* ── gallery live stage (demo chrome only — not product surface) ── */
+
+.hm-toast-stage {
+  min-block-size: 18rem;
+  padding: 1.25rem 1.5rem 2rem;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--colour-brand) 4%, var(--colour-bg)) 0%,
+      var(--colour-bg) 8rem
+    );
+}
+
+.hm-toast-stage__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-block-end: 1rem;
+  padding-block-end: 0.75rem;
+  border-block-end: 1px solid var(--colour-border);
+  font-size: var(--text-sm);
+}
+
+.hm-toast-stage__hint {
+  color: var(--colour-text-muted);
+  font-size: 0.75rem;
+}
+
+.hm-toast-stage__body {
+  max-width: 36rem;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--colour-text);
+}
+
+.hm-toast-stage__body p {
+  margin: 0 0 1rem;
 }

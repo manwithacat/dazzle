@@ -2926,7 +2926,8 @@ def test_toast_stack_host_pause_dismiss_and_client_fire(page) -> None:  # type: 
         }"""
     )
     assert removed, "dismiss control must be present"
-    page.wait_for_timeout(80)
+    # Leave animation (~300ms) must finish before the node is removed.
+    page.wait_for_timeout(450)
     after_dismiss = page.locator(toast_sel).count()
     assert after_dismiss == initial - 1, "dismiss control removes one toast"
 

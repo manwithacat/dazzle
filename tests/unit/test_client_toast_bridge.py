@@ -70,6 +70,17 @@ class TestClientToastBridge:
         assert "data-dz-toast-cap" in content
         assert "data-dz-toast-dismiss" in content
 
+    def test_default_delay_is_eight_seconds(self) -> None:
+        """Readable default aligned with common toast UX (not a blink)."""
+        content = JS_FILE.read_text()
+        assert 'DEFAULT_DELAY = "8s"' in content
+
+    def test_leave_motion_before_remove(self) -> None:
+        content = JS_FILE.read_text()
+        assert "dz-toast-leave" in content
+        assert "dismissToast" in content
+        assert "animationend" in content
+
     def test_dazzle_host_matches_hm_controller(self) -> None:
         """Dual-lock: Dazzle static copy must not drift from HM controller."""
         assert JS_FILE.read_text() == HM_JS.read_text()

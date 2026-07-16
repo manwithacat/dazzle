@@ -2395,8 +2395,9 @@ body { background: var(--colour-bg); color: var(--colour-text);
 /* Framed Hyperparts (app-shell): desktop open-rail needs ≥64rem layout
    width. The iframe is at least that wide; .hm-preview scrolls and must
    stay keyboard-focusable (tabindex on the wrapper — axe
-   scrollable-region-focusable). */
-.hm-preview:has(.hm-hp-frame) {
+   scrollable-region-focusable). Overlay frames (toast) use natural
+   viewport width so position:fixed corners stay on-screen. */
+.hm-preview:has(.hm-hp-frame:not(.hm-hp-frame--overlay)) {
   overflow-x: auto;
 }
 .hm-hp-frame {
@@ -2408,6 +2409,40 @@ body { background: var(--colour-bg); color: var(--colour-text);
   border-radius: var(--radius-md);
   background: var(--colour-surface);
 }
+.hm-hp-frame--overlay {
+  min-inline-size: 0;
+  block-size: 22rem;
+}
+/* Toast gallery stage — fake app surface so fixed stack reads as page chrome. */
+.hm-toast-stage {
+  min-block-size: 18rem;
+  padding: 1.25rem 1.5rem 2rem;
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklch, var(--colour-brand) 4%, var(--colour-bg)) 0%,
+      var(--colour-bg) 8rem);
+}
+.hm-toast-stage__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-block-end: 1rem;
+  padding-block-end: 0.75rem;
+  border-block-end: 1px solid var(--colour-border);
+  font-size: var(--text-sm);
+}
+.hm-toast-stage__hint {
+  color: var(--colour-text-muted);
+  font-size: var(--text-xs, 0.75rem);
+}
+.hm-toast-stage__body {
+  max-width: 36rem;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--colour-text);
+}
+.hm-toast-stage__body p { margin: 0 0 1rem; }
 .hm-hero-def { font-size: var(--text-sm); color: var(--colour-text-muted); max-width: 42rem; margin-top: .5rem; }
 .hm-composed { font-size: var(--text-sm); color: var(--colour-text-muted); margin-top: .6rem; }
 .hm-composed a { color: var(--colour-brand-text); text-decoration: underline; }
@@ -2504,8 +2539,8 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         if c.framed:
             hp_dir = out_dir / "hyperparts"
             hp_dir.mkdir(exist_ok=True)
-            # Desktop open-rail MQ needs ≥64rem *iframe layout* width — see
-            # .hm-hp-frame min-inline-size (not body min-width; MQ ignores that).
+            # shell: ≥64rem iframe layout for desktop open-rail MQ.
+            # overlay: natural width so fixed corners (toast) stay on-screen.
             hp_live_doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -2527,8 +2562,12 @@ window.addEventListener('storage', function (e) {{
 </body>
 </html>"""
             (hp_dir / f"{c.id}-live.html").write_text(hp_live_doc + "\n", encoding="utf-8")
+            frame_mod = (
+                " hm-hp-frame--overlay" if getattr(c, "frame_kind", "shell") == "overlay" else ""
+            )
             framed_live = (
-                f'<iframe class="hm-hp-frame" src="hyperparts/{c.id}-live.html" '
+                f'<iframe class="hm-hp-frame{frame_mod}" '
+                f'src="hyperparts/{c.id}-live.html" '
                 f'title="{_html.escape(c.title)} — live preview"></iframe>'
             )
             framed_live_part = framed_live.replace('src="hyperparts/', 'src="')
@@ -2553,12 +2592,18 @@ window.addEventListener('storage', function (e) {{
         tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         deps = _dependency_chips(c)
         # tabindex+role when framed: overflow-x scroll region must be keyboard
-        # accessible (axe scrollable-region-focusable).
+        # accessible (axe scrollable-region-focusable). Overlay frames do not
+        # force horizontal scroll.
         if c.framed:
+            scroll_hint = (
+                "viewport overlay"
+                if getattr(c, "frame_kind", "shell") == "overlay"
+                else "scroll horizontally for the full desktop frame"
+            )
             preview = (
                 f'<div class="hm-preview" tabindex="0" role="region" '
                 f'aria-label="{_html.escape(c.title)} live preview — '
-                f'scroll horizontally for the full desktop frame">'
+                f'{scroll_hint}">'
                 f"{framed_live_part}</div>"
             )
         else:
@@ -2596,10 +2641,15 @@ window.addEventListener('storage', function (e) {{
         # No exchanges/contract/guidance/anatomy disclosures on the index.
         # Index uses site-root relative links (framed_live / live_index).
         if c.framed:
+            idx_scroll_hint = (
+                "viewport overlay"
+                if getattr(c, "frame_kind", "shell") == "overlay"
+                else "scroll horizontally for the full desktop frame"
+            )
             idx_preview = (
                 f'<div class="hm-preview" tabindex="0" role="region" '
                 f'aria-label="{_html.escape(c.title)} live preview — '
-                f'scroll horizontally for the full desktop frame">'
+                f'{idx_scroll_hint}">'
                 f"{framed_live}</div>"
             )
         else:

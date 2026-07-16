@@ -18,7 +18,7 @@ def with_toast(
     response: HTMLResponse,
     message: str,
     level: str = "info",
-    duration: str = "5s",
+    duration: str = "8s",
     *,
     title: str | None = None,
     actions: Sequence[tuple[str, str]] | None = None,
@@ -34,7 +34,7 @@ def with_toast(
         message: Toast body text (HTML-escaped automatically).
         level: Toast severity — ``success``, ``error``, ``warning``, ``info``.
             Set on the rendered toast as ``data-dz-toast-level``.
-        duration: Auto-dismiss delay (e.g., ``"5s"``).
+        duration: Auto-dismiss delay (e.g., ``"8s"``).
         title: Optional heading above the message.
         actions: Optional ``(label, href)`` pairs. Empty href renders a
             dismiss button (``data-dz-toast-dismiss``); non-empty href is a

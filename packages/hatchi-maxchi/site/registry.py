@@ -146,6 +146,11 @@ class Hyperpart:
     # Blueprint live pages. The iframe is GALLERY CHROME added by the
     # builder — never part of the partial, which stays the copyable snippet.
     framed: bool = False
+    # Framed iframe layout:
+    #   "shell"   — min-inline-size 64rem (app-shell desktop rail MQ)
+    #   "overlay" — natural viewport width so position:fixed corners stay
+    #               on-screen (toast stack and similar page chrome)
+    frame_kind: str = "shell"
     # OPTIONAL extension controllers riding this Hyperpart's seams (each a
     # controllers/*.js file). An extension adds behaviour a consumer can take
     # or leave — its absence never breaks the core partial (the grid works
@@ -296,12 +301,52 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "Feedback",
             "Stack host + auto-dismiss notifications — title, body, optional "
             "actions; hover/focus pauses the timer (htmx OOB or client bridge).",
-            # Live stack is framed so fixed positioning paints in its own
-            # viewport (same treatment as other overlay hosts).
+            # Live demo is a mini page: body content + fixed viewport stack.
+            # frame_kind=overlay keeps the iframe at natural width so fixed
+            # top-right toasts stay on-screen (shell frames are 64rem wide).
+            '<div class="hm-toast-stage">'
+            '<header class="hm-toast-stage__bar">'
+            "<strong>Demo app</strong>"
+            '<span class="hm-toast-stage__hint">Toasts pin to the viewport, '
+            "not this content column</span>"
+            "</header>"
+            '<main class="hm-toast-stage__body">'
+            "<p>Save, create, and validation feedback appear on the "
+            "<strong>whole page</strong> — top-right overlay, auto-dismiss "
+            "after 8s, pause on hover/focus.</p>"
+            '<div class="hm-demo-row">'
+            '<button type="button" class="dz-button" data-dz-variant="primary" '
+            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+            "{detail:{title:'Saved',message:"
+            "'Your changes are live.',type:'success'}}))\">"
+            "Fire success</button>"
+            '<button type="button" class="dz-button" data-dz-variant="outline" '
+            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+            "{detail:{title:'Update available',message:"
+            "'A new version is ready.',type:'info'}}))\">"
+            "Fire info</button>"
+            '<button type="button" class="dz-button" data-dz-variant="outline" '
+            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+            "{detail:{title:'Action needed',message:"
+            "'Storage is getting low.',type:'warning',"
+            "actions:[{label:'Upgrade',href:'#toast'},{label:'Dismiss'}]}}))\">"
+            "Fire warning</button>"
+            '<button type="button" class="dz-button" data-dz-variant="outline" '
+            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+            "{detail:{title:'Something went wrong',message:"
+            "'Please try again.',type:'error',"
+            "actions:[{label:'Dismiss'}]}}))\">"
+            "Fire error</button>"
+            "</div>"
+            "</main>"
+            "</div>"
+            # Stack is empty in the live stage; seed toast lives only for
+            # Copy-this / contract docs via the snippet (see notes). The
+            # host mounts on #dz-toast regardless of children.
             '<div id="dz-toast" class="dz-toast-stack" aria-live="polite" '
             'data-dz-toast-cap="8">'
             '<div class="dz-toast dz-toast-enter" data-dz-toast-level="success" '
-            'data-dz-remove-after="12s" role="status">'
+            'data-dz-remove-after="8s" role="status">'
             '<div class="dz-toast__body">'
             '<div class="dz-toast__title">Saved</div>'
             '<div class="dz-toast__message">Your changes are live.</div>'
@@ -313,34 +358,18 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             '<button type="button" class="dz-toast__close" data-dz-toast-dismiss '
             'aria-label="Dismiss"></button>'
             "</div>"
-            '<div class="dz-toast" data-dz-toast-level="info" '
-            'data-dz-remove-after="12s" role="status">'
-            '<div class="dz-toast__body">'
-            '<div class="dz-toast__message">Message-only toast still works.</div>'
-            "</div>"
-            '<button type="button" class="dz-toast__close" data-dz-toast-dismiss '
-            'aria-label="Dismiss"></button>'
-            "</div></div>"
-            '<div class="hm-demo-row" style="margin-top:1rem">'
-            '<button type="button" class="dz-button" data-dz-variant="primary" '
-            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
-            "{detail:{title:'Update available',message:"
-            "'A new version is ready.',type:'info',duration:'8s'}}))\">"
-            "Fire info toast</button>"
-            '<button type="button" class="dz-button" data-dz-variant="outline" '
-            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
-            "{detail:{message:'Something went wrong.',type:'error',"
-            "actions:[{label:'Dismiss'}]}}))\">"
-            "Fire error toast</button>"
             "</div>",
             notes="Dual-lock root <code>.dz-toast</code> + stack "
             "<code>#dz-toast.dz-toast-stack</code>. Host: pause-on-hover, "
-            "stack cap, dismiss. Server: <code>with_toast(..., title=…, "
-            "actions=…)</code>. Not Alpine notify — HTMX OOB + CustomEvent.",
+            "stack cap, enter/leave motion, default 8s dismiss. Server: "
+            "<code>with_toast(..., title=…, actions=…)</code>. Not Alpine "
+            "notify — HTMX OOB + CustomEvent. Gallery uses "
+            "<code>frame_kind=overlay</code> so fixed corners stay visible.",
             tags=("feedback", "htmx"),
             controller="controllers/dz-toast.js",
             contracts=("contracts/toast.py",),
             framed=True,
+            frame_kind="overlay",
             recipe="chrome-presentation",
             layer="L2",
             guidance=Guidance(
