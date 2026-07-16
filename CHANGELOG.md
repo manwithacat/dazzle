@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Story → composition playbook** — document correct
   `cd examples/<app> && dazzle validate` (cwd-based CLI); fieldtest worked
   example lists the non-active **device attention** queue (TR-35).
+- **fieldtest_hub SPEC.md** — product-brief UI section matches job workspaces
+  (engineering metrics + device attention / triage queues; tester personal queues).
 
 ### Fixed
 - **PreToolUse hooks under system Python 3.9 / multi-harness payloads** —

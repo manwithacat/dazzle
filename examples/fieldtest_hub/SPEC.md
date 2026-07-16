@@ -105,32 +105,41 @@ The key outcome is faster product iteration and early detection of systemic fail
 
 ## User Interface
 
-### Pages I Need
+### Where work happens (job workspaces)
 
-1. **Device Dashboard**
-   - Shows: All devices with status indicators
-   - Filters: Batch, firmware, status, assigned tester
-   - Actions: Assign tester, change status, open device detail
+1. **Engineering Dashboard** (engineers / managers land here)
+   - Fleet **metrics** first (device / open-issue / critical / open-task counts)
+   - Non-active **device attention** queue (recalled / prototype / retired — TR-35)
+   - Open **triage queue** of issue reports by severity
+   - Critical-issue and open-task **queues**
+   - Secondary demos: kanban boards, timelines, device tree, map, tester directory
 
-2. **Device Detail Page**
+2. **Tester Dashboard** (field testers land here)
+   - Personal metrics
+   - Queues of assigned devices, their issue reports, and tasks
+   - Timeline of their test sessions
+
+### Supporting surfaces (CRUD / detail)
+
+3. **Device Detail Page**
    - Shows: Full device history and reports
    - Actions: Log issue, start test session, view tasks
    - Fields: Batch, firmware, deployment date, tester
 
-3. **Issue Reporting Form**
+4. **Issue Reporting Form**
    - Purpose: Fast capture of problems
    - Fields: Severity, category, description, media upload
    - Next: Redirect to Issue Detail
 
-4. **Issue Board**
+5. **Issue Board** (secondary to the triage queue on the engineering home)
    - Kanban workflow (Open → Triaged → In Progress → Fixed → Verified → Closed)
    - Filters for severity, category, firmware
 
-5. **Firmware Release Page**
+6. **Firmware Release Page**
    - Version timeline
    - Actions: Create release, update status
 
-6. **Tester Directory**
+7. **Tester Directory**
    - List all testers with activity levels
    - Actions: Assign or unassign devices
 
