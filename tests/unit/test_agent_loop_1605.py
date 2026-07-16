@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.agent_loop import build_context, build_playbook, prove_stories
+from dazzle.agent_loop import binding_wall, build_context, build_playbook, prove_stories
 from dazzle.core import ir
 from dazzle.core.validation.extended import _lint_story_execution_bindings
 
@@ -45,6 +45,26 @@ def test_agent_context_on_simple_task() -> None:
     assert "narrative_only_ratio" in data["story_bindings"]
     # CLI-first next steps
     assert any(s.get("kind") == "cli" for s in data["next_steps"])
+    # #1605 pilot F — binding wall on context
+    wall = data.get("story_wall") or {}
+    assert wall.get("view") == "binding_wall"
+    assert "buckets" in wall
+    assert "executed_pass_static" in wall["buckets"]
+    assert "narrative_only" in wall["buckets"]
+    assert "markdown" in wall
+    # service contract_diff light
+    assert "contract_diff" in (data.get("services") or {})
+
+
+def test_binding_wall_buckets_and_prove_pass() -> None:
+    wall = binding_wall(SIMPLE)
+    assert wall["view"] == "binding_wall"
+    counts = wall["counts"]
+    # ST-017 is process-bound and should land in pass_static
+    pass_ids = {r["story_id"] for r in wall["buckets"]["executed_pass_static"]}
+    assert "ST-017" in pass_ids
+    assert "pass_static" in wall["markdown"] or "Executed + pass_static" in wall["markdown"]
+    assert counts["executed_pass_static"] >= 1
 
 
 def test_agent_playbook_domain_logic() -> None:
@@ -53,6 +73,7 @@ def test_agent_playbook_domain_logic() -> None:
     body = data["body"]
     assert "map → bind" in body or "map" in body
     assert "dazzle agent context" in body
+    assert "dazzle agent wall" in body
 
 
 def _minimal_appspec(stories: list[ir.StorySpec]) -> ir.AppSpec:

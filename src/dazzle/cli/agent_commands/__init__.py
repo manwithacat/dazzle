@@ -84,6 +84,43 @@ def closed_loop_prove(
         raise typer.Exit(1)
 
 
+@agent_app.command("wall")
+def closed_loop_wall(
+    project: Path = typer.Option(
+        Path("."),
+        "--project",
+        "-p",
+        help="Project root (directory with dazzle.toml).",
+    ),
+    markdown: bool = typer.Option(
+        False,
+        "--markdown",
+        "-m",
+        help="Print markdown board only (default: JSON).",
+    ),
+) -> None:
+    """#1605 story wall by binding + static prove (no mcp extra).
+
+    Buckets: executed+pass_static / executed+fail_static / narrative_only /
+    unbound_accepted. Complements process-coverage wall on MCP story tool.
+    """
+    from dazzle.agent_loop import binding_wall
+
+    root = project.resolve()
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"Error: {root} has no dazzle.toml", err=True)
+        raise typer.Exit(1)
+    data = binding_wall(root)
+    if markdown:
+        typer.echo(data.get("markdown", ""))
+    else:
+        typer.echo(json.dumps(data, indent=2, default=str))
+    if data.get("counts", {}).get("unbound_accepted") or data.get("counts", {}).get(
+        "executed_fail_static"
+    ):
+        raise typer.Exit(1)
+
+
 @agent_app.command("sync")
 def sync_command(
     project: Path = typer.Option(

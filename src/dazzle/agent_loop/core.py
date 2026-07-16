@@ -148,6 +148,106 @@ def story_binding_summary(appspec: Any) -> dict[str, Any]:
     }
 
 
+def _story_row(story: Any, **extra: Any) -> dict[str, Any]:
+    return {
+        "story_id": story.story_id,
+        "title": getattr(story, "title", "") or story.story_id,
+        "persona": getattr(story, "persona", "") or "",
+        "status": str(getattr(story.status, "value", story.status)),
+        "executed_by": str(getattr(story, "executed_by", None) or "") or None,
+        "narrative_only": bool(getattr(story, "narrative_only", False)),
+        **extra,
+    }
+
+
+def binding_wall(
+    project_root: Path,
+    appspec: Any | None = None,
+) -> dict[str, Any]:
+    """Story wall by *execution binding* (#1605 pilot F).
+
+    Buckets agents actually need (not only process-implements coverage):
+
+    - ``executed_pass_static`` — has ``executed_by`` and static prove passes
+    - ``executed_fail_static`` — bound but target missing
+    - ``narrative_only`` — honesty mode (not implemented path)
+    - ``unbound_accepted`` — accepted without bind (validate hard-fail)
+    - ``other`` — draft / non-accepted
+    """
+    if appspec is None:
+        appspec = load_project_appspec(project_root)
+    stories = list(getattr(appspec, "stories", None) or [])
+    buckets: dict[str, list[dict[str, Any]]] = {
+        "executed_pass_static": [],
+        "executed_fail_static": [],
+        "narrative_only": [],
+        "unbound_accepted": [],
+        "other": [],
+    }
+    for s in stories:
+        status = str(getattr(s.status, "value", s.status))
+        if getattr(s, "narrative_only", False):
+            buckets["narrative_only"].append(_story_row(s))
+            continue
+        eb = getattr(s, "executed_by", None)
+        if eb:
+            proved = _static_prove_one(project_root, appspec, s)
+            row = _story_row(
+                s,
+                prove_result=proved.get("result"),
+                prove_reason=proved.get("reason"),
+            )
+            if str(proved.get("result", "")).startswith("pass"):
+                buckets["executed_pass_static"].append(row)
+            else:
+                buckets["executed_fail_static"].append(row)
+            continue
+        if status == "accepted":
+            buckets["unbound_accepted"].append(_story_row(s))
+        else:
+            buckets["other"].append(_story_row(s))
+
+    counts = {k: len(v) for k, v in buckets.items()}
+    md: list[str] = [
+        "Story wall — binding / prove (agent closed loop)",
+        "",
+        f"Executed + pass_static ({counts['executed_pass_static']})",
+    ]
+    for r in buckets["executed_pass_static"]:
+        md.append(f"  [ok] {r['story_id']}  {r['title']}  → {r.get('executed_by')}")
+    md.append("")
+    md.append(f"Executed + fail_static ({counts['executed_fail_static']})")
+    for r in buckets["executed_fail_static"]:
+        md.append(
+            f"  [!!] {r['story_id']}  {r['title']}  → {r.get('executed_by')} "
+            f"({r.get('prove_reason')})"
+        )
+    md.append("")
+    md.append(f"narrative_only ({counts['narrative_only']})")
+    for r in buckets["narrative_only"]:
+        md.append(f"  [..] {r['story_id']}  {r['title']}")
+    md.append("")
+    md.append(f"unbound accepted ({counts['unbound_accepted']})")
+    for r in buckets["unbound_accepted"]:
+        md.append(f"  [  ] {r['story_id']}  {r['title']}")
+    if buckets["other"]:
+        md.append("")
+        md.append(f"other / draft ({counts['other']})")
+        for r in buckets["other"]:
+            md.append(f"  [~~] {r['story_id']}  {r['title']}  ({r['status']})")
+
+    return {
+        "view": "binding_wall",
+        "counts": counts,
+        "buckets": buckets,
+        "markdown": "\n".join(md),
+        "note": (
+            "pass_static = binding target exists, not a runtime journey pass. "
+            "Runtime prove (pass_runtime) is not implemented yet."
+        ),
+    }
+
+
 def _coverage_buckets_light(appspec: Any) -> dict[str, Any]:
     """Process.implements-based buckets without MCP coverage handler."""
     stories = list(getattr(appspec, "stories", None) or [])
@@ -298,6 +398,7 @@ def build_context(project_root: Path) -> dict[str, Any]:
             "personas": len(getattr(appspec, "personas", None) or []),
         },
         "story_bindings": story_binding_summary(appspec),
+        "story_wall": binding_wall(project_root, appspec),
         "coverage": _coverage_buckets_light(appspec),
         "processes": process_summary(appspec),
         "services": {
@@ -306,6 +407,12 @@ def build_context(project_root: Path) -> dict[str, Any]:
             "matched": sorted(dsl_set & host_svc),
             "dsl_only": sorted(dsl_set - host_svc),
             "host_only": sorted(host_svc - dsl_set),
+            # Light contract diff: DSL declared without host file, or host without DSL.
+            "contract_diff": {
+                "missing_host_impl": sorted(dsl_set - host_svc),
+                "orphan_host_py": sorted(host_svc - dsl_set),
+                "ok": not (dsl_set - host_svc) and not (host_svc - dsl_set),
+            },
         },
         "host": host,
         "thesis": {
@@ -499,6 +606,12 @@ Agents must **map → bind → scaffold → prove --static**, not dual-lock chro
 ## Language
 - `pass_static` / `fail_static` — binding evidence
 - Runtime journey proof is future (`pass_runtime`) — do not over-read static pass
+
+## Story wall (binding)
+- `dazzle agent wall` — buckets: executed+pass_static / executed+fail_static /
+  narrative_only / unbound_accepted
+- MCP `story(operation=get, view=wall)` includes the same binding buckets
+- `agent context` → `story_wall` for session start
 """
 
 

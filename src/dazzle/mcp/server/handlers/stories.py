@@ -582,7 +582,7 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     progress.log_sync("Rendering story wall...")
     # Render wall markdown
-    md_lines = ["Story Wall", ""]
+    md_lines = ["Story Wall (process coverage)", ""]
     if actor_filter_str:
         md_lines.append(f"Filtered by: {actor_filter_str}")
         md_lines.append("")
@@ -599,6 +599,20 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     for s in not_started:
         md_lines.append(f"  [  ] {s['title']}  ({s['persona']})")
 
+    # #1605 pilot F: binding / static-prove buckets (agent closed loop).
+    # Pure path — no extra MCP dependency on the dual-lock CLI pin.
+    binding: dict[str, Any] = {}
+    try:
+        from dazzle.agent_loop import binding_wall
+
+        binding = binding_wall(project_root, app_spec)
+        md_lines.append("")
+        md_lines.append("---")
+        md_lines.append("")
+        md_lines.append(binding.get("markdown") or "")
+    except Exception as exc:
+        binding = {"error": str(exc)[:200]}
+
     return json.dumps(
         {
             "view": "wall",
@@ -609,6 +623,7 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
             "personas": personas,
             "filtered_by": actor_filter_str,
             "markdown": "\n".join(md_lines),
+            "binding_wall": binding,
         },
         indent=2,
     )

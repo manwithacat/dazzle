@@ -12,6 +12,10 @@
   list `open: Entity via fk`. Dogfood: simple_task `user_detail` overview.
 - **#1600 `layout: strip` on VIEW sections** — horizontal RAG/status badge row
   for compliance strips on client hubs.
+- **#1605 story binding wall** — `dazzle agent wall` + `agent context` →
+  `story_wall` buckets (executed+pass_static / fail_static / narrative_only /
+  unbound). MCP story wall includes `binding_wall`. Services block gains
+  light `contract_diff` (DSL vs host `.py`).
 
 ### Fixed
 - **#1603 open-via unwraps hydrated FK dicts** — `_resolve_row_links` extracts

@@ -415,7 +415,9 @@
     "functions": {
       "_coverage_buckets_light": 10,
       "_static_prove_one": 46,
-      "build_context": 10,
+      "_story_row": 5,
+      "binding_wall": 15,
+      "build_context": 11,
       "build_playbook": 3,
       "context_json": 1,
       "dsl_service_names": 4,
@@ -578,6 +580,7 @@
       "closed_loop_context": 3,
       "closed_loop_playbook": 3,
       "closed_loop_prove": 3,
+      "closed_loop_wall": 5,
       "seed_command": 8,
       "signals_command": 11,
       "sync_command": 6
@@ -16002,7 +16005,7 @@
       "story_generate_tests_impl": 12,
       "story_propose_impl": 30,
       "story_save_impl": 15,
-      "wall_stories_handler": 18
+      "wall_stories_handler": 20
     },
     "mi_rank": "A"
   },

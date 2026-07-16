@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dazzle.agent_loop.core import (
     PLAYBOOK_DOMAIN_LOGIC,
+    binding_wall,
     build_context,
     build_playbook,
     prove_stories,
@@ -15,6 +16,7 @@ from dazzle.agent_loop.core import (
 
 __all__ = [
     "PLAYBOOK_DOMAIN_LOGIC",
+    "binding_wall",
     "build_context",
     "build_playbook",
     "prove_stories",
