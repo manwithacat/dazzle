@@ -111,7 +111,7 @@ def set_project_root(path: Path) -> None:
 
         set_pack_project_root(path)
     except Exception:
-        pass
+        logger.debug("api_kb set_pack_project_root unavailable", exc_info=True)
 
 
 def get_project_root() -> Path:

@@ -179,6 +179,13 @@ operation (e.g. `search_trigger=companies_house_lookup` →
 `source=companies_house_lookup.search_companies`). Prefer explicit
 `source=<pack>.<op>` when you need a non-default search op.
 
+**Pack fragment field maps** (#1600 P1) — API packs may declare per-operation
+`[operations.<op>.fragment]` keys (`display_key`, `value_key`, `secondary_key`,
+`items_key`, `query_param`, `detail_url`) and `[operations.<op>.field_map]`
+aliases (e.g. Companies House search `title` → `company_name`, profile `type` →
+`company_type`). Fragment search/select apply the map before reading display
+keys, so host dual-lock remappers are not required for shape mismatches.
+
 ## Detail Surfaces (`mode: view`)
 
 - Read-only field display
@@ -186,7 +193,8 @@ operation (e.g. `search_trigger=companies_house_lookup` →
 - Back navigation link
 - **State machine transitions** — rendered as action buttons for valid transitions from current state
 - **Related groups** — `related name "Title": display: table|status_cards|file_list; show: ChildEntity`
-  (reverse-FK tabs under the detail body)
+  (reverse-FK tabs under the detail body). Optional `columns: field1, field2, …`
+  projects scannable tabs instead of every entity field.
 - **Multi-section overview** (#1600 Wedge B) — multiple `section` blocks stack as
   titled field groups (identity / role / timeline …), then related work below.
   Pair with list `open: Entity via fk` (#1603) for queue → context hub.
@@ -206,6 +214,7 @@ surface client_overview "Client overview":
   related work "Work":
     display: table
     show: Engagement
+    columns: name, status, due_date
 
 surface engagement_list "Engagements":
   uses entity Engagement

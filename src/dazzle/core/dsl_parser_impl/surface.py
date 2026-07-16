@@ -70,6 +70,7 @@ class SurfaceParserMixin:
             related name "Title":
               display: table|status_cards|file_list
               show: EntityA, EntityB
+              columns: title, status, due_date   # optional projection
         """
         self.advance()  # consume 'related'
         name = self.expect(TokenType.IDENTIFIER).value
@@ -82,6 +83,7 @@ class SurfaceParserMixin:
 
         display = None
         show: list[str] = []
+        columns: list[str] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -103,6 +105,16 @@ class SurfaceParserMixin:
                     self.advance()
                     show.append(self.expect(TokenType.IDENTIFIER).value)
                 self.skip_newlines()
+            elif token.type == TokenType.COLUMNS or token.value == "columns":
+                # Optional field projection for related tabs (#1600 P1).
+                # Field names may be reserved words (status, type, …).
+                self.advance()
+                self.expect(TokenType.COLON)
+                columns.append(self.expect_identifier_or_keyword().value)
+                while self.match(TokenType.COMMA):
+                    self.advance()
+                    columns.append(self.expect_identifier_or_keyword().value)
+                self.skip_newlines()
             else:
                 break
 
@@ -119,6 +131,7 @@ class SurfaceParserMixin:
             title=title,
             display=display,
             show=show,
+            columns=columns,
         )
 
     def _parse_surface_access(self) -> ir.SurfaceAccessSpec:

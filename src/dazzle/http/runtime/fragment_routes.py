@@ -28,6 +28,22 @@ def _html(content: str) -> Response:
     return Response(content=content, media_type="text/html")
 
 
+def apply_field_map(record: dict[str, Any], field_map: dict[str, str] | None) -> dict[str, Any]:
+    """Remap API response fields onto pack/foreign-model names.
+
+    Pack ops declare ``field_map`` (e.g. Companies House search ``title`` →
+    ``company_name``) so fragment search/select can use canonical keys without
+    a host-side dual-lock normaliser.
+    """
+    if not field_map or not isinstance(record, dict):
+        return record
+    out = dict(record)
+    for src, dest in field_map.items():
+        if src in record and dest:
+            out[str(dest)] = record[src]
+    return out
+
+
 def create_fragment_router(
     fragment_sources: dict[str, dict[str, Any]] | None = None,
     app_spec: ir.AppSpec | None = None,
@@ -124,6 +140,7 @@ def create_fragment_router(
             display_key = source_config.get("display_key", "name")
             value_key = source_config.get("value_key", "id")
             secondary_key = source_config.get("secondary_key", "")
+            field_map = source_config.get("field_map") or {}
             field_name = request.query_params.get("field_name", source)
 
             # #1547: propagate the widget's field name so the selection
@@ -138,7 +155,8 @@ def create_fragment_router(
             results_target = f"#search-results-{field_name}"
             if items:
                 model_rows: list[SearchResultRow] = []
-                for item in items:
+                for raw in items:
+                    item = apply_field_map(raw if isinstance(raw, dict) else {}, field_map)
                     val = item.get(value_key)
                     secondary = ""
                     if secondary_key:
@@ -213,6 +231,9 @@ def create_fragment_router(
             autofill = source_config.get("autofill", {})
             display_key = source_config.get("display_key", "name")
             value_key = source_config.get("value_key", "id")
+            field_map = source_config.get("field_map") or {}
+            if isinstance(record, dict):
+                record = apply_field_map(record, field_map)
             field_name = request.query_params.get("field_name", source)
             from urllib.parse import quote_plus as _qp
 

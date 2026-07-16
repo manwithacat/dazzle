@@ -687,6 +687,41 @@ class TestRelatedEntityTabs:
         assert contact_tab.create_url == "/contact/create"
         assert contact_tab.detail_url_template == "/contact/{id}"
 
+    def test_related_group_columns_projection(self):
+        """related columns: filters tab columns to declared fields (#1600 P1)."""
+        company = _company_entity()
+        contact = _contact_entity()
+        task = _task_entity()
+        appspec = ir.AppSpec(
+            name="test_app",
+            title="Test App",
+            version="0.1.0",
+            domain=ir.DomainSpec(entities=[company, contact, task]),
+            surfaces=[
+                ir.SurfaceSpec(
+                    name="company_detail",
+                    title="Company Detail",
+                    entity_ref="Company",
+                    mode=SurfaceMode.VIEW,
+                    actions=[],
+                    related_groups=[
+                        ir.RelatedGroup(
+                            name="work",
+                            title="Work",
+                            display=ir.RelatedDisplayMode.TABLE,
+                            show=["Task"],
+                            columns=["title"],
+                        ),
+                    ],
+                ),
+            ],
+        )
+        contexts = compile_appspec_to_templates(appspec)
+        groups = contexts["/company/{id}"].detail.related_groups
+        work = next(g for g in groups if g.group_id == "group-work")
+        task_tab = next(t for t in work.tabs if t.entity_name == "Task")
+        assert [c.key for c in task_tab.columns] == ["title"]
+
     def test_list_surface_has_no_related_tabs(self):
         """LIST surfaces should not have related tabs."""
         appspec = self._make_hub_appspec()

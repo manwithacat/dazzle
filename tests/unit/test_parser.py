@@ -3567,6 +3567,39 @@ surface contact_detail "Contact Detail":
         assert group.title == "Compliance"
         assert group.display.value == "status_cards"
         assert group.show == ["TaxReturn"]
+        assert group.columns == []
+
+    def test_parse_surface_related_block_with_columns(self):
+        """Related block may project columns for scannable tabs (#1600 P1)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Contact "Contact":
+  id: uuid pk
+  first_name: str(100) required
+
+entity TaxReturn "Tax Return":
+  id: uuid pk
+  contact: ref Contact
+  status: str(50)
+  period: str(20)
+
+surface contact_detail "Contact Detail":
+  uses entity Contact
+  mode: view
+  section main:
+    field first_name "First Name"
+  related compliance "Compliance":
+    display: table
+    show: TaxReturn
+    columns: status, period
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        group = surface.related_groups[0]
+        assert group.columns == ["status", "period"]
+        assert group.show == ["TaxReturn"]
 
     def test_parse_surface_multiple_related_blocks(self):
         """Surface with multiple related blocks and multi-entity show."""

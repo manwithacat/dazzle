@@ -508,10 +508,12 @@ surface user_detail "Team Member Overview":
   related work "Open work":
     display: table
     show: Task
+    columns: title, status, priority, due_date
 
   related comments "Comments":
     display: table
     show: TaskComment
+    columns: content, author, created_at
 
   ux:
     purpose: "Context overview — identity, role, and related work in one place"

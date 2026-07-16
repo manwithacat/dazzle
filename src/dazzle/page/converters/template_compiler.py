@@ -1305,6 +1305,17 @@ def _compile_view_surface(
         claimed: set[str] = set()
         for group in surface.related_groups:
             group_tabs = [t for t in related_tabs if t.entity_name in group.show]
+            # Optional columns: projection — keep scannable 3–5 fields, not
+            # the full warehouse dump (CyFuture #1600 P1 related residual).
+            proj = list(getattr(group, "columns", None) or [])
+            if proj:
+                order = {name: i for i, name in enumerate(proj)}
+                projected_tabs: list[RelatedTabContext] = []
+                for tab in group_tabs:
+                    filtered = [c for c in tab.columns if c.key in order]
+                    filtered.sort(key=lambda c: order.get(c.key, 999))
+                    projected_tabs.append(tab.model_copy(update={"columns": filtered}))
+                group_tabs = projected_tabs
             claimed.update(group.show)
             if group_tabs:
                 related_groups_ctx.append(

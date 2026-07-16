@@ -302,6 +302,10 @@ class TestFragmentSourceGeneration:
         assert "Authorization" in config["headers"]
         assert config["query_param"] == "q"
         assert config["items_key"] == "items"
+        # Search API shape vs foreign model (#1600 P1 field maps)
+        assert config["field_map"]["title"] == "company_name"
+        assert config["field_map"]["type"] == "company_type"
+        assert config["detail_url"] == "https://api.company-information.service.gov.uk/company"
 
     def test_generate_fragment_source_with_overrides(self):
         """Test overrides are applied to generated config."""
@@ -326,6 +330,39 @@ class TestFragmentSourceGeneration:
 
         with pytest.raises(ValueError, match="Operation 'nonexistent'"):
             pack.generate_fragment_source("nonexistent")
+
+    def test_search_companies_op_carries_fragment_and_field_map(self):
+        """Pack loader surfaces nested fragment + field_map on the op."""
+        pack = load_pack("companies_house_lookup")
+        assert pack is not None
+        op = next(o for o in pack.operations if o.name == "search_companies")
+        assert op.fragment.get("display_key") == "company_name"
+        assert op.field_map.get("title") == "company_name"
+
+
+class TestPackFieldMapApply:
+    """field_map remaps search/detail response keys before display lookup."""
+
+    def test_apply_field_map_title_to_company_name(self):
+        from dazzle.http.runtime.fragment_routes import apply_field_map
+
+        hit = {
+            "title": "ACME LTD",
+            "company_number": "12345678",
+            "company_status": "active",
+        }
+        mapped = apply_field_map(hit, {"title": "company_name", "type": "company_type"})
+        assert mapped["company_name"] == "ACME LTD"
+        assert mapped["title"] == "ACME LTD"  # original preserved
+        assert mapped["company_number"] == "12345678"
+        assert "company_type" not in mapped  # type missing → no-op
+
+    def test_apply_field_map_profile_type(self):
+        from dazzle.http.runtime.fragment_routes import apply_field_map
+
+        profile = {"company_name": "ACME LTD", "company_number": "12345678", "type": "ltd"}
+        mapped = apply_field_map(profile, {"type": "company_type"})
+        assert mapped["company_type"] == "ltd"
 
 
 class TestPackDataIntegrity:

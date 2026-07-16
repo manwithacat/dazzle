@@ -45,6 +45,12 @@ class OperationSpec:
     description: str = ""
     request_schema: dict[str, Any] = field(default_factory=dict)
     response_schema: dict[str, Any] = field(default_factory=dict)
+    # Fragment / search_select keys (search vs detail may differ from foreign model).
+    # e.g. display_key, value_key, secondary_key, items_key, query_param, detail_url
+    fragment: dict[str, Any] = field(default_factory=dict)
+    # API response field → canonical/foreign-model field (e.g. title → company_name).
+    # Applied by fragment_routes before display_key / autofill lookup.
+    field_map: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -233,19 +239,21 @@ class ApiPack:
                 token = os.environ.get(self.auth.env_var, "")
                 headers["Authorization"] = f"Bearer {token}"
 
-        # Infer display/value keys from the first foreign model
+        # Infer display/value keys from the first foreign model, then layer
+        # per-operation fragment keys (search APIs often use different shapes
+        # than profile/detail — e.g. Companies House search `title` vs profile
+        # `company_name`). Explicit op.fragment wins over inference.
         display_key = "name"
         value_key = "id"
         secondary_key = ""
         if self.foreign_models:
             fm = self.foreign_models[0]
             value_key = fm.key_field
-            # Pick a likely display field
+            # Prefer canonical foreign-model names; field_map remaps API → these.
             for candidate in ("name", "company_name", "title", "label", "description"):
                 if candidate in fm.fields:
                     display_key = candidate
                     break
-            # Pick a secondary field
             for candidate in ("company_number", "status", "company_status", "type", "category"):
                 if candidate in fm.fields and candidate != display_key:
                     secondary_key = candidate
@@ -261,6 +269,21 @@ class ApiPack:
             "items_key": "items",
             "autofill": {},
         }
+        # Per-op fragment config (search_display_key / detail keys / etc.)
+        frag = op.fragment or {}
+        for key in (
+            "display_key",
+            "value_key",
+            "secondary_key",
+            "items_key",
+            "query_param",
+            "detail_url",
+            "autofill",
+        ):
+            if key in frag and frag[key] is not None:
+                result[key] = frag[key]
+        if op.field_map:
+            result["field_map"] = dict(op.field_map)
         result.update(overrides)
         return result
 
@@ -362,29 +385,36 @@ def _resolve_project_root() -> Path:
     return Path.cwd()
 
 
-def _load_pack_from_toml(toml_path: Path) -> ApiPack:
-    """Load a single pack from a TOML file."""
-    with open(toml_path, "rb") as f:
-        data = tomllib.load(f)
-
-    pack_info = data.get("pack", {})
-
-    # Parse auth
-    auth_data = data.get("auth", {})
-    auth = None
-    if auth_data:
-        auth = AuthSpec(
-            auth_type=auth_data.get("type", "none"),
-            header=auth_data.get("header"),
-            prefix=auth_data.get("prefix"),
-            env_var=auth_data.get("env_var"),
-            token_url=auth_data.get("token_url"),
-            scopes=auth_data.get("scopes", []),
+def _parse_operations(raw: dict[str, Any]) -> list[OperationSpec]:
+    """Parse operations tables, including fragment keys and field_map aliases."""
+    operations: list[OperationSpec] = []
+    for op_name, op_spec in raw.items():
+        if not isinstance(op_spec, dict):
+            continue
+        frag_raw = op_spec.get("fragment") or {}
+        fragment: dict[str, Any] = dict(frag_raw) if isinstance(frag_raw, dict) else {}
+        map_raw = op_spec.get("field_map") or {}
+        field_map: dict[str, str] = (
+            {str(k): str(v) for k, v in map_raw.items()} if isinstance(map_raw, dict) else {}
         )
+        operations.append(
+            OperationSpec(
+                name=op_name,
+                method=op_spec.get("method", "GET"),
+                path=op_spec.get("path", ""),
+                description=op_spec.get("description", ""),
+                request_schema=op_spec.get("request_schema", {}),
+                response_schema=op_spec.get("response_schema", {}),
+                fragment=fragment,
+                field_map=field_map,
+            )
+        )
+    return operations
 
-    # Parse env vars
-    env_vars = []
-    for name, spec in data.get("env_vars", {}).items():
+
+def _parse_env_vars(raw: dict[str, Any]) -> list[EnvVarSpec]:
+    env_vars: list[EnvVarSpec] = []
+    for name, spec in raw.items():
         if isinstance(spec, dict):
             env_vars.append(
                 EnvVarSpec(
@@ -396,25 +426,12 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
             )
         else:
             env_vars.append(EnvVarSpec(name=name, description=str(spec)))
+    return env_vars
 
-    # Parse operations
-    operations = []
-    for op_name, op_spec in data.get("operations", {}).items():
-        if isinstance(op_spec, dict):
-            operations.append(
-                OperationSpec(
-                    name=op_name,
-                    method=op_spec.get("method", "GET"),
-                    path=op_spec.get("path", ""),
-                    description=op_spec.get("description", ""),
-                    request_schema=op_spec.get("request_schema", {}),
-                    response_schema=op_spec.get("response_schema", {}),
-                )
-            )
 
-    # Parse foreign models
-    foreign_models = []
-    for model_name, model_spec in data.get("foreign_models", {}).items():
+def _parse_foreign_models(raw: dict[str, Any]) -> list[ForeignModelSpec]:
+    foreign_models: list[ForeignModelSpec] = []
+    for model_name, model_spec in raw.items():
         if isinstance(model_spec, dict):
             foreign_models.append(
                 ForeignModelSpec(
@@ -425,29 +442,30 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
                     fields=model_spec.get("fields", {}),
                 )
             )
+    return foreign_models
 
-    # Parse infrastructure
-    infra_data = data.get("infrastructure", {})
-    infrastructure = None
-    if infra_data:
-        sandbox_data = infra_data.get("sandbox", {})
-        sandbox = None
-        if sandbox_data:
-            sandbox = SandboxSpec(
-                available=sandbox_data.get("available", False),
-                env_prefix=sandbox_data.get("env_prefix", ""),
-                docs=sandbox_data.get("docs", ""),
-            )
 
-        infrastructure = InfrastructureSpec(
-            hosting=infra_data.get("hosting", "cloud_only"),
-            local_env_overrides=infra_data.get("local_env_overrides", {}),
-            sandbox=sandbox,
+def _parse_infrastructure(infra_data: dict[str, Any]) -> InfrastructureSpec | None:
+    if not infra_data:
+        return None
+    sandbox_data = infra_data.get("sandbox", {})
+    sandbox = None
+    if sandbox_data:
+        sandbox = SandboxSpec(
+            available=sandbox_data.get("available", False),
+            env_prefix=sandbox_data.get("env_prefix", ""),
+            docs=sandbox_data.get("docs", ""),
         )
+    return InfrastructureSpec(
+        hosting=infra_data.get("hosting", "cloud_only"),
+        local_env_overrides=infra_data.get("local_env_overrides", {}),
+        sandbox=sandbox,
+    )
 
-    # Parse webhooks
+
+def _parse_webhooks(raw: dict[str, Any]) -> list[WebhookEventSpec]:
     webhooks: list[WebhookEventSpec] = []
-    for wh_name, wh_spec in data.get("webhooks", {}).items():
+    for wh_name, wh_spec in raw.items():
         if isinstance(wh_spec, dict):
             webhooks.append(
                 WebhookEventSpec(
@@ -462,6 +480,27 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
             )
         elif isinstance(wh_spec, str):
             webhooks.append(WebhookEventSpec(name=wh_name, description=wh_spec))
+    return webhooks
+
+
+def _load_pack_from_toml(toml_path: Path) -> ApiPack:
+    """Load a single pack from a TOML file."""
+    with open(toml_path, "rb") as f:
+        data = tomllib.load(f)
+
+    pack_info = data.get("pack", {})
+
+    auth_data = data.get("auth", {})
+    auth = None
+    if auth_data:
+        auth = AuthSpec(
+            auth_type=auth_data.get("type", "none"),
+            header=auth_data.get("header"),
+            prefix=auth_data.get("prefix"),
+            env_var=auth_data.get("env_var"),
+            token_url=auth_data.get("token_url"),
+            scopes=auth_data.get("scopes", []),
+        )
 
     return ApiPack(
         name=pack_info.get("name", toml_path.stem),
@@ -472,11 +511,11 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
         base_url=pack_info.get("base_url", ""),
         docs_url=pack_info.get("docs_url", ""),
         auth=auth,
-        env_vars=env_vars,
-        operations=operations,
-        foreign_models=foreign_models,
-        infrastructure=infrastructure,
-        webhooks=webhooks,
+        env_vars=_parse_env_vars(data.get("env_vars", {})),
+        operations=_parse_operations(data.get("operations", {})),
+        foreign_models=_parse_foreign_models(data.get("foreign_models", {})),
+        infrastructure=_parse_infrastructure(data.get("infrastructure", {})),
+        webhooks=_parse_webhooks(data.get("webhooks", {})),
     )
 
 

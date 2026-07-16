@@ -46,6 +46,10 @@ _ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
         ("src/dazzle/core/manifest.py", "_FRAGMENT_CHROME_WARNED"),
         # Tracked for a later #1445 slice (genuine shared state):
         ("src/dazzle/http/runtime/tenant_isolation.py", "_rls_user_attr_names"),
+        # #1616 pack discovery without mcp — process-wide TOML pack cache (HTTP + CLI).
+        ("src/dazzle/api_kb/loader.py", "_pack_cache"),
+        ("src/dazzle/api_kb/loader.py", "_packs_loaded"),
+        ("src/dazzle/api_kb/loader.py", "_pack_project_root"),
     }
 )
 

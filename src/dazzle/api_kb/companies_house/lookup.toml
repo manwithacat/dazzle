@@ -27,39 +27,106 @@ env_var = "COMPANIES_HOUSE_API_KEY"
 [env_vars]
 COMPANIES_HOUSE_API_KEY = { required = true, description = "Companies House API key", example = "" }
 
-[operations]
-# Search
-search_companies = { method = "GET", path = "/search/companies", description = "Search for companies by name or number" }
-search_officers = { method = "GET", path = "/search/officers", description = "Search for company officers" }
-search_disqualified_officers = { method = "GET", path = "/search/disqualified-officers", description = "Search disqualified directors" }
+# Operations — nested tables where fragment/field_map are declared (CH search
+# hits use `title`; profile uses `company_name`. field_map kills host dual-lock).
 
-# Company Profile
-get_company = { method = "GET", path = "/company/{company_number}", description = "Get company profile" }
-get_registered_office = { method = "GET", path = "/company/{company_number}/registered-office-address", description = "Get registered office address" }
+[operations.search_companies]
+method = "GET"
+path = "/search/companies"
+description = "Search for companies by name or number"
 
-# Officers
-list_officers = { method = "GET", path = "/company/{company_number}/officers", description = "List company officers" }
-get_officer_appointments = { method = "GET", path = "/officers/{officer_id}/appointments", description = "Get officer's appointments" }
+[operations.search_companies.fragment]
+display_key = "company_name"
+value_key = "company_number"
+secondary_key = "company_status"
+items_key = "items"
+query_param = "q"
+# Select/detail fetch uses company profile, not the search collection URL.
+detail_url = "https://api.company-information.service.gov.uk/company"
 
-# Filing History
-get_filing_history = { method = "GET", path = "/company/{company_number}/filing-history", description = "Get company filing history" }
-get_filing = { method = "GET", path = "/company/{company_number}/filing-history/{transaction_id}", description = "Get specific filing" }
+[operations.search_companies.field_map]
+# Search item → foreign_models.Company shape
+title = "company_name"
+# Profile body uses `type`; foreign model / autofill use company_type
+type = "company_type"
 
-# Charges (Mortgages)
-list_charges = { method = "GET", path = "/company/{company_number}/charges", description = "List company charges/mortgages" }
+[operations.search_officers]
+method = "GET"
+path = "/search/officers"
+description = "Search for company officers"
 
-# Persons with Significant Control
-list_pscs = { method = "GET", path = "/company/{company_number}/persons-with-significant-control", description = "List persons with significant control" }
-get_psc = { method = "GET", path = "/company/{company_number}/persons-with-significant-control/individual/{psc_id}", description = "Get individual PSC details" }
+[operations.search_disqualified_officers]
+method = "GET"
+path = "/search/disqualified-officers"
+description = "Search disqualified directors"
 
-# Insolvency
-get_insolvency = { method = "GET", path = "/company/{company_number}/insolvency", description = "Get company insolvency information" }
+[operations.get_company]
+method = "GET"
+path = "/company/{company_number}"
+description = "Get company profile"
 
-# UK Establishments (for overseas companies)
-list_uk_establishments = { method = "GET", path = "/company/{company_number}/uk-establishments", description = "List UK establishments for overseas company" }
+[operations.get_company.fragment]
+display_key = "company_name"
+value_key = "company_number"
+secondary_key = "company_status"
 
-# Exemptions
-get_exemptions = { method = "GET", path = "/company/{company_number}/exemptions", description = "Get company exemptions from disclosure" }
+[operations.get_company.field_map]
+type = "company_type"
+
+[operations.get_registered_office]
+method = "GET"
+path = "/company/{company_number}/registered-office-address"
+description = "Get registered office address"
+
+[operations.list_officers]
+method = "GET"
+path = "/company/{company_number}/officers"
+description = "List company officers"
+
+[operations.get_officer_appointments]
+method = "GET"
+path = "/officers/{officer_id}/appointments"
+description = "Get officer's appointments"
+
+[operations.get_filing_history]
+method = "GET"
+path = "/company/{company_number}/filing-history"
+description = "Get company filing history"
+
+[operations.get_filing]
+method = "GET"
+path = "/company/{company_number}/filing-history/{transaction_id}"
+description = "Get specific filing"
+
+[operations.list_charges]
+method = "GET"
+path = "/company/{company_number}/charges"
+description = "List company charges/mortgages"
+
+[operations.list_pscs]
+method = "GET"
+path = "/company/{company_number}/persons-with-significant-control"
+description = "List persons with significant control"
+
+[operations.get_psc]
+method = "GET"
+path = "/company/{company_number}/persons-with-significant-control/individual/{psc_id}"
+description = "Get individual PSC details"
+
+[operations.get_insolvency]
+method = "GET"
+path = "/company/{company_number}/insolvency"
+description = "Get company insolvency information"
+
+[operations.list_uk_establishments]
+method = "GET"
+path = "/company/{company_number}/uk-establishments"
+description = "List UK establishments for overseas company"
+
+[operations.get_exemptions]
+method = "GET"
+path = "/company/{company_number}/exemptions"
+description = "Get company exemptions from disclosure"
 
 [foreign_models.Company]
 description = "A UK registered company"

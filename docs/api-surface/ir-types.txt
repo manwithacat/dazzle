@@ -2357,6 +2357,7 @@ ir_class: RelatedGroup
     - name: str
     - show: list[str]
   optional:
+    - columns: list[str] = []
     - title: str | None = None
 
 ir_class: RetryConfig
@@ -2879,6 +2880,7 @@ ir_class: SurfaceSection
     - name: str
   optional:
     - elements: list[SurfaceElement] = []
+    - layout: str | None = None
     - note: str | None = None
     - subtype_panel: SubtypePanelSpec | None = None
     - title: str | None = None

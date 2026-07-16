@@ -45,12 +45,15 @@ class RelatedGroup(BaseModel):
         title: Human-readable label (e.g. "Compliance")
         display: How to render the group's entities
         show: Entity names to include (validated at link time)
+        columns: Optional field projection for related tabs (scannable
+            3–5 columns). Empty means all non-FK entity fields (legacy).
     """
 
     name: str
     title: str | None = None
     display: RelatedDisplayMode
     show: list[str]
+    columns: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
