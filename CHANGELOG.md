@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **invoice_ops**: finance_ops metrics + approval/pay/dispute **queues**
     (was list-named-queue); persona defaults to finance_ops.
   - **acme_billing**: portfolio metrics + invoice queue; persona defaults.
+  - **design_studio**: portfolio + gallery metrics; review queue filtered to
+    `status = review`; persona defaults (reviewer → asset_gallery).
   - **support_tickets** (prior): agent queue / manager_ops / customer cases.
 - **HM ops blueprints** — gallery page motifs `ops-queue`, `triage-drawer`,
   `manager-sla-strip` (metrics + queue + toast / queue + drawer / metrics +

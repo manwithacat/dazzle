@@ -14,14 +14,17 @@ feedback_widget: enabled
 persona admin "Admin":
   role: admin
   description: "Full access to all brands and assets"
+  default_workspace: studio_dashboard
 
 persona designer "Designer":
   role: designer
   description: "Creates and manages design assets"
+  default_workspace: studio_dashboard
 
 persona reviewer "Reviewer":
   role: reviewer
   description: "Reviews and approves assets"
+  default_workspace: asset_gallery
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -152,8 +155,20 @@ entity Feedback "Design Feedback":
 
 # ── Workspaces ───────────────────────────────────────────────────────
 
+# Story-driven: designer home = metrics + recent work; reviewer home =
+# asset_gallery review queue (docs/guides/story-to-composition.md).
 workspace studio_dashboard "Studio Dashboard":
   access: persona(admin, designer, reviewer)
+  portfolio:
+    source: Asset
+    display: metrics
+    aggregate:
+      assets: count(Asset)
+      in_review: count(Asset where status = review)
+      brands: count(Brand)
+      campaigns: count(Campaign)
+    tones:
+      in_review: warning
   brands:
     source: Brand
     display: grid
@@ -168,13 +183,27 @@ workspace studio_dashboard "Studio Dashboard":
 
 workspace asset_gallery "Asset Gallery":
   access: persona(admin, designer, reviewer)
+  gallery_metrics:
+    source: Asset
+    display: metrics
+    aggregate:
+      draft: count(Asset where status = draft)
+      in_review: count(Asset where status = review)
+      approved: count(Asset where status = approved)
+    tones:
+      in_review: warning
+      approved: positive
   gallery:
     source: Asset
     display: grid
     sort: created_at desc
   review_queue:
     source: Asset
+    filter: status = review
+    sort: updated_at asc
     display: queue
+    action: asset_edit
+    empty: "Nothing awaiting review"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
