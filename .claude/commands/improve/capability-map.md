@@ -39,7 +39,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 744 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 746 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 736 | USED |
-| `dazzle qa trial` | CLI | trials | 715 | USED |
+| `dazzle qa trial` | CLI | trials | 715 | STALE (lag 37) |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 736 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 743 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 742 | USED |
@@ -67,7 +67,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 740 | USED |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
-| `qa-trial` skill | skill | trials (downstream authoring) | 488 | STALE (lag 223 since @488) |
+| `qa-trial` skill | skill | trials (downstream authoring) | 488 | STALE (lag 264) |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 746 | USED |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 747 | USED |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 746 | USED |
@@ -97,6 +97,13 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 752 (2026-07-16) capability-sweep.** Inventory: CLI/skills/commands/strategies
+> **unchanged** vs 731. **No newly-built UNOWNED.** Preflight green after month_anchor
+> baseline repair. **STALE recompute (threshold ≤732):** **1 flips** USED→STALE.
+> **already STALE:** qa-trial skill@488. Prefer product STALE if any remain after flips;
+> skip qa-trial until LLM driver healthy. Explore **69/100**. Next sweep ~**772**.
+> Next self-audit ~**753** (last@738).
 
 > **Cycle 747 (2026-07-16) hm-convergence + framework-ux STALE-clear.** property-vision:
 > support_tickets landing capture (Playwright); subscription host-Read mean **7.8**
