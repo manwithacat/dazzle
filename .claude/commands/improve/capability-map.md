@@ -72,10 +72,10 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 709 | STALE (lag 22) |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 706 | STALE (lag 25) |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 730 | USED |
-| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 700 | STALE (lag 31) |
-| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 700 | STALE (lag 31) |
-| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 703 | STALE (lag 28) |
-| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 703 | STALE (lag 28) |
+| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 733 | USED |
+| `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 733 | USED |
+| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 733 | USED |
+| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 733 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 703 | STALE (lag 28) |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 704 | STALE (lag 27) |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 704 | STALE (lag 27) |
