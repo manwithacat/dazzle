@@ -41,7 +41,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 736 | USED |
 | `dazzle qa trial` | CLI | trials | 715 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 736 | USED |
-| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 726 | USED |
+| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 743 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 742 | USED |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 742 | USED |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 713 | USED |
@@ -97,6 +97,11 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 743 (2026-07-16) hm-convergence STALE-clear gallery probes.** Discover
+> multi-details 3/3 catalog_ok. Run **6/6 PASS** (menubar/nav/accordion exclusive;
+> tree multi_open; menubar/nav dismiss). Stamped gallery probes **USED@743**.
+> Explore **65/100**.
 
 > **Cycle 742 (2026-07-16) hm-convergence STALE-clear (taste/component vision).**
 > `hm_visual_smoke --dazzle-emit` PASS; subscription host-Read scores mean **7.4**
