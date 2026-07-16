@@ -44,8 +44,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 743 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 742 | USED |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 742 | USED |
-| `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 713 | USED |
-| **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 735 | USED |
+| `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 747 | USED |
+| **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 747 | USED |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 745 | USED |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 744 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 739 | USED |
@@ -69,7 +69,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
 | `qa-trial` skill | skill | trials (downstream authoring) | 488 | STALE (lag 223 since @488) |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 746 | USED |
-| `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 736 | USED |
+| `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 747 | USED |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 746 | USED |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 744 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 744 | USED |
@@ -97,6 +97,12 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 747 (2026-07-16) hm-convergence + framework-ux STALE-clear.** property-vision:
+> support_tickets landing capture (Playwright); subscription host-Read mean **7.8**
+> (stripe-family SaaS; no metered API). fitness code exit 0; coherence queue=0 mean=8.7;
+> smells via fitness code. Stamped property-vision, hyperpart coherence, /smells
+> **USED@747**. Explore **69/100**.
 
 > **Cycle 746 (2026-07-16) multi STALE-clear.** /fuzz support_tickets boot scrape
 > HTTP 200 clean; /xproject validate cyfuture+AegisMark+pennydreadful exit 0;
