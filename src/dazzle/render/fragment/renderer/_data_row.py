@@ -79,8 +79,11 @@ def drill_row_attrs(
     bare-click `hx-get` to the detail surface. `url_attr` is the
     already-escaped detail URL — empty means the row is not clickable.
 
-    Default: full-page swap into ``body`` (standalone list / non-paired
-    workspace regions).
+    Default: swap into ``#main-content`` (the AppShell main slot). That
+    matches sidebar/nav HTMX targeting so the server can return a
+    content-only fragment (``HtmxDetails.wants_fragment``) without
+    destroying the SaaS chrome. Targeting ``body`` + content-only
+    fragments was wiping ``dz-app-shell`` on every list→detail drill.
 
     ``pane=True`` (dual_pane_flow master-detail): swap into the detail pane
     identified by ``pane_target`` (CSS id selector, already escaped); no
@@ -112,9 +115,11 @@ def drill_row_attrs(
     # hover (the vendored htmx-4 `preload` extension), so the click serves the
     # cached prefetch — perceived-instant drill. The extension dedups per row
     # (one prefetch / 5s), so a mouse-sweep doesn't storm the server.
+    # Target #main-content (not body) so AppShell sidebar/topbar survive the swap.
     return (
         f'hx-get="{url_attr}" hx-push-url="true" hx-trigger="click" '
-        f'hx-preload="mouseover" hx-target="body" hx-swap="innerHTML" tabindex="0"'
+        f'hx-preload="mouseover" hx-target="#main-content" hx-swap="innerHTML" '
+        f'tabindex="0"'
     )
 
 

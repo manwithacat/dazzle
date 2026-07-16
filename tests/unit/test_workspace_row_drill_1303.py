@@ -51,7 +51,7 @@ def test_list_rows_drill_when_detail_url_template_set() -> None:
     assert 'hx-get="/app/task/row-1"' in html
     assert 'hx-get="/app/task/row-2"' in html
     assert html.count("is-clickable") == 2
-    assert 'hx-target="body"' in html
+    assert 'hx-target="#main-content"' in html
 
 
 def test_list_rows_no_link_without_template() -> None:

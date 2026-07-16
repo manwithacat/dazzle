@@ -420,7 +420,7 @@ class _RenderTablesMixin:
             return ""
         return (
             f' hx-get="{ctx.escape_attr(drill)}" hx-push-url="true" '
-            'hx-trigger="click" hx-target="body" hx-swap="innerHTML"'
+            'hx-trigger="click" hx-target="#main-content" hx-swap="innerHTML"'
         )
 
     @staticmethod
@@ -466,7 +466,7 @@ class _RenderTablesMixin:
                     drill = t.row_drill[ri] if t.row_drill else ""
                     attrs = (
                         f' hx-get="{ctx.escape_attr(drill)}" hx-push-url="true" '
-                        'hx-trigger="click" hx-target="body" hx-swap="innerHTML"'
+                        'hx-trigger="click" hx-target="#main-content" hx-swap="innerHTML"'
                         if drill
                         else ""
                     )

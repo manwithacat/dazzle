@@ -76,7 +76,7 @@ def test_render_master_detail_shell_has_contract_markers() -> None:
 
 def test_pane_drill_row_attrs_target_detail_pane() -> None:
     full = drill_row_attrs("/app/contact/1")
-    assert 'hx-target="body"' in full
+    assert 'hx-target="#main-content"' in full
     assert "hx-push-url" in full
 
     pane = drill_row_attrs(
@@ -87,7 +87,7 @@ def test_pane_drill_row_attrs_target_detail_pane() -> None:
     assert 'hx-target="#dz-md-detail-contact_detail"' in pane
     assert "closest" not in pane  # cousin pane is not reachable via closest
     assert "hx-push-url" not in pane
-    assert 'hx-target="body"' not in pane
+    assert 'hx-target="#main-content"' not in pane
     assert "load once" not in pane
     assert "aria-current" not in pane
 
