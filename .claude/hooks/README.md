@@ -1,6 +1,6 @@
-# Project hooks (Claude Code + Grok)
+# Project hooks (agent harnesses)
 
-Configured in `.claude/settings.json`. Grok loads these when the folder is trusted.
+Configured in `.claude/settings.json`. The harness loads these when the folder is trusted.
 
 ## PreToolUse (blocking)
 
@@ -9,7 +9,7 @@ Configured in `.claude/settings.json`. Grok loads these when the folder is trust
 | `bash_validator.py` | `Bash\|run_terminal_command` | Block destructive shell; rewrite bare `dazzle` → `python -m dazzle` |
 | `file_protection.py` | `Edit\|Write\|search_replace\|write` | Block auto-generated / secret paths |
 
-Exit codes: `0` allow, `2` deny, other = fail-open (tool still runs; Grok logs the failure).
+Exit codes: `0` allow, `2` deny, other = fail-open (tool still runs; the harness may log the failure).
 
 ## PostToolUse (passive)
 
@@ -24,9 +24,13 @@ Exit codes: `0` allow, `2` deny, other = fail-open (tool still runs; Grok logs t
 
 ## Compatibility notes
 
-- Grok sends **camelCase** (`toolName`, `toolInput`); Claude uses **snake_case**. `_hook_io.py` accepts both.
-- System `python3` may be 3.9 — hooks use `from __future__ import annotations` so PEP 604 types do not crash import (regression: `tests/unit/test_claude_pretool_hooks.py`).
-- Do not use `cmd || fallback` for hook commands: exit `2` (deny) would re-run the fallback.
+- Harnesses may send **camelCase** (`toolName`, `toolInput`) or **snake_case**
+  (`tool_name`, `tool_input`). `_hook_io.py` accepts both.
+- System `python3` may be 3.9 — hooks use `from __future__ import annotations`
+  so PEP 604 types do not crash import (regression:
+  `tests/unit/test_claude_pretool_hooks.py`).
+- Do not use `cmd || fallback` for hook commands: exit `2` (deny) would re-run
+  the fallback.
 
 ## Smoke
 

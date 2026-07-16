@@ -259,7 +259,7 @@ Both lists are drift-gated against the directory trees by `tests/unit/test_docs_
 
 **Story-driven homes (not list-first CRUD):** map persona jobs → workspace Hyperparts via `docs/guides/story-to-composition.md`. Lifted apps carry `examples/<app>/stems/story-driven-jobs.md`. Prefer `display: queue` / `metrics` / `status_list` for open work; keep kanban/map/tree as secondary density, not the default landing.
 
-**Project hooks (Grok + Claude):** `.claude/hooks/README.md` — PreToolUse exit codes, `run_hook.sh`, camelCase payloads; regression tests in `tests/unit/test_claude_pretool_hooks.py`.
+**Project hooks (agent harness):** `.claude/hooks/README.md` — PreToolUse exit codes, `run_hook.sh`, harness payload shapes; regression tests in `tests/unit/test_claude_pretool_hooks.py`.
 
 ## LSP Server
 
