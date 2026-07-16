@@ -1715,36 +1715,54 @@ class DazzleBackendApp:
             self._app.state.db_manager = self._db_manager
 
         # Project route overrides — registered first for priority (v0.29.0)
+        # #1601: never swallow registration failures at debug — one bad
+        # override used to drop every host route with no production log.
         if self._project_root:
+            from dazzle.http.runtime.route_overrides import (
+                RouteOverrideRegistrationError,
+                build_override_router,
+                discover_route_overrides,
+                find_unbound_shadowing_overrides,
+            )
+
+            # #1392 item 2 — page-context builder for `# dazzle:returns fragment`
+            # overrides: chrome the handler's inner HTML in the app shell. deps=None
+            # ⇒ appspec from app.state + shell frame (the item-2 guarantee).
+            async def _ov_page_ctx(request: Any, current_route: str) -> Any:
+                return await build_app_page_context(request, current_route=current_route)
+
             try:
-                from dazzle.http.runtime.route_overrides import build_override_router
-
-                # #1392 item 2 — page-context builder for `# dazzle:returns fragment`
-                # overrides: chrome the handler's inner HTML in the app shell. deps=None
-                # ⇒ appspec from app.state + shell frame (the item-2 guarantee).
-                async def _ov_page_ctx(request: Any, current_route: str) -> Any:
-                    return await build_app_page_context(request, current_route=current_route)
-
                 override_router = build_override_router(
                     self._project_root / "routes", page_ctx_builder=_ov_page_ctx
                 )
-                if override_router is not None:
-                    self._app.include_router(override_router)
-
-                # #1420 Slice 3 / ADR-0040 D2 — conformance: a route-override that
-                # shadows a generated entity route without a `# dazzle:implements`
-                # binding bypasses permit/scope. Surface it loudly at boot.
-                from dazzle.http.runtime.route_overrides import (
-                    discover_route_overrides,
-                    find_unbound_shadowing_overrides,
+            except RouteOverrideRegistrationError:
+                # Fail boot loudly (default). Soft mode is handled inside
+                # build_override_router and does not raise.
+                raise
+            except Exception:
+                logger.error(
+                    "Route override discovery/build failed — host custom routes "
+                    "will not be mounted",
+                    exc_info=True,
                 )
+                raise
 
+            if override_router is not None:
+                self._app.include_router(override_router)
+
+            # #1420 Slice 3 / ADR-0040 D2 — conformance: a route-override that
+            # shadows a generated entity route without a `# dazzle:implements`
+            # binding bypasses permit/scope. Surface it loudly at boot.
+            try:
                 _overrides = discover_route_overrides(self._project_root / "routes")
                 _generated = {(ep.method.value, ep.path) for ep in self._endpoint_specs}
                 for _violation in find_unbound_shadowing_overrides(_overrides, _generated):
                     logger.warning("[dazzle] %s", _violation)
             except Exception:
-                logger.debug("Route override discovery skipped", exc_info=True)
+                logger.warning(
+                    "Route override shadowing conformance check skipped",
+                    exc_info=True,
+                )
 
             # Extension routers registered in dazzle.toml (#786).
             # Registered after single-file overrides but before generated routes

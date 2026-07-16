@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.104.3] - 2026-07-16
+
+### Fixed
+- **#1601 Route override registration isolation** — one bad override
+  (e.g. `HTMLResponse | RedirectResponse` return annotation) no longer
+  aborts the whole router and silently drops every host route. Failures
+  log at ERROR with `source_path`; default is fail-boot via
+  `RouteOverrideRegistrationError`; opt-in soft continue with
+  `DAZZLE_ROUTE_OVERRIDE_SOFT=1`. Server no longer swallows this at debug.
+
 ## [0.104.2] - 2026-07-16
 
 ### Changed

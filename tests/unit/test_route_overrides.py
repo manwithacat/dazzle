@@ -165,6 +165,75 @@ class TestBuildOverrideRouter:
         assert result is None
 
 
+class TestOverrideRegistrationIsolation1601:
+    """#1601 — one bad override must not silently kill every host route."""
+
+    @staticmethod
+    def _write_good(routes_dir: Path, name: str, path: str) -> None:
+        (routes_dir / f"{name}.py").write_text(
+            f"# dazzle:route-override GET {path}\n"
+            "from fastapi.responses import HTMLResponse\n"
+            "async def handler():\n"
+            "    return HTMLResponse('<p>ok</p>')\n"
+        )
+
+    @staticmethod
+    def _write_union_return(routes_dir: Path) -> None:
+        # FastAPI rejects Union response annotations at registration time
+        # (CyFuture: HTMLResponse | RedirectResponse → all host routes gone).
+        (routes_dir / "bad_union.py").write_text(
+            "# dazzle:route-override GET /ch/import\n"
+            "from fastapi.responses import HTMLResponse, RedirectResponse\n"
+            "async def handler() -> HTMLResponse | RedirectResponse:\n"
+            "    return HTMLResponse('<p>bad</p>')\n"
+        )
+
+    def test_hard_mode_raises_and_names_source(self, tmp_path: Path, monkeypatch) -> None:
+        from dazzle.http.runtime.route_overrides import (
+            RouteOverrideRegistrationError,
+            build_override_router,
+        )
+
+        monkeypatch.delenv("DAZZLE_ROUTE_OVERRIDE_SOFT", raising=False)
+        routes_dir = tmp_path / "routes"
+        routes_dir.mkdir()
+        self._write_good(routes_dir, "good", "/gdpr/export")
+        self._write_union_return(routes_dir)
+
+        with pytest.raises(RouteOverrideRegistrationError) as ei:
+            build_override_router(routes_dir)
+        err = str(ei.value)
+        assert "bad_union.py" in err or "/ch/import" in err
+        assert len(ei.value.failures) >= 1
+
+    def test_soft_mode_keeps_good_routes(self, tmp_path: Path, monkeypatch) -> None:
+        from dazzle.http.runtime.route_overrides import build_override_router
+
+        monkeypatch.setenv("DAZZLE_ROUTE_OVERRIDE_SOFT", "1")
+        routes_dir = tmp_path / "routes"
+        routes_dir.mkdir()
+        self._write_good(routes_dir, "good", "/gdpr/export")
+        self._write_union_return(routes_dir)
+
+        router = build_override_router(routes_dir)
+        assert router is not None
+        paths = [getattr(r, "path", None) for r in router.routes]
+        assert "/gdpr/export" in paths
+        assert "/ch/import" not in paths
+
+    def test_all_good_still_registers(self, tmp_path: Path, monkeypatch) -> None:
+        from dazzle.http.runtime.route_overrides import build_override_router
+
+        monkeypatch.delenv("DAZZLE_ROUTE_OVERRIDE_SOFT", raising=False)
+        routes_dir = tmp_path / "routes"
+        routes_dir.mkdir()
+        self._write_good(routes_dir, "a", "/ch/import")
+        self._write_good(routes_dir, "b", "/gdpr/export")
+        router = build_override_router(routes_dir)
+        assert router is not None
+        assert len(router.routes) == 2
+
+
 class TestLoadExtensionRouters:
     """load_extension_routers() imports APIRouters declared in dazzle.toml (#786)."""
 
