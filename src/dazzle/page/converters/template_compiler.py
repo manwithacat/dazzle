@@ -20,6 +20,7 @@ from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
 from dazzle.core.ir.triples import WidgetKind, resolve_widget
 from dazzle.core.strings import to_api_plural
 from dazzle.page import app_paths
+from dazzle.page.open_via import resolve_list_detail_url_template
 from dazzle.render.context import (
     ColumnContext,
     CompanionContext,
@@ -817,6 +818,19 @@ def _build_form_sections(
     return sections
 
 
+def _list_detail_url_template(
+    surface: ir.SurfaceSpec,
+    entity: ir.EntitySpec | None,
+    *,
+    app_prefix: str,
+    entity_slug: str,
+) -> str:
+    """List row drill template — same-entity detail or #1603 open-via FK hop."""
+    if surface is not None and getattr(surface, "open_via", None):
+        return resolve_list_detail_url_template(surface, entity, app_prefix=app_prefix)
+    return app_paths.detail_path(app_prefix, entity_slug)
+
+
 def _extract_surface_purpose(ux: ir.UXSpec | None) -> tuple[str, dict[str, str]]:
     """Extract surface-level purpose + per-persona overrides.
 
@@ -963,7 +977,9 @@ def _compile_list_surface(
             columns=columns,
             api_endpoint=api_endpoint,
             create_url=create_url,
-            detail_url_template=app_paths.detail_path(app_prefix, entity_slug),
+            detail_url_template=_list_detail_url_template(
+                surface, entity, app_prefix=app_prefix, entity_slug=entity_slug
+            ),
             search_enabled=bool(search_fields),
             default_sort_field=default_sort_field,
             default_sort_dir=default_sort_dir,

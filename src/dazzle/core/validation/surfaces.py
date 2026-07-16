@@ -204,6 +204,42 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                                     f"'{element.field_name}': {fmt_err}"
                                 )
 
+        # #1603 — open: Entity via field (list FK hop)
+        if getattr(surface, "open_via", None) or getattr(surface, "open_entity", None):
+            if surface.mode != ir.SurfaceMode.LIST:
+                errors.append(
+                    f"Surface '{surface.name}' declares open: via but mode is not list "
+                    f"(#1603 open-via is list-only)"
+                )
+            elif not surface.entity_ref:
+                errors.append(
+                    f"Surface '{surface.name}' declares open: via but has no entity (#1603)"
+                )
+            else:
+                entity = appspec.get_entity(surface.entity_ref)
+                via = surface.open_via
+                if entity and via:
+                    fld = entity.get_field(via)
+                    if not fld:
+                        errors.append(
+                            f"Surface '{surface.name}' open via '{via}' — field not on "
+                            f"entity '{entity.name}' (#1603)"
+                        )
+                    else:
+                        ref_ent = getattr(fld.type, "ref_entity", None) if fld.type else None
+                        if surface.open_entity and ref_ent and surface.open_entity != ref_ent:
+                            errors.append(
+                                f"Surface '{surface.name}' open: {surface.open_entity} via "
+                                f"{via} but field refs '{ref_ent}' (#1603)"
+                            )
+                        elif surface.open_entity and not ref_ent:
+                            # allow if open_entity set and field exists (loose)
+                            pass
+                elif not via:
+                    errors.append(
+                        f"Surface '{surface.name}' open: missing 'via' field name (#1603)"
+                    )
+
         # Validate field options: unsupported keys + source= pack/op resolution.
         # #996 — typos and dropped packs fail silently at runtime (plain text).
         # #1599 — unknown keys (e.g. search_trigger=) also no-op at render.

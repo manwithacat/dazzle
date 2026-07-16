@@ -285,6 +285,9 @@ surface task_list "Task List":
   uses entity Task
   mode: list
   render: fragment
+  # #1603 — row click opens the assignee (context hop), not the task detail.
+  # Task detail remains available via actions / related on the user detail.
+  open: User via assigned_to
 
   section main "Tasks":
     field title "Title"

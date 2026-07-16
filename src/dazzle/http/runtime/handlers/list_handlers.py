@@ -132,6 +132,7 @@ def create_list_handler(
     htmx_columns: list[dict[str, Any]] | None = None,
     htmx_columns_full: list[dict[str, Any]] | None = None,
     htmx_detail_url: str | None = None,
+    htmx_detail_url_by_table_id: dict[str, str] | None = None,
     htmx_peek_mode: str | None = None,
     htmx_peek_by_table_id: dict[str, str] | None = None,
     htmx_entity_name: str | None = None,
@@ -194,6 +195,8 @@ def create_list_handler(
             request.state.htmx_columns = cols
         if htmx_detail_url is not None:
             request.state.htmx_detail_url = htmx_detail_url
+        if htmx_detail_url_by_table_id is not None:
+            request.state.htmx_detail_url_by_table_id = htmx_detail_url_by_table_id
         if htmx_peek_mode is not None:
             request.state.htmx_peek_mode = htmx_peek_mode
         if htmx_peek_by_table_id is not None:
@@ -598,6 +601,11 @@ async def _list_handler_body(
             _resolved_peek = _peek_by_tid.get(table_id) or getattr(
                 request.state, "htmx_peek_mode", None
             )
+            # #1603: per-surface open-via detail template (FK hop)
+            _detail_by_tid = getattr(request.state, "htmx_detail_url_by_table_id", None) or {}
+            _resolved_detail = _detail_by_tid.get(table_id) or getattr(
+                request.state, "htmx_detail_url", None
+            )
 
             items = result.get("items", []) if isinstance(result, dict) else []
             # Convert Pydantic models to dicts
@@ -613,7 +621,7 @@ async def _list_handler_body(
                 "columns": request.state.htmx_columns
                 if hasattr(request.state, "htmx_columns")
                 else [],
-                "detail_url_template": getattr(request.state, "htmx_detail_url", None),
+                "detail_url_template": _resolved_detail,
                 "peek_mode": _resolved_peek,
                 "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
                 "api_endpoint": str(request.url.path),

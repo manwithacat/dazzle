@@ -688,6 +688,9 @@ class _SurfaceState:
     # #1494 (UX-maturity 2c): action-proximate detail mode. `None` = unset
     # (author wrote no `peek:`); `_kw_peek` sets the explicit value.
     peek: ir.PeekMode | None = None
+    # #1603 — open: TargetEntity via fk_field
+    open_entity: str | None = None
+    open_via: str | None = None
 
 
 # ---------- Token-keyed keyword parsers ---------- #
@@ -740,6 +743,20 @@ def _kw_peek(parser: Any, state: _SurfaceState) -> None:
     parser.advance()  # consume `peek`
     parser.expect(TokenType.COLON)
     state.peek = parser.enum_from_token(ir.PeekMode, parser.expect_identifier_or_keyword())
+    parser.skip_newlines()
+
+
+def _kw_open(parser: Any, state: _SurfaceState) -> None:
+    """``open: TargetEntity via fk_field`` — list row FK hop (#1603).
+
+    Row click navigates to the target entity's detail using the FK value
+    on the list row, not the list row's own id.
+    """
+    parser.advance()  # consume `open`
+    parser.expect(TokenType.COLON)
+    state.open_entity = parser.expect_identifier_or_keyword().value
+    parser.expect(TokenType.VIA)
+    state.open_via = parser.expect_identifier_or_keyword().value
     parser.skip_newlines()
 
 
@@ -911,6 +928,7 @@ _SURFACE_IDENT_KEYWORDS: dict[str, KeywordParser[_SurfaceState]] = {
     "show_history": _kw_show_history,
     "refresh": _kw_refresh,  # #1399 slice 3 — live-refresh poll interval
     "peek": _kw_peek,  # #1494 (2c) — action-proximate detail mode
+    "open": _kw_open,  # #1603 — list row open via FK hop
 }
 
 
@@ -972,6 +990,8 @@ def _build_surface(
         refresh_interval=state.refresh_interval,
         emits=tuple(state.emits),
         peek=state.peek,
+        open_via=state.open_via,
+        open_entity=state.open_entity,
     )
 
 

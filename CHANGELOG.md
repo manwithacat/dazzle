@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.104.7] - 2026-07-16
+
+### Added
+- **#1603 Wedge A — list `open: Entity via field`** — row click drills to a
+  *context* entity via FK (e.g. task list → assignee detail), not only the
+  list row's own detail. SSR + HTMX share `resolve_list_detail_url_template`;
+  null FKs skip the link. Example: simple_task `task_list`.
+
 ## [0.104.6] - 2026-07-16
 
 ### Fixed

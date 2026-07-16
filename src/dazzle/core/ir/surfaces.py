@@ -378,6 +378,13 @@ class SurfaceSpec(BaseModel):
     # directly — and is stripped from `model_dump()`, so unset surfaces don't
     # churn the corpus snapshot.) Default-by-role resolution is `resolve_peek_mode`.
     peek: PeekMode | None = None
+    # #1603 Wedge A — list row opens a *context* entity via an FK hop, not
+    # the list row itself. Example: task list `open: User via assigned_to`
+    # drills to `/app/user/{assigned_to}` instead of task detail.
+    # ``open_via`` is the FK field name on the list entity; ``open_entity``
+    # is the target entity (must match the field's ref target when set).
+    open_via: str | None = None
+    open_entity: str | None = None
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
     related_groups: list[RelatedGroup] = Field(default_factory=list)

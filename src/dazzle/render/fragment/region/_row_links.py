@@ -28,7 +28,14 @@ def _resolve_row_links(
     out: list[str | None] = []
     for item in items:
         try:
-            out.append(detail_url_template.format(**item))
+            # #1603: skip drill when a placeholder is missing or null
+            # (e.g. open via assigned_to with no assignee).
+            class _NullMap(dict):
+                def __missing__(self, key: str) -> str:  # type: ignore[override]
+                    raise KeyError(key)
+
+            mapping = _NullMap((k, v) for k, v in item.items() if v is not None)
+            out.append(detail_url_template.format_map(mapping))
         except (KeyError, IndexError, ValueError):
             # Template referenced a key that's not on this row, or the
             # template has malformed placeholders. Skip the link

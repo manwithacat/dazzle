@@ -1823,10 +1823,25 @@ class DazzleBackendApp:
                 _s.name: resolve_peek_mode(_s, entity).value
                 for _s in _entity_all_list_surfaces.get(entity.name, [])
             }
+            # #1603: per-surface open-via detail templates (key both surface.name
+            # and dt-{name} — HTMX table_id is `dt-{surface.name}`).
+            from dazzle.page.open_via import resolve_list_detail_url_template
+
+            detail_url_by_table_id: dict[str, str] = {}
+            for _s in _entity_all_list_surfaces.get(entity.name, []):
+                _tmpl = resolve_list_detail_url_template(_s, entity, app_prefix=app_prefix)
+                detail_url_by_table_id[_s.name] = _tmpl
+                detail_url_by_table_id[f"dt-{_s.name}"] = _tmpl
+            _default_detail = (
+                resolve_list_detail_url_template(_ls, entity, app_prefix=app_prefix)
+                if _ls is not None
+                else f"{app_prefix}/{slug}/{{id}}"
+            )
             entity_htmx_meta[entity.name] = {
                 "columns": cols,
                 "columns_full": cols_full,  # ADR-0050 2d: untruncated (entity-fallback only)
-                "detail_url": f"{app_prefix}/{slug}/{{id}}",
+                "detail_url": _default_detail,
+                "detail_url_by_table_id": detail_url_by_table_id,
                 "entity_name": entity.name,
                 # #1494 (2c): resolved `peek:` mode for the (first) list surface.
                 # Unset → "off" (Slice-1 default, byte-stable); `peek: expand` opts
