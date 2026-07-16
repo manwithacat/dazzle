@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (ST-037–041); tester personal metrics + device/issue/task queues.
   - **llm_ticket_classifier**: supervisor metrics + open queue; agent ticket
     queue for non-closed work.
+  - **domain_join_co**: home metrics + join readiness status_list +
+    announcements; persona defaults.
   - **support_tickets** (prior): agent queue / manager_ops / customer cases.
 - **HM ops blueprints** — gallery page motifs `ops-queue`, `triage-drawer`,
   `manager-sla-strip` (metrics + queue + toast / queue + drawer / metrics +

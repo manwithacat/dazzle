@@ -21,11 +21,13 @@ persona admin "Workspace Admin":
   description: "Owns one workspace — verifies the company email domain, sets the join policy, approves join requests, and posts announcements."
   goals: "Verify our domain", "Approve the right joiners", "Keep the team informed"
   proficiency: expert
+  default_workspace: home
 
 persona member "Team Member":
   description: "An employee who self-joined with a verified company email — reads the team's announcements."
   goals: "Join my company workspace", "Stay up to date"
   proficiency: intermediate
+  default_workspace: home
 
 # ── Tenant root (resolved by host; members + their role declared here) ─────────
 
@@ -92,7 +94,39 @@ surface announcement_create "Post Announcement":
     field title "Title"
     field body "Body"
 
+# Story-driven home: metrics + readiness strip before the announcement feed.
+# Join-request approval lives in runtime admin console (not DSL) — see
+# docs/reference/verified-domain-join.md.
 workspace home "Workspace Home":
+  access: persona(admin, member)
+
+  team_pulse:
+    source: Announcement
+    display: metrics
+    aggregate:
+      announcements: count(Announcement)
+    tones:
+      announcements: accent
+
+  join_readiness:
+    display: status_list
+    entries:
+      - title: "Verified domain"
+        caption: "DNS-TXT domain connection is managed in dazzle auth / admin console"
+        icon: "globe"
+        state: accent
+      - title: "Join policy"
+        caption: "Default admin_approval — approve join requests before members land"
+        icon: "shield"
+        state: warning
+      - title: "Announcements"
+        caption: "Members read posts scoped to current_tenant after join"
+        icon: "megaphone"
+        state: positive
+
   announcements:
     source: Announcement
+    sort: title asc
     display: list
+    action: announcement_detail
+    empty: "No announcements yet — post one to keep the team informed"
