@@ -109,10 +109,21 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 - [ ] Optional: HM Blueprint + gallery rebuild
 - [ ] Optional: trial scenario for the job persona
 
-## Worked example
+## Worked examples
 
-`examples/support_tickets` (this wave):
+**support_tickets** (keystone):
 
 - Agent → `ticket_queue` = metrics + **queue** + kanban
 - Manager → `manager_ops` = metrics + status_list + critical/unassigned queues + funnel
 - Customer → `my_tickets` = metrics + open queue + history list
+
+**simple_task**:
+
+- Admin → `admin_dashboard` = metrics + urgent/overdue queues
+- Manager → `team_overview` = metrics + review/unassigned/WIP queues
+- Member → `my_work` = personal metrics + WIP/todo queues
+
+**project_tracker**:
+
+- Admin/manager → `dashboard` = portfolio metrics + open task queue + grid + kanban
+- Member → `project_board` = board metrics + kanban + unassigned queue

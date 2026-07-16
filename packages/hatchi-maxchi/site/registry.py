@@ -337,6 +337,9 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "actions=…, actor_name=…)</code>. Not Alpine notify.",
             tags=("feedback", "htmx"),
             controller="controllers/dz-toast.js",
+            # Shared opt-in audio primitive (stem chrome-cue-opt-in); toast is
+            # the first consumer — keep ownership so cohesion doesn't orphan it.
+            extensions=("controllers/dz-cue.js",),
             contracts=("contracts/toast.py",),
             framed=True,
             frame_kind="overlay",

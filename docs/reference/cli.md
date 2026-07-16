@@ -138,6 +138,7 @@ there requires a row here.
 | `dazzle auth` | Manage authentication users and sessions |
 | `dazzle backup` | Backup and restore project data |
 | `dazzle capability` | Manage opt-in feature capabilities |
+| `dazzle clean` | Local hygiene — reclaim gitignored snapshot trees |
 | `dazzle compliance` | Compliance documentation tools (ISO 27001 / SOC 2) |
 | `dazzle composition` | Visual composition analysis for Dazzle apps |
 | `dazzle conformance` | DSL conformance testing |

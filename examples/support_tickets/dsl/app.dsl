@@ -438,11 +438,14 @@ workspace ticket_queue "Ticket Queue":
       in_progress: accent
 
   # ST-019 worklist — review queue with inline status transitions, not a CRUD table.
+  # date_range: fleet dogfood for the date-range Hyperpart (filters created_at).
   open_queue:
     source: Ticket
     filter: status != closed
     sort: priority desc, created_at asc
     display: queue
+    date_range
+    date_field: created_at
     action: ticket_edit
     empty: "No open tickets"
 

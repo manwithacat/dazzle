@@ -10,13 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Story-driven job workspaces (support_tickets keystone)** — compositions
-  map stories → personas → Hyperparts instead of list-first CRUD homes:
-  agent `ticket_queue` = metrics + `display: queue` + kanban; manager
-  `manager_ops` = team metrics + status_list SLA strip + critical/unassigned
-  queues + funnel; customer `my_tickets` = my metrics + open queue + history.
-  Playbook `docs/guides/story-to-composition.md`; map
-  `dev_docs/story-ux-map.md`; stem `story-driven-jobs`.
+- **Story-driven job workspaces — fleet lift** — playbook
+  `docs/guides/story-to-composition.md` applied beyond support_tickets:
+  - **simple_task**: admin/manager/member homes use metrics + `display: queue`
+    for urgent/review/unassigned/WIP (ST-014–020); stem `story-driven-jobs`.
+  - **project_tracker**: dashboard metrics + open task queue; board metrics +
+    unassigned queue; persona `default_workspace` set.
+  - **support_tickets** (prior): agent queue / manager_ops / customer cases.
 - **HM ops blueprints** — gallery page motifs `ops-queue`, `triage-drawer`,
   `manager-sla-strip` (metrics + queue + toast / queue + drawer / metrics +
   status-list + critical queue).
@@ -26,6 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `dz-sound` or `data-dz-cue-sound`, never default-on). Slot model
   `ToastSlots` / `toast_unit_html` for SSR↔client parity. Stems:
   `chrome-cue-opt-in`, `ssr-client-slot-parity`.
+
+### Fixed
+- **CI gates after toast E/F** — `toast_unit_html` cyclomatic complexity
+  split; `dazzle clean` documented in CLI command groups; dual-lock coverage +
+  UX catalogue regenerated; toast claims `dz-cue.js` via `extensions=`;
+  support_tickets queue keeps `date_range` fleet dogfood; doctor deferred-
+  import baseline for snapshot hygiene check.
+- **record-page Blueprint WCAG** — drop half-built `role=tablist`/`tabpanel`
+  (honest selection-strip; matches tabs Hyperpart doctrine).
 
 ## [0.104.1] - 2026-07-16
 

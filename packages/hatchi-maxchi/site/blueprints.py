@@ -334,8 +334,10 @@ BLUEPRINTS: list[Blueprint] = [
         '<div class="dz-card-value" style="font-size:var(--text-xl)">2019</div>'
         '<div class="dz-card-delta">Last inspection 14 June</div></div>'
         "</div>"
+        # Honest selection strip (tabs Hyperpart): buttons + aria-current —
+        # NOT role=tablist without roving tabindex (selection-strip-honest).
         '<div class="dz-tabs" data-dz-tabs>'
-        '<div class="dz-tabs__list" role="tablist" aria-label="Record sections">'
+        '<div class="dz-tabs__list" aria-label="Record sections">'
         '<button type="button" class="dz-tabs__tab" aria-current="true" '
         'data-dz-tab-target="rec-overview">Overview</button>'
         '<button type="button" class="dz-tabs__tab" '
@@ -343,7 +345,7 @@ BLUEPRINTS: list[Blueprint] = [
         '<button type="button" class="dz-tabs__tab" '
         'data-dz-tab-target="rec-related">Related</button>'
         "</div>"
-        '<div id="rec-overview" class="dz-tabs__panel" role="tabpanel">'
+        '<div id="rec-overview" class="dz-tabs__panel">'
         '<div class="dz-stack" data-dz-gap="md">'
         '<div class="dz-alert" data-dz-tone="warning" role="alert">'
         '<span class="dz-alert__icon">{svg:triangle-alert}</span>'
@@ -359,10 +361,10 @@ BLUEPRINTS: list[Blueprint] = [
         '<div><div class="dz-card-label">Feeder</div>'
         "<div>N-GRID-14 · 33 kV</div></div>"
         "</div></div></div>"
-        '<div id="rec-activity" class="dz-tabs__panel" role="tabpanel" hidden>'
+        '<div id="rec-activity" class="dz-tabs__panel" hidden>'
         '<p class="hm-demo-muted">Inspection notes, status changes, and work-order '
         "events land here on the full page — not in the peek fragment.</p></div>"
-        '<div id="rec-related" class="dz-tabs__panel" role="tabpanel" hidden>'
+        '<div id="rec-related" class="dz-tabs__panel" hidden>'
         '<p class="hm-demo-muted">Related assets, contracts, and tickets would '
         "compose as list-region / grid guests on this route.</p></div>"
         "</div>"

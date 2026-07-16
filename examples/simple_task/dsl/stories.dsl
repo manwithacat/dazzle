@@ -109,10 +109,10 @@ story ST-016 "Team Manager views unassigned tasks":
   trigger: user_click
   entities: [Task]
   given:
-    - "Team Manager is on the team overview workspace"
+    - "Team Manager is on the team_overview workspace"
   then:
-    - "Team Manager sees Tasks where assigned_to is null"
-    - "Team Manager can click a Task to assign it"
+    - "Team Manager sees an unassigned queue of Tasks where assigned_to is null"
+    - "Team Manager can open a Task from the queue to assign it"
 
 story ST-017 "Team Manager assigns a task to a Team Member":
   persona: manager
@@ -125,14 +125,15 @@ story ST-017 "Team Manager assigns a task to a Team Member":
     - "Task.assigned_to is set to the chosen Team Member"
     - "Team Member sees the new Task in their my_work view"
 
-story ST-018 "Team Manager reviews completed tasks":
+story ST-018 "Team Manager reviews tasks awaiting review":
   persona: manager
   trigger: user_click
   entities: [Task]
   given:
+    - "Team Manager is on the team_overview workspace"
     - "Tasks exist with status review"
   then:
-    - "Team Manager sees the review queue sorted by updated_at desc"
+    - "Team Manager sees the needs_review queue sorted by updated_at"
     - "Team Manager can approve a Task to done or send it back to in_progress"
 
 story ST-019 "Team Member updates own task status":
@@ -153,5 +154,5 @@ story ST-020 "Team Member views own tasks":
   given:
     - "Team Member is on the my_work workspace"
   then:
-    - "Team Member sees only Tasks where assigned_to = self or created_by = self"
-    - "Task list is grouped by status"
+    - "Team Member sees personal metrics and WIP/todo queues for assigned work"
+    - "Team Member sees only Tasks scoped to self"

@@ -25,7 +25,7 @@
   "src/dazzle/cli/deploy.py": 1,
   "src/dazzle/cli/discovery.py": 20,
   "src/dazzle/cli/docs.py": 6,
-  "src/dazzle/cli/doctor.py": 4,
+  "src/dazzle/cli/doctor.py": 5,
   "src/dazzle/cli/e2e/__init__.py": 27,
   "src/dazzle/cli/events.py": 9,
   "src/dazzle/cli/feedback.py": 6,

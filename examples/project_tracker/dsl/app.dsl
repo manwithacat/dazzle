@@ -15,14 +15,17 @@ feedback_widget: enabled
 persona admin "Admin":
   role: admin
   description: "Full access to all projects and settings"
+  default_workspace: dashboard
 
 persona manager "Project Manager":
   role: manager
   description: "Manages projects and assigns tasks"
+  default_workspace: dashboard
 
 persona member "Team Member":
   role: member
   description: "Works on assigned tasks"
+  default_workspace: project_board
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -213,16 +216,42 @@ entity Attachment "Attachment":
 
 # ── Workspaces ───────────────────────────────────────────────────────
 
+# Story-driven compositions (docs/guides/story-to-composition.md):
+#   manager/admin → dashboard     = metrics + task queue + project grid
+#   member        → project_board = metrics + kanban board + milestones
+
 workspace dashboard "Dashboard":
   access: persona(admin, manager, member)
-  purpose: "Project and task overview"
+  purpose: "Project and task overview — metrics and work queues first"
+
+  portfolio_metrics:
+    source: Task
+    display: metrics
+    aggregate:
+      open_tasks: count(Task where status != done)
+      in_progress: count(Task where status = in_progress)
+      critical: count(Task where priority = critical and status != done)
+      projects: count(Project where status = active)
+    tones:
+      in_progress: accent
+      critical: destructive
+
+  # Work the pile — review queue before the visual board.
+  open_task_queue:
+    source: Task
+    filter: status != done
+    sort: priority desc, due_date asc
+    limit: 15
+    display: queue
+    action: task_edit
+    empty: "No open tasks"
 
   project_overview:
     source: Project
     display: grid
     sort: updated_at desc
 
-  my_tasks:
+  task_flow:
     source: Task
     display: kanban
     group_by: status
@@ -232,11 +261,31 @@ workspace project_board "Project Board":
   access: persona(admin, manager, member)
   purpose: "Task and milestone management"
 
+  board_metrics:
+    source: Task
+    display: metrics
+    aggregate:
+      todo: count(Task where status = todo)
+      in_progress: count(Task where status = in_progress)
+      done: count(Task where status = done)
+    tones:
+      in_progress: accent
+      done: positive
+
   task_board:
     source: Task
     display: kanban
     group_by: status
     sort: priority desc
+
+  unassigned_queue:
+    source: Task
+    filter: assigned_to = null and status != done
+    sort: priority desc
+    limit: 10
+    display: queue
+    action: task_edit
+    empty: "Every open task has an assignee"
 
   milestones:
     source: Milestone

@@ -573,31 +573,45 @@ workspace task_board "Task Board":
     limit: 10
     empty: "No comments yet"
 
+# Story-driven compositions (docs/guides/story-to-composition.md):
+#   admin   → admin_dashboard = metrics + urgent/overdue queues (ST-014)
+#   manager → team_overview   = metrics + review/unassigned queues (ST-015–018)
+#   member  → my_work         = personal metrics + WIP/todo queues (ST-019–020)
+
 workspace admin_dashboard "Admin Dashboard":
   access: persona(admin)
   purpose: "System-wide overview and management"
 
   metrics:
     source: Task
+    display: metrics
     aggregate:
       total_tasks: count(Task)
       todo: count(Task where status = todo)
       in_progress: count(Task where status = in_progress)
       in_review: count(Task where status = review)
       done: count(Task where status = done)
+    tones:
+      in_progress: accent
+      in_review: warning
+      done: positive
 
   team_metrics:
     source: User
+    display: metrics
     aggregate:
       total_users: count(User)
       active_users: count(User where is_active = true)
+    tones:
+      active_users: positive
 
+  # Job queues — not bare CRUD lists (ST-014 pressure surfaces).
   urgent_tasks:
     source: Task
     filter: priority = urgent and status != done
     sort: due_date asc
-    limit: 5
-    display: list
+    limit: 10
+    display: queue
     action: task_edit
     empty: "No urgent tasks"
 
@@ -605,8 +619,8 @@ workspace admin_dashboard "Admin Dashboard":
     source: Task
     filter: due_date < today and status != done
     sort: due_date asc
-    limit: 5
-    display: list
+    limit: 10
+    display: queue
     action: task_edit
     empty: "No overdue tasks"
 
@@ -616,49 +630,68 @@ workspace team_overview "Team Overview":
 
   metrics:
     source: Task
+    display: metrics
     aggregate:
       total: count(Task)
       in_progress: count(Task where status = in_progress)
       in_review: count(Task where status = review)
       completed_today: count(Task where status = done and updated_at >= today)
+    tones:
+      in_progress: accent
+      in_review: warning
+      completed_today: positive
 
+  # ST-018 review queue + ST-016 unassigned — manager jobs.
   needs_review:
     source: Task
     filter: status = review
     sort: updated_at asc
     limit: 10
-    display: list
+    display: queue
     action: task_edit
     empty: "No tasks awaiting review"
+
+  unassigned:
+    source: Task
+    filter: assigned_to = null and status = todo
+    sort: priority desc
+    limit: 10
+    display: queue
+    action: task_edit
+    empty: "All tasks are assigned"
 
   team_workload:
     source: Task
     filter: status = in_progress
     sort: priority desc, due_date asc
     limit: 10
-    display: list
+    display: queue
     action: task_detail
     empty: "No tasks in progress"
-
-  unassigned:
-    source: Task
-    filter: assigned_to = null and status = todo
-    sort: priority desc
-    limit: 5
-    display: list
-    action: task_edit
-    empty: "All tasks are assigned"
 
 workspace my_work "My Work":
   access: authenticated
   purpose: "Personal task view for assigned work"
+
+  my_summary:
+    source: Task
+    display: metrics
+    aggregate:
+      in_progress: count(Task where status = in_progress and assigned_to = current_user)
+      todo: count(Task where status = todo and assigned_to = current_user)
+      in_review: count(Task where status = review and assigned_to = current_user)
+      done: count(Task where status = done and assigned_to = current_user)
+    tones:
+      in_progress: accent
+      in_review: warning
+      done: positive
 
   my_in_progress:
     source: Task
     filter: status = in_progress and assigned_to = current_user
     sort: priority desc, due_date asc
     limit: 10
-    display: list
+    display: queue
     action: task_edit
     empty: "No tasks in progress - pick one from your backlog!"
 
@@ -667,7 +700,7 @@ workspace my_work "My Work":
     filter: status = todo and assigned_to = current_user
     sort: priority desc, due_date asc
     limit: 10
-    display: list
+    display: queue
     action: task_edit
     empty: "No pending tasks - ask your manager for work"
 
@@ -676,7 +709,7 @@ workspace my_work "My Work":
     filter: status = review and assigned_to = current_user
     sort: updated_at desc
     limit: 5
-    display: list
+    display: queue
     action: task_detail
     empty: "No tasks in review"
 

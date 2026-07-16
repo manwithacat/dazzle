@@ -77,59 +77,66 @@ class ToastSlots:
     sound: bool = False
 
 
+def _toast_default_duration(level: str, duration: str | None) -> str:
+    """Decision 0011 defaults: 10s for error, 8s otherwise."""
+    if duration is not None:
+        return duration
+    return "10s" if level == "error" else "8s"
+
+
+def _toast_actions_html(actions: Sequence[tuple[str, str]]) -> str:
+    """Action row: link when href set, dismiss button when empty."""
+    parts = ['<div class="dz-toast__actions">']
+    for label, href in actions:
+        safe_label = escape(label)
+        if href:
+            parts.append(
+                f'<a class="dz-toast__action" href="{escape(href, quote=True)}">{safe_label}</a>'
+            )
+        else:
+            parts.append(
+                f'<button type="button" class="dz-toast__action" '
+                f"data-dz-toast-dismiss>{safe_label}</button>"
+            )
+    parts.append("</div>")
+    return "".join(parts)
+
+
+def _toast_body_html(slots: ToastSlots, *, is_person: bool, safe_message: str) -> str:
+    """Title / actor / message / actions inside ``.dz-toast__body``."""
+    parts: list[str] = ['<div class="dz-toast__body">']
+    if is_person:
+        parts.append(
+            f'<div class="dz-toast__title dz-toast__actor">{escape(slots.actor_name or "")}</div>'
+        )
+        if slots.title:
+            parts.append(f'<div class="dz-toast__subtitle">{escape(slots.title)}</div>')
+    elif slots.title:
+        parts.append(f'<div class="dz-toast__title">{escape(slots.title)}</div>')
+    parts.append(f'<div class="dz-toast__message">{safe_message}</div>')
+    if slots.actions:
+        parts.append(_toast_actions_html(slots.actions))
+    parts.append("</div>")
+    return "".join(parts)
+
+
 def toast_unit_html(slots: ToastSlots) -> str:
     """Render one ``.dz-toast`` unit (no OOB wrapper) from shared slots."""
     level = slots.level if slots.level in _TOAST_ICON_PATHS else "info"
-    duration = slots.duration
-    if duration is None:
-        duration = "10s" if level == "error" else "8s"
-    safe_message = escape(slots.message)
-    safe_level = escape(level, quote=True)
-    safe_duration = escape(duration, quote=True)
-    role = "alert" if level == "error" else "status"
+    duration = _toast_default_duration(level, slots.duration)
     is_person = bool(slots.actor_name and slots.actor_name.strip())
-
     leading = (
         _toast_avatar_html(slots.actor_name or "", slots.actor_avatar)
         if is_person
         else _toast_icon_html(level)
     )
-
-    body_parts: list[str] = ['<div class="dz-toast__body">']
-    if is_person:
-        body_parts.append(
-            f'<div class="dz-toast__title dz-toast__actor">{escape(slots.actor_name or "")}</div>'
-        )
-        if slots.title:
-            body_parts.append(f'<div class="dz-toast__subtitle">{escape(slots.title)}</div>')
-    elif slots.title:
-        body_parts.append(f'<div class="dz-toast__title">{escape(slots.title)}</div>')
-    body_parts.append(f'<div class="dz-toast__message">{safe_message}</div>')
-
-    if slots.actions:
-        body_parts.append('<div class="dz-toast__actions">')
-        for label, href in slots.actions:
-            safe_label = escape(label)
-            if href:
-                body_parts.append(
-                    f'<a class="dz-toast__action" href="{escape(href, quote=True)}">'
-                    f"{safe_label}</a>"
-                )
-            else:
-                body_parts.append(
-                    f'<button type="button" class="dz-toast__action" '
-                    f"data-dz-toast-dismiss>{safe_label}</button>"
-                )
-        body_parts.append("</div>")
-    body_parts.append("</div>")
-    body_html = "".join(body_parts)
-
+    body_html = _toast_body_html(slots, is_person=is_person, safe_message=escape(slots.message))
     composition = ' data-dz-toast-composition="person"' if is_person else ""
     sound_attr = ' data-dz-toast-sound="on"' if slots.sound else ""
-
     return (
-        f'<div class="dz-toast" data-dz-toast-level="{safe_level}" '
-        f'data-dz-remove-after="{safe_duration}" role="{role}"'
+        f'<div class="dz-toast" data-dz-toast-level="{escape(level, quote=True)}" '
+        f'data-dz-remove-after="{escape(duration, quote=True)}" '
+        f'role="{"alert" if level == "error" else "status"}"'
         f"{composition}{sound_attr}>"
         f"{leading}{body_html}"
         f'<button type="button" class="dz-toast__close" '
@@ -141,9 +148,7 @@ def toast_unit_html(slots: ToastSlots) -> str:
 def toast_detail_dict(slots: ToastSlots) -> dict[str, Any]:
     """JSON-serialisable detail for ``HX-Trigger: showToast`` / client parity."""
     level = slots.level if slots.level in _TOAST_ICON_PATHS else "info"
-    duration = slots.duration
-    if duration is None:
-        duration = "10s" if level == "error" else "8s"
+    duration = _toast_default_duration(level, slots.duration)
     detail: dict[str, Any] = {
         "message": slots.message,
         "type": level,

@@ -150,3 +150,4 @@ Dual-lock root .dz-toast + stack #dz-toast.dz-toast-stack. Decision 0011: viewpo
 - `site/registry.py` (partial + exchanges + guidance)
 - `contracts/toast.py`
 - `controllers/dz-toast.js`
+- `controllers/dz-cue.js`
