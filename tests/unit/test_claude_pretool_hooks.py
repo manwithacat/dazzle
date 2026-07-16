@@ -166,3 +166,28 @@ def test_file_protection_does_not_crash_on_system_python3() -> None:
         python="/usr/bin/python3",
     )
     assert proc.returncode == 0, proc.stderr
+
+
+def test_safe_main_converts_runtime_errors_to_exit_0() -> None:
+    """Harness logs exit-1 as 'failed with exit code 1'; never emit that."""
+    sys.path.insert(0, str(HOOKS))
+    from _hook_io import safe_main  # type: ignore[import-not-found]
+
+    def boom() -> None:
+        raise RuntimeError("simulated hook bug")
+
+    with pytest.raises(SystemExit) as ei:
+        safe_main(boom)
+    assert ei.value.code == 0
+
+
+def test_safe_main_preserves_deny_exit_2() -> None:
+    sys.path.insert(0, str(HOOKS))
+    from _hook_io import safe_main  # type: ignore[import-not-found]
+
+    def deny() -> None:
+        raise SystemExit(2)
+
+    with pytest.raises(SystemExit) as ei:
+        safe_main(deny)
+    assert ei.value.code == 2

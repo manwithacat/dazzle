@@ -16,7 +16,13 @@ from pathlib import Path
 
 # Allow `python hooks/file_protection.py` from any cwd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _hook_io import EDIT_TOOLS, file_path_from, tool_input, tool_name  # noqa: E402
+from _hook_io import (  # noqa: E402
+    EDIT_TOOLS,
+    file_path_from,
+    safe_main,
+    tool_input,
+    tool_name,
+)
 
 PROTECTED_PATTERNS = [
     ".git/",
@@ -109,4 +115,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    safe_main(main)

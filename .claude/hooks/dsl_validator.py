@@ -88,4 +88,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from _hook_io import safe_main
+
+    safe_main(main)

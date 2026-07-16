@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _hook_io import BASH_TOOLS, tool_input, tool_name  # noqa: E402
+from _hook_io import BASH_TOOLS, safe_main, tool_input, tool_name  # noqa: E402
 
 # Absolute-path deletes under /tmp, $HOME, project dirs are allowed; only
 # filesystem root and shell globs are hard-blocked (the old `\s+/` pattern
@@ -68,4 +68,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    safe_main(main)

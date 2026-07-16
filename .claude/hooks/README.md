@@ -9,7 +9,18 @@ Configured in `.claude/settings.json`. The harness loads these when the folder i
 | `bash_validator.py` | `Bash\|run_terminal_command` | Block destructive shell; rewrite bare `dazzle` → `python -m dazzle` |
 | `file_protection.py` | `Edit\|Write\|search_replace\|write` | Block auto-generated / secret paths |
 
-Exit codes: `0` allow, `2` deny, other = fail-open (tool still runs; the harness may log the failure).
+Exit codes: `0` allow, `2` deny. **Never exit 1** — Grok/Claude log that as
+`pre_tool_use[N] failed with exit code 1` while still fail-opening the tool.
+Hooks use `from __future__ import annotations` (system Python 3.9) and
+`_hook_io.safe_main` so runtime bugs also exit 0 instead of spamming the TUI.
+
+### Known regression (fixed 2026-07-16)
+
+`pre_tool_use[1]` is the `file_protection` matcher group. Before the fix it
+crashed on every `search_replace` under PATH `python3` 3.9 because
+`str | None` was evaluated at import time (PEP 604). Session telemetry on
+main: **376× exit-1 failures → 0 after** `run_hook.sh` + future annotations +
+camelCase payloads.
 
 ## PostToolUse (passive)
 

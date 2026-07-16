@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PreToolUse hooks under system Python 3.9 / multi-harness payloads** —
   `file_protection` no longer crashes (exit 1 spam) on every edit; hooks accept
   camelCase + snake_case tool payloads; `run_hook.sh` prefers project venv; DSL
-  post-hook finds `dazzle.toml` (not only legacy `dazzle.yaml`). Regression:
+  post-hook finds `dazzle.toml` (not only legacy `dazzle.yaml`). Defense-in-depth:
+  `_hook_io.safe_main` converts unexpected exceptions to exit 0 so the harness
+  never surfaces fail-open as `failed with exit code 1`. Regression:
   `tests/unit/test_claude_pretool_hooks.py`.
 
 ### Added
