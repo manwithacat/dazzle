@@ -169,10 +169,15 @@ field company_name "Company" source=companies_house_lookup.search_companies
 
 **Renders:** Autocomplete input that queries an external API with debounce. Shows results in a dropdown with primary/secondary display fields. Selecting a result can autofill other form fields.
 
-Supported field `key=value` options on create/edit forms: `source`, `widget`,
-`accept`, `capture`, `rich_text_toolbar`, `rich_text_max_length`. Other keys
-(e.g. a mistaken `search_trigger=`) are stored by the parser but **not**
-rendered — `dazzle validate` warns (#1599).
+Supported field `key=value` options on create/edit forms: `source`,
+`search_trigger` (alias — see below), `widget`, `accept`, `capture`,
+`rich_text_toolbar`, `rich_text_max_length`. Other keys are ignored at
+render; `dazzle validate` warns.
+
+**`search_trigger=<pack>`** (#1599) is an alias for the pack’s primary search
+operation (e.g. `search_trigger=companies_house_lookup` →
+`source=companies_house_lookup.search_companies`). Prefer explicit
+`source=<pack>.<op>` when you need a non-default search op.
 
 ## Detail Surfaces (`mode: view`)
 

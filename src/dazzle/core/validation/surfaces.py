@@ -36,6 +36,7 @@ def register_pack_ops_provider(provider: Callable[[], dict[str, set[str]]]) -> N
 _RENDERED_FIELD_OPTIONS = frozenset(
     {
         "source",
+        "search_trigger",  # #1599 — alias → source=<pack>.<search_op> at render
         "widget",
         "accept",
         "capture",
@@ -240,31 +241,42 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         f"Surface '{surface.name}' open: missing 'via' field name (#1603)"
                     )
 
-        # Validate field options: unsupported keys + source= pack/op resolution.
+        # Validate field options: unsupported keys + source=/search_trigger resolution.
         # #996 — typos and dropped packs fail silently at runtime (plain text).
-        # #1599 — unknown keys (e.g. search_trigger=) also no-op at render.
+        # #1599 — search_trigger aliases to source=<pack>.<search_op>; unknown keys warn.
         for section in surface.sections:
             for element in section.elements:
                 options = element.options or {}
                 for opt_key in options:
                     if opt_key in _RENDERED_FIELD_OPTIONS:
                         continue
-                    if opt_key == "search_trigger":
-                        warnings.append(
-                            f"Surface '{surface.name}' field '{element.field_name}' "
-                            f"option 'search_trigger' is not rendered — use "
-                            f"source=<pack>.<operation> for search-select typeahead "
-                            f"(e.g. source=companies_house_lookup.search_companies)"
-                        )
-                    else:
-                        warnings.append(
-                            f"Surface '{surface.name}' field '{element.field_name}' "
-                            f"has unsupported option '{opt_key}' (ignored at render). "
-                            f"Supported field options: "
-                            f"{', '.join(sorted(_RENDERED_FIELD_OPTIONS))}"
-                        )
+                    warnings.append(
+                        f"Surface '{surface.name}' field '{element.field_name}' "
+                        f"has unsupported option '{opt_key}' (ignored at render). "
+                        f"Supported field options: "
+                        f"{', '.join(sorted(_RENDERED_FIELD_OPTIONS))}"
+                    )
 
                 source_ref = options.get("source")
+                trigger = options.get("search_trigger")
+                if not source_ref and trigger:
+                    # Prefer explicit pack.op; bare pack → pick a search_* op.
+                    from dazzle.page.field_source_alias import (
+                        resolve_search_trigger_to_source,
+                    )
+
+                    aliased = resolve_search_trigger_to_source(str(trigger))
+                    if aliased:
+                        source_ref = aliased
+                    else:
+                        errors.append(
+                            f"Surface '{surface.name}' field '{element.field_name}' "
+                            f"search_trigger='{trigger}' could not be resolved to a "
+                            f"search operation on a known API pack (#1599). Use "
+                            f"source=<pack>.<operation> "
+                            f"(e.g. source=companies_house_lookup.search_companies)"
+                        )
+                        continue
                 if not source_ref or "." not in str(source_ref):
                     continue
                 source_ref = str(source_ref)

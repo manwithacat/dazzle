@@ -504,6 +504,19 @@ def _build_state_machine_field_options(
     return [], None
 
 
+def _effective_field_source_ref(element_options: dict[str, Any]) -> str | None:
+    """Return ``source=`` or aliased ``search_trigger=`` (#1599)."""
+    from dazzle.page.field_source_alias import resolve_search_trigger_to_source
+
+    source_ref = element_options.get("source")
+    if source_ref:
+        return str(source_ref)
+    trigger = element_options.get("search_trigger")
+    if trigger:
+        return resolve_search_trigger_to_source(str(trigger))
+    return None
+
+
 def _resolve_field_source(
     source_ref: str,
 ) -> FieldSourceContext | None:
@@ -607,7 +620,7 @@ def _build_form_fields(
         is_required = bool(field_spec and field_spec.is_required)
 
         source_ctx: FieldSourceContext | None = None
-        source_ref = element_options.get("source")
+        source_ref = _effective_field_source_ref(element_options)
         if source_ref:
             source_ctx = _resolve_field_source(source_ref)
             if source_ctx:
@@ -732,7 +745,7 @@ def _build_form_sections(
             is_required = bool(field_spec and field_spec.is_required)
 
             source_ctx: FieldSourceContext | None = None
-            source_ref = element.options.get("source")
+            source_ref = _effective_field_source_ref(element.options or {})
             if source_ref:
                 source_ctx = _resolve_field_source(source_ref)
                 if source_ctx:

@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.104.8] - 2026-07-16
+
+### Fixed
+- **#1599 `search_trigger=` now renders search-select** — aliases to
+  `source=<pack>.search_*` (prefers `search_companies`); form fields emit
+  `search_select` typeahead. Prefer explicit `source=` for non-default ops.
+
 ## [0.104.7] - 2026-07-16
 
 ### Added
