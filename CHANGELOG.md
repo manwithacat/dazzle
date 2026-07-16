@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics / task_inbox; HR workspaces lead with headcount/compensation metrics.
 
 ### Fixed
+- **IR reader baseline** — drop `SeedTemplateSpec.month_anchor` from orphan
+  baseline now that seed generator reads it (preflight after rolling_window
+  multi-tenant seed fix).
 - **List datetime inline-edit alignment** — SSR `template_compiler` C2.3
   editable set includes `datetime` (match HTMX `server.py`); list-fragment
   gate + regression assert humanised display and non-text edit-kind (#1597).

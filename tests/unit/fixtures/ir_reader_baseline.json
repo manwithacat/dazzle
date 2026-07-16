@@ -137,7 +137,6 @@
   "security.TwoFactorConfig.enforce_for_roles",
   "security.TwoFactorConfig.otp_expiry_seconds",
   "security.TwoFactorConfig.otp_length",
-  "seed.SeedTemplateSpec.month_anchor",
   "services.DomainServiceSpec.stub_language",
   "sitespec.FAQItem.answer",
   "sitespec.LayoutSpec.section_backgrounds",
