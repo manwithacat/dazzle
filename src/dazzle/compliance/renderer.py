@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from dazzle.i18n.display_locale import calendar_today, get_display_locale
+
 try:
     import markdown  # type: ignore[import-untyped,unused-ignore]
     import weasyprint
@@ -27,6 +29,19 @@ except ImportError:
 PACKAGE_DIR = Path(__file__).parent
 CSS_PATH = PACKAGE_DIR / "css" / "compliance.css"
 TEMPLATE_PATH = PACKAGE_DIR / "templates" / "document.html"
+
+
+def _compliance_doc_date() -> str:
+    """Document control date from DisplayLocaleProfile (#1597 D).
+
+    Long form (e.g. ``16 July 2026``) matches UK letter/PDF conventions;
+    falls back to ISO when i18n is unavailable.
+    """
+    try:
+        return get_display_locale().format_long_date(calendar_today())
+    except Exception:
+        return date.today().isoformat()
+
 
 # Minimal brandspec for projects without one
 DEFAULT_BRANDSPEC: dict[str, Any] = {
@@ -111,7 +126,7 @@ def render_document(
         document_title=document_title,
         document_id=document_id,
         version=version,
-        date=date.today().isoformat(),
+        date=_compliance_doc_date(),
         organisation_name=identity["name"],
         legal_name=identity.get("legal_name", identity["name"]),
         classification=doc_control.get("classification", "Confidential"),

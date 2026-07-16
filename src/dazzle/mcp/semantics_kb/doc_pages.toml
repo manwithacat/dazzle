@@ -1464,6 +1464,13 @@ order = 105
 handwritten = true
 intro = "What the Dazzle runtime actually renders for each DSL construct — the map from DSL to live UI."
 
+[pages.data-representation]
+title = "Data representation"
+slug = "data-representation"
+order = 105.5
+handwritten = true
+intro = "Relational defaults vs pragmatic escape hatches (poly, JSONB, STI) for multi-tenant SaaS — #1617."
+
 [pages.ux-maturity]
 title = "Framework UX-Maturity Rubric"
 slug = "ux-maturity"

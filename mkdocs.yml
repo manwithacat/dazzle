@@ -90,6 +90,7 @@ nav:
       - Patterns: reference/patterns.md
       - Scenarios: reference/scenarios.md
       - Runtime Capabilities: reference/runtime-capabilities.md
+      - Data representation: reference/data-representation.md
       - HTMX Templates: reference/htmx-templates.md
       - Databases: reference/databases.md
       - Migrations: reference/migrations.md

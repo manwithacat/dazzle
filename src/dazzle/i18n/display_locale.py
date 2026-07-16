@@ -73,6 +73,14 @@ class DisplayLocaleProfile:
             return f"{d.day} {d.strftime('%b %Y')}"
         return d.strftime(fmt)
 
+    def format_long_date(self, value: date | datetime) -> str:
+        """Long UK-style date for letters/PDF (e.g. ``16 July 2026``).
+
+        Calendar day only — no TZ shift (#1597 D). Same profile as HTML cells.
+        """
+        d = value.date() if isinstance(value, datetime) else value
+        return f"{d.day} {d.strftime('%B %Y')}"
+
     def format_datetime_value(self, value: datetime | date) -> str:
         """Format a datetime in tenant TZ; pure dates stay calendar-only."""
         if isinstance(value, date) and not isinstance(value, datetime):

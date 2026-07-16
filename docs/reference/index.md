@@ -38,6 +38,7 @@
 | [UI Islands](islands.md) | Self-contained interactive JavaScript components that mount into server-rendered pages. |
 | [Reports & Charts](reports.md) | How chart and report regions (bar_chart, pivot_table, heatmap, funnel, metrics) compile to scope-aware aggregate queries. |
 | [Runtime UI Capabilities](runtime-capabilities.md) | What the Dazzle runtime actually renders for each DSL construct — the map from DSL to live UI. |
+| [Data representation](data-representation.md) | Relational defaults vs pragmatic escape hatches (poly, JSONB, STI) for multi-tenant SaaS — #1617. |
 | [HTMX Template Specification](htmx-templates.md) | The HTMX interaction patterns the runtime emits; SSR + HTMX with no SPA framework. |
 | [Card-Safety Invariants](card-safety-invariants.md) | The canonical spec for what a card means in Dazzle templates and the eight invariants its scanners enforce. |
 | [RBAC Scope Rules](rbac-scope.md) | Operation-by-operation reference for `scope:` row-level authorization rules and their predicate algebra. |

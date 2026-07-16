@@ -345,6 +345,47 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                             f"does not exist on entity '{entity.name}'"
                         )
 
+        # #1597 E: list projection format vs entity type — `format: raw` on
+        # temporal/money fields reintroduces the ISO/type-leak class of bugs.
+        if surface.mode == ir.SurfaceMode.LIST and surface.entity_ref:
+            entity = appspec.get_entity(surface.entity_ref)
+            if entity:
+                for section in surface.sections:
+                    for element in section.elements:
+                        fn = element.field_name
+                        if not fn:
+                            continue
+                        fld = entity.get_field(fn)
+                        if not fld or not fld.type:
+                            continue
+                        fmt = getattr(element, "format", None)
+                        if fmt is None:
+                            continue
+                        kind = getattr(fmt, "kind", None) or ""
+                        ent_kind = fld.type.kind
+                        if kind == "raw" and ent_kind in (
+                            ir.FieldTypeKind.DATE,
+                            ir.FieldTypeKind.DATETIME,
+                            ir.FieldTypeKind.MONEY,
+                        ):
+                            warnings.append(
+                                f"Surface '{surface.name}' field '{fn}' has "
+                                f"format: raw on a {ent_kind.value} entity field "
+                                f"(#1597). List cells will leak ISO/raw storage "
+                                f"shape — drop format: raw or use format: date/"
+                                f"datetime/currency so DisplayLocaleProfile applies."
+                            )
+                        if kind in ("date", "datetime", "relative") and ent_kind not in (
+                            ir.FieldTypeKind.DATE,
+                            ir.FieldTypeKind.DATETIME,
+                        ):
+                            # format: validation may already error; keep soft warn if missed
+                            warnings.append(
+                                f"Surface '{surface.name}' field '{fn}' uses "
+                                f"format: {kind} but entity field is "
+                                f"{ent_kind.value} (#1597 projection type mismatch)"
+                            )
+
         # Warn if no sections — unless the surface is intentionally headless
         # (e.g. a framework-generated API-only surface whose UI lives in a
         # client-side widget).
@@ -396,6 +437,27 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 f"distinct entity/mode (e.g. a workspace region for a secondary "
                 f"view)."
             )
+
+    # #1597 E: view field_type projection vs source entity field type
+    for view in getattr(appspec, "views", None) or []:
+        src = getattr(view, "source_entity", "") or ""
+        entity = appspec.get_entity(src) if src else None
+        if not entity:
+            continue
+        for vf in getattr(view, "fields", None) or []:
+            vft = getattr(vf, "field_type", None)
+            if vft is None or not getattr(vft, "kind", None):
+                continue
+            ent_f = entity.get_field(vf.name)
+            if not ent_f or not ent_f.type:
+                continue
+            if ent_f.type.kind != vft.kind:
+                warnings.append(
+                    f"View '{view.name}' field '{vf.name}' declares type "
+                    f"{vft.kind.value} but source entity '{entity.name}' has "
+                    f"{ent_f.type.kind.value} (#1597 projection type mismatch). "
+                    f"List/report cells may render as the wrong kind."
+                )
 
     return errors, warnings
 

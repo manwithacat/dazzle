@@ -4,6 +4,26 @@ What the Dazzle runtime actually renders for each DSL construct. Use this to und
 what UI features your DSL declarations produce — the gap between "what can I declare?" and
 "what will the user see?"
 
+## Display locale (#1597)
+
+List/detail cells use **`DisplayLocaleProfile`** (not browser Accept-Language):
+
+| Layer | Role |
+|-------|------|
+| Product default | **en-GB** + `Europe/London` + GBP + friendly `D MMM YYYY` |
+| Tenant override | DSL `param locale.timezone` / `locale.date_format` (ParamResolver cascade) |
+| Browser cookie / Accept-Language | **gettext only** — never cell dates/numbers |
+
+- **date** fields: calendar day, never TZ-shifted (filing/VAT-safe).
+- **datetime** fields: stored UTC (naive = UTC), **displayed** in tenant TZ.
+- **`today()` / `days_until` / attention**: shared `calendar_today()` (tenant midnight).
+- **`money(CODE)`**: code is authoritative; locale does not convert.
+
+**Editors vs display:** C2.3 list edit for dates uses `input type=date` /
+datetime-local (ISO value). Display is day-first en-GB; the edit payload stays
+ISO so day/month swap cannot corrupt storage. Do not force `format: raw` on
+temporal list fields (`dazzle validate` warns — #1597 E).
+
 ## List Surfaces (`mode: list`)
 
 A surface with `mode: list` renders a **DataTable** component. The base table always includes:
