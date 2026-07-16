@@ -386,4 +386,286 @@ BLUEPRINTS: list[Blueprint] = [
         "<code>xl</code>) — do not label it “full page.” "
         "See <code>stems/host-chrome-symmetry.md</code> › Peek vs full page.",
     ),
+    # ── Story-driven ops motifs (docs/guides/story-to-composition.md) ──
+    Blueprint(
+        "ops-queue",
+        "Ops work queue",
+        "The agent job page: KPI pressure strip, a dual-lock review queue with "
+        "attention rows and inline actions, plus a mutation toast — not a CRUD "
+        "table of every entity. Mirrors support_tickets ticket_queue.",
+        '<main class="dz-stack" data-dz-gap="lg">'
+        '<div class="dz-cluster" data-dz-justify="between">'
+        "<div>"
+        '<div class="dz-card-label">Workspace</div>'
+        '<h1 style="margin:0.25rem 0 0;letter-spacing:-0.02em">Ticket queue</h1>'
+        "</div>"
+        '<div class="dz-cluster" data-dz-gap="sm">'
+        '<span class="dz-badge" data-dz-tone="warning">'
+        '<span class="dz-badge-icon">{svg:triangle-alert}</span>3 critical</span>'
+        '<button type="button" class="dz-button" data-dz-variant="outline">Filters</button>'
+        "</div></div>"
+        '<div class="dz-metrics-grid" data-dz-tile-count="3">'
+        '<div class="dz-metric-tile" data-dz-metric-key="open">'
+        '<div class="dz-metric-label">Open</div>'
+        '<div class="dz-metric-value">18</div></div>'
+        '<div class="dz-metric-tile" data-dz-metric-key="wip" data-dz-tone="accent">'
+        '<div class="dz-metric-label">In progress</div>'
+        '<div class="dz-metric-value">7</div></div>'
+        '<div class="dz-metric-tile" data-dz-metric-key="critical" data-dz-tone="destructive">'
+        '<div class="dz-metric-label">Critical</div>'
+        '<div class="dz-metric-value">3</div></div>'
+        "</div>"
+        '<div class="dz-stack" data-dz-gap="sm" aria-label="Open tickets">'
+        '<div class="dz-queue-row dz-attn-both dz-attn-tone-critical" '
+        'data-dz-queue-row data-dz-attn="critical">'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">Billing charge failed — Acme</span>'
+        '<span class="dz-badge" data-dz-tone="destructive">critical</span></div>'
+        '<p class="dz-queue-row-attn">SLA breaches at 16:00 — assign now.</p>'
+        '<span class="dz-queue-row-date">opened 2h ago</span></div>'
+        '<div class="dz-cluster" data-dz-gap="xs">'
+        '<button type="button" class="dz-button" data-dz-variant="primary" data-dz-size="sm">'
+        "Claim</button>"
+        '<button type="button" class="dz-button" data-dz-variant="outline" data-dz-size="sm" '
+        'data-dz-dialog-open="ops-peek">Peek</button>'
+        "</div></div>"
+        '<div class="dz-queue-row " data-dz-queue-row>'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">SSO login loop — Globex</span>'
+        '<span class="dz-badge" data-dz-tone="warning">high</span></div>'
+        '<span class="dz-queue-row-date">opened 5h ago</span></div>'
+        '<div class="dz-cluster" data-dz-gap="xs">'
+        '<button type="button" class="dz-button" data-dz-variant="primary" data-dz-size="sm">'
+        "Claim</button>"
+        '<button type="button" class="dz-button" data-dz-variant="outline" data-dz-size="sm">'
+        "Open</button>"
+        "</div></div>"
+        '<div class="dz-queue-row " data-dz-queue-row>'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">Export CSV empty — Initech</span>'
+        '<span class="dz-badge" data-dz-tone="neutral">medium</span></div>'
+        '<span class="dz-queue-row-date">opened yesterday</span></div>'
+        '<div class="dz-cluster" data-dz-gap="xs">'
+        '<button type="button" class="dz-button" data-dz-variant="primary" data-dz-size="sm">'
+        "Claim</button>"
+        "</div></div>"
+        "</div>"
+        # Mutation feedback — page-chrome toast (decision 0011), not client state.
+        '<div id="dz-toast" class="dz-toast-stack" data-dz-toast-stack aria-live="polite">'
+        '<div class="dz-toast" data-dz-toast-level="success" '
+        'data-dz-remove-after="8000" role="status">'
+        '<div class="dz-toast__body">'
+        '<div class="dz-toast__title">Ticket claimed</div>'
+        '<div class="dz-toast__message">Billing charge failed — Acme is yours.</div>'
+        '<div class="dz-toast__actions">'
+        '<button type="button" class="dz-button" data-dz-variant="ghost" data-dz-size="sm">'
+        "View</button></div></div></div></div>"
+        "</main>"
+        '<dialog class="dz-dialog" id="ops-peek" aria-labelledby="ops-peek-title" closedby="any">'
+        '<form method="dialog">'
+        '<div class="dz-dialog__header">'
+        '<h2 class="dz-dialog__title" id="ops-peek-title">Billing charge failed</h2>'
+        '<button type="submit" class="dz-dialog__close" aria-label="Close dialog">'
+        "{svg:x}</button></div>"
+        '<div class="dz-dialog__body">'
+        "<p>Peek fragment — enough to claim or escalate without leaving the queue. "
+        "Full record is a separate owned URL.</p></div>"
+        '<div class="dz-dialog__footer">'
+        '<button type="submit" class="dz-button" data-dz-variant="outline">Close</button>'
+        '<button type="submit" class="dz-button" data-dz-variant="primary" value="claim">'
+        "Claim</button></div></form></dialog>",
+        composes=(
+            "stack",
+            "cluster",
+            "metrics",
+            "queue",
+            "badge",
+            "button",
+            "toast",
+            "dialog",
+        ),
+        notes="Job page, not entity admin: metrics answer “how bad?”, queue rows "
+        "answer “what next?”, toast answers “what just happened?”. Dual-lock "
+        "roots: <code>data-dz-metric-key</code>, <code>data-dz-queue-row</code>, "
+        "<code>data-dz-toast-level</code>. Dazzle expression: "
+        "<code>display: metrics</code> + <code>display: queue</code> on "
+        "<code>ticket_queue</code>.",
+    ),
+    Blueprint(
+        "triage-drawer",
+        "Triage with drawer",
+        "Master list as a work queue beside a detail drawer: select a row, "
+        "hx-get a peek fragment into the dialog body, keep the queue mounted. "
+        "Full page remains a real navigation target.",
+        '<div class="dz-sidebar-layout" style="--dz-sidebar-width: 22rem">'
+        '<div class="dz-stack" data-dz-gap="sm" aria-label="Triage queue">'
+        '<div class="dz-cluster" data-dz-justify="between">'
+        '<h1 style="margin:0;font-size:var(--text-lg)">Triage</h1>'
+        '<span class="dz-badge" data-dz-tone="accent">12 open</span></div>'
+        '<div class="dz-queue-row " data-dz-queue-row>'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">INV-441 · Acme overdue</span></div>'
+        '<span class="dz-queue-row-date">due today</span></div>'
+        '<button type="button" class="dz-button" data-dz-variant="outline" data-dz-size="sm" '
+        'data-dz-dialog-open="triage-drawer">Open</button></div>'
+        '<div class="dz-queue-row dz-attn-both dz-attn-tone-warning" '
+        'data-dz-queue-row data-dz-attn="warning">'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">INV-390 · Globex dispute</span></div>'
+        '<p class="dz-queue-row-attn">Customer waiting 3 days.</p></div>'
+        '<button type="button" class="dz-button" data-dz-variant="outline" data-dz-size="sm" '
+        'data-dz-dialog-open="triage-drawer">Open</button></div>'
+        '<div class="dz-queue-row " data-dz-queue-row>'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">INV-512 · Initech credit</span></div>'
+        '<span class="dz-queue-row-date">due Fri</span></div>'
+        '<button type="button" class="dz-button" data-dz-variant="outline" data-dz-size="sm" '
+        'data-dz-dialog-open="triage-drawer">Open</button></div>'
+        "</div>"
+        '<main class="dz-stack" data-dz-gap="md">'
+        '<h2 style="margin:0">Reading pane</h2>'
+        '<p class="hm-demo-muted" style="margin:0">On wide screens the queue docks; '
+        "on a phone it stacks. The drawer is the hypermedia peek — same fragment "
+        "contract as the record page, different chrome.</p>"
+        '<div class="dz-card dz-card-body">'
+        '<div class="dz-card-label">Hint</div>'
+        "<div>Open a row to load the triage drawer. Prefer peek for decide-now; "
+        "navigate to the full record for history and edit.</div></div>"
+        "</main></div>"
+        '<dialog class="dz-dialog" id="triage-drawer" '
+        'aria-labelledby="triage-drawer-title" closedby="any">'
+        '<form method="dialog">'
+        '<div class="dz-dialog__header">'
+        '<h2 class="dz-dialog__title" id="triage-drawer-title">INV-441 · Acme</h2>'
+        '<button type="submit" class="dz-dialog__close" aria-label="Close dialog">'
+        "{svg:x}</button></div>"
+        '<div class="dz-dialog__body">'
+        '<div class="dz-stack" data-dz-gap="md">'
+        '<div class="dz-cluster" data-dz-gap="sm">'
+        '<span class="dz-badge" data-dz-tone="warning">overdue</span>'
+        '<span class="dz-badge" data-dz-tone="neutral">Net 30</span></div>'
+        "<p>£1,250.00 · last contact 2 days ago. Approve write-off or send "
+        "reminder without losing the queue context.</p>"
+        '<div class="dz-alert" data-dz-tone="accent" role="status">'
+        '<span class="dz-alert__icon">{svg:info}</span>'
+        '<div class="dz-alert__body">'
+        '<div class="dz-alert__title">Peek, not full page</div>'
+        '<div class="dz-alert__description">'
+        "Esc / backdrop close; full record is a real link below."
+        "</div></div></div></div></div>"
+        '<div class="dz-dialog__footer">'
+        '<a class="dz-button" data-dz-variant="outline" href="../blueprints/record-page">'
+        "Open full page</a>"
+        '<button type="submit" class="dz-button" data-dz-variant="primary" value="remind">'
+        "Send reminder</button>"
+        "</div></form></dialog>",
+        composes=(
+            "sidebar-layout",
+            "stack",
+            "cluster",
+            "queue",
+            "badge",
+            "button",
+            "card",
+            "dialog",
+            "alert",
+        ),
+        notes="Compose queue + dialog; do not invent a client triage store. "
+        "Selection is an exchange (button opens dialog; production wires "
+        "<code>hx-get</code> into <code>dialog__body</code>). Full page is "
+        "navigation — see record-page Blueprint and "
+        "<code>stems/host-chrome-symmetry.md</code>.",
+    ),
+    Blueprint(
+        "manager-sla-strip",
+        "Manager SLA strip",
+        "Metrics-first team home: KPI tiles, a status-list readiness strip, "
+        "and a critical work queue — the manager job, not a personal assigned "
+        "list. Mirrors support_tickets manager_ops.",
+        '<main class="dz-stack" data-dz-gap="lg">'
+        '<div class="dz-cluster" data-dz-justify="between">'
+        "<div>"
+        '<div class="dz-card-label">Manager</div>'
+        '<h1 style="margin:0.25rem 0 0;letter-spacing:-0.02em">Team ops</h1>'
+        "</div>"
+        '<span class="dz-badge" data-dz-tone="success">'
+        '<span class="dz-badge-icon">{svg:circle-check}</span>Within SLA band</span>'
+        "</div>"
+        '<div class="dz-metrics-grid" data-dz-tile-count="4">'
+        '<div class="dz-metric-tile" data-dz-metric-key="open">'
+        '<div class="dz-metric-label">Open</div>'
+        '<div class="dz-metric-value">24</div></div>'
+        '<div class="dz-metric-tile" data-dz-metric-key="wip" data-dz-tone="accent">'
+        '<div class="dz-metric-label">In progress</div>'
+        '<div class="dz-metric-value">11</div></div>'
+        '<div class="dz-metric-tile" data-dz-metric-key="critical" data-dz-tone="destructive">'
+        '<div class="dz-metric-label">Critical</div>'
+        '<div class="dz-metric-value">2</div></div>'
+        '<div class="dz-metric-tile" data-dz-metric-key="resolved" data-dz-tone="positive">'
+        '<div class="dz-metric-label">Resolved</div>'
+        '<div class="dz-metric-value">9</div></div>'
+        "</div>"
+        '<div class="dz-stack" data-dz-gap="sm">'
+        '<h2 style="margin:0;font-size:var(--text-base)">SLA readiness</h2>'
+        '<ul class="dz-status-list">'
+        '<li class="dz-status-list-entry" data-dz-status-entry data-dz-state="accent">'
+        '<span class="dz-status-list-icon" aria-hidden="true">{svg:clock}</span>'
+        '<div class="dz-status-list-text">'
+        '<div class="dz-status-list-title">Ticket response SLA</div>'
+        '<div class="dz-status-list-caption">'
+        "Warning 2h · breach 4h · critical 8h (business hours)</div></div>"
+        '<span class="dz-status-list-pill">accent</span></li>'
+        '<li class="dz-status-list-entry" data-dz-status-entry data-dz-state="warning">'
+        '<span class="dz-status-list-icon" aria-hidden="true">{svg:triangle-alert}</span>'
+        '<div class="dz-status-list-text">'
+        '<div class="dz-status-list-title">Critical open</div>'
+        '<div class="dz-status-list-caption">'
+        "Priority critical tickets must stay assigned</div></div>"
+        '<span class="dz-status-list-pill">warning</span></li>'
+        '<li class="dz-status-list-entry" data-dz-status-entry data-dz-state="warning">'
+        '<span class="dz-status-list-icon" aria-hidden="true">{svg:user}</span>'
+        '<div class="dz-status-list-text">'
+        '<div class="dz-status-list-title">Unassigned open</div>'
+        '<div class="dz-status-list-caption">'
+        "Open tickets with no assignee block first response</div></div>"
+        '<span class="dz-status-list-pill">warning</span></li>'
+        '<li class="dz-status-list-entry" data-dz-status-entry data-dz-state="positive">'
+        '<span class="dz-status-list-icon" aria-hidden="true">{svg:circle-check}</span>'
+        '<div class="dz-status-list-text">'
+        '<div class="dz-status-list-title">Resolved pending close</div>'
+        '<div class="dz-status-list-caption">'
+        "Awaiting customer confirmation or agent close</div></div>"
+        '<span class="dz-status-list-pill">positive</span></li>'
+        "</ul></div>"
+        '<div class="dz-stack" data-dz-gap="sm">'
+        '<h2 style="margin:0;font-size:var(--text-base)">Critical queue</h2>'
+        '<div class="dz-queue-row dz-attn-both dz-attn-tone-critical" '
+        'data-dz-queue-row data-dz-attn="critical">'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">Production outage — North region</span></div>'
+        '<p class="dz-queue-row-attn">Unassigned · breach in 40m</p></div>'
+        '<button type="button" class="dz-button" data-dz-variant="primary" data-dz-size="sm">'
+        "Reassign</button></div>"
+        '<div class="dz-queue-row " data-dz-queue-row>'
+        '<div class="dz-queue-row-main">'
+        '<div class="dz-queue-row-headline">'
+        '<span class="dz-queue-row-title">Payment webhook storm</span></div>'
+        '<span class="dz-queue-row-date">assigned · Ada</span></div>'
+        '<button type="button" class="dz-button" data-dz-variant="outline" data-dz-size="sm">'
+        "Escalate</button></div>"
+        "</div></main>",
+        composes=("stack", "cluster", "metrics", "status-list", "queue", "badge", "button"),
+        notes="Manager default workspace shape: metrics → readiness strip → "
+        "focused queues. Avoid landing managers on empty “my assigned” lists "
+        "when seed data assigns to agents (TR-52 class). Dual-lock roots: "
+        "metric tiles, <code>data-dz-status-entry</code>, "
+        "<code>data-dz-queue-row</code>.",
+    ),
 ]

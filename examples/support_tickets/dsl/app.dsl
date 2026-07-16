@@ -415,18 +415,38 @@ surface comment_edit "Edit Comment":
 # WORKSPACES - Composed views with stages
 # =============================================================================
 
+# Story-driven compositions (docs/guides/story-to-composition.md):
+#   agent  → ticket_queue  = metrics + queue + kanban  (ST-019–023)
+#   manager → manager_ops  = metrics + SLA strip + focused queues (ST-027–029)
+#   customer → my_tickets  = my metrics + open queue + history (ST-024–026)
+
 workspace ticket_queue "Ticket Queue":
   purpose: "Agent workspace for managing incoming support tickets"
   stage: "scanner_table"
+  access: persona(agent, manager)
 
+  # Job primary: at-a-glance pressure (tones on critical).
   queue_metrics:
     source: Ticket
-    display: summary
+    display: metrics
     aggregate:
       total_open: count(Ticket where status = open)
       in_progress: count(Ticket where status = in_progress)
       critical: count(Ticket where priority = critical and status != closed)
+    tones:
+      critical: destructive
+      in_progress: accent
 
+  # ST-019 worklist — review queue with inline status transitions, not a CRUD table.
+  open_queue:
+    source: Ticket
+    filter: status != closed
+    sort: priority desc, created_at asc
+    display: queue
+    action: ticket_edit
+    empty: "No open tickets"
+
+  # Lifecycle board (secondary) — status columns for flow, not the primary worklist.
   ticket_board:
     source: Ticket
     filter: status != closed
@@ -435,23 +455,78 @@ workspace ticket_queue "Ticket Queue":
     action: ticket_edit
     empty: "No open tickets"
 
-  ticket_table:
+workspace manager_ops "Manager Ops":
+  # ST-027 team performance + SLA narrative; critical/unassigned queues for
+  # ST-028/029. TR-52 moved managers off empty personal assigned lists — this
+  # is the metrics-first home that matches the story.
+  purpose: "Team performance, SLA readiness, and escalations"
+  stage: "command_center"
+  access: persona(manager)
+
+  team_metrics:
     source: Ticket
-    filter: status != closed
-    sort: priority desc, created_at asc
-    display: list
-    # From/To date pickers scoping the table to tickets raised in a
-    # window (filters created_at via date_from/date_to params)
-    date_range
-    date_field: created_at
+    display: metrics
+    aggregate:
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+      critical_open: count(Ticket where priority = critical and status != closed)
+      resolved: count(Ticket where status = resolved)
+    tones:
+      critical_open: destructive
+      resolved: positive
+      in_progress: accent
+
+  # Static readiness strip — pairs with sla TicketResponseTime commitment.
+  sla_readiness:
+    display: status_list
+    entries:
+      - title: "Ticket response SLA"
+        caption: "Warning 2h · breach 4h · critical 8h (business hours)"
+        icon: "clock"
+        state: accent
+      - title: "Critical open"
+        caption: "Priority critical tickets must stay assigned and progressing"
+        icon: "triangle-alert"
+        state: warning
+      - title: "Unassigned open"
+        caption: "Open tickets with no assignee block first response"
+        icon: "user"
+        state: warning
+      - title: "Resolved pending close"
+        caption: "Resolved tickets await customer confirmation or agent close"
+        icon: "circle-check"
+        state: positive
+
+  critical_queue:
+    source: Ticket
+    filter: priority = critical and status != closed
+    sort: created_at asc
+    display: queue
     action: ticket_edit
-    empty: "No open tickets"
+    empty: "No critical tickets open"
+
+  unassigned_queue:
+    source: Ticket
+    filter: assigned_to = null and status = open
+    sort: priority desc, created_at asc
+    display: queue
+    action: ticket_edit
+    empty: "Every open ticket has an assignee"
+
+  resolution_funnel:
+    source: Ticket
+    display: funnel_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No tickets"
 
 workspace agent_dashboard "Agent Dashboard":
-  # TR-51 / cycle 715 trial: managers land here and expected open queue + SLA
-  # signal first. Keep ticket work + lifecycle metrics above comment noise.
-  purpose: "Personal dashboard for support agents and managers"
+  # Personal agent view (assigned work + activity). Manager team home is
+  # manager_ops; agents keep this for "my WIP" after claiming from the queue.
+  purpose: "Personal dashboard for support agents"
   stage: "dual_pane_flow"
+  access: persona(agent, manager)
 
   # ── Work first: assigned + pending tickets ──────────────────────────
   my_assigned:
@@ -522,8 +597,30 @@ workspace agent_dashboard "Agent Dashboard":
 workspace my_tickets "My Tickets":
   purpose: "Customer view of their submitted tickets"
   stage: "simple_list"
+  access: persona(customer)
 
-  customer_tickets:
+  # ST-025 rollup — scope rules already limit counts to the current customer.
+  my_summary:
+    source: Ticket
+    display: metrics
+    aggregate:
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+      resolved: count(Ticket where status = resolved)
+    tones:
+      open: accent
+      resolved: positive
+
+  # Active cases as a queue (story-shaped), not agent triage chrome.
+  open_cases:
+    source: Ticket
+    filter: created_by = current_user and status != closed
+    sort: updated_at desc
+    display: queue
+    action: ticket_detail
+    empty: "You have no open tickets"
+
+  all_cases:
     source: Ticket
     filter: created_by = current_user
     sort: created_at desc
@@ -619,9 +716,9 @@ persona manager "Support Manager":
   description: "Team lead monitoring performance and handling escalations"
   goals: "Monitor team metrics and performance", "Identify bottlenecks in ticket flow", "Ensure quality and customer satisfaction"
   proficiency: expert
-  # TR-52 / cycle 717 trial: managers need the open team queue first (not a
-  # personal "my assigned" dashboard that is empty when seed assigns to agents).
-  default_workspace: ticket_queue
+  # Metrics-first team home (ST-027). Team work queue remains accessible via
+  # ticket_queue access: persona(agent, manager). Avoids TR-52 empty personal list.
+  default_workspace: manager_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
@@ -641,8 +738,8 @@ scenario escalation "Escalation Flow":
   as persona agent:
     start_route: "/queue?priority=critical"
   as persona manager:
-    # TR-52: manager default is team queue (not empty personal dashboard)
-    start_route: "/queue"
+    # ST-027: metrics-first manager ops (critical queue on the same surface)
+    start_route: "/app/workspaces/manager_ops"
 
 scenario backlog "Backlog Scenario":
   description: "High volume testing with many open tickets"
@@ -650,7 +747,7 @@ scenario backlog "Backlog Scenario":
   as persona agent:
     start_route: "/queue"
   as persona manager:
-    start_route: "/queue"
+    start_route: "/app/workspaces/manager_ops"
 
 # =============================================================================
 # TOP-LEVEL ENUM — shared severity vocabulary

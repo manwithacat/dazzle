@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Story-driven job workspaces (support_tickets keystone)** — compositions
+  map stories → personas → Hyperparts instead of list-first CRUD homes:
+  agent `ticket_queue` = metrics + `display: queue` + kanban; manager
+  `manager_ops` = team metrics + status_list SLA strip + critical/unassigned
+  queues + funnel; customer `my_tickets` = my metrics + open queue + history.
+  Playbook `docs/guides/story-to-composition.md`; map
+  `dev_docs/story-ux-map.md`; stem `story-driven-jobs`.
+- **HM ops blueprints** — gallery page motifs `ops-queue`, `triage-drawer`,
+  `manager-sla-strip` (metrics + queue + toast / queue + drawer / metrics +
+  status-list + critical queue).
 - **Toast phases E/F** (#1594, #1595) — person composition
   (`with_toast(..., actor_name=, actor_avatar=)` / `showToast` `actor: {name, avatar}`);
   swipe-to-dismiss; opt-in enter sound via shared `window.dzCue` (meta

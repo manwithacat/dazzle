@@ -2,12 +2,14 @@ module support_tickets.guides
 
 use support_tickets.core
 
-# Two onboarding guides — one per primary persona:
+# Three onboarding guides — one per primary job persona:
 #
 #   1. customer_onboarding: customer lands on my_tickets, walks them
 #      through filing their first ticket.
-#   2. agent_onboarding: agent/manager lands on ticket_queue, walks
-#      them through claiming + commenting on a ticket.
+#   2. agent_onboarding: agent lands on ticket_queue, walks them through
+#      claiming + commenting on a ticket.
+#   3. manager_onboarding: manager lands on manager_ops, walks them through
+#      metrics + critical queue.
 #
 # Admin personas are deliberately not targeted — admins know what
 # they're doing and overlays would just be friction.
@@ -53,16 +55,16 @@ guide customer_onboarding "Filing your first ticket":
   on_complete:
     redirect: surface.ticket_list
 
-# ─── Agent / manager journey ──────────────────────────────────────
+# ─── Agent journey ────────────────────────────────────────────────
 
 guide agent_onboarding "Working the support queue":
-  audience: persona = agent or persona = manager
+  audience: persona = agent
 
   step welcome_queue:
     kind: spotlight
     target: surface.ticket_list
     title: "Welcome to the queue"
-    body: "This is every open ticket assigned to you or your team. Click a ticket to start working it."
+    body: "Metrics show open pressure; the queue below is every open team ticket. Claim one to start working it."
     placement: center
     complete_on: dismiss
 
@@ -82,6 +84,32 @@ guide agent_onboarding "Working the support queue":
     complete_on: event entity.Comment.created
 
   step_order: [welcome_queue, claim_first, write_comment]
+
+  on_complete:
+    redirect: surface.ticket_list
+
+# ─── Manager journey ──────────────────────────────────────────────
+
+guide manager_onboarding "Running the support team":
+  audience: persona = manager
+
+  step welcome_ops:
+    kind: spotlight
+    target: surface.ticket_list
+    title: "Team ops at a glance"
+    body: "Start with metrics and the SLA strip, then work the critical and unassigned queues. The agent ticket queue stays available for full triage."
+    placement: center
+    complete_on: dismiss
+
+  step critical_first:
+    kind: popover
+    target: surface.ticket_list
+    title: "Critical and unassigned first"
+    body: "Reassign or escalate from the focused queues — do not hunt through a personal assigned list."
+    placement: bottom
+    complete_on: dismiss
+
+  step_order: [welcome_ops, critical_first]
 
   on_complete:
     redirect: surface.ticket_list

@@ -116,6 +116,7 @@ nav:
       - Implicitness Audit: reference/implicitness-audit.md
   - Guides:
       - Agent Workflow: guides/agent-workflow.md
+      - Story to Composition: guides/story-to-composition.md
       - Heroku Deployment: guides/heroku.md
       - Observability: guides/observability.md
       - Operations: guides/operations.md

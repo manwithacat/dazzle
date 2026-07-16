@@ -78,6 +78,7 @@ _No composition edges declared._
 **Used by blueprints**
 
 - `record-page` — blueprint
+- `triage-drawer` — blueprint
 
 **Related from (`composes_with`)**
 
@@ -144,8 +145,11 @@ _No composition edges declared._
 **Used by blueprints**
 
 - `dashboard` — blueprint
+- `manager-sla-strip` — blueprint
 - `master-detail` — blueprint
+- `ops-queue` — blueprint
 - `record-page` — blueprint
+- `triage-drawer` — blueprint
 
 **Related from (`composes_with`)**
 
@@ -205,8 +209,11 @@ _No composition edges declared._
 **Used by blueprints**
 
 - `auth` — blueprint
+- `manager-sla-strip` — blueprint
+- `ops-queue` — blueprint
 - `record-page` — blueprint
 - `saas-shell` — blueprint
+- `triage-drawer` — blueprint
 - `workspace-drawer` — blueprint
 
 **Related from (`composes_with`)**
@@ -244,6 +251,7 @@ _No composition edges declared._
 - `master-detail` — blueprint
 - `record-page` — blueprint
 - `saas-shell` — blueprint
+- `triage-drawer` — blueprint
 - `workspace-drawer` — blueprint
 
 **Related from (`composes_with`)**
@@ -290,8 +298,11 @@ _No composition edges declared._
 
 - `auth` — blueprint
 - `dashboard` — blueprint
+- `manager-sla-strip` — blueprint
 - `master-detail` — blueprint
+- `ops-queue` — blueprint
 - `record-page` — blueprint
+- `triage-drawer` — blueprint
 - `workspace-drawer` — blueprint
 
 ### `code`
@@ -362,6 +373,8 @@ _No composition edges declared._
 
 **Used by blueprints**
 
+- `ops-queue` — blueprint
+- `triage-drawer` — blueprint
 - `workspace-drawer` — blueprint
 
 **Related from (`composes_with`)**
@@ -569,7 +582,10 @@ _No composition edges declared._
 
 **Layer:** `L1`
 
-_No composition edges declared._
+**Used by blueprints**
+
+- `manager-sla-strip` — blueprint
+- `ops-queue` — blueprint
 
 ### `money`
 
@@ -639,7 +655,11 @@ _No composition edges declared._
 
 **Layer:** `L1`
 
-_No composition edges declared._
+**Used by blueprints**
+
+- `manager-sla-strip` — blueprint
+- `ops-queue` — blueprint
+- `triage-drawer` — blueprint
 
 ### `radar`
 
@@ -685,6 +705,7 @@ _No composition edges declared._
 **Used by blueprints**
 
 - `master-detail` — blueprint
+- `triage-drawer` — blueprint
 - `workspace-drawer` — blueprint
 
 **Related from (`composes_with`)**
@@ -717,16 +738,21 @@ _No composition edges declared._
 
 - `auth` — blueprint
 - `dashboard` — blueprint
+- `manager-sla-strip` — blueprint
 - `master-detail` — blueprint
+- `ops-queue` — blueprint
 - `record-page` — blueprint
 - `saas-shell` — blueprint
+- `triage-drawer` — blueprint
 - `workspace-drawer` — blueprint
 
 ### `status-list`
 
 **Layer:** `L1`
 
-_No composition edges declared._
+**Used by blueprints**
+
+- `manager-sla-strip` — blueprint
 
 ### `switch`
 
@@ -782,7 +808,9 @@ _No composition edges declared._
 
 **Layer:** `L2` · **Recipe:** `chrome-presentation` (presentation / chrome)
 
-_No composition edges declared._
+**Used by blueprints**
+
+- `ops-queue` — blueprint
 
 ### `toggle`
 

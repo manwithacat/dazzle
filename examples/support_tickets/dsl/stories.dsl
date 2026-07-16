@@ -61,7 +61,7 @@ story ST-018 "User creates a new Comment":
     - "New Comment is saved to database"
     - "User sees confirmation message"
 
-story ST-019 "Support Agent views all open tickets in a filterable list":
+story ST-019 "Support Agent works the open ticket queue":
   status: accepted
   persona: agent
   trigger: user_click
@@ -69,8 +69,9 @@ story ST-019 "Support Agent views all open tickets in a filterable list":
   given:
     - "Support Agent is on the ticket_queue workspace"
   then:
-    - "Support Agent sees all Tickets where status != closed"
-    - "Agent can filter by priority, category, and assigned_to"
+    - "Support Agent sees open Tickets in a review queue (status != closed)"
+    - "Queue metrics show open, in-progress, and critical counts"
+    - "Agent can act on a row (claim / transition / open detail)"
 
 story ST-020 "Support Agent picks up a ticket":
   status: accepted
@@ -153,10 +154,10 @@ story ST-027 "Support Manager reviews team performance":
   trigger: user_click
   entities: [Ticket, User]
   given:
-    - "Support Manager is on the agent_dashboard"
+    - "Support Manager is on the manager_ops workspace"
   then:
-    - "Manager sees counts of resolved vs open tickets per Agent"
-    - "Manager sees average resolution time across the team"
+    - "Manager sees open, in-progress, critical, and resolved ticket counts"
+    - "Manager sees the SLA readiness strip and critical / unassigned queues"
 
 story ST-028 "Support Manager reassigns a ticket":
   persona: manager
