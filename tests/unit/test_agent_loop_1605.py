@@ -65,6 +65,12 @@ def test_binding_wall_buckets_and_prove_pass() -> None:
     assert "ST-017" in pass_ids
     assert "pass_static" in wall["markdown"] or "Executed + pass_static" in wall["markdown"]
     assert counts["executed_pass_static"] >= 1
+    # Journey buckets: ST-017 fails journey (host auto_assign_task missing)
+    assert "executed_pass_journey" in wall["buckets"]
+    assert "executed_fail_journey" in wall["buckets"]
+    fail_j = {r["story_id"] for r in wall["buckets"]["executed_fail_journey"]}
+    assert "ST-017" in fail_j
+    assert "pass_journey" in wall["markdown"] or "fail_journey" in wall["markdown"]
 
 
 def test_agent_playbook_domain_logic() -> None:

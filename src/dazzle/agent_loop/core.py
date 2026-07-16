@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from dazzle.agent_loop.journey_prove import prove_stories_journey
+from dazzle.agent_loop.journey_prove import journey_prove_one, prove_stories_journey
 from dazzle.agent_loop.runtime_prove import (
     prove_stories_runtime,
     service_contract_diff_deep,
@@ -175,6 +175,8 @@ def binding_wall(
 
     - ``executed_pass_static`` — has ``executed_by`` and static prove passes
     - ``executed_fail_static`` — bound but target missing
+    - ``executed_pass_journey`` — static pass + journey graph ok
+    - ``executed_fail_journey`` — static pass but journey graph fails
     - ``narrative_only`` — honesty mode (not implemented path)
     - ``unbound_accepted`` — accepted without bind (validate hard-fail)
     - ``other`` — draft / non-accepted
@@ -185,6 +187,8 @@ def binding_wall(
     buckets: dict[str, list[dict[str, Any]]] = {
         "executed_pass_static": [],
         "executed_fail_static": [],
+        "executed_pass_journey": [],
+        "executed_fail_journey": [],
         "narrative_only": [],
         "unbound_accepted": [],
         "other": [],
@@ -204,6 +208,11 @@ def binding_wall(
             )
             if str(proved.get("result", "")).startswith("pass"):
                 buckets["executed_pass_static"].append(row)
+                jrow = _journey_row(project_root, appspec, s, proved)
+                if str(jrow.get("journey_result", "")).startswith("pass"):
+                    buckets["executed_pass_journey"].append(jrow)
+                elif str(jrow.get("journey_result", "")).startswith("fail"):
+                    buckets["executed_fail_journey"].append(jrow)
             else:
                 buckets["executed_fail_static"].append(row)
             continue
@@ -213,11 +222,57 @@ def binding_wall(
             buckets["other"].append(_story_row(s))
 
     counts = {k: len(v) for k, v in buckets.items()}
+    md = _binding_wall_markdown(buckets, counts)
+
+    return {
+        "view": "binding_wall",
+        "counts": counts,
+        "buckets": buckets,
+        "markdown": "\n".join(md),
+        "note": (
+            "pass_static = binding target exists. "
+            "pass_runtime = host module ready. "
+            "pass_journey = hub/open-via graph coherent (not Playwright)."
+        ),
+    }
+
+
+def _journey_row(
+    project_root: Path,
+    appspec: Any,
+    story: Any,
+    static_result: dict[str, Any],
+) -> dict[str, Any]:
+    j = journey_prove_one(project_root, appspec, story, static_result=static_result)
+    return _story_row(
+        story,
+        prove_result=static_result.get("result"),
+        prove_reason=static_result.get("reason"),
+        journey_result=j.get("result"),
+        journey_reason=j.get("reason"),
+    )
+
+
+def _binding_wall_markdown(
+    buckets: dict[str, list[dict[str, Any]]],
+    counts: dict[str, int],
+) -> list[str]:
     md: list[str] = [
         "Story wall — binding / prove (agent closed loop)",
         "",
-        f"Executed + pass_static ({counts['executed_pass_static']})",
+        f"Executed + pass_journey ({counts['executed_pass_journey']})",
     ]
+    for r in buckets["executed_pass_journey"]:
+        md.append(f"  [ok] {r['story_id']}  {r['title']}  → {r.get('executed_by')}")
+    md.append("")
+    md.append(f"Executed + fail_journey ({counts['executed_fail_journey']})")
+    for r in buckets["executed_fail_journey"]:
+        md.append(
+            f"  [!!] {r['story_id']}  {r['title']}  → {r.get('executed_by')} "
+            f"({r.get('journey_reason')})"
+        )
+    md.append("")
+    md.append(f"Executed + pass_static ({counts['executed_pass_static']})")
     for r in buckets["executed_pass_static"]:
         md.append(f"  [ok] {r['story_id']}  {r['title']}  → {r.get('executed_by')}")
     md.append("")
@@ -240,18 +295,7 @@ def binding_wall(
         md.append(f"other / draft ({counts['other']})")
         for r in buckets["other"]:
             md.append(f"  [~~] {r['story_id']}  {r['title']}  ({r['status']})")
-
-    return {
-        "view": "binding_wall",
-        "counts": counts,
-        "buckets": buckets,
-        "markdown": "\n".join(md),
-        "note": (
-            "pass_static = binding target exists. "
-            "pass_runtime = host module ready. "
-            "pass_journey = hub/open-via graph coherent (not Playwright)."
-        ),
-    }
+    return md
 
 
 def _coverage_buckets_light(appspec: Any) -> dict[str, Any]:
@@ -688,8 +732,8 @@ Agents must **map → bind → scaffold → prove --static**, not dual-lock chro
 - `dazzle prove story --runtime` / `--journey`
 
 ## Story wall (binding)
-- `dazzle agent wall` — buckets: executed+pass_static / executed+fail_static /
-  narrative_only / unbound_accepted
+- `dazzle agent wall` — buckets: pass_journey / fail_journey / pass_static /
+  fail_static / narrative_only / unbound_accepted
 - MCP `story(operation=get, view=wall)` includes the same binding buckets
 - `agent context` → `story_wall` for session start
 """
