@@ -422,6 +422,14 @@ def build_context(project_root: Path) -> dict[str, Any]:
             "evidence_kind": "static",
         },
     }
+    try:
+        from dazzle.agent_loop.runtime_prove import service_contract_diff_deep
+
+        payload["services"]["contract_diff_deep"] = service_contract_diff_deep(
+            project_root, appspec
+        )
+    except Exception as exc:
+        payload["services"]["contract_diff_deep"] = {"error": str(exc)[:200]}
     payload["next_steps"] = next_steps(payload)
     return payload
 
@@ -550,8 +558,14 @@ def prove_stories(
     project_root: Path,
     *,
     story_id: str | None = None,
+    mode: str = "static",
 ) -> dict[str, Any]:
-    """Static prove for one story or all accepted/bound."""
+    """Prove stories: ``static`` binding or ``runtime`` host readiness.
+
+    - ``static`` → ``pass_static`` / ``fail_static`` (target exists in DSL/host map)
+    - ``runtime`` → requires static pass, then host-module readiness
+      (``pass_runtime`` / ``fail_runtime`` / ``skip_runtime``). Not browser e2e.
+    """
     appspec = load_project_appspec(project_root)
     stories = list(getattr(appspec, "stories", None) or [])
     if story_id:
@@ -567,18 +581,38 @@ def prove_stories(
             or getattr(s, "narrative_only", False)
         ]
 
-    results = [_static_prove_one(project_root, appspec, s) for s in stories]
-    failed = [r for r in results if str(r.get("result", "")).startswith("fail")]
-    return {
-        "ok": not failed,
-        "operation": "prove",
-        "evidence_kind": "static",
-        "checked": len(results),
-        "passed": len(results) - len(failed),
-        "failed": len(failed),
-        "results": results,
-        "note": "pass_static means binding target exists — not that the user journey works",
-    }
+    static_results = [_static_prove_one(project_root, appspec, s) for s in stories]
+    mode_norm = (mode or "static").strip().lower()
+    if mode_norm in ("static", ""):
+        failed = [r for r in static_results if str(r.get("result", "")).startswith("fail")]
+        return {
+            "ok": not failed,
+            "operation": "prove",
+            "evidence_kind": "static",
+            "checked": len(static_results),
+            "passed": len(static_results) - len(failed),
+            "failed": len(failed),
+            "results": static_results,
+            "note": "pass_static means binding target exists — not that the user journey works",
+        }
+
+    if mode_norm in ("runtime", "host"):
+        from dazzle.agent_loop.runtime_prove import (
+            prove_stories_runtime,
+            service_contract_diff_deep,
+        )
+
+        runtime = prove_stories_runtime(
+            project_root, appspec, stories, static_results=static_results
+        )
+        runtime["static_summary"] = {
+            "passed": sum(1 for r in static_results if str(r.get("result", "")).startswith("pass")),
+            "failed": sum(1 for r in static_results if str(r.get("result", "")).startswith("fail")),
+        }
+        runtime["service_contract_diff"] = service_contract_diff_deep(project_root, appspec)
+        return runtime
+
+    return {"ok": False, "error": f"Unknown prove mode: {mode}. Use static|runtime"}
 
 
 PLAYBOOK_DOMAIN_LOGIC = """# Playbook: domain_logic closed loop (#1605)
@@ -604,8 +638,10 @@ Agents must **map → bind → scaffold → prove --static**, not dual-lock chro
 5. **Gate** — validate fails accepted+unbound
 
 ## Language
-- `pass_static` / `fail_static` — binding evidence
-- Runtime journey proof is future (`pass_runtime`) — do not over-read static pass
+- `pass_static` / `fail_static` — binding target exists in DSL/host map
+- `pass_runtime` / `fail_runtime` / `skip_runtime` — host module readiness
+  (service file, entrypoint, not scaffold-only). **Not** browser e2e.
+- `dazzle prove story --runtime` / `dazzle agent prove --runtime`
 
 ## Story wall (binding)
 - `dazzle agent wall` — buckets: executed+pass_static / executed+fail_static /

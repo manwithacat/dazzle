@@ -16,6 +16,10 @@
   `story_wall` buckets (executed+pass_static / fail_static / narrative_only /
   unbound). MCP story wall includes `binding_wall`. Services block gains
   light `contract_diff` (DSL vs host `.py`).
+- **#1605 runtime prove (host readiness)** — `dazzle prove story --runtime` /
+  `agent prove --runtime` → `pass_runtime` / `fail_runtime` / `skip_runtime`.
+  Checks host service modules (exists, entrypoint, not scaffold-only) for
+  process/service binds. Deep `service_contract_diff` on context. Not browser e2e.
 
 ### Fixed
 - **#1603 open-via unwraps hydrated FK dicts** — `_resolve_row_links` extracts

@@ -417,7 +417,7 @@
       "_static_prove_one": 46,
       "_story_row": 5,
       "binding_wall": 15,
-      "build_context": 11,
+      "build_context": 12,
       "build_playbook": 3,
       "context_json": 1,
       "dsl_service_names": 4,
@@ -426,11 +426,24 @@
       "playbook_json": 1,
       "process_summary": 11,
       "prove_json": 1,
-      "prove_stories": 13,
+      "prove_stories": 20,
       "runtime_truth": 5,
       "story_binding_summary": 9
     },
     "mi_rank": "B"
+  },
+  "dazzle/agent_loop/runtime_prove.py": {
+    "functions": {
+      "_find_function": 4,
+      "_fn_is_scaffold_only": 12,
+      "_process_step_services": 5,
+      "_read_service_ast": 2,
+      "inspect_host_service": 14,
+      "prove_stories_runtime": 10,
+      "runtime_prove_one": 54,
+      "service_contract_diff_deep": 23
+    },
+    "mi_rank": "A"
   },
   "dazzle/api_kb/__init__.py": {
     "functions": {
@@ -1183,7 +1196,7 @@
   },
   "dazzle/cli/prove.py": {
     "functions": {
-      "prove_story": 11
+      "prove_story": 14
     },
     "mi_rank": "A"
   },
@@ -15337,7 +15350,7 @@
     "functions": {
       "agent_context_handler": 1,
       "agent_playbook_handler": 4,
-      "agent_prove_handler": 2,
+      "agent_prove_handler": 3,
       "handle_agent": 8
     },
     "mi_rank": "A"

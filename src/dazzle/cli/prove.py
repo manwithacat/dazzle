@@ -23,39 +23,41 @@ def prove_story(
     static: bool = typer.Option(
         True,
         "--static/--runtime",
-        help="Static binding evidence (default). Runtime prove is not implemented.",
+        help="Static binding (default) or host-readiness runtime prove.",
     ),
     json_out: bool = typer.Option(False, "--json", help="Raw JSON only"),
 ) -> None:
-    """Static prove: binding target exists in appspec / host files.
+    """Prove story bindings (static) or host readiness (runtime).
 
-    Results use ``pass_static`` / ``fail_static`` — this is **not** a claim
-    that the user journey works end-to-end.
+    - ``--static``: ``pass_static`` / ``fail_static`` — target exists in DSL/host map
+    - ``--runtime``: ``pass_runtime`` / ``fail_runtime`` — host service module ready
+      (not scaffold-only). **Not** a browser e2e journey.
     """
-    if not static:
-        typer.echo(
-            "Runtime prove is not implemented yet. Use --static (default).",
-            err=True,
-        )
-        raise typer.Exit(2)
-
     from dazzle.agent_loop import prove_stories
 
     root = Path(manifest).resolve().parent
-    data = prove_stories(root, story_id=story_id)
+    mode = "static" if static else "runtime"
+    data = prove_stories(root, story_id=story_id, mode=mode)
     if json_out:
         typer.echo(json.dumps(data, indent=2, default=str))
     else:
         if data.get("error"):
             typer.echo(data["error"], err=True)
             raise typer.Exit(1)
+        kind = data.get("evidence_kind") or mode
         typer.echo(
-            f"prove --static: {data.get('passed')}/{data.get('checked')} passed "
-            f"(failed={data.get('failed')}) — binding evidence only"
+            f"prove --{kind}: {data.get('passed')}/{data.get('checked')} passed "
+            f"(failed={data.get('failed')}"
+            + (f", skipped={data.get('skipped')}" if data.get("skipped") is not None else "")
+            + ")"
         )
         for r in data.get("results") or []:
             res = r.get("result")
-            mark = "OK" if str(res).startswith("pass") else "FAIL"
+            mark = (
+                "OK"
+                if str(res).startswith("pass")
+                else ("SKIP" if str(res).startswith("skip") else "FAIL")
+            )
             typer.echo(f"  [{mark}] {r.get('story_id')}: {res} ({r.get('reason')})")
             for e in r.get("evidence") or []:
                 typer.echo(f"         evidence: {e}")

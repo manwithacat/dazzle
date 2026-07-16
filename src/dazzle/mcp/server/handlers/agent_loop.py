@@ -27,7 +27,8 @@ def agent_context_handler(project_root: Path, args: dict[str, Any]) -> str:
 @wrap_handler_errors
 def agent_prove_handler(project_root: Path, args: dict[str, Any]) -> str:
     story_id = args.get("story_id") or args.get("name")
-    payload = prove_stories(project_root, story_id=story_id)
+    mode = str(args.get("mode") or "static")
+    payload = prove_stories(project_root, story_id=story_id, mode=mode)
     return json.dumps(payload, indent=2, default=str)
 
 

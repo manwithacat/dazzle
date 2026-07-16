@@ -120,6 +120,28 @@ def test_prove_process_bound_story_static_naming() -> None:
     assert data.get("evidence_kind") == "static"
 
 
+def test_prove_runtime_process_missing_service_host() -> None:
+    """ST-017 process needs auto_assign_task host — simple_task lacks it → fail_runtime."""
+    data = prove_stories(SIMPLE, story_id="ST-017", mode="runtime")
+    assert data.get("evidence_kind") == "runtime"
+    r0 = data["results"][0]
+    assert r0["story_id"] == "ST-017"
+    # Static should have passed (process exists)
+    assert r0.get("static", {}).get("result") == "pass_static"
+    # Runtime fails: process step service has no host file
+    assert r0["result"] == "fail_runtime", r0
+    assert "auto_assign" in str(r0.get("reason", "")) or "not_ready" in str(r0.get("reason", ""))
+    assert "service_contract_diff" in data
+
+
+def test_inspect_host_service_ready_on_real_impl() -> None:
+    from dazzle.agent_loop.runtime_prove import inspect_host_service
+
+    insp = inspect_host_service(SIMPLE, "calculate_overdue_penalty", expected_inputs=["task_id"])
+    assert insp["ok"] is True
+    assert insp["exists"] is True
+
+
 def test_agent_tool_registered() -> None:
     from dazzle.mcp.server.tools_consolidated import get_consolidated_tools
 

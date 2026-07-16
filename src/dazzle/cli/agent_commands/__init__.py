@@ -68,17 +68,14 @@ def closed_loop_prove(
     static: bool = typer.Option(
         True,
         "--static/--runtime",
-        help="Static binding evidence (default). Runtime not implemented.",
+        help="Static binding (default) or host-readiness runtime prove.",
     ),
 ) -> None:
-    """#1605 static binding prove (alias of ``dazzle prove story --static``)."""
-    if not static:
-        typer.echo("Runtime prove is not implemented; use --static.", err=True)
-        raise typer.Exit(2)
+    """#1605 prove story — static binding or runtime host readiness."""
     from dazzle.agent_loop import prove_stories
 
     root = project.resolve()
-    data = prove_stories(root, story_id=story_id)
+    data = prove_stories(root, story_id=story_id, mode="static" if static else "runtime")
     typer.echo(json.dumps(data, indent=2, default=str))
     if not data.get("ok"):
         raise typer.Exit(1)
