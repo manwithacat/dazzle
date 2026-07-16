@@ -369,14 +369,14 @@ dazzle mcp check
 
 | Example | Complexity | What it demonstrates |
 |---------|-----------|---------------------|
-| `simple_task` | Beginner | 3 entities, state machine, personas, workspaces, access control |
-| `contact_manager` | Beginner | CRM with relationships and list/detail surfaces |
-| `support_tickets` | Intermediate | Ticket lifecycle with state machines and assignments |
-| `ops_dashboard` | Intermediate | Workspace stages and aggregate metrics |
-| `fieldtest_hub` | Advanced | Full-featured demo with integrations |
-| `invoice_ops` | Advanced | Invoicing lifecycle with processes, services, and four-eyes approvals |
+| `simple_task` | Beginner | 3 entities, state machine, personas, job workspaces (metrics + queues) |
+| `contact_manager` | Beginner | CRM dual-pane + favourites queues, not list-only home |
+| `support_tickets` | Intermediate | Ticket lifecycle; agent queue / manager ops / customer cases |
+| `ops_dashboard` | Intermediate | Command-centre stages: metrics, ack queue, status_list, charts |
+| `fieldtest_hub` | Advanced | Fleet metrics + triage/device attention queues; multi-entity density |
+| `invoice_ops` | Advanced | Approval / pay / dispute queues + four-eyes approvals |
 
-A curated ladder — the full set (12 apps, including `acme_billing`, `project_tracker`, `design_studio`, `hr_records`, and `llm_ticket_classifier`) lives in [`examples/`](examples/).
+A curated ladder — the full set (12 apps) lives in [`examples/`](examples/). Prefer **story → persona → workspace Hyperparts** over entity CRUD lists: [`docs/guides/story-to-composition.md`](docs/guides/story-to-composition.md).
 
 ---
 
