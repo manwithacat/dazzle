@@ -261,6 +261,7 @@ def _sidebar_from_nav_model(model: Any, ctx: PageContext) -> Sidebar:
         items=tuple(flat_items),
         groups=tuple(groups),
         header=Text(app_name),
+        show_sidebar_toggle=True,
     )
 
 
@@ -335,6 +336,7 @@ def _build_sidebar_from_ctx(ctx: PageContext) -> Sidebar:
         items=tuple(flat_items),
         groups=tuple(groups),
         header=Text(app_name),
+        show_sidebar_toggle=True,
     )
 
 

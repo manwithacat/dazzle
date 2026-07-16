@@ -7543,9 +7543,11 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   gap: var(--space-sm);
 }
 
-/* #1294 — sidebar toggle (hamburger) at the start of the topbar leading
- * area. Flips `data-sidebar` on `.app-shell` via alpine.js so the
- * sidebar nav is reachable + collapsible at every viewport. */
+/* #1294 / #1602 — sidebar toggle (hamburger).
+ * Two placements share data-sidebar-toggle:
+ *   --chrome: topbar leading (mobile always; desktop when sidebar closed)
+ *   --rail:   sidebar header (desktop when sidebar open only)
+ * CSS shows exactly one visible control per state/viewport. */
 .sidebar-toggle {
   display: inline-flex;
   align-items: center;
@@ -7558,10 +7560,40 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   background: transparent;
   color: var(--colour-text);
   cursor: pointer;
+  flex: none;
 }
 
 .sidebar-toggle:hover {
   background: var(--colour-surface);
+}
+
+/* Rail toggle: hidden by default (mobile + desktop-closed). */
+.sidebar-toggle--rail {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  /* Desktop open: collapse control lives on the sidebar chrome, not title row. */
+  [data-sidebar="open"] .sidebar-toggle--chrome {
+    display: none;
+  }
+  [data-sidebar="open"] .sidebar-toggle--rail {
+    display: inline-flex;
+  }
+}
+
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.sidebar__header-main {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .sidebar-toggle__icon,

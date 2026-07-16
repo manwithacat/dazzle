@@ -116,7 +116,12 @@ class Topbar:
     controller flips `data-dz-sidebar` on the `.dz-app-shell` root and
     persists the choice to the `dz_sidebar` cookie, so the sidebar nav is
     reachable (collapse on desktop, open/dismiss on narrow viewports).
-    `build_app_chrome_page` sets this True; standalone Topbars default off."""
+    `build_app_chrome_page` sets this True; standalone Topbars default off.
+
+    #1602 — on desktop with the sidebar open, CSS hides this topbar
+    (chrome) toggle in favour of the rail toggle emitted on
+    ``Sidebar.show_sidebar_toggle``; topbar toggle remains for mobile
+    and for reopening when the sidebar is closed."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,3 +141,7 @@ class Sidebar:
     items: tuple[NavItem, ...] = ()
     groups: tuple[NavGroup, ...] = ()
     header: object | None = None
+    show_sidebar_toggle: bool = False
+    """#1602 — when True, emit a rail-side collapse control in the
+    sidebar header (desktop-open placement). Paired with
+    ``Topbar.show_sidebar_toggle``; CSS shows only one at a time."""

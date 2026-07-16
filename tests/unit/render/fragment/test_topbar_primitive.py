@@ -137,6 +137,7 @@ def test_topbar_emits_sidebar_toggle_when_enabled() -> None:
     reachable/collapsible at every viewport (#1294)."""
     html = _render(Topbar(title="App", show_sidebar_toggle=True))
     assert "data-dz-sidebar-toggle" in html
+    assert "dz-sidebar-toggle--chrome" in html
     assert 'aria-controls="dz-app-sidebar"' in html
     assert 'type="button"' in html
 
@@ -144,3 +145,30 @@ def test_topbar_emits_sidebar_toggle_when_enabled() -> None:
 def test_topbar_no_sidebar_toggle_by_default() -> None:
     html = _render(Topbar(title="App"))
     assert "data-dz-sidebar-toggle" not in html
+
+
+def test_sidebar_rail_toggle_when_enabled() -> None:
+    """#1602 — rail placement on sidebar header for desktop-open collapse."""
+    from dazzle.render.fragment import Sidebar, Text
+
+    html = _render(Sidebar(header=Text("Brand"), show_sidebar_toggle=True))
+    assert "dz-sidebar-toggle--rail" in html
+    assert "data-dz-sidebar-toggle" in html
+    assert "dz-sidebar__header" in html
+
+
+def test_app_shell_chrome_and_rail_toggles() -> None:
+    """#1602 — chrome page emits both placements; CSS picks one per viewport."""
+    from dazzle.render.fragment import AppShell, Sidebar, Text, Topbar
+
+    html = _render(
+        AppShell(
+            sidebar=Sidebar(header=Text("App"), show_sidebar_toggle=True),
+            header=Topbar(title="App", show_sidebar_toggle=True),
+            body=Text("main"),
+            sidebar_state="open",
+        )
+    )
+    assert html.count("data-dz-sidebar-toggle") == 2
+    assert "dz-sidebar-toggle--chrome" in html
+    assert "dz-sidebar-toggle--rail" in html

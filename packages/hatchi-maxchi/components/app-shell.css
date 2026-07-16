@@ -70,9 +70,11 @@
   gap: var(--space-sm);
 }
 
-/* #1294 — sidebar toggle (hamburger) at the start of the topbar leading
- * area. Flips `data-dz-sidebar` on `.dz-app-shell` via dz-alpine.js so the
- * sidebar nav is reachable + collapsible at every viewport. */
+/* #1294 / #1602 — sidebar toggle (hamburger).
+ * Two placements share data-dz-sidebar-toggle:
+ *   --chrome: topbar leading (mobile always; desktop when sidebar closed)
+ *   --rail:   sidebar header (desktop when sidebar open only)
+ * CSS shows exactly one visible control per state/viewport. */
 .dz-sidebar-toggle {
   display: inline-flex;
   align-items: center;
@@ -85,10 +87,40 @@
   background: transparent;
   color: var(--colour-text);
   cursor: pointer;
+  flex: none;
 }
 
 .dz-sidebar-toggle:hover {
   background: var(--colour-surface);
+}
+
+/* Rail toggle: hidden by default (mobile + desktop-closed). */
+.dz-sidebar-toggle--rail {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  /* Desktop open: collapse control lives on the sidebar chrome, not title row. */
+  [data-dz-sidebar="open"] .dz-sidebar-toggle--chrome {
+    display: none;
+  }
+  [data-dz-sidebar="open"] .dz-sidebar-toggle--rail {
+    display: inline-flex;
+  }
+}
+
+.dz-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-block-end: 1px solid var(--colour-border);
+}
+
+.dz-sidebar__header-main {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .dz-sidebar-toggle__icon,

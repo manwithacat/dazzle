@@ -325,6 +325,23 @@ class _RenderShellMixin:
         text = ctx.escape(s.text)
         return f'<a href="{target}" class="dz-skip-link">{text}</a>'
 
+    @staticmethod
+    def _sidebar_toggle_button(*, placement: str) -> str:
+        """Hamburger control for app-shell sidebar (#1294 / #1602).
+
+        ``placement`` is ``chrome`` (topbar — mobile + reopen when closed)
+        or ``rail`` (sidebar header — desktop when open). Both share
+        ``data-dz-sidebar-toggle`` so dz-app-shell.js can flip state.
+        """
+        return (
+            f'<button type="button" '
+            f'class="dz-sidebar-toggle dz-sidebar-toggle--{placement}" '
+            f'data-dz-sidebar-toggle aria-controls="dz-app-sidebar" '
+            f'aria-expanded="true" aria-label="Toggle navigation">'
+            f'<span class="dz-sidebar-toggle__icon" aria-hidden="true"></span>'
+            f"</button>"
+        )
+
     def _emit_topbar(self, t: Topbar, ctx: RenderContext) -> str:
         """`<div class="dz-topbar">` with leading / title / trailing.
 
@@ -338,20 +355,11 @@ class _RenderShellMixin:
         trailing_html = (
             self._emit(t.trailing, ctx) if t.trailing is not None else ""  # type: ignore[arg-type]
         )
-        # #1294 — built-in sidebar toggle. Emitted at the start of the
-        # leading area so the sidebar nav is reachable (and collapsible)
-        # on every app-shell page. The HM controller (dz-app-shell.js) wires
-        # the click → flip `data-dz-sidebar` on `.dz-app-shell` + persist
-        # the `dz_sidebar` cookie; aria-expanded is synced on load + click.
-        toggle_html = ""
-        if t.show_sidebar_toggle:
-            toggle_html = (
-                '<button type="button" class="dz-sidebar-toggle" '
-                'data-dz-sidebar-toggle aria-controls="dz-app-sidebar" '
-                'aria-expanded="true" aria-label="Toggle navigation">'
-                '<span class="dz-sidebar-toggle__icon" aria-hidden="true"></span>'
-                "</button>"
-            )
+        # #1294 / #1602 — chrome toggle in topbar leading (mobile + desktop
+        # when sidebar closed). Rail toggle lives on Sidebar when enabled.
+        toggle_html = (
+            self._sidebar_toggle_button(placement="chrome") if t.show_sidebar_toggle else ""
+        )
         title_html = ""
         if t.title:
             title_html = f'<span class="dz-topbar-title-text">{ctx.escape(t.title)}</span>'
@@ -414,9 +422,17 @@ class _RenderShellMixin:
         """`<nav class="dz-sidebar">` — header (free Fragment slot) +
         flat items (`<ul>`) + groups (`<details>` blocks)."""
         parts: list[str] = ['<nav class="dz-sidebar" aria-label="Primary">']
-        if s.header is not None:
+        # #1602 — rail collapse control in the header row (desktop-open).
+        rail_toggle = self._sidebar_toggle_button(placement="rail") if s.show_sidebar_toggle else ""
+        if s.header is not None or rail_toggle:
+            header_main = (
+                self._emit(s.header, ctx) if s.header is not None else ""  # type: ignore[arg-type]
+            )
             parts.append(
-                f'<div class="dz-sidebar__header">{self._emit(s.header, ctx)}</div>'  # type: ignore[arg-type]
+                f'<div class="dz-sidebar__header">'
+                f'<div class="dz-sidebar__header-main">{header_main}</div>'
+                f"{rail_toggle}"
+                f"</div>"
             )
         if s.items:
             items_html = "".join(self._emit_nav_item(item, ctx) for item in s.items)

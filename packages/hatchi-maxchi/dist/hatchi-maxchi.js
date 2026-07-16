@@ -3313,8 +3313,9 @@
  * Contract:
  *   - root:    `.app-shell` carries `data-sidebar="open|closed"`
  *              (server-rendered initial state).
- *   - toggle:  `[data-sidebar-toggle]` (the topbar hamburger) flips the
- *              state and mirrors it to aria-expanded.
+ *   - toggle:  `[data-sidebar-toggle]` (chrome and/or rail hamburgers)
+ *              flips the state and mirrors it to aria-expanded on every
+ *              matching control (#1602 dual placement).
  *   - persist: the `dz_sidebar` cookie (1y) — a cookie, not localStorage,
  *              so the SERVER renders the correct state on first paint.
  */
@@ -3337,8 +3338,11 @@
     return m ? m[1] : null;
   }
   function syncToggle(state) {
-    var t = document.querySelector("[data-sidebar-toggle]");
-    if (t) t.setAttribute("aria-expanded", state === "open" ? "true" : "false");
+    var expanded = state === "open" ? "true" : "false";
+    var nodes = document.querySelectorAll("[data-sidebar-toggle]");
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].setAttribute("aria-expanded", expanded);
+    }
   }
   function apply(state) {
     var el = shell();

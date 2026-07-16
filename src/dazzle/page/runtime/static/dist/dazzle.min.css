@@ -1,4 +1,4 @@
-/* dazzle v0.104.1 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.104.3 | MIT License | https://github.com/manwithacat/dazzle */
 @layer reset, vendor, tokens, base, utilities, components, overrides;
 @layer reset {
 *,
@@ -5314,9 +5314,33 @@ border-radius: var(--radius-md);
 background: transparent;
 color: var(--colour-text);
 cursor: pointer;
+flex: none;
 }
 .dz-sidebar-toggle:hover {
 background: var(--colour-surface);
+}
+.dz-sidebar-toggle--rail {
+display: none;
+}
+@media (min-width: 64rem) {
+[data-dz-sidebar="open"] .dz-sidebar-toggle--chrome {
+display: none;
+}
+[data-dz-sidebar="open"] .dz-sidebar-toggle--rail {
+display: inline-flex;
+}
+}
+.dz-sidebar__header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: var(--space-sm);
+padding: var(--space-md);
+border-block-end: 1px solid var(--colour-border);
+}
+.dz-sidebar__header-main {
+flex: 1 1 0;
+min-width: 0;
 }
 .dz-sidebar-toggle__icon,
 .dz-sidebar-toggle__icon::before,
@@ -5432,9 +5456,19 @@ display: flex;
 flex-direction: column;
 transform: translateX(-100%);
 transition: transform var(--duration-base) var(--ease-out);
+overflow-x: hidden;
+overflow-y: auto;
+overscroll-behavior: contain;
 }
 [data-dz-sidebar="open"] .dz-sidebar {
 transform: translateX(0);
+}
+.dz-sidebar-brand,
+.dz-sidebar__header {
+position: sticky;
+inset-block-start: 0;
+z-index: 1;
+background: var(--colour-surface);
 }
 .dz-sidebar-brand {
 padding: var(--space-md);
