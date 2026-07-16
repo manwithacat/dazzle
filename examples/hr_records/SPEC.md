@@ -171,8 +171,15 @@ On the effective date:
 
 ## Workspace Surfaces
 
+### Where work happens
+
+Job homes lead with **metrics**, then the directory/salary work — not a bare
+staff table as the only region.
+
 ### Workspace: `staff_directory` (default landing for hr_admin + manager)
+- **Headcount metrics** first (people, departments, roles)
 - **Staff list** — current employees (active Employment), columns: name, role, department, manager
+- Recent starters / directory lists as supporting regions
 - **Filters**: by department, by role level, by "starting in last 90 days", by "ended in last 90 days"
 - **Sort**: by name, by tenure (started_at desc), by department
 - For `manager` persona: scoped to own reports
@@ -189,14 +196,16 @@ On the effective date:
 - For each department: count of currently-active employees
 - For each currently-active person: their place in the manager chain (drill-down via ManagerLink)
 
-### Workspace: `compensation_review` (finance + hr_admin only)
+### Workspace: `compensation_review` (finance + hr_admin only — finance home)
+- **Compensation metrics** strip first (totals / band signals)
 - Total annual cost-of-employment, broken down by department, by role level
+- Active salary list for band analysis
 - Average salary by role level + department (cross-tab)
 - Distribution histogram per role level (boxplot would be nice but not in scope)
 - Compare current totals to "12 months ago" totals using historical Salary rows
 
 ### Workspace: `time_machine` (hr_admin only)
-- Date picker (the as-of input)
+- Date picker (the as-of input); append `?as_of=YYYY-MM-DD` for re-projection
 - When a date is picked, the staff_directory + org_chart re-project to that date
 - The picker defaults to today (giving the current state); choosing a past date is the historical projection
 

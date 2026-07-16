@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **support_tickets + contact_manager SPEC.md** — product briefs lead with job
   homes (ticket queue / manager ops / my tickets; home metrics + favourites queue)
   instead of list-first dashboards.
+- **ops_dashboard + hr_records SPEC.md** — Command Center documents ack_queue /
+  metrics / task_inbox; HR workspaces lead with headcount/compensation metrics.
 
 ### Fixed
 - **PreToolUse hooks under system Python 3.9 / multi-harness payloads** —

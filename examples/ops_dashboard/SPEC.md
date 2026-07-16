@@ -91,13 +91,21 @@ The COMMAND_CENTER archetype provides a dense, expert-focused layout optimized f
 
 **Purpose**: Real-time operations monitoring and incident response
 
+**Where work happens** (job-shaped first, not a bare alert table):
+
+- **Health metrics** strip (estate counts / health summary)
+- **Acknowledgement queue** (`ack_queue`) for unacked alerts by severity
+- Live alert feed, systems grid/kanban, status_list readiness, and charts
+- **Task inbox** for multi-source “what needs me” ops work
+- Secondary: Incident Review (side-by-side pairs) and Incident Response wizard
+
 **Signals**:
 
 | Signal | Type | Purpose |
 |--------|------|---------|
-| `active_alerts` | Item List | Unacknowledged alerts sorted by severity |
-| `system_status` | Table | All systems with current health status |
-| `health_summary` | KPI | Aggregate metrics (total, healthy, critical counts) |
+| `ack_queue` / unacked alerts | Queue | Unacknowledged alerts sorted by severity |
+| `system_status` | Table / grid | All systems with current health status |
+| `health_summary` | Metrics | Aggregate metrics (total, healthy, critical counts) |
 
 **Engine Hint**: `command_center` (forces archetype selection)
 
