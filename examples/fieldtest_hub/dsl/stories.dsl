@@ -223,11 +223,12 @@ story ST-040 "Manager reviews team workload":
   status: accepted
   persona: manager
   trigger: user_click
-  entities: [Task, Tester]
+  entities: [Task, Tester, Device]
   given:
     - "Manager is on the engineering_dashboard workspace"
   then:
-    - "Manager sees open Tasks in a work queue and fleet metrics"
+    - "Manager sees fleet metrics and a non-active device attention queue without leaving the dashboard"
+    - "Manager sees open Tasks in a work queue"
     - "Manager can reassign a Task from one Engineer to another"
 
 story ST-041 "Manager tracks release progress":
