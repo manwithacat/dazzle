@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **contact_manager**: home metrics + favourites queue; contacts dual-pane
     gains favourites queue strip (ST-007).
   - **hr_records**: staff_directory + compensation_review metrics strips.
+  - **invoice_ops**: finance_ops metrics + approval/pay/dispute **queues**
+    (was list-named-queue); persona defaults to finance_ops.
+  - **acme_billing**: portfolio metrics + invoice queue; persona defaults.
   - **support_tickets** (prior): agent queue / manager_ops / customer cases.
 - **HM ops blueprints** — gallery page motifs `ops-queue`, `triage-drawer`,
   `manager-sla-strip` (metrics + queue + toast / queue + drawer / metrics +

@@ -245,6 +245,25 @@ workspace billing "Acme Billing":
   # to all authenticated users).
   access: persona(admin, org_owner, auditor)
 
+  # Metrics-first portfolio (story-to-composition) before dense entity lists.
+  portfolio_metrics:
+    source: Invoice
+    display: metrics
+    aggregate:
+      organizations: count(Organization)
+      projects: count(Project)
+      invoices: count(Invoice)
+      members: count(Membership)
+    tones:
+      invoices: accent
+
+  open_invoices:
+    source: Invoice
+    sort: created_at desc
+    limit: 15
+    display: queue
+    empty: "No invoices found"
+
   organizations:
     source: Organization
     display: list
@@ -256,12 +275,6 @@ workspace billing "Acme Billing":
     display: list
     sort: name asc
     empty: "No projects found"
-
-  invoices:
-    source: Invoice
-    display: list
-    sort: created_at desc
-    empty: "No invoices found"
 
   memberships:
     source: Membership

@@ -4,16 +4,19 @@ persona admin "Administrator":
   description: "Platform administrator — full cross-org access (break-glass)"
   goals: "Manage organizations", "Audit access"
   proficiency: expert
+  default_workspace: billing
 
 persona org_owner "Organization Owner":
   description: "Owns one organization — full access within that org only"
   goals: "Manage projects", "Review invoices"
   proficiency: expert
+  default_workspace: billing
 
 persona auditor "Auditor":
   description: "Read-only reviewer scoped to one organization"
   goals: "Review invoices and projects", "Verify compliance"
   proficiency: intermediate
+  default_workspace: billing
 
 persona project_member "Project Member":
   description: "Works on assigned projects only"

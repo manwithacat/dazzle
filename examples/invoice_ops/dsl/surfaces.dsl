@@ -195,8 +195,25 @@ surface lineitem_create "New Line Item":
 # The app's home surface for fleet capture rounds: a persona-homed
 # workspace (the framework-injected `_platform_admin` is gated to
 # framework roles and is never a capture target).
+# Story-driven (docs/guides/story-to-composition.md): metrics + review
+# queues — not bare invoice lists named "queue".
 workspace finance_ops "Finance Operations":
   purpose: "Day-to-day invoice throughput — pipeline, payment health, and the queues that need a person"
+  access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
+
+  ops_metrics:
+    source: Invoice
+    display: metrics
+    aggregate:
+      submitted: count(Invoice where status = submitted)
+      approved: count(Invoice where status = approved)
+      disputed: count(Invoice where status = disputed)
+      paid: count(Invoice where status = paid)
+    tones:
+      submitted: warning
+      disputed: destructive
+      paid: positive
+      approved: accent
 
   invoice_pipeline:
     source: Invoice
@@ -206,14 +223,25 @@ workspace finance_ops "Finance Operations":
       count: count(Invoice)
     empty: "No invoices yet"
 
+  # Approver job — review queue with inline transitions when available.
   awaiting_approval:
     source: Invoice
     filter: status = submitted
     sort: amount desc
-    limit: 10
-    display: list
+    limit: 15
+    display: queue
     action: invoice_detail
     empty: "Nothing awaiting approval"
+
+  # Finance job — settle approved invoices.
+  ready_to_pay:
+    source: Invoice
+    filter: status = approved
+    sort: amount desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "Nothing ready to pay"
 
   payment_health:
     source: PaymentAttempt
@@ -227,7 +255,7 @@ workspace finance_ops "Finance Operations":
     source: Invoice
     filter: status = disputed
     sort: updated_at desc
-    limit: 10
-    display: list
+    limit: 15
+    display: queue
     action: invoice_detail
     empty: "No disputes open"

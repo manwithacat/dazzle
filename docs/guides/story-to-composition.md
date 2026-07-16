@@ -137,3 +137,12 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 
 - HR/manager → `staff_directory` = headcount metrics + directory lists
 - Finance → `compensation_review` = compensation metrics + salary list
+
+**invoice_ops**:
+
+- Approver/finance → `finance_ops` = metrics + awaiting_approval / ready_to_pay /
+  disputed **queues** + funnel + payment chart
+
+**acme_billing**:
+
+- Admin/owner/auditor → `billing` = portfolio metrics + invoice queue + entity lists
