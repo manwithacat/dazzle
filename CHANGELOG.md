@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics / task_inbox; HR workspaces lead with headcount/compensation metrics.
 
 ### Fixed
+- **List datetime cells humanised (UK)** — `field_kind_to_col_type` keeps
+  `datetime` distinct from `date`; list rows format timestamps as
+  `16 Jul 2026 01:30` instead of raw ISO/Postgres timestamptz. Inline edit
+  accepts datetime columns. Regression: `TestFieldKindToColType` + data-row
+  characterization.
 - **#1596 App shell dual-lock sidebar scroll** — long persona nav under
   `nav.dz-sidebar` (no `.dz-sidebar-nav` wrapper) now scrolls on the panel;
   sticky brand/header while scrolling. Regression:
