@@ -42,8 +42,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa trial` | CLI | trials | 715 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 736 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 726 | USED |
-| `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 722 | USED |
-| `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 722 | USED |
+| `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 742 | USED |
+| `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 742 | USED |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 713 | USED |
 | **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 735 | USED |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 728 | USED |
@@ -97,6 +97,12 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 742 (2026-07-16) hm-convergence STALE-clear (taste/component vision).**
+> `hm_visual_smoke --dazzle-emit` PASS; subscription host-Read scores mean **7.4**
+> (billing=subscription-host-read; ship_gate=false). Stamped taste-panel +
+> component-vision **USED@742**. CI repair HEAD `2a34139a0` still in_progress;
+> local catalogue+HM gate tests green. Explore **64/100**.
 
 > **Cycle 741 (2026-07-16) test-suite STALE-clear.** `dazzle sentinel mutate
 > --suite security` **PASS** — all 5 modules ≥ floor (crypto 83%, rbac 71%,
