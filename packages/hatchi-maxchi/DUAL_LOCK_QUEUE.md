@@ -15,7 +15,6 @@ Consumed by: `/improve hm-convergence` → strategy `dual_lock_expand`.
 
 | # | stem | kind | pri | dual-lock | contract | css | gallery | emitters | action |
 |--:|------|------|----:|-----------|:--------:|:---:|:-------:|----------|--------|
-| 1 | `toast` | contract_none | 40 | none | yes | yes | yes | `—` | DOM-only dual-lock if a stable Dazzle emission path exists; else schema+DOM once an ingest model lands; else document BLOCKED (gallery-only) in backlog. |
 
 ## Kind legend
 
@@ -26,4 +25,4 @@ Consumed by: `/improve hm-convergence` → strategy `dual_lock_expand`.
 | `emitter_uncontracted` | FragmentRenderer `_emit_*` ready, no contract |
 | `gallery_uncontracted` | Registry Hyperpart without `contracts=` |
 
-**Queue depth:** 1 candidates (showing 1).
+**Queue depth:** 0 candidates (showing 0).

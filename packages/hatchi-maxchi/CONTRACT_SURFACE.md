@@ -142,7 +142,7 @@ blast radius (who embeds / refuses this part).
 | `text` | `text` | `.dz-text` | .dz-text[] | — |
 | `time_series` | `time-series` | `[data-dz-time-series]` | [data-dz-time-series][data-dz-time-series=present] | TimeSeries(empty_message:str:opt; label:str:opt; legend_html:str:opt; peak_display:str:opt; points:list[TimeSeriesPoint]:opt; series:list[TimeSeriesLayer]:opt; svg_html:str:opt; view:Literal:opt); TimeSeriesLayer(name:str:req; points:list[TimeSeriesPoint]:opt); TimeSeriesPoint(label:str:req; value:float:opt) |
 | `timeline` | `timeline` | `[data-dz-timeline-item]` | [data-dz-timeline-item][data-dz-timeline-item=present] | TimelineEvent(bullet_html:str:opt; date_label:str:opt; fields_html:str:opt; title:str:req) |
-| `toast` | `toast` | `.dz-toast` | .dz-toast[data-dz-remove-after=present, data-dz-toast-level=one_of:info\|success\|warning\|error] | — |
+| `toast` | `toast` | `[data-dz-toast-level]` | [data-dz-toast-level][data-dz-remove-after=present, data-dz-toast-level=one_of:info\|success\|warning\|error] | — |
 | `toggle` | `toggle` | `[data-dz-toggle]` | [data-dz-toggle][data-dz-toggle=present] | — |
 | `toggle_group` | `toggle_group` | `.dz-toggle-group` | .dz-toggle-group[] | — |
 | `toolbar` | `toolbar` | `.dz-toolbar` | .dz-toolbar[] | — |

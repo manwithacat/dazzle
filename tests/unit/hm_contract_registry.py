@@ -734,6 +734,11 @@ DOM_ONLY_CONTRACTS: list[tuple[str, str, bool]] = [
         "tooltip",
         True,
     ),  # HM gallery tooltip (no FragmentRenderer emit yet)
+    (
+        "contracts/toast.py",
+        "toast",
+        True,
+    ),  # response_helpers.with_toast OOB toast unit (shell host)
 ]
 
 # Root-only modules without a simple FragmentRenderer / page fixture yet.

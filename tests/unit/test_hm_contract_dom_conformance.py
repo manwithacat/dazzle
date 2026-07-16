@@ -1996,6 +1996,20 @@ def _emit_root_only_html(part_id: str) -> str:
             card_id="fixture",
             eager=True,
         )
+    if part_id == "toast":
+        # Stable Dazzle emission: OOB toast unit from with_toast (shell host).
+        from starlette.responses import HTMLResponse
+
+        from dazzle.http.runtime.response_helpers import with_toast
+
+        resp = with_toast(
+            HTMLResponse(""),
+            "Your changes are live.",
+            "success",
+            title="Saved",
+            duration="5s",
+        )
+        return bytes(resp.body).decode("utf-8")
     raise AssertionError(f"no fixture builder for root-only part {part_id!r}")
 
 
