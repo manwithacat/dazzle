@@ -108,7 +108,11 @@
 /* ── controllers/cue.js ── */
 /** @ts-check */
 /**
+ * HYPERPART: toast (extension)
+ *
  * cue.js — opt-in UI cues (sound) for Hyperparts.
+ * Claimed as a toast extension (first consumer); reusable by confirm /
+ * command via the same opt-in stem (chrome-cue-opt-in).
  *
  * Parallel to Dazzle's haptic gate (`meta[name=haptic]` / window.dzHaptic):
  * a **product must opt in** before any sound plays. Controllers call
