@@ -426,9 +426,10 @@ workspace ticket_queue "Ticket Queue":
   access: persona(agent, manager)
 
   # Job primary: at-a-glance pressure (tones on critical).
+  # `summary` is a metrics alias — keep one fleet consumer for coverage gate.
   queue_metrics:
     source: Ticket
-    display: metrics
+    display: summary
     aggregate:
       total_open: count(Ticket where status = open)
       in_progress: count(Ticket where status = in_progress)
