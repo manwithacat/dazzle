@@ -10,10 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- **PreToolUse hooks under Grok / system Python 3.9** — `file_protection` no
-  longer crashes (exit 1 spam) on every `search_replace`; hooks accept Grok
-  camelCase payloads + tool names; `run_hook.sh` prefers project venv; DSL
-  post-hook finds `dazzle.toml` (not only legacy `dazzle.yaml`).
+- **PreToolUse hooks under system Python 3.9 / multi-harness payloads** —
+  `file_protection` no longer crashes (exit 1 spam) on every edit; hooks accept
+  camelCase + snake_case tool payloads; `run_hook.sh` prefers project venv; DSL
+  post-hook finds `dazzle.toml` (not only legacy `dazzle.yaml`). Regression:
+  `tests/unit/test_claude_pretool_hooks.py`.
 
 ### Added
 - **Story-driven job workspaces — fleet lift** — playbook
@@ -30,13 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **acme_billing**: portfolio metrics + invoice queue; persona defaults.
   - **design_studio**: portfolio + gallery metrics; review queue filtered to
     `status = review`; persona defaults (reviewer → asset_gallery).
-  - **fieldtest_hub**: engineering metrics + triage/critical/task queues
-    (ST-037–041); tester personal metrics + device/issue/task queues.
+  - **fieldtest_hub**: engineering metrics + triage/critical/task queues +
+    non-active **device attention** queue (TR-35); tester personal queues.
   - **llm_ticket_classifier**: supervisor metrics + open queue; agent ticket
     queue for non-closed work.
   - **domain_join_co**: home metrics + join readiness status_list +
     announcements; persona defaults.
   - **support_tickets** (prior): agent queue / manager_ops / customer cases.
+  - Fleet `stems/story-driven-jobs.md` on all teaching examples; README ladder
+    points at the composition guide.
 - **HM ops blueprints** — gallery page motifs `ops-queue`, `triage-drawer`,
   `manager-sla-strip` (metrics + queue + toast / queue + drawer / metrics +
   status-list + critical queue).
