@@ -617,6 +617,78 @@ def _wrap_with_response_contract(
     return contract_handler
 
 
+def _prepare_override_handler(
+    override: RouteOverrideDescriptor,
+    *,
+    page_ctx_builder: Callable[..., Any] | None,
+) -> Callable[..., Any]:
+    """Apply policy gate + response contract wrappers for one override."""
+    # v0.71.24 (#1126): when the override declared `# dazzle:implements`,
+    # wrap so permit + scope run against the row at `kwargs[via]` first.
+    handler = override.handler
+    if override.implements_entity:
+        handler = _wrap_with_policy_gate(
+            handler,
+            entity=override.implements_entity,
+            op=override.implements_op or "",
+            via=override.implements_via or "",
+        )
+    # #1392 item 2 — response contract outside the policy gate (RBAC first).
+    # Applied when a kind is declared, or for an undeclared GET under /app.
+    if override.returns_kind is not None or (
+        override.method == "GET" and override.path.startswith("/app")
+    ):
+        handler = _wrap_with_response_contract(
+            handler,
+            returns_kind=override.returns_kind,
+            path=override.path,
+            page_ctx_builder=page_ctx_builder,
+        )
+    return handler
+
+
+def _register_one_override(
+    override: RouteOverrideDescriptor,
+    method_map: dict[str, Callable[..., Any]],
+    *,
+    page_ctx_builder: Callable[..., Any] | None,
+) -> str | None:
+    """Register one override on the router.
+
+    Returns ``None`` on success, or a failure message (already logged).
+    """
+    decorator = method_map.get(override.method)
+    if not decorator:
+        msg = f"{override.method} {override.path} ({override.source_path}): unsupported HTTP method"
+        logger.error("Route override registration failed: %s", msg)
+        return msg
+    try:
+        handler = _prepare_override_handler(override, page_ctx_builder=page_ctx_builder)
+        decorator(override.path)(handler)
+    except Exception as exc:  # noqa: BLE001 — isolate one bad override (#1601)
+        msg = (
+            f"{override.method} {override.path} ({override.source_path}): "
+            f"{type(exc).__name__}: {exc}"
+        )
+        logger.error(
+            "Route override registration failed: %s %s from %s — %s: %s",
+            override.method,
+            override.path,
+            override.source_path,
+            type(exc).__name__,
+            exc,
+            exc_info=True,
+        )
+        return msg
+    logger.info(
+        "Registered route override: %s %s -> %s",
+        override.method,
+        override.path,
+        override.source_path.name,
+    )
+    return None
+
+
 def build_override_router(
     routes_dir: Path, *, page_ctx_builder: Callable[..., Any] | None = None
 ) -> APIRouter | None:
@@ -651,69 +723,16 @@ def build_override_router(
     registered = 0
 
     for override in overrides:
-        decorator = method_map.get(override.method)
-        if not decorator:
-            msg = (
-                f"{override.method} {override.path} ({override.source_path}): "
-                f"unsupported HTTP method"
-            )
-            logger.error("Route override registration failed: %s", msg)
-            failures.append(msg)
-            continue
-        try:
-            # v0.71.24 (#1126): when the override declared
-            # `# dazzle:implements`, wrap the handler so permit + scope
-            # evaluation runs against the row at `kwargs[via]` before
-            # the user's code sees the request. Otherwise register the
-            # bare handler — legacy override behaviour preserved.
-            handler = override.handler
-            if override.implements_entity:
-                handler = _wrap_with_policy_gate(
-                    handler,
-                    entity=override.implements_entity,
-                    op=override.implements_op or "",
-                    via=override.implements_via or "",
-                )
-            # #1392 item 2 — apply the response contract OUTSIDE the policy gate (RBAC
-            # runs first, then chrome/shape the result). Applied when a kind is declared,
-            # or for an undeclared GET under /app (the advisory nudge needs that case).
-            if override.returns_kind is not None or (
-                override.method == "GET" and override.path.startswith("/app")
-            ):
-                handler = _wrap_with_response_contract(
-                    handler,
-                    returns_kind=override.returns_kind,
-                    path=override.path,
-                    page_ctx_builder=page_ctx_builder,
-                )
-            decorator(override.path)(handler)
+        err = _register_one_override(override, method_map, page_ctx_builder=page_ctx_builder)
+        if err is None:
             registered += 1
-            logger.info(
-                "Registered route override: %s %s -> %s",
-                override.method,
-                override.path,
-                override.source_path.name,
-            )
-        except Exception as exc:  # noqa: BLE001 — isolate one bad override
-            msg = (
-                f"{override.method} {override.path} ({override.source_path}): "
-                f"{type(exc).__name__}: {exc}"
-            )
-            logger.error(
-                "Route override registration failed: %s %s from %s — %s: %s",
-                override.method,
-                override.path,
-                override.source_path,
-                type(exc).__name__,
-                exc,
-                exc_info=True,
-            )
-            failures.append(msg)
+        else:
+            failures.append(err)
 
     if failures and not _route_override_soft():
         raise RouteOverrideRegistrationError(failures)
 
-    if failures and _route_override_soft():
+    if failures:
         logger.error(
             "Route override soft mode: continuing with %d registered, %d failed "
             "(DAZZLE_ROUTE_OVERRIDE_SOFT)",

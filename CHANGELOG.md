@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+### Fixed
+- **CI repair after #1601** — lower cyclomatic complexity of `build_override_router` via helpers; burn-down deferred-import baseline for `seed_runner` (0) and `server.py` (50).
+
 ## [0.104.3] - 2026-07-16
 
 ### Fixed
