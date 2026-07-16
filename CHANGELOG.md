@@ -7,6 +7,12 @@
   of `ci-fast` / `ci-core` and is mandatory in `/ship`. Script:
   `scripts/preflight_surface.py` (prints remediation playbook on failure).
 
+### Fixed
+- **#1603 open-via unwraps hydrated FK dicts** — `_resolve_row_links` extracts
+  scalar `id` from nested ref records / UUID objects so HTMX rows emit
+  `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood
+  v0.104.9).
+
 ## [0.104.9] - 2026-07-16
 
 ### Fixed

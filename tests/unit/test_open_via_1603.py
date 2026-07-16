@@ -65,6 +65,66 @@ def test_row_links_format_fk_placeholder() -> None:
     assert links[2] is None  # missing key
 
 
+def test_row_links_unwraps_hydrated_ref_dict_and_uuid() -> None:
+    """#1603 dogfood v0.104.9: list JSON embeds full contact dict under FK key.
+
+    CyFuture saw::
+
+        hx-get="/app/contact/{'id': UUID('7048…'), 'first_name': 'Demo', …}"
+
+    format_map must extract the scalar id, not str(dict).
+    """
+    from uuid import UUID
+
+    uid = UUID("704816af-f88a-42eb-9ecf-e28308774039")
+    tmpl = "/app/contact/{contact}"
+    rows = [
+        {
+            "id": "task-1",
+            "contact": {
+                "id": uid,
+                "first_name": "Demo",
+                "last_name": "User",
+            },
+        },
+        {"id": "task-2", "contact": {"name": "no-id-field"}},  # unwrappable
+        {"id": "task-3", "contact": uid},  # bare UUID
+        {"id": "task-4", "contact": str(uid)},  # already scalar
+    ]
+    links = _resolve_row_links(rows, tmpl)
+    assert links[0] == f"/app/contact/{uid}"
+    assert links[1] is None
+    assert links[2] == f"/app/contact/{uid}"
+    assert links[3] == f"/app/contact/{uid}"
+
+
+def test_data_row_htmx_unwraps_nested_contact_dict() -> None:
+    from uuid import UUID
+
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    uid = UUID("704816af-f88a-42eb-9ecf-e28308774039")
+    columns = [{"key": "title", "type": "str"}]
+    item = {
+        "id": "task-1",
+        "title": "Call",
+        "contact": {"id": uid, "first_name": "Demo"},
+    }
+    html = render_data_row(
+        columns,
+        item,
+        RowCapabilities(drill=True),
+        detail_url_template="/app/contact/{contact}",
+        entity_name="Task",
+        api_endpoint="/api/tasks",
+    )
+    assert f'hx-get="/app/contact/{uid}"' in html
+    assert "first_name" not in html
+    assert "UUID(" not in html
+    assert "{contact}" not in html
+
+
 def test_data_row_htmx_path_substitutes_open_via_fk() -> None:
     """#1603 dogfood: rich CRUD data-table path must format {contact} etc.
 
