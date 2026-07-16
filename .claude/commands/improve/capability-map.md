@@ -50,7 +50,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 732 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 739 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 730 | USED |
-| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 714 | USED |
+| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 741 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 732 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 729 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 729 | USED |
@@ -97,6 +97,11 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 741 (2026-07-16) test-suite STALE-clear.** `dazzle sentinel mutate
+> --suite security` **PASS** — all 5 modules ≥ floor (crypto 83%, rbac 71%,
+> csrf 85%, rls 100%, predicate 77%) with DATABASE_URL. Stamped sentinel mutate
+> **USED@741**. Explore **63/100**.
 
 > **Cycle 740 (2026-07-16) test-suite + hm-convergence STALE-clear.** KG init +
 > MCP test_intelligence summary/failures/regression/coverage/context (empty runs OK);
