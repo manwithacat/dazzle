@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics / task_inbox; HR workspaces lead with headcount/compensation metrics.
 
 ### Fixed
+- **#1598 List row single-click drill with C2.3 inline-edit** — data cells no
+  longer `stopPropagation()`; grid edit is dblclick-only, so single-click
+  bubbles to row `hx-get` again. Checkbox + actions cells still isolate.
 - **IR reader baseline** — drop `SeedTemplateSpec.month_anchor` from orphan
   baseline now that seed generator reads it (preflight after rolling_window
   multi-tenant seed fix).
