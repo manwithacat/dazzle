@@ -39,19 +39,19 @@ browsed alongside them, through three dedicated screens.
 - **Administrator** — the administrative role for the system.
 - **Support Agent** — handles support tickets and views AI classifications.
   Their stated aims are to view and manage tickets, review AI classifications,
-  and update ticket status; they work in the Ticket Management workspace.
+  and update ticket status; they land on **Ticket Management**.
 - **Support Supervisor** — monitors ticket flow and AI classification accuracy.
   Their stated aims are to monitor ticket classifications, review AI accuracy,
-  and manage team workload; they work in the Support Dashboard.
+  and manage team workload; they land on the **Support Dashboard**.
 
 ## Where work happens
 
-**Support Dashboard** — for monitoring and classifying support tickets: a list
-of tickets side by side with a list of their AI classifications, so
-classification quality is visible next to the work it describes.
+**Support Dashboard** — supervisor home: classification metrics (open, classified,
+in progress), an open-ticket review queue, and a list of recent AI
+classifications so quality sits beside the work it describes.
 
-**Ticket Management** — for managing individual tickets: the working list where
-agents handle the queue.
+**Ticket Management** — agent home: a queue of non-closed tickets for day-to-day
+handling, plus the full ticket list for history.
 
 ## Automation & controls
 

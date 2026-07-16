@@ -45,8 +45,11 @@ dedicated screens.
 
 ## Where work happens
 
-**Workspace Home** is the single place of work: it presents the workspace's
-announcements as a list, the shared noticeboard for everyone who has joined.
+**Workspace Home** is the single place of work for admins and members. It opens
+with team pulse metrics (announcement count), a join-readiness status strip
+(verified domain, join policy, and announcements — join approval itself lives
+in the auth admin console, not in this workspace), then the announcement
+noticeboard for everyone who has joined.
 
 ## The technical foundation
 
