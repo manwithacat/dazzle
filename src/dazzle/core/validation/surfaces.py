@@ -29,6 +29,21 @@ def register_pack_ops_provider(provider: Callable[[], dict[str, set[str]]]) -> N
     _PACK_OPS_REGISTRY["provider"] = provider
 
 
+# Field ``key=value`` options the form emitter actually honours
+# (template_compiler). Parser stores any key; unknown keys are silent no-ops at
+# render — #1599 (search_trigger=) is the canonical footgun. Warn so authors
+# are pointed at the real search-select path (``source=<pack>.<op>``).
+_RENDERED_FIELD_OPTIONS = frozenset(
+    {
+        "source",
+        "widget",
+        "accept",
+        "capture",
+        "rich_text_toolbar",
+        "rich_text_max_length",
+    }
+)
+
 # #1470 Phase 2: explicit field `format:` override validation. Inference handles
 # unannotated fields; an explicit kind must be known and type-compatible.
 _FORMAT_KINDS = frozenset(
@@ -133,6 +148,9 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
       `companies_house_lookup.search_companies` with no pack declared;
       runtime silently swallowed the resolution failure and the
       autocomplete just rendered as a plain text input)
+    - Unsupported field ``key=value`` options are warned (#1599 —
+      e.g. ``search_trigger=`` is parsed but never rendered; use
+      ``source=<pack>.<op>`` for search-select typeahead)
     - Actions have valid outcomes
     - Modes are appropriate for the surface structure
 
@@ -186,15 +204,34 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                                     f"'{element.field_name}': {fmt_err}"
                                 )
 
-        # Validate field source= references resolve to a known API pack
-        # AND a known operation on that pack. #996 — typos and dropped
-        # packs would fail silently at runtime; the autocomplete just
-        # rendered as a plain text input.
+        # Validate field options: unsupported keys + source= pack/op resolution.
+        # #996 — typos and dropped packs fail silently at runtime (plain text).
+        # #1599 — unknown keys (e.g. search_trigger=) also no-op at render.
         for section in surface.sections:
             for element in section.elements:
-                source_ref = element.options.get("source") if element.options else None
-                if not source_ref or "." not in source_ref:
+                options = element.options or {}
+                for opt_key in options:
+                    if opt_key in _RENDERED_FIELD_OPTIONS:
+                        continue
+                    if opt_key == "search_trigger":
+                        warnings.append(
+                            f"Surface '{surface.name}' field '{element.field_name}' "
+                            f"option 'search_trigger' is not rendered — use "
+                            f"source=<pack>.<operation> for search-select typeahead "
+                            f"(e.g. source=companies_house_lookup.search_companies)"
+                        )
+                    else:
+                        warnings.append(
+                            f"Surface '{surface.name}' field '{element.field_name}' "
+                            f"has unsupported option '{opt_key}' (ignored at render). "
+                            f"Supported field options: "
+                            f"{', '.join(sorted(_RENDERED_FIELD_OPTIONS))}"
+                        )
+
+                source_ref = options.get("source")
+                if not source_ref or "." not in str(source_ref):
                     continue
+                source_ref = str(source_ref)
                 pack_name, op_name = source_ref.rsplit(".", 1)
                 packs = _resolve_pack_ops()
                 if not packs:

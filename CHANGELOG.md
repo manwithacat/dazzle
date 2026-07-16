@@ -1,13 +1,6 @@
-# Changelog
-
-All notable changes to DAZZLE will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
----
-
 ## [Unreleased]
+
+## [0.104.2] - 2026-07-16
 
 ### Changed
 - **Story → composition playbook** — document correct
@@ -22,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics / task_inbox; HR workspaces lead with headcount/compensation metrics.
 
 ### Fixed
+- **#1599 `search_trigger=` field option footgun** — open-ended field
+  `key=value` options that the form emitter does not honour now warn at
+  `validate` (with a specific hint for `search_trigger` → use
+  `source=<pack>.<op>` for search-select). Docs list the supported option set.
 - **#1598 List row single-click drill with C2.3 inline-edit** — data cells no
   longer `stopPropagation()`; grid edit is dblclick-only, so single-click
   bubbles to row `hx-get` again. Checkbox + actions cells still isolate.

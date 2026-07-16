@@ -161,13 +161,18 @@ Base form rendering:
 | State machine field | Select dropdown with valid states |
 | Field with `source:` | **Search-select** widget (debounced autocomplete from external API) |
 
-### Search-Select Widget (`source:`)
+### Search-Select Widget (`source=`)
 
 ```dsl
-field company_name "Company" source=companies_house.search_companies
+field company_name "Company" source=companies_house_lookup.search_companies
 ```
 
 **Renders:** Autocomplete input that queries an external API with debounce. Shows results in a dropdown with primary/secondary display fields. Selecting a result can autofill other form fields.
+
+Supported field `key=value` options on create/edit forms: `source`, `widget`,
+`accept`, `capture`, `rich_text_toolbar`, `rich_text_max_length`. Other keys
+(e.g. a mistaken `search_trigger=`) are stored by the parser but **not**
+rendered — `dazzle validate` warns (#1599).
 
 ## Detail Surfaces (`mode: view`)
 
