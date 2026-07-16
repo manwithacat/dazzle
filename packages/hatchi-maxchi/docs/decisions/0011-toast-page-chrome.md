@@ -119,8 +119,8 @@ same URL. Apps should not invent a parallel toast store.
 | B — Viewport gallery + 8s + leave motion | **Done** | overlay frame, enter/leave, shell stack |
 | C — TTL progress + error 10s + clean Copy this | **Done** | progress bar, demo_shell split |
 | D — Level icons (SSR + client parity) | **Done** | inline SVG `__icon`; host ensures if missing |
-| E — Person / message toast | Later | **separate** optional composition, not a severity |
-| F — Sound / swipe-dismiss | Later | opt-in only; a11y / preference gated |
+| E — Person / message toast | Later | **separate** optional composition, not a severity — [#1594](https://github.com/manwithacat/dazzle/issues/1594) |
+| F — Sound / swipe-dismiss | Later | opt-in only; a11y / preference gated — [#1595](https://github.com/manwithacat/dazzle/issues/1595) |
 
 ## Not decided here
 
