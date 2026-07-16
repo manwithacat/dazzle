@@ -25,18 +25,27 @@ def prove_story(
         "--static/--runtime",
         help="Static binding (default) or host-readiness runtime prove.",
     ),
+    journey: bool = typer.Option(
+        False,
+        "--journey",
+        help="Journey graph prove (hub/open-via/process). Implies beyond static.",
+    ),
     json_out: bool = typer.Option(False, "--json", help="Raw JSON only"),
 ) -> None:
-    """Prove story bindings (static) or host readiness (runtime).
+    """Prove story bindings (static), host readiness (runtime), or journey graph.
 
     - ``--static``: ``pass_static`` / ``fail_static`` — target exists in DSL/host map
     - ``--runtime``: ``pass_runtime`` / ``fail_runtime`` — host service module ready
-      (not scaffold-only). **Not** a browser e2e journey.
+    - ``--journey``: ``pass_journey`` / ``fail_journey`` — VIEW hub + open-via hops
+      coherent; process steps host-ready. **Not** Playwright e2e.
     """
     from dazzle.agent_loop import prove_stories
 
     root = Path(manifest).resolve().parent
-    mode = "static" if static else "runtime"
+    if journey:
+        mode = "journey"
+    else:
+        mode = "static" if static else "runtime"
     data = prove_stories(root, story_id=story_id, mode=mode)
     if json_out:
         typer.echo(json.dumps(data, indent=2, default=str))

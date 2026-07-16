@@ -1,7 +1,7 @@
 {
   "src/dazzle/agent/client_factory.py": 1,
   "src/dazzle/agent/missions/journey.py": 4,
-  "src/dazzle/agent_loop/core.py": 6,
+  "src/dazzle/agent_loop/core.py": 5,
   "src/dazzle/agent_loop/runtime_prove.py": 1,
   "src/dazzle/api_surface/ir_types.py": 1,
   "src/dazzle/api_surface/mcp_tools.py": 1,

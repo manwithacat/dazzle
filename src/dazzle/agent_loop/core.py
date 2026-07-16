@@ -12,6 +12,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from dazzle.agent_loop.journey_prove import prove_stories_journey
+from dazzle.agent_loop.runtime_prove import (
+    prove_stories_runtime,
+    service_contract_diff_deep,
+)
 from dazzle.core.appspec_loader import load_project_appspec
 
 
@@ -242,8 +247,9 @@ def binding_wall(
         "buckets": buckets,
         "markdown": "\n".join(md),
         "note": (
-            "pass_static = binding target exists, not a runtime journey pass. "
-            "Runtime prove (pass_runtime) is not implemented yet."
+            "pass_static = binding target exists. "
+            "pass_runtime = host module ready. "
+            "pass_journey = hub/open-via graph coherent (not Playwright)."
         ),
     }
 
@@ -560,11 +566,12 @@ def prove_stories(
     story_id: str | None = None,
     mode: str = "static",
 ) -> dict[str, Any]:
-    """Prove stories: ``static`` binding or ``runtime`` host readiness.
+    """Prove stories: static binding, runtime host readiness, or journey graph.
 
     - ``static`` → ``pass_static`` / ``fail_static`` (target exists in DSL/host map)
-    - ``runtime`` → requires static pass, then host-module readiness
-      (``pass_runtime`` / ``fail_runtime`` / ``skip_runtime``). Not browser e2e.
+    - ``runtime`` → host-module readiness (``pass_runtime`` / …). Not browser e2e.
+    - ``journey`` → surface hub / open-via hop coherence + process host ready
+      (``pass_journey`` / ``fail_journey`` / ``skip_journey``). Still not Playwright.
     """
     appspec = load_project_appspec(project_root)
     stories = list(getattr(appspec, "stories", None) or [])
@@ -597,22 +604,57 @@ def prove_stories(
         }
 
     if mode_norm in ("runtime", "host"):
-        from dazzle.agent_loop.runtime_prove import (
-            prove_stories_runtime,
-            service_contract_diff_deep,
-        )
+        return _prove_runtime_bundle(project_root, appspec, stories, static_results)
 
-        runtime = prove_stories_runtime(
-            project_root, appspec, stories, static_results=static_results
-        )
-        runtime["static_summary"] = {
-            "passed": sum(1 for r in static_results if str(r.get("result", "")).startswith("pass")),
-            "failed": sum(1 for r in static_results if str(r.get("result", "")).startswith("fail")),
-        }
-        runtime["service_contract_diff"] = service_contract_diff_deep(project_root, appspec)
-        return runtime
+    if mode_norm in ("journey", "journey_graph", "path"):
+        return _prove_journey_bundle(project_root, appspec, stories, static_results)
 
-    return {"ok": False, "error": f"Unknown prove mode: {mode}. Use static|runtime"}
+    return {
+        "ok": False,
+        "error": f"Unknown prove mode: {mode}. Use static|runtime|journey",
+    }
+
+
+def _static_pass_fail(static_results: list[dict[str, Any]]) -> dict[str, int]:
+    return {
+        "passed": sum(1 for r in static_results if str(r.get("result", "")).startswith("pass")),
+        "failed": sum(1 for r in static_results if str(r.get("result", "")).startswith("fail")),
+    }
+
+
+def _prove_runtime_bundle(
+    project_root: Path,
+    appspec: Any,
+    stories: list[Any],
+    static_results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    runtime = prove_stories_runtime(project_root, appspec, stories, static_results=static_results)
+    runtime["static_summary"] = _static_pass_fail(static_results)
+    runtime["service_contract_diff"] = service_contract_diff_deep(project_root, appspec)
+    return runtime
+
+
+def _prove_journey_bundle(
+    project_root: Path,
+    appspec: Any,
+    stories: list[Any],
+    static_results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    runtime = prove_stories_runtime(project_root, appspec, stories, static_results=static_results)
+    journey = prove_stories_journey(
+        project_root,
+        appspec,
+        stories,
+        static_results=static_results,
+        runtime_results=list(runtime.get("results") or []),
+    )
+    journey["static_summary"] = _static_pass_fail(static_results)
+    journey["runtime_summary"] = {
+        "passed": runtime.get("passed"),
+        "failed": runtime.get("failed"),
+        "skipped": runtime.get("skipped"),
+    }
+    return journey
 
 
 PLAYBOOK_DOMAIN_LOGIC = """# Playbook: domain_logic closed loop (#1605)
@@ -641,7 +683,9 @@ Agents must **map → bind → scaffold → prove --static**, not dual-lock chro
 - `pass_static` / `fail_static` — binding target exists in DSL/host map
 - `pass_runtime` / `fail_runtime` / `skip_runtime` — host module readiness
   (service file, entrypoint, not scaffold-only). **Not** browser e2e.
-- `dazzle prove story --runtime` / `dazzle agent prove --runtime`
+- `pass_journey` / `fail_journey` / `skip_journey` — surface hub / open-via
+  hop graph + process host ready. **Still not** Playwright e2e.
+- `dazzle prove story --runtime` / `--journey`
 
 ## Story wall (binding)
 - `dazzle agent wall` — buckets: executed+pass_static / executed+fail_static /

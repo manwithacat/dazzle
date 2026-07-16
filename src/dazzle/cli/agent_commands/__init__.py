@@ -70,12 +70,21 @@ def closed_loop_prove(
         "--static/--runtime",
         help="Static binding (default) or host-readiness runtime prove.",
     ),
+    journey: bool = typer.Option(
+        False,
+        "--journey",
+        help="Journey graph prove (hub/open-via). JSON result.",
+    ),
 ) -> None:
-    """#1605 prove story — static binding or runtime host readiness."""
+    """#1605 prove story — static, runtime host readiness, or journey graph."""
     from dazzle.agent_loop import prove_stories
 
     root = project.resolve()
-    data = prove_stories(root, story_id=story_id, mode="static" if static else "runtime")
+    if journey:
+        mode = "journey"
+    else:
+        mode = "static" if static else "runtime"
+    data = prove_stories(root, story_id=story_id, mode=mode)
     typer.echo(json.dumps(data, indent=2, default=str))
     if not data.get("ok"):
         raise typer.Exit(1)
