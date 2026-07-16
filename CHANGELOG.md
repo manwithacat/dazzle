@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **PreToolUse hooks under Grok / system Python 3.9** — `file_protection` no
+  longer crashes (exit 1 spam) on every `search_replace`; hooks accept Grok
+  camelCase payloads + tool names; `run_hook.sh` prefers project venv; DSL
+  post-hook finds `dazzle.toml` (not only legacy `dazzle.yaml`).
+
 ### Added
 - **Story-driven job workspaces — fleet lift** — playbook
   `docs/guides/story-to-composition.md` applied beyond support_tickets:
