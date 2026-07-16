@@ -160,6 +160,32 @@ def doctor_command() -> None:
     except Exception:
         _warn("Could not check MCP registration")
 
+    # 9. Local snapshot hygiene (gitignored; can explode disk if nested)
+    typer.echo("\nLocal snapshots:")
+    try:
+        from dazzle.core.local_snapshots import (
+            any_nested_snapshots,
+            list_snapshot_ids,
+            snapshots_root,
+        )
+
+        snap_root = snapshots_root(Path.cwd())
+        ids = list_snapshot_ids(Path.cwd())
+        nested = any_nested_snapshots(Path.cwd())
+        if not snap_root.exists():
+            _ok("no .dazzle/spec_snapshots tree")
+        elif nested:
+            _warn(
+                f"{len(nested)} nested snapshot tree(s) under {snap_root} "
+                f"({len(ids)} top-level) — run: dazzle clean snapshots --all"
+            )
+        elif ids:
+            _ok(f"{len(ids)} top-level snapshot(s) under {snap_root.name}/…")
+        else:
+            _ok(f"empty {snap_root}")
+    except Exception as exc:
+        _warn(f"snapshot check failed: {exc}")
+
     # Summary
     typer.echo(f"\n{'=' * 40}")
     typer.echo(f"  {ok_count} ok, {warn_count} warnings, {fail_count} failures")

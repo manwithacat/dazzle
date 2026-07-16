@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`dazzle clean snapshots`** — reclaim gitignored `.dazzle/spec_snapshots/`
+  trees (historical ops rollback mirrors; writer retired ADR-0051). Supports
+  `--all`, `--keep N`, `--dry-run`. Shared `dazzle.core.local_snapshots` copy
+  ignore excludes `.dazzle/` so any future writer cannot nest snapshots.
+  `dazzle doctor` warns when nested snapshot trees are present.
+
 ### Changed
 - **htmx 4.0.0-beta4 → 4.0.0-beta5.** Vendored core + `hx-preload` /
   `hx-optimistic` / `hx-upsert` re-synced at the pin

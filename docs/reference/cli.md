@@ -22,7 +22,29 @@ Complete reference for the `dazzle` command-line interface.
 | `dazzle analyze-spec` | LLM-assisted DSL generation from a spec file |
 | `dazzle info` | Show runtime installation status |
 | `dazzle doctor` | Run environment health checks |
+| `dazzle clean snapshots` | Remove local `.dazzle/spec_snapshots` (gitignored) |
 | `dazzle schema` | Inspect generated app structure |
+
+
+
+### Local cleanup
+
+| Command | Description |
+|---------|-------------|
+| `dazzle clean snapshots` | Delete local `.dazzle/spec_snapshots` trees (gitignored) |
+| `dazzle clean snapshots --dry-run` | List what would be removed |
+| `dazzle clean snapshots --all` | Remove the entire snapshots directory (use after nested explosion) |
+| `dazzle clean snapshots --keep N` | Keep the N newest top-level snapshot dirs (mtime); default 10 |
+
+**Why:** historical ops rollback mirrors and accidental full-tree copies under
+`.dazzle/spec_snapshots/` can nest prior snapshots and produce millions of paths
+(rsync backups stall). The product writer was retired with ADR-0051; residual
+trees are safe to delete. Prefer `--all` when doctor warns about nesting.
+
+**Backup tip:** exclude `.dazzle/spec_snapshots/`, `.venv/`, `node_modules/`,
+and `*cache*` when rsyncing the monorepo — durable state is source + `.git`.
+
+See also: `dazzle.core.local_snapshots` (shared copy-ignore for any future writer).
 
 ### Runtime
 

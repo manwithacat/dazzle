@@ -271,6 +271,7 @@ from dazzle.cli.api_pack import api_pack_app  # noqa: E402
 from dazzle.cli.auth import auth_app  # noqa: E402
 from dazzle.cli.backup import backup_app  # noqa: E402
 from dazzle.cli.capability import capability_app  # noqa: E402
+from dazzle.cli.clean import clean_app  # noqa: E402
 from dazzle.cli.compliance import compliance_app  # noqa: E402
 from dazzle.cli.composition import composition_app  # noqa: E402
 from dazzle.cli.conformance import conformance_app  # noqa: E402
@@ -325,6 +326,7 @@ app.add_typer(conformance_app, name="conformance")
 app.add_typer(backup_app, name="backup")
 app.add_typer(composition_app, name="composition")
 app.add_typer(contribution_app, name="contribution")
+app.add_typer(clean_app, name="clean")
 app.add_typer(db_app, name="db")
 app.add_typer(demo_app, name="demo")
 app.add_typer(discovery_app, name="discovery")
