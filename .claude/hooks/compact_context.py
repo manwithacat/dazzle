@@ -5,6 +5,8 @@ Injects must-preserve context: current branch, modified files, ralph-loop
 state, so that compaction doesn't lose important working state.
 """
 
+from __future__ import annotations
+
 import json
 import subprocess
 import sys

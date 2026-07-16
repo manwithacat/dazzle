@@ -6,6 +6,8 @@ Runs appropriate formatter based on file extension:
 - JavaScript: prettier (if available)
 """
 
+from __future__ import annotations
+
 import json
 import subprocess
 import sys
@@ -26,13 +28,15 @@ def main():
     except json.JSONDecodeError:
         sys.exit(0)
 
-    tool_name = input_data.get("tool_name", "")
-    tool_input = input_data.get("tool_input", {})
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from _hook_io import EDIT_TOOLS, file_path_from
+    from _hook_io import tool_input as _ti
+    from _hook_io import tool_name as _tn
 
-    if tool_name not in ("Edit", "Write"):
+    if _tn(input_data) not in EDIT_TOOLS:
         sys.exit(0)
 
-    file_path = tool_input.get("file_path", "")
+    file_path = file_path_from(_ti(input_data))
     if not file_path:
         sys.exit(0)
 

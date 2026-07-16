@@ -5,6 +5,8 @@ Runs `dazzle validate` whenever a .dazzle file is modified.
 Provides feedback to Claude if validation fails.
 """
 
+from __future__ import annotations
+
 import json
 import subprocess
 import sys
@@ -17,15 +19,17 @@ def main():
     except json.JSONDecodeError:
         sys.exit(0)
 
-    tool_name = input_data.get("tool_name", "")
-    tool_input = input_data.get("tool_input", {})
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from _hook_io import EDIT_TOOLS, file_path_from
+    from _hook_io import tool_input as _ti
+    from _hook_io import tool_name as _tn
 
-    # Only check Edit/Write operations
-    if tool_name not in ("Edit", "Write"):
+    if _tn(input_data) not in EDIT_TOOLS:
         sys.exit(0)
 
-    file_path = tool_input.get("file_path", "")
-    if not file_path.endswith(".dazzle"):
+    file_path = file_path_from(_ti(input_data))
+    # Dazzle apps use .dsl more often than legacy .dazzle
+    if not (file_path.endswith(".dazzle") or file_path.endswith(".dsl")):
         sys.exit(0)
 
     # Find project root (where dazzle.yaml lives)

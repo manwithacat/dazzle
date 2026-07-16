@@ -5,6 +5,8 @@ Checks if the subagent modified any Python files and runs a quick ruff check.
 Reports issues as additionalContext so the parent agent sees them.
 """
 
+from __future__ import annotations
+
 import json
 import subprocess
 import sys

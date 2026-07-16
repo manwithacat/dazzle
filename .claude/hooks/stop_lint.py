@@ -5,6 +5,8 @@ Runs ruff check on any unstaged Python files that were modified during the
 session. Reports issues as additionalContext so Claude sees them next turn.
 """
 
+from __future__ import annotations
+
 import json
 import subprocess
 import sys

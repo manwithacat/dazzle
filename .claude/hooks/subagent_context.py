@@ -6,6 +6,8 @@ then returns it as additionalContext so every subagent is oriented to the
 Dazzle codebase.
 """
 
+from __future__ import annotations
+
 import json
 import subprocess
 import sys

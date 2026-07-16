@@ -8,9 +8,15 @@ Blocks modifications to:
 - .git directory
 """
 
+from __future__ import annotations
+
 import json
 import sys
 from pathlib import Path
+
+# Allow `python hooks/file_protection.py` from any cwd
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _hook_io import EDIT_TOOLS, file_path_from, tool_input, tool_name  # noqa: E402
 
 PROTECTED_PATTERNS = [
     ".git/",
@@ -52,7 +58,6 @@ def is_auto_generated(file_path: str) -> bool:
         if not path.exists():
             return False
 
-        # Read first 10 lines to check for marker
         with open(path, encoding="utf-8", errors="ignore") as f:
             for i, line in enumerate(f):
                 if i >= 10:
@@ -66,36 +71,38 @@ def is_auto_generated(file_path: str) -> bool:
     return False
 
 
-def main():
+def main() -> None:
     try:
         input_data = json.load(sys.stdin)
     except json.JSONDecodeError:
         sys.exit(0)
 
-    tool_name = input_data.get("tool_name", "")
-    tool_input = input_data.get("tool_input", {})
-
-    if tool_name not in ("Edit", "Write"):
+    name = tool_name(input_data)
+    if name not in EDIT_TOOLS:
         sys.exit(0)
 
-    file_path = tool_input.get("file_path", "")
+    inp = tool_input(input_data)
+    file_path = file_path_from(inp)
     if not file_path:
         sys.exit(0)
 
-    # Check path traversal
     if ".." in file_path:
         print("Path traversal blocked", file=sys.stderr)
         sys.exit(2)
 
-    # Check protected patterns
     reason = is_protected_path(file_path)
     if reason:
         print(f"BLOCKED: {reason}", file=sys.stderr)
         sys.exit(2)
 
-    # Check auto-generated (only for Edit, not Write to new file)
-    if tool_name == "Edit" and is_auto_generated(file_path):
-        print("BLOCKED: File is marked as AUTO-GENERATED. Do not edit directly.", file=sys.stderr)
+    # Claude Edit / Grok search_replace on existing auto-generated files
+    if name in ("Edit", "search_replace", "StrReplace", "MultiEdit") and is_auto_generated(
+        file_path
+    ):
+        print(
+            "BLOCKED: File is marked as AUTO-GENERATED. Do not edit directly.",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
     sys.exit(0)

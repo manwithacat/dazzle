@@ -121,22 +121,22 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|run_terminal_command",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/bash_validator.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run_hook.sh bash_validator.py",
             "timeout": 10,
             "statusMessage": "Validating bash command..."
           }
         ]
       },
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|search_replace|write",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/file_protection.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run_hook.sh file_protection.py",
             "timeout": 10,
             "statusMessage": "Checking file protection..."
           }
@@ -145,17 +145,17 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|search_replace|write",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/dsl_validator.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run_hook.sh dsl_validator.py",
             "timeout": 30,
             "statusMessage": "Validating DSL..."
           },
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/code_formatter.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run_hook.sh code_formatter.py",
             "timeout": 30,
             "async": true,
             "statusMessage": "Formatting code..."
@@ -168,7 +168,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop_lint.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run_hook.sh stop_lint.py",
             "timeout": 30,
             "statusMessage": "End-of-turn lint check..."
           }
@@ -180,7 +180,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/subagent_context.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run_hook.sh subagent_context.py",
             "timeout": 10,
             "statusMessage": "Injecting Dazzle context..."
           }
@@ -192,7 +192,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/subagent_stop.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run_hook.sh subagent_stop.py",
             "timeout": 15,
             "statusMessage": "Validating subagent results..."
           }
@@ -216,7 +216,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/compact_context.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run_hook.sh compact_context.py",
             "timeout": 10,
             "statusMessage": "Preserving session context..."
           }
