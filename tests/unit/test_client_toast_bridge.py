@@ -4,12 +4,12 @@ The bug this pins against: `window.dz.toast()` and the optimistic-rollback
 path dispatched events whose ONLY listener was the `dzToast` Alpine
 component — which no layout ever mounted, so client-initiated toasts
 (CSV-export failures, optimistic rollback nudges) were silently swallowed.
-The vanilla bridge in `dz-toast.js` now owns both event shapes and renders
+The vanilla host in `dz-toast.js` now owns both event shapes and renders
 into the shell's `#dz-toast` stack with the same markup the server's
 `with_toast` OOB emits (one dismiss path, one CSS contract).
 
-Behavioural coverage arrives with the HM `toast` Hyperpart (Bucket C-T2);
-these source pins hold the seam until then.
+HM dual-lock: packages/hatchi-maxchi/controllers/dz-toast.js is the
+canonical host; this file is kept in sync for the Dazzle static bundle.
 """
 
 from __future__ import annotations
@@ -24,6 +24,14 @@ JS_FILE = (
     / "runtime"
     / "static"
     / "js"
+    / "dz-toast.js"
+)
+
+HM_JS = (
+    Path(__file__).resolve().parents[2]
+    / "packages"
+    / "hatchi-maxchi"
+    / "controllers"
     / "dz-toast.js"
 )
 
@@ -44,6 +52,9 @@ class TestClientToastBridge:
         assert 'getElementById("dz-toast")' in content
         assert "dz-toast-level" in content
         assert "data-dz-remove-after" in content
+        assert "dz-toast__title" in content
+        assert "dz-toast__message" in content
+        assert "dz-toast__actions" in content
 
     def test_message_is_text_not_html(self) -> None:
         """The message travels via textContent — event detail is caller
@@ -51,3 +62,14 @@ class TestClientToastBridge:
         content = JS_FILE.read_text()
         assert "textContent" in content
         assert "innerHTML" not in content
+
+    def test_pause_resume_and_cap_are_present(self) -> None:
+        content = JS_FILE.read_text()
+        assert "__dzToastPause" in content
+        assert "__dzToastResume" in content
+        assert "data-dz-toast-cap" in content
+        assert "data-dz-toast-dismiss" in content
+
+    def test_dazzle_host_matches_hm_controller(self) -> None:
+        """Dual-lock: Dazzle static copy must not drift from HM controller."""
+        assert JS_FILE.read_text() == HM_JS.read_text()

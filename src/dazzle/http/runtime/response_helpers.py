@@ -8,6 +8,7 @@ UI updates without client-side logic.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from html import escape
 
 from starlette.responses import HTMLResponse
@@ -18,31 +19,65 @@ def with_toast(
     message: str,
     level: str = "info",
     duration: str = "5s",
+    *,
+    title: str | None = None,
+    actions: Sequence[tuple[str, str]] | None = None,
 ) -> HTMLResponse:
     """Append an auto-dismissing toast to an HTMX response via OOB swap.
 
-    The toast is OOB-prepended into the shell's ``#dz-toast`` stack and auto-dismissed by
-    the ``dz-toast.js`` bridge (``data-dz-remove-after``) — replacing the
-    htmx-2 ``remove-me`` extension, dropped in the htmx 4 migration.
+    The toast is OOB-prepended into the shell's ``#dz-toast`` stack and
+    auto-dismissed by the ``dz-toast.js`` host (``data-dz-remove-after``) —
+    hover/focus pauses the timer; optional title + action row are slots.
 
     Args:
         response: The original HTMLResponse to augment.
-        message: Toast message text (HTML-escaped automatically).
+        message: Toast body text (HTML-escaped automatically).
         level: Toast severity — ``success``, ``error``, ``warning``, ``info``.
-            Set on the rendered toast as ``data-dz-toast-level``; the
-            ``HM components/sitespec.css`` rules tone-tint per level.
+            Set on the rendered toast as ``data-dz-toast-level``.
         duration: Auto-dismiss delay (e.g., ``"5s"``).
+        title: Optional heading above the message.
+        actions: Optional ``(label, href)`` pairs. Empty href renders a
+            dismiss button (``data-dz-toast-dismiss``); non-empty href is a
+            link. Labels and hrefs are escaped.
     """
     safe_message = escape(message)
     safe_level = escape(level, quote=True)
+    safe_duration = escape(duration, quote=True)
+    role = "alert" if level == "error" else "status"
+
+    body_parts: list[str] = ['<div class="dz-toast__body">']
+    if title:
+        body_parts.append(f'<div class="dz-toast__title">{escape(title)}</div>')
+    body_parts.append(f'<div class="dz-toast__message">{safe_message}</div>')
+
+    if actions:
+        body_parts.append('<div class="dz-toast__actions">')
+        for label, href in actions:
+            safe_label = escape(label)
+            if href:
+                body_parts.append(
+                    f'<a class="dz-toast__action" href="{escape(href, quote=True)}">'
+                    f"{safe_label}</a>"
+                )
+            else:
+                body_parts.append(
+                    f'<button type="button" class="dz-toast__action" '
+                    f"data-dz-toast-dismiss>{safe_label}</button>"
+                )
+        body_parts.append("</div>")
+
+    body_parts.append("</div>")
+    body_html = "".join(body_parts)
+
     # OOB target = the shell's toast stack (`#dz-toast`, _render_shell) —
     # the wrapper div is consumed by the swap, its children prepended.
-    # (Historically targeted `#dz-toast-container`, an id no layout ever
-    # rendered, so every toast silently missed — caught in the C3 sweep.)
     toast_html = (
         f'<div hx-swap-oob="afterbegin:#dz-toast">'
-        f'<div class="dz-toast" data-dz-toast-level="{safe_level}" data-dz-remove-after="{duration}">'
-        f"<span>{safe_message}</span>"
+        f'<div class="dz-toast" data-dz-toast-level="{safe_level}" '
+        f'data-dz-remove-after="{safe_duration}" role="{role}">'
+        f"{body_html}"
+        f'<button type="button" class="dz-toast__close" '
+        f'data-dz-toast-dismiss aria-label="Dismiss"></button>'
         f"</div>"
         f"</div>"
     )

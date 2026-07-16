@@ -40,6 +40,7 @@ CSS_SOURCES = [
     ("base", "base/base.css"),
     ("components", "components/accordion.css"),
     ("components", "components/alert.css"),
+    ("components", "components/toast.css"),
     ("components", "components/badge.css"),
     ("components", "components/button.css"),
     ("components", "components/dialog.css"),
@@ -125,6 +126,7 @@ LAYER_ORDER = "@layer vendor, tokens, base, components;"
 
 JS_SOURCES = [
     "controllers/dz-confirm.js",
+    "controllers/dz-toast.js",
     "controllers/dz-command.js",
     "controllers/dz-master-detail.js",
     "controllers/dz-dialog.js",

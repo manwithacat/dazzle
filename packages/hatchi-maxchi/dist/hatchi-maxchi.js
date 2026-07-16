@@ -105,6 +105,339 @@
   });
 })();
 
+/* ── controllers/toast.js ── */
+/** @ts-check */
+/**
+ * HYPERPART: toast
+ *
+ * Toast stack host — auto-dismiss, hover/focus pause, stack cap, dismiss
+ * clicks, and client-initiated toasts with server-parity markup.
+ *
+ * Contract (contracts/toast.py):
+ *   Stack:  #toast.toast-stack  [data-toast-cap]
+ *   Toast:  .toast[data-toast-level][data-remove-after]
+ *   Slots:  .toast__title | .toast__message | .toast__actions
+ *   Dismiss: [data-toast-dismiss]
+ *
+ * Server path: OOB afterbegin into #toast with data-remove-after.
+ * Client path: CustomEvent `showToast` (document/body) or `toast` on the
+ * stack (window.dz.toast). Detail: { message, type?, title?, actions? }
+ * where actions is [{ label, href? }].
+ *
+ * Zero dependencies. Survives htmx swaps (re-scan after:swap).
+ */
+
+(function () {
+  "use strict";
+
+  var DEFAULT_CAP = 8;
+  var DEFAULT_DELAY = "5s";
+
+  /** Parse htmx-style timing ("5s", "300ms", bare seconds) → ms. */
+  function parseDelayMs(value) {
+    if (!value) return 5000;
+    var m = String(value)
+      .trim()
+      .match(/^(\d+(?:\.\d+)?)\s*(ms|s)?$/);
+    if (!m) return 5000;
+    var n = parseFloat(m[1]);
+    if (m[2] === "ms") return n;
+    return n * 1000;
+  }
+
+  function stackEl() {
+    return document.getElementById("toast");
+  }
+
+  function toastSelector() {
+    // Prefixed source form; apply_prefix rewrites for unprefixed gallery.
+    return ".toast";
+  }
+
+  function capOf(stack) {
+    var raw = stack.getAttribute("data-toast-cap");
+    if (raw == null || raw === "") return DEFAULT_CAP;
+    var n = parseInt(raw, 10);
+    return Number.isFinite(n) && n > 0 ? n : DEFAULT_CAP;
+  }
+
+  function enforceCap(stack) {
+    var sel = toastSelector();
+    var items = stack.querySelectorAll(sel);
+    var cap = capOf(stack);
+    // Stack prepends newest first — drop from the end (oldest).
+    while (items.length > cap) {
+      var last = items[items.length - 1];
+      last.remove();
+      items = stack.querySelectorAll(sel);
+    }
+  }
+
+  /**
+   * Schedule auto-dismiss with pause/resume. Each toast is scheduled once
+   * (`__dzRemoveScheduled`). Hover or focus on the stack pauses all timers;
+   * leave resumes with remaining time.
+   */
+  function scheduleOne(el) {
+    if (el.__dzRemoveScheduled) return;
+    el.__dzRemoveScheduled = true;
+
+    var total = parseDelayMs(el.getAttribute("data-remove-after"));
+    var remaining = total;
+    var deadline = Date.now() + remaining;
+    var timer = null;
+    var paused = false;
+
+    function clear() {
+      if (timer != null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    }
+
+    function arm() {
+      clear();
+      if (remaining <= 0) {
+        el.remove();
+        return;
+      }
+      deadline = Date.now() + remaining;
+      timer = setTimeout(function () {
+        el.remove();
+      }, remaining);
+    }
+
+    el.__dzToastPause = function () {
+      if (paused) return;
+      paused = true;
+      remaining = Math.max(0, deadline - Date.now());
+      clear();
+    };
+
+    el.__dzToastResume = function () {
+      if (!paused) return;
+      paused = false;
+      arm();
+    };
+
+    arm();
+  }
+
+  function forEachToast(stack, fn) {
+    stack.querySelectorAll(toastSelector()).forEach(fn);
+  }
+
+  function pauseAll(stack) {
+    forEachToast(stack, function (el) {
+      if (typeof el.__dzToastPause === "function") el.__dzToastPause();
+    });
+  }
+
+  function resumeAll(stack) {
+    forEachToast(stack, function (el) {
+      if (typeof el.__dzToastResume === "function") el.__dzToastResume();
+    });
+  }
+
+  function wireStackOnce(stack) {
+    if (stack.__dzToastHostWired) return;
+    stack.__dzToastHostWired = true;
+
+    // mouseover/out bubble through children (stack itself is pointer-events:none).
+    stack.addEventListener("mouseover", function () {
+      pauseAll(stack);
+    });
+    stack.addEventListener("mouseout", function (e) {
+      var related = e.relatedTarget;
+      if (related && stack.contains(related)) return;
+      resumeAll(stack);
+    });
+    stack.addEventListener("focusin", function () {
+      pauseAll(stack);
+    });
+    stack.addEventListener("focusout", function (e) {
+      var related = e.relatedTarget;
+      if (related && stack.contains(related)) return;
+      resumeAll(stack);
+    });
+
+    stack.addEventListener("click", function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      var dismiss = t.closest("[data-toast-dismiss]");
+      if (!dismiss || !stack.contains(dismiss)) return;
+      var toast = dismiss.closest(toastSelector());
+      if (toast) toast.remove();
+    });
+  }
+
+  function scan(root) {
+    var stack = stackEl();
+    if (stack) {
+      wireStackOnce(stack);
+      forEachToast(stack, scheduleOne);
+      enforceCap(stack);
+    }
+    // Also schedule any data-remove-after outside the stack (legacy).
+    var scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll("[data-remove-after]").forEach(function (el) {
+      if (el.classList && el.classList.contains("toast")) {
+        scheduleOne(el);
+      } else if (!el.__dzRemoveScheduled) {
+        // Non-toast remove-after (if any): simple timeout, no pause.
+        el.__dzRemoveScheduled = true;
+        setTimeout(function () {
+          el.remove();
+        }, parseDelayMs(el.getAttribute("data-remove-after")));
+      }
+    });
+    if (scope !== document) {
+      document.querySelectorAll(".toast[data-remove-after]").forEach(scheduleOne);
+    }
+  }
+
+  /**
+   * @param {string|object} messageOrOpts
+   * @param {string} [level]
+   */
+  function clientToast(messageOrOpts, level) {
+    var stack = stackEl();
+    if (!stack) return;
+
+    var opts =
+      messageOrOpts && typeof messageOrOpts === "object"
+        ? messageOrOpts
+        : { message: messageOrOpts, type: level };
+
+    var message = opts.message;
+    if (!message) return;
+
+    var tone = opts.type || opts.level || "info";
+    var title = opts.title || null;
+    var actions = opts.actions || null;
+    var duration = opts.duration || DEFAULT_DELAY;
+
+    var toast = document.createElement("div");
+    toast.className = "toast toast-enter";
+    toast.setAttribute("data-toast-level", tone);
+    toast.setAttribute("data-remove-after", duration);
+    toast.setAttribute("role", tone === "error" ? "alert" : "status");
+
+    var body = document.createElement("div");
+    body.className = "toast__body";
+
+    if (title) {
+      var titleEl = document.createElement("div");
+      titleEl.className = "toast__title";
+      titleEl.textContent = String(title);
+      body.appendChild(titleEl);
+    }
+
+    var msgEl = document.createElement("div");
+    msgEl.className = "toast__message";
+    msgEl.textContent = String(message);
+    body.appendChild(msgEl);
+
+    if (actions && actions.length) {
+      var row = document.createElement("div");
+      row.className = "toast__actions";
+      for (var i = 0; i < actions.length; i++) {
+        var a = actions[i] || {};
+        var label = a.label || a.text;
+        if (!label) continue;
+        var node;
+        if (a.href) {
+          node = document.createElement("a");
+          node.className = "toast__action";
+          node.href = String(a.href);
+          node.textContent = String(label);
+        } else {
+          node = document.createElement("button");
+          node.type = "button";
+          node.className = "toast__action";
+          node.setAttribute("data-toast-dismiss", "");
+          node.textContent = String(label);
+        }
+        row.appendChild(node);
+      }
+      if (row.childNodes.length) body.appendChild(row);
+    }
+
+    toast.appendChild(body);
+
+    var close = document.createElement("button");
+    close.type = "button";
+    close.className = "toast__close";
+    close.setAttribute("data-toast-dismiss", "");
+    close.setAttribute("aria-label", "Dismiss");
+    toast.appendChild(close);
+
+    stack.insertBefore(toast, stack.firstChild);
+    enforceCap(stack);
+    scheduleOne(toast);
+  }
+
+  // window.dz.toast(msg, type) → CustomEvent `toast` on the stack (no bubble).
+  document.addEventListener(
+    "toast",
+    function (e) {
+      var t = e && e.target;
+      if (!t || t.id !== "toast") return;
+      var d = e.detail || {};
+      clientToast(d);
+    },
+    true,
+  );
+
+  // Optimistic rollback / HX-Trigger path — showToast on document/body.
+  document.addEventListener(
+    "showToast",
+    function (e) {
+      var d = (e && e.detail) || {};
+      clientToast(d);
+    },
+    true,
+  );
+
+  document.addEventListener("htmx:after:swap", function (e) {
+    scan(e && e.target);
+  });
+  // htmx 2 legacy alias if present
+  document.addEventListener("htmx:afterSwap", function (e) {
+    scan(e && e.target);
+  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () {
+      scan(document);
+    });
+  } else {
+    scan(document);
+  }
+
+  // Optional global for demos / window.dz parity.
+  if (typeof window !== "undefined") {
+    window.dz = window.dz || {};
+    if (typeof window.dz.toast !== "function") {
+      window.dz.toast = function (message, type) {
+        var stack = stackEl();
+        if (!stack) {
+          clientToast(message, type);
+          return;
+        }
+        stack.dispatchEvent(
+          new CustomEvent("toast", {
+            detail:
+              message && typeof message === "object"
+                ? message
+                : { message: message, type: type },
+          }),
+        );
+      };
+    }
+  }
+})();
+
 /* ── controllers/command.js ── */
 /* HYPERPART: command */
 /*

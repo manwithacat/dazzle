@@ -28,48 +28,8 @@
  * moved to the HM `table.css` (grid Hyperpart, Slice 0b, 2026-07-04). */
 
 /* ─────────────────────────── toast fragment ─────────────────────
- * Auto-dismissing notification (5s via htmx remove-me). 4 tones
- * keyed off data-dz-toast-level — replaces two parallel dictionary
- * lookups for border-l + icon colour. */
-
-.dz-toast {
-  pointer-events: auto;
-  max-width: 24rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--colour-border);
-  border-inline-start-width: 4px;
-  background: var(--colour-surface);
-  color: var(--colour-text);
-  box-shadow: var(--shadow-md);
-  padding-inline: var(--space-md);
-  padding-block: var(--space-md);
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-md);
-  transition: all var(--duration-base) var(--ease-out);
-}
-
-.dz-toast[data-dz-toast-level="success"] { border-inline-start-color: var(--colour-success); }
-.dz-toast[data-dz-toast-level="error"]   { border-inline-start-color: var(--colour-danger); }
-.dz-toast[data-dz-toast-level="warning"] { border-inline-start-color: var(--colour-warning); }
-.dz-toast[data-dz-toast-level="info"]    { border-inline-start-color: var(--colour-brand); }
-
-.dz-toast-icon {
-  width: 0.75rem;
-  height: 0.75rem;
-  margin-block-start: 3px;
-  flex-shrink: 0;
-}
-
-.dz-toast[data-dz-toast-level="success"] .dz-toast-icon { color: var(--colour-success); }
-.dz-toast[data-dz-toast-level="error"]   .dz-toast-icon { color: var(--colour-danger); }
-.dz-toast[data-dz-toast-level="warning"] .dz-toast-icon { color: var(--colour-warning); }
-.dz-toast[data-dz-toast-level="info"]    .dz-toast-icon { color: var(--colour-brand); }
-
-.dz-toast-message {
-  font-size: var(--text-sm);
-  color: var(--colour-text);
-}
+ * MOVED to components/toast.css (HYPERPART: toast). Stack host,
+ * title/message/actions, and level tones live there. */
 
 /* ─────────────────────────── bulk_actions fragment ──────────────
  * Delete-only bulk actions toolbar. Visible via Alpine x-show
@@ -622,21 +582,7 @@
 }
 
 /* ─────────────────────────── toast stack ────────────────────────
- * Fixed-position container for stacked toast notifications. Two
- * separate stacks (Alpine dzToast + HTMX OOB) share the same
- * chrome — extracting it kills the duplicated Tailwind string. */
-
-.dz-toast-stack {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  max-width: 24rem;
-  pointer-events: none;
-}
+ * MOVED to components/toast.css (HYPERPART: toast). */
 
 /* ─────────────────────────── form chrome (UX-016) ───────────────
  * Live subset (.dz-form-section/-title/-note) MOVED to HaTchi-MaXchi

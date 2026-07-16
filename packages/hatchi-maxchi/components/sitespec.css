@@ -1700,43 +1700,5 @@
   color: var(--colour-text-muted);
 }
 
-/* Toast — replaces `alert alert-{level}` emitted by
- * `response_helpers.append_toast`. Tone keyed off `data-dz-toast-level`,
- * mirroring the `.dz-alert-banner[data-dz-alert-level=…]` pattern in
- * fragments.css. Slide-in/out animation inherited from the existing
- * `.dz-toast-enter` / `.dz-toast-leave` rules in dz.css. */
-.dz-toast {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--colour-surface);
-  color: var(--colour-text);
-  border: 1px solid var(--colour-border);
-  border-left-width: 4px;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-md);
-  font-size: var(--text-sm);
-  line-height: var(--leading-tight);
-  max-width: min(28rem, calc(100vw - var(--space-xl) * 2));
-}
-
-.dz-toast[data-dz-toast-level="info"] {
-  border-left-color: var(--colour-brand);
-  background: color-mix(in oklch, var(--colour-brand) 6%, var(--colour-surface));
-}
-
-.dz-toast[data-dz-toast-level="success"] {
-  border-left-color: var(--colour-success);
-  background: color-mix(in oklch, var(--colour-success) 6%, var(--colour-surface));
-}
-
-.dz-toast[data-dz-toast-level="warning"] {
-  border-left-color: var(--colour-warning);
-  background: color-mix(in oklch, var(--colour-warning) 6%, var(--colour-surface));
-}
-
-.dz-toast[data-dz-toast-level="error"] {
-  border-left-color: var(--colour-danger);
-  background: color-mix(in oklch, var(--colour-danger) 6%, var(--colour-surface));
-}
+/* Toast unit + stack — owned by HYPERPART: toast (components/toast.css).
+ * Do not re-declare .dz-toast* here; dual-lock lives in toast.css. */

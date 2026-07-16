@@ -303,9 +303,9 @@ _MAP: list[tuple[str, str, str, str]] = [
     ),
     (
         "toast",
-        "partial",
-        "fragments",
-        "Toast stack exists; dual-lock not first-class",
+        "parity",
+        "toast",
+        "Dual-lock Hyperpart: stack host, title/actions, pause-on-hover",
     ),
     (
         "toggle",

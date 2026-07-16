@@ -54,6 +54,30 @@ class TestWithToast:
         result = with_toast(resp, "Done")
         assert result.headers.get("X-Custom") == "test"
 
+    def test_title_and_actions_slots(self):
+        resp = HTMLResponse("<p>OK</p>")
+        result = with_toast(
+            resp,
+            "Your changes are live.",
+            "success",
+            title="Saved",
+            actions=(("View record", "/tickets/1"), ("Dismiss", "")),
+        )
+        body = result.body.decode()
+        assert 'class="dz-toast__title"' in body
+        assert "Saved" in body
+        assert 'class="dz-toast__message"' in body
+        assert 'href="/tickets/1"' in body
+        assert "View record" in body
+        assert "data-dz-toast-dismiss" in body
+        assert 'class="dz-toast__close"' in body
+        assert 'role="status"' in body
+
+    def test_error_level_uses_alert_role(self):
+        resp = HTMLResponse("<p>OK</p>")
+        result = with_toast(resp, "Nope", "error")
+        assert 'role="alert"' in result.body.decode()
+
 
 class TestWithOob:
     def test_appends_oob_swap_to_response(self):

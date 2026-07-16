@@ -186,7 +186,10 @@ class _RenderShellMixin:
         parts.append('<body class="dz-page">')
         parts.append(self._emit(p.body, ctx))  # type: ignore[arg-type]
         if p.toast_container:
-            parts.append('<div id="dz-toast" class="dz-toast-stack" aria-live="polite"></div>')
+            parts.append(
+                '<div id="dz-toast" class="dz-toast-stack" aria-live="polite" '
+                'data-dz-toast-cap="8"></div>'
+            )
         if p.modal_slot:
             parts.append('<div id="dz-modal-slot"></div>')
         if p.page_announcer:

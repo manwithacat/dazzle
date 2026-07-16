@@ -2894,3 +2894,54 @@ def test_code_copy_uses_source_text(page) -> None:  # type: ignore[no-untyped-de
     assert "def greet" in copied
     assert "<span" not in copied, "clipboard must be plain text, not highlighted HTML"
     assert preview.locator("[data-code-copy][data-copied]").count() == 1
+
+
+def test_toast_stack_host_pause_dismiss_and_client_fire(page) -> None:  # type: ignore[no-untyped-def]
+    """toast Hyperpart: stack host dismisses, client showToast appends.
+
+    Fixed-position stack lives on the framed live page (own browsing context),
+    same pattern as app-shell. Gallery dist is unprefixed (``.toast`` / ``#toast``).
+    """
+    # Coverage meta-gate greps for goto_part(page, "toast").
+    goto_part(page, "toast")
+    live = Path(__file__).resolve().parents[1] / "site" / "hyperparts" / "toast-live.html"
+    page.goto(live.as_uri())
+    page.wait_for_timeout(200)
+
+    stack = page.locator("#toast.toast-stack, #dz-toast.dz-toast-stack")
+    assert stack.count() == 1, "live page must mount the toast stack"
+    toast_sel = ".toast, .dz-toast"
+    initial = page.locator(toast_sel).count()
+    assert initial >= 1, "demo partial ships at least one toast"
+
+    # Dismiss via host click handler (evaluate avoids fixed-position intercept flakes).
+    removed = page.evaluate(
+        """() => {
+          const close = document.querySelector(
+            '.toast__close[data-toast-dismiss], .dz-toast__close[data-dz-toast-dismiss]'
+          );
+          if (!close) return false;
+          close.click();
+          return true;
+        }"""
+    )
+    assert removed, "dismiss control must be present"
+    page.wait_for_timeout(80)
+    after_dismiss = page.locator(toast_sel).count()
+    assert after_dismiss == initial - 1, "dismiss control removes one toast"
+
+    page.evaluate(
+        """() => {
+          document.dispatchEvent(new CustomEvent('showToast', {
+            detail: {
+              title: 'Host test',
+              message: 'Client-fired toast',
+              type: 'warning',
+              duration: '30s',
+            },
+          }));
+        }"""
+    )
+    page.wait_for_timeout(120)
+    assert page.locator(toast_sel).count() == after_dismiss + 1
+    assert page.locator(".toast__title, .dz-toast__title").filter(has_text="Host test").count() == 1

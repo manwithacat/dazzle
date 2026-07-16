@@ -14,12 +14,12 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 
 | Status | Count |
 |--------|------:|
-| **parity** | 36 |
-| **partial** | 27 |
+| **parity** | 37 |
+| **partial** | 26 |
 | **gap** (placeholders) | 0 |
 | **n/a** | 1 |
 | **total shadcn** | 64 |
-| HM Hyperparts (registry) | 86 |
+| HM Hyperparts (registry) | 87 |
 
 ## Mapping
 
@@ -38,7 +38,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `button-group` | **partial** | `toggle-group,toolbar,controls` | Compose toggle-group / toolbar; no dedicated button-group id |
 | `calendar` | **partial** | `date-range` | Date-range + CalendarGrid emit exist; no full month-picker Hyperpart |
 | `card` | **parity** | `card` | Gallery + dashboard-card chrome |
-| `carousel` | **parity** | `carousel` | Stage + wrap/autoplay (0009); `dz-carousel.js`; aspect-ratio compose for cover |
+| `carousel` | **parity** | `carousel` | Gallery Hyperpart — SSR strip + data-dz-active slide; controller deferred |
 | `chart` | **partial** | `bar-chart,time-series,radar,sparkline,histogram,box-plot,funnel,heatmap,bullet,bar-track,chart-legend` | HM owns server-SVG chart family; shadcn is Recharts client wrapper |
 | `checkbox` | **partial** | `field,form` | Native form field; not a named Hyperpart (deliberate) |
 | `collapsible` | **partial** | `accordion` | Accordion covers disclosure; single collapsible root optional |
@@ -84,7 +84,7 @@ has a Hyperpart (or an explicit refuse/n-a). The /improve loop promotes
 | `table` | **partial** | `grid,list-region,table` | grid dual-lock + list-region + CSS table |
 | `tabs` | **parity** | `tabs` | DOM-only dual-lock |
 | `textarea` | **partial** | `field,form` | Native textarea via field triad |
-| `toast` | **partial** | `fragments` | Toast stack exists; dual-lock not first-class |
+| `toast` | **parity** | `toast` | Dual-lock Hyperpart: stack host, title/actions, pause-on-hover |
 | `toggle` | **parity** | `toggle` | Gallery Hyperpart — button + aria-pressed; distinct from switch/toggle-group |
 | `toggle-group` | **parity** | `toggle-group` | Gallery |
 | `tooltip` | **parity** | `tooltip` | Gallery |

@@ -291,6 +291,94 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             contracts=("contracts/alert.py",),
         ),
         Hyperpart(
+            "toast",
+            "Toast",
+            "Feedback",
+            "Stack host + auto-dismiss notifications — title, body, optional "
+            "actions; hover/focus pauses the timer (htmx OOB or client bridge).",
+            # Live stack is framed so fixed positioning paints in its own
+            # viewport (same treatment as other overlay hosts).
+            '<div id="dz-toast" class="dz-toast-stack" aria-live="polite" '
+            'data-dz-toast-cap="8">'
+            '<div class="dz-toast dz-toast-enter" data-dz-toast-level="success" '
+            'data-dz-remove-after="12s" role="status">'
+            '<div class="dz-toast__body">'
+            '<div class="dz-toast__title">Saved</div>'
+            '<div class="dz-toast__message">Your changes are live.</div>'
+            '<div class="dz-toast__actions">'
+            '<a class="dz-toast__action" href="#toast">View record</a>'
+            '<button type="button" class="dz-toast__action" data-dz-toast-dismiss>'
+            "Dismiss</button>"
+            "</div></div>"
+            '<button type="button" class="dz-toast__close" data-dz-toast-dismiss '
+            'aria-label="Dismiss"></button>'
+            "</div>"
+            '<div class="dz-toast" data-dz-toast-level="info" '
+            'data-dz-remove-after="12s" role="status">'
+            '<div class="dz-toast__body">'
+            '<div class="dz-toast__message">Message-only toast still works.</div>'
+            "</div>"
+            '<button type="button" class="dz-toast__close" data-dz-toast-dismiss '
+            'aria-label="Dismiss"></button>'
+            "</div></div>"
+            '<div class="hm-demo-row" style="margin-top:1rem">'
+            '<button type="button" class="dz-button" data-dz-variant="primary" '
+            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+            "{detail:{title:'Update available',message:"
+            "'A new version is ready.',type:'info',duration:'8s'}}))\">"
+            "Fire info toast</button>"
+            '<button type="button" class="dz-button" data-dz-variant="outline" '
+            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+            "{detail:{message:'Something went wrong.',type:'error',"
+            "actions:[{label:'Dismiss'}]}}))\">"
+            "Fire error toast</button>"
+            "</div>",
+            notes="Dual-lock root <code>.dz-toast</code> + stack "
+            "<code>#dz-toast.dz-toast-stack</code>. Host: pause-on-hover, "
+            "stack cap, dismiss. Server: <code>with_toast(..., title=…, "
+            "actions=…)</code>. Not Alpine notify — HTMX OOB + CustomEvent.",
+            tags=("feedback", "htmx"),
+            controller="controllers/dz-toast.js",
+            contracts=("contracts/toast.py",),
+            framed=True,
+            recipe="chrome-presentation",
+            layer="L2",
+            guidance=Guidance(
+                seams=(
+                    "stack host #dz-toast.dz-toast-stack receives OOB afterbegin",
+                    "data-dz-remove-after + data-dz-toast-level on each .dz-toast",
+                    "optional .dz-toast__title / __message / __actions slots",
+                    "data-dz-toast-dismiss removes the nearest .dz-toast",
+                    "showToast CustomEvent or window.dz.toast for client path",
+                ),
+                pitfalls=(
+                    "do not morph the toast stack — replace/afterbegin only",
+                    "do not invent Alpine notify stacks — use OOB + this host",
+                    "message text must be textContent (never innerHTML from detail)",
+                    "gallery fire buttons are demo chrome — production uses "
+                    "with_toast or HX-Trigger showToast",
+                ),
+                do_dont=(
+                    (
+                        "emit structured toasts (title + message + actions) "
+                        "from the exchange response via with_toast",
+                        "build a client notification SPA store or copy "
+                        "third-party Alpine toast idioms",
+                    ),
+                    (
+                        "let hover/focus pause auto-dismiss so users can read or activate actions",
+                        "force-dismiss while the pointer is over the toast",
+                    ),
+                ),
+                a11y_keys=(
+                    "role=status (or alert for error); aria-live on the stack",
+                    "dismiss control is keyboard-activatable",
+                    "focus inside the stack pauses auto-dismiss",
+                ),
+                composes_with=("button", "alert"),
+            ),
+        ),
+        Hyperpart(
             "card",
             "Card",
             "Data",
