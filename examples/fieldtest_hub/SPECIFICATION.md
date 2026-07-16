@@ -29,7 +29,7 @@ Every one of these six kinds of record can be browsed, inspected in detail, crea
 ## Where work happens
 
 **Engineering Dashboard** — field-testing oversight for engineers and managers,
-job-shaped first: fleet and issue metrics, an open **triage queue** of reports
+job-shaped first: fleet metrics, a non-active **device attention** queue, an open **triage queue** of reports
 by severity, critical-issue and open-task queues, then secondary demos (kanban
 boards, timelines, device tree, diagram, map, and tester directory).
 
@@ -69,4 +69,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:447340bad013792811cf5b1f48a71d36fb871a227e9a800040d94e5bf274b9cf -->
+<!-- dazzle-spec-brief: sha256:63aabdbb91f90a7ede84e033792dcce677eef7d709d969cedcfd717fb1ccd7e8 -->

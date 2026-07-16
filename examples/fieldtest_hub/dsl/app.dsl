@@ -1031,6 +1031,17 @@ workspace engineering_dashboard "Engineering Dashboard":
       recalled_devices: destructive
       prototype_devices: accent
 
+  # TR-35: fleet status without click-through to /app/device — non-active
+  # devices as a review queue next to the KPI strip.
+  device_attention:
+    source: Device
+    filter: status != active
+    sort: status asc, name asc
+    limit: 15
+    display: queue
+    action: device_detail
+    empty: "All registered devices are active"
+
   # Recent hands-on sessions: manager "tester activity tracking".
   tester_activity:
     source: TestSession
@@ -1199,9 +1210,9 @@ workspace engineering_dashboard "Engineering Dashboard":
       focus: triage_queue, critical_issues, metrics, all_tasks, firmware_releases
 
     as manager:
-      # TR-17: fleet KPIs + tester sessions first, then quality signals.
+      # TR-17/TR-35: fleet KPIs + non-active device queue first (no /app/device hop).
       purpose: "Fleet overview, tester activity, and product quality"
-      focus: fleet_overview, metrics, tester_activity, critical_issues, all_tasks, all_testers
+      focus: fleet_overview, device_attention, metrics, tester_activity, critical_issues, all_tasks
 
 # Workspace: Tester Dashboard
 # ST-042–044: personal metrics + assigned devices + open issues/tasks as queues

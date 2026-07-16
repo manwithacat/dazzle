@@ -257,6 +257,10 @@ Framework-validation fixtures in `fixtures/` (not user-facing apps — abstract 
 
 Both lists are drift-gated against the directory trees by `tests/unit/test_docs_drift.py` — adding or removing an example/fixture requires updating the matching line here.
 
+**Story-driven homes (not list-first CRUD):** map persona jobs → workspace Hyperparts via `docs/guides/story-to-composition.md`. Lifted apps carry `examples/<app>/stems/story-driven-jobs.md`. Prefer `display: queue` / `metrics` / `status_list` for open work; keep kanban/map/tree as secondary density, not the default landing.
+
+**Project hooks (Grok + Claude):** `.claude/hooks/README.md` — PreToolUse exit codes, `run_hook.sh`, camelCase payloads; regression tests in `tests/unit/test_claude_pretool_hooks.py`.
+
 ## LSP Server
 
 - LSP server: `dazzle lsp run` (diagnostics, hover, completion, go-to-definition)
