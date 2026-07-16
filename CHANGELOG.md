@@ -9,6 +9,11 @@
   `open: Entity via field` cannot resolve, row drills to
   `/app/<list-entity>/{id}` so journeys stay navigable and row click shields
   actions from #1613.
+- **#1615 related tables no longer dump FK dicts** — `format_cell` resolves
+  hydrated ref dicts via `_ref_display_name` (same as list cells).
+- **#1616 api_kb packs in wheel + load without mcp** — package-data ships
+  `**/*.toml`; pack discovery uses a pure module cache (no `dazzle.mcp`
+  import) so CH `search_select` sources register on dual-lock installs.
 
 ### Added
 - **`make preflight-surface`** — hard local gate for unpaid structural/artifact

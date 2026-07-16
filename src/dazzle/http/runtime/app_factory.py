@@ -774,6 +774,15 @@ def build_server_config(
         except Exception:
             logger.debug("Could not load persisted processes", exc_info=True)
 
+    # #1616: point pack discovery at this project before loading packs
+    if project_root is not None:
+        try:
+            from dazzle.api_kb.loader import set_pack_project_root
+
+            set_pack_project_root(project_root)
+        except Exception:
+            logger.debug("Could not set api_kb pack project root", exc_info=True)
+
     # Build fragment sources if not provided by caller
     if fragment_sources is None:
         fragment_sources = build_fragment_sources(appspec)

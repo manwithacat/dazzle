@@ -337,6 +337,31 @@ def _get_packs_dir() -> Path:
     return Path(__file__).parent
 
 
+# Module-level pack registry (#1616) — no MCP dependency. Dual-lock installs
+# without the mcp extra must still resolve companies_house_lookup etc.
+_pack_cache: dict[str, ApiPack] = {}
+_packs_loaded: bool = False
+_pack_project_root: Path | None = None
+
+
+def set_pack_project_root(path: Path | None) -> None:
+    """Point discovery at a project root (optional local ``.dazzle/api_packs``).
+
+    Clears the pack cache so the next ``load_pack`` rediscovers. Called from
+    HTTP boot and MCP ``set_project_root`` when available.
+    """
+    global _pack_project_root, _packs_loaded, _pack_cache
+    _pack_project_root = path.resolve() if path is not None else None
+    _packs_loaded = False
+    _pack_cache = {}
+
+
+def _resolve_project_root() -> Path:
+    if _pack_project_root is not None:
+        return _pack_project_root
+    return Path.cwd()
+
+
 def _load_pack_from_toml(toml_path: Path) -> ApiPack:
     """Load a single pack from a TOML file."""
     with open(toml_path, "rb") as f:
@@ -472,24 +497,26 @@ def _collect_packs_from_dir(packs_dir: Path, into: dict[str, ApiPack]) -> None:
 
 
 def _discover_packs() -> None:
-    """Discover all available packs (project-local first, then built-in)."""
-    from dazzle.mcp.server.state import get_state
+    """Discover all available packs (project-local first, then built-in).
 
-    state = get_state()
-    if state.packs_loaded:
+    #1616: pure path — no ``dazzle.mcp`` import. HTTP dual-lock pins without
+    the mcp extra must still resolve ``companies_house_lookup`` etc.
+    """
+    global _pack_cache, _packs_loaded
+    if _packs_loaded:
         return
 
     new_cache: dict[str, ApiPack] = {}
 
     # Project-local packs take priority
-    project_packs_dir = state.project_root / ".dazzle" / "api_packs"
+    project_packs_dir = _resolve_project_root() / ".dazzle" / "api_packs"
     _collect_packs_from_dir(project_packs_dir, new_cache)
 
     # Built-in packs (won't overwrite project-local ones with same name)
     _collect_packs_from_dir(_get_packs_dir(), new_cache)
 
-    state.pack_cache = new_cache
-    state.packs_loaded = True
+    _pack_cache = new_cache
+    _packs_loaded = True
 
 
 def load_pack(pack_name: str) -> ApiPack | None:
@@ -502,10 +529,8 @@ def load_pack(pack_name: str) -> ApiPack | None:
     Returns:
         The ApiPack if found, None otherwise
     """
-    from dazzle.mcp.server.state import get_state
-
     _discover_packs()
-    return get_state().pack_cache.get(pack_name)
+    return _pack_cache.get(pack_name)
 
 
 def list_packs() -> list[ApiPack]:
@@ -515,10 +540,8 @@ def list_packs() -> list[ApiPack]:
     Returns:
         List of all discovered ApiPacks
     """
-    from dazzle.mcp.server.state import get_state
-
     _discover_packs()
-    return list(get_state().pack_cache.values())
+    return list(_pack_cache.values())
 
 
 def search_packs(
@@ -537,10 +560,8 @@ def search_packs(
     Returns:
         List of matching ApiPacks
     """
-    from dazzle.mcp.server.state import get_state
-
     _discover_packs()
-    results = list(get_state().pack_cache.values())
+    results = list(_pack_cache.values())
 
     if category:
         category_lower = category.lower()
@@ -570,13 +591,11 @@ def get_all_env_vars() -> list[EnvVarSpec]:
     Returns:
         Deduplicated list of all env vars across packs
     """
-    from dazzle.mcp.server.state import get_state
-
     _discover_packs()
     seen: set[str] = set()
     result: list[EnvVarSpec] = []
 
-    for pack in get_state().pack_cache.values():
+    for pack in _pack_cache.values():
         for env_var in pack.env_vars:
             if env_var.name not in seen:
                 seen.add(env_var.name)
@@ -595,10 +614,8 @@ def generate_env_example(pack_names: list[str] | None = None) -> str:
     Returns:
         Combined .env.example content
     """
-    from dazzle.mcp.server.state import get_state
-
     _discover_packs()
-    cache = get_state().pack_cache
+    cache = _pack_cache
 
     if pack_names is None:
         packs = list(cache.values())

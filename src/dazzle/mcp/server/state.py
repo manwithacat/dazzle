@@ -105,6 +105,13 @@ def set_project_root(path: Path) -> None:
     _state.project_root = path
     _state.pack_cache.clear()
     _state.packs_loaded = False
+    # #1616: keep pure api_kb pack discovery in sync (no mcp required to load packs)
+    try:
+        from dazzle.api_kb.loader import set_pack_project_root
+
+        set_pack_project_root(path)
+    except Exception:
+        pass
 
 
 def get_project_root() -> Path:

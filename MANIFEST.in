@@ -22,6 +22,9 @@ recursive-include src/dazzle/lsp/grammars *.json
 # sdist needs the recursive-include so `python -m build` sees them.
 recursive-include src/dazzle/services/agent_commands/definitions *.toml
 
+# API Knowledgebase pack TOMLs (#1616) — fragment search_select sources.
+recursive-include src/dazzle/api_kb *.toml
+
 # Include Alembic migration assets (#1308) — the `dazzle db` CLI loads these by
 # file path (script.py.mako template, alembic.ini, and the framework baseline
 # migrations under versions/, which is not a Python package). Needed in the

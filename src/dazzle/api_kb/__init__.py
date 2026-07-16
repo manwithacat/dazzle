@@ -37,6 +37,7 @@ from .loader import (
     list_packs,
     load_pack,
     search_packs,
+    set_pack_project_root,
 )
 
 __all__ = [
@@ -48,6 +49,7 @@ __all__ = [
     "load_pack",
     "list_packs",
     "search_packs",
+    "set_pack_project_root",
 ]
 
 

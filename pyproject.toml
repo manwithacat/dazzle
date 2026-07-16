@@ -421,6 +421,11 @@ dazzle = ["py.typed"]
 # definitions/*.toml via Path relative to loader.py. definitions/ has no
 # __init__.py so packages.find omits it — same class as #1032/#1308/#1572.
 "dazzle.services.agent_commands" = ["definitions/*.toml"]
+# API Knowledgebase pack TOMLs (#1616) — search_select fragment sources load
+# packs via Path relative to loader.py (companies_house/lookup.toml etc.).
+# Provider dirs have no __init__.py so packages.find omits them — same class
+# as #1032/#1308/#1572/#1589 (asset exists in-repo, wheel drops it).
+"dazzle.api_kb" = ["**/*.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/dazzle/http/tests"]

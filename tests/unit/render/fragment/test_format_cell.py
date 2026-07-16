@@ -115,6 +115,27 @@ def test_bool_value_in_text_column():
     assert format_cell(True, "text") == "Yes"
 
 
+def test_ref_dict_uses_display_not_str_dict() -> None:
+    """#1615: related tables pass hydrated FK dicts — never str(dict) in UI."""
+    raw = {
+        "id": "a9a9826a-5708-4dfd-87e1-38cbd08e8964",
+        "first_name": "Demo",
+        "last_name": "Chen",
+        "email": "customer@test.local",
+        "__display__": "customer@test.local",
+    }
+    out = format_cell(raw, "ref")
+    assert out == "customer@test.local"
+    assert "{" not in out and "id" not in out
+    # Without __display__, fall back to name heuristics
+    out2 = format_cell(
+        {"id": "x", "first_name": "Ada", "last_name": "Lovelace"},
+        "ref",
+    )
+    assert out2 == "Ada Lovelace"
+    assert "id" not in out2
+
+
 def test_render_path_escapes_exactly_once():
     """Regression guard for the double-escape class: format_cell returns RAW and
     the renderer escapes once. A special-char cell must appear escaped exactly

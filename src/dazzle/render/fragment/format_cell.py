@@ -12,9 +12,10 @@ consumers (`Table` cells via `_render_tables`, `Text` via `_emit_text`) call
 would be double-encoded (e.g. `&` → `&amp;amp;`). This mirrors the old stub's
 raw `str(value)` contract.
 
-FK display values are already resolved upstream (`fk_display_only`), so a
-``ref`` cell's value is already the name. Phase 2 (#1470) adds the explicit
-``format:`` override via `override=`.
+FK display: prefer an already-resolved name string; when the value is still a
+hydrated dict (related-group path, #1615), resolve via ``_ref_display_name``
+(``__display__`` / name heuristics). Never dump ``str(dict)`` into the UI.
+Phase 2 (#1470) adds the explicit ``format:`` override via `override=`.
 """
 
 from dataclasses import dataclass
@@ -88,7 +89,21 @@ def _infer(value: Any, kind: str, currency_code: str) -> str:
     if kind == "currency":
         return _currency(value, currency_code or "GBP")
     if kind == "badge":
+        # Hydrated enum/ref dicts must not dump as str(dict) (#1615).
+        if isinstance(value, dict):
+            from dazzle.render.filters import _ref_display_name
+
+            return _title_case(_ref_display_name(value))
         return _title_case(str(value))
+    # #1615: related-group path passes hydrated FK dicts with kind=ref (or
+    # sometimes text). Lists already use _ref_display_name; format_cell must
+    # match so detail related tables never show Python dict repr.
+    if kind == "ref" or isinstance(value, dict):
+        from dazzle.render.filters import _ref_display_name
+
+        if isinstance(value, dict):
+            return _ref_display_name(value)
+        return str(value)
     if kind == "date":
         return _friendly_dt(value, with_time=False)
     if kind == "datetime":
