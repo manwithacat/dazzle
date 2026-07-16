@@ -102,3 +102,15 @@ class TestWithOob:
         body = result.body.decode()
         assert 'id="a"' in body
         assert 'id="b"' in body
+
+    def test_error_default_duration_is_ten_seconds(self):
+        resp = HTMLResponse("<p>OK</p>")
+        result = with_toast(resp, "Fail", "error")
+        body = result.body.decode()
+        assert 'data-dz-remove-after="10s"' in body
+
+    def test_info_default_duration_is_eight_seconds(self):
+        resp = HTMLResponse("<p>OK</p>")
+        result = with_toast(resp, "Hi", "info")
+        body = result.body.decode()
+        assert 'data-dz-remove-after="8s"' in body

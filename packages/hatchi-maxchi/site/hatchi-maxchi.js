@@ -834,8 +834,10 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   "use strict";
 
   var DEFAULT_CAP = 8;
-  /** Penguin-aligned default; long enough to read title + act. */
+  /** Decision 0011: readable default (info/success/warning). */
   var DEFAULT_DELAY = "8s";
+  /** Errors get a longer read window when duration is omitted. */
+  var ERROR_DELAY = "10s";
   /** Match CSS --duration-slow leave; hard ceiling if animationend missed. */
   var LEAVE_MS = 320;
 
@@ -849,6 +851,33 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var n = parseFloat(m[1]);
     if (m[2] === "ms") return n;
     return n * 1000;
+  }
+
+  function defaultDelayFor(level) {
+    return level === "error" ? ERROR_DELAY : DEFAULT_DELAY;
+  }
+
+  /**
+   * Host-owned TTL bar. Duration matches data-remove-after; pause/resume
+   * uses animation-play-state so remaining visual time tracks the timer.
+   * @param {Element} el
+   * @param {number} totalMs
+   */
+  function ensureProgress(el, totalMs) {
+    var bar = el.querySelector(".toast__progress");
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.className = "toast__progress";
+      bar.setAttribute("aria-hidden", "true");
+      el.appendChild(bar);
+    }
+    bar.style.animationDuration = totalMs + "ms";
+    return bar;
+  }
+
+  function setProgressPaused(el, paused) {
+    var bar = el.querySelector(".toast__progress");
+    if (bar) bar.style.animationPlayState = paused ? "paused" : "running";
   }
 
   function stackEl() {
@@ -889,6 +918,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     if (typeof el.__dzToastPause === "function") el.__dzToastPause();
     el.classList.remove("toast-enter");
     el.classList.add("toast-leave");
+    setProgressPaused(el, true);
 
     var done = false;
     function finish() {
@@ -897,7 +927,13 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       if (el.parentNode) el.remove();
     }
 
-    el.addEventListener("animationend", finish, { once: true });
+    function onEnd(e) {
+      // Ignore bubbled progress/enter ends — only leave motion on the unit.
+      if (e && e.target !== el) return;
+      if (e && e.animationName && e.animationName.indexOf("toast-out") === -1) return;
+      finish();
+    }
+    el.addEventListener("animationend", onEnd);
     // Fallback when reduced-motion collapses animation or event is missed.
     setTimeout(finish, LEAVE_MS);
   }
@@ -916,6 +952,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var deadline = Date.now() + remaining;
     var timer = null;
     var paused = false;
+
+    ensureProgress(el, total);
 
     function clear() {
       if (timer != null) {
@@ -941,11 +979,13 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       paused = true;
       remaining = Math.max(0, deadline - Date.now());
       clear();
+      setProgressPaused(el, true);
     };
 
     el.__dzToastResume = function () {
       if (!paused || el.__dzToastLeaving) return;
       paused = false;
+      setProgressPaused(el, false);
       arm();
     };
 
@@ -1050,7 +1090,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     var tone = opts.type || opts.level || "info";
     var title = opts.title || null;
     var actions = opts.actions || null;
-    var duration = opts.duration || DEFAULT_DELAY;
+    var duration = opts.duration || defaultDelayFor(tone);
 
     var toast = document.createElement("div");
     toast.className = "toast toast-enter";

@@ -12,18 +12,6 @@ Stack host + auto-dismiss notifications — title, body, optional actions; hover
 ## Copy this
 
 ```html
-<div class="hm-toast-stage">
-  <header class="hm-toast-stage__bar"><strong>Demo app</strong><span class="hm-toast-stage__hint">Toasts pin to the viewport, not this content column</span></header>
-  <main class="hm-toast-stage__body">
-    <p>Save, create, and validation feedback appear on the <strong>whole page</strong> — top-right overlay, auto-dismiss after 8s, pause on hover/focus.</p>
-    <div class="hm-demo-row">
-      <button type="button" class="button" data-variant="primary" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{title:'Saved',message:'Your changes are live.',type:'success'}}))">Fire success</button>
-      <button type="button" class="button" data-variant="outline" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{title:'Update available',message:'A new version is ready.',type:'info'}}))">Fire info</button>
-      <button type="button" class="button" data-variant="outline" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{title:'Action needed',message:'Storage is getting low.',type:'warning',actions:[{label:'Upgrade',href:'#toast'},{label:'Dismiss'}]}}))">Fire warning</button>
-      <button type="button" class="button" data-variant="outline" onclick="document.dispatchEvent(new CustomEvent('showToast',{detail:{title:'Something went wrong',message:'Please try again.',type:'error',actions:[{label:'Dismiss'}]}}))">Fire error</button>
-    </div>
-  </main>
-</div>
 <div id="toast" class="toast-stack" aria-live="polite" data-toast-cap="8">
   <div class="toast toast-enter" data-toast-level="success" data-remove-after="8s" role="status">
     <div class="toast__body">
@@ -61,6 +49,7 @@ This L2 host has no declared hypermedia exchanges in the registry. If you add pe
 - optional .dz-toast__title / __message / __actions slots
 - data-dz-toast-dismiss removes the nearest .dz-toast
 - showToast CustomEvent or window.dz.toast for client path
+- host injects .dz-toast__progress TTL bar (pauses with timer)
 
 ### Do / Don't
 
@@ -111,6 +100,10 @@ Dual-lock unit is the toast root (``[data-dz-toast-level]`` on ``.dz-toast``)
 plus the stack host (``#dz-toast.dz-toast-stack``). Level, auto-dismiss delay,
 title, message, and optional action row are host-owned.
 
+Page chrome (decision 0011 / stem ``page-chrome-toast``): viewport stack,
+default TTL 8s (10s error), pause on hover/focus, leave before remove. TTL
+progress bar is host-injected (not a contract-required node).
+
 Server emit: ``dazzle.http.runtime.response_helpers.with_toast``.
 Client emit: ``showToast`` / stack ``toast`` events (``controllers/dz-toast.js``).
 
@@ -140,7 +133,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Dual-lock root .dz-toast + stack #dz-toast.dz-toast-stack. Host: pause-on-hover, stack cap, enter/leave motion, default 8s dismiss. Server: with_toast(..., title=…, actions=…). Not Alpine notify — HTMX OOB + CustomEvent. Gallery uses frame_kind=overlay so fixed corners stay visible.
+Dual-lock root .dz-toast + stack #dz-toast.dz-toast-stack. Decision 0011-toast-page-chrome: viewport host, 8s/10s TTL, pause, leave motion, TTL progress. Server: with_toast(..., title=…, actions=…). Not Alpine notify — HTMX OOB + CustomEvent.
 
 ## Source files
 

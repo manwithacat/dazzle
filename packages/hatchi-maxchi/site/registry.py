@@ -151,6 +151,10 @@ class Hyperpart:
     #   "overlay" — natural viewport width so position:fixed corners stay
     #               on-screen (toast stack and similar page chrome)
     frame_kind: str = "shell"
+    # Optional HTML prepended **only** on live framed pages (and not in
+    # Copy this). Use for fire buttons / demo stages that must not pollute
+    # the product partial (decision 0011 toast).
+    demo_shell: str = ""
     # OPTIONAL extension controllers riding this Hyperpart's seams (each a
     # controllers/*.js file). An extension adds behaviour a consumer can take
     # or leave — its absence never breaks the core partial (the grid works
@@ -301,48 +305,8 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "Feedback",
             "Stack host + auto-dismiss notifications — title, body, optional "
             "actions; hover/focus pauses the timer (htmx OOB or client bridge).",
-            # Live demo is a mini page: body content + fixed viewport stack.
-            # frame_kind=overlay keeps the iframe at natural width so fixed
-            # top-right toasts stay on-screen (shell frames are 64rem wide).
-            '<div class="hm-toast-stage">'
-            '<header class="hm-toast-stage__bar">'
-            "<strong>Demo app</strong>"
-            '<span class="hm-toast-stage__hint">Toasts pin to the viewport, '
-            "not this content column</span>"
-            "</header>"
-            '<main class="hm-toast-stage__body">'
-            "<p>Save, create, and validation feedback appear on the "
-            "<strong>whole page</strong> — top-right overlay, auto-dismiss "
-            "after 8s, pause on hover/focus.</p>"
-            '<div class="hm-demo-row">'
-            '<button type="button" class="dz-button" data-dz-variant="primary" '
-            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
-            "{detail:{title:'Saved',message:"
-            "'Your changes are live.',type:'success'}}))\">"
-            "Fire success</button>"
-            '<button type="button" class="dz-button" data-dz-variant="outline" '
-            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
-            "{detail:{title:'Update available',message:"
-            "'A new version is ready.',type:'info'}}))\">"
-            "Fire info</button>"
-            '<button type="button" class="dz-button" data-dz-variant="outline" '
-            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
-            "{detail:{title:'Action needed',message:"
-            "'Storage is getting low.',type:'warning',"
-            "actions:[{label:'Upgrade',href:'#toast'},{label:'Dismiss'}]}}))\">"
-            "Fire warning</button>"
-            '<button type="button" class="dz-button" data-dz-variant="outline" '
-            "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
-            "{detail:{title:'Something went wrong',message:"
-            "'Please try again.',type:'error',"
-            "actions:[{label:'Dismiss'}]}}))\">"
-            "Fire error</button>"
-            "</div>"
-            "</main>"
-            "</div>"
-            # Stack is empty in the live stage; seed toast lives only for
-            # Copy-this / contract docs via the snippet (see notes). The
-            # host mounts on #dz-toast regardless of children.
+            # Product partial only (decision 0011). Live fire buttons live in
+            # demo_shell so Copy this stays stack + unit.
             '<div id="dz-toast" class="dz-toast-stack" aria-live="polite" '
             'data-dz-toast-cap="8">'
             '<div class="dz-toast dz-toast-enter" data-dz-toast-level="success" '
@@ -360,16 +324,51 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "</div>"
             "</div>",
             notes="Dual-lock root <code>.dz-toast</code> + stack "
-            "<code>#dz-toast.dz-toast-stack</code>. Host: pause-on-hover, "
-            "stack cap, enter/leave motion, default 8s dismiss. Server: "
+            "<code>#dz-toast.dz-toast-stack</code>. Decision "
+            "<code>0011-toast-page-chrome</code>: viewport host, 8s/10s TTL, "
+            "pause, leave motion, TTL progress. Server: "
             "<code>with_toast(..., title=…, actions=…)</code>. Not Alpine "
-            "notify — HTMX OOB + CustomEvent. Gallery uses "
-            "<code>frame_kind=overlay</code> so fixed corners stay visible.",
+            "notify — HTMX OOB + CustomEvent.",
             tags=("feedback", "htmx"),
             controller="controllers/dz-toast.js",
             contracts=("contracts/toast.py",),
             framed=True,
             frame_kind="overlay",
+            demo_shell=(
+                '<div class="hm-toast-stage">'
+                '<header class="hm-toast-stage__bar">'
+                "<strong>Demo app</strong>"
+                '<span class="hm-toast-stage__hint">Toasts pin to the viewport, '
+                "not this content column</span>"
+                "</header>"
+                '<main class="hm-toast-stage__body">'
+                "<p>Page-chrome feedback — top-right overlay, 8s default "
+                "(10s errors), pause on hover/focus, leave motion.</p>"
+                '<div class="hm-demo-row">'
+                '<button type="button" class="dz-button" data-dz-variant="primary" '
+                "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+                "{detail:{title:'Saved',message:"
+                "'Your changes are live.',type:'success'}}))\">"
+                "Fire success</button>"
+                '<button type="button" class="dz-button" data-dz-variant="outline" '
+                "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+                "{detail:{title:'Update available',message:"
+                "'A new version is ready.',type:'info'}}))\">"
+                "Fire info</button>"
+                '<button type="button" class="dz-button" data-dz-variant="outline" '
+                "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+                "{detail:{title:'Action needed',message:"
+                "'Storage is getting low.',type:'warning',"
+                "actions:[{label:'Upgrade',href:'#toast'},{label:'Dismiss'}]}}))\">"
+                "Fire warning</button>"
+                '<button type="button" class="dz-button" data-dz-variant="outline" '
+                "onclick=\"document.dispatchEvent(new CustomEvent('showToast',"
+                "{detail:{title:'Something went wrong',message:"
+                "'Please try again.',type:'error',"
+                "actions:[{label:'Dismiss'}]}}))\">"
+                "Fire error</button>"
+                "</div></main></div>"
+            ),
             recipe="chrome-presentation",
             layer="L2",
             guidance=Guidance(
@@ -379,6 +378,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "optional .dz-toast__title / __message / __actions slots",
                     "data-dz-toast-dismiss removes the nearest .dz-toast",
                     "showToast CustomEvent or window.dz.toast for client path",
+                    "host injects .dz-toast__progress TTL bar (pauses with timer)",
                 ),
                 pitfalls=(
                     "do not morph the toast stack — replace/afterbegin only",

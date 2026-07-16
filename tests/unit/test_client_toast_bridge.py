@@ -81,6 +81,12 @@ class TestClientToastBridge:
         assert "dismissToast" in content
         assert "animationend" in content
 
+    def test_ttl_progress_and_error_delay(self) -> None:
+        content = JS_FILE.read_text()
+        assert "dz-toast__progress" in content
+        assert 'ERROR_DELAY = "10s"' in content
+        assert "ensureProgress" in content
+
     def test_dazzle_host_matches_hm_controller(self) -> None:
         """Dual-lock: Dazzle static copy must not drift from HM controller."""
         assert JS_FILE.read_text() == HM_JS.read_text()

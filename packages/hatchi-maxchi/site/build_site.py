@@ -2526,7 +2526,9 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         # note is NOT reprefixed: it references source-tree filenames
         # (e.g. controllers/dz-command.js) and HYPERPART markers, which keep
         # the source form regardless of the published class namespace.
-        live = apply_prefix(expand_icons(c.partial), prefix)
+        # Live may prepend demo_shell (gallery chrome); Copy this is partial only.
+        live_src = (getattr(c, "demo_shell", "") or "") + c.partial
+        live = apply_prefix(expand_icons(live_src), prefix)
         # __HM_ROOT__ → site-root-relative prefix (index "" vs part pages "../")
         live_index = live.replace("__HM_ROOT__", "")
         live_part = live.replace("__HM_ROOT__", "../")
@@ -2574,12 +2576,12 @@ window.addEventListener('storage', function (e) {{
         else:
             framed_live = live_index
             framed_live_part = live_part
-        # The live demo uses the compact one-line `live`; the SNIPPET is
-        # pretty-printed so the structure is legible (render-faithful — see
-        # site/pretty.py). Sprite-dependency note prepended to the snippet only.
-        # Snippet uses site-root relative hrefs (index form of __HM_ROOT__).
-        pretty = pretty_html(live_index)
-        snippet_src = _SPRITE_NOTE + pretty if '<use href="#i-' in live_index else pretty
+        # Live demo may include demo_shell; SNIPPET is product partial only
+        # (decision 0011 — Copy this must not ship gallery fire buttons).
+        # Pretty-print for legibility (site/pretty.py). Sprite note when needed.
+        snippet_html = apply_prefix(expand_icons(c.partial), prefix).replace("__HM_ROOT__", "")
+        pretty = pretty_html(snippet_html)
+        snippet_src = _SPRITE_NOTE + pretty if '<use href="#i-' in snippet_html else pretty
         # Dogfood the code Hyperpart: surface + copy; HTML/Python build-time colour.
         snippet_block = apply_prefix(
             render_code_block(

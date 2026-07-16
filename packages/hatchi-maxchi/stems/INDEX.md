@@ -15,6 +15,7 @@
 | [chrome-vs-protocol](chrome-vs-protocol.md) | Same modal chrome ≠ same L1; addressing vs request gating |
 | [host-chrome-symmetry](host-chrome-symmetry.md) | Overlay shells: form_shell vs exchange_shell; guests keep DOM contracts |
 | [pragmatic-gallery-aesthetics](pragmatic-gallery-aesthetics.md) | Demos teach by looking intentional: full-bleed media, observable autoplay, in-family hypermedia |
+| [page-chrome-toast](page-chrome-toast.md) | Toast is viewport page chrome: one host, OOB/Trigger/client parity, no Alpine store |
 
 **Framework parent:** [monorepo stems](../../../stems/INDEX.md)
 **Playbooks:** `docs/agent/`

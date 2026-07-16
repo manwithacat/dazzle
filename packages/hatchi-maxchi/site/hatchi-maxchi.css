@@ -1893,6 +1893,8 @@ dialog.alert-dialog::backdrop {
 /* ── toast unit ────────────────────────────────────────────────────── */
 
 .toast {
+  position: relative;
+  overflow: hidden;
   pointer-events: auto;
   display: flex;
   align-items: flex-start;
@@ -1902,6 +1904,7 @@ dialog.alert-dialog::backdrop {
   box-sizing: border-box;
   padding-inline: var(--space-md);
   padding-block: var(--space-md);
+  padding-block-end: calc(var(--space-md) + 2px);
   border-radius: var(--radius-md);
   border: 1px solid var(--colour-border);
   border-inline-start-width: 4px;
@@ -1911,6 +1914,42 @@ dialog.alert-dialog::backdrop {
   font-size: var(--text-sm);
   line-height: var(--leading-tight);
   will-change: transform, opacity;
+}
+
+/* TTL progress — host sets animation-duration from data-remove-after. */
+.toast__progress {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 2px;
+  transform-origin: inline-start;
+  background: color-mix(in oklch, var(--colour-text) 28%, transparent);
+  pointer-events: none;
+  animation-name: toast-ttl;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.toast[data-toast-level="info"] .toast__progress {
+  background: color-mix(in oklch, var(--colour-brand) 55%, transparent);
+}
+.toast[data-toast-level="success"] .toast__progress {
+  background: color-mix(in oklch, var(--colour-success) 55%, transparent);
+}
+.toast[data-toast-level="warning"] .toast__progress {
+  background: color-mix(in oklch, var(--colour-warning) 55%, transparent);
+}
+.toast[data-toast-level="error"] .toast__progress {
+  background: color-mix(in oklch, var(--colour-danger) 55%, transparent);
+}
+
+@keyframes toast-ttl {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
 }
 
 .toast[data-toast-level="info"] {
@@ -2089,6 +2128,10 @@ dialog.alert-dialog::backdrop {
   .toast-enter,
   .toast-leave {
     animation-duration: 1ms;
+  }
+  .toast__progress {
+    /* Still shrink so remaining time is visible, but no enter/leave flourish. */
+    animation-timing-function: linear;
   }
 }
 

@@ -1299,6 +1299,8 @@ max-width: min(24rem, calc(100vw - 2rem));
 pointer-events: none;
 }
 .dz-toast {
+position: relative;
+overflow: hidden;
 pointer-events: auto;
 display: flex;
 align-items: flex-start;
@@ -1308,6 +1310,7 @@ max-width: 100%;
 box-sizing: border-box;
 padding-inline: var(--space-md);
 padding-block: var(--space-md);
+padding-block-end: calc(var(--space-md) + 2px);
 border-radius: var(--radius-md);
 border: 1px solid var(--colour-border);
 border-inline-start-width: 4px;
@@ -1317,6 +1320,38 @@ box-shadow: var(--shadow-md);
 font-size: var(--text-sm);
 line-height: var(--leading-tight);
 will-change: transform, opacity;
+}
+.dz-toast__progress {
+position: absolute;
+inset-inline: 0;
+inset-block-end: 0;
+block-size: 2px;
+transform-origin: inline-start;
+background: color-mix(in oklch, var(--colour-text) 28%, transparent);
+pointer-events: none;
+animation-name: dz-toast-ttl;
+animation-timing-function: linear;
+animation-fill-mode: forwards;
+}
+.dz-toast[data-dz-toast-level="info"] .dz-toast__progress {
+background: color-mix(in oklch, var(--colour-brand) 55%, transparent);
+}
+.dz-toast[data-dz-toast-level="success"] .dz-toast__progress {
+background: color-mix(in oklch, var(--colour-success) 55%, transparent);
+}
+.dz-toast[data-dz-toast-level="warning"] .dz-toast__progress {
+background: color-mix(in oklch, var(--colour-warning) 55%, transparent);
+}
+.dz-toast[data-dz-toast-level="error"] .dz-toast__progress {
+background: color-mix(in oklch, var(--colour-danger) 55%, transparent);
+}
+@keyframes dz-toast-ttl {
+from {
+transform: scaleX(1);
+}
+to {
+transform: scaleX(0);
+}
 }
 .dz-toast[data-dz-toast-level="info"] {
 border-inline-start-color: var(--colour-brand);
@@ -1465,6 +1500,9 @@ transform: translateX(1.5rem);
 .dz-toast-enter,
 .dz-toast-leave {
 animation-duration: 1ms;
+}
+.dz-toast__progress {
+animation-timing-function: linear;
 }
 }
 .hm-toast-stage {
