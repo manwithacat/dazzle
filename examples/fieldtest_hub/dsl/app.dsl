@@ -1010,20 +1010,26 @@ surface task_edit "Edit Task":
 # =============================================================================
 
 # Workspace: Engineering Dashboard
+# Story-driven (docs/guides/story-to-composition.md):
+#   ST-037 triage queue · ST-040 team workload · ST-041 release metrics
+#   TR-17 manager focus: fleet KPIs + tester activity first
 workspace engineering_dashboard "Engineering Dashboard":
-  # TR-17: manager persona needs explicit fleet overview + tester activity,
-  # not only issue triage. Regions below power the manager focus strip.
   purpose: "Fleet overview, tester activity, and field-quality oversight"
   access: persona(engineer, manager)
 
   # Fleet overview KPI strip: total/active/prototype/recalled devices.
   fleet_overview:
     source: Device
+    display: metrics
     aggregate:
       total_devices: count(Device)
       active_devices: count(Device where status = active)
       prototype_devices: count(Device where status = prototype)
       recalled_devices: count(Device where status = recalled)
+    tones:
+      active_devices: positive
+      recalled_devices: destructive
+      prototype_devices: accent
 
   # Recent hands-on sessions: manager "tester activity tracking".
   tester_activity:
@@ -1034,12 +1040,22 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: test_session_detail
     empty: "No recent test sessions logged"
 
+  # ST-037 — triage open reports (severity-first), not a generic list.
+  triage_queue:
+    source: IssueReport
+    filter: status = open
+    sort: severity desc, reported_at desc
+    limit: 20
+    display: queue
+    action: issue_report_edit
+    empty: "No open reports to triage"
+
   critical_issues:
     source: IssueReport
     filter: severity = critical and status != closed
     sort: reported_at desc
     limit: 10
-    display: list
+    display: queue
     action: issue_report_detail
     empty: "No critical issues!"
 
@@ -1067,12 +1083,20 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: device_detail
     empty: "No active devices"
 
+  # ST-041 release + issue pressure strip.
   metrics:
     source: IssueReport
+    display: metrics
     aggregate:
       total_issues: count(IssueReport)
       critical: count(IssueReport where severity = critical)
       open: count(IssueReport where status = open)
+      releases_draft: count(FirmwareRelease where status = draft)
+      releases_live: count(FirmwareRelease where status = released)
+    tones:
+      critical: destructive
+      open: warning
+      releases_live: positive
 
   firmware_releases:
     source: FirmwareRelease
@@ -1082,13 +1106,15 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: firmware_release_detail
     empty: "No firmware releases"
 
+  # ST-040 — open work as a queue (reassign from row/detail).
   all_tasks:
     source: Task
+    filter: status != completed and status != cancelled
     sort: created_at desc
     limit: 20
-    display: list
+    display: queue
     action: task_detail
-    empty: "No tasks"
+    empty: "No open tasks"
 
   task_board:
     source: Task
@@ -1169,25 +1195,37 @@ workspace engineering_dashboard "Engineering Dashboard":
 
   ux:
     as engineer:
-      purpose: "Monitor field testing quality and issues"
-      focus: critical_issues, metrics, firmware_releases, all_tasks
+      purpose: "Triage field issues and ship firmware"
+      focus: triage_queue, critical_issues, metrics, all_tasks, firmware_releases
 
     as manager:
       # TR-17: fleet KPIs + tester sessions first, then quality signals.
       purpose: "Fleet overview, tester activity, and product quality"
-      focus: fleet_overview, tester_activity, metrics, critical_issues, all_testers, device_board
+      focus: fleet_overview, metrics, tester_activity, critical_issues, all_tasks, all_testers
 
 # Workspace: Tester Dashboard
+# ST-042–044: personal metrics + assigned devices + open issues/tasks as queues
 workspace tester_dashboard "Tester Dashboard":
   purpose: "Personal field testing hub"
   access: persona(tester)
+
+  my_stats:
+    source: IssueReport
+    display: metrics
+    aggregate:
+      total_reports: count(IssueReport where reported_by_id = current_user)
+      critical_found: count(IssueReport where reported_by_id = current_user and severity = critical)
+      open_tasks: count(Task where assigned_to_id = current_user and status != completed)
+    tones:
+      critical_found: destructive
+      open_tasks: accent
 
   my_devices:
     source: Device
     filter: assigned_tester_id = current_user
     sort: name asc
-    limit: 10
-    display: list
+    limit: 15
+    display: queue
     action: device_detail
     empty: "No devices assigned to you yet"
 
@@ -1196,7 +1234,7 @@ workspace tester_dashboard "Tester Dashboard":
     filter: reported_by_id = current_user
     sort: reported_at desc
     limit: 20
-    display: list
+    display: queue
     action: issue_report_detail
     empty: "No issues reported yet"
 
@@ -1208,25 +1246,19 @@ workspace tester_dashboard "Tester Dashboard":
     display: timeline
     empty: "No test sessions logged"
 
-  my_stats:
-    source: IssueReport
-    aggregate:
-      total_reports: count(IssueReport where reported_by_id = current_user)
-      critical_found: count(IssueReport where reported_by_id = current_user and severity = critical)
-
   my_tasks:
     source: Task
     filter: assigned_to_id = current_user
     sort: created_at desc
     limit: 10
-    display: list
+    display: queue
     action: task_detail
     empty: "No tasks assigned to you"
 
   ux:
     as tester:
       purpose: "Your field testing activity"
-      focus: my_devices, my_tasks, my_issues
+      focus: my_stats, my_devices, my_tasks, my_issues
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts

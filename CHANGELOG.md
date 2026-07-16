@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **acme_billing**: portfolio metrics + invoice queue; persona defaults.
   - **design_studio**: portfolio + gallery metrics; review queue filtered to
     `status = review`; persona defaults (reviewer → asset_gallery).
+  - **fieldtest_hub**: engineering metrics + triage/critical/task queues
+    (ST-037–041); tester personal metrics + device/issue/task queues.
+  - **llm_ticket_classifier**: supervisor metrics + open queue; agent ticket
+    queue for non-closed work.
   - **support_tickets** (prior): agent queue / manager_ops / customer cases.
 - **HM ops blueprints** — gallery page motifs `ops-queue`, `triage-drawer`,
   `manager-sla-strip` (metrics + queue + toast / queue + drawer / metrics +

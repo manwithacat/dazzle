@@ -190,9 +190,10 @@ story ST-037 "Engineer triages recent issue reports":
   trigger: user_click
   entities: [IssueReport]
   given:
+    - "Engineer is on the engineering_dashboard workspace"
     - "IssueReports exist with status 'open'"
   then:
-    - "Engineer sees all open reports sorted by severity desc"
+    - "Engineer sees open reports in the triage_queue sorted by severity desc"
     - "Engineer can transition a report from 'open' to 'triaged'"
 
 story ST-038 "Engineer links firmware release to a device batch":
@@ -224,9 +225,9 @@ story ST-040 "Manager reviews team workload":
   trigger: user_click
   entities: [Task, Tester]
   given:
-    - "Manager is on the engineering dashboard"
+    - "Manager is on the engineering_dashboard workspace"
   then:
-    - "Manager sees open Tasks grouped by assigned_to"
+    - "Manager sees open Tasks in a work queue and fleet metrics"
     - "Manager can reassign a Task from one Engineer to another"
 
 story ST-041 "Manager tracks release progress":
@@ -235,10 +236,11 @@ story ST-041 "Manager tracks release progress":
   trigger: user_click
   entities: [FirmwareRelease]
   given:
+    - "Manager is on the engineering_dashboard workspace"
     - "FirmwareReleases exist in various statuses"
   then:
-    - "Manager sees releases sorted by release_date desc"
-    - "Manager can see counts of drafted vs released vs deprecated"
+    - "Manager sees release counts (draft vs released) on the metrics strip"
+    - "Manager sees releases sorted by release_date desc on the list"
 
 story ST-042 "Field Tester reports a device issue":
   status: accepted

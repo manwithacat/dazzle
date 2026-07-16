@@ -151,3 +151,14 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 
 - Designer/admin → `studio_dashboard` = portfolio metrics + grids
 - Reviewer → `asset_gallery` = gallery metrics + **review queue** (`status = review`)
+
+**fieldtest_hub**:
+
+- Engineer/manager → `engineering_dashboard` = fleet metrics + triage/critical
+  queues + open task queue (kanban/map/tree retained as secondary demos)
+- Tester → `tester_dashboard` = personal metrics + assigned device/issue/task queues
+
+**llm_ticket_classifier**:
+
+- Supervisor → `support_dashboard` = classification metrics + open queue
+- Agent → `ticket_management` = non-closed ticket queue + full list

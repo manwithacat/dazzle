@@ -196,15 +196,31 @@ surface classification_list "Classifications":
 # Workspaces
 # =============================================================================
 
+# Story-driven (docs/guides/story-to-composition.md): supervisor metrics +
+# open queue first; agent ticket_management is a review queue not CRUD list.
 workspace support_dashboard "Support Dashboard":
   purpose: "Monitor and classify support tickets"
+  access: persona(supervisor, support_agent, admin)
 
-  tickets:
+  classification_metrics:
+    source: Ticket
+    display: metrics
+    aggregate:
+      open: count(Ticket where status = open)
+      classified: count(TicketClassification)
+      in_progress: count(Ticket where status = in_progress)
+    tones:
+      open: warning
+      classified: positive
+      in_progress: accent
+
+  open_queue:
     source: Ticket
     filter: status = open
     sort: created_at desc
     limit: 20
-    display: list
+    display: queue
+    action: ticket_detail
     empty: "No open tickets"
 
   classifications:
@@ -216,6 +232,15 @@ workspace support_dashboard "Support Dashboard":
 
 workspace ticket_management "Ticket Management":
   purpose: "Manage individual tickets"
+  access: persona(support_agent, supervisor, admin)
+
+  ticket_queue:
+    source: Ticket
+    filter: status != closed
+    sort: created_at desc
+    display: queue
+    action: ticket_detail
+    empty: "No open tickets in the system"
 
   all_tickets:
     source: Ticket

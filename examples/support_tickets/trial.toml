@@ -31,10 +31,10 @@ escalate to their account managers when tickets linger.
 """
 
 tasks = [
-    "Get a feel for the landing page. Is it obvious what this software is for and where to start?",
-    "You want to see what's currently open across the whole team. Find the list of open tickets and skim them.",
-    "One customer just called about a 2-day-old ticket that hasn't been resolved. See if the software can help you find overdue tickets — not by scrolling manually but with a filter or sort that makes urgency obvious.",
-    "Alex just asked for more tickets. See if you can tell who has how many tickets assigned right now, so you can redistribute.",
+    "Get a feel for the landing page (you should land on Manager Ops). Is team pressure obvious from metrics and the SLA strip without hunting?",
+    "Skim the critical and unassigned queues. Can you act on a ticket without diving into a generic entity list?",
+    "One customer just called about a 2-day-old ticket that hasn't been resolved. See if urgency is visible from the open/critical queues or metrics — not only by scrolling a flat table.",
+    "Alex just asked for more tickets. From Manager Ops, can you see open/WIP/critical counts and find unassigned work to reassign?",
 ]
 
 stop_when = """
