@@ -1227,7 +1227,14 @@ dialog.dz-alert-dialog::backdrop {
   }
 }
 
-/* Sidebar */
+/* Sidebar
+ *
+ * Dual-lock persona nav is ``nav.dz-sidebar > details.dz-nav-group…`` with no
+ * ``.dz-sidebar-nav`` wrapper — overflow must live on ``.dz-sidebar`` itself
+ * so long sidebars scroll. ``.dz-sidebar-nav`` keeps overflow for legacy
+ * brand+nav+footer layouts. Sticky brand/header keeps identity visible while
+ * scrolling (#1596).
+ */
 .dz-sidebar {
   position: fixed;
   inset-block: 0;
@@ -1240,10 +1247,21 @@ dialog.dz-alert-dialog::backdrop {
   flex-direction: column;
   transform: translateX(-100%);
   transition: transform var(--duration-base) var(--ease-out);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 [data-dz-sidebar="open"] .dz-sidebar {
   transform: translateX(0);
+}
+
+.dz-sidebar-brand,
+.dz-sidebar__header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--colour-surface);
 }
 
 .dz-sidebar-brand {

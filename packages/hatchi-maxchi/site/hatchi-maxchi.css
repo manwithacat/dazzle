@@ -7689,7 +7689,14 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   }
 }
 
-/* Sidebar */
+/* Sidebar
+ *
+ * Dual-lock persona nav is ``nav.sidebar > details.nav-group…`` with no
+ * ``.sidebar-nav`` wrapper — overflow must live on ``.sidebar`` itself
+ * so long sidebars scroll. ``.sidebar-nav`` keeps overflow for legacy
+ * brand+nav+footer layouts. Sticky brand/header keeps identity visible while
+ * scrolling (#1596).
+ */
 .sidebar {
   position: fixed;
   inset-block: 0;
@@ -7702,10 +7709,21 @@ summary.table-col-menu-trigger::-webkit-details-marker {
   flex-direction: column;
   transform: translateX(-100%);
   transition: transform var(--duration-base) var(--ease-out);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 [data-sidebar="open"] .sidebar {
   transform: translateX(0);
+}
+
+.sidebar-brand,
+.sidebar__header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--colour-surface);
 }
 
 .sidebar-brand {
