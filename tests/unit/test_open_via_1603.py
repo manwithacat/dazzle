@@ -65,6 +65,21 @@ def test_row_links_format_fk_placeholder() -> None:
     assert links[2] is None  # missing key
 
 
+def test_row_links_null_fk_falls_back_to_same_entity() -> None:
+    """#1614: open-via null → same-entity ``.../{id}`` so row stays drillable."""
+    tmpl = "/app/user/{assigned_to}"
+    fallback = "/app/task/{id}"
+    rows = [
+        {"id": "t1", "assigned_to": "u-aaa"},
+        {"id": "t2", "assigned_to": None},
+        {"id": "t3"},  # missing key
+    ]
+    links = _resolve_row_links(rows, tmpl, fallback_template=fallback)
+    assert links[0] == "/app/user/u-aaa"
+    assert links[1] == "/app/task/t2"
+    assert links[2] == "/app/task/t3"
+
+
 def test_row_links_unwraps_hydrated_ref_dict_and_uuid() -> None:
     """#1603 dogfood v0.104.9: list JSON embeds full contact dict under FK key.
 
@@ -149,7 +164,8 @@ def test_data_row_htmx_path_substitutes_open_via_fk() -> None:
     assert "{contact}" not in html
 
 
-def test_data_row_null_fk_skips_drill_link() -> None:
+def test_data_row_null_fk_falls_back_to_same_entity_detail() -> None:
+    """#1614: null open-via FK → same-entity detail + click drill (not bare row)."""
     from dazzle.render.fragment.primitives import RowCapabilities
     from dazzle.render.fragment.renderer._data_row import render_data_row
 
@@ -160,12 +176,33 @@ def test_data_row_null_fk_skips_drill_link() -> None:
         item,
         RowCapabilities(drill=True),
         detail_url_template="/app/contact/{contact}",
+        detail_url_fallback_template="/app/task/{id}",
         entity_name="Task",
         api_endpoint="/api/tasks",
     )
     assert "{contact}" not in html
-    assert 'hx-get="/app/contact/' not in html
-    assert 'href="/app/contact/' not in html
+    assert 'hx-get="/app/task/task-2"' in html
+    assert 'hx-trigger="click"' in html
+
+
+def test_delete_button_pins_hx_trigger_click() -> None:
+    """#1613: delete must not inherit tbody load via implicitInheritance."""
+    from dazzle.render.fragment.primitives import RowCapabilities
+    from dazzle.render.fragment.renderer._data_row import render_data_row
+
+    columns = [{"key": "title", "type": "str"}]
+    item = {"id": "task-3", "title": "X"}
+    html = render_data_row(
+        columns,
+        item,
+        RowCapabilities(drill=True),
+        detail_url_template="/app/task/{id}",
+        entity_name="Task",
+        api_endpoint="/api/tasks",
+    )
+    assert 'hx-delete="/api/tasks/task-3"' in html
+    assert 'hx-trigger="click"' in html
+    assert "hx-disinherit" in html
 
 
 def test_simple_task_parses_open_via() -> None:

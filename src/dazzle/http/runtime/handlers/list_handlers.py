@@ -85,6 +85,7 @@ def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) ->
         entity_name=str(table_dict.get("entity_name") or "Item"),
         api_endpoint=str(table_dict.get("api_endpoint") or ""),
         detail_url_template=str(table_dict.get("detail_url_template") or ""),
+        detail_url_fallback_template=str(table_dict.get("detail_url_fallback_template") or ""),
         table_id=str(table_dict.get("table_id") or "dt-table"),
         capabilities=caps,
         # #1558 3c: state-gated transition affordances, sourced upstream from the
@@ -133,6 +134,8 @@ def create_list_handler(
     htmx_columns_full: list[dict[str, Any]] | None = None,
     htmx_detail_url: str | None = None,
     htmx_detail_url_by_table_id: dict[str, str] | None = None,
+    htmx_detail_url_fallback: str | None = None,
+    htmx_detail_url_fallback_by_table_id: dict[str, str] | None = None,
     htmx_peek_mode: str | None = None,
     htmx_peek_by_table_id: dict[str, str] | None = None,
     htmx_entity_name: str | None = None,
@@ -197,6 +200,12 @@ def create_list_handler(
             request.state.htmx_detail_url = htmx_detail_url
         if htmx_detail_url_by_table_id is not None:
             request.state.htmx_detail_url_by_table_id = htmx_detail_url_by_table_id
+        if htmx_detail_url_fallback is not None:
+            request.state.htmx_detail_url_fallback = htmx_detail_url_fallback
+        if htmx_detail_url_fallback_by_table_id is not None:
+            request.state.htmx_detail_url_fallback_by_table_id = (
+                htmx_detail_url_fallback_by_table_id
+            )
         if htmx_peek_mode is not None:
             request.state.htmx_peek_mode = htmx_peek_mode
         if htmx_peek_by_table_id is not None:
@@ -606,6 +615,13 @@ async def _list_handler_body(
             _resolved_detail = _detail_by_tid.get(table_id) or getattr(
                 request.state, "htmx_detail_url", None
             )
+            # #1614: same-entity fallback when open-via FK is null
+            _fallback_by_tid = (
+                getattr(request.state, "htmx_detail_url_fallback_by_table_id", None) or {}
+            )
+            _resolved_fallback = _fallback_by_tid.get(table_id) or getattr(
+                request.state, "htmx_detail_url_fallback", None
+            )
 
             items = result.get("items", []) if isinstance(result, dict) else []
             # Convert Pydantic models to dicts
@@ -622,6 +638,7 @@ async def _list_handler_body(
                 if hasattr(request.state, "htmx_columns")
                 else [],
                 "detail_url_template": _resolved_detail,
+                "detail_url_fallback_template": _resolved_fallback,
                 "peek_mode": _resolved_peek,
                 "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
                 "api_endpoint": str(request.url.path),

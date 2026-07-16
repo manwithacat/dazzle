@@ -101,7 +101,9 @@ class TableContext(BaseModel):
     # Optional override for the "New …" CTA label (from surface title /
     # persona ``action_primary``). Empty → Fragment uses entity_title.
     create_label: str = ""
-    detail_url_template: str | None = None  # e.g. "/tasks/{id}"
+    detail_url_template: str | None = None  # e.g. "/tasks/{id}" or open-via hop
+    # #1614: same-entity ``.../{id}`` when open-via FK is null on a row
+    detail_url_fallback_template: str | None = None
     rows: list[dict[str, Any]] = Field(default_factory=list)
     total: int = 0
     page: int = 1

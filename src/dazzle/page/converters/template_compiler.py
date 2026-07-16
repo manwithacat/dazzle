@@ -20,7 +20,10 @@ from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
 from dazzle.core.ir.triples import WidgetKind, resolve_widget
 from dazzle.core.strings import to_api_plural
 from dazzle.page import app_paths
-from dazzle.page.open_via import resolve_list_detail_url_template
+from dazzle.page.open_via import (
+    resolve_list_detail_url_template,
+    resolve_list_same_entity_detail_template,
+)
 from dazzle.render.context import (
     ColumnContext,
     CompanionContext,
@@ -1006,6 +1009,10 @@ def _compile_list_surface(
             create_url=create_url,
             detail_url_template=_list_detail_url_template(
                 surface, entity, app_prefix=app_prefix, entity_slug=entity_slug
+            ),
+            # #1614: null open-via FK → same-entity detail (keeps row drill)
+            detail_url_fallback_template=resolve_list_same_entity_detail_template(
+                entity, surface, app_prefix=app_prefix
             ),
             search_enabled=bool(search_fields),
             default_sort_field=default_sort_field,

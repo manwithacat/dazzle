@@ -11,6 +11,18 @@ from typing import Any
 from dazzle.page import app_paths
 
 
+def resolve_list_same_entity_detail_template(
+    entity: Any,
+    surface: Any = None,
+    *,
+    app_prefix: str = "/app",
+) -> str:
+    """Same-entity detail template ``/app/<list-entity>/{id}`` (#1614 fallback)."""
+    list_entity_name = getattr(entity, "name", None) or getattr(surface, "entity_ref", None) or ""
+    slug = app_paths.entity_slug(str(list_entity_name))
+    return app_paths.detail_path(app_prefix, slug, id="{id}")
+
+
 def resolve_list_detail_url_template(
     surface: Any,
     entity: Any,
@@ -21,14 +33,17 @@ def resolve_list_detail_url_template(
 
     With ``open: Company via company`` → ``/app/company/{company}``.
     Without open_via → ``/app/<list-entity-slug>/{id}``.
+
+    When open-via is set, pair with
+    :func:`resolve_list_same_entity_detail_template` as the per-row fallback
+    for null FKs (#1614).
     """
     open_via = getattr(surface, "open_via", None) if surface is not None else None
     open_entity = getattr(surface, "open_entity", None) if surface is not None else None
     list_entity_name = getattr(entity, "name", None) or getattr(surface, "entity_ref", "") or ""
 
     if not open_via:
-        slug = app_paths.entity_slug(list_entity_name)
-        return app_paths.detail_path(app_prefix, slug, id="{id}")
+        return resolve_list_same_entity_detail_template(entity, surface, app_prefix=app_prefix)
 
     # Prefer explicit open_entity; else resolve from the FK field's ref target.
     target_name = open_entity

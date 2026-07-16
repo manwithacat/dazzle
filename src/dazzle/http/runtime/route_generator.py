@@ -527,6 +527,8 @@ class RouteGenerator:
                 htmx_columns_full=_htmx.get("columns_full"),  # ADR-0050 2d (untruncated)
                 htmx_detail_url=_htmx.get("detail_url"),
                 htmx_detail_url_by_table_id=_htmx.get("detail_url_by_table_id"),
+                htmx_detail_url_fallback=_htmx.get("detail_url_fallback"),
+                htmx_detail_url_fallback_by_table_id=_htmx.get("detail_url_fallback_by_table_id"),
                 htmx_peek_mode=_htmx.get("peek_mode"),
                 htmx_peek_by_table_id=_htmx.get("peek_by_table_id"),
                 htmx_entity_name=_htmx.get("entity_name", entity_name or "Item"),

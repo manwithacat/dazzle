@@ -402,13 +402,24 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     detail_link_html = ""
     edit_link_html = ""
     # #1603: substitute all placeholders ({id}, {contact}, {assigned_to}, …)
-    # via the shared format_map helper. {id}-only replace left open: FK hops
-    # as literal hx-get="/app/contact/{contact}" on the HTMX data-table path.
+    # via the shared format_map helper. #1614: null open-via FK falls back to
+    # same-entity detail so the row keeps hx-trigger=click (shields #1613).
+    fallback_tmpl = str(table.get("detail_url_fallback_template") or "")
     if detail_url_template:
-        _links = _resolve_row_links([item], str(detail_url_template))
+        _links = _resolve_row_links(
+            [item],
+            str(detail_url_template),
+            fallback_template=fallback_tmpl,
+        )
         detail_url = _links[0] if _links else None
     else:
         detail_url = None
+    # Last-resort: row id → same-entity path if fallback template given alone
+    if not detail_url and fallback_tmpl and item_id:
+        try:
+            detail_url = fallback_tmpl.format_map({"id": item_id})
+        except (KeyError, IndexError, ValueError):
+            detail_url = None
     if detail_url:
         detail_url_attr = _html_mod.escape(detail_url, quote=True)
         if peek_expand:
@@ -422,6 +433,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 f'aria-label="Toggle detail for {row_label_attr}" '
                 f'aria-expanded="false" '
                 f'hx-get="{peek_url_attr}" '
+                f'hx-trigger="click" '
                 f'hx-target="#{content_id}" '
                 f'hx-swap="innerHTML" '
                 f"hx-on:click=\"const p=document.getElementById('{panel_id}'); "
@@ -449,6 +461,7 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
                 f'data-dazzle-action="{entity_name_attr}.peek" '
                 f'aria-label="Open detail for {row_label_attr}" '
                 f'hx-get="{slide_url_attr}" '
+                f'hx-trigger="click" '
                 f'hx-target="#{content_target}" '
                 f'hx-swap="innerHTML" '
                 f'data-dz-dialog-open="{panel_attr}">'
@@ -570,11 +583,14 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         )
 
     # Delete action.
+    # #1613: hard-pin hx-trigger="click" so tbody hx-trigger=load cannot
+    # inherit onto destructive controls (implicitInheritance=true).
     delete_button = (
         f'<button type="button" '  # nosemgrep
         f'data-dazzle-action="{entity_name_attr}.delete" '
         f'aria-label="Delete {row_label_attr}" '
         f'hx-delete="{api_endpoint}/{item_id_attr}" '
+        f'hx-trigger="click" '
         f'hx-confirm="Delete this {_html_mod.escape(entity_name_lower, quote=False)}?" '
         f'hx-target="closest tr" '
         f'hx-swap="outerHTML swap:300ms" '
@@ -597,14 +613,17 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             transition_buttons = "".join(
                 f'<button type="button" class="dz-tr-action dz-tr-transition" '
                 f'hx-put="{endpoint_attr}/{item_id_attr}" '
+                f'hx-trigger="click" '
                 f'hx-vals=\'{{"{status_field_attr}": '
                 f'"{_html_mod.escape(t.to_state, quote=True)}"}}\' '
                 f'aria-label="{_html_mod.escape(t.label, quote=True)}">'
                 f"{_html_mod.escape(t.label, quote=False)}</button>"
                 for t in valid
             )
+    # #1613: disinherit hx-trigger from tbody load onto action chrome.
     actions_cell = (
-        '<td class="dz-tr-actions-cell" onclick="event.stopPropagation()">'
+        '<td class="dz-tr-actions-cell" onclick="event.stopPropagation()" '
+        'hx-disinherit="hx-trigger">'
         f'<div class="dz-tr-actions">{transition_buttons}{peek_toggle_html}'
         f"{detail_link_html}{edit_link_html}{delete_button}</div>"
         "</td>"
@@ -657,6 +676,7 @@ def render_data_row(
     entity_name: str = "Item",
     api_endpoint: str = "",
     detail_url_template: str = "",
+    detail_url_fallback_template: str = "",
     table_id: str = "dt-table",
     state_transitions: tuple[Any, ...] = (),
     status_field: str = "",
@@ -676,6 +696,8 @@ def render_data_row(
         # `drill` is the authoritative gate for the whole-row hx-get + view/edit
         # links — the template only flows through when the capability is on.
         "detail_url_template": detail_url_template if caps.drill else "",
+        # #1614: same-entity detail when open-via FK is null
+        "detail_url_fallback_template": (detail_url_fallback_template if caps.drill else ""),
         "bulk_actions": caps.bulk_select,
         "inline_editable": list(caps.inline_editable),
         "table_id": table_id,
@@ -708,6 +730,7 @@ def render_data_table_rows(dt: DataTable) -> str:
             entity_name=dt.entity_name,
             api_endpoint=dt.api_endpoint,
             detail_url_template=dt.detail_url_template,
+            detail_url_fallback_template=getattr(dt, "detail_url_fallback_template", "") or "",
             table_id=dt.table_id,
             state_transitions=dt.state_transitions,
             status_field=dt.status_field,

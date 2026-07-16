@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+### Fixed
+- **#1613 row actions pin `hx-trigger=click`** — delete / state-transition /
+  peek controls no longer inherit tbody `load` under HTMX
+  `implicitInheritance` (CyFuture auto-delete dialog on list entry). Actions
+  cell also sets `hx-disinherit="hx-trigger"`.
+- **#1614 open-via null FK falls back to same-entity detail** — when
+  `open: Entity via field` cannot resolve, row drills to
+  `/app/<list-entity>/{id}` so journeys stay navigable and row click shields
+  actions from #1613.
+
 ### Added
 - **`make preflight-surface`** — hard local gate for unpaid structural/artifact
   debt (API surface, docs drift, deferred imports, import contracts, complexity

@@ -314,7 +314,9 @@ class _BuildersTablesMixin:
         # share one substitution contract.
         row_links: tuple[str | None, ...] = ()
         if detail_url_template:
-            row_links = _resolve_row_links(row_items, detail_url_template)
+            # #1614: optional same-entity fallback when open-via FK is null
+            _fb = str(ctx.get("detail_url_fallback_template") or "")
+            row_links = _resolve_row_links(row_items, detail_url_template, fallback_template=_fb)
 
         body: Fragment = ListRegion(
             columns=tuple(list_columns),

@@ -36,8 +36,29 @@ def _format_link_value(value: Any) -> str:
     return str(value)
 
 
+def _item_format_map(item: dict[str, Any]) -> dict[str, str]:
+    """Build a format mapping for one row (skip null / unwrappable values)."""
+
+    class _NullMap(dict[str, str]):
+        def __missing__(self, key: str) -> str:
+            raise KeyError(key)
+
+    mapping = _NullMap()
+    for k, v in item.items():
+        if v is None:
+            continue
+        try:
+            mapping[k] = _format_link_value(v)
+        except KeyError:
+            continue
+    return mapping
+
+
 def _resolve_row_links(
-    items: list[dict[str, Any]], detail_url_template: str
+    items: list[dict[str, Any]],
+    detail_url_template: str,
+    *,
+    fallback_template: str = "",
 ) -> tuple[str | None, ...]:
     """Issue #1029 phase 1: per-row drill-down URL resolution.
 
@@ -46,37 +67,31 @@ def _resolve_row_links(
     `{code}`, etc. — and #1603 `open: Entity via field` uses `{fk_field}`).
     For each item, substitute `{key}` with a URL-safe scalar from
     `item[key]` (unwrapping hydrated ref dicts / UUIDs) and emit the
-    resolved URL. Items missing a required key get `None` (no row link)
-    — defensive for partial records or rows that aren't really drillable
-    (e.g., summary rows).
+    resolved URL.
 
-    Empty template → empty tuple (caller short-circuits before
-    reaching here, but defensive)."""
+    #1614: when the primary template cannot resolve (null open-via FK),
+    try ``fallback_template`` (typically same-entity ``.../{id}``) so the
+    row keeps a drill + ``hx-trigger=click`` — which also shields action
+    buttons from inheriting tbody ``load`` (#1613).
+
+    Empty template → empty tuple.
+    """
     if not detail_url_template:
         return ()
     out: list[str | None] = []
     for item in items:
+        mapping = _item_format_map(item)
+        url: str | None = None
         try:
             # #1603: skip drill when a placeholder is missing or null
             # (e.g. open via assigned_to with no assignee).
-            class _NullMap(dict[str, str]):
-                def __missing__(self, key: str) -> str:
-                    raise KeyError(key)
-
-            mapping = _NullMap()
-            for k, v in item.items():
-                if v is None:
-                    continue
-                try:
-                    mapping[k] = _format_link_value(v)
-                except KeyError:
-                    # Unwrappable value (e.g. dict without id) — treat as
-                    # missing for placeholders that need a scalar.
-                    continue
-            out.append(detail_url_template.format_map(mapping))
+            url = detail_url_template.format_map(mapping)
         except (KeyError, IndexError, ValueError):
-            # Template referenced a key that's not on this row, or the
-            # template has malformed placeholders. Skip the link
-            # rather than crash the whole list render.
-            out.append(None)
+            url = None
+        if not url and fallback_template:
+            try:
+                url = fallback_template.format_map(mapping)
+            except (KeyError, IndexError, ValueError):
+                url = None
+        out.append(url or None)
     return tuple(out)
