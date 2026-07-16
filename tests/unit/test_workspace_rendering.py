@@ -95,6 +95,26 @@ class TestFieldKindToColType:
         assert _field_kind_to_col_type(f, entity) == expected
 
 
+class TestSsrFieldTypeToColumnType1597:
+    """SSR template_compiler mapper must match HTMX datetime vocabulary (#1597)."""
+
+    def test_datetime_kind_is_datetime_not_date(self) -> None:
+        from dazzle.core import ir
+        from dazzle.page.converters.template_compiler import _field_type_to_column_type
+
+        fld = ir.FieldSpec(
+            name="assigned_at",
+            type=ir.FieldType(kind=ir.FieldTypeKind.DATETIME),
+        )
+        assert _field_type_to_column_type(fld, "assigned_at") == "datetime"
+
+    def test_injected_at_suffix_is_datetime(self) -> None:
+        from dazzle.page.converters.template_compiler import _field_type_to_column_type
+
+        assert _field_type_to_column_type(None, "created_at") == "datetime"
+        assert _field_type_to_column_type(None, "updated_at") == "datetime"
+
+
 # ===========================================================================
 # TestFilterableColumns
 # ===========================================================================

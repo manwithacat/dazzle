@@ -76,6 +76,7 @@ _TYPE_SALIENCE: dict[str, int] = {
     "ref": 60,
     "bool": 50,
     "date": 45,
+    "datetime": 45,  # same scannable weight as date (#1597 dual-mapper parity)
     "text": 30,
 }
 

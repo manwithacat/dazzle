@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.104.4] - 2026-07-16
+
+### Fixed
+- **#1597 dual column-type mapper (type residual)** — SSR _field_type_to_column_type maps DATETIME → datetime (match HTMX field_kind_to_col_type); injected *_at columns same; column-economy salience includes datetime. Locale profile still open on #1597.
+
 ### Fixed
 - **#1602 AppShell sidebar toggle placement** — desktop open shows the collapse control on the **sidebar header** (rail); topbar chrome toggle remains for mobile and for reopening when the sidebar is closed. JS syncs ``aria-expanded`` on all ``[data-dz-sidebar-toggle]`` nodes.
 

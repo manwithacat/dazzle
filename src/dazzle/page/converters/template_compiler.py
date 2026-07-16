@@ -139,16 +139,19 @@ def _field_type_to_column_type(
     ISO-8601 text.
     """
     if not field_spec or not field_spec.type:
+        # Framework-injected timestamps (created_at / updated_at) — match HTMX
+        # `field_kind_to_col_type` so list cells humanise with time (#1597).
         if field_name.endswith("_at"):
-            return "date"
+            return "datetime"
         return "text"
     kind = field_spec.type.kind
     type_map = {
         FieldTypeKind.BOOL: "bool",
         FieldTypeKind.DATE: "date",
-        # datetime stays date-only in dense list cells (time would be noise per
-        # row); the detail view renders it as `datetime` with time (#1491 1d).
-        FieldTypeKind.DATETIME: "date",
+        # Align with HTMX workspace_columns.field_kind_to_col_type (#1597):
+        # datetime must stay distinct from date so list cells show time and
+        # C2.3 edit-kind is not forced through a text path.
+        FieldTypeKind.DATETIME: "datetime",
         FieldTypeKind.MONEY: "currency",
         # decimal keeps its natural precision via str() (a price 19.99 must not
         # round); float is rounded to avoid leaking full binary precision (#1491).
