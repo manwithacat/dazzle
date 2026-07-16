@@ -152,8 +152,10 @@ def test_datetime_column_humanises_and_is_inline_editable() -> None:
         "inline_editable": inline_editable,
     }
     html = render_data_table_rows(build_data_table(table, [row]))
-    # Visible cell text is humanised (raw ISO may still sit in data-dz-edit-value).
-    assert ">16 Jul 2026 01:30<" in html
+    # Visible cell: product default Europe/London (BST in July) → 01:30 UTC = 02:30.
+    # Raw ISO may still sit in data-dz-edit-value for the editor.
+    assert ">16 Jul 2026 02:30<" in html
+    assert "2026-07-16T01:30:24" in html  # edit-value keeps stored UTC
     assert 'data-dz-edit-kind="date"' in html  # datetime → date editor
     assert 'data-dz-grid-edit="assigned_at"' in html
     # title may still be text; assigned_at must not be

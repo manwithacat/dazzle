@@ -1127,6 +1127,9 @@ class DazzleBackendApp:
 
         param_specs = {p.key: p for p in self._appspec.params} if self._appspec.params else {}
         self._param_resolver = ParamResolver(specs=param_specs)
+        # #1597: LocaleMiddleware / display profile resolve DSL locale.* defaults
+        if self._app is not None:
+            self._app.state.param_resolver = self._param_resolver
 
         # Migrate tenant schemas when using schema-per-tenant isolation (#561)
         if self._tenant_config and self._tenant_config.isolation == "schema":

@@ -174,7 +174,6 @@
   "src/dazzle/http/runtime/htmx_render.py": 3,
   "src/dazzle/http/runtime/integration_manager.py": 4,
   "src/dazzle/http/runtime/llm_queue.py": 1,
-  "src/dazzle/http/runtime/locale_middleware.py": 1,
   "src/dazzle/http/runtime/locale_routes.py": 2,
   "src/dazzle/http/runtime/mapping_executor.py": 2,
   "src/dazzle/http/runtime/model_generator.py": 1,

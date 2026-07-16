@@ -28,6 +28,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from dazzle.i18n import locale_ctxvar
+from dazzle.i18n.display_locale import (
+    PRODUCT_DEFAULT_PROFILE,
+    profile_from_param_resolver,
+    reset_display_locale,
+    set_display_locale,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -142,14 +150,21 @@ class LocaleMiddleware(BaseHTTPMiddleware):
         # threading it through their context. The reset on the way out
         # is good hygiene for test environments where multiple requests
         # share a worker.
-        from dazzle.i18n import locale_ctxvar
-
         token = locale_ctxvar.set(locale)
+        # #1597: display profile from DSL param defaults / tenant overrides.
+        # Browser Accept-Language drives gettext only — never date/number display.
+        app_state = getattr(getattr(request, "app", None), "state", None)
+        param_resolver = getattr(app_state, "param_resolver", None) if app_state else None
+        tenant_id = getattr(request.state, "tenant_id", None)
+        display_profile = profile_from_param_resolver(param_resolver, tenant_id=tenant_id)
+        request.state.display_locale = display_profile or PRODUCT_DEFAULT_PROFILE
+        disp_token = set_display_locale(request.state.display_locale)
         try:
             response: Response = await call_next(request)
             return response
         finally:
             locale_ctxvar.reset(token)
+            reset_display_locale(disp_token)
 
     def _resolve(self, request: Request) -> str:
         # 1. Cookie override

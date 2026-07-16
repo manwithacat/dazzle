@@ -22,7 +22,6 @@ from dazzle.render.filters import (
     _basename_or_url_filter,
     _bool_icon_filter,
     _currency_filter,
-    _date_filter,
     _metric_number_filter,
     _ref_display_name,
     _truncate_filter,
@@ -35,11 +34,6 @@ from dazzle.render.fragment.ingest import GridEditCell, edit_span_attrs
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.state_affordance import gated_row_transitions
-
-# UK-first defaults (day month year). Full locale plumbing is a follow-up;
-# these match the stock `_date_filter` default and production UK tenants.
-_UK_DATE = "%d %b %Y"
-_UK_DATETIME = "%d %b %Y %H:%M"
 
 # Raw ISO / Postgres timestamptz leak detector for the text fallback path.
 _ISO_DT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$")
@@ -254,7 +248,8 @@ def _render_cell_display(
     if col_type in ("datetime", "number", "json") and value in (None, "", "—"):
         return "—"
     if col_type == "datetime":
-        return _html_mod.escape(_date_filter(value, _UK_DATETIME), quote=False)
+        # #1597: DisplayLocaleProfile (tenant TZ + date_format), not hard UK
+        return _html_mod.escape(format_cell(value, "datetime"), quote=False)
     if col_type == "number":
         return _html_mod.escape(_metric_number_filter(value), quote=False)
     if col_type == "json":
@@ -278,7 +273,7 @@ def _render_cell_display(
         # `_bool_icon_filter` returns Markup with raw HTML — safe to emit.
         return str(_bool_icon_filter(value))
     if col_type == "date":
-        return _html_mod.escape(_date_filter(value, _UK_DATE), quote=False)
+        return _html_mod.escape(format_cell(value, "date"), quote=False)
     if col_type in ("currency", "money"):
         currency_code = col.get("currency_code") or "GBP"
         return _html_mod.escape(_currency_filter(value, currency_code), quote=False)
@@ -330,17 +325,17 @@ def _render_cell_display(
     # Defensive temporal humanisation: when a column is mistyped as `text`
     # (e.g. list-projection views that declare every field as text) but the
     # value is clearly an ISO date/datetime (incl. Postgres timestamptz with
-    # microseconds), format it with the UK default instead of leaking raw ISO.
+    # microseconds), format via DisplayLocaleProfile instead of leaking raw ISO.
     if isinstance(value, datetime):
-        return _html_mod.escape(value.strftime(_UK_DATETIME), quote=False)
+        return _html_mod.escape(format_cell(value, "datetime"), quote=False)
     if isinstance(value, date):
-        return _html_mod.escape(value.strftime(_UK_DATE), quote=False)
+        return _html_mod.escape(format_cell(value, "date"), quote=False)
     if isinstance(value, str):
         s = value.strip()
         if _ISO_DT_RE.match(s):
-            return _html_mod.escape(_date_filter(s, _UK_DATETIME), quote=False)
+            return _html_mod.escape(format_cell(s, "datetime"), quote=False)
         if _ISO_DATE_RE.match(s):
-            return _html_mod.escape(_date_filter(s, _UK_DATE), quote=False)
+            return _html_mod.escape(format_cell(s, "date"), quote=False)
     if isinstance(value, (dict, list, tuple)):
         inner = _json_summary(value)
     elif isinstance(value, float):

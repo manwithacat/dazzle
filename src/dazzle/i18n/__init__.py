@@ -40,6 +40,18 @@ import threading
 from contextvars import ContextVar
 from typing import Any
 
+from dazzle.i18n.display_locale import (
+    PRODUCT_DEFAULT_LOCALE,
+    PRODUCT_DEFAULT_PROFILE,
+    DisplayLocaleProfile,
+    bind_display_locale_for_request,
+    get_display_locale,
+    profile_from_param_resolver,
+    reset_display_locale,
+    resolve_display_locale,
+    set_display_locale,
+)
+
 logger = logging.getLogger(__name__)
 
 # Per-request locale (mirrors the theme_variant ContextVar pattern in
@@ -181,6 +193,16 @@ __all__ = [
     "locale_ctxvar",
     "register_translations",
     "translate",
+    # #1597 display profile
+    "DisplayLocaleProfile",
+    "PRODUCT_DEFAULT_LOCALE",
+    "PRODUCT_DEFAULT_PROFILE",
+    "bind_display_locale_for_request",
+    "get_display_locale",
+    "profile_from_param_resolver",
+    "reset_display_locale",
+    "resolve_display_locale",
+    "set_display_locale",
 ]
 
 
