@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics / task_inbox; HR workspaces lead with headcount/compensation metrics.
 
 ### Fixed
+- **#1596 App shell dual-lock sidebar scroll** — long persona nav under
+  `nav.dz-sidebar` (no `.dz-sidebar-nav` wrapper) now scrolls on the panel;
+  sticky brand/header while scrolling. Regression:
+  `tests/unit/test_app_shell_sidebar_scroll.py`.
 - **PreToolUse hooks under system Python 3.9 / multi-harness payloads** —
   `file_protection` no longer crashes (exit 1 spam) on every edit; hooks accept
   camelCase + snake_case tool payloads; `run_hook.sh` prefers project venv; DSL
