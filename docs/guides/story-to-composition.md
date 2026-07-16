@@ -127,3 +127,13 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 
 - Admin/manager → `dashboard` = portfolio metrics + open task queue + grid + kanban
 - Member → `project_board` = board metrics + kanban + unassigned queue
+
+**contact_manager**:
+
+- User → `home` = directory metrics + favourites queue + sample list
+- User → `contacts` = search + favourites queue + dual-pane list/detail
+
+**hr_records**:
+
+- HR/manager → `staff_directory` = headcount metrics + directory lists
+- Finance → `compensation_review` = compensation metrics + salary list

@@ -49,7 +49,7 @@ story ST-007 "User favourites a contact":
     - "Contact.is_favorite = false"
   then:
     - "Contact.is_favorite becomes true"
-    - "Favourite contacts sort to the top of the list"
+    - "Favourite contacts appear in the home and contacts favourites queues"
 
 story ST-008 "User edits an existing contact":
   persona: user

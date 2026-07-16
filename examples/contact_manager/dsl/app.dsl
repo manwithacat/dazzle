@@ -184,14 +184,30 @@ search on Contact:
   tokenizer: english
 
 # TR-2: first-run / post-login welcome — overview before the dense list.
+# Story-driven (docs/guides/story-to-composition.md): metrics + favourites
+# queue first (ST-007), then a short directory sample (ST-004).
 workspace home "Home":
   purpose: "Welcome overview for your contact directory"
   access: persona(user, admin)
 
   directory_stats:
     source: Contact
+    display: metrics
     aggregate:
       total_contacts: count(Contact)
+      favourites: count(Contact where is_favorite = true)
+    tones:
+      favourites: accent
+
+  # ST-007 — favourites as a work queue, not buried in the full list sort.
+  favourite_contacts:
+    source: Contact
+    filter: is_favorite = true
+    sort: last_name asc, first_name asc
+    limit: 10
+    display: queue
+    action: contact_detail
+    empty: "No favourites yet — star a contact from the directory."
 
   recent_contacts:
     source: Contact
@@ -204,10 +220,10 @@ workspace home "Home":
   ux:
     as user:
       purpose: "See a friendly overview before diving into the full list"
-      focus: directory_stats, recent_contacts
+      focus: directory_stats, favourite_contacts, recent_contacts
     as admin:
       purpose: "Directory overview"
-      focus: directory_stats, recent_contacts
+      focus: directory_stats, favourite_contacts, recent_contacts
 
 # Workspace with list + detail pattern
 workspace contacts "Contacts":
@@ -220,6 +236,16 @@ workspace contacts "Contacts":
     source: Contact
     display: search_box
     title: "Find a contact"
+
+  # Favourites strip above the A–Z list (ST-007).
+  favourites_queue:
+    source: Contact
+    filter: is_favorite = true
+    sort: last_name asc, first_name asc
+    limit: 8
+    display: queue
+    action: contact_detail
+    empty: "No favourites pinned"
 
   # List signal - browsable contact list
   contact_list:

@@ -538,6 +538,17 @@ workspace staff_directory "Staff Directory":
   access: persona(hr_admin, manager, finance, employee)
   purpose: "Current employees, filterable by department + level"
 
+  # Job strip first — counts before the dense directory list.
+  headcount:
+    source: Person
+    display: metrics
+    aggregate:
+      people: count(Person)
+      departments: count(Department)
+      roles: count(Role)
+    tones:
+      people: accent
+
   current_staff:
     source: Person
     display: list
@@ -622,6 +633,15 @@ workspace org_chart "Org Chart":
 workspace compensation_review "Compensation Review":
   access: persona(hr_admin, finance)
   purpose: "Salary band analysis — by department, by role level"
+
+  # Metrics-first finance job surface (story-to-composition).
+  compensation_metrics:
+    source: Salary
+    display: metrics
+    aggregate:
+      active_salaries: count(Salary)
+    tones:
+      active_salaries: accent
 
   # #1223 Phase 3a.ii — Salary is a temporal entity (declared above) with
   # default_filter: active, so every list / aggregate / read path against
