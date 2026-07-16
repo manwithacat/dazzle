@@ -36,7 +36,17 @@ def generate_seed_rows(
     if reference_date is None:
         reference_date = datetime.date.today()
 
-    current_year = reference_date.year
+    calendar_year = reference_date.year
+    # month_anchor: first month of the fiscal year (1–12). UK tax years use 4
+    # (April). Before the anchor month, the "current" fiscal start year is
+    # calendar_year - 1 (e.g. Feb 2026 → FY starting Apr 2025).
+    month_anchor = int(getattr(seed_template, "month_anchor", None) or 1)
+    if month_anchor < 1 or month_anchor > 12:
+        month_anchor = 1
+    fiscal_current_start = (
+        calendar_year if reference_date.month >= month_anchor else calendar_year - 1
+    )
+
     strategy = seed_template.strategy
     if hasattr(strategy, "value"):
         strategy = strategy.value
@@ -46,7 +56,7 @@ def generate_seed_rows(
 
     rows: list[dict[str, Any]] = []
     for offset in range(seed_template.window_start, seed_template.window_end + 1):
-        y = current_year + offset
+        y = fiscal_current_start + offset
         y1 = y + 1
         ctx = {
             "y": str(y),
@@ -57,7 +67,7 @@ def generate_seed_rows(
 
         row: dict[str, Any] = {}
         for ft in seed_template.fields:
-            value = _render_template(ft.template, ctx, y, current_year)
+            value = _render_template(ft.template, ctx, y, fiscal_current_start)
             row[ft.field] = value
         rows.append(row)
 
@@ -69,18 +79,20 @@ def _render_template(
     ctx: dict[str, str],
     y: int,
     current_year: int,
-) -> str:
+) -> Any:
     """Render a single field template string.
 
     Handles both ``{var}`` substitution and special expressions
-    like ``y == current_year``.
+    like ``y == current_year``. Boolean expressions return real
+    ``bool`` values so repository create does not choke on ``"true"``
+    strings for bool columns.
     """
     # Special boolean expression
     stripped = template.strip()
     if stripped == "y == current_year":
-        return "true" if y == current_year else "false"
+        return y == current_year
     if stripped == "y != current_year":
-        return "true" if y != current_year else "false"
+        return y != current_year
 
     # Standard {var} substitution
     result = template
