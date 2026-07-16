@@ -334,9 +334,41 @@ class FragmentSurfaceAdapter:
         """
         title = surface.title or surface.name.replace("_", " ").title()
         fields: list[dict[str, Any]] = ctx.get("fields", [])
+        # #1600 Wedge B: multi-section overview (header / strip / …).
+        sections: list[dict[str, Any]] = ctx.get("sections", []) or []
 
         detail_body: Fragment
-        if not fields:
+        if sections:
+            # Stack titled sections so client hubs read as composition, not a
+            # flat warehouse field dump. Related groups still append below.
+            section_parts: list[Fragment] = []
+            for sec in sections:
+                sec_title = str(sec.get("title") or sec.get("name") or "").strip()
+                sec_fields: list[dict[str, Any]] = sec.get("fields") or []
+                if not sec_fields:
+                    continue
+                if sec_title:
+                    section_parts.append(Heading(sec_title, level=2))
+                note = str(sec.get("note") or "").strip()
+                if note:
+                    section_parts.append(Text(note, tone="muted"))
+                section_parts.append(
+                    DetailGrid(
+                        rows=tuple(
+                            (str(f.get("label", f.get("key", ""))), _detail_field_value(f))
+                            for f in sec_fields
+                        )
+                    )
+                )
+            detail_body = (
+                Stack(children=tuple(section_parts), gap="md")
+                if section_parts
+                else EmptyState(
+                    title="No data",
+                    description="This record has no displayable fields.",
+                )
+            )
+        elif not fields:
             detail_body = EmptyState(
                 title="No data",
                 description="This record has no displayable fields.",

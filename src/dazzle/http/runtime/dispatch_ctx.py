@@ -109,27 +109,50 @@ def _dispatch_ctx_from_form(form: Any) -> dict[str, Any]:
     return ctx_out
 
 
+def _one_detail_field_dict(f: Any, item: dict[str, Any]) -> dict[str, Any]:
+    """Map one FieldContext + item → flat detail field dict."""
+    field_name = getattr(f, "name", "") or getattr(f, "key", "")
+    kind = getattr(f, "type", "text") or "text"
+    value = item.get(field_name, "") if isinstance(item, dict) else ""
+    if kind == "ref" and isinstance(item, dict):
+        rel = field_name[:-3] if field_name.endswith("_id") else field_name
+        value = item.get(f"{rel}_display") or item.get(f"{field_name}_display") or value
+    extra = getattr(f, "extra", None) or {}
+    currency_code = str(extra.get("currency_code", "") or "") if isinstance(extra, dict) else ""
+    return {
+        "key": field_name,
+        "label": getattr(f, "label", "") or field_name,
+        "value": "" if value is None else value,
+        "kind": kind,
+        "currency_code": currency_code,
+        "semantic_map": dict(getattr(f, "enum_semantics", {}) or {}),
+    }
+
+
 def _detail_fields_from_context(detail: Any) -> list[dict[str, Any]]:
     """Map DetailContext.fields + item values → adapter field dicts."""
     item = getattr(detail, "item", {}) or {}
+    if not isinstance(item, dict):
+        item = {}
+    return [_one_detail_field_dict(f, item) for f in getattr(detail, "fields", []) or []]
+
+
+def _detail_sections_from_context(detail: Any) -> list[dict[str, Any]]:
+    """#1600 Wedge B: map DetailContext.sections → adapter section dicts."""
+    item = getattr(detail, "item", {}) or {}
+    if not isinstance(item, dict):
+        item = {}
     out: list[dict[str, Any]] = []
-    for f in getattr(detail, "fields", []) or []:
-        field_name = getattr(f, "name", "") or getattr(f, "key", "")
-        kind = getattr(f, "type", "text") or "text"
-        value = item.get(field_name, "") if isinstance(item, dict) else ""
-        if kind == "ref" and isinstance(item, dict):
-            rel = field_name[:-3] if field_name.endswith("_id") else field_name
-            value = item.get(f"{rel}_display") or item.get(f"{field_name}_display") or value
-        extra = getattr(f, "extra", None) or {}
-        currency_code = str(extra.get("currency_code", "") or "") if isinstance(extra, dict) else ""
+    for sec in getattr(detail, "sections", None) or []:
+        fields_out = [_one_detail_field_dict(f, item) for f in getattr(sec, "fields", []) or []]
+        if not fields_out:
+            continue
         out.append(
             {
-                "key": field_name,
-                "label": getattr(f, "label", "") or field_name,
-                "value": "" if value is None else value,
-                "kind": kind,
-                "currency_code": currency_code,
-                "semantic_map": dict(getattr(f, "enum_semantics", {}) or {}),
+                "name": getattr(sec, "name", "") or "",
+                "title": getattr(sec, "title", "") or getattr(sec, "name", "") or "",
+                "note": getattr(sec, "note", None) or "",
+                "fields": fields_out,
             }
         )
     return out
@@ -268,6 +291,7 @@ def _dispatch_ctx_from_detail(
     actions = _detail_actions_from_context(detail)
     return {
         "fields": detail_fields_out,
+        "sections": _detail_sections_from_context(detail),
         "region_name": getattr(detail, "entity_name", "") + "_detail",
         "related_groups": _related_groups_from_detail(detail),
         "edit_url": getattr(detail, "edit_url", None) or "",

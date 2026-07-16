@@ -10870,13 +10870,15 @@
       "_append_subtype_panel_fields": 14,
       "_build_dispatch_ctx": 4,
       "_detail_actions_from_context": 17,
-      "_detail_fields_from_context": 18,
+      "_detail_fields_from_context": 5,
+      "_detail_sections_from_context": 12,
       "_dispatch_ctx_from_detail": 14,
       "_dispatch_ctx_from_form": 20,
       "_dispatch_ctx_from_table": 33,
+      "_one_detail_field_dict": 15,
       "_related_groups_from_detail": 24
     },
-    "mi_rank": "A"
+    "mi_rank": "B"
   },
   "dazzle/http/runtime/document_routes.py": {
     "functions": {
@@ -12173,13 +12175,13 @@
   },
   "dazzle/http/runtime/renderers/fragment_adapter.py": {
     "functions": {
-      "FragmentSurfaceAdapter": 26,
+      "FragmentSurfaceAdapter": 28,
       "FragmentSurfaceAdapter._build_detail_actions": 32,
       "FragmentSurfaceAdapter._build_form": 29,
       "FragmentSurfaceAdapter._build_list": 55,
       "FragmentSurfaceAdapter._build_list_toolbar": 12,
       "FragmentSurfaceAdapter._build_related_group": 29,
-      "FragmentSurfaceAdapter._build_view": 19,
+      "FragmentSurfaceAdapter._build_view": 31,
       "FragmentSurfaceAdapter.build": 4,
       "_build_column_header": 7,
       "_cell_value": 3,
@@ -12190,7 +12192,7 @@
       "_pick_empty_state": 9,
       "render_generic_detail": 1
     },
-    "mi_rank": "A"
+    "mi_rank": "B"
   },
   "dazzle/http/runtime/renderers/html_normalise.py": {
     "functions": {
@@ -16490,7 +16492,7 @@
       "_compile_custom_surface": 2,
       "_compile_form_surface": 13,
       "_compile_list_surface": 40,
-      "_compile_view_surface": 49,
+      "_compile_view_surface": 56,
       "_effective_field_source_ref": 3,
       "_enum_semantic_map": 2,
       "_extract_surface_purpose": 6,
@@ -17779,6 +17781,7 @@
       "CompanionStageContext": 1,
       "CustomRenderCtx": 1,
       "DetailContext": 1,
+      "DetailSectionContext": 1,
       "ExperienceContext": 1,
       "ExperienceStepContext": 1,
       "ExperienceTransitionContext": 1,
@@ -18536,7 +18539,8 @@
   },
   "dazzle/render/fragment/region/_row_links.py": {
     "functions": {
-      "_resolve_row_links": 6
+      "_format_link_value": 8,
+      "_resolve_row_links": 7
     },
     "mi_rank": "A"
   },

@@ -315,6 +315,20 @@ class IntegrationActionContext(BaseModel):
     api_url: str  # POST endpoint, e.g. "/api/companies/{id}/integrations/ch/verify"
 
 
+class DetailSectionContext(BaseModel):
+    """One titled section of fields on a VIEW/detail surface (#1600 Wedge B).
+
+    Multi-section view surfaces render as a stacked overview (header / strip /
+    …) rather than a single flat field grid. Empty ``sections`` on
+    ``DetailContext`` keeps the legacy flat layout.
+    """
+
+    name: str
+    title: str
+    fields: list[FieldContext] = Field(default_factory=list)
+    note: str | None = None
+
+
 class DetailContext(BaseModel):
     """Context for rendering a detail/view page."""
 
@@ -336,6 +350,8 @@ class DetailContext(BaseModel):
     # `components/detail_view.html` to include the HTMX-loaded audit
     # history fragment from `render_audit_history_region` (cycle 9).
     show_history: bool = False
+    # #1600 Wedge B: multi-section overview chrome (optional).
+    sections: list[DetailSectionContext] = Field(default_factory=list)
 
 
 class IslandContext(BaseModel):

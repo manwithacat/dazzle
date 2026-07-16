@@ -483,22 +483,28 @@ surface user_list "Team Members":
       purpose: "View team members"
       read_only: true
 
-surface user_detail "Team Member Detail":
+# #1600 Wedge B — multi-section VIEW is the client/context overview hub.
+# Task list open: User via assigned_to lands here: identity + role + related work.
+surface user_detail "Team Member Overview":
   uses entity User
   mode: view
   render: fragment
 
   access: persona(admin, manager)
 
-  section main "Team Member":
+  section identity "Identity":
     field name "Name"
     field email "Email"
+
+  section role "Role & access":
     field role "Role"
     field department "Department"
     field is_active "Active"
+
+  section timeline "Timeline":
     field created_at "Joined"
 
-  related tasks "Tasks":
+  related work "Open work":
     display: table
     show: Task
 
@@ -507,7 +513,7 @@ surface user_detail "Team Member Detail":
     show: TaskComment
 
   ux:
-    purpose: "Inspect a team member's profile, role, and activity status"
+    purpose: "Context overview — identity, role, and related work in one place"
 
 # User Create (admin only)
 surface user_create "Add Team Member":

@@ -27,6 +27,7 @@ from dazzle.render.context import (
     CompanionEntryContext,
     CompanionStageContext,
     DetailContext,
+    DetailSectionContext,
     ExternalLinkAction,
     FieldContext,
     FieldSourceContext,
@@ -1347,6 +1348,29 @@ def _compile_view_surface(
 
     page_purpose, persona_purposes = _extract_surface_purpose(surface.ux)
 
+    # #1600 Wedge B: multi-section overview chrome — preserve section titles
+    # on VIEW so client hubs stack identity / compliance / … instead of a
+    # single flat field grid. Flat fields list remains for backward compat.
+    detail_sections: list[DetailSectionContext] = []
+    if surface.sections:
+        fields_by_name = {f.name: f for f in fields}
+        for section in surface.sections:
+            sec_fields = [
+                fields_by_name[el.field_name]
+                for el in section.elements
+                if el.field_name in fields_by_name
+            ]
+            if not sec_fields:
+                continue
+            detail_sections.append(
+                DetailSectionContext(
+                    name=section.name,
+                    title=section.title or section.name.replace("_", " ").title(),
+                    fields=sec_fields,
+                    note=getattr(section, "note", None),
+                )
+            )
+
     # v0.61.126 (#942): ``display: pdf_viewer`` surface override. Routes
     # the view surface through the built-in PDF viewer chrome instead of
     # the generic detail layout. Storage-bound fields keep precedence
@@ -1387,6 +1411,7 @@ def _compile_view_surface(
             related_groups=related_groups_ctx,
             external_link_actions=external_links,
             show_history=surface.show_history,  # #956 cycle 10
+            sections=detail_sections,
         ),
         pdf_viewer=pdf_viewer_ctx,
     )

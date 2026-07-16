@@ -185,6 +185,30 @@ operation (e.g. `search_trigger=companies_house_lookup` →
 - Edit and Delete action buttons
 - Back navigation link
 - **State machine transitions** — rendered as action buttons for valid transitions from current state
+- **Related groups** — `related name "Title": display: table|status_cards|file_list; show: ChildEntity`
+  (reverse-FK tabs under the detail body)
+- **Multi-section overview** (#1600 Wedge B) — multiple `section` blocks stack as
+  titled field groups (identity / role / timeline …), then related work below.
+  Pair with list `open: Entity via fk` (#1603) for queue → context hub.
+
+```dsl
+surface client_overview "Client overview":
+  uses entity Company
+  mode: view
+  section header "Client":
+    field name "Name"
+    field status "Status"
+  related work "Work":
+    display: table
+    show: Engagement
+
+surface engagement_list "Engagements":
+  uses entity Engagement
+  mode: list
+  open: Company via company   # row → /app/company/{company} hub
+```
+
+One `mode: view` surface per entity owns the detail route (`/app/<entity>/{id}`).
 
 ## Workspace Layouts
 

@@ -6,6 +6,10 @@
   ratchet, bare-except, catalogue CSS, HM gallery). Runs as the **first** step
   of `ci-fast` / `ci-core` and is mandatory in `/ship`. Script:
   `scripts/preflight_surface.py` (prints remediation playbook on failure).
+- **#1600 Wedge B — multi-section VIEW overview chrome** — VIEW surfaces with
+  multiple `section` blocks stack titled field groups (not a flat dump) above
+  related work. Client/context hubs: `mode: view` + sections + `related` +
+  list `open: Entity via fk`. Dogfood: simple_task `user_detail` overview.
 
 ### Fixed
 - **#1603 open-via unwraps hydrated FK dicts** — `_resolve_row_links` extracts
