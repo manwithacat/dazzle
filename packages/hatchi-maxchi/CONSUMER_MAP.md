@@ -34,7 +34,7 @@ These are the high-risk lookalikes. CI locks (`require_substrings` /
 
 Same **job** can have multiple **surfaces**. Pick from `docs/agent/pick-a-surface.md`; do not merge L1s by visual shape.
 
-- **`chrome-presentation`** (presentation / chrome): `toolbar`
+- **`chrome-presentation`** (presentation / chrome): `toast`, `toolbar`
 - **`command-palette`** (command palette search): `command`
 - **`confirm-affordance`** (confirm irreversible action): `confirm`
 - **`field-triad`** (label + help + error triad): `field`
@@ -82,6 +82,7 @@ _No composition edges declared._
 **Related from (`composes_with`)**
 
 - `drawer` — composes_with
+- `toast` — composes_with
 
 ### `app-shell`
 
@@ -223,6 +224,7 @@ _No composition edges declared._
 - `pdf` — composes_with
 - `popover` — composes_with
 - `tabs` — composes_with
+- `toast` — composes_with
 - `wizard` — composes_with
 
 ### `card`
@@ -773,6 +775,12 @@ _No composition edges declared._
 ### `timeline`
 
 **Layer:** `L1`
+
+_No composition edges declared._
+
+### `toast`
+
+**Layer:** `L2` · **Recipe:** `chrome-presentation` (presentation / chrome)
 
 _No composition edges declared._
 

@@ -5744,48 +5744,8 @@ input.dz-switch:checked::before {
  * moved to the HM `table.css` (grid Hyperpart, Slice 0b, 2026-07-04). */
 
 /* ─────────────────────────── toast fragment ─────────────────────
- * Auto-dismissing notification (5s via htmx remove-me). 4 tones
- * keyed off data-dz-toast-level — replaces two parallel dictionary
- * lookups for border-l + icon colour. */
-
-.dz-toast {
-  pointer-events: auto;
-  max-width: 24rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--colour-border);
-  border-inline-start-width: 4px;
-  background: var(--colour-surface);
-  color: var(--colour-text);
-  box-shadow: var(--shadow-md);
-  padding-inline: var(--space-md);
-  padding-block: var(--space-md);
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-md);
-  transition: all var(--duration-base) var(--ease-out);
-}
-
-.dz-toast[data-dz-toast-level="success"] { border-inline-start-color: var(--colour-success); }
-.dz-toast[data-dz-toast-level="error"]   { border-inline-start-color: var(--colour-danger); }
-.dz-toast[data-dz-toast-level="warning"] { border-inline-start-color: var(--colour-warning); }
-.dz-toast[data-dz-toast-level="info"]    { border-inline-start-color: var(--colour-brand); }
-
-.dz-toast-icon {
-  width: 0.75rem;
-  height: 0.75rem;
-  margin-block-start: 3px;
-  flex-shrink: 0;
-}
-
-.dz-toast[data-dz-toast-level="success"] .dz-toast-icon { color: var(--colour-success); }
-.dz-toast[data-dz-toast-level="error"]   .dz-toast-icon { color: var(--colour-danger); }
-.dz-toast[data-dz-toast-level="warning"] .dz-toast-icon { color: var(--colour-warning); }
-.dz-toast[data-dz-toast-level="info"]    .dz-toast-icon { color: var(--colour-brand); }
-
-.dz-toast-message {
-  font-size: var(--text-sm);
-  color: var(--colour-text);
-}
+ * MOVED to components/toast.css (HYPERPART: toast). Stack host,
+ * title/message/actions, and level tones live there. */
 
 /* ─────────────────────────── bulk_actions fragment ──────────────
  * Delete-only bulk actions toolbar. Visible via Alpine x-show
@@ -6338,21 +6298,7 @@ input.dz-switch:checked::before {
 }
 
 /* ─────────────────────────── toast stack ────────────────────────
- * Fixed-position container for stacked toast notifications. Two
- * separate stacks (Alpine dzToast + HTMX OOB) share the same
- * chrome — extracting it kills the duplicated Tailwind string. */
-
-.dz-toast-stack {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  max-width: 24rem;
-  pointer-events: none;
-}
+ * MOVED to components/toast.css (HYPERPART: toast). */
 
 /* ─────────────────────────── form chrome (UX-016) ───────────────
  * Live subset (.dz-form-section/-title/-note) MOVED to HaTchi-MaXchi
@@ -12972,46 +12918,8 @@ dz-onboarding-step {
   color: var(--colour-text-muted);
 }
 
-/* Toast — replaces `alert alert-{level}` emitted by
- * `response_helpers.append_toast`. Tone keyed off `data-dz-toast-level`,
- * mirroring the `.dz-alert-banner[data-dz-alert-level=…]` pattern in
- * fragments.css. Slide-in/out animation inherited from the existing
- * `.dz-toast-enter` / `.dz-toast-leave` rules in dz.css. */
-.dz-toast {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--colour-surface);
-  color: var(--colour-text);
-  border: 1px solid var(--colour-border);
-  border-left-width: 4px;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-md);
-  font-size: var(--text-sm);
-  line-height: var(--leading-tight);
-  max-width: min(28rem, calc(100vw - var(--space-xl) * 2));
-}
-
-.dz-toast[data-dz-toast-level="info"] {
-  border-left-color: var(--colour-brand);
-  background: color-mix(in oklch, var(--colour-brand) 6%, var(--colour-surface));
-}
-
-.dz-toast[data-dz-toast-level="success"] {
-  border-left-color: var(--colour-success);
-  background: color-mix(in oklch, var(--colour-success) 6%, var(--colour-surface));
-}
-
-.dz-toast[data-dz-toast-level="warning"] {
-  border-left-color: var(--colour-warning);
-  background: color-mix(in oklch, var(--colour-warning) 6%, var(--colour-surface));
-}
-
-.dz-toast[data-dz-toast-level="error"] {
-  border-left-color: var(--colour-danger);
-  background: color-mix(in oklch, var(--colour-danger) 6%, var(--colour-surface));
-}
+/* Toast unit + stack — owned by HYPERPART: toast (components/toast.css).
+ * Do not re-declare .dz-toast* here; dual-lock lives in toast.css. */
 /* --- hatchi-maxchi/components/skeleton.css --- */
 /* HYPERPART: skeleton */
 /*
@@ -14517,6 +14425,235 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 .dz-attn-bullet.dz-attn-tone-warning  { color: var(--colour-warning); }
 .dz-attn-bullet.dz-attn-tone-notice   { color: var(--colour-brand); }
 .dz-attn-bullet.dz-attn-tone-default  { color: var(--colour-brand); }
+/* --- hatchi-maxchi/components/toast.css --- */
+/*
+ * HYPERPART: toast
+ *
+ * Auto-dismissing notifications for the shell toast stack.
+ * Server OOB (`with_toast`) and the client bridge (`dz-toast.js`) share
+ * this markup. Levels key off data-dz-toast-level (info | success |
+ * warning | error). Optional title + action row are slots — message-only
+ * markup remains valid.
+ *
+ * Contract (contracts/toast.py):
+ *   <div id="dz-toast" class="dz-toast-stack" aria-live="polite"
+ *        data-dz-toast-cap="8">
+ *     <div class="dz-toast" data-dz-toast-level="success"
+ *          data-dz-remove-after="8s" role="status">
+ *       <div class="dz-toast__body">
+ *         <div class="dz-toast__title">Saved</div>
+ *         <div class="dz-toast__message">Your changes are live.</div>
+ *         <div class="dz-toast__actions">
+ *           <a class="dz-toast__action" href="/…">View</a>
+ *           <button type="button" class="dz-toast__action"
+ *                   data-dz-toast-dismiss>Dismiss</button>
+ *         </div>
+ *       </div>
+ *       <button type="button" class="dz-toast__close"
+ *               data-dz-toast-dismiss aria-label="Dismiss"></button>
+ *     </div>
+ *   </div>
+ *
+ * Host behaviour (controllers/dz-toast.js): auto-dismiss via
+ * data-dz-remove-after, hover/focus pause, stack cap, dismiss clicks.
+ */
+
+/* ── stack ─────────────────────────────────────────────────────────── */
+
+.dz-toast-stack {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: min(24rem, calc(100vw - var(--space-xl) * 2));
+  /* Children re-enable hits; empty chrome does not steal clicks. */
+  pointer-events: none;
+}
+
+/* ── toast unit ────────────────────────────────────────────────────── */
+
+.dz-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  max-width: 24rem;
+  padding-inline: var(--space-md);
+  padding-block: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--colour-border);
+  border-inline-start-width: 4px;
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.dz-toast[data-dz-toast-level="info"] {
+  border-inline-start-color: var(--colour-brand);
+  background: color-mix(in oklch, var(--colour-brand) 6%, var(--colour-surface));
+}
+
+.dz-toast[data-dz-toast-level="success"] {
+  border-inline-start-color: var(--colour-success);
+  background: color-mix(in oklch, var(--colour-success) 6%, var(--colour-surface));
+}
+
+.dz-toast[data-dz-toast-level="warning"] {
+  border-inline-start-color: var(--colour-warning);
+  background: color-mix(in oklch, var(--colour-warning) 6%, var(--colour-surface));
+}
+
+.dz-toast[data-dz-toast-level="error"] {
+  border-inline-start-color: var(--colour-danger);
+  background: color-mix(in oklch, var(--colour-danger) 6%, var(--colour-surface));
+}
+
+.dz-toast-icon,
+.dz-toast__icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-block-start: 0.15rem;
+  flex-shrink: 0;
+}
+
+.dz-toast[data-dz-toast-level="info"] .dz-toast-icon,
+.dz-toast[data-dz-toast-level="info"] .dz-toast__icon {
+  color: var(--colour-brand);
+}
+
+.dz-toast[data-dz-toast-level="success"] .dz-toast-icon,
+.dz-toast[data-dz-toast-level="success"] .dz-toast__icon {
+  color: var(--colour-success);
+}
+
+.dz-toast[data-dz-toast-level="warning"] .dz-toast-icon,
+.dz-toast[data-dz-toast-level="warning"] .dz-toast__icon {
+  color: var(--colour-warning);
+}
+
+.dz-toast[data-dz-toast-level="error"] .dz-toast-icon,
+.dz-toast[data-dz-toast-level="error"] .dz-toast__icon {
+  color: var(--colour-danger);
+}
+
+.dz-toast__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.dz-toast__title {
+  font-weight: var(--weight-semibold);
+  color: var(--colour-text);
+  font-size: var(--text-sm);
+}
+
+.dz-toast-message,
+.dz-toast__message {
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
+.dz-toast__title + .dz-toast__message {
+  color: var(--colour-text-muted);
+}
+
+.dz-toast__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-sm);
+}
+
+.dz-toast__action {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--colour-brand);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.dz-toast__action:hover {
+  color: var(--colour-text);
+}
+
+.dz-toast__action:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.dz-toast__close {
+  appearance: none;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: -0.25rem -0.25rem 0 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--colour-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 1rem;
+}
+
+.dz-toast__close::before {
+  content: "×";
+  font-weight: var(--weight-semibold);
+}
+
+.dz-toast__close:hover {
+  color: var(--colour-text);
+  background: color-mix(in oklch, var(--colour-text) 8%, transparent);
+}
+
+.dz-toast__close:focus-visible {
+  outline: 2px solid var(--colour-brand);
+  outline-offset: 2px;
+}
+
+/* Enter/leave helpers (host may toggle). */
+.dz-toast-enter {
+  animation: dz-toast-in var(--duration-slow) var(--ease-out);
+}
+
+.dz-toast-leave {
+  opacity: 0;
+  transform: translateX(0.75rem);
+  pointer-events: none;
+}
+
+@keyframes dz-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 /* --- hatchi-maxchi/components/toggle.css --- */
 /* HYPERPART: toggle */
 /*
