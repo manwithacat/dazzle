@@ -162,3 +162,11 @@ unless the app sets cue meta (`chrome-cue-opt-in` stem).
 
 - Supervisor → `support_dashboard` = classification metrics + open queue
 - Agent → `ticket_management` = non-closed ticket queue + full list
+
+**domain_join_co**:
+
+- Admin/member → `home` = announcement metrics + join readiness status_list + feed
+
+**ops_dashboard** (reference dogfood — already job-shaped):
+
+- Ops engineer → command centre with metrics, `ack_queue`, charts, status_list, task_inbox

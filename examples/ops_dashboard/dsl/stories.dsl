@@ -55,27 +55,29 @@ story ST-006 "Operations Engineer views all system health statuses at a glance":
   given:
     - "Operations Engineer is on the command_center workspace"
   then:
-    - "Operations Engineer sees every System grouped by status"
-    - "Critical and offline Systems are visually distinguished"
+    - "Operations Engineer sees health metrics and status lists at a glance"
+    - "Critical systems and readiness strips are visually distinguished"
 
 story ST-007 "Operations Engineer acknowledges an alert with one click":
   persona: ops_engineer
   trigger: user_click
   entities: [Alert]
   given:
+    - "Operations Engineer is on the command_center workspace"
     - "Alert.status = active"
   then:
-    - "Alert.status becomes acknowledged"
-    - "Alert.acknowledged_by records the Operations Engineer"
+    - "Active alerts appear in the acknowledgement queue"
+    - "Alert.status becomes acknowledged from the queue or detail"
 
 story ST-008 "Operations Engineer views alerts grouped by severity":
   persona: ops_engineer
   trigger: user_click
   entities: [Alert]
   given:
+    - "Operations Engineer is on the command_center workspace"
     - "Open Alerts exist across systems"
   then:
-    - "Operations Engineer sees Alerts sorted by severity desc, triggered_at desc"
+    - "Operations Engineer sees severity breakdown charts and the ack queue"
     - "Critical and high severity alerts appear above medium/low"
 
 story ST-009 "Operations Engineer drills into a degraded system":

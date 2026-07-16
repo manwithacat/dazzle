@@ -39,28 +39,34 @@ only comments that are not internal.
 
 **Support Agents** are first-line support handling incoming tickets. They aim
 to process tickets efficiently, keep within the response-time commitment, and
-escalate complex issues to managers. They work from the Ticket Queue and the
-Agent Console, with full visibility of tickets and conversations.
+escalate complex issues to managers. They land on the **Ticket Queue** — open
+pressure metrics, a review queue of open tickets, and a lifecycle kanban —
+with full visibility of tickets and conversations, plus the Agent Console for
+per-agent inspection.
 
 **Support Managers** are team leads monitoring performance and handling
 escalations — watching team metrics, spotting bottlenecks in ticket flow, and
-ensuring quality and customer satisfaction — from the **Ticket Queue** (team
-open work first) and the Agent Console. Managers alone can delete tickets or
+ensuring quality and customer satisfaction. They land on **Manager Ops**: team
+counts, an SLA readiness strip, critical and unassigned work queues, and a
+lifecycle funnel — not an empty personal assigned list. The team Ticket Queue
+and Agent Console remain available. Managers alone can delete tickets or
 comments.
 
 **Administrators** oversee the operation from the Agent Console.
 
 ## Where work happens
 
-Four workspaces organise the work. The **Ticket Queue** is the home for
-managing incoming tickets — a summary, a kanban board, and the ticket list —
-and is where Support Agents and Support Managers land so the open team queue
-is visible immediately. The **Agent Dashboard** is a personal dashboard for
-day-to-day ticket work — assigned and pending items and lifecycle metrics
-first, comment activity last. **My Tickets** is the customer's view of their
-own submitted tickets. The **Agent Console** — shared by administrators,
-managers, and agents — lets you pick an agent and see the tickets assigned to
-them, the comments on those tickets, and comparison charts of both.
+Five workspaces organise the work. The **Ticket Queue** is the agent home for
+incoming tickets — summary metrics, a review queue, and a kanban board of open
+statuses. **Manager Ops** is the manager home for team performance and
+escalations — metrics, SLA readiness, focused critical/unassigned queues, and
+a funnel of ticket statuses. The **Agent Dashboard** is a personal dashboard
+for claimed work — assigned and pending items and lifecycle metrics first,
+comment activity last. **My Tickets** is the customer's home: their open/WIP
+counts, an open-cases queue, and full history. The **Agent Console** — shared
+by administrators, managers, and agents — lets you pick an agent and see the
+tickets assigned to them, the comments on those tickets, and comparison charts
+of both.
 
 ## How work flows through it
 
@@ -76,6 +82,9 @@ Eighteen authored scenarios pin the flows down; representative ones:
   agents and managers.
 - When a Support Agent resolves a ticket, its status becomes resolved and the
   customer is notified.
+- When a Support Manager reviews team performance on Manager Ops, they see
+  open, in-progress, critical, and resolved counts plus critical and
+  unassigned queues.
 - When a Support Manager reassigns a ticket, the chosen agent takes it over
   and the previous assignee is notified.
 - When the Administrator triages the full queue, they see every ticket
