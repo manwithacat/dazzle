@@ -81,6 +81,15 @@ class DisplayLocaleProfile:
         d = value.date() if isinstance(value, datetime) else value
         return f"{d.day} {d.strftime('%B %Y')}"
 
+    def format_letter_datetime(self, value: datetime) -> str:
+        """Long letter form with time in tenant TZ (e.g. ``16 July 2026 at 01:30``).
+
+        Used by native PDF signing and other export/messaging paths (#1597 D).
+        Naive datetimes are treated as UTC (storage convention).
+        """
+        local = self.to_display_datetime(value)
+        return f"{local.day} {local.strftime('%B %Y')} at {local.strftime('%H:%M')}"
+
     def format_datetime_value(self, value: datetime | date) -> str:
         """Format a datetime in tenant TZ; pure dates stay calendar-only."""
         if isinstance(value, date) and not isinstance(value, datetime):

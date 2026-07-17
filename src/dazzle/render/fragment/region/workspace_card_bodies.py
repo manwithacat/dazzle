@@ -28,6 +28,7 @@ from dazzle.core.ir.conditions import (
     ConditionExpr,
     LogicalOperator,
 )
+from dazzle.i18n.display_locale import get_display_locale
 
 
 def _eval_row_condition(cond: ConditionExpr, row: dict[str, Any]) -> bool:
@@ -208,7 +209,8 @@ def _render_thread_summary_body(
 
     if chosen_ts is not None:
         iso = chosen_ts.isoformat()
-        visible = chosen_ts.strftime("%Y-%m-%d %H:%M")
+        # Tenant display profile — not ISO wall text (#1597 D)
+        visible = get_display_locale().format_datetime_value(chosen_ts)
     else:
         iso = str(chosen_row.get(timestamp_field, "") or "")
         visible = iso
@@ -305,7 +307,7 @@ def _render_stamps_body(
         # parseable values, raw stringified value otherwise).
         if parsed_ts is not None:
             iso = parsed_ts.isoformat()
-            visible = parsed_ts.strftime("%Y-%m-%d %H:%M")
+            visible = get_display_locale().format_datetime_value(parsed_ts)
         else:
             iso = str(raw_ts or "")
             visible = iso

@@ -17,6 +17,7 @@ from markupsafe import Markup
 
 from dazzle.core.ir.money import get_currency_scale
 from dazzle.core.ir.tones import field_enum_semantic_map, normalize_tone
+from dazzle.i18n.display_locale import get_display_locale
 
 
 def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> str:
@@ -53,8 +54,13 @@ def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> s
     return f"{symbol}{amount:,.{scale}f}"
 
 
-def _date_filter(value: Any, fmt: str = "%d %b %Y") -> str:
-    """Format a date or datetime."""
+def _date_filter(value: Any, fmt: str | None = None) -> str:
+    """Format a date or datetime via DisplayLocaleProfile (#1597 D).
+
+    Explicit ``fmt`` (strftime) still wins for legacy callers. With no
+    ``fmt``, calendar dates and datetimes use the request/tenant profile
+    (same path as list ``format_cell``).
+    """
     if value is None:
         return ""
     if isinstance(value, str):
@@ -63,7 +69,11 @@ def _date_filter(value: Any, fmt: str = "%d %b %Y") -> str:
         except ValueError:
             return str(value)
     if isinstance(value, (date, datetime)):
-        return value.strftime(fmt)
+        if fmt is not None:
+            return value.strftime(fmt)
+        # Default path is calendar-date presentation (legacy DETAIL
+        # ``%d %b %Y``). List/detail datetime columns use format_cell.
+        return get_display_locale().format_date_value(value)
     return str(value)
 
 

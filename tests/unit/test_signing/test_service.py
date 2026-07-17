@@ -16,6 +16,7 @@ import pytest
 from dazzle.signing.service import (
     PdfBranding,
     _get_signer,
+    _letter_date_strings,
     _sanitize_html_for_pdf,
     generate_pdf,
     sign_pdf,
@@ -94,6 +95,27 @@ def test_generate_pdf_produces_pdf_bytes():
     )
     assert out.startswith(b"%PDF-")
     assert len(out) > 100
+
+
+def test_letter_date_strings_follow_display_locale():
+    """#1597 D: letter header/signature dates use tenant TZ profile."""
+    from datetime import UTC, datetime
+
+    from dazzle.i18n.display_locale import (
+        DisplayLocaleProfile,
+        reset_display_locale,
+        set_display_locale,
+    )
+
+    token = set_display_locale(
+        DisplayLocaleProfile(timezone="Europe/London", date_format="D MMM YYYY")
+    )
+    try:
+        header, signed = _letter_date_strings(datetime(2026, 7, 16, 0, 30, tzinfo=UTC))
+        assert header == "16 July 2026"
+        assert signed == "16 July 2026 at 01:30"
+    finally:
+        reset_display_locale(token)
 
 
 def test_generate_pdf_grows_with_signature_image():

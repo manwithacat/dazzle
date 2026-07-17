@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from dazzle.i18n.display_locale import get_display_locale
 from dazzle.signing.tokens import SigningError
 
 if TYPE_CHECKING:
@@ -96,6 +97,22 @@ def _sanitize_html_for_pdf(html: str) -> str:
     return html
 
 
+def _letter_date_strings(now: datetime | None = None) -> tuple[str, str]:
+    """Header + signature dates from DisplayLocaleProfile (#1597 D).
+
+    ``now`` is injectable for tests; production always uses UTC wall clock
+    converted to the tenant display timezone.
+    """
+    profile = get_display_locale()
+    clock = now if now is not None else datetime.now(UTC)
+    if clock.tzinfo is None:
+        clock = clock.replace(tzinfo=UTC)
+    local = profile.to_display_datetime(clock)
+    header = profile.format_long_date(local)
+    signed = profile.format_letter_datetime(clock)
+    return header, signed
+
+
 def generate_pdf(
     letter_html: str,
     signer_name: str,
@@ -106,6 +123,9 @@ def generate_pdf(
 
     The output is an unsigned PDF; pass it to ``sign_pdf`` to apply the
     PKCS#7 digital signature.
+
+    Letter dates use the request/tenant :class:`DisplayLocaleProfile`
+    (#1597 D) — not a hard-coded UTC ``strftime``.
     """
     try:
         from fpdf import FPDF
@@ -132,8 +152,8 @@ def generate_pdf(
     pdf.ln(5)
 
     pdf.set_font("Helvetica", "", 10)
-    today = datetime.now(UTC).strftime("%d %B %Y")
-    pdf.cell(0, 6, f"Date: {today}", new_x="LMARGIN", new_y="NEXT")
+    header_date, signed_date = _letter_date_strings()
+    pdf.cell(0, 6, f"Date: {header_date}", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
 
     pdf.set_font("Helvetica", "", 10)
@@ -154,7 +174,7 @@ def generate_pdf(
     pdf.cell(
         0,
         6,
-        f"Date: {datetime.now(UTC).strftime('%d %B %Y at %H:%M UTC')}",
+        f"Date: {signed_date}",
         new_x="LMARGIN",
         new_y="NEXT",
     )

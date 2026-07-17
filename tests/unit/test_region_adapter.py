@@ -930,8 +930,9 @@ def test_detail_type_aware_date_uses_dateformat_filter() -> None:
         "fields": [{"key": "created", "type": "date"}],
     }
     html = _render(adapter.build(_FakeRegion("d", display="detail"), ctx))
-    # _date_filter default format is "%d %b %Y"
-    assert "01 May 2026" in html
+    # _date_filter uses DisplayLocaleProfile (product default D MMM YYYY)
+    assert "May 2026" in html
+    assert "1 May" in html or "01 May" in html
 
 
 def test_detail_type_aware_currency_formats_minor_units() -> None:

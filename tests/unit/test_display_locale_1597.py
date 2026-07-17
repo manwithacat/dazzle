@@ -108,3 +108,43 @@ def test_expression_today_and_days_until_use_tenant_calendar() -> None:
         assert evaluate(parse_expr("days_until(due)"), {"due": dt_due}) == 5
     finally:
         reset_display_locale(token)
+
+
+def test_format_letter_datetime_tenant_tz() -> None:
+    """#1597 D: letter/PDF signed-at uses tenant TZ, not hard-coded UTC label."""
+    p = DisplayLocaleProfile(timezone="Europe/London", date_format="D MMM YYYY")
+    # 2026-07-16 00:30 UTC → 01:30 BST
+    utc = datetime(2026, 7, 16, 0, 30, tzinfo=UTC)
+    assert p.format_long_date(utc) == "16 July 2026"
+    assert p.format_letter_datetime(utc) == "16 July 2026 at 01:30"
+
+
+def test_date_filter_uses_display_locale() -> None:
+    """#1597 D: Jinja/legacy _date_filter follows profile (not fixed %d %b %Y)."""
+    from dazzle.i18n.display_locale import reset_display_locale, set_display_locale
+    from dazzle.render.filters import _date_filter
+
+    us = DisplayLocaleProfile(locale="en-US", date_format="MM/DD/YYYY", timezone="UTC")
+    token = set_display_locale(us)
+    try:
+        assert _date_filter(date(2026, 7, 16)) == "07/16/2026"
+        # Explicit fmt still wins
+        assert _date_filter(date(2026, 7, 16), fmt="%Y-%m-%d") == "2026-07-16"
+    finally:
+        reset_display_locale(token)
+
+
+def test_letter_date_strings_london_bst() -> None:
+    """#1597 D: signing letter dates convert UTC clock → tenant display."""
+    from dazzle.i18n.display_locale import reset_display_locale, set_display_locale
+    from dazzle.signing.service import _letter_date_strings
+
+    p = DisplayLocaleProfile(timezone="Europe/London", date_format="D MMM YYYY")
+    token = set_display_locale(p)
+    try:
+        header, signed = _letter_date_strings(datetime(2026, 7, 16, 0, 30, tzinfo=UTC))
+        assert header == "16 July 2026"
+        assert signed == "16 July 2026 at 01:30"
+        assert "UTC" not in signed
+    finally:
+        reset_display_locale(token)

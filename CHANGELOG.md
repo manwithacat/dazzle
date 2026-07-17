@@ -42,6 +42,15 @@
   `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood
   v0.104.9).
 
+## [0.104.10] - 2026-07-17
+
+### Changed
+- **#1597 D — export/letter dates use DisplayLocaleProfile** — native PDF
+  signing (`generate_pdf`) letter header + signature lines follow tenant TZ
+  long form (e.g. `16 July 2026 at 01:30`) instead of hard-coded UTC
+  `strftime`. Legacy `_date_filter` and entity-card thread/stamps timestamps
+  share the same profile as list `format_cell`.
+
 ## [0.104.9] - 2026-07-16
 
 ### Fixed
