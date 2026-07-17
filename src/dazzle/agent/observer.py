@@ -125,8 +125,14 @@ class PlaywrightObserver:
         return url
 
     async def navigate(self, url: str) -> None:
-        await self._page.goto(url)
-        await self._page.wait_for_load_state("networkidle")
+        # Match PlaywrightExecutor: workspace shells keep HTMX/SSE open, so
+        # default "load"/unbounded networkidle can hang past 30s and abort
+        # qa trials before step 1 (design_studio reviewer cold start).
+        await self._page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+        try:
+            await self._page.wait_for_load_state("networkidle", timeout=5_000)
+        except Exception:
+            pass
 
     async def observe(self) -> PageState:
         if self._mode == ObserverMode.ACCESSIBILITY:
