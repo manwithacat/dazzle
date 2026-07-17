@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.104.19] - 2026-07-17
+
+### Added
+- **Loopable example journey dogfood** — `scripts/example_journey_maturity.py`
+  ranks residual apps (critical/thin/deepen); improve strategy
+  `journey_dogfood` (`/improve example-apps journey_dogfood`); Tier 0.5 in
+  example-apps lane; fleet prove fails on bound journey failures.
+- **domain_join_co journey dogfood** — announcement open-via + multi-section
+  hub; ST-001–004 bound (`pass_journey`). Residual next: design_studio,
+  llm_ticket_classifier.
+
 ## [0.104.18] - 2026-07-17
 
 ### Added

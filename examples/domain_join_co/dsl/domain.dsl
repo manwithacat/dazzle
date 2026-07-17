@@ -77,15 +77,23 @@ entity Announcement "Announcement":
 surface announcement_list "Announcements":
   uses entity Announcement
   mode: list
+  open: Announcement via id
   section main:
     field title "Title"
+    field workspace "Workspace"
+  ux:
+    purpose: "Team board — open a row for the announcement hub"
 
 surface announcement_detail "Announcement":
   uses entity Announcement
   mode: view
-  section main:
+  section summary "Summary":
     field title "Title"
+    field workspace "Workspace"
+  section body "Body":
     field body "Body"
+  ux:
+    purpose: "Announcement hub — title, workspace context, and body in one place"
 
 surface announcement_create "Post Announcement":
   uses entity Announcement

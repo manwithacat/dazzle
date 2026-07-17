@@ -60,11 +60,13 @@ Read backlog section. **First, prune stale findings** (see Stale-finding TTL und
 Then selection priority:
 1. `IN_PROGRESS` with attempts < 3 → resume it
 2. `IN_PROGRESS` with attempts ≥ 3 → mark `BLOCKED`, file issue if framework-related, pick next `PENDING`
-3. All gaps DONE/BLOCKED → run **explore phase** (Step 6 below)
-4. Pick next `PENDING` (priority: critical > warning > info, then app alphabetical)
-5. Mark `IN_PROGRESS`
+3. **`journey_maturity` residuals** — if `python scripts/example_journey_maturity.py --next` prints an app, prefer a matching `PENDING` `journey_maturity` row (or create one from the probe) **before** STALE-clear Tier-1 noise. Strategy body: `improve/strategies/journey_dogfood.md`. Force path: `/improve example-apps journey_dogfood`.
+4. All gaps DONE/BLOCKED and journey residual empty → run **explore phase** (Step 6 below)
+5. Pick next `PENDING` (priority: critical > warning > info, then app alphabetical)
+6. Mark `IN_PROGRESS`
 
 If `$ARGUMENTS` provided as `<app>`, filter to that app only.
+If `$ARGUMENTS` is `journey_dogfood` (or lane+strategy force), run the journey_dogfood strategy playbook for one residual app and skip unrelated gap types.
 
 ### 2. ENHANCE
 
@@ -77,6 +79,7 @@ Apply the fix appropriate to the gap type:
 | `validation` | Edit DSL to satisfy parser/validator |
 | `conformance` | Add missing entity/surface/workspace per `mcp__dazzle__conformance` |
 | `fidelity` | Add missing IR-graph edges per `mcp__dazzle__dsl operation=fidelity` |
+| `journey_maturity` | Agent-first dogfood: bound `executed_by` stories + list `open:` + multi-section VIEW hubs. Full playbook: `improve/strategies/journey_dogfood.md`. Force: `/improve example-apps journey_dogfood`. |
 | `rhythm_fidelity` | A rhythm scores `< 1.0` (a scene's surface/action/entity can't resolve) — add the missing surface/derive-binding, or fix the cited story's `entities`/`trigger`. **Only non-advisory `evaluate` failures are actionable** (advisory `surface_specialization` + orphan-story gaps are design nudges, not defects). |
 | `story_scope` | `dazzle story scope-fidelity` reports a story with `< full` process coverage (story⇄process axis) — add/point the implementing process. Distinct from `rhythm_fidelity` (story⇄rhythm axis). |
 | `test_design_coverage` | `dazzle test-design coverage-actions` / `runtime-gaps` flags an uncovered persona action — add the test-design coverage row. |
@@ -123,6 +126,19 @@ If the fleet is `HM_OK`, skip residual-markup investigations and go to Tier 1.
 If `FAIL`, treat as framework residual unless custom project HTML is the source
 (see **HM surface gate** above). Do **not** open `visual_quality` rows for stale
 `dnr-ui/` Alpine — delete the local tree or rebuild; `examples/*/dnr-ui/` is gitignored.
+
+#### Tier 0.5 (every cycle, free): Journey maturity probe
+
+```bash
+python scripts/example_journey_maturity.py --status
+python scripts/example_journey_maturity.py --next
+```
+
+If `next` is non-empty, open/refresh a `journey_maturity` backlog row for that
+app (`PENDING`) and **prefer it on the next OBSERVE** (see selection priority).
+Do not batch-fix the whole residual list in one cycle — one app per cycle via
+`improve/strategies/journey_dogfood.md`. When residual is empty, note
+`journey_maturity: fleet ok` in the cycle log and continue Tier 1.
 
 #### Tier 1 (every cycle, free): Re-scan DSL gaps
 

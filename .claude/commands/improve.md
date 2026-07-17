@@ -7,6 +7,9 @@ ARGUMENTS: $ARGUMENTS
 If `$ARGUMENTS` is empty: driver picks the lane.
 If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep; `trial-signals` forces the TR-action drain strategy; `cimonitor` forces the CI-badge gate playbook even when main is green — re-check + report only unless red; `codeql` forces the CodeQL open-alert poll + remediate playbook; `consumer-issues` / `github-prs` force GitHub inbox strategies.)
 If `$ARGUMENTS` is `<lane> <strategy>`: force that lane and that sub-strategy.
+Known sub-strategies include `journey_dogfood` under `example-apps`
+(`.claude/commands/improve/strategies/journey_dogfood.md` — agent-first
+example maturity via `scripts/example_journey_maturity.py`).
 If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (no cycle).
 If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count`, log the manual reset, and exit (no cycle). Operator escape hatch — use when the cap was reached but exploration should continue (e.g. after a large framework change that a release signal didn't capture).
 
