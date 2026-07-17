@@ -14,6 +14,61 @@
     "personas": [],
     "entities": [
       {
+        "name": "User",
+        "row_count_default": 4,
+        "notes": "Studio personas (admin/designer/reviewer) so Feedback.reviewer FK can resolve",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "email",
+            "strategy": "email_from_name",
+            "params": {
+              "source_field": "name",
+              "domains": [
+                "studio.test"
+              ]
+            }
+          },
+          {
+            "field_name": "name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "role",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "admin",
+                "designer",
+                "reviewer"
+              ],
+              "weights": [
+                0.25,
+                0.5,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -180,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      },
+      {
         "name": "Brand",
         "row_count_default": 4,
         "notes": null,
@@ -245,6 +300,58 @@
             "params": {
               "min": 1000,
               "max": 50000
+            }
+          }
+        ]
+      },
+      {
+        "name": "Feedback",
+        "row_count_default": 8,
+        "notes": "Required reviewer FK was missing from blueprint \u2192 null reviewer 400s on managed seed reset",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "asset",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Asset"
+            }
+          },
+          {
+            "field_name": "reviewer",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "User"
+            }
+          },
+          {
+            "field_name": "rating",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 1,
+              "max": 5
+            }
+          },
+          {
+            "field_name": "comment",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 6,
+              "max_words": 25
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -60,
+              "max_offset_days": 0
             }
           }
         ]

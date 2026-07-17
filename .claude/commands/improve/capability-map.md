@@ -37,7 +37,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 767 | USED |
-| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 769 | USED |
+| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 770 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 759 | USED |
 | `dazzle qa trial` | CLI | trials | 758 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 759 | USED |
@@ -97,6 +97,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 770 (2026-07-17) product.** UX seed FK parents without surfaces — design_studio Feedback.reviewer; **v0.105.10**. Explore **81/100**.
 
 > **Cycle 769 (2026-07-17) STALE-clear.** /fuzz via managed contracts boot: support_tickets 64/0/38, design_studio 41/0/32, simple_task 39/0/24 (seed 400s advisory only). /smells via fitness code hotspots. property-vision substitute hm_visual_smoke --dazzle-emit (11 parts). coherence queue=0 mean=8.7. Stamped fuzz/smells/property-vision/coherence/ux-verify **USED@769**. Explore **80/100**. Tip CI **green** (767).
 

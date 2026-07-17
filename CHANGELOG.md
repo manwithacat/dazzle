@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.105.10] - 2026-07-17
+
+### Fixed
+- **UX managed seed skipped required FK parents without surfaces** —
+  `generate_seed_payload` only seeded entities that had surfaces, so
+  design_studio `Feedback.reviewer` → `User` (no list/view surface) was
+  omitted and `/__test__/seed` hit NOT NULL on `reviewer`. Now transitively
+  seeds required FK targets. Unit test + design_studio blueprint lists User
+  and Feedback for demo generation.
+
 ## [0.105.9] - 2026-07-17
 
 ### Fixed

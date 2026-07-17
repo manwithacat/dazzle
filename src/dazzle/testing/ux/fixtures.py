@@ -188,14 +188,48 @@ def generate_seed_payload(
     # table stays empty → `list_page` contracts spuriously fail with "no
     # clickable rows". Topological ordering fixes FK-chain apps (e.g.
     # acme_billing: Organization ← Project/User ← Invoice/Membership).
+    #
+    # Also seed *required FK targets* of surfaced entities even when those
+    # targets have no surfaces of their own (design_studio: User has no
+    # list/view surface but Feedback.reviewer is required). Without this,
+    # the ref is skipped → null NOT NULL on the referencing insert.
     from dazzle.demo_data.loader import topological_sort_entities
 
     entities_by_name = {e.name: e for e in appspec.domain.entities}
+    seed_entities = set(surfaced_entities)
+
+    def _required_ref_targets(entity_name: str) -> set[str]:
+        entity = entities_by_name.get(entity_name)
+        if entity is None:
+            return set()
+        targets: set[str] = set()
+        for field in entity.fields:
+            modifiers = (
+                [str(m) for m in (field.modifiers or [])] if hasattr(field, "modifiers") else []
+            )
+            if "required" not in modifiers and "pk" not in modifiers:
+                continue
+            ref_entity = getattr(field.type, "ref_entity", None)
+            type_str = _get_field_type_str(field.type)
+            if ref_entity is not None or type_str.lower() == "ref":
+                if ref_entity and ref_entity not in _FRAMEWORK_ENTITIES:
+                    targets.add(ref_entity)
+        return targets
+
+    # Transitively close over required FK parents of surfaced entities.
+    frontier = list(surfaced_entities)
+    while frontier:
+        name = frontier.pop()
+        for parent in _required_ref_targets(name):
+            if parent not in seed_entities and parent in entities_by_name:
+                seed_entities.add(parent)
+                frontier.append(parent)
+
     ordered_names = topological_sort_entities(appspec.domain.entities)
 
     for entity_name in ordered_names:
         entity = entities_by_name.get(entity_name)
-        if entity is None or entity.name not in surfaced_entities:
+        if entity is None or entity.name not in seed_entities:
             continue
 
         for i in range(rows_per_entity):

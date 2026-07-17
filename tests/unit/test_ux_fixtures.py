@@ -79,6 +79,31 @@ class TestFixtureGeneration:
                     f"which is seeded later — not FK-dependency-ordered"
                 )
 
+    def test_required_fk_target_seeded_without_surfaces(self) -> None:
+        """design_studio: User has no surfaces but Feedback.reviewer is required.
+
+        Surfaced-only seeding skipped User → null reviewer on /__test__/seed
+        (NOT NULL) during managed contract verify.
+        """
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        project = Path(__file__).resolve().parents[2] / "examples" / "design_studio"
+        appspec = load_project_appspec(project)
+        payload = generate_seed_payload(appspec)
+        fixtures = payload["fixtures"]
+        by_entity: dict[str, list] = {}
+        for fx in fixtures:
+            by_entity.setdefault(fx["entity"], []).append(fx)
+
+        assert "User" in by_entity, "User must be seeded as required FK target of Feedback"
+        assert "Feedback" in by_entity, "Feedback is surfaced and must be seeded"
+        user_ids = {fx["id"] for fx in by_entity["User"]}
+        for fx in by_entity["Feedback"]:
+            refs = fx.get("refs") or {}
+            assert "reviewer" in refs, f"Feedback {fx['id']} missing reviewer ref"
+            assert refs["reviewer"] in user_ids
+            assert "asset" in refs, f"Feedback {fx['id']} missing asset ref"
+
 
 class TestLifecycleSeedIntegrity:
     """TR-10: demo/UX seeds must not put resolved_at on open tickets or in the future."""
