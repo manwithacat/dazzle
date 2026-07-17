@@ -23,5 +23,8 @@ the two conflict.
 ## Expressions
 
 - ADR-0004, ADR-0002, ADR-0003
-- `AGENTS.md` › Authoring vs API Boundary, Counter-Prior Catalogue
+- `AGENTS.md` › Authoring vs API Boundary, Counter-Prior Catalogue, Deferred decisions
 - `docs/counter-priors/`, `docs/architecture/model-driven-failure-modes.md`
+- `docs/architecture/epistemic-engineering-practice.md` (didactics + assessment)
+- `make ship-surface` / drift gates — post-hoc prior correction (not a substitute for stems)
+- Parked residual work: `docs/decisions/` (do not speculative-build PARKED DDs)

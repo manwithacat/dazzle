@@ -4,7 +4,8 @@ Dazzle's [counter-prior catalogue](../counter-priors/INDEX.md) corrects **corpus
 priors** — bad code shapes that dominate LLM training data because humans wrote
 them at scale (Rails polymorphic associations, exceptions-as-control-flow, raw SQL
 string-building). Each entry is a small permanent inoculation against a recurring
-drift.
+drift. How counter-priors sit next to stems, ADRs, and Deferred Decisions is
+summarised in [epistemic engineering practice](epistemic-engineering-practice.md).
 
 But corpus idioms are only half the story. Agentic code *production* has its own
 predictable failure modes — the agent-era analogue of the patterns the catalogue

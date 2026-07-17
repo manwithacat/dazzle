@@ -10,18 +10,23 @@ live only here.
 
 **Stems** are the small conceptual structures that regenerate Dazzle judgement.
 They are not “extra docs.” Open them before inventing architecture.
+Practice note: [`docs/architecture/epistemic-engineering-practice.md`](docs/architecture/epistemic-engineering-practice.md).
 
 | Rank | Location | Role |
 |------|----------|------|
 | 1 | **[`stems/`](stems/INDEX.md)** | Framework stems (compressed judgement) |
 | 2 | **This file** | Always-on didactics + commands |
 | 3 | **`docs/adr/`** | Decision history (expressions of stems) |
-| 4 | **Package stems** | e.g. `packages/hatchi-maxchi/stems/` |
-| 5 | **Example / app stems** | `examples/<app>/stems/` — domain judgement |
-| 6 | Guides / reference | Mechanics |
+| 4 | **`docs/decisions/`** | Deferred Decisions — parked plans + force reopen |
+| 5 | **`docs/counter-priors/`** | Corpus pathologies (negative space) |
+| 6 | **Package stems** | e.g. `packages/hatchi-maxchi/stems/` |
+| 7 | **Example / app stems** | `examples/<app>/stems/` — domain judgement |
+| 8 | Guides / reference + gates | Mechanics; dual-locks / ship-surface / prove |
 
-Curriculum: `stems/INDEX.md` → stem that matches the task → this file’s commands →
-local code. HaTchi-MaXchi agents: also `packages/hatchi-maxchi/AGENTS.md`.
+**Curriculum:** `stems/INDEX.md` → matching stem → this file’s commands → ADR if
+constitutional → DD if `future`/parked residual → counter-prior/prove if the design
+smells like a known failure → local code. HaTchi-MaXchi: also
+`packages/hatchi-maxchi/AGENTS.md`. Do **not** treat every Markdown file as equal weight.
 
 ## Project Overview
 
@@ -391,18 +396,22 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 
 When you park work as “not yet / consumer-forced / future”, **do not leave only
 a GitHub comment**. Write or update a **Deferred Decision** under
-`docs/decisions/`:
+`docs/decisions/` (see [INDEX](docs/decisions/INDEX.md) and the practice note).
 
 - Copy `docs/decisions/TEMPLATE.md` → `DD-NNN-….md`, add a row to
   `docs/decisions/INDEX.md`, set `status: PARKED`, link issues + ADRs.
 - Fill **Plan**, **Reopen when** (checkable consumer signals), **Already shipped**,
-  **Out of scope**.
+  **Out of scope**. Prefer the GitHub template
+  `.github/ISSUE_TEMPLATE/deferred_decision.yml`.
 - Pin the DD path in the **issue body** (not only a transient comment).
+- Link the DD from any related stem **Expressions** when residual work hangs off
+  a stem (e.g. representation hatches → [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md)).
 - Improve / `/issues` must **not** implement `PARKED` DDs or `future`-labeled
-  issues that point at a PARKED DD until `status: FORCED` with a named consumer.
+  issues that point at a PARKED DD until `status: FORCED` with a named consumer
+  (path, dual-lock residual, or interrogation write-up recorded in the DD Trail).
 
-When a use case finally appears: set `FORCED` → implement against the plan →
-`DONE` + close issues. Grep: `rg -n '^status: PARKED' docs/decisions/`.
+When a use case finally appears: set `FORCED` → implement **that plan** (do not
+re-derive) → `DONE` + close issues. Grep: `rg -n '^status: PARKED' docs/decisions/`.
 
 Example: [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/#1622.
 
@@ -521,4 +530,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.105.1 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.105.2 | **Python**: 3.12+ | **Status**: Production Ready

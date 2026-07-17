@@ -28,6 +28,10 @@ held up (including what didn't, and any measurement mistakes caught along the wa
 
 ## Related
 
+- [Epistemic engineering practice](../architecture/epistemic-engineering-practice.md) —
+  how this monorepo records judgement (stems, ADRs, DDs, counter-priors, gates);
+  application of Barlow (2026) [Epistemic Engineering](https://doi.org/10.5281/zenodo.21415599).
+- [Deferred Decisions](../decisions/INDEX.md) — parked plans with consumer-force reopen.
 - [Agent self-reflection](../architecture/agent-self-reflection.md) — the
   programme that motivated the context-prediction study: discovering counter-priors
   for *agentic* code production by having the agent adversarially interrogate its

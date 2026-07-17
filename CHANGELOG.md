@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.105.2] - 2026-07-17
+
+### Changed
+- **Agent didactics from epistemic-engineering practice** — hierarchy now
+  ranks stems → AGENTS → ADRs → **Deferred Decisions** → counter-priors →
+  package/app stems → guides/gates. README, AGENTS, stems (epistemic-layout,
+  README, INDEX, agent-first, authoring-boundary), stems skill, and
+  `docs/architecture/epistemic-engineering-practice.md` spell out how ADRs,
+  DDs, and counter-priors compose; paper DOI linked. Gate asserts layout/practice
+  still point at `docs/decisions/`.
+
 ## [0.105.1] - 2026-07-17
 
 ### Added

@@ -62,33 +62,56 @@ That path is the product advantage: **make the correct change obvious, local, in
 
 ## Epistemic engineering and stems
 
-Prompt engineering optimises a single interaction. **Epistemic engineering** optimises the *representational environment* from which many interactions reconstruct understanding. When artificial reasoners join the team, organisational judgement cannot rely only on hallway culture and mentorship — it has to live in **explicit representations** that a competent reasoner can rebuild from.
+Prompt engineering optimises a single interaction. **Context engineering** assembles
+what a model receives for one inference. **Epistemic engineering** is earlier and
+longer-lived: deciding *what organisational judgement must be durable*, where
+authority lives, how it is compressed, and how fidelity is tested so human and
+artificial collaborators can **reconstruct** that judgement without years of
+hallway socialisation ([Barlow, 2026](https://doi.org/10.5281/zenodo.21415599)).
 
-This repository treats a small set of those representations as first-class:
+This repository is a working practice of that discipline. A stem becomes ordinary
+context when supplied to a model; its engineering significance is **lifecycle**
+(declared authority, compression, tests, maintenance)—not a special inference API.
 
 | Term | Meaning in Dazzle |
 |------|-------------------|
-| **Stem** | A short conceptual claim from which large bodies of judgement reconstruct (not “more docs”) |
-| **Expression** | ADR, code path, test, playbook, or example that *points at* a stem |
-| **Agent didactics** | How stems and instructions are sequenced so reconstruction is reliable |
-| **Prior correction** | Grammar, agent guidance, and CI gates that pull against corpus defaults (next section) |
+| **Stem** | Compact claim under [`stems/`](stems/) from which large bodies of judgement reconstruct (not “more docs”) |
+| **Expression** | ADR, code path, dual-lock, test, playbook, or example that *points at* a stem |
+| **Agent didactics** | Ordered curriculum so reconstruction is reliable (stems → AGENTS → ADR/DD → code) |
+| **Counter-prior** | Named corpus pathology + preferred shape ([catalogue](docs/counter-priors/INDEX.md)) |
+| **Deferred Decision (DD)** | Parked *plan* + checkable consumer-force reopen ([log](docs/decisions/INDEX.md)) — **not** a stem |
+| **Prior correction** | Grammar + guidance + CI gates that pull against training-corpus defaults (next section) |
 
-**Stems** live in a deliberate hierarchy — different artefact classes have different authority:
+**Hierarchy of reconstruction** — different artefact classes have different authority
+([epistemic-layout](stems/epistemic-layout.md)):
 
 | Rank | Location | Role |
 |------|----------|------|
 | 1 | [`stems/`](stems/INDEX.md) | Framework stems — what must stay true across implementations |
 | 2 | [`AGENTS.md`](AGENTS.md) | Always-on didactics and commands |
 | 3 | [`docs/adr/`](docs/adr/INDEX.md) | Decision history (expressions of stems) |
-| 4 | Package stems (e.g. [`packages/hatchi-maxchi/stems/`](packages/hatchi-maxchi/stems/)) | Design-system / Hyperpart judgement |
-| 5 | [`examples/*/stems/`](examples/) | App **domain** stems (framework stems still win on framework questions) |
-| 6 | Guides / reference | Mechanics and tutorials |
+| 4 | [`docs/decisions/`](docs/decisions/INDEX.md) | **When** residual work may proceed (`PARKED` → `FORCED` → `DONE`) |
+| 5 | [`docs/counter-priors/`](docs/counter-priors/INDEX.md) | Negative space the corpus will re-suggest |
+| 6 | Package stems (e.g. [HaTchi-MaXchi](packages/hatchi-maxchi/stems/)) | Design-system / Hyperpart judgement |
+| 7 | [`examples/*/stems/`](examples/) | App **domain** stems (framework stems still win on framework questions) |
+| 8 | Guides / reference + gates | Mechanics; dual-locks / `make ship-surface` / prove as assessment |
 
-Agents (and humans onboarding): open [`stems/INDEX.md`](stems/INDEX.md) → the stem that matches the task → `AGENTS.md` commands → local code. Do not treat every Markdown file as equal weight.
+**Agent path:** [`stems/INDEX.md`](stems/INDEX.md) → matching stem → [`AGENTS.md`](AGENTS.md) →
+ADR if constitutional → DD if work is parked residual → counter-prior/prove if the design
+smells like a known failure → local code. Do not treat every Markdown file as equal weight.
+Do not implement a `future` / PARKED DD without a named consumer force.
 
-Framework stems today include DSL-first, agent-first, hypermedia SSR, the four-layer stack (`http → page → render → core`), authoring boundary, clean breaks, RBAC/scope separation, and [epistemic layout](stems/epistemic-layout.md). HaTchi-MaXchi adds Hyperpart-specific stems (composition, invention ladder, three layers). New example apps scaffold a local `stems/` so domain judgement has a place to live.
+Framework stems today include DSL-first, agent-first, hypermedia SSR, the four-layer stack
+(`http → page → render → core`), authoring boundary, clean breaks, RBAC/scope separation,
+and epistemic layout. HaTchi-MaXchi adds Hyperpart-specific stems. New example apps scaffold
+a local `stems/` so domain judgement has a place to live.
 
-Start here: **[stems/README.md](stems/README.md)** · catalogue: **[stems/INDEX.md](stems/INDEX.md)**.
+| Start | Path |
+|-------|------|
+| Stems | [stems/README.md](stems/README.md) · [stems/INDEX.md](stems/INDEX.md) |
+| Practice note | [docs/architecture/epistemic-engineering-practice.md](docs/architecture/epistemic-engineering-practice.md) |
+| Parked plans | [docs/decisions/INDEX.md](docs/decisions/INDEX.md) (e.g. [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/#1622) |
+| Paper | [Epistemic Engineering](https://doi.org/10.5281/zenodo.21415599) (DOI 10.5281/zenodo.21415599) |
 
 ---
 
@@ -333,7 +356,7 @@ For the full architecture, see [docs/architecture/overview.md](docs/architecture
 
 Dazzle ships as both a runtime and an AI development environment. The intent is not “better prompts for the same scattered architecture,” but a **smaller surface to inspect, modify, and verify**: domain model in `.dsl`, rendered HTML as a first-class artefact, HTMX contracts on the wire, stems for judgement reconstruction, and CI gates for drift.
 
-**Before inventing structure**, agents should reconstruct from the epistemic hierarchy: [`stems/INDEX.md`](stems/INDEX.md) → matching stem → [`AGENTS.md`](AGENTS.md) → local code. Package work (e.g. HaTchi-MaXchi) also reads that package’s `stems/` and agent curriculum.
+**Before inventing structure**, agents should reconstruct from the epistemic hierarchy: [`stems/INDEX.md`](stems/INDEX.md) → matching stem → [`AGENTS.md`](AGENTS.md) → ADR/DD as needed → local code. Package work (e.g. HaTchi-MaXchi) also reads that package’s `stems/` and agent curriculum. Parked residual work lives in [`docs/decisions/`](docs/decisions/INDEX.md)—do not speculative-build a PARKED DD.
 
 When used with Claude Code (via MCP), you get access to a growing set of tools that span the full lifecycle. The exact tool count, operations, and parameters drift with development — see the [MCP Tool Inventory](docs/reference/mcp-tools.md) for the live list, regenerated from the registry every build. As of the latest doc regen: **34 tools, 156 operations**. Broad lifecycle coverage:
 
@@ -399,10 +422,13 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 ### Epistemic layout (start here if you write with agents)
 
 - **[Framework stems](stems/README.md)** — compressed organisational judgement; catalogue in [`stems/INDEX.md`](stems/INDEX.md)
+- **[Epistemic engineering practice](docs/architecture/epistemic-engineering-practice.md)** — stems, ADRs, DDs, counter-priors, gates
+- **[Deferred Decisions](docs/decisions/INDEX.md)** — parked plans + consumer-force reopen ([DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md))
 - **[AGENTS.md](AGENTS.md)** — always-on agent curriculum and commands (reconstruct stems first)
 - **[HaTchi-MaXchi stems](packages/hatchi-maxchi/stems/)** — Hyperpart / design-system stems
 - **[Counter-prior catalogue](docs/counter-priors/INDEX.md)** — named corpus pathologies and the preferred shape
 - **[ADRs](docs/adr/INDEX.md)** — decision history (expressions of stems)
+- **[Epistemic Engineering (paper)](https://doi.org/10.5281/zenodo.21415599)** — published framing (DOI 10.5281/zenodo.21415599)
 
 ### Product and evaluation
 

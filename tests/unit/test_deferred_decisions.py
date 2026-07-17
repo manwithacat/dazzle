@@ -68,3 +68,16 @@ def test_dd_001_links_1621_and_1622() -> None:
     text = path.read_text(encoding="utf-8")
     assert "1621" in text and "1622" in text
     assert "status: PARKED" in text
+
+
+def test_practice_note_and_epistemic_layout_point_at_decisions() -> None:
+    """Agent didactics must keep DDs in the reconstruction hierarchy."""
+    practice = REPO / "docs" / "architecture" / "epistemic-engineering-practice.md"
+    layout = REPO / "stems" / "epistemic-layout.md"
+    assert practice.is_file()
+    assert "docs/decisions" in practice.read_text(
+        encoding="utf-8"
+    ) or "decisions/" in practice.read_text(encoding="utf-8")
+    layout_text = layout.read_text(encoding="utf-8")
+    assert "docs/decisions" in layout_text or "decisions/" in layout_text
+    assert "PARKED" in layout_text or "Deferred" in layout_text

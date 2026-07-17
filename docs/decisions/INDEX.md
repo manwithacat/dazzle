@@ -3,6 +3,12 @@
 Long-horizon plans that must **survive months of silence** and wake up when a
 **specific consumer force** appears.
 
+In epistemic-engineering terms (see
+[practice note](../architecture/epistemic-engineering-practice.md)): stems and
+ADRs answer *what is true*; a DD answers *when residual work may proceed* and
+preserves the full plan so agents implement **that** plan under force—not a
+fresh invention from chat archaeology.
+
 GitHub `future` issues alone are not enough: labels rot, comment threads bury
 the plan, and new agents re-derive the wrong design. A **DD** is a greppable,
 versioned doc that records:

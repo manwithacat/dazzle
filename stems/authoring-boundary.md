@@ -20,3 +20,5 @@ APIs may return **data** (extraction, classification), not idiomatic DSL writes.
 
 - `AGENTS.md` › Authoring vs API Boundary (#1222)
 - MCP tools: validate/inspect/lookup — not author-as-service
+- [epistemic-layout](epistemic-layout.md) — reconstruct stems before inventing structure
+- Representation residual (poly polish / STI): [DD-001](../docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) — PARKED until consumer force

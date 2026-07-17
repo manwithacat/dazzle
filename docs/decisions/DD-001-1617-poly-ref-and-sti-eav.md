@@ -90,6 +90,11 @@ noise without a consumer path.
 | Typed `poly_ref` + scope selector | ADR-0042 / #1448 |
 | “No untyped poly” prior | ADR-0027 |
 | Hatches ladder | `docs/reference/data-representation.md` |
+| Stem / didactics for reconstruction order | `stems/epistemic-layout.md`, practice note |
+
+**Related stems (expressions point here for residual timing only):**
+`stems/epistemic-layout.md`, `stems/authoring-boundary.md` — do not promote this DD
+into `stems/`; timing ≠ enduring org character.
 
 ## Explicitly out of scope until force
 
