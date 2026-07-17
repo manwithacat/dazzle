@@ -151,20 +151,25 @@ DRAWER_PATTERN = ComponentPattern(
             description="Sidebar on-screen at desktop (transform ≈ identity)",
         ),
         # Toggle present + visible so the nav is reachable/collapsible at
-        # both viewports (the affordance whose absence broke #1294).
+        # both viewports (#1294 affordance; #1602 placement split).
+        # Default shell state is data-dz-sidebar=open:
+        #   desktop open → rail toggle on sidebar header (chrome hidden)
+        #   mobile       → chrome toggle in topbar (rail always hidden)
+        # A bare `.dz-sidebar-toggle` matches rail first in DOM order, so on
+        # mobile it would read display:none even when chrome is visible.
         ViewportAssertion(
-            selector=".dz-sidebar-toggle",
+            selector=".dz-sidebar-toggle--rail",
             property="display",
             expected=["flex", "inline-flex", "block", "inline-block"],
             viewport="desktop",
-            description="Sidebar toggle visible at desktop",
+            description="Sidebar rail toggle visible at desktop (open default)",
         ),
         ViewportAssertion(
-            selector=".dz-sidebar-toggle",
+            selector=".dz-sidebar-toggle--chrome",
             property="display",
             expected=["flex", "inline-flex", "block", "inline-block"],
             viewport="mobile",
-            description="Sidebar toggle visible on mobile (nav reachable)",
+            description="Sidebar chrome toggle visible on mobile (nav reachable)",
         ),
     ],
 )

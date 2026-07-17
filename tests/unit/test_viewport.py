@@ -601,7 +601,11 @@ from dazzle.render.fragment.renderer import FragmentRenderer  # noqa: E402
 
 
 def _render_app_shell_chrome() -> str:
-    sidebar = Sidebar(items=(NavItem(label="Home", href=URL("/app")),))
+    # Match production build_app_chrome_page: chrome + rail toggles (#1602).
+    sidebar = Sidebar(
+        items=(NavItem(label="Home", href=URL("/app")),),
+        show_sidebar_toggle=True,
+    )
     shell = AppShell(
         body=RawHTML("<p>content</p>"),
         sidebar=sidebar,

@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.104.21] - 2026-07-17
+
+### Fixed
+- **Viewport INTERACTION_WALK sidebar toggle** — after #1602 chrome/rail
+  split, bare `.dz-sidebar-toggle` matched the rail first (display:none on
+  mobile). DRAWER_PATTERN now asserts `--chrome` on mobile and `--rail` on
+  desktop (open default); freshness fixture enables both placements.
+
 ## [0.104.20] - 2026-07-17
 
 ### Fixed
