@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 35 tools, 161 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 36 tools, 165 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -37,6 +37,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`pitch`](#pitch) | 1 | Pitch deck operations: get |
 | [`policy`](#policy) | 6 | Policy analysis operations for RBAC access control |
 | [`process`](#process) | 5 | Process operations: list, inspect, list_runs, get_run, coverage |
+| [`representation`](#representation) | 4 | Data-representation organisational judgement (#1617): named hatch patterns (rel |
 | [`rhythm`](#rhythm) | 3 | Rhythm operations: get, list, coverage |
 | [`semantics`](#semantics) | 6 | Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards |
 | [`sentinel`](#sentinel) | 4 | Sentinel operations: findings (get findings from latest/specific scan), status (available agents and last scan), history (list recent scans), fuzz_summary (run a small mutation fuzz campaign and return the markdown report) |
@@ -53,7 +54,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 
 ### `agent`
 
-Agent closed-loop control plane (#1605): context (brownfield map + runtime.truth + next_steps), prove (static binding evidence), playbook (domain_logic map→bind→scaffold→prove). Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`.
+Agent closed-loop control plane (#1605): context (brownfield map + runtime.truth + next_steps), prove (static binding evidence), playbook (domain_logic map→bind→scaffold→prove). Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`. For data-shape judgement (exclusive FKs / poly_ref / JSONB) use the `representation` tool (#1617).
 
 **Operations (3):** `context`, `prove`, `playbook`
 
@@ -419,6 +420,20 @@ Process operations: list, inspect, list_runs, get_run, coverage
 - `status_filter` *(string)* — Filter by coverage status (for coverage, default: all)
 - `limit` *(integer)* — Max results (for list_runs, coverage; default: 50)
 - `offset` *(integer)* — Skip N results for pagination (for coverage, default: 0)
+- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
+
+---
+
+### `representation`
+
+Data-representation organisational judgement (#1617): named hatch patterns (rel.explicit_ref, rel.exclusive_fks, rel.poly_ref, rel.tpt_subtype, rel.json_extension, …). Operations: patterns (catalogue), decide (ladder → pattern_id + DSL sketch + reject list), classify (project AppSpec evidence), prove (static integrity gate). Prefer before inventing host poly or dual-lock open-via. Complements agent/story prove (behaviour) with shape prove.
+
+**Operations (4):** `patterns`, `decide`, `classify`, `prove`
+
+**Parameters:**
+
+- `text` *(string)* — Free-text domain pressure for decide
+- `signals` *(object)* — Structured decide signals: shared_child_of_many_parents, exclusive_parents, parent_count, true_isa, needs_mixed_kind_list, tenant_variable_fields, four_questions_failed, host_extension, journey_open_via
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---

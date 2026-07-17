@@ -9,11 +9,11 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 36 tools
+# Count: 37 tools
 
 tool: agent
-  description_hash: 64d89b186111
-  description_len: 244
+  description_hash: 644a118f9248
+  description_len: 343
   {
     "properties": {
       "name": {
@@ -1082,6 +1082,40 @@ tool: project
       },
       "project_name": {
         "description": "Name of the project (required for operation=select)",
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: representation
+  description_hash: ea35bed9b251
+  description_len: 443
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "patterns",
+          "decide",
+          "classify",
+          "prove"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "signals": {
+        "description": "Structured decide signals: shared_child_of_many_parents, exclusive_parents, parent_count, true_isa, needs_mixed_kind_list, tenant_variable_fields, four_questions_failed, host_extension, journey_open_via",
+        "type": "object"
+      },
+      "text": {
+        "description": "Free-text domain pressure for decide",
         "type": "string"
       }
     },

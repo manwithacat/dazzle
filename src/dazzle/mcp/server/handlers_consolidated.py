@@ -1341,6 +1341,13 @@ def handle_agent(arguments: dict[str, Any]) -> str:
     return _handle(arguments)
 
 
+def handle_representation(arguments: dict[str, Any]) -> str:
+    """#1617 representation decide / classify / prove."""
+    from .handlers.representation import handle_representation as _handle
+
+    return _handle(arguments)
+
+
 # Map of consolidated tool names to their handlers
 CONSOLIDATED_TOOL_HANDLERS = {
     "dsl": handle_dsl,
@@ -1378,6 +1385,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "agent_commands": handle_agent_commands,
     "perf": handle_perf,
     "agent": handle_agent,
+    "representation": handle_representation,
 }
 
 

@@ -1805,19 +1805,44 @@ entity Tag "Tag":
 
 [[modeling_guidance]]
 id = "no_polymorphic_keys"
-name = "Prefer Typed Refs Over Polymorphic Keys"
-triggers = ["can belong to X or Y", "owner can be", "polymorphic", "attachable", "commentable", "taggable", "owner_type", "item_type"]
-anti_pattern = "item_type: enum[...] + item_id: uuid"
-prefer = "Separate nullable ref fields or a junction entity"
-rationale = "Polymorphic keys break referential integrity, prevent linker validation, and block runtime auto-include"
+name = "Prefer Named Hatches Over Hand-Rolled Polymorphic Keys"
+triggers = ["can belong to X or Y", "owner can be", "polymorphic", "attachable", "commentable", "taggable", "owner_type", "item_type", "first_non_null", "sole trader", "company or"]
+anti_pattern = "item_type: enum[...] + item_id: uuid (hand-rolled poly)"
+prefer = """
+Use the #1617 representation ladder (pattern IDs) — never invent subject_type+subject_id:
+
+1. rel.explicit_ref — single parent: `field: ref Parent`
+2. rel.exclusive_fks — 2–4 alternative parents on one row (journey clients):
+   nullable refs + `invariant: a != null or b != null` + `open: first_non_null(a, b, …)`
+3. rel.poly_ref — shared child of many parents (Comment/Attachment) after four-question fail:
+   `subject: poly_ref [A, B]` + scope `subject[A].path`
+4. rel.tpt_subtype — true ISA + mixed-kind list: `subtype_of:`
+5. rel.json_extension — tenant bag: core columns + `extensions: json`
+
+Call MCP `representation(operation=decide)` or `dazzle representation decide --text '…'`.
+"""
+rationale = "Hand-rolled polymorphic keys break referential integrity and scope. Named hatches keep integrity + render + RBAC co-designed (#1617)."
 example = """
 # BAD — polymorphic key pair
 commentable_type: enum[post,photo] required
 commentable_id: uuid required
 
-# GOOD — separate typed refs (nullable)
-post: ref Post        # set when comment is on a post
-photo: ref Photo      # set when comment is on a photo
+# GOOD — exclusive parents (product poly / journey hub) — rel.exclusive_fks
+entity Subscription "Subscription":
+  id: uuid pk
+  company: ref Company
+  sole_trader: ref SoleTrader
+  partnership: ref Partnership
+  invariant: company != null or sole_trader != null or partnership != null
+
+# list:
+#   open: first_non_null(company, sole_trader, partnership)
+
+# GOOD — shared child of many parents — rel.poly_ref
+entity Comment "Comment":
+  id: uuid pk
+  subject: poly_ref [Post, Photo]
+  body: text
 
 # GOOD — for many-to-many, use a junction entity
 entity ProductTag "Product Tag":

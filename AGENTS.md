@@ -301,6 +301,7 @@ The table below is drift-gated against the live registry (`tests/unit/test_docs_
 | `pitch` | get |
 | `policy` | analyze, conflicts, coverage, simulate, access_matrix, verify_status |
 | `process` | list, inspect, list_runs, get_run, coverage |
+| `representation` | patterns, decide, classify, prove |
 | `rhythm` | get, list, coverage |
 | `semantics` | extract, validate_events, tenancy, compliance, analytics, extract_guards |
 | `sentinel` | findings, status, history, fuzz_summary |
@@ -488,4 +489,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.104.11 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.104.12 | **Python**: 3.12+ | **Status**: Production Ready

@@ -4,6 +4,35 @@
 [#1240](https://github.com/manwithacat/dazzle/issues/1240) (poly association),
 `subtype_of:` / ADR-0026 (TPT inheritance).
 
+## Pattern IDs (agent vocabulary)
+
+Agents and tools **must** reason in these IDs (not free-text “polymorphism”):
+
+| ID | Layer | One-liner |
+|----|-------|-----------|
+| `rel.explicit_ref` | default | Single parent `ref Entity` |
+| `rel.exclusive_fks` | hatch | Sparse exclusive nullable FKs + `first_non_null` open |
+| `rel.tpt_subtype` | hatch | True ISA via `subtype_of:` |
+| `rel.poly_ref` | hatch | Typed `poly_ref [T…]` shared child → many parents |
+| `rel.json_extension` | hatch | Core columns + `json` bag |
+| `rel.sti` | discouraged | Single table + type — prefer TPT / exclusive FKs |
+| `rel.eav` | last resort | Prefer JSONB projections |
+| `rel.host_extension` | dual-lock | Host owns extension schema |
+
+### Control plane (decide → classify → prove)
+
+```bash
+dazzle representation patterns
+dazzle representation decide --text "company or sole trader client overview"
+dazzle representation classify -p .
+dazzle prove representation -p .
+# MCP: representation(operation=patterns|decide|classify|prove)
+```
+
+- **decide** — ladder → `pattern_id` + DSL sketch + reject list
+- **classify** — project AppSpec evidence (hand-rolled poly, exclusive sets, open-via gaps)
+- **prove** — static integrity gate (complements `dazzle db verify` for DB row counts)
+
 ## Default (opinionated)
 
 Dazzle leads with **relational, explicit shapes**:
@@ -72,8 +101,11 @@ Locale and money rules ([#1597](https://github.com/manwithacat/dazzle/issues/159
 
 ## Guidance for agents
 
-1. Model with explicit `ref`s first.
-2. If the domain is “kinds of X with shared lifecycle”, try **state machine** or **separate entities** before poly.
-3. If the domain is “shared child of many parents”, use sparse FKs or file for typed poly (#1240).
-4. Put tenant-variable shape in `json` + core FKs, not a new table per customer.
-5. Never dual-lock row drill / open-via — use framework `open:` hops.
+1. Call `representation decide` (or structured signals) **before** modeling poly-shaped domains.
+2. Model with explicit `ref`s first (`rel.explicit_ref`).
+3. Alternative parents on one row (CyFuture client types) → `rel.exclusive_fks`, **not** `poly_ref` and **not** host open patches.
+4. Shared child of many parents (Comment/Attachment) → four-question interrogation; only then `rel.poly_ref`.
+5. “Kinds of X with shared lifecycle” → state machine or separate entities before `subtype_of:`.
+6. Tenant-variable shape → `rel.json_extension` (core FKs stay columns).
+7. Never dual-lock row drill / open-via — use framework `open:` hops.
+8. Close the loop: `representation classify` + `prove representation` + `db verify`.

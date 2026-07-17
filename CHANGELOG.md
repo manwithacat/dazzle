@@ -42,6 +42,17 @@
   `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood
   v0.104.9).
 
+## [0.104.12] - 2026-07-17
+
+### Added
+- **#1617 representation judgement substrate** — named pattern IDs
+  (`rel.exclusive_fks`, `rel.poly_ref`, …), executable ladder
+  (`dazzle representation decide`), project classify, static prove
+  (`dazzle prove representation`), MCP `representation` tool, and
+  `agent context` → `representation` summary. Aligns inference_kb
+  `no_polymorphic_keys` with exclusive FKs + first_non_null. Org
+  judgement so agents stop dual-locking poly shapes.
+
 ## [0.104.11] - 2026-07-17
 
 ### Added

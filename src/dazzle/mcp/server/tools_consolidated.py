@@ -876,7 +876,9 @@ def _tool_agent() -> Tool:
             "Agent closed-loop control plane (#1605): context (brownfield map + "
             "runtime.truth + next_steps), prove (static binding evidence), "
             "playbook (domain_logic map→bind→scaffold→prove). "
-            "Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`."
+            "Does NOT write files — use CLI `dazzle scaffold` / `dazzle prove`. "
+            "For data-shape judgement (exclusive FKs / poly_ref / JSONB) use "
+            "the `representation` tool (#1617)."
         ),
         inputSchema={
             "type": "object",
@@ -893,6 +895,47 @@ def _tool_agent() -> Tool:
                 "name": {
                     "type": "string",
                     "description": "Playbook name (default: domain_logic)",
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
+def _tool_representation() -> Tool:
+    """#1617 data-representation judgement (decide / classify / prove)."""
+    return Tool(
+        name="representation",
+        description=(
+            "Data-representation organisational judgement (#1617): named hatch "
+            "patterns (rel.explicit_ref, rel.exclusive_fks, rel.poly_ref, "
+            "rel.tpt_subtype, rel.json_extension, …). Operations: patterns "
+            "(catalogue), decide (ladder → pattern_id + DSL sketch + reject "
+            "list), classify (project AppSpec evidence), prove (static "
+            "integrity gate). Prefer before inventing host poly or dual-lock "
+            "open-via. Complements agent/story prove (behaviour) with shape prove."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["patterns", "decide", "classify", "prove"],
+                    "description": "Operation to perform",
+                },
+                "text": {
+                    "type": "string",
+                    "description": "Free-text domain pressure for decide",
+                },
+                "signals": {
+                    "type": "object",
+                    "description": (
+                        "Structured decide signals: shared_child_of_many_parents, "
+                        "exclusive_parents, parent_count, true_isa, "
+                        "needs_mixed_kind_list, tenant_variable_fields, "
+                        "four_questions_failed, host_extension, journey_open_via"
+                    ),
                 },
                 **PROJECT_PATH_SCHEMA,
             },
@@ -1712,6 +1755,7 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_user_profile(),
         _tool_bootstrap(),
         _tool_agent(),
+        _tool_representation(),
         _tool_spec_analyze(),
         _tool_graph(),
         _tool_discovery(),
