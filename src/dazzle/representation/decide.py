@@ -297,4 +297,11 @@ def _next_steps(pid: PatternId) -> list[str]:
             "dazzle db explain-scope <Entity> <verb>",
             *common,
         ]
+    if pid == PatternId.JSON_EXTENSION:
+        return [
+            "Keep identity/FKs as typed columns; bag only in extensions: json",
+            "dazzle representation gin-sql <Entity> --column extensions",
+            "Omit json columns from dense lists (or accept compact summary)",
+            *common,
+        ]
     return ["dazzle representation decide --text '…'", *common]

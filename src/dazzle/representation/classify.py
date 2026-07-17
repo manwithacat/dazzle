@@ -16,6 +16,27 @@ def _kind(field: Any) -> str:
     return str(getattr(k, "value", k) or "")
 
 
+# Not "core domain" for json_identity_smell (#1619)
+_SYSTEM_FIELD_NAMES = frozenset(
+    {
+        "id",
+        "created_at",
+        "updated_at",
+        "deleted_at",
+        "tenant_id",
+        "version",
+    }
+)
+
+
+def _is_auto_timestamp(field: Any) -> bool:
+    name = str(getattr(field, "name", "") or "")
+    if name in ("created_at", "updated_at", "deleted_at"):
+        return True
+    # FieldSpec may carry auto flags
+    return bool(getattr(field, "auto_add", False) or getattr(field, "auto_update", False))
+
+
 def _field_names(entity: Any) -> set[str]:
     return {str(f.name) for f in getattr(entity, "fields", None) or []}
 
@@ -38,6 +59,63 @@ def _exclusive_sets_from_invariants(entity: Any) -> list[list[str]]:
         if fields and len(fields) >= 2:
             sets.append(list(fields))
     return sets
+
+
+def _json_and_poly_findings(entity: Any, ename: str) -> list[dict[str, Any]]:
+    """json fields, poly_ref, and json_identity_smell (#1619)."""
+    out: list[dict[str, Any]] = []
+    json_fields: list[str] = []
+    core_fields: list[str] = []
+    for f in getattr(entity, "fields", None) or []:
+        k = _kind(f)
+        fname = str(f.name)
+        if k == "json":
+            json_fields.append(fname)
+            out.append(
+                _finding(
+                    "json_field",
+                    "info",
+                    ename,
+                    [fname],
+                    str(PatternId.JSON_EXTENSION),
+                    f"{ename}.{fname} is json — keep identity/FKs as columns",
+                    "docs: data-representation#jsonb-extension-pattern-1619",
+                )
+            )
+            continue
+        if k == "poly_ref":
+            targets = getattr(getattr(f, "type", None), "poly_targets", None) or []
+            out.append(
+                _finding(
+                    "poly_ref",
+                    "info",
+                    ename,
+                    [fname],
+                    str(PatternId.POLY_REF),
+                    f"{ename}.{fname} poly_ref targets={list(targets)}",
+                    "dazzle db explain-scope for scope rules",
+                )
+            )
+            core_fields.append(fname)
+            continue
+        if fname in _SYSTEM_FIELD_NAMES or _is_auto_timestamp(f):
+            continue
+        if k:
+            core_fields.append(fname)
+    if json_fields and not core_fields:
+        out.append(
+            _finding(
+                "json_identity_smell",
+                "warning",
+                ename,
+                json_fields,
+                str(PatternId.JSON_EXTENSION),
+                f"{ename} has only json bags beside system columns — "
+                f"promote identity/FKs to typed columns (rel.json_extension)",
+                "keep name/email/refs as columns; put tenant bags in extensions: json",
+            )
+        )
+    return out
 
 
 def _hand_rolled_poly_pairs(entity: Any) -> list[dict[str, str]]:
@@ -122,32 +200,7 @@ def _findings_for_entity(entity: Any) -> list[dict[str, Any]]:
                 f"{ename} subtype_of: {entity.subtype_of}",
             )
         )
-    for f in getattr(entity, "fields", None) or []:
-        if _kind(f) == "json":
-            out.append(
-                _finding(
-                    "json_field",
-                    "info",
-                    ename,
-                    [str(f.name)],
-                    str(PatternId.JSON_EXTENSION),
-                    f"{ename}.{f.name} is json — keep identity/FKs as columns",
-                    "docs: data-representation JSONB hatch",
-                )
-            )
-        if _kind(f) == "poly_ref":
-            targets = getattr(getattr(f, "type", None), "poly_targets", None) or []
-            out.append(
-                _finding(
-                    "poly_ref",
-                    "info",
-                    ename,
-                    [str(f.name)],
-                    str(PatternId.POLY_REF),
-                    f"{ename}.{f.name} poly_ref targets={list(targets)}",
-                    "dazzle db explain-scope for scope rules",
-                )
-            )
+    out.extend(_json_and_poly_findings(entity, ename))
     opt_refs = _optional_ref_fields(entity)
     if len(opt_refs) >= 2 and not exclusive_sets:
         out.append(

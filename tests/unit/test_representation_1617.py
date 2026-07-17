@@ -40,6 +40,37 @@ def test_decide_poly_ref_from_attachable() -> None:
 def test_decide_json_extension_signal() -> None:
     d = decide_representation(signals={"tenant_variable_fields": True})
     assert d["pattern_id"] == PatternId.JSON_EXTENSION
+    assert any("gin-sql" in s for s in d.get("next_steps") or [])
+
+
+def test_format_cell_json_summary() -> None:
+    from dazzle.render.fragment.format_cell import format_cell
+
+    out = format_cell({"theme": "dark", "locale": "en-GB"}, "json")
+    assert "theme" in out and "dark" in out
+    assert "{" not in out  # not raw dump
+
+
+def test_json_identity_smell() -> None:
+    ent = ir.EntitySpec(
+        name="Blob",
+        title="Blob",
+        fields=[
+            ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+            ir.FieldSpec(name="payload", type=ir.FieldType(kind=ir.FieldTypeKind.JSON)),
+        ],
+    )
+    appspec = ir.AppSpec(name="t", domain=ir.DomainSpec(entities=[ent]), surfaces=[])
+    findings = classify_appspec(appspec)["findings"]
+    assert any(f["kind"] == "json_identity_smell" for f in findings)
+
+
+def test_gin_index_sql() -> None:
+    from dazzle.representation import gin_index_sql
+
+    sql = gin_index_sql("Client", "extensions")
+    assert "USING gin" in sql
+    assert "jsonb_path_ops" in sql
 
 
 def test_decide_default_explicit_ref() -> None:

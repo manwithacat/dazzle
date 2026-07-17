@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dazzle.representation.classify import classify_appspec, classify_project
 from dazzle.representation.decide import decide_representation
+from dazzle.representation.json_extension import gin_index_sql, json_extension_checklist
 from dazzle.representation.patterns import PATTERN_CATALOGUE, PatternId, list_patterns
 from dazzle.representation.prove import prove_representation, prove_representation_project
 from dazzle.representation.wall import attach_representation_to_wall
@@ -20,6 +21,8 @@ __all__ = [
     "classify_appspec",
     "classify_project",
     "decide_representation",
+    "gin_index_sql",
+    "json_extension_checklist",
     "list_patterns",
     "prove_representation",
     "prove_representation_project",

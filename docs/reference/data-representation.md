@@ -56,7 +56,7 @@ When purity collides with multi-tenant SaaS velocity, use **documented** hatches
 |-------|------|--------|
 | **Sparse exclusive FKs** | 2–4 alternative parents (`company` \| `sole_trader`) | Works today + `open: first_non_null(...)` + integrity (#1617 Phase 1) |
 | **`subtype_of:` TPT** | True ISA with substantial per-kind columns | Shipped — prefer over STI for core domain |
-| **`json` / JSONB payload** | Tenant/feature-variable bags; keep core columns normalized | Field type exists; GIN/index conventions evolving |
+| **`json` / JSONB payload** | Tenant/feature-variable bags; keep core columns normalized | **#1619** convention + GIN recipe + compact list display |
 | **Typed polymorphic association** | Comment/attachment/audit → many parents | Designed in #1240; implement when a consumer forces |
 | **STI (single table + type)** | Related subtypes with sparse columns | Prefer TPT; lint when overused |
 | **EAV** | Extreme custom fields | Prefer JSONB projections, not classic EAV joins |
@@ -104,6 +104,61 @@ portable `CASE WHEN col IS NOT NULL THEN 1 ELSE 0 END` summed to `= 1`.
 Soft verify remains useful after CHECK exists (reports counts; CHECK blocks
 writes). Prefer soft-only until you need storage-layer defence against out-of-band
 writes.
+
+## JSONB extension pattern (#1619)
+
+**Pattern ID:** `rel.json_extension`
+
+### Convention
+
+| Put in typed columns | Put in `json` bag |
+|----------------------|-------------------|
+| Primary key, email, name, money | Tenant-specific flags |
+| Foreign keys / exclusive FKs | Feature payloads |
+| Status enums that drive RBAC/surfaces | UI preferences, sparse metadata |
+
+```dsl
+entity Client "Client":
+  id: uuid pk
+  name: text required
+  email: email required
+  # identity stays queryable + scoped
+  extensions: json   # tenant/feature bag only
+```
+
+### Display
+
+List/detail **must not** dump raw JSON. Cells with type `json` use a compact
+`key: val · …` summary (`format_cell` / list cell core). Prefer **omitting**
+json columns from list projections; show on detail when needed.
+
+### GIN index (Postgres)
+
+DSL `index` is btree-oriented. For containment queries into a bag:
+
+```bash
+dazzle representation gin-sql Client --column extensions
+```
+
+Emits:
+
+```sql
+CREATE INDEX IF NOT EXISTS ix_Client_extensions_gin
+ON "Client" USING gin ("extensions" jsonb_path_ops);
+```
+
+Apply via hand migration / ops SQL. Dazzle maps `json` fields to **JSONB**.
+
+### Agent / prove
+
+```bash
+dazzle representation decide --tenant-json
+dazzle representation classify -p .   # json_field info; json_identity_smell warning
+dazzle prove representation -p .
+```
+
+`json_identity_smell`: entity has only json bags beside system columns — promote
+identity/FKs to typed columns.
 
 ## Display is not storage
 

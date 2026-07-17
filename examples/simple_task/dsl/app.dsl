@@ -37,6 +37,8 @@ entity User "Team Member":
   department: str(50)
   avatar_url: str(500)
   is_active: bool=true
+  # #1619 rel.json_extension — tenant/UI bag only; identity stays typed columns
+  preferences: json
   created_at: datetime auto_add
 
   # ADR-0039 (#778/#1398): this entity IS the authenticated principal's domain row.

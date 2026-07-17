@@ -95,6 +95,23 @@ def _friendly_dt(
     return str(value)
 
 
+def _badge_display(value: Any) -> str:
+    if isinstance(value, dict):
+        from dazzle.render.filters import _ref_display_name
+
+        return _title_case(_ref_display_name(value))
+    return _title_case(str(value))
+
+
+def _ref_or_dict_display(value: Any) -> str:
+    """#1615 hydrated FK dicts; not used for kind=json (handled separately)."""
+    from dazzle.render.filters import _ref_display_name
+
+    if isinstance(value, dict):
+        return _ref_display_name(value)
+    return str(value)
+
+
 def _infer(
     value: Any,
     kind: str,
@@ -106,36 +123,48 @@ def _infer(
     if kind == "bool" or isinstance(value, bool):
         return "Yes" if value else "No"
     if kind == "currency":
-        # money(CODE) is authoritative; profile only supplies fallback code
         return _currency(value, currency_code or prof.currency_default or "GBP")
+    if kind == "json":
+        return _json_bag_summary(value)
     if kind == "badge":
-        # Hydrated enum/ref dicts must not dump as str(dict) (#1615).
-        if isinstance(value, dict):
-            from dazzle.render.filters import _ref_display_name
-
-            return _title_case(_ref_display_name(value))
-        return _title_case(str(value))
-    # #1615: related-group path passes hydrated FK dicts with kind=ref (or
-    # sometimes text). Lists already use _ref_display_name; format_cell must
-    # match so detail related tables never show Python dict repr.
+        return _badge_display(value)
     if kind == "ref" or isinstance(value, dict):
-        from dazzle.render.filters import _ref_display_name
-
-        if isinstance(value, dict):
-            return _ref_display_name(value)
-        return str(value)
+        return _ref_or_dict_display(value)
     if kind == "date":
         return _friendly_dt(value, with_time=False, profile=prof)
     if kind == "datetime":
-        # Strings that parse as datetime keep the time; pure date values stay
-        # date-only. Previously only kind=="date" was handled, so datetime
-        # columns fell through to raw ISO (often with microseconds).
         return _friendly_dt(value, with_time=True, profile=prof)
-    # float/Decimal round to 2dp (the column vocabulary collapses these to "text",
-    # so rounding is keyed off the Python value type, not the kind).
     if isinstance(value, (float, Decimal)):
         return f"{float(value):.2f}"
     return str(value)
+
+
+def _json_bag_summary(value: Any, *, max_pairs: int = 4, length: int = 80) -> str:
+    """Compact JSON/JSONB display for extension bags (#1619 / #1491 1d)."""
+    parsed: Any = value
+    if isinstance(value, str):
+        try:
+            import json as _json
+
+            parsed = _json.loads(value)
+        except Exception:
+            raw = str(value)
+            return raw[:length] + ("…" if len(raw) > length else "")
+    text: str
+    if isinstance(parsed, dict):
+        parts = [f"{k}: {v}" for k, v in list(parsed.items())[:max_pairs]]
+        text = " · ".join(parts)
+        if len(parsed) > max_pairs:
+            text += " · …"
+    elif isinstance(parsed, (list, tuple)):
+        parts = [str(x) for x in list(parsed)[:max_pairs]]
+        text = ", ".join(parts)
+        if len(parsed) > max_pairs:
+            text += ", …"
+    else:
+        text = str(parsed)
+    out = text[:length] + "…" if len(text) > length else text
+    return str(out)
 
 
 def format_cell(
@@ -149,7 +178,7 @@ def format_cell(
     """Render ``value`` to a RAW (unescaped) display string.
 
     ``kind`` is the column's display type (``text``/``bool``/``date``/
-    ``currency``/``badge``/``ref``). ``override`` (Phase 2) wins over inference.
+    ``currency``/``badge``/``ref``/``json``). ``override`` (Phase 2) wins over inference.
     ``profile`` (#1597) is the display locale; defaults to the request-bound
     :func:`~dazzle.i18n.display_locale.get_display_locale` (product en-GB).
     The renderer escapes the result at emit time — do not escape here.

@@ -14,6 +14,8 @@ import typer
 from dazzle.representation import (
     classify_project,
     decide_representation,
+    gin_index_sql,
+    json_extension_checklist,
     list_patterns,
 )
 
@@ -114,3 +116,21 @@ def representation_classify(
         raise typer.Exit(1)
     if data.get("error_count"):
         raise typer.Exit(1)
+
+
+@representation_app.command("gin-sql")
+def representation_gin_sql(
+    table: str = typer.Argument(..., help="Table / entity name"),
+    column: str = typer.Option(
+        "extensions",
+        "--column",
+        "-c",
+        help="json/JSONB column (default: extensions)",
+    ),
+) -> None:
+    """Print recommended Postgres GIN index SQL for a JSONB extension bag (#1619)."""
+    typer.echo(gin_index_sql(table, column))
+    typer.echo("")
+    typer.echo("# Checklist:")
+    for line in json_extension_checklist():
+        typer.echo(f"# - {line}")

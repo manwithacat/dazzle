@@ -42,6 +42,14 @@
   `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood
   v0.104.9).
 
+## [0.104.15] - 2026-07-17
+
+### Added
+- **#1619 JSONB extension pattern** — convention + GIN recipe
+  (`dazzle representation gin-sql`), `format_cell` compact json summary,
+  classify `json_identity_smell`, simple_task `User.preferences: json`
+  dogfood. Docs in data-representation.md.
+
 ## [0.104.14] - 2026-07-17
 
 ### Added
