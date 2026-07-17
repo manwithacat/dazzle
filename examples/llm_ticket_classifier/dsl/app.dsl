@@ -153,32 +153,67 @@ entity PriorityAssessment "Priority Assessment Result":
 surface ticket_list "Tickets":
   uses entity Ticket
   mode: list
+  # Primary drill: ticket hub (queue + AI classifications), not a warehouse list
+  open: Ticket via id
   section main:
     field subject "Subject"
     field customer_email "Customer"
     field status "Status"
     field created_at "Created"
   ux:
+    purpose: "Work the open ticket queue — open a row for the ticket + AI hub"
     sort: created_at desc
     filter: status
     search: subject, customer_email
     empty: "No tickets in the queue."
 
-surface ticket_detail "Ticket Detail":
+surface ticket_create "New Ticket":
   uses entity Ticket
-  mode: view
-  section info:
+  mode: create
+  section main:
     field subject "Subject"
     field description "Description"
     field customer_email "Customer Email"
+  ux:
+    purpose: "Capture a new support ticket for LLM classification on create"
+
+surface ticket_edit "Edit Ticket":
+  uses entity Ticket
+  mode: edit
+  section summary "Summary":
+    field subject "Subject"
+    field description "Description"
+    field customer_email "Customer Email"
+  section lifecycle "Lifecycle":
+    layout: strip
     field status "Status"
-  section timestamps:
+  ux:
+    purpose: "Update ticket body and transition status through the queue"
+
+surface ticket_detail "Ticket Detail":
+  uses entity Ticket
+  mode: view
+  section summary "Summary":
+    field subject "Subject"
+    field description "Description"
+    field customer_email "Customer Email"
+  section lifecycle "Lifecycle":
+    layout: strip
+    field status "Status"
     field created_at "Created"
     field updated_at "Updated"
+
+  related classifications "AI Classifications":
+    display: table
+    show: TicketClassification
+
+  ux:
+    purpose: "Ticket hub — lifecycle strip and related LLM classification runs"
 
 surface classification_list "Classifications":
   uses entity TicketClassification
   mode: list
+  open: Ticket via ticket
   section main:
     field ticket "Ticket"
     field category "Category"
@@ -186,10 +221,29 @@ surface classification_list "Classifications":
     field sentiment "Sentiment"
     field classified_at "Classified At"
   ux:
+    purpose: "Review AI classifications — open a row for the parent ticket hub"
     sort: classified_at desc
     filter: category, priority, sentiment
     search: suggested_response, llm_job_id
     empty: "No classifications yet. Submit tickets to generate AI classifications."
+
+surface classification_detail "Classification Detail":
+  uses entity TicketClassification
+  mode: view
+  section triage "Triage":
+    field ticket "Ticket"
+    field category "Category"
+    field priority "Priority"
+    field sentiment "Sentiment"
+  section confidence "Model output":
+    layout: strip
+    field confidence "Confidence"
+    field classified_at "Classified At"
+    field llm_job_id "LLM Job"
+  section suggestion "Suggested response":
+    field suggested_response "Suggested Response"
+  ux:
+    purpose: "Classification hub — triage labels, confidence strip, suggested reply"
 
 
 # =============================================================================

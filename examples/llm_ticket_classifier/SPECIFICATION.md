@@ -53,6 +53,25 @@ classifications so quality sits beside the work it describes.
 **Ticket Management** — agent home: a queue of non-closed tickets for day-to-day
 handling, plus the full ticket list for history.
 
+## How work flows through it
+
+Six authored scenarios pin the agent-facing flows (bound to concrete screens,
+not free prose):
+
+- When a **Support Agent** works the open ticket queue, they see tickets sorted
+  by age with a status filter, and opening a row hops to the ticket hub.
+- When a **Support Agent** opens a ticket hub, they see the summary, a lifecycle
+  strip for status, and the related AI classifications for that ticket.
+- When a **Support Supervisor** reviews the classification trail, opening a
+  classification row hops back to the parent ticket hub so AI labels never
+  float free of the work item.
+- When a **Support Agent** captures a new ticket, it starts life open and is
+  eligible for the declared auto-classify AI step on create.
+- When a **Support Agent** transitions ticket lifecycle, status is editable on
+  the lifecycle strip until the ticket is closed.
+- When an agent inspects a single classification run, they see triage labels,
+  a confidence strip, the suggested response, and the LLM job id for audit.
+
 ## Automation & controls
 
 Four AI-assisted steps are declared in the model and run as part of the
@@ -97,4 +116,4 @@ declared in the model — each with an explicit trigger, prompt contract, and
 timeout — rather than ad-hoc calls buried in code, so what the AI is allowed to
 touch is reviewable in one place. (Verify: `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:3e616382620a84a6119698b64738b7b2bf02902a28331ea76727fc15e57bad79 -->
+<!-- dazzle-spec-brief: sha256:961b7e7e3c9efcb58eb773eba3fc0c06e62c08153f7a7e9dafa2f2ced581b8b4 -->

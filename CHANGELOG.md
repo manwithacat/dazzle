@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.105.4] - 2026-07-17
+
+### Added
+- **llm_ticket_classifier journey dogfood** — ticket/classification hubs,
+  open-via hops (ticket list→hub, classification→ticket), lifecycle strip,
+  related AI classifications, create/edit surfaces, stories ST-001–006
+  (`pass_journey` 6/6). Fleet residual cleared (12/12 ok).
+
 ## [0.105.3] - 2026-07-17
 
 ### Added
