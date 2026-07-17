@@ -365,7 +365,9 @@ def build_trial_mission(
             reads ``transcript_sink["friction"]`` and
             ``transcript_sink["verdict"]`` after the run.
         max_steps: Override the scenario's ``max_steps`` budget.
-        token_budget: LLM token budget for the run.
+        token_budget: Default LLM token budget; overridden by
+            scenario ``token_budget`` when set (grok-cli trials often
+            need ≥400k for multi-step hub evaluation).
         signing_tools: When provided, the trial driver registers these
             alongside the baseline tools (used by the signing trial
             harness when the app has any ``signable: true`` entity).
@@ -393,6 +395,12 @@ def build_trial_mission(
         effective_start_url = f"{base_url}/app"
 
     effective_max_steps = max_steps or int(scenario.get("max_steps", 35))
+    # Scenario may raise the token budget (subscription CLIs spend heavily
+    # per observed page). Fall back to the builder default.
+    try:
+        effective_token_budget = int(scenario.get("token_budget") or token_budget)
+    except (TypeError, ValueError):
+        effective_token_budget = token_budget
     # Wrap-up at 60% — trials 1-3 all ran out of budget at 75% wrap-up
     # because exploration + recording takes more steps than the LLM
     # estimates. Budget safety matters more than full coverage; the
@@ -424,7 +432,7 @@ def build_trial_mission(
         tools=base_tools,
         completion_criteria=_trial_completion,
         max_steps=effective_max_steps,
-        token_budget=token_budget,
+        token_budget=effective_token_budget,
         start_url=effective_start_url,
         terminal_tools=["submit_verdict"],
         context={

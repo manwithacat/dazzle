@@ -12,9 +12,13 @@ compression, validation and maintenance of organisational judgement so that
 artificial reasoners—and new human collaborators—can reconstruct it without
 years of hallway socialisation.
 
-Paper (published): [Epistemic Engineering](https://doi.org/10.5281/zenodo.21415599)
-(DOI 10.5281/zenodo.21415599). The paper’s §6 repository exploration describes
-Dazzle as a field instance of the same distinctions used below.
+Paper (Zenodo preprint): Barlow, J. M. (2026).
+[*Epistemic Engineering: Towards a Discipline of Knowledge Representation for
+Artificial Reasoners in Engineering Organisations*](https://zenodo.org/records/21415599)
+([DOI 10.5281/zenodo.21415599](https://doi.org/10.5281/zenodo.21415599),
+[PDF](https://zenodo.org/records/21415599/files/epistemic-engineering.pdf)).
+The paper’s §6 repository exploration describes Dazzle as a field instance of
+the same distinctions used below.
 
 ## Vocabulary (local)
 

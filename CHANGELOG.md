@@ -1,5 +1,25 @@
 ## [Unreleased]
 
+## [0.105.5] - 2026-07-17
+
+### Fixed
+- **Queue card titles** — `display: queue` regions now set `display_key`
+  from the entity `display_field` (e.g. Ticket.subject). Missing
+  `*_display` FK suffixes fall through to the primary field instead of
+  empty/UUID labels (qa-trial friction on llm_ticket_classifier).
+
+### Added
+- **design_studio + llm_ticket_classifier trial scaffolding** —
+  `trial.toml` scenarios (hub-focused `starting_url`, 500k token budget)
+  and demo blueprints under `dsl/seeds/demo_data/` so `--fresh-db` seeds
+  real portfolio/ticket rows.
+- **trial.toml `token_budget`** — per-scenario override (default still
+  200k); needed for multi-step grok-cli hub evaluation.
+
+### Changed
+- **README / practice note** — Epistemic Engineering Zenodo preprint
+  citation (record, DOI, PDF): https://zenodo.org/records/21415599
+
 ## [0.105.4] - 2026-07-17
 
 ### Added

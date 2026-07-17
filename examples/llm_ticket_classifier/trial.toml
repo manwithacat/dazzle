@@ -1,0 +1,74 @@
+# Qualitative trial scenarios for llm_ticket_classifier (journey dogfood v0.105.4).
+# Product differentiator: declared LLM intents + ticket hubs with AI classifications.
+# Consumed by: dazzle qa trial --app llm_ticket_classifier --fresh-db --llm-driver grok-cli
+
+[[scenario]]
+name = "agent_ticket_queue"
+login_persona = "support_agent"
+time_budget_seconds = 500
+max_steps = 25
+token_budget = 500000
+starting_url = "/app/workspaces/ticket_management"
+
+user_identity = """
+You are Jordan, a support agent at a 40-person B2B SaaS. You work 15–25
+tickets a day. Leadership is trialling software that auto-classifies tickets
+with AI (category, priority, sentiment, suggested reply) so you spend less
+time triaging email. You are logged in as support_agent — day-to-day agent
+role, not admin.
+"""
+
+business_context = """
+Today's pain: shared inbox + spreadsheet for categories. You need to (1) see
+an open queue quickly, (2) open a ticket hub that shows AI classifications
+next to the customer text, (3) update status without losing the AI context,
+(4) trust that classifications are auditable (job id / confidence), not a
+black box. If AI results are a separate warehouse list with no hop back to
+the ticket, this is worse than the spreadsheet.
+"""
+
+tasks = [
+    "Land on Ticket Management. Can you see non-closed work as a queue and open a ticket without hunting?",
+    "Open a ticket hub. Is there a lifecycle/status strip and related AI classifications, or a flat field dump?",
+    "Browse classifications (if reachable). Opening a classification — do you hop to the parent ticket hub, or get stuck on an orphan AI row?",
+    "Create a new ticket or edit status on an existing one. Does the flow feel like support work, or CRUD admin?",
+]
+
+stop_when = """
+Stop when you've formed an opinion on whether Jordan would prefer this to
+inbox+spreadsheet for AI-assisted triage. Call submit_verdict with a
+one-paragraph verdict. Honest friction over exhaustive coverage.
+"""
+
+
+[[scenario]]
+name = "supervisor_dashboard"
+login_persona = "supervisor"
+time_budget_seconds = 500
+max_steps = 20
+token_budget = 500000
+starting_url = "/app/workspaces/support_dashboard"
+
+user_identity = """
+You are Sam, support supervisor for the same team as Jordan. You care about
+open volume, how many tickets the AI has classified, and whether agents can
+act from dashboards rather than spreadsheets. You are logged in as
+supervisor — Support Dashboard is your home.
+"""
+
+business_context = """
+Weekly ops review: open count, classified count, in-progress pressure, and a
+sense of whether AI labels look sane. You will not dig through entity admin
+to get those answers.
+"""
+
+tasks = [
+    "Land on Support Dashboard. Are open / classified / in-progress metrics and queues obvious?",
+    "From the open queue or classifications list, open into a ticket hub. Does context hold?",
+    "Can you tell whether AI is actually attached to tickets (related classifications) without a data dump?",
+]
+
+stop_when = """
+Stop when you can say whether Sam would run the ops review here.
+Call submit_verdict with a one-paragraph verdict.
+"""

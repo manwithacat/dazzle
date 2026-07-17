@@ -22,7 +22,9 @@ Dazzle is an **agent-native SaaS framework** built around domain-first declarati
 
 It is optimised for applications where **correctness, inspectability, and change locality** matter more than unconstrained client-side composition: domain-heavy SaaS, workflow systems, operational tooling, and governance-heavy products. Rich client behaviour is allowed through **bounded JavaScript islands** with named lifecycle contracts — not a parallel SPA state graph.
 
-The same repository is also a working practice of **epistemic engineering**: deliberately shaping the representations from which human and artificial collaborators reconstruct organisational judgement (see [stems](stems/README.md) below).
+The same repository is also a working practice of **epistemic engineering**: deliberately shaping the representations from which human and artificial collaborators reconstruct organisational judgement (see [stems](stems/README.md) below). The framing paper is available as a Zenodo preprint:
+
+> Barlow, J. M. (2026). *Epistemic Engineering: Towards a Discipline of Knowledge Representation for Artificial Reasoners in Engineering Organisations*. Zenodo. [https://doi.org/10.5281/zenodo.21415599](https://doi.org/10.5281/zenodo.21415599) · [record](https://zenodo.org/records/21415599) · [PDF](https://zenodo.org/records/21415599/files/epistemic-engineering.pdf)
 
 ```bash
 cd examples/simple_task && dazzle serve
@@ -67,7 +69,7 @@ what a model receives for one inference. **Epistemic engineering** is earlier an
 longer-lived: deciding *what organisational judgement must be durable*, where
 authority lives, how it is compressed, and how fidelity is tested so human and
 artificial collaborators can **reconstruct** that judgement without years of
-hallway socialisation ([Barlow, 2026](https://doi.org/10.5281/zenodo.21415599)).
+hallway socialisation ([Barlow, 2026](https://zenodo.org/records/21415599)).
 
 This repository is a working practice of that discipline. A stem becomes ordinary
 context when supplied to a model; its engineering significance is **lifecycle**
@@ -111,7 +113,7 @@ a local `stems/` so domain judgement has a place to live.
 | Stems | [stems/README.md](stems/README.md) · [stems/INDEX.md](stems/INDEX.md) |
 | Practice note | [docs/architecture/epistemic-engineering-practice.md](docs/architecture/epistemic-engineering-practice.md) |
 | Parked plans | [docs/decisions/INDEX.md](docs/decisions/INDEX.md) (e.g. [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/#1622) |
-| Paper | [Epistemic Engineering](https://doi.org/10.5281/zenodo.21415599) (DOI 10.5281/zenodo.21415599) |
+| Paper (preprint) | Barlow (2026), *Epistemic Engineering* — [Zenodo record](https://zenodo.org/records/21415599) · [DOI](https://doi.org/10.5281/zenodo.21415599) · [PDF](https://zenodo.org/records/21415599/files/epistemic-engineering.pdf) |
 
 ---
 
@@ -428,7 +430,7 @@ Works with VS Code, Neovim, Emacs, and any editor supporting LSP. See [docs/refe
 - **[HaTchi-MaXchi stems](packages/hatchi-maxchi/stems/)** — Hyperpart / design-system stems
 - **[Counter-prior catalogue](docs/counter-priors/INDEX.md)** — named corpus pathologies and the preferred shape
 - **[ADRs](docs/adr/INDEX.md)** — decision history (expressions of stems)
-- **[Epistemic Engineering (paper)](https://doi.org/10.5281/zenodo.21415599)** — published framing (DOI 10.5281/zenodo.21415599)
+- **[Epistemic Engineering (preprint)](https://zenodo.org/records/21415599)** — Barlow (2026); framing paper for stems / agent didactics ([DOI 10.5281/zenodo.21415599](https://doi.org/10.5281/zenodo.21415599), [PDF](https://zenodo.org/records/21415599/files/epistemic-engineering.pdf))
 
 ### Product and evaluation
 

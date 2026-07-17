@@ -1,0 +1,254 @@
+{
+  "version": "1.0",
+  "blueprint": {
+    "project_id": "design_studio",
+    "domain_description": "Brand and design asset management",
+    "seed": 42,
+    "tenants": [
+      {
+        "name": "Studio Demo",
+        "slug": "studio-demo",
+        "notes": "trial"
+      }
+    ],
+    "personas": [],
+    "entities": [
+      {
+        "name": "Brand",
+        "row_count_default": 4,
+        "notes": null,
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "company_name",
+            "params": {}
+          },
+          {
+            "field_name": "description",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 8,
+              "max_words": 20
+            }
+          },
+          {
+            "field_name": "primary_color",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "#1a73e8",
+                "#0f9d58",
+                "#ea4335",
+                "#fbbc04"
+              ]
+            }
+          },
+          {
+            "field_name": "secondary_color",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "#5f6368",
+                "#202124",
+                "#e8eaed",
+                "#334155"
+              ]
+            }
+          },
+          {
+            "field_name": "accent_color",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "#fbbc04",
+                "#ea4335",
+                "#1a73e8",
+                "#0f9d58"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Asset",
+        "row_count_default": 12,
+        "notes": null,
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "description",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 6,
+              "max_words": 20
+            }
+          },
+          {
+            "field_name": "brand",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Brand"
+            }
+          },
+          {
+            "field_name": "asset_type",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "logo",
+                "icon_glyph",
+                "illustration",
+                "photo",
+                "pattern",
+                "typography"
+              ],
+              "weights": [
+                0.25,
+                0.2,
+                0.2,
+                0.15,
+                0.1,
+                0.1
+              ]
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "draft",
+                "review",
+                "approved",
+                "published",
+                "archived"
+              ],
+              "weights": [
+                0.2,
+                0.35,
+                0.25,
+                0.1,
+                0.1
+              ]
+            }
+          },
+          {
+            "field_name": "tags",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 1,
+              "max_words": 3
+            }
+          },
+          {
+            "field_name": "quality_score",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 1,
+              "max": 5
+            }
+          }
+        ]
+      },
+      {
+        "name": "Campaign",
+        "row_count_default": 3,
+        "notes": null,
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "description",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 6,
+              "max_words": 18
+            }
+          },
+          {
+            "field_name": "brand",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Brand"
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "planning",
+                "active",
+                "completed",
+                "cancelled"
+              ],
+              "weights": [
+                0.3,
+                0.4,
+                0.2,
+                0.1
+              ]
+            }
+          },
+          {
+            "field_name": "start_date",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -30,
+              "max_offset_days": 10
+            }
+          },
+          {
+            "field_name": "end_date",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": 10,
+              "max_offset_days": 90
+            }
+          },
+          {
+            "field_name": "budget",
+            "strategy": "currency_amount",
+            "params": {
+              "min": 1000,
+              "max": 50000
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

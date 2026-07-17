@@ -1,0 +1,78 @@
+# Qualitative trial scenarios for design_studio (journey dogfood v0.105.3).
+# Agent-first: brand/asset hubs, open-via hops, review queue — not warehouse lists.
+# Consumed by: dazzle qa trial --app design_studio --fresh-db --llm-driver grok-cli
+
+[[scenario]]
+name = "designer_portfolio"
+login_persona = "designer"
+time_budget_seconds = 500
+max_steps = 25
+token_budget = 500000
+starting_url = "/app/workspaces/studio_dashboard"
+
+user_identity = """
+You are Priya, lead designer at a 12-person product studio. You own brand
+systems and a growing library of logos, icons, and campaign assets. Today
+you juggle Figma + a shared Drive folder + Slack threads for review, and
+version chaos is real. You're trialling Design Studio to decide whether
+the team can stop hunting for the right brand palette and latest approved
+asset. You are logged in as the designer account — the role you'd use day
+to day.
+"""
+
+business_context = """
+You support 4 active brands and about 40 assets, with 5–10 in review at any
+time. Designers need: (1) a portfolio overview that shows pressure (assets
+in review, brand count), (2) hop from an asset row into the brand context
+(palette + related campaigns), not a dead-end list, (3) leave or read
+feedback without losing brand context. If those three fail, you keep Drive.
+"""
+
+tasks = [
+    "Land on Studio Dashboard. Can you see portfolio pressure (assets, in-review, brands, campaigns) without hunting through menus?",
+    "Open the brands list or a brand from the dashboard. Does a brand open as a hub (identity + palette + related assets/campaigns), or a flat field dump?",
+    "From Assets, open a row. Do you land on a useful asset hub (production strip + feedback), and can you hop to the parent brand when you need context?",
+    "As a designer, can you start a new asset or find how review status is visible without becoming a warehouse admin?",
+]
+
+stop_when = """
+Stop when you've formed a rounded opinion on whether Priya's studio would
+adopt this over Drive+Slack for brand/asset context. Don't exhaust every
+screen — honest friction beats full coverage. Call submit_verdict with a
+one-paragraph verdict.
+"""
+
+
+[[scenario]]
+name = "reviewer_queue"
+login_persona = "reviewer"
+time_budget_seconds = 500
+max_steps = 25
+token_budget = 500000
+starting_url = "/app/workspaces/asset_gallery"
+
+user_identity = """
+You are Marcus, a design reviewer at the same studio as Priya. Your job is
+to clear the review queue: open assets awaiting review, check quality, leave
+feedback, and approve or send back. You are logged in as the reviewer
+account — default home should be the asset gallery, not brand admin.
+"""
+
+business_context = """
+Monday morning: 6–8 assets in review. You care about finding the queue
+fast, opening an asset hub (not a spreadsheet row), seeing related feedback,
+and changing status. If review is buried under brand CRUD, you will not use
+this daily.
+"""
+
+tasks = [
+    "Land on Asset Gallery. Is review pressure obvious (metrics / queue) without navigating into admin lists?",
+    "Open an asset that looks like it needs review. Is the hub usable (status, quality, related feedback)?",
+    "Can you leave feedback or update status from the asset context, or are you forced into a generic form maze?",
+    "From feedback list (if you find it), can you hop back to the asset — or are you stuck in a warehouse trail?",
+]
+
+stop_when = """
+Stop when you can say whether Marcus would run Monday reviews here.
+Call submit_verdict with a one-paragraph verdict.
+"""

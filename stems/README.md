@@ -16,7 +16,7 @@ organisational judgement for human and artificial collaborators.
 | **Prompt** | Immediate instruction — secondary once stems exist |
 
 Full practice note: [`docs/architecture/epistemic-engineering-practice.md`](../docs/architecture/epistemic-engineering-practice.md).
-Published framing: [Epistemic Engineering](https://doi.org/10.5281/zenodo.21415599) (Barlow, 2026).
+Zenodo preprint: [Epistemic Engineering](https://zenodo.org/records/21415599) (Barlow, 2026; [DOI](https://doi.org/10.5281/zenodo.21415599)).
 
 ## Authority
 

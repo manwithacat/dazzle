@@ -1,0 +1,183 @@
+{
+  "version": "1.0",
+  "blueprint": {
+    "project_id": "llm_ticket_classifier",
+    "domain_description": "AI-assisted support ticket classification",
+    "seed": 42,
+    "tenants": [
+      {
+        "name": "Demo SaaS",
+        "slug": "demo-saas",
+        "notes": "trial"
+      }
+    ],
+    "personas": [],
+    "entities": [
+      {
+        "name": "Ticket",
+        "row_count_default": 8,
+        "notes": null,
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "subject",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "Cannot login after password reset",
+                "Double charged on monthly invoice",
+                "Feature request: dark mode for dashboard",
+                "API keys not working in production",
+                "SSO login loop for enterprise org",
+                "Export CSV times out on large projects",
+                "Webhook delivery failures overnight",
+                "Account owner transfer stuck pending"
+              ]
+            }
+          },
+          {
+            "field_name": "description",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 12,
+              "max_words": 40
+            }
+          },
+          {
+            "field_name": "customer_email",
+            "strategy": "email_from_name",
+            "params": {
+              "source_field": "subject",
+              "domains": [
+                "example.test"
+              ]
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "open",
+                "in_progress",
+                "resolved",
+                "closed"
+              ],
+              "weights": [
+                0.5,
+                0.3,
+                0.15,
+                0.05
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "TicketClassification",
+        "row_count_default": 6,
+        "notes": null,
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "ticket",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Ticket"
+            }
+          },
+          {
+            "field_name": "category",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "billing",
+                "technical",
+                "feature_request",
+                "account",
+                "other"
+              ],
+              "weights": [
+                0.2,
+                0.35,
+                0.15,
+                0.2,
+                0.1
+              ]
+            }
+          },
+          {
+            "field_name": "priority",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ],
+              "weights": [
+                0.25,
+                0.4,
+                0.25,
+                0.1
+              ]
+            }
+          },
+          {
+            "field_name": "sentiment",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "positive",
+                "neutral",
+                "negative",
+                "frustrated"
+              ],
+              "weights": [
+                0.1,
+                0.3,
+                0.35,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "confidence",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 0.55,
+              "max": 0.98
+            }
+          },
+          {
+            "field_name": "suggested_response",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 15,
+              "max_words": 50
+            }
+          },
+          {
+            "field_name": "llm_job_id",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 1,
+              "max_words": 2
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

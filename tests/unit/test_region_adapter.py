@@ -1844,6 +1844,48 @@ def test_queue_renders_minimal_items() -> None:
     assert "dz-queue-region" in html
 
 
+def test_queue_title_uses_display_field_without_fk_display_suffix() -> None:
+    """Non-FK display_field (Ticket.subject) has no ``subject_display``.
+
+    Missing ``*_display`` must fall through to the primary field — not
+    empty title or bare UUID (qa-trial llm_ticket_classifier friction).
+    """
+    adapter = WorkspaceRegionAdapter()
+    subject = "Cannot login to my account"
+    row_id = "70193944-6955-4d6d-9a6a-4d076a6e033f"
+    ctx = {
+        "items": [
+            {
+                "id": row_id,
+                "subject": subject,
+                "customer_email": "user@example.com",
+                "status": "open",
+            },
+        ],
+        "columns": [
+            {"key": "subject", "label": "Subject", "type": "text"},
+            {"key": "status", "label": "Status", "type": "badge"},
+        ],
+        "display_key": "subject",
+    }
+    html = _render(adapter.build(_FakeRegion("open_queue", display="queue"), ctx))
+    assert subject in html
+    assert row_id not in html  # UUID must not be the primary card label
+
+
+def test_queue_title_falls_back_to_id_only_when_display_key_missing() -> None:
+    """Without display_key, id remains the last-resort title."""
+    adapter = WorkspaceRegionAdapter()
+    row_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    ctx = {
+        "items": [{"id": row_id, "subject": "Hidden subject", "status": "open"}],
+        "columns": [{"key": "status", "label": "Status", "type": "badge"}],
+        # display_key deliberately omitted
+    }
+    html = _render(adapter.build(_FakeRegion("q", display="queue"), ctx))
+    assert row_id in html
+
+
 def test_queue_renders_transition_buttons_when_supplied() -> None:
     """Phase 4B.1.d: queue_transitions + status_field + api_endpoint
     produce per-row Button primitives with hx_put + hx_vals + hx_ext.
