@@ -1,0 +1,67 @@
+name: Deferred Decision (parked plan)
+description: Park a long-horizon plan with checkable reopen conditions (docs/decisions/)
+title: "[DD]: "
+labels: ["enhancement", "future", "framework"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when you are **parking** work with a real plan — not a vague backlog item.
+
+        After filing: write `docs/decisions/DD-NNN-….md` from `docs/decisions/TEMPLATE.md`,
+        add a row to `docs/decisions/INDEX.md`, and paste the DD path into this issue body.
+
+  - type: input
+    id: dd-path
+    attributes:
+      label: Deferred Decision path
+      description: Relative path under docs/decisions/ (create in the same PR if possible)
+      placeholder: "docs/decisions/DD-001-….md"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: status
+    attributes:
+      label: DD status
+      options:
+        - PARKED
+        - FORCED
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: plan
+    attributes:
+      label: Plan summary (already decided)
+      description: What we concluded — not a blank slate for future agents
+      placeholder: "We will not ship X until Y. Counter-prior: never Z."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reopen
+    attributes:
+      label: Reopen when (consumer force)
+      description: Checkable signals only — named app, dual-lock residual, interrogation write-up
+      placeholder: |
+        1. Named consumer app: …
+        2. Evidence of host dual-lock: …
+        3. Acceptance that unblocks: …
+    validations:
+      required: true
+
+  - type: textarea
+    id: shipped
+    attributes:
+      label: Already shipped (do not re-litigate)
+      description: Substrate / ADRs / prove commands that already hold
+    validations:
+      required: true
+
+  - type: input
+    id: parent
+    attributes:
+      label: Parent umbrella issue (optional)
+      placeholder: "1617"

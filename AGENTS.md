@@ -387,6 +387,25 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **All schema changes via Alembic** — including framework entities (FeedbackReport, AIJob, admin entities). No raw ALTER TABLE. Use `dazzle db revision -m "description"` then `dazzle db upgrade` (ADR-0017)
 - **DB artifacts have one registry** — before adding a framework table, boot-DDL, or RLS, read `docs/reference/db-artifacts.md` or run `dazzle inspect db-artifacts`. `dazzle.db.artifact_registry` is the source of truth (class/owner/RLS/baseline/gating); `tests/unit/test_db_artifact_contract.py` enforces the boot-entry gating invariant + a completeness sweep — a new ungated boot-DDL path (the #1495 class: `CREATE INDEX` fails for the non-owner runtime role under split-ownership RLS) fails CI until registered+gated with `skip_boot_schema_ddl()`. `IN_SCOPE_TABLES` is registry-derived (ADR-0047, supersedes the hand-synced list; ADR-0044 keeps the baseline mechanism)
 
+## Deferred decisions (long-horizon plans)
+
+When you park work as “not yet / consumer-forced / future”, **do not leave only
+a GitHub comment**. Write or update a **Deferred Decision** under
+`docs/decisions/`:
+
+- Copy `docs/decisions/TEMPLATE.md` → `DD-NNN-….md`, add a row to
+  `docs/decisions/INDEX.md`, set `status: PARKED`, link issues + ADRs.
+- Fill **Plan**, **Reopen when** (checkable consumer signals), **Already shipped**,
+  **Out of scope**.
+- Pin the DD path in the **issue body** (not only a transient comment).
+- Improve / `/issues` must **not** implement `PARKED` DDs or `future`-labeled
+  issues that point at a PARKED DD until `status: FORCED` with a named consumer.
+
+When a use case finally appears: set `FORCED` → implement against the plan →
+`DONE` + close issues. Grep: `rg -n '^status: PARKED' docs/decisions/`.
+
+Example: [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/#1622.
+
 ## Ship Discipline
 
 - **Clean worktree**: Every push must leave `git status` clean. After shipping, check for untracked or modified files (especially `dist/`) and commit them before moving on.
@@ -502,4 +521,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.105.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.105.1 | **Python**: 3.12+ | **Status**: Production Ready

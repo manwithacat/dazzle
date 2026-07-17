@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.105.1] - 2026-07-17
+
+### Added
+- **Deferred Decisions log** (`docs/decisions/`) — greppable long-horizon
+  plans with `status: PARKED|FORCED|DONE`, checkable **Reopen when** consumer
+  signals, and issue pins. DD-001 captures #1621/#1622 (poly_ref polish +
+  STI/EAV) so the plan survives comment rot. Gate:
+  `tests/unit/test_deferred_decisions.py`. Issue template:
+  `.github/ISSUE_TEMPLATE/deferred_decision.yml`. AGENTS + improve skip
+  implementing PARKED DDs.
+
 ## [0.105.0] - 2026-07-17
 
 ### Agent Guidance

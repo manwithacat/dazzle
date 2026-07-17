@@ -139,6 +139,13 @@ uv run python scripts/improve_github_inbox.py
 
 **Issue bug policy:** bug-shaped issues — whether from downstream authors **or** the project owner (including pilot-labeled CyFuture findings) — are **first-class improve work**. Step 0c3 claims the cycle when inbox heat is `consumer_bug` or `owner_bug`. Features / design-only / `future`-labeled work still skips implement. Quiet product state still self-schedules ~15m so Step 0c3 re-polls GitHub regularly rather than waiting multi-hour all-clear gaps.
 
+**`future` / PARKED Deferred Decisions:** issues labeled `future` that link a
+`docs/decisions/DD-*.md` with `status: PARKED` are **not** implementable until
+the DD is `FORCED` with a named consumer (see `docs/decisions/INDEX.md`). Do not
+“make progress” by speculative-building #1621/#1622-class work. If a real
+consumer force appears in inbox or pilot signal, update the DD to `FORCED` first,
+then implement.
+
 Forceable via `/improve github-prs` or `/improve consumer-issues`.
 
 ### Step 0d: Read signals

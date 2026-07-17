@@ -57,9 +57,9 @@ When purity collides with multi-tenant SaaS velocity, use **documented** hatches
 | **Sparse exclusive FKs** | 2–4 alternative parents (`company` \| `sole_trader`) | Works today + `open: first_non_null(...)` + integrity (#1617 Phase 1) |
 | **`subtype_of:` TPT** | True ISA with substantial per-kind columns | Shipped — prefer over STI for core domain |
 | **`json` / JSONB payload** | Tenant/feature-variable bags; keep core columns normalized | **#1619** convention + GIN recipe + compact list display |
-| **Typed polymorphic association** | Comment/attachment/audit → many parents | Designed in #1240; implement when a consumer forces |
-| **STI (single table + type)** | Related subtypes with sparse columns | Prefer TPT; lint when overused |
-| **EAV** | Extreme custom fields | Prefer JSONB projections, not classic EAV joins |
+| **Typed polymorphic association** | Comment/attachment/audit → many parents | Substrate + ADR-0042 shipped; **product polish consumer-forced** — [DD-001](../decisions/DD-001-1617-poly-ref-and-sti-eav.md) (#1621) |
+| **STI (single table + type)** | Related subtypes with sparse columns | Prefer TPT; lint when overused — [DD-001](../decisions/DD-001-1617-poly-ref-and-sti-eav.md) (#1622) |
+| **EAV** | Extreme custom fields | Prefer JSONB projections, not classic EAV joins — [DD-001](../decisions/DD-001-1617-poly-ref-and-sti-eav.md) (#1622) |
 | **Core vs extension schema** | Dual-lock host owns extensions | Intentional boundary; framework owns core |
 
 ### Exclusive FKs integrity (#1617 Phase 1)
