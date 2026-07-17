@@ -28,6 +28,7 @@ from dazzle.core.ir.expressions import (
     UnaryExpr,
     UnaryOp,
 )
+from dazzle.i18n.display_locale import calendar_today
 
 # ============================================================================
 # Tokenizer tests
@@ -633,19 +634,19 @@ class TestEvalFunctions:
 
     def test_today(self) -> None:
         result = evaluate(parse_expr("today()"), {})
-        assert result == date.today()
+        assert result == calendar_today()
 
     def test_now(self) -> None:
         result = evaluate(parse_expr("now()"), {})
         assert isinstance(result, datetime)
 
     def test_days_since(self) -> None:
-        past = date.today() - timedelta(days=10)
+        past = calendar_today() - timedelta(days=10)
         result = evaluate(parse_expr("days_since(created)"), {"created": past})
         assert result == 10
 
     def test_days_until(self) -> None:
-        future = date.today() + timedelta(days=5)
+        future = calendar_today() + timedelta(days=5)
         result = evaluate(parse_expr("days_until(due)"), {"due": future})
         assert result == 5
 

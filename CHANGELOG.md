@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.105.11] - 2026-07-18
+
+### Fixed
+- **Date-relative unit tests vs Europe/London calendar day** — `today()`,
+  `days_until`/`days_since`, and date default factories use
+  `calendar_today()` (tenant TZ, default Europe/London). Tests still
+  asserted `date.today()` (runner local TZ), so CI failed near UTC midnight
+  with off-by-one day counts (16 failures on v0.105.10 Python Tests).
+
 ## [0.105.10] - 2026-07-17
 
 ### Fixed

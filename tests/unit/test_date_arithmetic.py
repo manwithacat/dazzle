@@ -22,6 +22,7 @@ from dazzle.core.ir import (
 from dazzle.core.lexer import Lexer, TokenType
 from dazzle.http.converters.entity_converter import convert_entity
 from dazzle.http.runtime.model_generator import _create_date_factory
+from dazzle.i18n.display_locale import calendar_today
 
 # =============================================================================
 # Lexer Tests
@@ -302,7 +303,7 @@ class TestRuntimeEvaluation:
         """Factory for 'today' returns current date."""
         factory = _create_date_factory({"kind": "today"})
         result = factory()
-        assert result == date.today()
+        assert result == calendar_today()
 
     def test_now_factory(self):
         """Factory for 'now' returns current datetime (within tolerance)."""
@@ -323,7 +324,7 @@ class TestRuntimeEvaluation:
             }
         )
         result = factory()
-        expected = date.today() + timedelta(days=7)
+        expected = calendar_today() + timedelta(days=7)
         assert result == expected
 
     def test_now_minus_hours(self):
@@ -352,7 +353,7 @@ class TestRuntimeEvaluation:
             }
         )
         result = factory()
-        expected = date.today() + timedelta(weeks=2)
+        expected = calendar_today() + timedelta(weeks=2)
         assert result == expected
 
     def test_minutes_arithmetic(self):
@@ -382,9 +383,9 @@ class TestRuntimeEvaluation:
         )
         result = factory()
         # Just verify it returns a date in the future
-        assert result > date.today()
+        assert result > calendar_today()
         # And roughly 3 months away (between 80-100 days)
-        days_diff = (result - date.today()).days
+        days_diff = (result - calendar_today()).days
         assert 80 < days_diff < 100
 
     def test_years_arithmetic(self):
@@ -399,9 +400,9 @@ class TestRuntimeEvaluation:
         )
         result = factory()
         # Just verify it returns a date in the future
-        assert result > date.today()
+        assert result > calendar_today()
         # And roughly 1 year away (between 360-370 days)
-        days_diff = (result - date.today()).days
+        days_diff = (result - calendar_today()).days
         assert 360 < days_diff < 370
 
 
@@ -462,4 +463,4 @@ entity Task "Task":
 
         # due_date should be today + 7 days
         assert isinstance(due_result, date)
-        assert due_result == date.today() + timedelta(days=7)
+        assert due_result == calendar_today() + timedelta(days=7)

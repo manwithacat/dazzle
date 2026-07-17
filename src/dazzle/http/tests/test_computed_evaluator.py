@@ -1,6 +1,6 @@
 """Tests for computed field evaluator."""
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -16,6 +16,7 @@ from dazzle.http.specs.entity import (
     ComputedExprSpec,
     ComputedFieldSpec,
 )
+from dazzle.i18n.display_locale import calendar_today
 
 
 class TestExpressionEvaluation:
@@ -192,7 +193,7 @@ class TestDateFunctions:
 
     def test_days_until_future(self) -> None:
         """Test days_until with future date."""
-        future_date = date.today() + timedelta(days=10)
+        future_date = calendar_today() + timedelta(days=10)
         expr = ComputedExprSpec(
             kind="aggregate",
             function=AggregateFunctionKind.DAYS_UNTIL,
@@ -203,7 +204,7 @@ class TestDateFunctions:
 
     def test_days_until_past(self) -> None:
         """Test days_until with past date (negative result)."""
-        past_date = date.today() - timedelta(days=5)
+        past_date = calendar_today() - timedelta(days=5)
         expr = ComputedExprSpec(
             kind="aggregate",
             function=AggregateFunctionKind.DAYS_UNTIL,
@@ -214,7 +215,7 @@ class TestDateFunctions:
 
     def test_days_since_past(self) -> None:
         """Test days_since with past date."""
-        past_date = date.today() - timedelta(days=7)
+        past_date = calendar_today() - timedelta(days=7)
         expr = ComputedExprSpec(
             kind="aggregate",
             function=AggregateFunctionKind.DAYS_SINCE,
@@ -225,7 +226,7 @@ class TestDateFunctions:
 
     def test_days_until_string_date(self) -> None:
         """Test days_until with ISO string date."""
-        future_date = (date.today() + timedelta(days=3)).isoformat()
+        future_date = (calendar_today() + timedelta(days=3)).isoformat()
         expr = ComputedExprSpec(
             kind="aggregate",
             function=AggregateFunctionKind.DAYS_UNTIL,
@@ -237,7 +238,7 @@ class TestDateFunctions:
     def test_days_since_datetime(self) -> None:
         """Test days_since with datetime object."""
         # Use date subtraction for consistent test
-        past_date = date.today() - timedelta(days=14)
+        past_date = calendar_today() - timedelta(days=14)
         past_datetime = datetime.combine(past_date, datetime.min.time())
         expr = ComputedExprSpec(
             kind="aggregate",

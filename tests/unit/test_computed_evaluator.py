@@ -1,5 +1,6 @@
 """Tests for computed field evaluator (#coverage)."""
 
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -16,6 +17,7 @@ from dazzle.http.specs.entity import (
     ComputedExprSpec,
     ComputedFieldSpec,
 )
+from dazzle.i18n.display_locale import calendar_today
 
 # ---------------------------------------------------------------------------
 # Literals
@@ -324,9 +326,7 @@ class TestDateFunctions:
         make_value: object,
         expected: int,
     ) -> None:
-        from datetime import date, timedelta
-
-        target_date = date.today() + timedelta(days=offset_days)
+        target_date = calendar_today() + timedelta(days=offset_days)
         expr = self._date_agg(func, field)
         result = evaluate_expression(expr, {field: make_value(target_date)})
         assert result == expected
