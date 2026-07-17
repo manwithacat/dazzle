@@ -359,17 +359,10 @@ body { background: var(--colour-bg); color: var(--colour-text);
             <span class="code__tok--op">)</span>
     <span class="code__tok--kw">if</span> <span class="code__tok--name">row</span><span class="code__tok--op">.</span><span class="code__tok--name">drill_url</span><span class="code__tok--op">:</span>
         <span class="code__tok--name">href</span> <span class="code__tok--op">=</span> <span class="code__tok--name">html</span><span class="code__tok--op">.</span><span class="code__tok--name">escape</span><span class="code__tok--op">(</span><span class="code__tok--name">row</span><span class="code__tok--op">.</span><span class="code__tok--name">drill_url</span><span class="code__tok--op">,</span> <span class="code__tok--name">quote</span><span class="code__tok--op">=</span><span class="code__tok--kw">True</span><span class="code__tok--op">)</span>
-        <span class="code__tok--name">title_html</span> <span class="code__tok--op">=</span> <span class="code__tok--op">(</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;a class=&quot;dz-queue-row-title&quot; href=&quot;{href}&quot; data-dz-queue-drill&gt;{title}&lt;/a&gt;&#x27;</span>
-        <span class="code__tok--op">)</span>
+        <span class="code__tok--name">title_html</span> <span class="code__tok--op">=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;a class=&quot;dz-queue-row-title&quot; href=&quot;{href}&quot; data-dz-queue-drill&gt;{title}&lt;/a&gt;&#x27;</span>
     <span class="code__tok--kw">else</span><span class="code__tok--op">:</span>
         <span class="code__tok--name">title_html</span> <span class="code__tok--op">=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;span class=&quot;dz-queue-row-title&quot;&gt;{title}&lt;/span&gt;&#x27;</span>
-    <span class="code__tok--name">headline_html</span> <span class="code__tok--op">=</span> <span class="code__tok--op">(</span>
-        <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-queue-row-headline&quot;&gt;&#x27;</span>
-        <span class="code__tok--name">f</span><span class="code__tok--str">&quot;{title_html}&quot;</span>
-        <span class="code__tok--name">f</span><span class="code__tok--str">&quot;{row.badges_html}&quot;</span>
-        <span class="code__tok--name">f</span><span class="code__tok--str">&quot;&lt;/div&gt;&quot;</span>
-    <span class="code__tok--op">)</span>
+    <span class="code__tok--name">headline_html</span> <span class="code__tok--op">=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;div class=&quot;dz-queue-row-headline&quot;&gt;{title_html}{row.badges_html}&lt;/div&gt;&#x27;</span>
     <span class="code__tok--cmt"># Trailing space inside class mirrors legacy Jinja when no attn.</span>
     <span class="code__tok--name">row_open_class</span> <span class="code__tok--op">=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&quot;dz-queue-row {attn_class}&quot;</span> <span class="code__tok--kw">if</span> <span class="code__tok--name">attn_class</span> <span class="code__tok--kw">else</span> <span class="code__tok--str">&quot;dz-queue-row &quot;</span>
     <span class="code__tok--kw">return</span> <span class="code__tok--op">(</span>

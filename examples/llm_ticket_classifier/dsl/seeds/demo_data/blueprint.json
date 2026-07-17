@@ -26,7 +26,7 @@
           },
           {
             "field_name": "subject",
-            "strategy": "static_list",
+            "strategy": "sequential",
             "params": {
               "values": [
                 "Cannot login after password reset",
@@ -42,7 +42,7 @@
           },
           {
             "field_name": "description",
-            "strategy": "static_list",
+            "strategy": "sequential",
             "params": {
               "values": [
                 "Customer reset password twice yesterday; new link always says expired. Browser Chrome 128 on Windows.",
@@ -68,27 +68,43 @@
           },
           {
             "field_name": "status",
-            "strategy": "enum_weighted",
+            "strategy": "sequential",
             "params": {
-              "enum_values": [
+              "values": [
+                "open",
+                "open",
                 "open",
                 "in_progress",
+                "in_progress",
+                "open",
                 "resolved",
                 "closed"
-              ],
-              "weights": [
-                0.5,
-                0.3,
-                0.15,
-                0.05
               ]
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -14,
+              "max_offset_days": -1
+            }
+          },
+          {
+            "field_name": "updated_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -7,
+              "max_offset_days": 0
             }
           }
         ]
       },
       {
         "name": "TicketClassification",
-        "row_count_default": 6,
+        "row_count_default": 8,
         "notes": null,
         "tenant_scoped": false,
         "field_patterns": [
@@ -170,7 +186,7 @@
           },
           {
             "field_name": "suggested_response",
-            "strategy": "static_list",
+            "strategy": "sequential",
             "params": {
               "values": [
                 "Thanks for reporting this \u2014 I've escalated to billing and will confirm the refund within one business day.",

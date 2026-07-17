@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+## [0.105.7] - 2026-07-17
+
+### Fixed
+- **design_studio Brand/Asset/Campaign VIEW 404** — entities declared
+  only `scope: list: all`, so `gated_read` default-denied detail
+  pages (list OK, GET-by-id / `/app/brand/{id}` 404). Added matching
+  `scope: read|create|update|delete` per permit personas; Asset
+  `update` includes reviewer for the review-queue edit path.
+- **llm_ticket_classifier demo seeds** — hand-authored Ticket +
+  TicketClassification JSONL (paired subject/description, timestamps,
+  one classification per ticket) so hub trials see coherent AI rows
+  instead of randomly crossed static_list fields.
+
 ## [0.105.6] - 2026-07-17
 
 ### Fixed

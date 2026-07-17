@@ -44,8 +44,18 @@ entity User "User":
     delete: role(admin)
 
   scope:
+    # list-only was insufficient: detail routes use gated_read → scope:read
+    # (#1123). Missing read → default-deny 404 even when list rows exist.
     list: all
       as: admin, designer, reviewer
+    read: all
+      as: admin, designer, reviewer
+    create: all
+      as: admin
+    update: all
+      as: admin
+    delete: all
+      as: admin
 
 entity Brand "Brand":
   display_field: name
@@ -70,6 +80,14 @@ entity Brand "Brand":
   scope:
     list: all
       as: admin, designer, reviewer
+    read: all
+      as: admin, designer, reviewer
+    create: all
+      as: admin, designer
+    update: all
+      as: admin, designer
+    delete: all
+      as: admin
 
 entity Asset "Design Asset":
   display_field: name
@@ -98,12 +116,22 @@ entity Asset "Design Asset":
     list: role(admin) or role(designer) or role(reviewer)
     read: role(admin) or role(designer) or role(reviewer)
     create: role(admin) or role(designer)
-    update: role(admin) or role(designer)
+    # Reviewer updates status on the review-queue edit surface (and
+    # transition buttons); designer owns create/content edits.
+    update: role(admin) or role(designer) or role(reviewer)
     delete: role(admin)
 
   scope:
     list: all
       as: admin, designer, reviewer
+    read: all
+      as: admin, designer, reviewer
+    create: all
+      as: admin, designer
+    update: all
+      as: admin, designer, reviewer
+    delete: all
+      as: admin
 
 entity Campaign "Campaign":
   id: uuid pk
@@ -133,6 +161,14 @@ entity Campaign "Campaign":
   scope:
     list: all
       as: admin, designer, reviewer
+    read: all
+      as: admin, designer, reviewer
+    create: all
+      as: admin, designer
+    update: all
+      as: admin, designer
+    delete: all
+      as: admin
 
 entity Feedback "Design Feedback":
   id: uuid pk
@@ -152,6 +188,14 @@ entity Feedback "Design Feedback":
   scope:
     list: all
       as: admin, designer, reviewer
+    read: all
+      as: admin, designer, reviewer
+    create: all
+      as: admin, reviewer
+    update: all
+      as: admin
+    delete: all
+      as: admin
 
 # ── Workspaces ───────────────────────────────────────────────────────
 

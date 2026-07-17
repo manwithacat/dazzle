@@ -132,7 +132,9 @@ class PlaywrightObserver:
         try:
             await self._page.wait_for_load_state("networkidle", timeout=5_000)
         except Exception:
-            pass
+            # Expected when HTMX/SSE keeps the socket busy past 5s —
+            # navigate already succeeded on domcontentloaded.
+            logger.debug("networkidle wait timed out after navigate to %s", url, exc_info=True)
 
     async def observe(self) -> PageState:
         if self._mode == ObserverMode.ACCESSIBILITY:

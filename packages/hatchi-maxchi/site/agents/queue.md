@@ -99,17 +99,10 @@ def render(row: QueueRow) -> str:
             )
     if row.drill_url:
         href = html.escape(row.drill_url, quote=True)
-        title_html = (
-            f'<a class="dz-queue-row-title" href="{href}" data-dz-queue-drill>{title}</a>'
-        )
+        title_html = f'<a class="dz-queue-row-title" href="{href}" data-dz-queue-drill>{title}</a>'
     else:
         title_html = f'<span class="dz-queue-row-title">{title}</span>'
-    headline_html = (
-        f'<div class="dz-queue-row-headline">'
-        f"{title_html}"
-        f"{row.badges_html}"
-        f"</div>"
-    )
+    headline_html = f'<div class="dz-queue-row-headline">{title_html}{row.badges_html}</div>'
     # Trailing space inside class mirrors legacy Jinja when no attn.
     row_open_class = f"dz-queue-row {attn_class}" if attn_class else "dz-queue-row "
     return (
