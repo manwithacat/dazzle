@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.105.9] - 2026-07-17
+
+### Fixed
+- **design_studio ST-004 story coverage** — added `feedback_detail` VIEW
+  surface so discovery coherence sees Feedback.view for the reviewer
+  (related trail alone left ST-004 red; overall 88→95).
+
 ## [0.105.8] - 2026-07-17
 
 ### Fixed

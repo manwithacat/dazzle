@@ -407,6 +407,21 @@ surface feedback_list "Feedback":
     filter: asset, reviewer
     empty: "No feedback submitted yet."
 
+# View surface so ST-004 story_coverage sees Feedback.view for reviewer
+# (related table alone was not enough for discovery coherence).
+# open: is list-only (#1603) — hop to parent is via asset field + list open.
+surface feedback_detail "Feedback Detail":
+  uses entity Feedback
+  mode: view
+  section summary "Feedback":
+    field asset "Asset"
+    field reviewer "Reviewer"
+    field rating "Rating"
+    field comment "Comment"
+    field created_at "Date"
+  ux:
+    purpose: "Read a feedback note in context of the parent Asset"
+
 surface feedback_edit "Edit Feedback":
   uses entity Feedback
   mode: edit
