@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.105.8] - 2026-07-17
+
 ### Fixed
 - **`dazzle qa capture` workspace hang** — navigate uses `domcontentloaded`
   + 5s capped `networkidle` (same pattern as agent trial navigate) so HTMX
@@ -11,6 +13,9 @@
 - **property_vision / composition_capture navigate** — same domcontentloaded
   + capped networkidle pattern as qa capture.
 
+### Added
+- **Unit test pin for sweep interpreter** — `TestRunGate` asserts
+  `_run_gate` uses `sys.executable` (cycle 761).
 
 ## [0.105.7] - 2026-07-17
 
