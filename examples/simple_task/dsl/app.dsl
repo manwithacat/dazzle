@@ -326,36 +326,48 @@ surface task_list "Task List":
       scope: assigned_to = current_user or created_by = current_user
       purpose: "View your assigned and created tasks"
 
-# Task Detail
+# Task Detail — journey hub (not a flat warehouse dump): strip + related
 surface task_detail "Task Detail":
   uses entity Task
   mode: view
   render: fragment
 
-  section main "Task Details":
+  section summary "Summary":
     field title "Title"
     field description "Description"
+
+  section status "Status":
+    layout: strip
     field status "Status"
     field priority "Priority"
     field due_date "Due Date"
+
+  section ownership "Ownership":
     field assigned_to "Assigned To"
     field created_by "Created By"
     field created_at "Created"
     field updated_at "Updated"
 
-  ux:
-    purpose: "View complete task information"
+  related discussion "Discussion":
+    display: table
+    show: TaskComment
+    columns: content, author, created_at
 
-# Task Comment List - embedded in task detail
+  ux:
+    purpose: "Task context — status, ownership, and discussion in one place"
+
+# Task Comment List - open hops to parent task context (not orphan warehouse row)
 surface task_comments "Task Comments":
   uses entity TaskComment
   mode: list
   render: fragment
+  open: Task via task
 
   section main "Comments":
     field author "Author"
     field content "Comment"
     field created_at "Posted"
+    field task "Task"
 
   ux:
     purpose: "View and add comments on a task"
@@ -458,6 +470,8 @@ surface user_list "Team Members":
   uses entity User
   mode: list
   render: fragment
+  # Row click → member overview hub (journey, not dead warehouse row)
+  open: User via id
 
   access: persona(admin, manager)
 
@@ -469,7 +483,7 @@ surface user_list "Team Members":
     field is_active "Active"
 
   ux:
-    purpose: "Manage team members"
+    purpose: "Manage team members — open a member for context and open work"
     sort: name asc
     filter: role, department, is_active
     search: name, email
@@ -482,7 +496,7 @@ surface user_list "Team Members":
 
     as manager:
       scope: all
-      purpose: "View team members"
+      purpose: "View team members and open their work hub"
       read_only: true
 
 # #1600 Wedge B — multi-section VIEW is the client/context overview hub.

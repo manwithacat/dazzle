@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
-from dazzle.db.verify import unanchored_invariant_fields
+from dazzle.db.exclusive_checks import exclusive_anchor_field_sets
 from dazzle.representation.patterns import PatternId
 
 
@@ -25,6 +25,19 @@ _SYSTEM_FIELD_NAMES = frozenset(
         "deleted_at",
         "tenant_id",
         "version",
+    }
+)
+
+# Framework-injected entities — hand-rolled poly columns are platform residual
+# (#956 AuditEntry, etc.), not app dual-lock. Agents must not "fix" these in app DSL.
+_FRAMEWORK_ENTITY_NAMES = frozenset(
+    {
+        "AIJob",
+        "ProcessRun",
+        "JobRun",
+        "AuditEntry",
+        "OnboardingState",
+        "FeedbackReport",
     }
 )
 
@@ -53,12 +66,8 @@ def _optional_ref_fields(entity: Any) -> list[str]:
 
 
 def _exclusive_sets_from_invariants(entity: Any) -> list[list[str]]:
-    sets: list[list[str]] = []
-    for inv in getattr(entity, "invariants", None) or []:
-        fields = unanchored_invariant_fields(inv)
-        if fields and len(fields) >= 2:
-            sets.append(list(fields))
-    return sets
+    """Exclusive FK sets only — refs in at-least-one-anchor invariant (#1617)."""
+    return exclusive_anchor_field_sets(entity)
 
 
 def _json_and_poly_findings(entity: Any, ename: str) -> list[dict[str, Any]]:
@@ -176,19 +185,20 @@ def _findings_for_entity(entity: Any) -> list[dict[str, Any]]:
                 "ensure list open: first_non_null(...) covers these fields",
             )
         )
-    for pair in _hand_rolled_poly_pairs(entity):
-        out.append(
-            _finding(
-                "hand_rolled_poly",
-                "error",
-                ename,
-                [pair["type_field"], pair["id_field"]],
-                str(PatternId.POLY_REF),
-                f"{ename} has hand-rolled {pair['type_field']}+{pair['id_field']} "
-                f"— use poly_ref {pair['base']} […]",
-                "knowledge counter_prior id=polymorphic_associations",
+    if ename not in _FRAMEWORK_ENTITY_NAMES:
+        for pair in _hand_rolled_poly_pairs(entity):
+            out.append(
+                _finding(
+                    "hand_rolled_poly",
+                    "error",
+                    ename,
+                    [pair["type_field"], pair["id_field"]],
+                    str(PatternId.POLY_REF),
+                    f"{ename} has hand-rolled {pair['type_field']}+{pair['id_field']} "
+                    f"— use poly_ref {pair['base']} […]",
+                    "knowledge counter_prior id=polymorphic_associations",
+                )
             )
-        )
     if getattr(entity, "subtype_of", None):
         out.append(
             _finding(

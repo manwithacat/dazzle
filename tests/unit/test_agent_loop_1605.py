@@ -65,11 +65,12 @@ def test_binding_wall_buckets_and_prove_pass() -> None:
     assert "ST-017" in pass_ids
     assert "pass_static" in wall["markdown"] or "Executed + pass_static" in wall["markdown"]
     assert counts["executed_pass_static"] >= 1
-    # Journey buckets: ST-017 fails journey (host auto_assign_task missing)
+    # Host auto_assign_task is present — ST-017 (and journey stories) pass_journey
     assert "executed_pass_journey" in wall["buckets"]
     assert "executed_fail_journey" in wall["buckets"]
-    fail_j = {r["story_id"] for r in wall["buckets"]["executed_fail_journey"]}
-    assert "ST-017" in fail_j
+    pass_j = {r["story_id"] for r in wall["buckets"]["executed_pass_journey"]}
+    assert "ST-017" in pass_j
+    assert counts["executed_pass_journey"] >= 1
     assert "pass_journey" in wall["markdown"] or "fail_journey" in wall["markdown"]
 
 
@@ -126,17 +127,15 @@ def test_prove_process_bound_story_static_naming() -> None:
     assert data.get("evidence_kind") == "static"
 
 
-def test_prove_runtime_process_missing_service_host() -> None:
-    """ST-017 process needs auto_assign_task host — simple_task lacks it → fail_runtime."""
+def test_prove_runtime_process_service_host_ready() -> None:
+    """ST-017 process + services/auto_assign_task.py → pass_runtime (dogfood closed loop)."""
     data = prove_stories(SIMPLE, story_id="ST-017", mode="runtime")
     assert data.get("evidence_kind") == "runtime"
     r0 = data["results"][0]
     assert r0["story_id"] == "ST-017"
-    # Static should have passed (process exists)
     assert r0.get("static", {}).get("result") == "pass_static"
-    # Runtime fails: process step service has no host file
-    assert r0["result"] == "fail_runtime", r0
-    assert "auto_assign" in str(r0.get("reason", "")) or "not_ready" in str(r0.get("reason", ""))
+    assert r0["result"] == "pass_runtime", r0
+    assert "service_ready:auto_assign_task" in (r0.get("evidence") or [])
     assert "service_contract_diff" in data
 
 

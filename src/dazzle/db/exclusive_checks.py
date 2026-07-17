@@ -36,13 +36,32 @@ def exclusive_exactly_one_sql(fields: list[str]) -> str:
     return f"({parts}) = 1"
 
 
+def _field_kind(entity: Any, name: str) -> str:
+    for f in getattr(entity, "fields", None) or []:
+        if str(getattr(f, "name", "")) != name:
+            continue
+        t = getattr(f, "type", None)
+        k = getattr(t, "kind", None)
+        return str(getattr(k, "value", k) or "")
+    return ""
+
+
 def exclusive_anchor_field_sets(entity: Any) -> list[list[str]]:
-    """Return exclusive-anchor field lists from entity invariants."""
+    """Return exclusive-anchor **ref** field lists from entity invariants.
+
+    Only ``ref`` / ``belongs_to`` fields qualify as exclusive parents
+    (``rel.exclusive_fks``). Scalar at-least-one invariants
+    (``email != null or phone != null``) stay soft-verify-only — they are
+    **not** exclusive FKs and must not emit CHECK or first_non_null.
+    """
     sets: list[list[str]] = []
     for inv in getattr(entity, "invariants", None) or []:
         fields = unanchored_invariant_fields(inv)
-        if fields and len(fields) >= 2:
-            sets.append(list(fields))
+        if not fields or len(fields) < 2:
+            continue
+        refs = [f for f in fields if _field_kind(entity, f) in ("ref", "belongs_to")]
+        if len(refs) >= 2:
+            sets.append(refs)
     return sets
 
 

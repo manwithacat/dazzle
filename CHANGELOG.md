@@ -42,6 +42,14 @@
   `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood
   v0.104.9).
 
+## [0.104.16] - 2026-07-17
+
+### Added
+- **Example fleet agent-first dogfood** — exclusive-FK detect is **ref-only**
+  (email|phone no longer false-positive); framework `AuditEntry` skipped for
+  hand-rolled poly classify; `simple_task` journey hubs + ST-015/017/020/021
+  `pass_journey`; host `auto_assign_task`; `scripts/example_agent_prove.sh`.
+
 ## [0.104.15] - 2026-07-17
 
 ### Added

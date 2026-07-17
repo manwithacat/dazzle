@@ -73,6 +73,37 @@ def test_gin_index_sql() -> None:
     assert "jsonb_path_ops" in sql
 
 
+def test_scalar_at_least_one_is_not_exclusive_fk() -> None:
+    """email|phone contact invariant must not be rel.exclusive_fks / CHECK."""
+    # Build via parse so invariant_expr is real
+    import tempfile
+
+    from dazzle.core.parser import parse_modules
+    from dazzle.db.exclusive_checks import exclusive_anchor_field_sets
+
+    body = """
+entity Contact "Contact":
+  id: uuid pk
+  email: email
+  phone: str(20)
+  invariant: email != null or phone != null
+"""
+    d = Path(tempfile.mkdtemp())
+    f = d / "app.dsl"
+    f.write_text(f'module t\n\napp t "T"\n\n{body}', encoding="utf-8")
+    (module,) = parse_modules([f])
+    contact = module.fragment.entities[0]
+    assert exclusive_anchor_field_sets(contact) == []
+    appspec = ir.AppSpec(
+        name="t",
+        domain=ir.DomainSpec(entities=list(module.fragment.entities)),
+        surfaces=[],
+    )
+    kinds = {f["kind"] for f in classify_appspec(appspec)["findings"]}
+    assert "exclusive_fk_set" not in kinds
+    assert "exclusive_fk_missing_open" not in kinds
+
+
 def test_decide_default_explicit_ref() -> None:
     d = decide_representation(text="simple task list for one team")
     assert d["pattern_id"] == PatternId.EXPLICIT_REF

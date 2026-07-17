@@ -101,6 +101,8 @@ story ST-014 "Administrator views system-wide analytics":
     - "Administrator sees team velocity metrics"
 
 story ST-015 "Team Manager views all tasks for team":
+  status: accepted
+  executed_by: surface.task_list
   persona: manager
   trigger: user_click
   entities: [Task]
@@ -109,6 +111,7 @@ story ST-015 "Team Manager views all tasks for team":
   then:
     - "Team Manager sees every Task assigned within their team"
     - "Task list is sortable by priority, status, due_date"
+    - "Row open hops to the assignee overview (User via assigned_to)"
 
 story ST-016 "Team Manager views unassigned tasks":
   persona: manager
@@ -156,6 +159,8 @@ story ST-019 "Team Member updates own task status":
     - "Updated timestamp is recorded"
 
 story ST-020 "Team Member views own tasks":
+  status: accepted
+  executed_by: surface.task_list
   persona: member
   trigger: user_click
   entities: [Task]
@@ -164,3 +169,16 @@ story ST-020 "Team Member views own tasks":
   then:
     - "Team Member sees personal metrics and WIP/todo queues for assigned work"
     - "Team Member sees only Tasks scoped to self"
+
+story ST-021 "Team Manager opens assignee overview from the task board":
+  status: accepted
+  executed_by: surface.user_detail
+  persona: manager
+  trigger: user_click
+  entities: [Task, User]
+  given:
+    - "Team Manager is on the task list"
+    - "A Task has assigned_to set"
+  then:
+    - "Clicking the row opens the Team Member overview hub"
+    - "Hub shows identity, role strip, and related open work"

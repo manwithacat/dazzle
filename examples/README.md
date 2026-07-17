@@ -38,6 +38,29 @@ Footer **Legal** links Privacy / Cookies / Terms. ROPA stays pack-only
 substituted) — edit freely; re-runs do not overwrite an existing terms.md.
 See `support_tickets` for the fullest walkthrough.
 
+### Agent-first prove (journey + representation)
+
+Examples are the **dogfood bar** for agent-first coding — not only “CRUD works”,
+but *journey hubs*, *open-via hops*, and *representation integrity* so agents
+don’t stop at warehouse-style lists (CyFuture pilot criticism).
+
+```bash
+# Fleet: every example with dazzle.toml
+bash scripts/example_agent_prove.sh
+
+# Single app
+cd examples/simple_task
+dazzle prove representation -p .
+dazzle prove story --journey
+dazzle agent wall -p . --markdown
+dazzle agent playbook domain_data_shape
+```
+
+**simple_task** is the journey reference: task list → assignee overview hub
+(`open: User via assigned_to`), multi-section `user_detail` / `task_detail`,
+related work tables, and bound stories ST-015 / ST-017 / ST-020 / ST-021 with
+`pass_journey` evidence.
+
 ### HM surfaces (HaTchi-MaXchi)
 
 Example UIs are **HM-shaped**: pages compose Hyperparts (see ADR-0053), not
