@@ -26,6 +26,7 @@ VERSION_FILES = [
     ("pyproject.toml", r'^version\s*=\s*["\']([^"\']+)["\']', 'version = "{version}"'),
     ("homebrew/dazzle.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
     ("package.json", r'"version":\s*"([^"]+)"', '"version": "{version}"'),
+    ("AGENTS.md", r"\*\*Version\*\*:\s*[\d.]+", "**Version**: {version}"),
     (".claude/CLAUDE.md", r"\*\*Version\*\*:\s*[\d.]+", "**Version**: {version}"),
 ]
 

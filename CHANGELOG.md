@@ -42,6 +42,19 @@
   `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood
   v0.104.9).
 
+## [0.104.11] - 2026-07-17
+
+### Added
+- **#1617 Phase 1 — exclusive FK integrity in `db verify`** — for
+  at-least-one-anchor invariants (`a != null or b != null [or c…]`),
+  report `exclusive_conflict` when two or more anchors are non-null
+  (sparse exclusive parents). Complements existing `unanchored` check.
+  Docs: `data-representation.md`, `migrations.md`.
+
+### Fixed
+- **AGENTS.md version footer** in `scripts/bump-version.py` so patch
+  bumps stay aligned with `pyproject.toml` (agent asset gate).
+
 ## [0.104.10] - 2026-07-17
 
 ### Changed

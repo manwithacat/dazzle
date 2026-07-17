@@ -70,6 +70,42 @@ class TestUnanchoredInvariantRecognition:
         assert unanchored_invariant_fields(invariant) is None
 
 
+class TestExclusiveConflict1617:
+    """#1617 Phase 1: multi-set exclusive anchors on at-least-one invariant."""
+
+    def test_exclusive_conflict_sql_shape(self) -> None:
+        from dazzle.db.verify import exclusive_conflict_sql
+
+        sql = exclusive_conflict_sql('"Subscription"', ["company", "sole_trader"])
+        assert "IS NOT NULL" in sql
+        assert "> 1" in sql
+        assert "company" in sql and "sole_trader" in sql
+
+    @pytest.mark.asyncio
+    async def test_exclusive_conflicts_counted(self, make_entity, tmp_path: Path) -> None:
+        entities = _parse_entity(
+            tmp_path,
+            'entity Doc "Doc":\n'
+            "  id: uuid pk\n"
+            "  case_ref: ref Case\n"
+            "  matter_ref: ref Matter\n"
+            "  invariant: case_ref != null or matter_ref != null\n"
+            "\n"
+            'entity Case "Case":\n  id: uuid pk\n'
+            "\n"
+            'entity Matter "Matter":\n  id: uuid pk\n',
+        )
+        # 2 orphan checks → 0,0; unanchored → 0; exclusive conflicts → 3
+        conn = scalar_conn([0, 0, 0, 3])
+
+        result = await db_verify_impl(entities=entities, conn=conn)
+        conflicts = [c for c in result["checks"] if c["status"] == "exclusive_conflict"]
+        assert len(conflicts) == 1
+        assert conflicts[0]["exclusive_conflict_count"] == 3
+        assert conflicts[0]["anchor_fields"] == ["case_ref", "matter_ref"]
+        assert result["total_issues"] == 3
+
+
 class TestVerifyRequiredNulls:
     @pytest.mark.asyncio
     async def test_required_ref_nulls_counted(self, make_entity) -> None:
@@ -106,8 +142,8 @@ class TestVerifyRequiredNulls:
             "\n"
             'entity Matter "Matter":\n  id: uuid pk\n',
         )
-        # 2 orphan checks (case_ref, matter_ref) → 0; unanchored count → 1179.
-        conn = scalar_conn([0, 0, 1179])
+        # 2 orphan checks → 0; unanchored → 1179; exclusive conflicts → 0.
+        conn = scalar_conn([0, 0, 1179, 0])
 
         result = await db_verify_impl(entities=entities, conn=conn)
         unanchored = [c for c in result["checks"] if c["status"] == "unanchored"]
@@ -115,6 +151,12 @@ class TestVerifyRequiredNulls:
         assert unanchored[0]["unanchored_count"] == 1179
         assert unanchored[0]["anchor_fields"] == ["case_ref", "matter_ref"]
         assert result["total_issues"] == 1179
+        exclusive = [c for c in result["checks"] if c["status"] == "exclusive_conflict"]
+        assert exclusive == []  # count 0 → status ok
+        assert any(
+            c.get("status") == "ok" and c.get("exclusive_conflict_count") == 0
+            for c in result["checks"]
+        )
 
 
 class TestCleanupUnanchored:

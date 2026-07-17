@@ -8,14 +8,18 @@ from .sql import quote_id
 
 
 def unanchored_invariant_fields(invariant: Any) -> list[str] | None:
-    """Recognise the at-least-one-anchor invariant shape (#1364).
+    """Recognise the at-least-one-anchor invariant shape (#1364 / #1617).
 
     ``invariant: case_ref != null or matter_ref != null`` parses to an
     OR-tree of ``BinaryExpr(op=NE, left=FieldRef, right=Literal(None))``
-    nodes in ``invariant_expr``. That narrow shape translates statically to
-    one SQL ``WHERE a IS NULL AND b IS NULL`` count; anything else returns
-    None (not statically checkable — invariants are enforced at app
-    write-time only, so out-of-convention writes can violate them).
+    nodes in ``invariant_expr``. That narrow shape translates statically to:
+
+    - **unanchored** — all anchors NULL (``WHERE a IS NULL AND b IS NULL``)
+    - **exclusive_conflict** — more than one anchor non-null (#1617 Phase 1:
+      sparse exclusive FKs for ``company | sole_trader | partnership``)
+
+    Anything else returns None (not statically checkable — other invariants
+    stay app-write-time contracts).
     """
     expr = getattr(invariant, "invariant_expr", None)
     if expr is None:
@@ -44,6 +48,16 @@ def unanchored_invariant_fields(invariant: Any) -> list[str] | None:
     if _walk(expr) and len(fields) >= 2:
         return fields
     return None
+
+
+def exclusive_conflict_sql(table_quoted: str, fields: list[str]) -> str:
+    """SQL count of rows with more than one exclusive-anchor FK set (#1617).
+
+    ``table_quoted`` is a quote_id()'d table name; ``fields`` are raw column
+    names (quoted inside). Portable CASE sum works on Postgres.
+    """
+    parts = " + ".join(f"(CASE WHEN {quote_id(f)} IS NOT NULL THEN 1 ELSE 0 END)" for f in fields)
+    return f"SELECT count(*) FROM {table_quoted} WHERE ({parts}) > 1"
 
 
 def _build_orphan_query(
@@ -183,23 +197,28 @@ async def db_verify_impl(
                 warning_count += 1
                 error_count += 1
 
-    # #1364: unanchored rows — entities whose at-least-one-anchor invariant
-    # (`a != null or b != null`) is violated. Only that statically
-    # translatable shape is checked; other invariants are app-write-time
-    # contracts the DB cannot see.
+    # #1364 / #1617: exclusive-anchor invariant set
+    # (`a != null or b != null [or c != null]`):
+    #   - unanchored: every anchor NULL (at-least-one violated)
+    #   - exclusive_conflict: two+ anchors non-null (sparse exclusive FKs)
+    # Only that statically translatable shape is checked; other invariants
+    # remain app-write-time contracts the DB cannot see.
     for entity in entities:
         for invariant in getattr(entity, "invariants", []) or []:
             anchor_fields = unanchored_invariant_fields(invariant)
             if anchor_fields is None:
                 continue
+            table_q = quote_id(entity.name)
+            field_label = " / ".join(anchor_fields)
             null_conds = " AND ".join(f"{quote_id(f)} IS NULL" for f in anchor_fields)
-            sql = f"SELECT count(*) FROM {quote_id(entity.name)} WHERE {null_conds}"
+            sql_unanchored = f"SELECT count(*) FROM {table_q} WHERE {null_conds}"
+            sql_exclusive = exclusive_conflict_sql(table_q, anchor_fields)
             try:
-                unanchored = await fetchval(conn, sql)
+                unanchored = await fetchval(conn, sql_unanchored)
                 checks.append(
                     {
                         "entity": entity.name,
-                        "field": " / ".join(anchor_fields),
+                        "field": field_label,
                         "ref": None,
                         "status": "unanchored" if unanchored > 0 else "ok",
                         "unanchored_count": unanchored,
@@ -211,7 +230,32 @@ async def db_verify_impl(
                 checks.append(
                     {
                         "entity": entity.name,
-                        "field": " / ".join(anchor_fields),
+                        "field": field_label,
+                        "ref": None,
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
+                warning_count += 1
+                error_count += 1
+            try:
+                conflicts = await fetchval(conn, sql_exclusive)
+                checks.append(
+                    {
+                        "entity": entity.name,
+                        "field": field_label,
+                        "ref": None,
+                        "status": "exclusive_conflict" if conflicts > 0 else "ok",
+                        "exclusive_conflict_count": conflicts,
+                        "anchor_fields": anchor_fields,
+                    }
+                )
+                total_issues += conflicts
+            except Exception as e:
+                checks.append(
+                    {
+                        "entity": entity.name,
+                        "field": field_label,
                         "ref": None,
                         "status": "error",
                         "error": str(e),

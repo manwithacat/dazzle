@@ -25,13 +25,42 @@ When purity collides with multi-tenant SaaS velocity, use **documented** hatches
 
 | Hatch | When | Status |
 |-------|------|--------|
-| **Sparse exclusive FKs** | 2–4 alternative parents (`company` \| `sole_trader`) | Works today + `open: first_non_null(...)` |
+| **Sparse exclusive FKs** | 2–4 alternative parents (`company` \| `sole_trader`) | Works today + `open: first_non_null(...)` + integrity (#1617 Phase 1) |
 | **`subtype_of:` TPT** | True ISA with substantial per-kind columns | Shipped — prefer over STI for core domain |
 | **`json` / JSONB payload** | Tenant/feature-variable bags; keep core columns normalized | Field type exists; GIN/index conventions evolving |
 | **Typed polymorphic association** | Comment/attachment/audit → many parents | Designed in #1240; implement when a consumer forces |
 | **STI (single table + type)** | Related subtypes with sparse columns | Prefer TPT; lint when overused |
 | **EAV** | Extreme custom fields | Prefer JSONB projections, not classic EAV joins |
 | **Core vs extension schema** | Dual-lock host owns extensions | Intentional boundary; framework owns core |
+
+### Exclusive FKs integrity (#1617 Phase 1)
+
+Author the at-least-one-anchor invariant on the exclusive set:
+
+```dsl
+entity Subscription "Subscription":
+  id: uuid pk
+  company: ref Company
+  sole_trader: ref SoleTrader
+  partnership: ref Partnership
+  invariant: company != null or sole_trader != null or partnership != null
+```
+
+List drill:
+
+```dsl
+open: first_non_null(company, sole_trader, partnership)
+```
+
+`dazzle db verify` then reports two integrity classes for that invariant shape:
+
+| Status | Meaning |
+|--------|---------|
+| `unanchored` | Every exclusive FK is NULL (row has no parent) |
+| `exclusive_conflict` | Two or more exclusive FKs are non-null (row claims multiple parents) |
+
+App write-time still enforces invariants on framework writes; `verify` catches
+out-of-band SQL / legacy data. Hard DB `CHECK` codegen remains optional later.
 
 ## Display is not storage
 

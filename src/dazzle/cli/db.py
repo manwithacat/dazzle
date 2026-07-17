@@ -1650,6 +1650,13 @@ def verify_command(
                 f"  [red]✗[/red] {check['entity']} ({check['field']}): "
                 f"{check['unanchored_count']} unanchored row(s) — all anchor refs NULL"
             )
+        elif check["status"] == "exclusive_conflict":
+            # #1617 Phase 1: more than one exclusive-anchor FK set on a row.
+            console.print(
+                f"  [red]✗[/red] {check['entity']} ({check['field']}): "
+                f"{check['exclusive_conflict_count']} exclusive conflict(s) — "
+                f"more than one anchor ref non-null"
+            )
         else:
             console.print(
                 f"  [yellow]![/yellow] {check['entity']}.{check['field']}{target}: "
