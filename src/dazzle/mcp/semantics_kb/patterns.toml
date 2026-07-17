@@ -1282,6 +1282,108 @@ related = [
 ]
 v_0_72 = "Phase 3(e) feature-complete in v0.72.0; see ADR-0026 and fixtures/asset_registry/"
 
+[patterns.exclusive_fks]
+category = "Modelling"
+doc_page = "data-representation"
+name = "rel.exclusive_fks — sparse exclusive nullable FKs + first_non_null (#1617)"
+pattern_id = "rel.exclusive_fks"
+triggers = [
+    "company or sole trader",
+    "sole trader",
+    "partnership",
+    "alternative parents",
+    "one of several parents",
+    "client type",
+    "first_non_null",
+    "exclusive fk",
+    "company or partnership",
+    "subscription client",
+]
+description = """
+**Product-layer exclusive parents** (not poly_ref). When a row points at
+exactly one of 2–4 parent entity types (CyFuture company | sole_trader |
+partnership), use N optional `ref` fields + an at-least-one-anchor
+invariant + list `open: first_non_null(...)`.
+
+This is **not** Rails polymorphic association and **not** `poly_ref`.
+Call `representation(operation=decide)` / `dazzle representation decide`.
+"""
+when_to_use = [
+    "2–4 alternative parent types on one row",
+    "Journey hub / list drill must hop to the non-null parent",
+    "Not true ISA (parents are not subtypes of a shared base entity)",
+]
+when_NOT_to_use = [
+    "Shared child of many parents (Comment/Attachment) → rel.poly_ref",
+    "True ISA with mixed-kind list → subtype_of: (rel.tpt_subtype)",
+    "Single parent type → plain ref (rel.explicit_ref)",
+]
+example = '''
+entity Subscription "Subscription":
+  id: uuid pk
+  company: ref Company
+  sole_trader: ref SoleTrader
+  partnership: ref Partnership
+  invariant: company != null or sole_trader != null or partnership != null
+
+surface subscription_list "Subscriptions":
+  uses entity Subscription
+  mode: list
+  open: first_non_null(company, sole_trader, partnership)
+'''
+anti_pattern = """
+Hand-rolled subject_type + subject_id, or dual-lock multi-target open-via
+in host routes. Use exclusive FKs + framework open: first_non_null.
+"""
+related = [
+    "no_polymorphic_keys",
+    "subtype_of",
+    "poly_ref_pattern",
+]
+v_0_104 = "#1617 representation substrate v0.104.12+"
+
+[patterns.json_extension]
+category = "Modelling"
+doc_page = "data-representation"
+name = "rel.json_extension — core columns + json bag (#1617)"
+pattern_id = "rel.json_extension"
+triggers = [
+    "custom fields",
+    "tenant-variable",
+    "extension payload",
+    "jsonb",
+    "per-org fields",
+    "feature bag",
+    "tenant custom",
+]
+description = """
+Keep identity and FKs as typed columns; put tenant/feature-variable shape
+in a `json` field. Prefer this over classic EAV joins. Pattern ID:
+`rel.json_extension`. Decide via `dazzle representation decide --tenant-json`.
+"""
+when_to_use = [
+    "Per-tenant or per-feature optional bags without schema migrations",
+    "Extension payload beside a stable core model",
+]
+when_NOT_to_use = [
+    "Business keys / FKs that need integrity or scope — keep as columns",
+    "Unbounded dump of all domain data into one JSON blob",
+]
+example = '''
+entity Client "Client":
+  id: uuid pk
+  name: text required
+  extensions: json
+'''
+anti_pattern = """
+Storing only identity in JSON, or modeling all custom fields as EAV tables.
+"""
+related = [
+    "no_polymorphic_keys",
+    "exclusive_fks",
+]
+v_0_104 = "#1617 representation substrate v0.104.12+"
+
 [patterns.direct_one_to_many]
 category = "Modelling"
 doc_page = "patterns"

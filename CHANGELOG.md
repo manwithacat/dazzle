@@ -42,6 +42,15 @@
   `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood
   v0.104.9).
 
+## [0.104.13] - 2026-07-17
+
+### Added
+- **#1618 representation substrate polish** — bootstrap injects
+  `analysis.representation_decision` + generation step 4b; playbook
+  `domain_data_shape`; patterns.toml `exclusive_fks` / `json_extension`;
+  `dazzle agent wall` prefixes Representation OK/FAIL; counter-prior
+  cross-links exclusive FKs vs poly_ref.
+
 ## [0.104.12] - 2026-07-17
 
 ### Added

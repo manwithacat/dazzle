@@ -13,11 +13,21 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.agent_loop.journey_prove import journey_prove_one, prove_stories_journey
+from dazzle.agent_loop.playbooks import PLAYBOOK_DOMAIN_LOGIC, build_playbook
 from dazzle.agent_loop.runtime_prove import (
     prove_stories_runtime,
     service_contract_diff_deep,
 )
 from dazzle.core.appspec_loader import load_project_appspec
+
+# Re-export playbooks for `from dazzle.agent_loop.core import build_playbook`
+__all__ = (
+    "PLAYBOOK_DOMAIN_LOGIC",
+    "binding_wall",
+    "build_context",
+    "build_playbook",
+    "prove_stories",
+)
 
 
 def runtime_truth(project_root: Path) -> dict[str, Any]:
@@ -699,56 +709,6 @@ def _prove_journey_bundle(
         "skipped": runtime.get("skipped"),
     }
     return journey
-
-
-PLAYBOOK_DOMAIN_LOGIC = """# Playbook: domain_logic closed loop (#1605)
-
-## Thesis
-Structure tools are not enough. Domain behaviour lives in services/routes/process.
-Agents must **map → bind → scaffold → prove --static**, not dual-lock chrome.
-
-## ADR-0002
-- **MCP** — `agent(operation=context|prove|playbook)` when mcp extra installed
-- **CLI (default dual-lock path)** — no mcp required:
-  - `dazzle agent context`
-  - `dazzle prove story --static`
-  - `dazzle agent playbook domain_logic`
-  - `dazzle scaffold …`
-  - `dazzle story bind-migrate …`
-
-## Loop
-1. **Map** — `dazzle agent context`
-2. **Bind** — `executed_by:` or `narrative_only: true` on every accepted story
-3. **Scaffold** — `dazzle scaffold service|story|process-step …`
-4. **Prove** — `dazzle prove story --static` (binding evidence only)
-5. **Gate** — validate fails accepted+unbound
-
-## Language
-- `pass_static` / `fail_static` — binding target exists in DSL/host map
-- `pass_runtime` / `fail_runtime` / `skip_runtime` — host module readiness
-  (service file, entrypoint, not scaffold-only). **Not** browser e2e.
-- `pass_journey` / `fail_journey` / `skip_journey` — surface hub / open-via
-  hop graph + process host ready. **Still not** Playwright e2e.
-- `dazzle prove story --runtime` / `--journey`
-
-## Story wall (binding)
-- `dazzle agent wall` — buckets: pass_journey / fail_journey / pass_static /
-  fail_static / narrative_only / unbound_accepted
-- MCP `story(operation=get, view=wall)` includes the same binding buckets
-- `agent context` → `story_wall` for session start
-"""
-
-
-def build_playbook(name: str = "domain_logic") -> dict[str, Any]:
-    n = (name or "domain_logic").strip()
-    if n in ("domain_logic", "domain-logic", "default"):
-        return {
-            "ok": True,
-            "operation": "playbook",
-            "name": "domain_logic",
-            "body": PLAYBOOK_DOMAIN_LOGIC,
-        }
-    return {"ok": False, "error": f"Unknown playbook: {n}. Known: domain_logic"}
 
 
 def context_json(project_root: Path) -> str:

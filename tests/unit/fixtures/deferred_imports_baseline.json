@@ -8,7 +8,7 @@
   "src/dazzle/api_surface/public_helpers.py": 3,
   "src/dazzle/cli/__init__.py": 4,
   "src/dazzle/cli/activity.py": 2,
-  "src/dazzle/cli/agent_commands/__init__.py": 7,
+  "src/dazzle/cli/agent_commands/__init__.py": 9,
   "src/dazzle/cli/analytics.py": 1,
   "src/dazzle/cli/api_pack.py": 9,
   "src/dazzle/cli/auth.py": 6,

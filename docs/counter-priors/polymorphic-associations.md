@@ -82,9 +82,11 @@ proposed polymorphic-shaped relationship):
 1. **Do all subjects share the same lifecycle?** If yes → one entity with `subtype_of:` (TPT, ADR-0026), discriminator immutable, polymorphic queries via SQL UNION ALL. Only when the three TPT conditions hold (true IS-A, subtype-specific NOT NULL fields, polymorphic queries genuinely needed).
 2. **Is the relationship N:M per pair?** → one junction entity per (parent, child) pair. `ManuscriptComment`, `AssessmentComment`. Boring, scope-composable, FK-enforced.
 3. **Is the parent really a stream of typed events?** → an event-log entity with a `kind:` discriminator and per-kind payload entities. Notifications, audit logs, activity feeds collapse into this almost every time.
-4. **Are there N≤4 candidate targets and exactly one is non-null per row?** → N nullable refs + a check constraint that exactly one is set. Mutex refs. Verbose but referentially honest.
+4. **Are there N≤4 candidate targets and exactly one is non-null per row?** → N nullable refs + an at-least-one-anchor invariant + list `open: first_non_null(...)`. This is **`rel.exclusive_fks`** (#1617) — **product-layer exclusive parents**, *not* `poly_ref` and *not* Rails polymorphic association. Journey hubs (company | sole_trader | partnership) live here.
 
 If none of the four fit, the design is wrong, not the modelling. Re-state the requirement; the polymorphic shape is downstream of a confused requirement ~95% of the time.
+
+**Do not collapse `rel.exclusive_fks` into this counter-prior.** Exclusive FKs are the *right* hatch for alternative parents on one row. This prior forbids *hand-rolled* `subject_type`+`subject_id` and untyped poly only.
 
 ## Why this matters here
 
@@ -97,5 +99,7 @@ The pattern is also a tell. When an LLM proposes a polymorphic ref, the proximat
 - ADR-0026 (subtype polymorphism TPT) — the legitimate IS-A escape hatch.
 - ADR-0027 (no `polymorphic_ref:`, now or planned) — the formal closure.
 - ADR-0042 (`poly_ref` scoping) — the realized escape hatch: the typed, statically-validated, scope-composable construct for the ≈5% of cases that survive the interrogation. Verify any poly scope with `dazzle db explain-scope <Entity> <verb>`.
-- Inference KB entry `no_polymorphic_keys` — bootstrap auto-surfacing via `spec_analyze.propose_patterns` (#1249).
+- Inference KB entry `no_polymorphic_keys` — bootstrap auto-surfacing via `spec_analyze.propose_patterns` (#1249); rewired in #1617 to name exclusive FKs vs poly_ref.
+- Representation control plane (#1617): `dazzle representation decide|classify` / MCP `representation` / playbook `domain_data_shape`.
+- `docs/reference/data-representation.md` — pattern ID ladder.
 - `tests/unit/test_propose_patterns_1249.py` — pins the four-question routing for the canonical use cases (comments / attachments / tags / audit log / notifications / likes).

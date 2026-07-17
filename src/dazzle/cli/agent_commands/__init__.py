@@ -109,14 +109,18 @@ def closed_loop_wall(
 
     Buckets: executed+pass_static / executed+fail_static / narrative_only /
     unbound_accepted. Complements process-coverage wall on MCP story tool.
+    Includes #1617 representation prove line (attach_representation_to_wall).
     """
     from dazzle.agent_loop import binding_wall
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.representation import attach_representation_to_wall
 
     root = project.resolve()
     if not (root / "dazzle.toml").exists():
         typer.echo(f"Error: {root} has no dazzle.toml", err=True)
         raise typer.Exit(1)
-    data = binding_wall(root)
+    appspec = load_project_appspec(root)
+    data = attach_representation_to_wall(binding_wall(root, appspec), appspec)
     if markdown:
         typer.echo(data.get("markdown", ""))
     else:
@@ -124,6 +128,8 @@ def closed_loop_wall(
     if data.get("counts", {}).get("unbound_accepted") or data.get("counts", {}).get(
         "executed_fail_static"
     ):
+        raise typer.Exit(1)
+    if data.get("representation") and not data["representation"].get("ok", True):
         raise typer.Exit(1)
 
 

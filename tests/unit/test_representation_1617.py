@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from dazzle.core import ir
 from dazzle.representation import (
     PatternId,
@@ -64,7 +66,6 @@ def _exclusive_entities() -> tuple[ir.EntitySpec, ir.EntitySpec, ir.EntitySpec]:
 def _doc_entity_with_invariant():
     """Parse a tiny module so invariant_expr is real BinaryExpr tree."""
     import tempfile
-    from pathlib import Path
 
     from dazzle.core.parser import parse_modules
 
@@ -147,6 +148,52 @@ def test_prove_fails_hand_rolled_poly() -> None:
     proved = prove_representation(appspec)
     assert not proved["ok"]
     assert proved["result"] == "fail_representation"
+
+
+def test_playbook_domain_data_shape() -> None:
+    from dazzle.agent_loop import build_playbook
+
+    pb = build_playbook("domain_data_shape")
+    assert pb["ok"]
+    assert "rel.exclusive_fks" in pb["body"]
+    assert "representation decide" in pb["body"]
+
+
+def test_wall_attach_includes_representation() -> None:
+    from dazzle.representation import attach_representation_to_wall
+
+    appspec = ir.AppSpec(
+        name="t",
+        domain=ir.DomainSpec(
+            entities=[
+                ir.EntitySpec(
+                    name="Task",
+                    title="Task",
+                    fields=[
+                        ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                    ],
+                )
+            ]
+        ),
+        surfaces=[],
+    )
+    wall = attach_representation_to_wall(
+        {"markdown": "Story wall", "note": "binding", "counts": {}},
+        appspec,
+    )
+    assert wall["representation"] is not None
+    assert wall["representation"]["ok"] is True
+    assert "Representation:" in wall["markdown"]
+
+
+def test_bootstrap_decision_helper_exclusive() -> None:
+    from dazzle.mcp.server.handlers.bootstrap import _representation_decision_for_spec
+
+    d = _representation_decision_for_spec(
+        "Build an app for company or sole trader clients with journey deep dive"
+    )
+    assert d.get("ok")
+    assert d.get("pattern_id") == PatternId.EXCLUSIVE_FKS
 
 
 def test_prove_fails_exclusive_without_open() -> None:

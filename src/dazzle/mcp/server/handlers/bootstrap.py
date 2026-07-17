@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core.capabilities.cognition import active_capabilities_for
+from dazzle.representation import decide_representation
 
 from .common import extract_progress
 from .spec_analyze import handle_spec_analyze
@@ -164,6 +165,10 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
     )
     patterns_result = json.loads(patterns_raw)
 
+    # #1617 — representation ladder (decide) so agents pick exclusive FKs /
+    # poly_ref / JSON hatches before dual-locking Rails poly.
+    representation_decision = _representation_decision_for_spec(spec_text)
+
     # Build mission briefing
     questions = questions_result.get("questions", [])
     has_questions = len(questions) > 0
@@ -196,17 +201,57 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
             # capability the app hasn't declared, surface the enable command +
             # runbook instead of pushing guidance the app can't use yet.
             "capability_suggestions": patterns_result.get("capability_suggestions", []),
+            # #1617 S1 — executable hatch choice for data shape
+            "representation_decision": representation_decision,
         },
         "clarification_needed": has_questions,
         "questions": questions,
-        "agent_instructions": _build_instructions(has_questions, questions),
+        "agent_instructions": _build_instructions(
+            has_questions, questions, representation_decision
+        ),
     }
 
     return json.dumps(briefing, indent=2)
 
 
-def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) -> dict[str, Any]:
+def _representation_decision_for_spec(spec_text: str) -> dict[str, Any]:
+    """Run the #1617 decide ladder on free-text / bootstrap spec."""
+    try:
+        return decide_representation(text=spec_text or "")
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)[:200]}
+
+
+def _representation_instruction_bits(
+    representation_decision: dict[str, Any] | None,
+) -> list[str]:
+    """#1617 S1 — inject hatch choice into generation workflow."""
+    if not representation_decision or not representation_decision.get("ok"):
+        return [
+            (
+                "4b. Data shape: call representation(operation=decide, text=<spec>) "
+                "before modeling multi-parent or attachable domains. Use pattern IDs "
+                "(rel.exclusive_fks, rel.poly_ref, …) — never hand-rolled subject_type+id."
+            ),
+        ]
+    pid = representation_decision.get("pattern_id") or "rel.explicit_ref"
+    return [
+        (
+            f"4b. Data shape (#1617): analysis.representation_decision chose **{pid}**. "
+            f"Author DSL per that sketch; reject list is binding. After entities+open-via, "
+            f"run representation(operation=prove) / `dazzle prove representation`. "
+            f"Playbook: agent(operation=playbook, name=domain_data_shape)."
+        ),
+    ]
+
+
+def _build_instructions(
+    has_questions: bool,
+    questions: list[dict[str, Any]],
+    representation_decision: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Build the agent instruction block."""
+    rep_bits = _representation_instruction_bits(representation_decision)
     if has_questions:
         # Format questions for the agent to ask
         question_texts = [q.get("question", "") for q in questions[:5]]  # Max 5 questions
@@ -229,7 +274,9 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 "Structure (1-3) → Data model (4-6) → Access control (7a-7b) → UI (8-10) → ",
                 "Validation (11-13) → Security verification (14-16) → Coverage (17)",
                 "See the generation phase 'steps' array for exact instructions per step.",
+                *rep_bits,
             ],
+            "representation_decision": representation_decision,
             "dsl_generation_rules": [
                 "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
                 "Generate incrementally: entities first, then surfaces, then workspaces",
@@ -247,6 +294,10 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                     "semantics(operation='tenancy') as security gates."
                 ),
                 "Do NOT copy from example projects - generate from first principles",
+                (
+                    "Data representation: honour analysis.representation_decision pattern_id; "
+                    "never dual-lock open-via or invent subject_type+subject_id pairs."
+                ),
             ],
             "agent_commands_setup": {
                 "action": "Run `dazzle agent sync` to install autonomous development commands",
@@ -261,6 +312,7 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
         return {
             "phase": "generation",
             "action": "generate_dsl",
+            "representation_decision": representation_decision,
             "steps": [
                 # --- Structure ---
                 "1. Create dsl/ directory if it doesn't exist",
@@ -268,6 +320,7 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 "3. Define personas with descriptions and default_workspace assignments",
                 # --- Data model ---
                 "4. Generate entity definitions based on analysis",
+                *rep_bits,
                 "5. Add state machines for entities with lifecycles",
                 (
                     "6. If spec mentions third-party services (payments, email, identity, etc.), "
