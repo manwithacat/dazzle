@@ -2,7 +2,7 @@
 # Auto-generated from semantics.py
 
 [meta]
-pattern_count = 34
+pattern_count = 36
 
 
 [patterns.enterprise_sso]

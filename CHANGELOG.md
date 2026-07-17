@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+## [0.104.20] - 2026-07-17
+
+### Fixed
+- **CI red on main after journey dogfood** — bandit B324 on exclusive-check
+  name hash (`usedforsecurity=False`); patterns.toml `pattern_count` 36;
+  drop resolved `rhythm.Gap.surface_ref` IR orphan; refresh example
+  SPECIFICATION.md footers (+ structure sections for domain_join_co /
+  hr_records); regenerate simple_task brief + golden IR snapshots; datetime
+  unit asserts match humanised (unpadded day / local wall) display.
+
+
 ## [0.104.19] - 2026-07-17
 
 ### Added

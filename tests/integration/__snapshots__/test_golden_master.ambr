@@ -1213,6 +1213,8 @@
         'name': 'task_list',
         'open_entity': None,
         'open_via': None,
+        'open_via_targets': list([
+        ]),
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1279,6 +1281,8 @@
         'name': 'task_detail',
         'open_entity': None,
         'open_via': None,
+        'open_via_targets': list([
+        ]),
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1355,6 +1359,8 @@
         'name': 'task_create',
         'open_entity': None,
         'open_via': None,
+        'open_via_targets': list([
+        ]),
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1421,6 +1427,8 @@
         'name': 'task_edit',
         'open_entity': None,
         'open_via': None,
+        'open_via_targets': list([
+        ]),
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1506,6 +1514,8 @@
         'name': '_admin_health',
         'open_entity': None,
         'open_via': None,
+        'open_via_targets': list([
+        ]),
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,
@@ -1623,6 +1633,8 @@
         'name': '_admin_deploys',
         'open_entity': None,
         'open_via': None,
+        'open_via_targets': list([
+        ]),
         'peek': None,
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'refresh_interval': None,

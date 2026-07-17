@@ -123,7 +123,6 @@
   "rhythm.Gap.rhythm",
   "rhythm.Gap.scene",
   "rhythm.Gap.story_ref",
-  "rhythm.Gap.surface_ref",
   "rhythm.GapsReport.roadmap_order",
   "rhythm.GapsSummary.by_kind",
   "rhythm.GapsSummary.by_persona",

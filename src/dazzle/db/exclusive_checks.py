@@ -24,7 +24,8 @@ def exclusive_check_name(table: str, fields: list[str]) -> str:
         return base
     import hashlib
 
-    digest = hashlib.sha1(cols.encode()).hexdigest()[:8]
+    # Non-crypto short fingerprint for PG identifier length only (not a security hash).
+    digest = hashlib.sha1(cols.encode(), usedforsecurity=False).hexdigest()[:8]
     return f"ck_{table}_excl_{digest}"[:63]
 
 

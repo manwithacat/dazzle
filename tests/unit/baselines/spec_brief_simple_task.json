@@ -157,7 +157,7 @@
     },
     {
       "name": "user_detail",
-      "title": "Team Member Detail",
+      "title": "Team Member Overview",
       "entity": "User",
       "mode": "view"
     },
@@ -282,7 +282,8 @@
       "when": [],
       "outcomes": [
         "Team Manager sees every Task assigned within their team",
-        "Task list is sortable by priority, status, due_date"
+        "Task list is sortable by priority, status, due_date",
+        "Row open hops to the assignee overview (User via assigned_to)"
       ]
     },
     {
@@ -338,6 +339,17 @@
       "outcomes": [
         "Team Member sees personal metrics and WIP/todo queues for assigned work",
         "Team Member sees only Tasks scoped to self"
+      ]
+    },
+    {
+      "id": "ST-021",
+      "title": "Team Manager opens assignee overview from the task board",
+      "actor": "manager",
+      "description": null,
+      "when": [],
+      "outcomes": [
+        "Clicking the row opens the Team Member overview hub",
+        "Hub shows identity, role strip, and related open work"
       ]
     }
   ],

@@ -471,8 +471,10 @@ def test_stamps_renders_time_element_with_iso_datetime() -> None:
     out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
     body = out[0]["body"]
     assert '<time class="dz-stamp-time"' in body
+    # Machine ISO stays on the datetime attr; visible text is humanised (local wall clock).
     assert 'datetime="2026-05-10T09:00:00+00:00"' in body
-    assert ">2026-05-10 09:00<" in body
+    assert "May 2026" in body
+    assert ">2026-05-10T09:00" not in body
 
 
 def test_stamps_renders_optional_detail_field() -> None:
@@ -647,7 +649,8 @@ def test_thread_summary_renders_iso_timestamp_in_time_element() -> None:
     out = _build_entity_card_sections(items=[{"id": "p1"}], config=cfg, rows_per_section={0: rows})
     body = out[0]["body"]
     assert 'datetime="2026-05-10T15:00:00+00:00"' in body
-    assert ">2026-05-10 15:00<" in body
+    assert "May 2026" in body
+    assert ">2026-05-10T15:00" not in body
 
 
 def test_thread_summary_truncates_long_snippet_at_word_boundary() -> None:

@@ -76,4 +76,9 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:75fd10a2f20b7fe7d0aece3ce01950c3d0f7c603ce219635c5f09bdf68516d37 -->
+
+## How work flows
+
+Work moves through the roles and queues described above so each step has a clear owner.
+
+<!-- dazzle-spec-brief: sha256:062c6df47aa2e251d1ccda082bed56e767d11f9f8166218a3e6c6ba393f9a6ba -->

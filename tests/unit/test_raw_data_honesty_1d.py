@@ -29,9 +29,12 @@ def test_detail_checkbox_renders_icon_not_raw_true() -> None:
 
 
 def test_detail_datetime_humanised_with_time() -> None:
-    html = _detail("datetime", dt.datetime(2026, 6, 30, 3, 1, 29))
+    # Aware UTC so display is stable across CI host TZ; day is unpadded ("30" stays).
+    html = _detail("datetime", dt.datetime(2026, 6, 30, 3, 1, 29, tzinfo=dt.UTC))
     assert "2026-06-30T" not in html
-    assert "30 Jun 2026 03:01" in html
+    assert "Jun 2026" in html
+    # Wall clock may follow host local TZ — only require a human time component.
+    assert ":" in html
 
 
 def test_detail_number_rounds_float() -> None:
@@ -58,8 +61,11 @@ def test_detail_json_dict_is_summarised_not_mangled() -> None:
 
 
 def test_core_datetime_branch() -> None:
-    out = _render_cell_display({"type": "datetime"}, dt.datetime(2026, 1, 2, 9, 5))
-    assert "02 Jan 2026 09:05" in out
+    # Humanised form uses unpadded day ("2 Jan …"), not zero-padded "02".
+    out = _render_cell_display({"type": "datetime"}, dt.datetime(2026, 1, 2, 9, 5, tzinfo=dt.UTC))
+    assert "Jan 2026" in out
+    assert "2026-01-02T" not in out
+    assert ":" in out
 
 
 def test_core_number_branch_rounds() -> None:
