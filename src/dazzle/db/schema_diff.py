@@ -136,6 +136,24 @@ class DropUnique:
     columns: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class AddCheck:
+    """Add a named CHECK constraint (#1620 exclusive FKs)."""
+
+    table: str
+    name: str
+    condition: str
+
+
+@dataclass(frozen=True)
+class DropCheck:
+    """Drop a named CHECK constraint (#1620)."""
+
+    table: str
+    name: str
+    condition: str  # for downgrade recreate
+
+
 SchemaOp = (
     AddTable
     | DropTable
@@ -150,6 +168,8 @@ SchemaOp = (
     | DropIndex
     | AddUnique
     | DropUnique
+    | AddCheck
+    | DropCheck
 )
 
 # ---------------------------------------------------------------------------
@@ -371,6 +391,14 @@ def _diff_constraints(
     for cols in sorted(prev_uniques - curr_uniques):
         drop_ops.append(DropUnique(table=curr_tname, columns=cols))
 
+    # #1620 CHECK constraints (name → condition)
+    prev_checks = {str(n): str(c) for n, c in (prev_snap.get("checks") or [])}
+    curr_checks = {str(n): str(c) for n, c in (curr_snap.get("checks") or [])}
+    for name in sorted(set(curr_checks) - set(prev_checks)):
+        add_ops.append(AddCheck(table=curr_tname, name=name, condition=curr_checks[name]))
+    for name in sorted(set(prev_checks) - set(curr_checks)):
+        drop_ops.append(DropCheck(table=curr_tname, name=name, condition=prev_checks[name]))
+
     return add_ops, drop_ops
 
 
@@ -385,7 +413,7 @@ def _add_op_order(op: SchemaOp) -> int:
         return 0
     if isinstance(op, AddColumn):
         return 1
-    if isinstance(op, (AddUnique, AddIndex)):
+    if isinstance(op, (AddUnique, AddIndex, AddCheck)):
         return 2
     if isinstance(op, AddForeignKey):
         return 3
@@ -400,7 +428,7 @@ def _drop_op_order(op: SchemaOp) -> int:
     """
     if isinstance(op, DropForeignKey):
         return 0
-    if isinstance(op, (DropUnique, DropIndex)):
+    if isinstance(op, (DropUnique, DropIndex, DropCheck)):
         return 1
     if isinstance(op, DropColumn):
         return 2
@@ -487,6 +515,10 @@ def diff(
                 add_table_constraints.append(AddIndex(table=tname, column=idx_cols))
             for cols in unique_specs:
                 add_table_constraints.append(AddUnique(table=tname, columns=cols))
+            for name, cond in tsnap.get("checks") or []:
+                add_table_constraints.append(
+                    AddCheck(table=tname, name=str(name), condition=str(cond))
+                )
 
     # --- 4. Diff columns + constraints for common/renamed table pairs -------
     add_details: list[SchemaOp] = []

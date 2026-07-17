@@ -42,6 +42,15 @@
   `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood
   v0.104.9).
 
+## [0.104.14] - 2026-07-17
+
+### Added
+- **#1620 exclusive FK CHECK codegen** — at-least-one-anchor invariants
+  emit a named table `CHECK` (exactly one non-null exclusive FK) via
+  `build_metadata`, schema snapshot `checks`, migration `AddCheck` /
+  Alembic `CreateCheckConstraintOp`. Soft `db verify` exclusive_conflict
+  remains; docs soft vs hard in data-representation.md.
+
 ## [0.104.13] - 2026-07-17
 
 ### Added

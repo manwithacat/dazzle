@@ -17,6 +17,7 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
+from dazzle.db.exclusive_checks import check_constraint_specs
 from dazzle.db.virtual import is_virtual_entity
 from dazzle.http.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
@@ -650,6 +651,13 @@ def build_metadata(
                 )
             else:  # index
                 constraint_args.append(sa.Index(f"ix_{entity.name}_{cols}", *constraint.fields))
+
+        # #1620: exclusive-anchor CHECK (exactly one of N FKs non-null) from
+        # at-least-one-anchor invariants. Soft twin: db verify exclusive_conflict.
+        for ck_name, ck_sql, ck_fields in check_constraint_specs(entity):
+            if not all(f in column_names for f in ck_fields):
+                continue
+            constraint_args.append(sa.CheckConstraint(ck_sql, name=ck_name))
 
         tenant_args: list[Any] = []
         if is_tenant_scoped:

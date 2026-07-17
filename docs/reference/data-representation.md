@@ -89,7 +89,21 @@ open: first_non_null(company, sole_trader, partnership)
 | `exclusive_conflict` | Two or more exclusive FKs are non-null (row claims multiple parents) |
 
 App write-time still enforces invariants on framework writes; `verify` catches
-out-of-band SQL / legacy data. Hard DB `CHECK` codegen remains optional later.
+out-of-band SQL / legacy data.
+
+#### Soft vs hard integrity (#1620)
+
+| Layer | Mechanism | When |
+|-------|-----------|------|
+| **Soft** | `dazzle db verify` → `unanchored` / `exclusive_conflict` | Always available; audits legacy/manual SQL |
+| **Hard** | Named `CHECK` on the table: exactly one of the exclusive FKs is non-null | Emitted by `build_metadata` / migration engine from the same invariant shape |
+
+CHECK name: `ck_<Entity>_excl_<fields>` (or shortened hash). Expression uses
+portable `CASE WHEN col IS NOT NULL THEN 1 ELSE 0 END` summed to `= 1`.
+
+Soft verify remains useful after CHECK exists (reports counts; CHECK blocks
+writes). Prefer soft-only until you need storage-layer defence against out-of-band
+writes.
 
 ## Display is not storage
 

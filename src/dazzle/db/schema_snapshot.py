@@ -144,6 +144,23 @@ def _table_index_keys(table: Any) -> set[str]:
     return {",".join(sorted(c.name for c in idx.columns)) for idx in table.indexes}
 
 
+def _table_checks(table: Any) -> list[tuple[str, str]]:
+    """Named CHECK constraints as (name, sqltext) sorted (#1620 exclusive FKs)."""
+    rows: list[tuple[str, str]] = []
+    for constraint in table.constraints:
+        if not isinstance(constraint, sa.CheckConstraint):
+            continue
+        name = getattr(constraint, "name", None)
+        if not name:
+            continue
+        # sqltext may be TextClause / ColumnElement
+        sql = getattr(constraint, "sqltext", None)
+        if sql is None:
+            continue
+        rows.append((str(name), str(sql)))
+    return sorted(rows)
+
+
 def project_schema(
     metadata: sa.MetaData,
     table_filter: Callable[[str], bool] | None = None,
@@ -200,6 +217,8 @@ def project_schema(
             "fks": sorted(_table_fks(table)),
             "uniques": sorted(_table_uniques(table)),
             "indexes": sorted(_table_index_keys(table)),
+            # #1620: named CHECK constraints (exclusive-anchor exactly-one)
+            "checks": _table_checks(table),
         }
 
     return dict(sorted(snapshot.items()))

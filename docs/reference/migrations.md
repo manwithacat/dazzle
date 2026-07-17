@@ -591,6 +591,7 @@ Refs compile to **soft (un-constrained) columns** by design, and `required` + in
 - **Required-ref NULLs** — `ref X required` columns containing NULL.
 - **Unanchored rows** — entities declaring an at-least-one-anchor invariant (`invariant: case_ref != null or matter_ref != null`) where every anchor is NULL. Only that statically translatable invariant shape is checked; other invariants remain app-write-time contracts.
 - **Exclusive conflicts** (#1617 Phase 1) — same invariant shape, but **more than one** anchor is non-null (sparse exclusive FKs violated). Status `exclusive_conflict` in the verify report.
+- **Hard CHECK** (#1620) — the same exclusive-anchor invariant set also drives a named table `CHECK` (exactly one non-null) in `build_metadata` / migration ops (`AddCheck` → Alembic `CreateCheckConstraintOp`). Soft verify still reports counts; CHECK blocks violating writes.
 
 To remove the bad rows:
 

@@ -36,12 +36,14 @@ import sqlalchemy as sa
 from alembic.operations import ops as aops
 
 from dazzle.db.schema_diff import (
+    AddCheck,
     AddColumn,
     AddForeignKey,
     AddIndex,
     AddTable,
     AddUnique,
     AlterColumn,
+    DropCheck,
     DropColumn,
     DropForeignKey,
     DropIndex,
@@ -582,6 +584,22 @@ def _render_drop_unique(
     return drop_op, recreate_op
 
 
+def _render_add_check(
+    op: AddCheck,
+) -> tuple[aops.MigrateOperation, aops.MigrateOperation]:
+    create_op = aops.CreateCheckConstraintOp(op.name, op.table, op.condition)
+    drop_op = aops.DropConstraintOp(op.name, op.table, type_="check")
+    return create_op, drop_op
+
+
+def _render_drop_check(
+    op: DropCheck,
+) -> tuple[aops.MigrateOperation, aops.MigrateOperation]:
+    drop_op = aops.DropConstraintOp(op.name, op.table, type_="check")
+    recreate_op = aops.CreateCheckConstraintOp(op.name, op.table, op.condition)
+    return drop_op, recreate_op
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -664,4 +682,8 @@ def _render_single(
         return _render_add_unique(op)
     if isinstance(op, DropUnique):
         return _render_drop_unique(op)
+    if isinstance(op, AddCheck):
+        return _render_add_check(op)
+    if isinstance(op, DropCheck):
+        return _render_drop_check(op)
     return None
