@@ -1,3 +1,6 @@
+# Journey-bound stories for contact_manager agent-first dogfood.
+# Warehouse lists alone are not enough — list→hub + favourites queues must prove green.
+
 story ST-001 "User creates a new Contact":
   status: accepted
   narrative_only: true
@@ -10,49 +13,61 @@ story ST-001 "User creates a new Contact":
     - "New Contact is saved to database"
     - "User sees confirmation message"
 
-story ST-004 "User browses contacts alphabetically":
+story ST-004 "User works Home overview then opens a contact hub":
+  status: accepted
+  executed_by: surface.contact_list
   persona: user
   trigger: user_click
   entities: [Contact]
   given:
+    - "User is on the home workspace"
     - "Contacts exist in the directory"
-    - "User is on the contacts workspace"
   then:
-    - "User sees all Contacts sorted by last_name, first_name"
-    - "Contact list is scrollable"
+    - "User sees directory metrics and the favourites queue before the full list"
+    - "Opening a contact row hops to the Contact detail hub"
 
-story ST-005 "User searches contacts by name or company":
-  persona: user
-  trigger: form_submitted
-  entities: [Contact]
-  given:
-    - "User is on the contact list surface"
-    - "Contacts exist matching the query"
-  then:
-    - "User sees only Contacts whose first_name, last_name, email, or company matches"
-    - "Search is case-insensitive"
-
-story ST-006 "User views full contact details":
+story ST-005 "User browses the dual-pane directory with favourites strip":
+  status: accepted
+  executed_by: surface.contact_list
   persona: user
   trigger: user_click
   entities: [Contact]
   given:
-    - "User clicked a contact row in the list"
+    - "User is on the contacts workspace"
+    - "Contacts exist matching a search or A–Z sort"
   then:
-    - "User sees all fields on the contact detail surface"
-    - "User can return to the list via breadcrumb"
+    - "User sees favourites queue above the A–Z list"
+    - "Row open hops to Contact via id (detail hub, not a dead warehouse row)"
+    - "Search filters by first_name, last_name, email, or company"
 
-story ST-007 "User favourites a contact":
+story ST-006 "User opens contact hub for call context":
+  status: accepted
+  executed_by: surface.contact_detail
+  persona: user
+  trigger: user_click
+  entities: [Contact]
+  given:
+    - "User selected a contact from the list or favourites queue"
+  then:
+    - "Contact hub shows identity, employment strip, and notes/timeline sections"
+    - "User can return to the dual-pane list without losing browse context"
+
+story ST-007 "User pins a favourite from the directory queue":
+  status: accepted
+  executed_by: surface.contact_edit
   persona: user
   trigger: user_click
   entities: [Contact]
   given:
     - "Contact.is_favorite = false"
+    - "User is on home or contacts workspace"
   then:
     - "Contact.is_favorite becomes true"
-    - "Favourite contacts appear in the home and contacts favourites queues"
+    - "Favourite appears in the home and contacts favourites queues"
 
 story ST-008 "User edits an existing contact":
+  status: accepted
+  narrative_only: true
   persona: user
   trigger: form_submitted
   entities: [Contact]

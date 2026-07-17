@@ -1,21 +1,15 @@
 ## [Unreleased]
 
-### Fixed
-- **#1613 row actions pin `hx-trigger=click`** — delete / state-transition /
-  peek controls no longer inherit tbody `load` under HTMX
-  `implicitInheritance` (CyFuture auto-delete dialog on list entry). Actions
-  cell also sets `hx-disinherit="hx-trigger"`.
-- **#1614 open-via null FK falls back to same-entity detail** — when
-  `open: Entity via field` cannot resolve, row drills to
-  `/app/<list-entity>/{id}` so journeys stay navigable and row click shields
-  actions from #1613.
-- **#1615 related tables no longer dump FK dicts** — `format_cell` resolves
-  hydrated ref dicts via `_ref_display_name` (same as list cells).
-- **#1616 api_kb packs in wheel + load without mcp** — package-data ships
-  `**/*.toml`; pack discovery uses a pure module cache (no `dazzle.mcp`
-  import) so CH `search_select` sources register on dual-lock installs.
+## [0.104.18] - 2026-07-17
 
 ### Added
+- **Examples fleet journey dogfood (thin apps)** — multi-section hubs,
+  `open:` hops, and bound `pass_journey` stories for contact_manager,
+  invoice_ops (new stories + supplier hub), ops_dashboard, hr_records
+  (person career hub + employment/salary lists), acme_billing (project/
+  org hubs + invoice→project open), fieldtest_hub (device hub + ST-037/
+  040–041/044–047). Spec/a-priori domains, not warehouse CRUD only.
+  Fleet `example_agent_prove.sh` stays green.
 - **`make preflight-surface`** — hard local gate for unpaid structural/artifact
   debt (API surface, docs drift, deferred imports, import contracts, complexity
   ratchet, bare-except, catalogue CSS, HM gallery). Runs as the **first** step
@@ -37,6 +31,19 @@
   process/service binds. Deep `service_contract_diff` on context. Not browser e2e.
 
 ### Fixed
+- **#1613 row actions pin `hx-trigger=click`** — delete / state-transition /
+  peek controls no longer inherit tbody `load` under HTMX
+  `implicitInheritance` (CyFuture auto-delete dialog on list entry). Actions
+  cell also sets `hx-disinherit="hx-trigger"`.
+- **#1614 open-via null FK falls back to same-entity detail** — when
+  `open: Entity via field` cannot resolve, row drills to
+  `/app/<list-entity>/{id}` so journeys stay navigable and row click shields
+  actions from #1613.
+- **#1615 related tables no longer dump FK dicts** — `format_cell` resolves
+  hydrated ref dicts via `_ref_display_name` (same as list cells).
+- **#1616 api_kb packs in wheel + load without mcp** — package-data ships
+  `**/*.toml`; pack discovery uses a pure module cache (no `dazzle.mcp`
+  import) so CH `search_select` sources register on dual-lock installs.
 - **#1603 open-via unwraps hydrated FK dicts** — `_resolve_row_links` extracts
   scalar `id` from nested ref records / UUID objects so HTMX rows emit
   `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood

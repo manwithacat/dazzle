@@ -1,12 +1,12 @@
 module acme_billing.stories
 
 # =============================================================================
-# ACME BILLING — RBAC Behaviour Stories
-# =============================================================================
-# 5 stories documenting expected access behaviour for the key personas.
+# ACME BILLING — RBAC narratives + journey-bound portfolio stories
 # =============================================================================
 
 story ST-001 "Org owner manages projects within their organization":
+  status: accepted
+  narrative_only: true
   persona: org_owner
   trigger: form_submitted
   entities: [Project, Organization]
@@ -24,6 +24,8 @@ story ST-001 "Org owner manages projects within their organization":
     - "Org owner cannot see projects belonging to Globex"
 
 story ST-002 "Auditor reviews invoices but cannot modify them":
+  status: accepted
+  narrative_only: true
   persona: auditor
   trigger: user_click
   entities: [Invoice, Project]
@@ -40,6 +42,8 @@ story ST-002 "Auditor reviews invoices but cannot modify them":
     - "Auditor cannot create, update, or delete any invoice"
 
 story ST-003 "Project member sees only their assigned projects":
+  status: accepted
+  narrative_only: true
   persona: project_member
   trigger: user_click
   entities: [Project, Membership]
@@ -57,6 +61,8 @@ story ST-003 "Project member sees only their assigned projects":
     - "Project Beta is not visible to the project member"
 
 story ST-004 "External contractor views non-sensitive invoices within their organization":
+  status: accepted
+  narrative_only: true
   persona: external_contractor
   trigger: user_click
   entities: [Invoice]
@@ -79,6 +85,8 @@ story ST-004 "External contractor views non-sensitive invoices within their orga
         then: "Invoice is excluded from the result set"
 
 story ST-005 "Admin has cross-organization access":
+  status: accepted
+  narrative_only: true
   persona: admin
   trigger: user_click
   entities: [Organization, Project, Invoice, User, Membership]
@@ -94,3 +102,81 @@ story ST-005 "Admin has cross-organization access":
     - "Admin can see all Acme data"
     - "Admin can see all Globex data"
     - "Admin is not restricted to any single organization scope"
+
+# --- Journey-bound portfolio stories (agent-first dogfood) ---
+
+story ST-006 "Org owner browses projects and opens a project hub":
+  status: accepted
+  executed_by: surface.project_list
+  persona: org_owner
+  trigger: user_click
+  entities: [Project, Invoice]
+  given:
+    - "Org owner is on the billing workspace"
+    - "Org owner has list permission on Project within their organization"
+  then:
+    - "Org owner sees projects scoped to their organization"
+    - "Row open hops to Project detail with related invoices and memberships"
+
+story ST-007 "Org owner reviews invoices from the portfolio queue into project context":
+  status: accepted
+  executed_by: surface.invoice_list
+  persona: org_owner
+  trigger: user_click
+  entities: [Invoice, Project]
+  given:
+    - "Org owner is on the billing workspace"
+    - "Invoices exist for projects under the org"
+  then:
+    - "Portfolio metrics and open_invoices queue surface recent billing work"
+    - "Invoice row open hops to the parent Project hub via project FK"
+
+story ST-008 "Auditor opens project hub for read-only invoice review":
+  status: accepted
+  executed_by: surface.project_detail
+  persona: auditor
+  trigger: user_click
+  entities: [Project, Invoice]
+  given:
+    - "Auditor is authenticated and scoped to the organization"
+  then:
+    - "Project hub shows related invoices including sensitive ones"
+    - "Auditor cannot create, update, or delete invoices"
+
+story ST-009 "Project member sees only assigned projects and non-sensitive invoices":
+  status: accepted
+  executed_by: surface.project_list
+  persona: project_member
+  trigger: user_click
+  entities: [Project, Membership, Invoice]
+  given:
+    - "Project member has Membership on Project Alpha only"
+  then:
+    - "Project Alpha is visible; unassigned projects are not"
+    - "Opening the project hub shows only non-sensitive invoices per scope"
+
+story ST-010 "External contractor reviews non-sensitive invoices via project hub":
+  status: accepted
+  executed_by: surface.invoice_list
+  persona: external_contractor
+  trigger: user_click
+  entities: [Invoice, Project]
+  given:
+    - "External contractor is scoped to their organization"
+    - "Sensitive and non-sensitive invoices exist"
+  then:
+    - "Only non-sensitive org invoices appear"
+    - "Row open hops to Project hub; sensitive rows stay excluded by scope"
+
+story ST-011 "Admin reviews cross-org portfolio from organization hubs":
+  status: accepted
+  executed_by: surface.organization_list
+  persona: admin
+  trigger: user_click
+  entities: [Organization, Project, Invoice]
+  given:
+    - "Admin is on the billing workspace"
+    - "Acme and Globex organizations both exist"
+  then:
+    - "Admin sees all organizations"
+    - "Organization hub shows related projects without org scope restriction"

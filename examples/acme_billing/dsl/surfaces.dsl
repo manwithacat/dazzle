@@ -10,10 +10,14 @@ surface organization_list "Organizations":
   uses entity Organization
   mode: list
   render: fragment
+  open: Organization via id
 
   section main "Organizations":
     field name "Name"
     field created_at "Created"
+
+  ux:
+    purpose: "Browse organizations — open a row for the organization hub"
 
 surface organization_detail "Organization":
   uses entity Organization
@@ -23,6 +27,13 @@ surface organization_detail "Organization":
   section main "Organization Details":
     field name "Name"
     field created_at "Created"
+
+  related projects "Projects":
+    display: table
+    show: Project
+
+  ux:
+    purpose: "Organization hub — identity and related projects"
 
 surface organization_create "Create Organization":
   uses entity Organization
@@ -94,21 +105,41 @@ surface project_list "Projects":
   uses entity Project
   mode: list
   render: fragment
+  open: Project via id
 
   section main "Projects":
     field name "Name"
     field org "Organization"
     field created_at "Created"
 
+  ux:
+    purpose: "Browse projects — open a row for the project hub"
+
 surface project_detail "Project":
   uses entity Project
   mode: view
   render: fragment
 
-  section main "Project Details":
+  section summary "Summary":
     field name "Name"
     field org "Organization"
+
+  section meta "Meta":
+    layout: strip
     field created_at "Created"
+
+  related invoices "Invoices":
+    display: table
+    show: Invoice
+    columns: number, amount, sensitive, created_at
+
+  related members "Memberships":
+    display: table
+    show: Membership
+    columns: user, project
+
+  ux:
+    purpose: "Project hub — org context, invoices, and memberships"
 
 surface project_create "Create Project":
   uses entity Project
@@ -136,6 +167,7 @@ surface invoice_list "Invoices":
   uses entity Invoice
   mode: list
   render: fragment
+  open: Project via project
 
   section main "Invoices":
     field number "Number"
@@ -150,6 +182,7 @@ surface invoice_list "Invoices":
   # The declared sort gives the list sortable headers (grid convergence C1.1 —
   # exercised end-to-end by tests/e2e/test_grid_convergence_e2e.py).
   ux:
+    purpose: "Browse invoices — open a row for the parent Project hub"
     sort: number asc
     bulk_actions:
       mark_sensitive: sensitive -> true
@@ -160,12 +193,18 @@ surface invoice_detail "Invoice":
   mode: view
   render: fragment
 
-  section main "Invoice Details":
+  section summary "Summary":
     field number "Number"
     field amount "Amount"
     field project "Project"
+
+  section flags "Flags":
+    layout: strip
     field sensitive "Sensitive"
     field created_at "Created"
+
+  ux:
+    purpose: "Invoice detail — amount, project context, and sensitivity flags"
 
 surface invoice_create "Create Invoice":
   uses entity Invoice
@@ -197,10 +236,14 @@ surface membership_list "Memberships":
   uses entity Membership
   mode: list
   render: fragment
+  open: Project via project
 
   section main "Memberships":
     field user "User"
     field project "Project"
+
+  ux:
+    purpose: "Memberships — open a row for the parent Project hub"
 
 surface membership_detail "Membership":
   uses entity Membership

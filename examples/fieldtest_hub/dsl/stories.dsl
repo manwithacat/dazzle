@@ -204,16 +204,17 @@ story ST-036 "Engineer changes Task from in_progress to open":
 
 story ST-037 "Engineer triages recent issue reports":
   status: accepted
-  narrative_only: true
+  executed_by: surface.issue_report_list
   persona: engineer
   trigger: user_click
-  entities: [IssueReport]
+  entities: [IssueReport, Device]
   given:
     - "Engineer is on the engineering_dashboard workspace"
-    - "IssueReports exist with status 'open'"
+    - "IssueReports exist with status open"
   then:
     - "Engineer sees open reports in the triage_queue sorted by severity desc"
-    - "Engineer can transition a report from 'open' to 'triaged'"
+    - "Issue board row open hops to the Device hub via device_id"
+    - "Engineer can transition a report from open to triaged"
 
 story ST-038 "Engineer links firmware release to a device batch":
   status: accepted
@@ -242,20 +243,20 @@ story ST-039 "Engineer marks a device as recalled":
 
 story ST-040 "Manager reviews team workload":
   status: accepted
-  narrative_only: true
+  executed_by: surface.device_list
   persona: manager
   trigger: user_click
   entities: [Task, Tester, Device]
   given:
     - "Manager is on the engineering_dashboard workspace"
   then:
-    - "Manager sees fleet metrics and a non-active device attention queue without leaving the dashboard"
+    - "Manager sees fleet metrics and a non-active device attention queue"
     - "Manager sees open Tasks in a work queue"
-    - "Manager can reassign a Task from one Engineer to another"
+    - "Opening a device hops to the Device hub with issues and sessions"
 
 story ST-041 "Manager tracks release progress":
   status: accepted
-  narrative_only: true
+  executed_by: surface.firmware_release_list
   persona: manager
   trigger: user_click
   entities: [FirmwareRelease]
@@ -263,8 +264,8 @@ story ST-041 "Manager tracks release progress":
     - "Manager is on the engineering_dashboard workspace"
     - "FirmwareReleases exist in various statuses"
   then:
-    - "Manager sees release counts (draft vs released) on the metrics strip"
-    - "Manager sees releases sorted by release_date desc on the list"
+    - "Manager sees release counts on the metrics strip"
+    - "Manager can open firmware detail for draft vs released context"
 
 story ST-042 "Field Tester reports a device issue":
   status: accepted
@@ -292,7 +293,7 @@ story ST-043 "Field Tester logs a test session":
 
 story ST-044 "Field Tester views devices assigned to them":
   status: accepted
-  narrative_only: true
+  executed_by: surface.device_list
   persona: tester
   trigger: user_click
   entities: [Device]
@@ -300,4 +301,38 @@ story ST-044 "Field Tester views devices assigned to them":
     - "Field Tester is on their tester_dashboard"
   then:
     - "Field Tester sees only Devices where assigned_tester_id = self"
-    - "Field Tester can click through to log a session or report an issue"
+    - "Row open hops to Device hub to log a session or report an issue"
+
+story ST-045 "Engineer opens device hub with issues and sessions":
+  status: accepted
+  executed_by: surface.device_detail
+  persona: engineer
+  trigger: user_click
+  entities: [Device, IssueReport, TestSession]
+  given:
+    - "Device exists and is readable"
+  then:
+    - "Device hub shows production strip, assignment, related issues, and sessions"
+
+story ST-046 "Engineer opens issue then hops to device context":
+  status: accepted
+  executed_by: surface.issue_report_list
+  persona: engineer
+  trigger: user_click
+  entities: [IssueReport, Device]
+  given:
+    - "Engineer has list permission on IssueReport"
+  then:
+    - "Issue list open hops to Device via device_id"
+    - "Device hub shows related IssueReports for the batch"
+
+story ST-047 "Manager opens tester hub for assignments and activity":
+  status: accepted
+  executed_by: surface.tester_detail
+  persona: manager
+  trigger: user_click
+  entities: [Tester, Device, Task, TestSession]
+  given:
+    - "Manager has list permission on Tester"
+  then:
+    - "Tester hub shows related testing activity and device/task assignments"

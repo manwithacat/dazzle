@@ -1,4 +1,6 @@
 story ST-001 "Operations Engineer creates a new System":
+  status: accepted
+  narrative_only: true
   persona: ops_engineer
   trigger: form_submitted
   entities: [System]
@@ -9,6 +11,8 @@ story ST-001 "Operations Engineer creates a new System":
     - "Operations Engineer sees confirmation message"
 
 story ST-002 "Operations Engineer changes System from healthy to degraded":
+  status: accepted
+  narrative_only: true
   persona: ops_engineer
   trigger: status_changed
   entities: [System]
@@ -19,6 +23,8 @@ story ST-002 "Operations Engineer changes System from healthy to degraded":
     - "Timestamp is recorded"
 
 story ST-003 "Operations Engineer changes System from healthy to critical":
+  status: accepted
+  narrative_only: true
   persona: ops_engineer
   trigger: status_changed
   entities: [System]
@@ -29,6 +35,8 @@ story ST-003 "Operations Engineer changes System from healthy to critical":
     - "Timestamp is recorded"
 
 story ST-004 "Operations Engineer changes System from degraded to healthy":
+  status: accepted
+  narrative_only: true
   persona: ops_engineer
   trigger: status_changed
   entities: [System]
@@ -39,6 +47,8 @@ story ST-004 "Operations Engineer changes System from degraded to healthy":
     - "Timestamp is recorded"
 
 story ST-005 "Operations Engineer creates a new Alert":
+  status: accepted
+  narrative_only: true
   persona: ops_engineer
   trigger: form_submitted
   entities: [Alert]
@@ -48,17 +58,22 @@ story ST-005 "Operations Engineer creates a new Alert":
     - "New Alert is saved to database"
     - "Operations Engineer sees confirmation message"
 
-story ST-006 "Operations Engineer views all system health statuses at a glance":
+story ST-006 "Operations Engineer monitors health from the command center":
+  status: accepted
+  executed_by: surface.system_list
   persona: ops_engineer
   trigger: user_click
   entities: [System]
   given:
     - "Operations Engineer is on the command_center workspace"
   then:
-    - "Operations Engineer sees health metrics and status lists at a glance"
-    - "Critical systems and readiness strips are visually distinguished"
+    - "Operations Engineer sees health_summary metrics and system status at a glance"
+    - "Critical systems are visually distinguished"
+    - "Opening a system hops to the System detail hub"
 
-story ST-007 "Operations Engineer acknowledges an alert with one click":
+story ST-007 "Operations Engineer acknowledges an alert from the ack queue":
+  status: accepted
+  executed_by: surface.alert_ack
   persona: ops_engineer
   trigger: user_click
   entities: [Alert]
@@ -69,33 +84,39 @@ story ST-007 "Operations Engineer acknowledges an alert with one click":
     - "Active alerts appear in the acknowledgement queue"
     - "Alert.status becomes acknowledged from the queue or detail"
 
-story ST-008 "Operations Engineer views alerts grouped by severity":
+story ST-008 "Operations Engineer triages alerts by severity then opens system context":
+  status: accepted
+  executed_by: surface.alert_list
   persona: ops_engineer
   trigger: user_click
-  entities: [Alert]
+  entities: [Alert, System]
   given:
     - "Operations Engineer is on the command_center workspace"
     - "Open Alerts exist across systems"
   then:
-    - "Operations Engineer sees severity breakdown charts and the ack queue"
-    - "Critical and high severity alerts appear above medium/low"
+    - "Severity breakdown charts and the ack queue surface critical/high first"
+    - "Alert row open hops to the System overview hub via system FK"
 
-story ST-009 "Operations Engineer drills into a degraded system":
+story ST-009 "Operations Engineer drills into a degraded system hub":
+  status: accepted
+  executed_by: surface.system_detail
   persona: ops_engineer
   trigger: user_click
   entities: [System, Alert]
   given:
-    - "System.status is 'degraded' or 'critical'"
+    - "System.status is degraded or critical"
   then:
-    - "Operations Engineer sees the System detail with its open Alerts"
-    - "Operations Engineer can transition status from the detail page"
+    - "System hub shows health strip and related open Alerts"
+    - "Operations Engineer can transition status from the detail path"
 
-story ST-010 "Operations Engineer reviews recent deploy history":
+story ST-010 "Operations Engineer reviews alert history against system health":
+  status: accepted
+  executed_by: surface.alert_detail
   persona: ops_engineer
   trigger: user_click
   entities: [System, Alert]
   given:
-    - "System has transitioned through degraded / critical / offline states"
+    - "System has transitioned through degraded / critical states"
   then:
-    - "Operations Engineer sees status-change timestamps per System"
-    - "Operations Engineer can correlate each status change with its triggering Alerts"
+    - "Alert detail shows severity strip and parent System"
+    - "Operator correlates status-change timestamps with triggering Alerts"

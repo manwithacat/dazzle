@@ -9,22 +9,41 @@ use invoice_ops.entities
 surface invoice_list "Invoices":
   uses entity Invoice
   mode: list
+  open: Invoice via id
   section main:
     field invoice_number "Number"
     field amount "Amount" format: currency:GBP
     field currency "Currency"
     field status "Status"
+  ux:
+    purpose: "Browse invoices — open a row for the invoice hub"
 
 surface invoice_detail "Invoice":
   uses entity Invoice
   mode: view
-  section main:
+  section summary "Summary":
     field invoice_number "Number"
     field supplier "Supplier"
     field amount "Amount"
+    field currency "Currency"
+  section status "Status":
+    layout: strip
     field status "Status"
+    field po_number "PO Number"
+  section review "Review notes":
     field rejection_reason "Rejection Reason"
     field dispute_reason "Dispute Reason"
+    field submitted_by "Submitted By"
+  related lines "Line items":
+    display: table
+    show: LineItem
+    columns: description, quantity, unit_amount
+  related payments "Payment attempts":
+    display: table
+    show: PaymentAttempt
+    columns: attempt_number, status, failure_reason, created_at
+  ux:
+    purpose: "Invoice hub — status, lines, and settlement trail in one place"
 
 surface invoice_create "New Invoice":
   uses entity Invoice
@@ -42,10 +61,30 @@ surface invoice_create "New Invoice":
 surface supplier_list "Suppliers":
   uses entity Supplier
   mode: list
+  open: Supplier via id
   section main:
     field name "Name"
     field contact_email "Contact"
     field region "Region"
+  ux:
+    purpose: "Browse suppliers — open a row for the supplier hub"
+
+surface supplier_detail "Supplier":
+  uses entity Supplier
+  mode: view
+  section identity "Identity":
+    field name "Name"
+    field contact_email "Contact"
+    field region "Region"
+  related bank "Bank accounts":
+    display: table
+    show: SupplierBankAccount
+  related invoices "Invoices":
+    display: table
+    show: Invoice
+    columns: invoice_number, amount, status
+  ux:
+    purpose: "Supplier hub — identity, bank refs, and invoice history"
 
 # =============================================================================
 # PAYMENT ATTEMPT SURFACES
@@ -54,11 +93,14 @@ surface supplier_list "Suppliers":
 surface payment_attempt_list "Payment Attempts":
   uses entity PaymentAttempt
   mode: list
+  open: Invoice via invoice
   section main:
     field invoice "Invoice"
     field attempt_number "Attempt"
     field status "Status"
     field failure_reason "Failure Reason"
+  ux:
+    purpose: "Payment trail — open a row for the parent Invoice hub"
 
 # =============================================================================
 # AUDIT EXPORT SURFACE
@@ -100,11 +142,14 @@ surface user_list "Users":
 surface line_item_list "Line Items":
   uses entity LineItem
   mode: list
+  open: Invoice via invoice
   section main:
     field invoice "Invoice"
     field description "Description"
     field quantity "Qty"
     field unit_amount "Unit Amount"
+  ux:
+    purpose: "Line items — open a row for the parent Invoice hub"
 
 # =============================================================================
 # INVOICE EDIT SURFACE — generates PUT /invoices/{id} + drives state machine

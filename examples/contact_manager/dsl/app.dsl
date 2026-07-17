@@ -84,6 +84,7 @@ surface contact_list "Contact List":
   uses entity Contact
   mode: list
   render: fragment
+  open: Contact via id
 
   section main "Contacts":
     field first_name "First Name"
@@ -94,32 +95,37 @@ surface contact_list "Contact List":
     field is_favorite "Favorite"
 
   ux:
-    purpose: "Browse and search contacts"
+    purpose: "Browse and search contacts — open a row for the contact hub"
     sort: last_name asc, first_name asc
     filter: is_favorite
     search: first_name, last_name, email, company
     empty: "No contacts yet. Add your first contact!"
 
-# Detail view - full contact information
+# Detail view — contact hub (identity / employment / notes)
 surface contact_detail "Contact Detail":
   uses entity Contact
   mode: view
   render: fragment
 
-  section main "Contact Details":
+  section identity "Identity":
     field first_name "First Name"
     field last_name "Last Name"
     field email "Email"
     field phone "Phone"
+
+  section employment "Employment":
+    layout: strip
     field company "Company"
     field job_title "Job Title"
-    field notes "Notes"
     field is_favorite "Favorite"
+
+  section notes "Notes & timeline":
+    field notes "Notes"
     field created_at "Created"
     field updated_at "Updated"
 
   ux:
-    purpose: "View complete contact information"
+    purpose: "Contact hub — identity, employment, and notes in one place"
 
 # Create form
 surface contact_create "Create Contact":

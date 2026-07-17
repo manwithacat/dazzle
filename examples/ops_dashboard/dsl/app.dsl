@@ -700,6 +700,7 @@ surface system_list "Systems":
   uses entity System
   mode: list
   render: fragment
+  open: System via id
 
   section main "Monitored Systems":
     field name "Name"
@@ -709,7 +710,7 @@ surface system_list "Systems":
     field error_rate "Error Rate"
 
   ux:
-    purpose: "Review all monitored systems and spot degraded or critical ones at a glance"
+    purpose: "Review monitored systems — open a row for the system hub"
     sort: name asc
     filter: service_type, status
     search: name
@@ -720,15 +721,28 @@ surface system_detail "System Detail":
   mode: view
   render: fragment
 
-  section main "System Details":
+  section identity "Identity":
     field name "Name"
     field service_type "Type"
+
+  section health "Health":
+    layout: strip
     field status "Status"
     field last_check "Last Check"
     field response_time_ms "Response Time (ms)"
     field error_rate "Error Rate"
+
+  section capacity "Capacity":
     field cpu_usage "CPU Usage"
     field memory_usage "Memory Usage"
+
+  related alerts "Open alerts":
+    display: table
+    show: Alert
+    columns: severity, message, status, triggered_at
+
+  ux:
+    purpose: "System hub — health strip and open alerts in one place"
 
 surface system_create "Register System":
   uses entity System
@@ -768,6 +782,7 @@ surface alert_list "Alerts":
   uses entity Alert
   mode: list
   render: fragment
+  open: System via system
 
   section main "Active Alerts":
     field system "System"
@@ -777,7 +792,7 @@ surface alert_list "Alerts":
     field status "Status"
 
   ux:
-    purpose: "Review active alerts sorted by severity and acknowledge them as they're handled"
+    purpose: "Review alerts by severity — open a row for the parent System hub"
     sort: triggered_at desc
     filter: severity, status
     search: message, acknowledged_by
@@ -788,16 +803,19 @@ surface alert_detail "Alert Detail":
   mode: view
   render: fragment
 
-  section main "Alert":
+  section summary "Summary":
     field system "System"
-    field severity "Severity"
     field message "Message"
-    field triggered_at "Triggered"
+
+  section severity "Severity":
+    layout: strip
+    field severity "Severity"
     field status "Status"
+    field triggered_at "Triggered"
     field acknowledged_by "Acknowledged By"
 
   ux:
-    purpose: "Inspect the full context of an alert and its acknowledgement status"
+    purpose: "Inspect alert severity strip and parent System context"
 
 surface alert_ack "Acknowledge Alert":
   uses entity Alert

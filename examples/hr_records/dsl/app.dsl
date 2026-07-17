@@ -398,21 +398,39 @@ entity ManagerLink "Manager Link":
 surface person_list "Staff Directory":
   uses entity Person
   mode: list
+  open: Person via id
   section main:
     field legal_name "Legal name"
     field preferred_name "Preferred name"
     field email "Email"
     field started_at "Started"
+  ux:
+    purpose: "Staff directory — open a row for the person career hub"
 
 surface person_detail "Person":
   uses entity Person
   mode: view
-  section main:
+  section identity "Identity":
     field legal_name "Legal name"
     field preferred_name "Preferred name"
     field email "Email"
+  section tenure "Tenure":
+    layout: strip
     field started_at "Started"
     field ended_at "Ended (NULL = active)"
+  related employment "Employment history":
+    display: table
+    show: Employment
+    columns: role, department, start_date, end_date
+  related compensation "Salary history":
+    display: table
+    show: Salary
+    columns: amount, effective_from, effective_to, reason
+  related reporting "Reporting lines":
+    display: table
+    show: ManagerLink
+  ux:
+    purpose: "Person hub — identity, tenure strip, employment and salary history"
 
 surface person_create "Add Person":
   uses entity Person
@@ -475,6 +493,19 @@ surface role_create "Add Role":
 # ------------------------------------------------
 # Hand-roll workaround today: four separate create surfaces + project-side
 # coordination. Loses transactional atomicity.
+surface employment_list "Employment history":
+  uses entity Employment
+  mode: list
+  open: Person via person
+  section main:
+    field person "Person"
+    field role "Role"
+    field department "Department"
+    field start_date "Start"
+    field end_date "End"
+  ux:
+    purpose: "Employment history — open a row for the person career hub"
+
 surface employment_create "Start Employment":
   uses entity Employment
   mode: create
@@ -490,6 +521,19 @@ surface employment_edit "End / Update Employment":
   section main:
     field end_date "End date (set to close)"
     field notes "Notes"
+
+surface salary_list "Salary history":
+  uses entity Salary
+  mode: list
+  open: Person via person
+  section main:
+    field person "Person"
+    field amount "Amount"
+    field effective_from "From"
+    field effective_to "To"
+    field reason "Reason"
+  ux:
+    purpose: "Salary history — open a row for the person career hub"
 
 surface salary_create "New Salary":
   uses entity Salary

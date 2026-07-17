@@ -395,6 +395,7 @@ surface device_list "Device Dashboard":
   uses entity Device
   mode: list
   render: fragment
+  open: Device via id
 
   section main "Devices":
     field name "Name"
@@ -405,7 +406,7 @@ surface device_list "Device Dashboard":
     field serial_number "Serial"
 
   ux:
-    purpose: "Monitor all field devices with status indicators"
+    purpose: "Monitor field devices — open a row for the device hub"
     sort: batch_number asc, status asc
     filter: batch_number, firmware_version, status, assigned_tester_id
     search: name, model, serial_number
@@ -430,25 +431,40 @@ surface device_list "Device Dashboard":
       scope: assigned_tester_id = current_user
       purpose: "Your assigned devices"
 
-# Surface: Device Detail
+# Surface: Device Detail — fleet hub (identity / production / assignment + related)
 surface device_detail "Device Detail":
   uses entity Device
   mode: view
   render: fragment
 
-  section main "Device Information":
+  section identity "Identity":
     field name "Name"
     field model "Model"
-    field batch_number "Batch Number"
     field serial_number "Serial Number"
+
+  section production "Production":
+    layout: strip
+    field batch_number "Batch Number"
     field firmware_version "Firmware Version"
     field status "Status"
+
+  section assignment "Assignment":
+    field assigned_tester_id "Assigned Tester"
     field deployed_at "Deployed At"
     field created_at "Created"
     field updated_at "Last Updated"
 
+  related issues "Issue reports":
+    display: table
+    show: IssueReport
+    columns: severity, status, category, reported_at
+
+  related sessions "Test sessions":
+    display: table
+    show: TestSession
+
   ux:
-    purpose: "View complete device history and reports"
+    purpose: "Device hub — production strip, assignment, issues, and sessions"
 
     as engineer:
       scope: all
@@ -621,6 +637,7 @@ surface issue_report_list "Issue Board":
   uses entity IssueReport
   mode: list
   render: fragment
+  open: Device via device_id
 
   section main "Issue Reports":
     field device_id "Device"
@@ -631,7 +648,7 @@ surface issue_report_list "Issue Board":
     field reported_at "Reported"
 
   ux:
-    purpose: "Track and triage field issues with Kanban workflow"
+    purpose: "Triage field issues — open a row for the parent Device hub"
     sort: severity desc, reported_at desc
     filter: category, severity, status, firmware_version, device_id
     search: description, steps_to_reproduce
@@ -663,21 +680,26 @@ surface issue_report_detail "Issue Detail":
   mode: view
   render: fragment
 
-  section main "Issue Information":
+  section summary "Summary":
     field device_id "Device"
-    field reported_by_id "Reported By"
-    field category "Category"
-    field severity "Severity"
     field description "Description"
-    field steps_to_reproduce "Steps to Reproduce"
-    field photo_url "Photo/Video"
-    field firmware_version "Firmware Version"
+    field reported_by_id "Reported By"
+
+  section classification "Classification":
+    layout: strip
+    field severity "Severity"
     field status "Status"
-    field resolution "Resolution"
+    field category "Category"
+    field firmware_version "Firmware Version"
     field reported_at "Reported At"
 
+  section evidence "Evidence":
+    field steps_to_reproduce "Steps to Reproduce"
+    field photo_url "Photo/Video"
+    field resolution "Resolution"
+
   ux:
-    purpose: "View complete issue details and context"
+    purpose: "Issue hub — classification strip and evidence for triage"
 
     as engineer:
       scope: all
@@ -747,6 +769,7 @@ surface test_session_list "Test Sessions":
   uses entity TestSession
   mode: list
   render: fragment
+  open: Device via device_id
 
   section main "Test Sessions":
     field device_id "Device"
