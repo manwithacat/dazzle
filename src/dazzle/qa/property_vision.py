@@ -14,6 +14,7 @@ multi-image score_image call — future work if wanted.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,8 @@ from dazzle.core.sitespec_vision_rubric import SITESPEC_VISION_DIMENSIONS
 from dazzle.qa.taste_panel import JudgeScore, PanelImage, score_image
 
 __all__ = ["exemplars_for", "score_property"]
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_MANIFEST = Path(".dazzle/composition/references/sitespec/sitespec_references_manifest.json")
 
@@ -54,7 +57,15 @@ def _default_capture(url: str, out_png: Path) -> Path:
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 1440, "height": 1024})
-        page.goto(url, wait_until="networkidle")
+        # HTMX workspace shells keep sockets busy — unbounded networkidle
+        # hangs capture (same class as qa capture / agent trial navigate).
+        page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=5_000)
+        except Exception:
+            logger.debug(
+                "networkidle wait timed out after property capture of %s", url, exc_info=True
+            )
         page.screenshot(path=str(out_png), full_page=False)
         browser.close()
     return out_png

@@ -72,9 +72,15 @@ def _discover_example_apps(repo_root: Path) -> list[Path]:
 
 
 def _run_gate(app_dir: Path, args: list[str]) -> tuple[int, str]:
-    """Run ``dazzle <args>`` in ``app_dir``; return (exit_code, combined_output)."""
+    """Run ``dazzle <args>`` in ``app_dir``; return (exit_code, combined_output).
+
+    Uses ``sys.executable`` (not bare ``python``) so the active venv /
+    uv interpreter is always the one that has dazzle installed. PATH's
+    ``python`` can resolve to a system shim without the package
+    (``No module named dazzle`` on host installs).
+    """
     proc = subprocess.run(
-        ["python", "-m", "dazzle", *args],
+        [sys.executable, "-m", "dazzle", *args],
         cwd=app_dir,
         capture_output=True,
         text=True,

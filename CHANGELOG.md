@@ -5,6 +5,12 @@
   + 5s capped `networkidle` (same pattern as agent trial navigate) so HTMX
   workspace shells (e.g. design_studio `asset_gallery`) no longer drop
   screenshots on Playwright's 30s networkidle timeout.
+- **`dazzle sweep examples` wrong interpreter** — gates invoked via
+  `sys.executable -m dazzle` instead of bare `python`, so the active venv
+  is used (host PATH `python` lacked the package → false VALIDATE FAILED).
+- **property_vision / composition_capture navigate** — same domcontentloaded
+  + capped networkidle pattern as qa capture.
+
 
 ## [0.105.7] - 2026-07-17
 

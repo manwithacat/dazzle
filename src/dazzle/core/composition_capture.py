@@ -239,7 +239,15 @@ async def _capture_single_page(
     result = CapturedPage(route=route, viewport=viewport_name, viewport_height=vp_height)
 
     try:
-        await page.goto(url, wait_until="networkidle", timeout=15000)
+        # domcontentloaded first — unbounded networkidle hangs on HTMX/SSE
+        # workspace shells (same class as qa capture / agent trial navigate).
+        await page.goto(url, wait_until="domcontentloaded", timeout=60_000)
+        try:
+            await page.wait_for_load_state("networkidle", timeout=5_000)
+        except Exception:
+            logger.debug(
+                "networkidle wait timed out after composition capture of %s", url, exc_info=True
+            )
         # Extra wait for dynamic content (icons, lazy images)
         await page.wait_for_timeout(1500)
     except Exception as e:
