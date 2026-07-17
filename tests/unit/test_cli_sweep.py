@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import typer
 from typer.testing import CliRunner
@@ -13,6 +15,7 @@ from dazzle.cli.sweep import (
     _parse_lint_output,
     _render_human,
     _render_json,
+    _run_gate,
     sweep_examples_command,
 )
 
@@ -25,6 +28,23 @@ app = typer.Typer()
 app.add_typer(_sweep, name="sweep")
 
 runner = CliRunner()
+
+
+class TestRunGate:
+    def test_invokes_sys_executable_not_bare_python(self, tmp_path: Path) -> None:
+        """PATH ``python`` may lack dazzle; always use the active interpreter."""
+        completed = MagicMock()
+        completed.returncode = 0
+        completed.stdout = "ok\n"
+        completed.stderr = ""
+        with patch("dazzle.cli.sweep.subprocess.run", return_value=completed) as run:
+            code, out = _run_gate(tmp_path, ["validate"])
+        assert code == 0
+        assert "ok" in out
+        args = run.call_args.args[0]
+        assert args[0] == sys.executable
+        assert args[1:4] == ["-m", "dazzle", "validate"]
+        assert run.call_args.kwargs["cwd"] == tmp_path
 
 
 class TestParseLintOutput:

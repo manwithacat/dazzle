@@ -50,7 +50,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 744 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 739 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 744 | USED |
-| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 741 | USED |
+| `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 761 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 744 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 744 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 745 | USED |
@@ -61,7 +61,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 744 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 746 | USED |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 746 | USED |
-| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 740 | USED |
+| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 761 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 760 | USED |
