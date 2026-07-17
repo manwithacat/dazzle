@@ -1,5 +1,32 @@
 ## [Unreleased]
 
+## [0.105.0] - 2026-07-17
+
+### Agent Guidance
+- **Ship/CI habits (minor)** — mid-edit `make ci-changed`; every ship
+  `make ci-fast` (includes `ship-surface` after preflight); badge red →
+  `/cimonitor` **and** promote new failure classes into
+  `scripts/ship_surface.py` / `preflight_surface.py`. Canonical table:
+  AGENTS.md **Ship Discipline**; concordance:
+  `docs/contributing/local-ci-concordance.md`.
+- **#1621 / #1622 stay parked** — poly_ref polish and STI/EAV-as-JSONB only
+  under real consumer force (`future`); do not speculative-build. Substrate
+  already classifies hand-rolled poly and routes to `rel.poly_ref` /
+  `rel.json_extension`.
+
+### Added
+- **Tier 0.5 ship-surface + path packs** (landed in 0.104.22; promoted as
+  the minor habit surface) — bandit + SPEC/IR/viewport recurrent pack;
+  `make ci-changed` for git-diff packs.
+
+### Security
+- **mcp ≥ 1.28.1** — address CVE-2026-59950 (deprecated WebSocket transport
+  Host/Origin validation). Pin raised from `>=1.0.0`; lock resolved to 1.28.1.
+
+### Changed
+- AGENTS.md Ship Discipline + workflow blurbs; check/cimonitor/ship skills;
+  improve Step 0b/0c; CLAUDE adapter pointer only.
+
 ## [0.104.22] - 2026-07-17
 
 ### Added

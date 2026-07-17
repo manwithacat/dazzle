@@ -67,6 +67,16 @@ If either is red, **STOP and fix before continuing** — same rule as old /ux-cy
 applies to every lane now. Do not start a product lane on unpaid surface debt
 (that is the red-main stacking pattern).
 
+When this cycle will **ship** product code (any lane that commits), also run
+before push (or rely on `make ci-fast`, which includes it):
+
+```bash
+make ship-surface   # bandit + recurrent SPEC/IR/viewport pack (Tier 0.5)
+# mid-edit optional: make ci-changed
+```
+
+Habit source: AGENTS.md **Ship Discipline** + `docs/contributing/local-ci-concordance.md`.
+
 ### Step 0c: CI badge gate (always)
 
 Every cycle opens with a **snapshot** of the README badge workflow on `main` (not a long poll). Playbook: `improve/strategies/cimonitor.md` (thin wrapper around `.agents/skills/cimonitor/SKILL.md`).
@@ -78,7 +88,7 @@ gh run list --workflow ci.yml --branch main --limit 1 \
 
 | Snapshot | Driver action |
 |----------|---------------|
-| **Latest completed run `conclusion=failure` (or `cancelled` / `timed_out` that left the badge red)** | **This cycle is CI repair.** Do **not** pick a product/capability lane. Follow cimonitor: job breakdown → `gh run view <id> --log-failed` → fix root causes (including pre-existing) → commit → push → note follow-up. Log `lane: cimonitor`. `budget_consumed: 0`. Apply Step 3–4 (log, mark_run, release lock) and exit. Next `/improve` re-checks; if still red, repair again. |
+| **Latest completed run `conclusion=failure` (or `cancelled` / `timed_out` that left the badge red)** | **This cycle is CI repair.** Do **not** pick a product/capability lane. Follow cimonitor: job breakdown → `gh run view <id> --log-failed` → fix root causes (including pre-existing) → **close the loop** (promote new failure class into ship-surface/preflight if Tier 0 would have missed it) → commit → push → note follow-up. Log `lane: cimonitor`. `budget_consumed: 0`. Apply Step 3–4 (log, mark_run, release lock) and exit. Next `/improve` re-checks; if still red, repair again. |
 | **Latest run `in_progress` / `queued`** | Record status + run URL in this cycle's log under **ci:**; **continue** the normal cycle (do not burn the whole cycle waiting — the 6m `/loop` re-checks). |
 | **Latest completed run `conclusion=success`** | Record **ci: green** (run id) in the cycle log; continue. |
 | **`gh` unavailable / auth failure / no runs** | Log **ci: unavailable** with the error; continue the cycle (local preflight already ran). Do not invent a green badge. |

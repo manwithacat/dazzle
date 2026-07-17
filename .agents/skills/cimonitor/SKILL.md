@@ -7,6 +7,18 @@ Monitor CI/CD pipeline status. Checks both the current branch and the CI badge w
 
 **Also wired into `/improve`:** every improve cycle runs Step 0c (see `.claude/commands/improve.md` and `improve/strategies/cimonitor.md`) — a cheap snapshot of the `main` badge. When the latest completed `ci.yml` run is red, that improve cycle becomes CI repair (this skill's body) and does not pick a product lane. When green / in progress / `gh` unavailable, improve logs one line and continues.
 
+**Local habits (pair with repair, do not replace the badge):**
+
+| When | Command |
+|------|---------|
+| Mid-edit | `make ci-changed` |
+| Before ship | `make ci-fast` (includes `ship-surface`) |
+| After fixing a *new* badge-red class | Promote into `scripts/ship_surface.py` or `preflight_surface.py` |
+| Concordance | `docs/contributing/local-ci-concordance.md` |
+
+Tier 0 is intentional subset of GitHub; ship-surface closes the recurrent gap
+(bandit / SPEC / IR goldens / viewport). Full matrix + walks remain Tier 2.
+
 ## 1. Check the CI badge workflow (always)
 
 The README badge tracks the `CI` workflow on `main`. Always check this first:

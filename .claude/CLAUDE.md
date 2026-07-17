@@ -12,7 +12,7 @@ This file carries ONLY Claude-Code-runtime specifics; adding project facts here 
 - `/loop 30m /improve` — recurring; lane-pickup auto each fire
 - `/issues` / `/issues auto` — GitHub issue resolver loop
 - `/fuzz` — one cross-app boot-stderr sweep; `/loop /fuzz` self-paced
-- Contributor workflows (`/ship`, `/check`, `/bump`, `/cimonitor`, `/docs-update`, `/smells`) and the dsl-authoring / qa-trial / spec-narrate skills are portable — canonical bodies live under `.agents/skills/<name>/SKILL.md` once the skills split lands; until then they remain in `.claude/commands/` and `.claude/skills/`.
+- Contributor workflows (`/ship`, `/check`, `/bump`, `/cimonitor`, `/docs-update`, `/smells`) and the dsl-authoring / qa-trial / spec-narrate skills are portable — canonical bodies live under `.agents/skills/<name>/SKILL.md`. Ship/CI habits (preflight → ship-surface → ci-fast; cimonitor close-the-loop) live in **AGENTS.md Ship Discipline** and those skills — do not restate them here.
 
 ## Autonomous Multi-Phase Execution
 

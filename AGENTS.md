@@ -391,6 +391,19 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 
 - **Clean worktree**: Every push must leave `git status` clean. After shipping, check for untracked or modified files (especially `dist/`) and commit them before moving on.
 - **Bump on every fix**: Run the bump workflow (patch level) after bug fixes before pushing. Every push gets a unique version for deployment traceability.
+- **Local CI tiers (concordance)** — laptop green ≠ GitHub badge. Canonical doc:
+  `docs/contributing/local-ci-concordance.md`. Shared runner: `scripts/ci_local.sh`.
+  | Habit | Command | When |
+  |-------|---------|------|
+  | Structural debt | `make preflight-surface` | Always before ship (also first step of ci-fast/ci-core) |
+  | Recurrent badge-red pack | `make ship-surface` | Always in Tier 0 (`ci-fast` runs it after preflight) — bandit + SPEC/IR/viewport pack |
+  | Path-aware mid-edit | `make ci-changed` | After touching examples DSL, shell/viewport, KB, or `src/` — not a full ship substitute |
+  | Default ship gate | `make ci-fast` | Every `/ship` (preflight + ship-surface + ruff + mypy + gate + docs) |
+  | Release / version bump | `make ci-core` | Before tags / when operator wants GitHub-core concordance |
+  | Badge red | `/cimonitor` | Fix **and** promote the failure class into ship-surface/preflight if Tier 0 would have missed it |
+  Do **not** ship on ad-hoc pytest alone. Do **not** treat full CI as the only place
+  to discover bandit / SPEC footer / IR golden / pattern_count / viewport selector
+  debt — that is what ship-surface is for.
 - **Agent Guidance in CHANGELOG**: When a release introduces new patterns, conventions, ADRs, or breaking changes that affect how agents should work, add a `### Agent Guidance` section to that version's changelog entry. Keep entries concise — one bullet per topic, stating the rule and where to look.
 - **Commit attribution (read before `git commit`)**:
   - **Author / Committer** must be the human account owner (`James Barlow` /
@@ -411,10 +424,10 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 
 Reusable workflows live in `.agents/skills/<name>/SKILL.md` (open-standard format, any harness):
 
-- **ship** — Commit, verify, tag, and push with the repo's pre-flight gate suite (lint, type, drift gates, docs build)
-- **check** — Run all quality checks on modified files — the on-demand pre-ship quality gate
+- **ship** — Commit, verify, tag, and push via Tier 0 (`make ci-fast` = preflight + **ship-surface** + ruff/mypy/gate/docs) or Tier 1 (`make ci-core` for version bumps); never ad-hoc pytest-only
+- **check** — On-demand quality gate on modified files; prefers `make ci-changed` path packs + full unit when Python changed
 - **bump** — Bump the semantic version across all six canonical locations and update CHANGELOG
-- **cimonitor** — Monitor CI pipeline status, diagnose failures, and drive the badge back to green
+- **cimonitor** — Snapshot/repair the main CI badge; after repair, **close the loop** by promoting new failure classes into `ship-surface` / `preflight-surface`
 - **docs-update** — Sync documentation with recently closed GitHub issues
 - **smells** — Two-phase read-only code-smells analysis: regression checks + new systemic patterns
 - **dsl-authoring** — Syntax rules and common mistakes for writing/editing Dazzle `.dsl` files
@@ -489,4 +502,4 @@ Run the suite locally with `pytest -n auto --dist loadgroup -m "not e2e"` (~2 mi
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.104.22 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.105.0 | **Python**: 3.12+ | **Status**: Production Ready
