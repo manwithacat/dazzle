@@ -7,7 +7,8 @@ Commit all current changes and push to the remote. Follow these steps exactly.
 
 Local ↔ CI concordance is documented in
 `docs/contributing/local-ci-concordance.md`. The single runner is
-`scripts/ci_local.sh` (Makefile: `preflight-surface` / `ci-fast` / `ci-core`).
+`scripts/ci_local.sh` (Makefile: `preflight-surface` / `ship-surface` /
+`ci-changed` / `ci-fast` / `ci-core`).
 
 ## 1. Pre-flight checks
 
@@ -39,6 +40,23 @@ make preflight-surface
 If `origin/main` CI is already red for surface debt, **repair main first**
 (or include the repair in this ship) — do not stack another feature tip.
 
+### Ship-surface pack (mandatory — every Tier 0 ship)
+
+Recurrent badge-red classes (bandit medium, example SPEC freshness, IR/brief
+goldens, pattern_count, viewport DRAWER freshness). See
+`scripts/ship_surface.py`.
+
+```bash
+make ship-surface
+# also runs automatically inside make ci-fast (after preflight-surface)
+```
+
+Optional mid-edit path packs (does not replace Tier 0):
+
+```bash
+make ci-changed   # scripts/ci_changed.py — packs from git diff
+```
+
 ### Gate tier (required)
 
 Decide the tier from the ship arguments / intent (each includes preflight-surface):
@@ -50,10 +68,11 @@ Decide the tier from the ship arguments / intent (each includes preflight-surfac
 | Operator asked for maximum local confidence | Tier 1 | `make ci-core` |
 
 ```bash
-# Tier 0 — default (~2–3 min, no DB)
+# Tier 0 — default (~3–4 min, no DB)
 make ci-fast
 # → bash scripts/ci_local.sh tier0
-#    preflight-surface          ← hard structural debt gate
+#    preflight-surface          ← structural debt gate
+#    ship-surface               ← bandit + recurrent SPEC/IR/viewport pack
 #    ruff check --fix + format
 #    mypy src/dazzle
 #    pytest tests/unit -m gate

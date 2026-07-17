@@ -12,7 +12,8 @@ Monitor CI/CD pipeline status. Checks both the current branch and the CI badge w
 The README badge tracks the `CI` workflow on `main`. Always check this first:
 
 ```bash
-gh run list --workflow ci.yml --branch main --limit 1 --json status,conclusion,databaseId,url
+gh run list --workflow ci.yml --branch main --limit 1 \
+  --json status,conclusion,databaseId,url,displayTitle,updatedAt
 ```
 
 Report whether the badge is green or red. If red, this takes priority — investigate and fix before other work.
@@ -20,61 +21,82 @@ Report whether the badge is green or red. If red, this takes priority — invest
 ## 2. Find runs for the current branch
 
 ```bash
-gh run list --branch $(git branch --show-current) --limit 5 --json status,conclusion,name,url,databaseId,event,workflowName
+gh run list --branch $(git branch --show-current) --limit 5 \
+  --json status,conclusion,name,url,databaseId,event,workflowName
 ```
 
 ## 3. Poll in-progress runs
 
-For each `in_progress` or `queued` run, poll every 15 seconds up to 20 attempts:
+For each `in_progress` or `queued` run, poll every 15 seconds up to 20 attempts
+**only when already in repair mode after a push** (do not burn an improve cycle
+waiting on green):
 
 ```bash
 gh run view <run-id> --json status,conclusion,name
 ```
 
-Show a brief status update each poll.
-
 ## 4. Per-job breakdown
-
-For each completed run, show individual job results:
 
 ```bash
 gh run view <run-id> --json jobs --jq '.jobs[] | {name, conclusion, startedAt, completedAt}'
 ```
 
-Present as a table:
+Present as a table. Real `ci.yml` jobs include (names vary with matrix):
 
-| Job | Status | Duration |
-|-----|--------|----------|
-| Python Tests | success | 2m 15s |
-| Security Tests | success | 1m 30s |
-| ... | ... | ... |
-
-The CI workflow has these jobs (all must pass for a green badge):
-- `python-tests` — Unit tests with coverage (~8000 tests)
-- `security-tests` — JWT, ASVS, sanitization, bandit
-- `lint` — ruff + bandit + DSL validation + AsyncAPI
-- `type-check` — mypy on core + backend
-- `integration` — Integration tests (depends on tests + lint + security)
-- `e2e-smoke` — Example project validation + serve tests
-- `postgres-tests` — Full test suite against PostgreSQL
-- `e2e-runtime` — CRUD + DSL tests against PostgreSQL
-- `homebrew-validation` — Formula syntax + version consistency
+| Job family | What fails look like |
+|------------|----------------------|
+| `Python Tests (py3.12/13/14)` | full unit + integration non-e2e |
+| `lint` | ruff, **bandit medium on src/**, CSS clip/raw-ramp, coverage |
+| `type-check` | mypy |
+| `Security Tests` | JWT fuzz, RBAC matrix, bandit, pip-audit |
+| `integration` | integration tests (needs prior jobs) |
+| `E2E Smoke` | example validate / serve |
+| `PostgreSQL Tests` | service container |
+| `E2E Runtime` | Playwright-ish runtime |
+| `INTERACTION_WALK` | workspace gestures + **viewport geometry** |
+| `GUIDE_WALK` | onboarding overlays |
+| `UX Contracts` | `ux verify --contracts` on support_tickets |
+| `Homebrew Formula Validation` | formula / version |
 
 ## 5. Diagnose and fix failures
 
 For each failed job:
 
-1. Fetch logs: `gh run view <run-id> --log-failed | tail -100`
-2. Categorize the failure:
-   - **Type error** (mypy) → fix locally with `mypy src/dazzle` (matches /ship, /check, and CI)
-   - **Lint failure** (ruff) → fix locally with `ruff check src/ tests/ --fix && ruff format src/ tests/`
-   - **Test failure** → identify the test, run locally with `pytest <test_file> -x -v`
-   - **Security failure** (bandit) → check the flagged code
-   - **Flaky/infra** (timeout, network) → note as transient, suggest re-run
-3. **Fix ALL errors — including pre-existing ones.** The goal is a green badge, not just validating your own changes. If the CI was already red before your push, fix those errors too. Pre-existing mypy errors, lint warnings, or test failures should be fixed in a separate commit with a message like `fix: resolve pre-existing mypy errors in <file>`.
-4. Commit, push, and re-poll until the badge is green.
+1. Fetch logs: `gh run view <run-id> --log-failed | tail -200`
+2. Map log signature → **local mirror** (run this *before* guessing):
 
-## 6. Report summary
+| Log signature | Local command (run first) |
+|---------------|---------------------------|
+| `B324` / `bandit` / `>> Issue:` | `make ship-surface` or `bandit -c pyproject.toml -r src/ --severity-level medium` |
+| `SPECIFICATION.md is stale` / `test_example_spec_bar` | `pytest tests/unit/test_example_spec_bar.py -q` |
+| `pattern_count` | `pytest tests/unit/test_patterns_phase2_kb_1217.py::test_pattern_count_meta_matches_actual_count -q` |
+| `ir_reader_baseline` / `baselined orphan` | `pytest tests/unit/test_ir_field_reader_parity.py::test_no_new_ir_field_orphans -q` |
+| `test_simple_dsl_to_ir_snapshot` / syrupy | `pytest tests/integration/test_golden_master.py::test_simple_dsl_to_ir_snapshot -q` |
+| `spec_brief_simple_task` | `pytest tests/unit/test_spec_narrative_brief_snapshot.py -q` |
+| `DRAWER_PATTERN` / `.dz-sidebar-toggle` / viewport | `pytest tests/unit/test_viewport.py -q` then INTERACTION_WALK if shell CSS |
+| mypy | `mypy src/dazzle` |
+| ruff | `ruff check src/ tests/ --fix && ruff format src/ tests/` |
+| preflight / api surface / docs drift | `make preflight-surface` |
+
+3. **Fix ALL errors — including pre-existing ones.** Goal is green badge.
+4. Commit, push, re-snapshot.
+
+## 6. Close the loop (mandatory after repair)
+
+Fixing main without teaching Tier 0 is how the badge re-reds on the next ship.
+
+After a successful product fix (or in the same commit when small):
+
+1. Ask: **would `make ship-surface` or `make preflight-surface` have caught this?**
+2. If **no** → promote the check into `scripts/ship_surface.py` (`SHIP_TESTS` or bandit)
+   or `scripts/preflight_surface.py` (`SURFACE_TESTS`), with a remediation line.
+3. If the failure was path-specific, add a pack to `scripts/ci_changed.py`.
+4. Log one line: `ci_gap: <class> | local_mirror: none → promoted to ship-surface`
+
+Do **not** treat "badge green after full CI" as complete without this step when
+the failure class was new.
+
+## 7. Report summary
 
 ```
 ## CI Status
@@ -86,6 +108,10 @@ For each failed job:
 | Job | Result |
 |-----|--------|
 | ... | ...    |
+
+### Local mirror
+- command that would have caught this: <make ship-surface | …>
+- promoted to ship-surface/preflight? yes | n/a (already covered) | TODO
 
 ### Action Required
 - <what needs fixing, if anything>

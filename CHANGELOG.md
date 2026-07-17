@@ -1,5 +1,22 @@
 ## [Unreleased]
 
+## [0.104.22] - 2026-07-17
+
+### Added
+- **Tier 0.5 ship-surface pack** — `make ship-surface` / `scripts/ship_surface.py`
+  runs bandit medium on `src/` plus the recurrent badge-red unit pack
+  (example SPEC bar, brief/IR goldens, pattern_count, IR orphans, viewport
+  DRAWER freshness). Wired into `make ci-fast` after preflight-surface so
+  agents catch these without a full GitHub matrix.
+- **Path-aware `make ci-changed`** — `scripts/ci_changed.py` selects packs
+  from the git diff (examples DSL, core IR, shell/viewport, KB, bandit).
+- **cimonitor close-the-loop** — skill + improve strategy require promoting
+  new failure classes into ship-surface/preflight after badge repair.
+
+### Changed
+- **local-ci-concordance + /ship** — document Tier 0.5 and path packs;
+  Tier 0 step list includes ship-surface.
+
 ## [0.104.21] - 2026-07-17
 
 ### Fixed

@@ -47,21 +47,58 @@ Standalone use mid-change:
 make preflight-surface
 ```
 
+### Tier 0.5 — `make ship-surface` (`scripts/ci_local.sh ship-surface`)
+
+**Recurrent badge-red classes** that used to slip past Tier 0 and only fail
+after a full `ci.yml` matrix. Script: `scripts/ship_surface.py`.
+
+| Step | CI failure class |
+|------|------------------|
+| `bandit -r src/ --severity-level medium` | lint job B3xx (e.g. B324 hashlib) |
+| `test_example_spec_bar` | example DSL without SPECIFICATION.md regen |
+| `test_spec_narrative_brief_snapshot` | simple_task brief golden |
+| `pattern_count` meta tests | patterns.toml `[meta].pattern_count` |
+| `test_no_new_ir_field_orphans` | IR reader baseline |
+| golden IR snapshot | `test_simple_dsl_to_ir_snapshot` |
+| viewport DRAWER freshness | shell toggle selector rot (browser-free) |
+
+**Also runs automatically as the second step of Tier 0** (after preflight).
+Standalone for mid-edit: `make ship-surface`.
+
+After a **cimonitor** repair, new recurrent classes must be **promoted into
+this pack or preflight-surface** — fix-only is incomplete.
+
+### Path-aware — `make ci-changed` (`scripts/ci_local.sh changed`)
+
+`scripts/ci_changed.py` selects packs from the git diff (`origin/main...HEAD`
+plus worktree dirt):
+
+| Path touch | Pack |
+|------------|------|
+| `examples/**/dsl/**` | example SPEC bar |
+| `src/dazzle/mcp/semantics_kb/**` | pattern_count |
+| `src/dazzle/core/**`, IR snapshots | golden IR + IR orphans |
+| shell / viewport / HM | viewport unit + topbar |
+| `src/**` | bandit medium on `src/` |
+
+Use mid-edit for a fast loop; does **not** replace Tier 0 for ship.
+
 ### Tier 0 — `make ci-fast` (`scripts/ci_local.sh tier0`)
 
-**Default for `/ship`.** Budget ~2–3 minutes, no Postgres. **Always runs
-preflight-surface first.**
+**Default for `/ship`.** Budget ~3–4 minutes, no Postgres. **Always runs
+preflight-surface then ship-surface first.**
 
 | Step | Mirrors |
 |------|---------|
 | `preflight-surface` | Structural debt cluster (see above) |
+| `ship-surface` | Recurrent badge-red pack (bandit + SPEC/IR/viewport) |
 | `ruff check --fix` + `ruff format` | CI `lint` (local mutates; CI is check-only) |
 | `mypy src/dazzle` | CI `type-check` **command** (extras may still differ) |
 | `pytest tests/unit -m gate` | Full gate suite (superset of preflight modules) |
 | `mkdocs build --strict` | `docs.yml` build |
 
-Does **not** include full unit matrix, security hard-fail, multi-version Python,
-or service-backed jobs.
+Does **not** include full unit matrix, multi-version Python, Postgres,
+Playwright walks, or service-backed jobs.
 
 ### Tier 1 — `make ci-core` (`scripts/ci_local.sh tier1`)
 
@@ -129,8 +166,9 @@ make type-check-ci
 
 | Skill | Default tier |
 |-------|----------------|
-| `/ship` | Tier 0 (`make ci-fast`); **Tier 1** for minor/major or version bumps |
-| `/check` | Opportunistic per changed files; prefer full unit when Python changed; `make ci-core` when asked for release-grade |
+| `/ship` | Tier 0 (`make ci-fast` = preflight + **ship-surface** + ruff/mypy/gate/docs); **Tier 1** for minor/major or version bumps; optional `make ci-changed` mid-edit |
+| `/cimonitor` | Repair badge; **close the loop** by promoting new failure classes into ship-surface/preflight |
+| `/check` | Opportunistic per changed files (`make ci-changed`); prefer full unit when Python changed; `make ci-core` when asked for release-grade |
 
 ---
 

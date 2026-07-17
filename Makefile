@@ -8,7 +8,7 @@
 # use pyenv/virtualenv/pip-install-editable for this repo — see
 # docs/contributing/dev-setup.md.
 
-.PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core preflight-surface sync-ci-type sync-ci-test pre-commit
+.PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core preflight-surface ship-surface ci-changed sync-ci-type sync-ci-test pre-commit
 
 # Prefer a real uv binary over pyenv shims. A committed `.python-version` of
 # `3.14` is correct for uv + Heroku but makes pyenv abort when that version is
@@ -61,7 +61,9 @@ help:
 	@echo ""
 	@echo "CI/CD (local concordance — see docs/contributing/local-ci-concordance.md):"
 	@echo "  preflight-surface  Hard gate: API/docs/import/ratchet/HM debt (run before every ship)"
-	@echo "  ci-fast          Tier 0: preflight + ruff + mypy + gate suite + mkdocs (~2–3 min)"
+	@echo "  ship-surface     Tier 0.5: bandit + recurrent SPEC/IR/viewport pack (badge-red classes)"
+	@echo "  ci-changed       Path-aware packs for git diff (fast mid-edit loop)"
+	@echo "  ci-fast          Tier 0: preflight + ship-surface + ruff + mypy + gate + mkdocs"
 	@echo "  ci-core          Tier 1: preflight + CI lint/type/unit/security/docs mirror"
 	@echo "  ci               Legacy umbrella (lint + format-check + type-check + security + test-all + examples)"
 	@echo "  pre-commit       Run pre-commit on all files"
@@ -234,8 +236,17 @@ examples:
 preflight-surface:
 	bash scripts/ci_local.sh preflight-surface
 
+# Recurrent badge-red classes (bandit + SPEC/IR/viewport) — Tier 0.5.
+# Also runs as part of ci-fast after preflight-surface.
+ship-surface:
+	bash scripts/ci_local.sh ship-surface
+
+# Path-aware packs for the current git diff (examples DSL, shell, KB, …).
+ci-changed:
+	bash scripts/ci_local.sh changed
+
 # Tier 0 — what `/ship` runs by default (fast; not full GitHub CI).
-# Always runs preflight-surface first.
+# Always runs preflight-surface then ship-surface first.
 ci-fast:
 	bash scripts/ci_local.sh tier0
 

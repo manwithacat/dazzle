@@ -205,9 +205,36 @@ cmd_preflight_surface() {
   _ok "preflight-surface clean"
 }
 
+cmd_ship_surface() {
+  # Tier 0.5 — recurrent badge-red classes (bandit + SPEC/IR/viewport pack).
+  # See scripts/ship_surface.py and docs/contributing/local-ci-concordance.md.
+  _log "ship-surface  (bandit medium + recurrent unit pack)"
+  if [ -x "$ROOT/.venv/bin/python" ]; then
+    "$ROOT/.venv/bin/python" "$ROOT/scripts/ship_surface.py" \
+      || _die "ship-surface failed — fix recurrent CI debt before ship (see remediation above)"
+  else
+    _run_uv python "$ROOT/scripts/ship_surface.py" \
+      || _die "ship-surface failed — fix recurrent CI debt before ship (see remediation above)"
+  fi
+  _ok "ship-surface clean"
+}
+
+cmd_changed() {
+  _log "ci-changed  (path-aware packs for git diff)"
+  if [ -x "$ROOT/.venv/bin/python" ]; then
+    "$ROOT/.venv/bin/python" "$ROOT/scripts/ci_changed.py" \
+      || _die "ci-changed failed — a path pack is red"
+  else
+    _run_uv python "$ROOT/scripts/ci_changed.py" \
+      || _die "ci-changed failed — a path pack is red"
+  fi
+  _ok "ci-changed clean"
+}
+
 cmd_tier0() {
-  _log "TIER 0 / ship-fast  (preflight-surface, ruff fix, mypy, gate suite, docs)"
+  _log "TIER 0 / ship-fast  (preflight + ship-surface + ruff + mypy + gate + docs)"
   cmd_preflight_surface
+  cmd_ship_surface
   cmd_ruff_fix
   cmd_type_check
   cmd_gates
@@ -244,7 +271,9 @@ Usage: bash scripts/ci_local.sh <command>
 
 Commands:
   preflight-surface     Hard structural debt gate (API/docs/import/ratchet/HM)
-  tier0 | ship-fast     preflight + ruff fix + mypy + -m gate + mkdocs
+  ship-surface          Tier 0.5: bandit + recurrent SPEC/IR/viewport pack
+  changed | ci-changed  Path-aware packs for files in git diff
+  tier0 | ship-fast     preflight + ship-surface + ruff + mypy + gate + mkdocs
   tier1 | ci-core       preflight + CI core mirror (sync, lint, type, unit, security, docs)
   sync-type             uv sync --frozen with CI type-check extras (Python 3.12)
   sync-test             uv sync --frozen with CI python-tests extras (Python 3.12)
@@ -264,6 +293,8 @@ main() {
   local cmd="${1:-help}"
   case "$cmd" in
     preflight-surface|preflight|surface) cmd_preflight_surface ;;
+    ship-surface|ship_surface) cmd_ship_surface ;;
+    changed|ci-changed|path) cmd_changed ;;
     tier0|ship-fast) cmd_tier0 ;;
     tier1|ci-core)   cmd_tier1 ;;
     sync-type|sync-ci-type) cmd_sync_type ;;
