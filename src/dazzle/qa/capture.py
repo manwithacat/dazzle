@@ -186,7 +186,10 @@ async def capture_screenshots(
     For each target the function:
     1. Obtains an authenticated session token via :class:`SessionManager`.
     2. Opens a browser context with the ``dazzle_session`` cookie set.
-    3. Navigates to ``{site_url}{target.url}`` and waits for ``networkidle``.
+    3. Navigates to ``{site_url}{target.url}`` with ``domcontentloaded``
+       (optional short ``networkidle`` — workspace HTMX/SSE keeps sockets
+       busy so unbounded networkidle hangs qa capture, same class as #agent
+       trial navigate hang).
     4. Takes a full-page screenshot and saves it to *output_dir*.
 
     Errors for individual targets are logged and skipped — a single bad
@@ -341,7 +344,19 @@ async def _capture_one(
             page = await context.new_page()
             try:
                 full_url = f"{site_url}{target.url}"
-                await page.goto(full_url, wait_until="networkidle")
+                # Match agent executor/observer navigate: HTMX region fan-out
+                # and optional SSE keep the network busy, so wait_until=
+                # "networkidle" times out at Playwright's 30s default and
+                # drops workspace screenshots (asset_gallery, etc.).
+                await page.goto(full_url, wait_until="domcontentloaded", timeout=60_000)
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=5_000)
+                except Exception:
+                    logger.debug(
+                        "networkidle wait timed out after capture navigate to %s",
+                        full_url,
+                        exc_info=True,
+                    )
                 await page.screenshot(path=str(screenshot_path), full_page=full_page)
                 logger.info(
                     "Captured %s/%s → %s",

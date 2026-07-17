@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Fixed
+- **`dazzle qa capture` workspace hang** — navigate uses `domcontentloaded`
+  + 5s capped `networkidle` (same pattern as agent trial navigate) so HTMX
+  workspace shells (e.g. design_studio `asset_gallery`) no longer drop
+  screenshots on Playwright's 30s networkidle timeout.
+
 ## [0.105.7] - 2026-07-17
 
 ### Fixed

@@ -38,9 +38,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 744 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 746 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 736 | USED |
-| `dazzle qa trial` | CLI | trials | 715 | STALE (lag 37) |
-| `dazzle qa login` | CLI | (support for qa capture/verify) | 736 | USED |
+| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 759 | USED |
+| `dazzle qa trial` | CLI | trials | 758 | USED |
+| `dazzle qa login` | CLI | (support for qa capture/verify) | 759 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 743 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 742 | USED |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 742 | USED |
