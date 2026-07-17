@@ -210,6 +210,8 @@ surface user_list "User List":
   uses entity User
   mode: list
   render: fragment
+  # Journey: roster row → person overview (not a dead warehouse row)
+  open: User via id
 
   ux:
     purpose: "Browse and manage team members across the support organisation"
@@ -230,20 +232,25 @@ surface user_detail "User Detail":
   mode: view
   render: fragment
 
-  section main "User Details":
-    field email "Email"
+  section identity "Identity":
     field name "Name"
+    field email "Email"
+
+  section role "Role & access":
+    layout: strip
     field role "Role"
     field is_active "Active"
-    field created_at "Created"
+    field created_at "Joined"
 
   related tickets "Tickets":
     display: table
     show: Ticket
+    columns: title, status, priority, assigned_to, created_at
 
   related comments "Comments":
     display: table
     show: Comment
+    columns: content, is_internal, created_at
 
 surface user_create "Create User":
   uses entity User
@@ -274,6 +281,8 @@ surface ticket_list "Ticket List":
   uses entity Ticket
   mode: list
   render: fragment
+  # Primary drill: ticket context hub (warehouse lists alone are not the product)
+  open: Ticket via id
   # Row peek opens the ticket in a slide-over drawer (HM drawer
   # Hyperpart) instead of the default inline expand — the queue keeps
   # its scan position while an agent glances at a ticket.
@@ -300,19 +309,31 @@ surface ticket_detail "Ticket Detail":
   mode: view
   render: fragment
 
-  section main "Ticket Details":
+  section summary "Summary":
     field ticket_number "Ticket #"
     field title "Title"
     field description "Description"
+
+  section status "Status":
+    layout: strip
     field status "Status"
     field priority "Priority"
     field category "Category"
+
+  section people "People":
     field created_by "Created By"
     field assigned_to "Assigned To"
+
+  section resolution "Resolution":
     field resolution "Resolution"
     field created_at "Created"
     field updated_at "Updated"
     field resolved_at "Resolved"
+
+  related discussion "Discussion":
+    display: table
+    show: Comment
+    columns: content, author, is_internal, created_at
 
 surface ticket_create "Create Ticket":
   uses entity Ticket
@@ -358,9 +379,10 @@ surface comment_list "Comment List":
   uses entity Comment
   mode: list
   render: fragment
+  open: Ticket via ticket
 
   ux:
-    purpose: "Scan recent comment activity across all tickets for context and follow-up"
+    purpose: "Scan recent comment activity — open hops to the parent ticket hub"
     sort: created_at desc
     filter: is_internal
     search: content
@@ -370,6 +392,7 @@ surface comment_list "Comment List":
     field content "Comment"
     field author "Author"
     field is_internal "Internal"
+    field ticket "Ticket"
     field created_at "Created"
 
 surface comment_detail "Comment Detail":

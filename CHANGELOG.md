@@ -42,6 +42,13 @@
   `/app/contact/<uuid>` instead of a dict repr in the path (CyFuture dogfood
   v0.104.9).
 
+## [0.104.17] - 2026-07-17
+
+### Added
+- **support_tickets + project_tracker journey dogfood** — multi-section hubs,
+  open-via hops, bound stories with `pass_journey` (ST-019/021/024/025 and
+  ST-001…004). Fleet `example_agent_prove.sh` stays green.
+
 ## [0.104.16] - 2026-07-17
 
 ### Added

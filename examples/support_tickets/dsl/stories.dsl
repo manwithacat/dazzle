@@ -69,7 +69,7 @@ story ST-018 "User creates a new Comment":
 
 story ST-019 "Support Agent works the open ticket queue":
   status: accepted
-  narrative_only: true
+  executed_by: surface.ticket_list
   persona: agent
   trigger: user_click
   entities: [Ticket]
@@ -78,7 +78,7 @@ story ST-019 "Support Agent works the open ticket queue":
   then:
     - "Support Agent sees open Tickets in a review queue (status != closed)"
     - "Queue metrics show open, in-progress, and critical counts"
-    - "Agent can act on a row (claim / transition / open detail)"
+    - "Agent can act on a row (claim / transition / open detail hub)"
 
 story ST-020 "Support Agent picks up a ticket":
   status: accepted
@@ -95,14 +95,14 @@ story ST-020 "Support Agent picks up a ticket":
 
 story ST-021 "Support Agent views full ticket detail with comment history":
   status: accepted
-  narrative_only: true
+  executed_by: surface.ticket_detail
   persona: agent
   trigger: user_click
   entities: [Ticket, Comment]
   given:
     - "Ticket exists"
   then:
-    - "Support Agent sees the Ticket detail with all Comments"
+    - "Support Agent sees the Ticket hub (status strip + discussion related)"
     - "Internal comments are visually distinguished from customer-visible comments"
 
 story ST-022 "Support Agent adds an internal note":
@@ -131,6 +131,8 @@ story ST-023 "Support Agent resolves a ticket":
     - "Customer is notified"
 
 story ST-024 "Customer creates a support ticket":
+  status: accepted
+  executed_by: surface.ticket_create
   persona: customer
   trigger: form_submitted
   entities: [Ticket]
@@ -141,6 +143,8 @@ story ST-024 "Customer creates a support ticket":
     - "Ticket.status starts as 'open'"
 
 story ST-025 "Customer views their submitted tickets":
+  status: accepted
+  executed_by: surface.ticket_list
   persona: customer
   trigger: user_click
   entities: [Ticket]
@@ -149,6 +153,7 @@ story ST-025 "Customer views their submitted tickets":
   then:
     - "Customer sees only Tickets where created_by = self"
     - "Customer cannot see Tickets from other customers"
+    - "Row open hops to the ticket context hub"
 
 story ST-026 "Customer follows up on an existing ticket":
   persona: customer

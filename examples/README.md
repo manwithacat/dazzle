@@ -56,10 +56,16 @@ dazzle agent wall -p . --markdown
 dazzle agent playbook domain_data_shape
 ```
 
-**simple_task** is the journey reference: task list → assignee overview hub
-(`open: User via assigned_to`), multi-section `user_detail` / `task_detail`,
-related work tables, and bound stories ST-015 / ST-017 / ST-020 / ST-021 with
-`pass_journey` evidence.
+**Journey references (agent wall `executed_pass_journey`):**
+
+| App | Hops / hubs | Bound stories |
+|-----|-------------|---------------|
+| **simple_task** | task → assignee overview; task hub + related discussion | ST-015 / 017 / 020 / 021 |
+| **support_tickets** | ticket list → ticket hub + discussion; comments → ticket | ST-019 / 021 / 024 / 025 |
+| **project_tracker** | task → project hub; project hub + tasks/milestones | ST-001 … ST-004 |
+
+Warehouse-style lists alone are not enough — open-via + multi-section VIEW
+hubs + `executed_by` bindings must prove green.
 
 ### HM surfaces (HaTchi-MaXchi)
 

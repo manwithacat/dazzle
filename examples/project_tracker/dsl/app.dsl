@@ -297,11 +297,15 @@ workspace project_board "Project Board":
 surface project_list "Projects":
   uses entity Project
   mode: list
+  open: Project via id
   section main:
     field name "Name"
     field owner "Owner"
     field status "Status"
     field target_date "Target Date"
+  ux:
+    purpose: "Browse projects — open a project for tasks and milestones"
+    empty: "No projects yet."
 
 surface project_create "New Project":
   uses entity Project
@@ -316,17 +320,20 @@ surface project_create "New Project":
 surface project_detail "Project Detail":
   uses entity Project
   mode: view
-  section main:
+  section summary "Summary":
     field name "Name"
     field description "Description"
-    field owner "Owner"
+  section status "Status":
+    layout: strip
     field status "Status"
+    field owner "Owner"
     field start_date "Start"
     field target_date "Target"
 
   related tasks "Tasks":
     display: table
     show: Task
+    columns: title, status, priority, assigned_to, due_date
 
   related milestones "Milestones":
     display: status_cards
@@ -335,13 +342,21 @@ surface project_detail "Project Detail":
 surface task_list "Tasks":
   uses entity Task
   mode: list
+  # Context hop to project hub (not only task warehouse)
+  open: Project via parent_project
   section main:
     field title "Title"
     field status "Status"
     field priority "Priority"
     field assigned_to "Assignee"
+    field parent_project "Project"
     field due_date "Due"
     field labels "Labels"
+  ux:
+    purpose: "Work across projects — open a row for the project context hub"
+    sort: due_date asc
+    filter: status, priority, assigned_to
+    empty: "No tasks yet."
 
 surface task_create "New Task":
   uses entity Task
@@ -361,19 +376,25 @@ surface task_create "New Task":
 surface task_detail "Task Detail":
   uses entity Task
   mode: view
-  section main:
+  section summary "Summary":
     field title "Title"
     field description "Description"
+  section status "Status":
+    layout: strip
     field status "Status"
     field priority "Priority"
-    field assigned_to "Assignee"
     field due_date "Due Date"
+  section ownership "Ownership":
+    field assigned_to "Assignee"
+    field parent_project "Project"
+    field milestone "Milestone"
     field labels "Labels"
     field estimated_hours "Estimate"
 
   related comments "Discussion":
     display: table
     show: Comment
+    columns: body, author, created_at
 
   related task_files "Files":
     display: file_list
@@ -410,12 +431,14 @@ surface comment_create "Add Comment":
 surface comment_list "Comments":
   uses entity Comment
   mode: list
+  open: Task via task
   section main:
     field task "Task"
     field author "Author"
     field body "Comment"
     field created_at "Date"
   ux:
+    purpose: "Discussion across tasks — open hops to the task hub"
     sort: created_at desc
     filter: task, author
     empty: "No comments yet."
@@ -440,12 +463,15 @@ surface project_edit "Edit Project":
 surface milestone_list "Milestones":
   uses entity Milestone
   mode: list
+  open: Project via parent_project
   section main:
     field name "Name"
     field status "Status"
     field parent_project "Project"
     field start_date "Start"
     field end_date "End"
+  ux:
+    purpose: "Milestones by project — open hops to the project hub"
 
 surface milestone_edit "Edit Milestone":
   uses entity Milestone
