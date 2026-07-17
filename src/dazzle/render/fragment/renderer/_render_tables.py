@@ -23,7 +23,7 @@ See issue #1064 for the full decomposition plan.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dazzle.render.fragment.context import RenderContext
 from dazzle.render.fragment.icon_html import lucide_icon_html, lucide_svg_html
@@ -712,6 +712,28 @@ class _RenderTablesMixin:
             f"</div>"
         )
 
+    def _queue_actions_html(self, q: QueueRegion, row: Any, ctx: RenderContext) -> str:
+        """Inline state-transition buttons for one queue row (or empty)."""
+        applicable = [t for t in q.transitions if t.to_state != row.current_status]
+        if not (applicable and q.queue_status_field and q.queue_api_endpoint):
+            return ""
+        buttons = "".join(
+            f'<button type="button" '
+            f'class="dz-queue-action" '
+            f'hx-put="{ctx.escape_attr(q.queue_api_endpoint)}/'
+            f'{ctx.escape_attr(row.row_id)}" '
+            f'hx-vals=\'{{"{q.queue_status_field}": '
+            f'"{t.to_state}"}}\' '
+            f'hx-target="#region-{ctx.escape_attr(q.region_name)}" '
+            f'hx-swap="innerHTML">'
+            f"{ctx.escape(t.label)}"
+            f"</button>"
+            for t in applicable
+        )
+        return (
+            f'<div class="dz-queue-row-actions" onclick="event.stopPropagation()">{buttons}</div>'
+        )
+
     def _emit_queue_region(self, q: QueueRegion, ctx: RenderContext) -> str:
         """Render a QueueRegion via HM dual-lock QueueRow seams.
 
@@ -758,30 +780,6 @@ class _RenderTablesMixin:
                 f"</span>"
                 for d in row.date_columns
             )
-
-            actions_html = ""
-            applicable = [t for t in q.transitions if t.to_state != row.current_status]
-            if applicable and q.queue_status_field and q.queue_api_endpoint:
-                buttons = "".join(
-                    f'<button type="button" '
-                    f'class="dz-queue-action" '
-                    f'hx-put="{ctx.escape_attr(q.queue_api_endpoint)}/'
-                    f'{ctx.escape_attr(row.row_id)}" '
-                    f'hx-vals=\'{{"{q.queue_status_field}": '
-                    f'"{t.to_state}"}}\' '
-                    f'hx-target="#region-{ctx.escape_attr(q.region_name)}" '
-                    f'hx-swap="innerHTML">'
-                    f"{ctx.escape(t.label)}"
-                    f"</button>"
-                    for t in applicable
-                )
-                actions_html = (
-                    f'<div class="dz-queue-row-actions" '
-                    f'onclick="event.stopPropagation()">'
-                    f"{buttons}"
-                    f"</div>"
-                )
-
             rows_html.append(
                 render_queue_row(
                     QueueRowSeam(
@@ -790,13 +788,13 @@ class _RenderTablesMixin:
                         attention_message=row.attention_message,
                         date_html=date_html,
                         badges_html=badges_html,
-                        actions_html=actions_html,
+                        actions_html=self._queue_actions_html(q, row, ctx),
+                        drill_url=getattr(row, "drill_url", "") or "",
                     )
                 )
             )
 
         rows_block = f'<div class="dz-queue-rows">{"".join(rows_html)}</div>'
-
         overflow_html = ""
         if q.total > len(q.rows):
             overflow_html = f'<p class="dz-queue-overflow">Showing {len(q.rows)} of {q.total}</p>'
@@ -1021,12 +1019,18 @@ class _RenderTablesMixin:
             # legacy `class="dz-grid-cell {{ attention_classes(...) }}"`
             # rendering when attention is empty — Jinja interpolates ""
             # leaving the space. Preserve it for byte-equivalence.
-            cells_html.append(
-                f'<div class="dz-grid-cell ">'
-                f'<h4 class="dz-grid-cell-title">{ctx.escape(cell.title)}</h4>'
-                f"{fields_html}"
-                f"</div>"
-            )
+            title_html = f'<h4 class="dz-grid-cell-title">{ctx.escape(cell.title)}</h4>'
+            if getattr(cell, "drill_url", ""):
+                href = ctx.escape_attr(cell.drill_url)
+                # Whole card is the drill target so title + fields open the hub.
+                cells_html.append(
+                    f'<a class="dz-grid-cell " href="{href}" data-dz-grid-drill>'
+                    f"{title_html}"
+                    f"{fields_html}"
+                    f"</a>"
+                )
+            else:
+                cells_html.append(f'<div class="dz-grid-cell ">{title_html}{fields_html}</div>')
 
         return render_grid_region(
             GridRegionSeam(body_html=f'<div class="dz-grid-list">{"".join(cells_html)}</div>')

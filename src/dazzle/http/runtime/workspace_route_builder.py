@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from dazzle.core.admin_builder import boot_log_line
 from dazzle.core.ir import AppSpec, SurfaceMode
-from dazzle.core.strings import entity_slug, to_api_plural
+from dazzle.core.strings import to_api_plural
 from dazzle.http.runtime.auth import AuthMiddleware
 from dazzle.http.runtime.workspace_columns import (
     build_entity_columns as _build_entity_columns,
@@ -26,6 +26,7 @@ from dazzle.http.runtime.workspace_handlers import (
     _workspace_stats_handler,
 )
 from dazzle.http.runtime.workspace_region_handler import _workspace_region_handler
+from dazzle.page import app_paths
 
 logger = logging.getLogger(__name__)
 
@@ -128,8 +129,11 @@ class WorkspaceRouteBuilder:
             # `drill: none`. Mirrors the `entities_with_create_surface` guard
             # the standalone list uses to auto-suppress its Create button.
             # app_prefix is "/app" at the page-route mount (app_factory.py).
+            # SSOT path formula (#1426) — never invent /brands/{id} API plurals.
             _entity_detail_url_map = {
-                _surf.entity_ref: f"/app/{entity_slug(_surf.entity_ref)}/{{id}}"
+                _surf.entity_ref: app_paths.detail_path(
+                    "/app", app_paths.entity_slug(_surf.entity_ref)
+                )
                 for _surf in appspec.surfaces
                 if _surf.mode == SurfaceMode.VIEW and _surf.entity_ref
             }

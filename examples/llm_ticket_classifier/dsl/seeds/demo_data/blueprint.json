@@ -42,10 +42,18 @@
           },
           {
             "field_name": "description",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 12,
-              "max_words": 40
+              "values": [
+                "Customer reset password twice yesterday; new link always says expired. Browser Chrome 128 on Windows.",
+                "Invoice #4821 charged twice on the 1st. Need refund of one charge and a corrected receipt.",
+                "Several power users asked for a dark theme. Prefer system-preference toggle over a separate site.",
+                "Prod API key returns 401 since Tuesday deploy. Staging key still works. Need root-cause before standup.",
+                "Enterprise IdP SSO redirects back to login after Okta assert. Affects 40 seats on the Acme tenant.",
+                "Project export with 50k rows never finishes; spinner for 10+ minutes then blank page.",
+                "Outbound webhooks to customer CRM failed overnight with 502s. Retry queue is growing.",
+                "Owner transfer form submits but status stays pending. New owner never receives invite email."
+              ]
             }
           },
           {
@@ -162,18 +170,25 @@
           },
           {
             "field_name": "suggested_response",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 15,
-              "max_words": 50
+              "values": [
+                "Thanks for reporting this \u2014 I've escalated to billing and will confirm the refund within one business day.",
+                "Sorry for the login friction. Please try the reset link once more; if it fails we'll force-expire prior tokens.",
+                "Logged as a feature request. We'll share an ETA after the next product triage."
+              ]
             }
           },
           {
             "field_name": "llm_job_id",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 1,
-              "max_words": 2
+              "values": [
+                "job_cls_01",
+                "job_cls_02",
+                "job_cls_03",
+                "job_pri_01"
+              ]
             }
           }
         ]

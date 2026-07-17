@@ -78,6 +78,7 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | `date_html` | `string` | no |
 | `badges_html` | `string` | no |
 | `actions_html` | `string` | no |
+| `drill_url` | `string` | no |
 
 #### Exemplar `render()`
 
@@ -96,9 +97,16 @@ def render(row: QueueRow) -> str:
             attn_message_html = (
                 f'<p class="dz-queue-row-attn">{html.escape(row.attention_message)}</p>'
             )
+    if row.drill_url:
+        href = html.escape(row.drill_url, quote=True)
+        title_html = (
+            f'<a class="dz-queue-row-title" href="{href}" data-dz-queue-drill>{title}</a>'
+        )
+    else:
+        title_html = f'<span class="dz-queue-row-title">{title}</span>'
     headline_html = (
         f'<div class="dz-queue-row-headline">'
-        f'<span class="dz-queue-row-title">{title}</span>'
+        f"{title_html}"
         f"{row.badges_html}"
         f"</div>"
     )

@@ -222,6 +222,8 @@ class QueueRow(BaseModel):
     date_html: str = ""
     badges_html: str = ""
     actions_html: str = ""
+    # Optional VIEW-hub drill (``/app/<slug>/{id}``). Title becomes a link.
+    drill_url: str = ""
 
     @field_validator("title")
     @classmethod

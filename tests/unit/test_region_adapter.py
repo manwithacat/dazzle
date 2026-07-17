@@ -1844,6 +1844,47 @@ def test_queue_renders_minimal_items() -> None:
     assert "dz-queue-region" in html
 
 
+def test_grid_emits_app_shell_drill_not_api_plural() -> None:
+    """Dashboard grid cells must open VIEW hubs at ``/app/<slug>/{id}``.
+
+    Without detail_url_template, trial agents invent ``/brands/{id}`` and
+    hit 404s (design_studio qa-trial critical friction).
+    """
+    adapter = WorkspaceRegionAdapter()
+    bid = "a267b2db-ada2-4314-9172-c2c293207acb"
+    ctx = {
+        "items": [{"id": bid, "name": "Palmer Group"}],
+        "columns": [{"key": "name", "label": "Name", "type": "text"}],
+        "display_key": "name",
+        "detail_url_template": "/app/brand/{id}",
+    }
+    html = _render(adapter.build(_FakeRegion("brands", display="grid"), ctx))
+    assert f"/app/brand/{bid}" in html
+    assert "data-dz-grid-drill" in html
+    assert "/brands/" not in html
+    assert "Palmer Group" in html
+
+
+def test_queue_emits_app_shell_drill_for_hub() -> None:
+    """Queue titles link to ``/app/ticket/{id}`` so related groups render."""
+    adapter = WorkspaceRegionAdapter()
+    tid = "5f122722-3193-476c-8f98-34b41f792d4d"
+    ctx = {
+        "items": [{"id": tid, "subject": "Double charged on monthly invoice", "status": "open"}],
+        "columns": [
+            {"key": "subject", "type": "text"},
+            {"key": "status", "type": "badge"},
+        ],
+        "display_key": "subject",
+        "detail_url_template": "/app/ticket/{id}",
+    }
+    html = _render(adapter.build(_FakeRegion("open_queue", display="queue"), ctx))
+    assert f"/app/ticket/{tid}" in html
+    assert "data-dz-queue-drill" in html
+    assert "/tickets/" not in html
+    assert "Double charged" in html
+
+
 def test_queue_title_uses_display_field_without_fk_display_suffix() -> None:
     """Non-FK display_field (Ticket.subject) has no ``subject_display``.
 

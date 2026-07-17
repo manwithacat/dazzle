@@ -318,6 +318,11 @@ def render_status_list_entry(entry: StatusListEntry) -> str:
 def render_queue_row(row: QueueRow) -> str:
     """Model → one queue row (matches HM contracts/queue.py)."""
     title = _html.escape(row.title)
+    if getattr(row, "drill_url", ""):
+        href = _html.escape(row.drill_url, quote=True)
+        title_html = f'<a class="dz-queue-row-title" href="{href}" data-dz-queue-drill>{title}</a>'
+    else:
+        title_html = f'<span class="dz-queue-row-title">{title}</span>'
     attn_class = ""
     attn_message_html = ""
     if row.attention_level:
@@ -326,12 +331,7 @@ def render_queue_row(row: QueueRow) -> str:
             attn_message_html = (
                 f'<p class="dz-queue-row-attn">{_html.escape(row.attention_message)}</p>'
             )
-    headline_html = (
-        f'<div class="dz-queue-row-headline">'
-        f'<span class="dz-queue-row-title">{title}</span>'
-        f"{row.badges_html}"
-        f"</div>"
-    )
+    headline_html = f'<div class="dz-queue-row-headline">{title_html}{row.badges_html}</div>'
     row_open_class = f"dz-queue-row {attn_class}" if attn_class else "dz-queue-row "
     root_attrs = queue_row_root_attrs(row)
     return (

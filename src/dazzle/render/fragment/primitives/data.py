@@ -612,10 +612,15 @@ class GridCell:
     a primary title (display_key value) and zero-or-more secondary
     fields rendered as `<p class="dz-grid-cell-field">` lines under
     the title.
+
+    ``drill_url`` (#1303 / qa-trial): when set, the cell wraps in an
+    ``<a href>`` to the entity VIEW hub (``/app/<slug>/{id}``). Empty
+    means a non-interactive card (no invented API paths).
     """
 
     title: str
     fields: tuple[tuple[str, object], ...] = ()
+    drill_url: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -806,6 +811,10 @@ class QueueRow:
     date_columns: tuple[QueueDateColumn, ...] = ()
     attention_level: str = ""
     attention_message: str = ""
+    # #1303 — optional hub drill (``/app/ticket/{id}``). When set, the
+    # title renders as a link so agents open VIEW hubs with related
+    # groups instead of guessing REST paths like ``/tickets/{id}``.
+    drill_url: str = ""
 
 
 @dataclass(frozen=True, slots=True)

@@ -404,6 +404,7 @@ class _BuildersTablesMixin:
         queue_api_endpoint = str(ctx.get("queue_api_endpoint") or "")
         display_key = str(ctx.get("display_key") or "")
         columns = ctx.get("columns") or []
+        detail_url_template = str(ctx.get("detail_url_template") or "")
 
         # Metrics row.
         metrics: list[QueueMetric] = []
@@ -435,8 +436,15 @@ class _BuildersTablesMixin:
                 )
             )
 
+        # #1303: resolve hub drills once for all dict rows.
+        dict_items = [i for i in items if isinstance(i, dict)]
+        row_links: tuple[str | None, ...] = (
+            _resolve_row_links(dict_items, detail_url_template) if detail_url_template else ()
+        )
+
         # Per-row construction.
         rows: list[QueueRow] = []
+        link_idx = 0
         for item in items:
             if not isinstance(item, dict):
                 continue
@@ -495,6 +503,11 @@ class _BuildersTablesMixin:
 
             current_status = str(item.get(queue_status_field) or "") if queue_status_field else ""
 
+            drill_url = ""
+            if link_idx < len(row_links) and row_links[link_idx]:
+                drill_url = str(row_links[link_idx])
+            link_idx += 1
+
             rows.append(
                 QueueRow(
                     row_id=row_id,
@@ -504,6 +517,7 @@ class _BuildersTablesMixin:
                     date_columns=tuple(date_columns),
                     attention_level=attn_level,
                     attention_message=attn_message,
+                    drill_url=drill_url,
                 )
             )
 

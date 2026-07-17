@@ -36,6 +36,7 @@ class QueueRow(BaseModel):
     - ``date_html`` → trusted secondary date lines
     - ``badges_html`` → trusted badges next to the title
     - ``actions_html`` → trusted transition action buttons (incl. wrapper)
+    - ``drill_url`` → when set, title becomes an ``<a href>`` hub drill
     """
 
     title: str
@@ -52,6 +53,10 @@ class QueueRow(BaseModel):
     actions_html: str = Field(
         default="",
         description="Trusted HTML for the actions column (wrapper + buttons).",
+    )
+    drill_url: str = Field(
+        default="",
+        description="Optional VIEW-hub URL (/app/<slug>/{id}); title becomes a link.",
     )
 
     @field_validator("title")
@@ -90,12 +95,12 @@ def render(row: QueueRow) -> str:
             attn_message_html = (
                 f'<p class="dz-queue-row-attn">{html.escape(row.attention_message)}</p>'
             )
-    headline_html = (
-        f'<div class="dz-queue-row-headline">'
-        f'<span class="dz-queue-row-title">{title}</span>'
-        f"{row.badges_html}"
-        f"</div>"
-    )
+    if row.drill_url:
+        href = html.escape(row.drill_url, quote=True)
+        title_html = f'<a class="dz-queue-row-title" href="{href}" data-dz-queue-drill>{title}</a>'
+    else:
+        title_html = f'<span class="dz-queue-row-title">{title}</span>'
+    headline_html = f'<div class="dz-queue-row-headline">{title_html}{row.badges_html}</div>'
     # Trailing space inside class mirrors legacy Jinja when no attn.
     row_open_class = f"dz-queue-row {attn_class}" if attn_class else "dz-queue-row "
     return (

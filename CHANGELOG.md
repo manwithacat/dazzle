@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+## [0.105.6] - 2026-07-17
+
+### Fixed
+- **Workspace GRID/QUEUE hub drills** — `detail_url_template` now threads
+  into grid cells and queue row titles as `/app/<slug>/{id}` links
+  (`data-dz-grid-drill` / `data-dz-queue-drill`). Stops trial agents from
+  inventing REST plurals (`/brands/{id}`, `/tickets/{id}`) that 404 or
+  skip VIEW hubs (related groups never loaded).
+- **Playwright navigate hang** — `goto` uses `domcontentloaded` + 60s
+  timeout; networkidle capped at 5s so HTMX region fan-out cannot abort
+  qa trials (design_studio reviewer cold start).
+
+### Changed
+- **llm_ticket_classifier demo seed** — realistic ticket subjects/bodies
+  and classification copy for meaningful hub trials.
+
 ## [0.105.5] - 2026-07-17
 
 ### Fixed

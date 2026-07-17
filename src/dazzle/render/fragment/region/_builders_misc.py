@@ -34,6 +34,7 @@ from dazzle.render.fragment import (
     TreeNode,
 )
 from dazzle.render.fragment.region._context import RegionContext
+from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
@@ -306,8 +307,16 @@ class _BuildersMiscMixin:
         columns: list[dict[str, Any]] = columns_raw if isinstance(columns_raw, list) else []
         display_key = str(ctx.get("display_key") or ctx.get("label_field") or "")
         entity_name = str(ctx.get("entity_name") or "Item")
+        detail_url_template = str(ctx.get("detail_url_template") or "")
+
+        # #1303: resolve per-cell hub drills (same contract as LIST/QUEUE).
+        row_items = [i for i in items if isinstance(i, dict)]
+        row_links: tuple[str | None, ...] = (
+            _resolve_row_links(row_items, detail_url_template) if detail_url_template else ()
+        )
 
         cells: list[GridCell] = []
+        link_idx = 0
         for item in items:
             if not isinstance(item, dict):
                 continue
@@ -325,7 +334,11 @@ class _BuildersMiscMixin:
                 # GRID renders badges with default size (md, no border)
                 # per legacy macro call (no kwargs).
                 fields.append((label, _render_typed_value(item, col)))
-            cells.append(GridCell(title=str(primary), fields=tuple(fields)))
+            drill = ""
+            if link_idx < len(row_links) and row_links[link_idx]:
+                drill = str(row_links[link_idx])
+            link_idx += 1
+            cells.append(GridCell(title=str(primary), fields=tuple(fields), drill_url=drill))
 
         empty_msg = (
             ctx.get("empty_message") or getattr(region, "empty_message", None) or "No items found."

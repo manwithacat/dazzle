@@ -124,11 +124,13 @@ class PlaywrightExecutor:
                 if not target.startswith("http"):
                     base_parts = self._page.url.split("/")[0:3]
                     target = "/".join(base_parts) + target
-                await self._page.goto(target)
-                # networkidle is best-effort — some apps keep long-poll/SSE open and
-                # never reach idle; the navigation itself has already succeeded (#smells-1.1).
+                # domcontentloaded (not default "load"/networkidle): workspace
+                # pages keep HTMX region fetches + optional SSE open, so a
+                # strict load wait can hang past Playwright's 30s default and
+                # abort qa trials (design_studio reviewer cold-start).
+                await self._page.goto(target, wait_until="domcontentloaded", timeout=60_000)
                 try:
-                    await self._page.wait_for_load_state("networkidle")
+                    await self._page.wait_for_load_state("networkidle", timeout=5_000)
                 except Exception:
                     logger.debug("networkidle timeout after navigate to %s", target, exc_info=True)
                 base = ActionResult(message=f"Navigated to {target}")
