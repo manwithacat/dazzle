@@ -49,7 +49,8 @@ login_persona = "reviewer"
 time_budget_seconds = 500
 max_steps = 25
 token_budget = 500000
-starting_url = "/app/workspaces/asset_gallery"
+# reviewer default_workspace is asset_gallery — land on /app so shell
+# resolves persona home (direct workspace URL timed out in trial)
 
 user_identity = """
 You are Marcus, a design reviewer at the same studio as Priya. Your job is
