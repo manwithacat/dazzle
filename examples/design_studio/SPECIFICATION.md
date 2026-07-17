@@ -111,4 +111,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:50945bf3543fcc3ef0c9b65ef92b03fef77dd98e5e11cbde226d432d3c9c05f7 -->
+<!-- dazzle-spec-brief: sha256:b2cfff500d91bb70d93648c676e5dc937ab62e2be20e0b686646661d3b8b10de -->

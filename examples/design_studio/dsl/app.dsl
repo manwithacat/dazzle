@@ -210,11 +210,14 @@ workspace asset_gallery "Asset Gallery":
 surface brand_list "Brands":
   uses entity Brand
   mode: list
+  open: Brand via id
   section main:
     field name "Name"
     field primary_color "Primary"
     field secondary_color "Secondary"
     field created_by "Creator"
+  ux:
+    purpose: "Browse brands — open a row for the brand hub"
 
 surface brand_create "New Brand":
   uses entity Brand
@@ -230,9 +233,12 @@ surface brand_create "New Brand":
 surface brand_detail "Brand Detail":
   uses entity Brand
   mode: view
-  section main:
+  section identity "Identity":
     field name "Name"
     field description "Description"
+    field created_by "Creator"
+  section palette "Palette":
+    layout: strip
     field primary_color "Primary"
     field secondary_color "Secondary"
     field accent_color "Accent"
@@ -245,9 +251,13 @@ surface brand_detail "Brand Detail":
     display: table
     show: Campaign
 
+  ux:
+    purpose: "Brand hub — identity, palette strip, assets and campaigns"
+
 surface asset_list "Assets":
   uses entity Asset
   mode: list
+  open: Brand via brand
   section main:
     field name "Name"
     field asset_type "Type"
@@ -255,6 +265,8 @@ surface asset_list "Assets":
     field brand "Brand"
     field tags "Tags"
     field quality_score "Quality"
+  ux:
+    purpose: "Browse assets — open a row for the parent Brand hub"
 
 surface asset_create "New Asset":
   uses entity Asset
@@ -272,18 +284,23 @@ surface asset_create "New Asset":
 surface asset_detail "Asset Detail":
   uses entity Asset
   mode: view
-  section main:
+  section summary "Summary":
     field name "Name"
     field description "Description"
+    field brand "Brand"
+  section production "Production":
+    layout: strip
     field asset_type "Type"
     field status "Status"
-    field brand "Brand"
-    field tags "Tags"
     field quality_score "Quality"
+    field tags "Tags"
 
   related feedback "Feedback":
     display: table
     show: Feedback
+
+  ux:
+    purpose: "Asset hub — production strip and related feedback"
 
 surface asset_edit "Edit Asset":
   uses entity Asset
@@ -293,6 +310,7 @@ surface asset_edit "Edit Asset":
     field description "Description" widget=rich_text
     field tags "Tags" widget=tags
     field quality_score "Quality" widget=slider
+    field status "Status"
 
 surface campaign_create "New Campaign":
   uses entity Campaign
@@ -309,14 +327,18 @@ surface campaign_create "New Campaign":
 surface campaign_detail "Campaign Detail":
   uses entity Campaign
   mode: view
-  section main:
+  section summary "Summary":
     field name "Name"
     field description "Brief"
     field brand "Brand"
+  section schedule "Schedule":
+    layout: strip
     field status "Status"
     field start_date "Start"
     field end_date "End"
     field budget "Budget"
+  ux:
+    purpose: "Campaign hub — brand context and schedule strip"
 
 surface feedback_create "Add Feedback":
   uses entity Feedback
@@ -328,6 +350,7 @@ surface feedback_create "Add Feedback":
 surface feedback_list "Feedback":
   uses entity Feedback
   mode: list
+  open: Asset via asset
   section main:
     field asset "Asset"
     field reviewer "Reviewer"
@@ -335,6 +358,7 @@ surface feedback_list "Feedback":
     field comment "Comment"
     field created_at "Date"
   ux:
+    purpose: "Feedback trail — open a row for the parent Asset hub"
     sort: created_at desc
     filter: asset, reviewer
     empty: "No feedback submitted yet."
@@ -361,12 +385,15 @@ surface brand_edit "Edit Brand":
 surface campaign_list "Campaigns":
   uses entity Campaign
   mode: list
+  open: Brand via brand
   section main:
     field name "Name"
     field brand "Brand"
     field status "Status"
     field start_date "Start"
     field end_date "End"
+  ux:
+    purpose: "Browse campaigns — open a row for the parent Brand hub"
 
 surface campaign_edit "Edit Campaign":
   uses entity Campaign

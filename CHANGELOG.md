@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.105.3] - 2026-07-17
+
+### Added
+- **design_studio journey dogfood** — brand/asset hubs, open-via hops
+  (asset→brand, feedback→asset), review-queue stories ST-001–006
+  (`pass_journey`). Residual next: llm_ticket_classifier.
+
 ## [0.105.2] - 2026-07-17
 
 ### Changed
