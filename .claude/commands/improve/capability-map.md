@@ -67,7 +67,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 786 | USED |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
-| `qa-trial` skill | skill | trials (downstream authoring) | 488 | STALE (lag 264) |
+| `qa-trial` skill | skill | trials (downstream authoring) | 488 | STALE (lag 304) |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 784 | USED |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 784 | USED |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 791 | USED |
@@ -79,8 +79,11 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 788 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 790 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 789 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 791 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 791 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 792 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 792 | USED |
+| `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 792 | USED |
+| `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 792 | USED |
+| `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | — | UNOWNED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 
@@ -111,6 +114,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 792 (2026-07-18) capability-sweep.** Inventory: CLI groups (representation/scaffold/prove/…), MCP tools **37** (+1 `representation` vs 36@772), skills unchanged (dsl-authoring/phase-contract/qa-trial/spec-narrate/stems + agent skills). **New registry rows:** representation CLI+MCP + prove → USED@792 (first-exercise support_tickets patterns/classify + prove representation OK); scaffold → **UNOWNED**. STALE recompute: **0 new USED→STALE** (max product lag qa trial@778 = 14); **already STALE:** qa-trial skill@488. Next sweep ~**812**. Next self-audit ~**798**. Explore **99/100**.
 
 > **Cycle 791 (2026-07-18).** **/xproject** lag-14: sibling validate cyfuture+AegisMark exit 0 (advisory surface gaps); pennydreadful parse fail #1559 → fixed actor→persona + scope→entities (16 stories); re-validate exit 0. Stamps @791. Explore **98/100**.
 
