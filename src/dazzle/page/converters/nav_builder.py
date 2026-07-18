@@ -11,13 +11,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.ir.workspaces import WorkspaceSpec
 from dazzle.page.converters.workspace_converter import workspace_allowed_personas
 from dazzle.rbac.matrix import PolicyDecision  # runtime import (ui may import rbac)
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
     from dazzle.core.ir.personas import PersonaSpec
-    from dazzle.core.ir.workspaces import NavSpec, WorkspaceSpec
+    from dazzle.core.ir.workspaces import NavSpec
     from dazzle.rbac.matrix import AccessMatrix
 
 
@@ -239,7 +240,7 @@ def _region_sources(region: object) -> list[str]:
 
 def _auto_discover_workspace_links(
     appspec: AppSpec,
-    ws: object,
+    ws: WorkspaceSpec,
     *,
     persona: PersonaSpec,
     matrix: AccessMatrix,
@@ -248,7 +249,7 @@ def _auto_discover_workspace_links(
     seen: set[str],
 ) -> list[NavLink]:
     """Product workspace link + list sources for one accessible workspace."""
-    ws_name = str(getattr(ws, "name", "") or "")
+    ws_name = str(ws.name or "")
     if not platform_ops and _is_platform_nav_target(appspec, ws_name):
         return []
     allowed = workspace_allowed_personas(ws, personas)  # None = all personas
@@ -262,7 +263,7 @@ def _auto_discover_workspace_links(
         links.append(ws_link)
 
     role = persona.effective_role
-    for region in getattr(ws, "regions", None) or []:
+    for region in ws.regions or []:
         for src in _region_sources(region):
             if not platform_ops and _is_platform_nav_target(appspec, src):
                 continue
