@@ -79,8 +79,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 777 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 777 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 777 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 782 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 782 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 783 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 783 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 
@@ -102,6 +102,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 783 (2026-07-18).** **self-audit** (15 cycles since 768): window `48de8593f..7bcd5e615`; sampled 5 product fixes — all **CLEAN**. No REGRESSION/AUD rows. Explore **90/100** (budget 0). Next self-audit ~**798**.
 
 > **Cycle 782 (2026-07-18).** **hm-convergence** directed explore (oldest last_run@775): zero-floor green (tw=0 css=0); dual_lock queue 0; shadcn gaps 0; coherence queue=0 mean=8.7; gallery probes **6/6**; `hm_visual_smoke --dazzle-emit` 11 parts (incl. dazzle-master-detail); reservoir+delegation unit **13 pass**. Stamps @782. Explore **90/100**.
 
