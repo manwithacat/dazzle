@@ -52,6 +52,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_ir_field_reader_parity.py::test_no_new_ir_field_orphans",
     "tests/integration/test_golden_master.py::test_simple_dsl_to_ir_snapshot",
     "tests/unit/test_viewport.py::test_drawer_pattern_selectors_match_current_markup",
+    # #1629 G6 compact status.mcp changelog (CI red 2026-07-18 after world-model ship)
+    "tests/unit/mcp/test_status_handlers.py::TestNewSinceLastCheck",
+    "tests/unit/test_mcp_agent_cognition_1629.py::test_mcp_status_changelog_compact_by_default",
 )
 
 REMEDIATION = """
