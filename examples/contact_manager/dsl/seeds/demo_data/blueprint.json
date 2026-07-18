@@ -20,7 +20,7 @@
       {
         "persona_name": "Staff",
         "description": "Regular staff users",
-        "default_role": "role_staff",
+        "default_role": "agent",
         "default_user_count": 3
       }
     ],

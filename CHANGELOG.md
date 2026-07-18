@@ -1,6 +1,14 @@
 ## [Unreleased]
 
+### Fixed
+- **Demo User.role `role_staff` 422 on admin User detail** — persona default_role
+  no longer forces legacy `role_*` values when User.role is a business enum
+  (customer|agent|manager). Blueprint generator clamps; support_tickets and
+  contact_manager blueprints updated; auto-scaffold personas use persona id /
+  enum.
+
 ### Added
+
 - **Agent QA ladder recipe** (`docs/recipes/agent-qa-ladder.md`, #1625) —
   V&V L0–L4, coverage/journey/deep instruments, ownership-aware friction
   auto-seed, harness-artifact appendix, domain-theory hook, consumer KPIs.

@@ -70,22 +70,48 @@ def demo_propose_impl(
 
     personas = []
     if include_metadata:
+        # Prefer User.role enum values when present so default_role is valid
+        # for generation (#admin User List / role_staff 422).
+        role_enum: list[str] = []
+        for ent in app_spec.domain.entities:
+            if ent.name != "User":
+                continue
+            for fld in ent.fields:
+                if fld.name == "role" and fld.type and fld.type.enum_values:
+                    role_enum = list(fld.type.enum_values)
+                    break
+            break
+
         for persona in app_spec.personas:
+            pid = persona.id.lower()
+            if pid in role_enum:
+                default_role = pid
+            elif role_enum:
+                # admin / platform personas → first staff-like enum if any
+                for candidate in ("agent", "manager", "staff", role_enum[0]):
+                    if candidate in role_enum:
+                        default_role = candidate
+                        break
+                else:
+                    default_role = role_enum[0]
+            else:
+                default_role = pid  # no role_ prefix — apps without User.role
             personas.append(
                 PersonaBlueprint(
                     persona_name=persona.label or persona.id,
                     description=persona.description or f"{persona.label or persona.id} user",
-                    default_role=f"role_{persona.id.lower()}",
-                    default_user_count=2 if persona.id.lower() in ["staff", "user"] else 1,
+                    default_role=default_role,
+                    default_user_count=2 if pid in ["staff", "user", "agent"] else 1,
                 )
             )
 
         if not personas:
+            fallback_role = role_enum[0] if role_enum else "agent"
             personas = [
                 PersonaBlueprint(
                     persona_name="Staff",
                     description="Regular staff users",
-                    default_role="role_staff",
+                    default_role=fallback_role,
                     default_user_count=3,
                 ),
             ]

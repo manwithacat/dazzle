@@ -18,10 +18,22 @@
     ],
     "personas": [
       {
-        "persona_name": "Staff",
-        "description": "Regular staff users",
-        "default_role": "role_staff",
-        "default_user_count": 3
+        "persona_name": "Agent",
+        "description": "First-line support agents",
+        "default_role": "agent",
+        "default_user_count": 2
+      },
+      {
+        "persona_name": "Manager",
+        "description": "Support managers",
+        "default_role": "manager",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "Customer",
+        "description": "External customers",
+        "default_role": "customer",
+        "default_user_count": 2
       }
     ],
     "entities": [
