@@ -128,6 +128,64 @@ class _TestDeps:
 # =============================================================================
 
 
+def _build_fixture_id_map(fixtures: list[FixtureData]) -> dict[str, str]:
+    """First pass: fixture id → entity uuid (from data or fresh)."""
+    import uuid
+
+    id_mapping: dict[str, str] = {}
+    for fixture in fixtures:
+        entity_id = fixture.data["id"] if "id" in fixture.data else str(uuid.uuid4())
+        id_mapping[fixture.id] = entity_id
+    return id_mapping
+
+
+def _prepare_fixture_row(
+    fixture: FixtureData,
+    repo: Repository[Any],
+    id_mapping: dict[str, str],
+) -> dict[str, Any]:
+    """Filter known fields, apply id + refs for one fixture."""
+    known_fields = set(repo._field_types) | {"id"}
+    data = {k: v for k, v in fixture.data.items() if k in known_fields}
+    if "id" not in data:
+        data["id"] = id_mapping[fixture.id]
+    if fixture.refs:
+        for field_name, ref_fixture_id in fixture.refs.items():
+            if ref_fixture_id in id_mapping:
+                data[field_name] = id_mapping[ref_fixture_id]
+    return data
+
+
+async def _create_one_fixture(
+    deps: _TestDeps,
+    fixture: FixtureData,
+    id_mapping: dict[str, str],
+    created_ids: list[tuple[str, str]],
+) -> tuple[str, dict[str, Any]]:
+    """Create one fixture row; raise HTTPException on failure (after rollback)."""
+    entity_name = fixture.entity
+    repo = deps.repositories.get(entity_name)
+    if not repo:
+        _rollback_created(deps, created_ids)
+        raise HTTPException(status_code=400, detail="Unknown entity: " + entity_name)
+
+    data = _prepare_fixture_row(fixture, repo, id_mapping)
+    try:
+        entity = await repo.create(data)
+        row = entity.model_dump() if hasattr(entity, "model_dump") else data
+        created_ids.append((entity_name, data["id"]))
+        if _entity_is_tenant_root(deps, entity_name):
+            _mirror_seeded_tenant_to_org(deps, data)
+        return fixture.id, row
+    except Exception as e:
+        logger.error("Failed to create %s: %s", entity_name, e)
+        _rollback_created(deps, created_ids)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to create {entity_name}: {e}",
+        ) from e
+
+
 async def _seed_fixtures(deps: _TestDeps, request: SeedRequest) -> SeedResponse:
     """
     Seed test fixtures into the database.
@@ -136,62 +194,127 @@ async def _seed_fixtures(deps: _TestDeps, request: SeedRequest) -> SeedResponse:
     between fixtures. On failure, rolls back by deleting all entities
     created in this batch so callers don't get partial state.
     """
-    import uuid
-
     created: dict[str, Any] = {}
-    id_mapping: dict[str, str] = {}  # fixture_id -> actual entity id
-    # Track created entity IDs for rollback
-    created_ids: list[tuple[str, str]] = []  # (entity_name, entity_id)
+    id_mapping = _build_fixture_id_map(request.fixtures)
+    created_ids: list[tuple[str, str]] = []
 
-    # First pass: generate IDs for all fixtures
     for fixture in request.fixtures:
-        if "id" in fixture.data:
-            entity_id = fixture.data["id"]
-        else:
-            entity_id = str(uuid.uuid4())
-        id_mapping[fixture.id] = entity_id
+        fid, row = await _create_one_fixture(deps, fixture, id_mapping, created_ids)
+        created[fid] = row
 
-    # Second pass: create entities with resolved references
-    for fixture in request.fixtures:
-        entity_name = fixture.entity
-        repo = deps.repositories.get(entity_name)
-
-        if not repo:
-            _rollback_created(deps, created_ids)
-            raise HTTPException(
-                status_code=400,
-                detail="Unknown entity: " + entity_name,
-            )
-
-        # Prepare data -- filter to known entity fields to avoid
-        # SQL errors from stale or incorrect fixture schemas
-        known_fields = set(repo._field_types) | {"id"}
-        data = {k: v for k, v in fixture.data.items() if k in known_fields}
-
-        # Add ID if not present
-        if "id" not in data:
-            data["id"] = id_mapping[fixture.id]
-
-        # Resolve references
-        if fixture.refs:
-            for field_name, ref_fixture_id in fixture.refs.items():
-                if ref_fixture_id in id_mapping:
-                    data[field_name] = id_mapping[ref_fixture_id]
-
-        # Create entity
-        try:
-            entity = await repo.create(data)
-            created[fixture.id] = entity.model_dump() if hasattr(entity, "model_dump") else data
-            created_ids.append((entity_name, data["id"]))
-        except Exception as e:
-            logger.error("Failed to create %s: %s", entity_name, e)
-            _rollback_created(deps, created_ids)
-            raise HTTPException(
-                status_code=400,
-                detail=f"Failed to create {entity_name}: {e}",
-            )
+    # After tenants are seeded, attach demo personas to the first tenant org
+    # so /__test__/authenticate + qa capture see non-empty job desks.
+    if any(_entity_is_tenant_root(deps, name) for name, _ in created_ids):
+        _ensure_demo_persona_memberships(deps)
 
     return SeedResponse(created=created)
+
+
+def _entity_is_tenant_root(deps: _TestDeps, entity_name: str) -> bool:
+    """True when *entity_name* is the app's tenant-root / archetype:tenant."""
+    if entity_name == "Tenant":
+        return True
+    for ent in deps.entities:
+        if ent.name != entity_name:
+            continue
+        if getattr(ent, "is_tenant_root", False):
+            return True
+        kind = getattr(getattr(ent, "archetype_kind", None), "name", "") or ""
+        return kind == "TENANT"
+    return False
+
+
+def _mirror_seeded_tenant_to_org(deps: _TestDeps, data: dict[str, Any]) -> None:
+    """Create organizations row with id == domain Tenant id (#1626)."""
+    if deps.auth_store is None:
+        return
+    org_id = str(data.get("id") or "")
+    if not org_id:
+        return
+    slug = str(data.get("slug") or data.get("name") or org_id)[:60]
+    name = str(data.get("name") or slug)
+    try:
+        deps.auth_store.ensure_organization_at_id(org_id=org_id, slug=slug, name=name, is_test=True)
+    except Exception:
+        logger.debug("Could not mirror Tenant %s to organization", org_id, exc_info=True)
+
+
+def _primary_demo_org_id(deps: _TestDeps) -> str | None:
+    """First test org id (mirrored tenants prefer is_test)."""
+    try:
+        with deps.db_manager.connection() as conn:
+            cur = conn.execute(
+                "SELECT id FROM organizations ORDER BY is_test DESC, created_at ASC LIMIT 1"
+            )
+            row = cur.fetchone()
+    except Exception:
+        logger.debug("Could not list organizations for demo memberships", exc_info=True)
+        return None
+    if not row:
+        return None
+    return str(row["id"] if isinstance(row, dict) else row[0])
+
+
+def _persona_email_candidates(deps: _TestDeps, persona_id: str) -> list[str]:
+    """Emails used by reset / authenticate / credentials file for a persona."""
+    candidates = [
+        f"{persona_id}@demo.dazzle.local",
+        f"{persona_id}@test.local",
+        f"{persona_id}@example.test",
+    ]
+    if not deps.project_root:
+        return candidates
+    creds_path = deps.project_root / ".dazzle" / "test_credentials.json"
+    if not creds_path.exists():
+        return candidates
+    try:
+        creds = json.loads(creds_path.read_text(encoding="utf-8"))
+        email = (creds.get("personas") or {}).get(persona_id, {}).get("email")
+        if email:
+            candidates.insert(0, email)
+    except Exception:
+        logger.debug("creds read for memberships failed", exc_info=True)
+    return candidates
+
+
+def _ensure_membership_for_persona(deps: _TestDeps, persona_id: str, tenant_id: str) -> None:
+    """Attach one matching auth user for *persona_id* to *tenant_id*."""
+    assert deps.auth_store is not None
+    for email in _persona_email_candidates(deps, persona_id):
+        user = deps.auth_store.get_user_by_email(email)
+        if user is None:
+            continue
+        try:
+            deps.auth_store.ensure_membership(
+                tenant_id=tenant_id,
+                identity_id=str(user.id),
+                roles=list(user.roles or [persona_id]),
+            )
+        except Exception:
+            logger.debug(
+                "Could not ensure membership for %s on %s",
+                email,
+                tenant_id,
+                exc_info=True,
+            )
+        return
+
+
+def _ensure_demo_persona_memberships(deps: _TestDeps) -> None:
+    """Give every configured demo persona a membership on the first tenant org.
+
+    Without memberships, shared_schema RLS leaves workspace queues empty even
+    when Invoice seeds exist (fail-closed dazzle.tenant_id).
+    """
+    if deps.auth_store is None:
+        return
+    primary = _primary_demo_org_id(deps)
+    if not primary:
+        return
+    for p in deps.personas or []:
+        pid = p.get("id") or ""
+        if pid:
+            _ensure_membership_for_persona(deps, pid, primary)
 
 
 def _rollback_created(deps: _TestDeps, created_ids: list[tuple[str, str]]) -> None:

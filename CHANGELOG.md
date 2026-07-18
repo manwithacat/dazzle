@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Fixed
+- **#1626 Tenant seed → org + membership auto-wire** — `/__test__/seed` of domain `Tenant` mirrors an auth organization at the same id and attaches demo personas so shared_schema RLS works without manual SQL; `AuthStore.ensure_organization_at_id` / `ensure_membership`.
 - **#1626 P0-9 invoice Approval Desk empty** — explicit `Invoice.jsonl` /
   `Supplier.jsonl` with ≥4 `submitted` + ≥3 `approved` per tenant; blueprint
   status list no longer weighted-random; `demo_fleet_bar` gates desk status

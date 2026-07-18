@@ -1199,6 +1199,71 @@ class SessionStoreMixin:
         )
         return org
 
+    def ensure_organization_at_id(
+        self,
+        *,
+        org_id: str,
+        slug: str,
+        name: str,
+        is_test: bool = True,
+    ) -> OrganizationRecord:
+        """Idempotently ensure an organization exists at a **fixed** id (#1626).
+
+        Multi-tenant demos seed domain ``Tenant`` rows first; shared_schema RLS
+        binds ``dazzle.tenant_id`` from ``memberships.tenant_id``, which must
+        equal the domain tenant primary key. This helper creates the matching
+        auth org with the **same id** (1:1 mirror), or updates name/slug when
+        the id already exists.
+
+        Race-safe on ``id`` (primary key). If *slug* is already owned by a
+        different id, returns that existing org (slug is unique) so callers
+        do not fail the seed path.
+        """
+        now = datetime.now(UTC).isoformat()
+        # Prefer id as the mirror key (domain Tenant.id == organizations.id).
+        self._execute(
+            """
+            INSERT INTO organizations
+                (id, slug, name, status, is_test, created_at, updated_at)
+            VALUES (%s, %s, %s, 'active', %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                updated_at = EXCLUDED.updated_at
+            """,
+            (org_id, slug, name, is_test, now, now),
+        )
+        found = self.get_organization(org_id)
+        if found is not None:
+            return found
+        # Slug collision with a different id — return that org rather than fail.
+        by_slug = self.get_organization_by_slug(slug)
+        if by_slug is not None:
+            return by_slug
+        raise LookupError(f"organization ensure failed for id={org_id!r} slug={slug!r}")
+
+    def ensure_membership(
+        self,
+        *,
+        tenant_id: str,
+        identity_id: str,
+        roles: list[str] | None = None,
+    ) -> MembershipRecord:
+        """Return existing active membership or create one (idempotent)."""
+        for m in self.get_memberships_for_identity(identity_id):
+            if m.tenant_id == tenant_id and m.status == "active":
+                return m
+        try:
+            return self.create_membership(
+                tenant_id=tenant_id,
+                identity_id=identity_id,
+                roles=roles or [],
+            )
+        except psycopg.errors.UniqueViolation:
+            for m in self.get_memberships_for_identity(identity_id):
+                if m.tenant_id == tenant_id:
+                    return m
+            raise
+
     def get_organization_by_slug(self, slug: str) -> OrganizationRecord | None:
         row = self._execute_one("SELECT * FROM organizations WHERE slug = %s", (slug,))
         return self._row_to_organization(row) if row else None
