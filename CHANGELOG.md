@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Fixed
+- **#1626 P0-8 design_studio palette swatches + story seeds** — Brand list/hub color fields use `widget=color`; explicit Brand.jsonl (hex palettes + logo placeholders) and Asset.jsonl (≥4 in review); demo_fleet_bar gates `seed_swatches`.
 - **#1626 P0-7 honesty renames** — design_studio `Asset Gallery` → `Asset Catalog` (card grid, not media gallery); simple_task `due_timeline` → `upcoming_due` (sorted due list, not calendar/Gantt).
 - **#1626 P0-6 empty-hero still floors** — `demo_fleet_bar` flags known
   happy-path stills (invoice Approval Desk, support Manager Ops, simple_task

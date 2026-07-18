@@ -312,11 +312,13 @@ surface brand_list "Brands":
   open: Brand via id
   section main:
     field name "Name"
-    field primary_color "Primary"
-    field secondary_color "Secondary"
+    # #1626 P0-8: color widgets render as swatches in list (not raw hex text)
+    field primary_color "Primary" widget=color
+    field secondary_color "Secondary" widget=color
+    field accent_color "Accent" widget=color
     field created_by "Creator"
   ux:
-    purpose: "Browse brands — open a row for the brand hub"
+    purpose: "Browse brands with palette swatches — open a row for the brand hub"
 
 surface brand_create "New Brand":
   uses entity Brand
@@ -338,9 +340,10 @@ surface brand_detail "Brand Detail":
     field created_by "Creator"
   section palette "Palette":
     layout: strip
-    field primary_color "Primary"
-    field secondary_color "Secondary"
-    field accent_color "Accent"
+    field primary_color "Primary" widget=color
+    field secondary_color "Secondary" widget=color
+    field accent_color "Accent" widget=color
+
 
   related assets "Assets":
     display: status_cards

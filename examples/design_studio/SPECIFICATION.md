@@ -58,7 +58,9 @@ and that grant is itself an explicit, auditable declaration.
 
 - **Studio Dashboard** — designer/admin portfolio: metrics (assets, in-review,
   brands, campaigns) first, then brand and asset grids and campaign metrics.
-- **Brand Desk** — brand-first path for designers: brand metrics, brand grid,
+- **Brand Desk** — brand-first path for designers: brand metrics, brand grid with
+  palette fields (primary / secondary / accent as color swatches on the Brands
+  list and brand hub),
   and active campaigns.
 - **Review Desk** — reviewer home: review-load metrics, the awaiting-review
   queue, and recently approved assets.

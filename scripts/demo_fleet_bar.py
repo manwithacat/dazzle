@@ -172,6 +172,26 @@ def score_app(app: str) -> AppDemoBar:
         else:
             row.issues.append("seed_desk_thin:missing_Invoice.jsonl")
 
+    # P0-8 design_studio: explicit Brand.jsonl with hex palettes (swatch seeds)
+    if app == "design_studio":
+        brand = app_dir / "dsl" / "seeds" / "demo_data" / "Brand.jsonl"
+        if not brand.is_file():
+            row.issues.append("seed_swatches:missing_Brand.jsonl")
+        else:
+            try:
+                hex_ok = 0
+                for line in brand.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    rec = json.loads(line)
+                    pc = str(rec.get("primary_color") or "")
+                    if pc.startswith("#") and len(pc) in (4, 7):
+                        hex_ok += 1
+                if hex_ok < 3:
+                    row.issues.append(f"seed_swatches:hex_brands={hex_ok}<3")
+            except (OSError, json.JSONDecodeError) as exc:
+                row.issues.append(f"seed_swatches_unreadable:{type(exc).__name__}")
+
     # P0-6 stale platform-only stills + empty-hero size floors
     shots = _shot_dir(app_dir)
     if shots is not None:
