@@ -37,7 +37,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 775 | USED |
-| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 780 | USED |
+| `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 781 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 776 | USED |
 | `dazzle qa trial` | CLI | trials | 778 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 776 | USED |
@@ -79,8 +79,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 777 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 777 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 777 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 780 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 780 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 781 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 781 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 
@@ -100,6 +100,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 781 (2026-07-18).** Preflight red: `_check_workspace` CC 18>15 from cycle-780 master-detail region fix. Refactored into `_region_tokens` / `_regions_from_tag_attrs` / `_regions_from_layout_html`. preflight-surface + contract_checker tests green. Stamps ux verify + inbox/codeql @781. Explore **89/100** (budget 0 — preflight repair).
 
 > **Cycle 780 (2026-07-18).** **ux-converge** explore (oldest last_run): fleet sample simple_task/support_tickets/design_studio/project_tracker/fieldtest_hub **0 failed**; contact_manager 2→0 after contract_checker master-detail region recognition. Stamps ux verify @780. Explore **89/100**.
 

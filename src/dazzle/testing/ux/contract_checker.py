@@ -518,70 +518,69 @@ def _check_detail_view(contract: DetailViewContract, tags: Tags) -> list[str]:
     return errors
 
 
+def _region_tokens(value: str | None) -> list[str]:
+    """Split a region marker into one or more region names.
+
+    dual_pane master-detail shells stamp ``data-card-region="list+detail"``;
+    both halves must satisfy workspace contracts.
+    """
+    if not value:
+        return []
+    return [p for raw in str(value).split("+") if (p := raw.strip())]
+
+
+def _regions_from_tag_attrs(attrs: dict[str, str]) -> set[str]:
+    """Region names declared on one element (SSR card / region wrapper)."""
+    found: set[str] = set()
+    # Classic non-dashboard + post-#948 dashboard SSR markers.
+    found.update(_region_tokens(attrs.get("data-dz-region-name") or attrs.get("data-card-region")))
+    # Master-detail composite stamps the pair explicitly.
+    for key in ("data-dz-master-detail-list", "data-dz-master-detail-detail"):
+        md = attrs.get(key)
+        if md:
+            found.add(str(md))
+    return found
+
+
+def _regions_from_layout_html(html: str) -> set[str]:
+    """Region names from the legacy ``dz-workspace-layout`` JSON island (#803)."""
+    found: set[str] = set()
+    layout = _extract_workspace_layout(html)
+    if not isinstance(layout, dict):
+        return found
+    for card in layout.get("cards") or []:
+        if isinstance(card, dict):
+            region = card.get("region")
+            if isinstance(region, str):
+                found.update(_region_tokens(region))
+    return found
+
+
 def _check_workspace(
     contract: WorkspaceContract,
     tags: Tags,
     html: str | None = None,
 ) -> list[str]:
-    errors: list[str] = []
+    """Assert every contract region appears in rendered workspace HTML.
 
-    # Collect regions from three sources to cover both the classic and
-    # post-#948 server-rendered dashboard templates:
-    #
-    #   1. `data-dz-region-name` attributes — classic non-dashboard workspaces
-    #      and any region wrapper still using the legacy attribute.
-    #   2. `data-card-region` attributes — dashboard workspaces after the
-    #      #948 refactor (`workspace/_content.html` server-renders each card
-    #      with `data-card-id` / `data-card-region` / `data-card-col-span`).
-    #      The JSON data island and Alpine `<template x-for>` were removed
-    #      in that cycle, so this attribute is now the SSR declaration of
-    #      record.
-    #   3. The `dz-workspace-layout` JSON data island — kept for backward
-    #      compatibility with any older template path that still emits it.
-    #      Closes the false-positive originally reported in #803.
+    Sources (any one counts): ``data-dz-region-name``, ``data-card-region``
+    (incl. ``list+detail`` pairs), master-detail attrs, or layout JSON cards.
+    """
     found_regions: set[str] = set()
     for _tag_name, attrs in tags:
-        # Classic / dashboard SSR markers.
-        region = attrs.get("data-dz-region-name") or attrs.get("data-card-region")
-        if region:
-            # dual_pane master-detail shell uses a single card whose
-            # data-card-region is "list+detail" (see dual_pane_master_detail
-            # render_master_detail_shell). Split so both region names count.
-            for part in str(region).split("+"):
-                part = part.strip()
-                if part:
-                    found_regions.add(part)
-        # Master-detail composite also stamps the pair explicitly (#1624-adjacent
-        # contract false-positive on contact_manager contacts workspace).
-        for key in (
-            "data-dz-master-detail-list",
-            "data-dz-master-detail-detail",
-        ):
-            md = attrs.get(key)
-            if md:
-                found_regions.add(str(md))
-
+        found_regions.update(_regions_from_tag_attrs(attrs))
     if html:
-        layout = _extract_workspace_layout(html)
-        if isinstance(layout, dict):
-            for card in layout.get("cards") or []:
-                if isinstance(card, dict):
-                    region = card.get("region")
-                    if isinstance(region, str):
-                        for part in region.split("+"):
-                            part = part.strip()
-                            if part:
-                                found_regions.add(part)
+        found_regions.update(_regions_from_layout_html(html))
 
-    for region in contract.regions:
-        if region not in found_regions:
-            errors.append(
-                f"Missing region '{region}' "
-                f'(expected element with data-dz-region-name="{region}" '
-                f"or an entry in the dz-workspace-layout JSON cards[])"
-            )
-
-    return errors
+    return [
+        (
+            f"Missing region '{region}' "
+            f'(expected element with data-dz-region-name="{region}" '
+            f"or an entry in the dz-workspace-layout JSON cards[])"
+        )
+        for region in contract.regions
+        if region not in found_regions
+    ]
 
 
 def _href_targets_entity_op(href: str, entity: str, op_verb: str) -> bool:
