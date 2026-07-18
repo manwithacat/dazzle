@@ -153,6 +153,8 @@ entity SupplierBankAccount "Supplier Bank Account":
 
 entity Invoice "Invoice":
   intent: "Supplier invoice moving through an approval + payment lifecycle"
+  # #1626 re-eval: queue cards need AP density — number + amount as primary line
+  display_field: invoice_number
 
   id: uuid pk
   tenant_id: ref Tenant required

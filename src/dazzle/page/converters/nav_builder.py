@@ -119,8 +119,11 @@ _PLATFORM_NAV_ENTITY_NAMES: frozenset[str] = frozenset(
         "Session",
     }
 )
+# Product "admin" personas (e.g. simple_task Administrator) are NOT platform
+# operators — #1626 re-eval still saw System Health / Deploy History co-equal
+# with Task Board on product-admin stills when "admin" was treated as platform.
 _PLATFORM_PERSONA_IDS: frozenset[str] = frozenset(
-    {"admin", "platform_admin", "superuser", "operator", "sysadmin"}
+    {"platform_admin", "superuser", "operator", "sysadmin"}
 )
 
 

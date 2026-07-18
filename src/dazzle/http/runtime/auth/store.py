@@ -7,7 +7,7 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from dazzle.core.environment import skip_boot_schema_ddl
 
@@ -99,6 +99,8 @@ class UserStoreMixin:
         username: str | None = None,
         is_superuser: bool = False,
         roles: list[str] | None = None,
+        *,
+        user_id: str | UUID | None = None,
     ) -> UserRecord:
         """
         Create a new user.
@@ -109,13 +111,19 @@ class UserStoreMixin:
             username: Optional username
             is_superuser: Is superuser flag
             roles: List of role names
+            user_id: Optional fixed UUID (demo/QA assignment-aware seeds —
+                domain ``User`` rows and FK ``assigned_to`` must match auth id)
 
         Returns:
             Created user record
         """
         import json
 
+        uid: UUID | None = None
+        if user_id is not None:
+            uid = user_id if isinstance(user_id, UUID) else UUID(str(user_id))
         user = UserRecord(
+            id=uid if uid is not None else uuid4(),
             email=_normalize_email(email),  # canonical-lowercase storage (#1342 M2)
             password_hash=hash_password(password),
             username=username,

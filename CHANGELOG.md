@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Fixed
+- **#1626 re-eval: assignment-aware persona homes + queue chrome** — stable demo user UUIDs for QA auth; Task/Ticket/Invoice seeds assign work to member/agent/requester; queue transitions capped to 2 primaries; product `admin` no longer treated as platform operator (P0-4 stills).
 - **`/improve` inbox: tracking enhancement epics not owner_bug heat** — `improve_github_inbox` no longer treats `tracking`+`enhancement` umbrellas (e.g. #1626 title containing "fail") as bug-shaped, so self-audit and other lanes are not starved after partial epic progress.
 - **#1626 demo_fleet seed contracts in unit tests** — invoice submitted-per-tenant, project_tracker board columns, design_studio hex brands; contact_manager dual-pane purpose honesty.
 - **#1626 P0-5 project_tracker board seeds** — explicit Project/Milestone/Task.jsonl with multi-column kanban distribution (≥3 todo/in_progress, ≥2 review); demo_fleet_bar `seed_board_thin` gate.

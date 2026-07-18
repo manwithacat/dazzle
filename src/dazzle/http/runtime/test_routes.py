@@ -31,6 +31,24 @@ logger = logging.getLogger(__name__)
 # Identifier pattern: letters, digits, underscores only (SQL-safe)
 _SAFE_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
+# #1626 re-eval: fixed auth user UUIDs so demo jsonl can assign
+# Task/Ticket/Invoice rows to the same principals QA capture logs in as.
+# Pattern: a1 + persona index in the last hex group (version/variant valid).
+STABLE_PERSONA_USER_IDS: dict[str, str] = {
+    "member": "a1000000-0000-4000-8000-000000000001",
+    "manager": "a1000000-0000-4000-8000-000000000002",
+    "admin": "a1000000-0000-4000-8000-000000000003",
+    "agent": "a1000000-0000-4000-8000-000000000004",
+    "customer": "a1000000-0000-4000-8000-000000000005",
+    "requester": "a1000000-0000-4000-8000-000000000006",
+    "approver": "a1000000-0000-4000-8000-000000000007",
+    "finance": "a1000000-0000-4000-8000-000000000008",
+    "auditor": "a1000000-0000-4000-8000-000000000009",
+    "user": "a1000000-0000-4000-8000-00000000000a",
+    "designer": "a1000000-0000-4000-8000-00000000000b",
+    "reviewer": "a1000000-0000-4000-8000-00000000000c",
+}
+
 
 class _EntitySQL:
     """Pre-computed SQL statements for a known entity table.
@@ -383,12 +401,14 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
             password = persona_creds.get("password") or ("demo_" + pid + "_password")  # nosec B106
             try:
                 user = deps.auth_store.get_user_by_email(email)
+                stable_id = STABLE_PERSONA_USER_IDS.get(pid)
                 if not user:
                     user = deps.auth_store.create_user(
                         email=email,
                         password=password,
                         username=p.get("label") or pid,
                         roles=[pid],
+                        user_id=stable_id,
                     )
                 elif user.roles != [pid]:
                     # Roles may be stale -- reset to the canonical persona role
@@ -472,12 +492,14 @@ async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest)
         # Create (or reuse) a real user + session in the auth store
         email = username + "@test.local"
         user = deps.auth_store.get_user_by_email(email)
+        stable_id = STABLE_PERSONA_USER_IDS.get(role) or STABLE_PERSONA_USER_IDS.get(username)
         if not user:
             user = deps.auth_store.create_user(
                 email=email,
                 password="test_password",  # nosec B106 - test-only credential
                 username=username,
                 roles=[role],
+                user_id=stable_id,
             )
         elif user.roles != [role]:
             # Roles may be stale from a previous test cycle -- update them so

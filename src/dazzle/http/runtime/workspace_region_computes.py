@@ -382,9 +382,43 @@ def compute_queue(
                         "label": to_state.replace("_", " ").title(),
                     }
                 )
+        # #1626 re-eval: queue rows must not show the full state-machine
+        # button wall (Approved|Rejected|Paid|…). Prefer commercial
+        # primary/secondary actions, hard-cap at 2.
+        transitions = _prefer_primary_queue_transitions(transitions)
 
     api_endpoint = f"/{to_api_plural(source_name)}"
     return transitions, status_field, api_endpoint
+
+
+# Preferred next-state labels for queue row chrome (order = priority).
+_QUEUE_PRIMARY_TO_STATES: tuple[str, ...] = (
+    "approved",
+    "rejected",
+    "in_progress",
+    "submitted",
+    "done",
+    "closed",
+    "paid",
+    "resolved",
+    "published",
+)
+
+
+def _prefer_primary_queue_transitions(
+    transitions: list[dict[str, str]],
+    *,
+    limit: int = 2,
+) -> list[dict[str, str]]:
+    """Keep at most *limit* queue row actions, prefer commercial primaries."""
+    if len(transitions) <= limit:
+        return transitions
+    rank = {s: i for i, s in enumerate(_QUEUE_PRIMARY_TO_STATES)}
+    scored = sorted(
+        transitions,
+        key=lambda tr: rank.get(str(tr.get("to_state") or "").lower(), 999),
+    )
+    return scored[:limit]
 
 
 def compute_bullet(

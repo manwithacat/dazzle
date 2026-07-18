@@ -365,7 +365,8 @@ workspace approval_desk "Approval Desk":
     filter: status = submitted
     sort: amount desc
     limit: 20
-    display: queue
+    display: list
+    # list shows amount/supplier columns; queue was state-button farm only
     action: invoice_detail
     empty: "Nothing awaiting approval"
 
@@ -374,7 +375,7 @@ workspace approval_desk "Approval Desk":
     filter: status = approved
     sort: updated_at desc
     limit: 10
-    display: queue
+    display: list
     action: invoice_detail
     empty: "No recent approvals"
 

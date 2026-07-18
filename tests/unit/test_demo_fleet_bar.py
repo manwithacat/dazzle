@@ -69,3 +69,47 @@ def test_design_studio_brand_hex_swatches() -> None:
         if pc.startswith("#") and len(pc) in (4, 7):
             hex_ok += 1
     assert hex_ok >= 3
+
+
+def test_simple_task_member_has_assigned_work() -> None:
+    """Re-eval #1: member My Work must have tasks assigned to stable member id."""
+    from dazzle.http.runtime.test_routes import STABLE_PERSONA_USER_IDS
+
+    member = STABLE_PERSONA_USER_IDS["member"]
+    path = SEEDS / "simple_task" / "dsl" / "seeds" / "demo_data" / "Task.jsonl"
+    rows = _jsonl(path)
+    assigned = [r for r in rows if r.get("assigned_to") == member]
+    assert len(assigned) >= 3, f"member assigned={len(assigned)}"
+
+
+def test_support_agent_has_in_progress_assignments() -> None:
+    """Re-eval #1: agent dashboard My Assigned needs in_progress tickets."""
+    from dazzle.http.runtime.test_routes import STABLE_PERSONA_USER_IDS
+
+    agent = STABLE_PERSONA_USER_IDS["agent"]
+    path = SEEDS / "support_tickets" / "dsl" / "seeds" / "demo_data" / "Ticket.jsonl"
+    rows = _jsonl(path)
+    mine = [r for r in rows if r.get("assigned_to") == agent and r.get("status") == "in_progress"]
+    assert len(mine) >= 2, f"agent in_progress={len(mine)}"
+
+
+def test_queue_transitions_capped_to_primary_pair() -> None:
+    """Re-eval #2: queue chrome must not show full state-machine walls."""
+    from dazzle.http.runtime.workspace_region_computes import (
+        _prefer_primary_queue_transitions,
+    )
+
+    farm = [
+        {"to_state": s, "label": s}
+        for s in (
+            "paid",
+            "partially_paid",
+            "disputed",
+            "approved",
+            "rejected",
+            "submitted",
+        )
+    ]
+    out = _prefer_primary_queue_transitions(farm)
+    assert len(out) == 2
+    assert {t["to_state"] for t in out} == {"approved", "rejected"}
