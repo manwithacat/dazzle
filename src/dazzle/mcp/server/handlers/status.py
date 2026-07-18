@@ -12,6 +12,7 @@ from typing import Any
 from dazzle.core.manifest import load_manifest
 from dazzle.core.paths import project_last_seen_version, project_log_dir, project_manifest
 from dazzle.db.connection import resolve_db_url
+from dazzle.demo_data.test_mode_load import demo_ops_playbook
 from dazzle.mcp.semantics_kb import get_mcp_version
 from dazzle.product_quality.persona_homes import (
     STABLE_PERSONA_USER_IDS,
@@ -110,11 +111,13 @@ def get_demo_world_handler(project_path: Path, args: dict[str, Any]) -> str:
         "persona_homes": personas_out,
         "persona_home_residual": sum(1 for p in personas_out if p.get("residual")),
         "seed_hint": (
-            "POST /__test__/reset then POST /__test__/seed with X-Test-Secret from "
-            "runtime.json; authenticate with role= after reset so principals use "
-            "STABLE_PERSONA_USER_IDS (#1626/#1629)."
+            "Prefer: dazzle demo reset-and-load --project <app> -y "
+            "(#1627). Or POST /__test__/reset then /__test__/seed with "
+            "X-Test-Secret; authenticate with role= *after* reset so principals "
+            "use STABLE_PERSONA_USER_IDS (#1626/#1629)."
         ),
     }
+    payload["demo_ops"] = demo_ops_playbook()
     return json.dumps(payload, indent=2)
 
 

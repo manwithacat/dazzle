@@ -19,6 +19,7 @@ from dazzle.agent_loop.runtime_prove import (
     service_contract_diff_deep,
 )
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.demo_data.test_mode_load import demo_ops_playbook, resolve_serve_binding
 
 # Re-export playbooks for `from dazzle.agent_loop.core import build_playbook`
 __all__ = (
@@ -491,6 +492,12 @@ def build_context(project_root: Path) -> dict[str, Any]:
     except Exception as exc:
         payload["services"]["contract_diff_deep"] = {"error": str(exc)[:200]}
     payload["next_steps"] = next_steps(payload)
+    # #1627 — tribal demo-ops knowledge for agents (no MCP required)
+    binding = resolve_serve_binding(project_root)
+    payload["demo_ops"] = {
+        **demo_ops_playbook(),
+        "serve_binding": {k: v for k, v in binding.items() if k != "test_secret"},
+    }
     return payload
 
 

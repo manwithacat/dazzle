@@ -2,13 +2,14 @@
 CLI commands for demo data management.
 
 Commands:
-  dazzle demo load      — Load seed data into a running instance
-  dazzle demo validate  — Validate seed files against DSL
-  dazzle demo reset     — Clear and reload demo data
-  dazzle demo propose   — Propose a demo data blueprint from DSL
-  dazzle demo save      — Save a blueprint JSON file
-  dazzle demo generate  — Generate demo data files from the blueprint
-  dazzle demo quality   — Score felt product/demo quality (#1626)
+  dazzle demo load           — Load seed data into a running instance (REST)
+  dazzle demo validate       — Validate seed files against DSL
+  dazzle demo reset          — Clear and reload demo data (REST)
+  dazzle demo reset-and-load — Test-mode reset+seed with STABLE personas (#1627)
+  dazzle demo propose        — Propose a demo data blueprint from DSL
+  dazzle demo save           — Save a blueprint JSON file
+  dazzle demo generate       — Generate demo data files from the blueprint
+  dazzle demo quality        — Score felt product/demo quality (#1626)
 """
 
 import json
@@ -19,6 +20,7 @@ from typing import Any
 import typer
 
 from dazzle.core.demo_blueprint_persistence import load_blueprint
+from dazzle.demo_data.test_mode_load import demo_ops_playbook, reset_and_load
 from dazzle.product_quality import score_project, score_status_lines
 
 demo_app = typer.Typer(help="Demo data management commands.", no_args_is_help=True)
@@ -229,6 +231,99 @@ def validate_command(
         raise typer.Exit(1)
     else:
         typer.echo("All seed data is valid.")
+
+
+@demo_app.command(name="reset-and-load")
+def reset_and_load_command(
+    project_root: Path = typer.Option(
+        Path("."),
+        "--project",
+        help="Project root directory",
+    ),
+    base_url: str | None = typer.Option(
+        None,
+        "--base-url",
+        "-u",
+        help="API base URL (default: .dazzle/runtime.json api_url)",
+    ),
+    data_dir: Path | None = typer.Option(
+        None,
+        "--data-dir",
+        "-d",
+        help="Path to seed data directory (auto-detected if omitted)",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        "-y",
+        help="Skip confirmation prompt",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit full structured report as JSON",
+    ),
+    skip_verify: bool = typer.Option(
+        False,
+        "--skip-verify",
+        help="Do not score persona_homes residual after seed",
+    ),
+) -> None:
+    """Reset + seed via /__test__/* with STABLE persona ids (#1627).
+
+    Prefer this over ``dazzle demo load`` for agent demos: it uses the
+    same path as QA (no CSRF entity POSTs), reads ports/secret from
+    runtime.json, and verifies assignment-aware persona homes.
+
+    Order after this command: authenticate with role= (never before reset).
+    """
+    project_root = project_root.resolve()
+    if not (project_root / "dazzle.toml").is_file():
+        typer.echo(f"No dazzle.toml at {project_root}", err=True)
+        raise typer.Exit(1)
+
+    if not yes:
+        confirm = typer.confirm(
+            "This will POST /__test__/reset then seed jsonl fixtures. Continue?"
+        )
+        if not confirm:
+            raise typer.Abort()
+
+    report = reset_and_load(
+        project_root,
+        base_url=base_url,
+        data_dir=data_dir,
+        verify_persona_homes=not skip_verify,
+    )
+
+    if json_output:
+        # Never dump raw test_secret in JSON stdout
+        safe = {k: v for k, v in report.items() if k != "test_secret"}
+        typer.echo(json.dumps(safe, indent=2, default=str))
+    else:
+        if report.get("ok"):
+            typer.echo(
+                f"OK reset-and-load: {report.get('fixture_count', 0)} fixtures → "
+                f"{report.get('api_url')}"
+            )
+            residual = report.get("persona_homes_residual")
+            if residual is not None:
+                typer.echo(f"  persona_homes residual: {residual}")
+            if report.get("warning"):
+                typer.echo(f"  warning: {report['warning']}", err=True)
+            typer.echo(f"  next: {report.get('next')}")
+            typer.echo(
+                f"  emails: {{role}}@{report.get('persona_email_domain', 'demo.dazzle.local')}"
+            )
+        else:
+            typer.echo(f"FAIL: {report.get('error', 'unknown')}", err=True)
+            playbook = report.get("playbook") or demo_ops_playbook()
+            typer.echo("Tribal playbook:", err=True)
+            for step in playbook.get("order", []):
+                typer.echo(f"  · {step}", err=True)
+
+    if not report.get("ok"):
+        raise typer.Exit(1)
 
 
 @demo_app.command(name="reset")

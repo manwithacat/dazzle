@@ -1,6 +1,12 @@
 ## [Unreleased]
 
 ### Added
+- **#1627 `dazzle demo reset-and-load`** — closed-loop persona demo via
+  `/__test__/reset` + `/__test__/seed` (jsonl → FixtureData), reading ports
+  and `test_secret` from `.dazzle/runtime.json`. Scores persona-home residual
+  after seed; prints STABLE ids + `@demo.dazzle.local` email domain +
+  “authenticate with role= **after** reset”. Tribal playbook also surfaces on
+  `dazzle agent context` (`demo_ops`) and MCP `status(demo_world)`.
 - **#1629 MCP agentic cognition (world-model read plane)** — P0 gaps from the
   antagonist Spend Desk A/B: (1) dev-mode MCP refuses silent monorepo root
   without `select_project` / `project_path`; (2) `db.*` resolves project-local
