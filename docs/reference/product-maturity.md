@@ -105,6 +105,16 @@ python scripts/improve_example_probes.py --status
 # product → demo → journey preference for residual_total / next=
 ```
 
+Agents should also score **felt** demo quality (persona-home seeds + still
+floors) via the single bar — structural residual alone can be green while
+desks are empty:
+
+```bash
+dazzle demo quality -p examples/simple_task
+dazzle demo quality -p examples --app support_tickets --json
+# MCP: product_quality(operation="score", project_root="examples/invoice_ops")
+```
+
 Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → Tier 1**.
 
 **Acceptance (showcase ready, per app):** no builder chrome on business desks;
@@ -154,6 +164,11 @@ python scripts/example_product_maturity.py --strict   # CI / improve gate (exit 
 # Demo fleet (#1626 floors)
 python scripts/demo_fleet_bar.py --status
 python scripts/demo_fleet_bar.py --strict
+
+# Felt product quality (probes + persona homes + stills)
+dazzle demo quality -p examples
+dazzle demo quality -p examples/simple_task --strict
+dazzle demo quality -p examples --app invoice_ops --json
 ```
 
 ## Design intent (reward structure)

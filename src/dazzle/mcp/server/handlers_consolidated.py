@@ -1131,6 +1131,20 @@ handle_fitness: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
 
 
 # =============================================================================
+# Product Quality Handler (#1626)
+# =============================================================================
+
+_MOD_PQ = "dazzle.mcp.server.handlers.product_quality"
+
+handle_product_quality: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "product_quality",
+    {
+        "score": f"{_MOD_PQ}:product_quality_score_handler",
+    },
+)
+
+
+# =============================================================================
 # User Profile Handler
 # =============================================================================
 
@@ -1372,6 +1386,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "discovery": handle_discovery,
     "e2e": handle_e2e,
     "fitness": handle_fitness,
+    "product_quality": handle_product_quality,
     "user_profile": handle_user_profile,
     "policy": handle_policy,
     "composition": handle_composition,

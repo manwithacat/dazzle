@@ -1242,6 +1242,57 @@ def _tool_fitness() -> Tool:
     )
 
 
+def _tool_product_quality() -> Tool:
+    """Felt product / demo quality bar (#1626)."""
+    return Tool(
+        name="product_quality",
+        description=(
+            "Felt product/demo quality for commercial showcase apps (#1626). "
+            "Operations: score — aggregates structural product maturity, demo "
+            "fleet floors, journey maturity, assignment-aware persona-home "
+            "seed residual (current_user filters vs STABLE_PERSONA_USER_IDS), "
+            "and empty-hero still byte floors into one residual_total + next "
+            "force path. Prefer this over running probe scripts alone when "
+            "judging whether a sales demo is empty-desk theater. CLI: "
+            "dazzle demo quality."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["score"],
+                    "description": "Operation to perform",
+                },
+                "project_root": {
+                    "type": "string",
+                    "description": (
+                        "Path to one example app (with dazzle.toml) or to "
+                        "examples/ for the showcase fleet. Defaults to the "
+                        "active MCP project."
+                    ),
+                },
+                "app": {
+                    "type": "string",
+                    "description": (
+                        "When project_root is examples/, limit persona-home "
+                        "and still scoring to this showcase app name."
+                    ),
+                },
+                "min_home_hits": {
+                    "type": "integer",
+                    "description": (
+                        "Minimum seed rows matching a current_user region filter (default 1)."
+                    ),
+                    "default": 1,
+                },
+                **PROJECT_PATH_SCHEMA,
+            },
+            "required": ["operation"],
+        },
+    )
+
+
 def _tool_policy() -> Tool:
     """Policy analysis (RBAC access control)."""
     return Tool(
@@ -1761,6 +1812,7 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_discovery(),
         _tool_e2e(),
         _tool_fitness(),
+        _tool_product_quality(),
         _tool_policy(),
         _tool_composition(),
         _tool_test_intelligence(),

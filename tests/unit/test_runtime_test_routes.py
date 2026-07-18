@@ -226,14 +226,23 @@ class TestSeedFieldFiltering:
         """
         import inspect
 
-        from dazzle.http.runtime.test_routes import _seed_fixtures
+        from dazzle.http.runtime import test_routes as tr
 
-        source = inspect.getsource(_seed_fixtures)
-        assert "known_fields" in source, (
-            "seed_fixtures must define known_fields to filter fixture data"
+        # Filtering lives on the per-row helper (called from _seed_fixtures).
+        prepare_src = inspect.getsource(tr._prepare_fixture_row)
+        create_src = inspect.getsource(tr._create_one_fixture)
+        seed_src = inspect.getsource(tr._seed_fixtures)
+        assert "known_fields" in prepare_src, (
+            "seed path must define known_fields to filter fixture data"
         )
-        assert "repo._field_types" in source, (
-            "seed_fixtures must use repo._field_types to determine known fields"
+        assert "repo._field_types" in prepare_src, (
+            "seed path must use repo._field_types to determine known fields"
+        )
+        assert "_prepare_fixture_row" in create_src, (
+            "_create_one_fixture must call _prepare_fixture_row for field filtering"
+        )
+        assert "_create_one_fixture" in seed_src, (
+            "_seed_fixtures must create rows via _create_one_fixture"
         )
 
     def test_field_filtering_logic(self) -> None:

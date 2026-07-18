@@ -254,7 +254,8 @@ def _mirror_seeded_tenant_to_org(deps: _TestDeps, data: dict[str, Any]) -> None:
     try:
         deps.auth_store.ensure_organization_at_id(org_id=org_id, slug=slug, name=name, is_test=True)
     except Exception:
-        logger.debug("Could not mirror Tenant %s to organization", org_id, exc_info=True)
+        # Best-effort mirror for QA seed; warn so swallow ratchet stays clean.
+        logger.warning("Could not mirror Tenant %s to organization", org_id, exc_info=True)
 
 
 def _primary_demo_org_id(deps: _TestDeps) -> str | None:
@@ -266,7 +267,7 @@ def _primary_demo_org_id(deps: _TestDeps) -> str | None:
             )
             row = cur.fetchone()
     except Exception:
-        logger.debug("Could not list organizations for demo memberships", exc_info=True)
+        logger.warning("Could not list organizations for demo memberships", exc_info=True)
         return None
     if not row:
         return None
@@ -291,7 +292,7 @@ def _persona_email_candidates(deps: _TestDeps, persona_id: str) -> list[str]:
         if email:
             candidates.insert(0, email)
     except Exception:
-        logger.debug("creds read for memberships failed", exc_info=True)
+        logger.warning("creds read for memberships failed", exc_info=True)
     return candidates
 
 
@@ -309,7 +310,7 @@ def _ensure_membership_for_persona(deps: _TestDeps, persona_id: str, tenant_id: 
                 roles=list(user.roles or [persona_id]),
             )
         except Exception:
-            logger.debug(
+            logger.warning(
                 "Could not ensure membership for %s on %s",
                 email,
                 tenant_id,
@@ -521,7 +522,7 @@ async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest)
             if active is not None:
                 active_membership_id = active.id
         except Exception:
-            logger.debug(
+            logger.warning(
                 "Could not resolve membership for test auth user %s",
                 email,
                 exc_info=True,

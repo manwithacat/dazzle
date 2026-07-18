@@ -9,7 +9,7 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 37 tools
+# Count: 38 tools
 
 tool: agent
   description_hash: 644a118f9248
@@ -1056,6 +1056,42 @@ tool: process
           "partial",
           "uncovered"
         ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: product_quality
+  description_hash: db0a4c5a3507
+  description_len: 459
+  {
+    "properties": {
+      "app": {
+        "description": "When project_root is examples/, limit persona-home and still scoring to this showcase app name.",
+        "type": "string"
+      },
+      "min_home_hits": {
+        "default": 1,
+        "description": "Minimum seed rows matching a current_user region filter (default 1).",
+        "type": "integer"
+      },
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "score"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
+        "type": "string"
+      },
+      "project_root": {
+        "description": "Path to one example app (with dazzle.toml) or to examples/ for the showcase fleet. Defaults to the active MCP project.",
         "type": "string"
       }
     },

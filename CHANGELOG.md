@@ -1,6 +1,17 @@
 ## [Unreleased]
 
+### Added
+- **`product_quality` MCP + `dazzle demo quality`** — single OBSERVE bar for
+  felt commercial demo quality (#1626): product/demo/journey probes +
+  assignment-aware persona-home seed residual (`current_user` filters vs
+  `STABLE_PERSONA_USER_IDS`) + empty-hero still floors. Package
+  `dazzle.product_quality`; CLI `dazzle demo quality [--json|--strict]`;
+  MCP `product_quality(operation=score)`.
+
 ### Fixed
+- **CI red after #1626 re-eval** — seed field-filter source gate follows
+  `_prepare_fixture_row`; tenant/membership best-effort paths log at warning
+  (not debug) so the swallow ratchet stays at baseline.
 - **#1626 re-eval: assignment-aware persona homes + queue chrome** — stable demo user UUIDs for QA auth; Task/Ticket/Invoice seeds assign work to member/agent/requester; queue transitions capped to 2 primaries; product `admin` no longer treated as platform operator (P0-4 stills).
 - **`/improve` inbox: tracking enhancement epics not owner_bug heat** — `improve_github_inbox` no longer treats `tracking`+`enhancement` umbrellas (e.g. #1626 title containing "fail") as bug-shaped, so self-audit and other lanes are not starved after partial epic progress.
 - **#1626 demo_fleet seed contracts in unit tests** — invoice submitted-per-tenant, project_tracker board columns, design_studio hex brands; contact_manager dual-pane purpose honesty.
@@ -18,7 +29,6 @@
   identity has a membership so shared_schema RLS shows seeded rows in QA
   capture (was fail-closed empty queue).
 
-### Added
 ### Added
 - **`/improve` example maturity loop** — product / demo / journey probes wired
   as forceable agent-first strategies under example-apps:

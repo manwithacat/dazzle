@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 36 tools, 165 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 37 tools, 166 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -37,6 +37,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`pitch`](#pitch) | 1 | Pitch deck operations: get |
 | [`policy`](#policy) | 6 | Policy analysis operations for RBAC access control |
 | [`process`](#process) | 5 | Process operations: list, inspect, list_runs, get_run, coverage |
+| [`product_quality`](#product_quality) | 1 | Felt product/demo quality for commercial showcase apps (#1626) |
 | [`representation`](#representation) | 4 | Data-representation organisational judgement (#1617): named hatch patterns (rel |
 | [`rhythm`](#rhythm) | 3 | Rhythm operations: get, list, coverage |
 | [`semantics`](#semantics) | 6 | Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards |
@@ -420,6 +421,21 @@ Process operations: list, inspect, list_runs, get_run, coverage
 - `status_filter` *(string)* — Filter by coverage status (for coverage, default: all)
 - `limit` *(integer)* — Max results (for list_runs, coverage; default: 50)
 - `offset` *(integer)* — Skip N results for pagination (for coverage, default: 0)
+- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
+
+---
+
+### `product_quality`
+
+Felt product/demo quality for commercial showcase apps (#1626). Operations: score — aggregates structural product maturity, demo fleet floors, journey maturity, assignment-aware persona-home seed residual (current_user filters vs STABLE_PERSONA_USER_IDS), and empty-hero still byte floors into one residual_total + next force path. Prefer this over running probe scripts alone when judging whether a sales demo is empty-desk theater. CLI: dazzle demo quality.
+
+**Operations (1):** `score`
+
+**Parameters:**
+
+- `project_root` *(string)* — Path to one example app (with dazzle.toml) or to examples/ for the showcase fleet. Defaults to the active MCP project.
+- `app` *(string)* — When project_root is examples/, limit persona-home and still scoring to this showcase app name.
+- `min_home_hits` *(integer)* — Minimum seed rows matching a current_user region filter (default 1).
 - `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---

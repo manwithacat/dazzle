@@ -8,8 +8,10 @@ Commands:
   dazzle demo propose   — Propose a demo data blueprint from DSL
   dazzle demo save      — Save a blueprint JSON file
   dazzle demo generate  — Generate demo data files from the blueprint
+  dazzle demo quality   — Score felt product/demo quality (#1626)
 """
 
+import json
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -17,6 +19,7 @@ from typing import Any
 import typer
 
 from dazzle.core.demo_blueprint_persistence import load_blueprint
+from dazzle.product_quality import score_project, score_status_lines
 
 demo_app = typer.Typer(help="Demo data management commands.", no_args_is_help=True)
 
@@ -580,3 +583,54 @@ def generate_command(
         raise typer.Exit(code=1)
 
     typer.echo(format_output(result, as_json=json_output))
+
+
+@demo_app.command(name="quality")
+def quality_command(
+    project_root: Path = typer.Option(
+        Path("."),
+        "--project",
+        "-p",
+        help="App root (dazzle.toml) or examples/ for the showcase fleet",
+    ),
+    app: str | None = typer.Option(
+        None,
+        "--app",
+        "-a",
+        help="When scoring examples/, limit persona-home/stills to this app",
+    ),
+    min_home_hits: int = typer.Option(
+        1,
+        "--min-home-hits",
+        help="Minimum seed rows per current_user region (default 1)",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output full report as JSON"),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Exit 1 when residual_total > 0",
+    ),
+) -> None:
+    """Score felt product/demo quality (persona homes, stills, maturity probes).
+
+    Structural residual (validate/lint) can be green while persona desks are
+    empty — this bar catches assignment-aware seed residual and empty-hero
+    still floors (#1626). Same payload as MCP product_quality(operation=score).
+    """
+    root = project_root.resolve()
+    report = score_project(root, app=app, min_home_hits=min_home_hits)
+
+    if json_output:
+        payload = report.to_dict()
+        payload["status_lines"] = score_status_lines(report)
+        typer.echo(json.dumps(payload, indent=2))
+    else:
+        for line in score_status_lines(report):
+            typer.echo(line)
+        for rec in report.recommended:
+            typer.echo(f"  → {rec}")
+        if report.force:
+            typer.echo(f"force: {report.force}")
+
+    if strict and report.residual_total > 0:
+        raise typer.Exit(code=1)
