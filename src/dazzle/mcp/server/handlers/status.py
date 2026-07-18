@@ -9,8 +9,10 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle._version import get_version
 from dazzle.core.manifest import load_manifest
 from dazzle.core.paths import project_last_seen_version, project_log_dir, project_manifest
+from dazzle.core.version_cognition import framework_version_cognition
 from dazzle.db.connection import resolve_db_url
 from dazzle.demo_data.test_mode_load import demo_ops_playbook
 from dazzle.mcp.semantics_kb import get_mcp_version
@@ -198,11 +200,24 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
 
     # Project version — prefer pyproject.toml (editable), fall back to metadata
     try:
-        from dazzle._version import get_version
-
         result["version"] = get_version()
     except Exception:
         result["version"] = "unknown"
+
+    # #1629 G7 — installed vs pin vs compatible (not banner folklore)
+    try:
+        project_for_pin: Path | None = None
+        if isinstance(resolved, Path) and project_manifest(resolved).exists():
+            project_for_pin = resolved
+        elif is_dev_mode() and get_active_project():
+            project_for_pin = get_available_projects().get(get_active_project() or "")
+        else:
+            root = get_project_root()
+            if root and project_manifest(root).exists():
+                project_for_pin = root
+        result["version_cognition"] = framework_version_cognition(project_for_pin)
+    except Exception:
+        logger.debug("version_cognition failed", exc_info=True)
 
     # Internal KB version info
     version_info = get_mcp_version()

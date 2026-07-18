@@ -272,7 +272,7 @@
   "src/dazzle/mcp/server/handlers/sentinel.py": 8,
   "src/dazzle/mcp/server/handlers/sitespec.py": 21,
   "src/dazzle/mcp/server/handlers/spec_analyze.py": 2,
-  "src/dazzle/mcp/server/handlers/status.py": 5,
+  "src/dazzle/mcp/server/handlers/status.py": 4,
   "src/dazzle/mcp/server/handlers/stories.py": 2,
   "src/dazzle/mcp/server/handlers/test_design/coverage.py": 2,
   "src/dazzle/mcp/server/handlers/test_design/gaps.py": 2,

@@ -3,11 +3,13 @@
 ### Added
 - **Agent demo cognition priors (KG)** — concepts `demo_identity`,
   `workspace_region_filters`, `empty_desk_false_green`,
-  `first_principles_demo` in `agent_demo.toml`; counter-priors
-  `empty_desk_false_green`, `free_persona_id_not_stable`,
-  `workspace_filter_or_silent_empty`, `reseed_stable_users`; workflow
-  `first_principles_demo`; always-on `knowledge_priors` on
-  `agent context` / `demo_ops`. Seed schema v30.
+  `first_principles_demo`, `bootstrap_pollution`, `version_cognition` in
+  `agent_demo.toml`; counter-priors for empty desk, STABLE ids, filter OR,
+  reseed Users, **bootstrap pollution**, **metric current_user lie**,
+  **version pin distrust**; workflow `first_principles_demo`; always-on
+  `knowledge_priors` on agent context / demo_ops; `status.mcp`
+  `version_cognition` triple (installed / pin / compatible). Seed schema v31.
+
 
 ### Fixed
 - **#1630 agent cognition follow-up (Venue Hold Desk)** — (1) `demo

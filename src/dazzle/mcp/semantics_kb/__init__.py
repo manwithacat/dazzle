@@ -91,6 +91,12 @@ ALIASES = {
     "false_green": "empty_desk_false_green",
     "region_filter": "workspace_region_filters",
     "filter_or": "workspace_region_filters",
+    "bootstrap": "bootstrap_pollution",
+    "analyze_spec": "bootstrap_pollution",
+    "spec_analyze": "bootstrap_pollution",
+    "framework_version": "version_cognition",
+    "version_pin": "version_cognition",
+    "metric_lie": "empty_desk_false_green",
     # Experience/wizard aliases
     "wizard": "experience",
     "wizards": "experience",

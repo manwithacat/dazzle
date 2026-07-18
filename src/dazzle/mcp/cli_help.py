@@ -1252,12 +1252,17 @@ entity Task "Task":
                 "workspace_region_filters",
                 "empty_desk_false_green",
                 "first_principles_demo",
+                "bootstrap_pollution",
+                "version_cognition",
             ],
             "counter_priors": [
                 "empty_desk_false_green",
                 "free_persona_id_not_stable",
                 "workspace_filter_or_silent_empty",
                 "reseed_stable_users",
+                "bootstrap_pollution",
+                "metric_current_user_lie",
+                "version_pin_distrust",
             ],
             "steps": [
                 {
@@ -1265,7 +1270,8 @@ entity Task "Task":
                     "action": "Author DSL with STABLE persona ids + human titles",
                     "notes": (
                         "id=requester/approver/ops_engineer…; title can be Promoter/Booker. "
-                        "knowledge concept=demo_identity"
+                        "knowledge concept=demo_identity. Prefer hand-author over bootstrap "
+                        "(counter-prior bootstrap_pollution)."
                     ),
                 },
                 {
@@ -1310,8 +1316,10 @@ entity Task "Task":
             ],
             "next_steps": [
                 "If desk empty with residual 0: check as: tokens and STABLE ids",
-                "knowledge(operation='counter_prior') for empty_desk_false_green",
+                "knowledge counter_prior empty_desk_false_green / metric_current_user_lie",
                 "Prefer same-field OR or split regions for filters",
+                "status.mcp version_cognition for pin decisions (not banner alone)",
+                "Avoid bootstrap as default SPEC→DSL (bootstrap_pollution)",
             ],
         },
     }

@@ -3,7 +3,7 @@
 
 [meta]
 file = "agent_demo"
-concept_count = 5
+concept_count = 7
 category = "Agent Demo Cognition"
 version = "0.106.0"
 
@@ -175,3 +175,42 @@ best_practices = [
   "Always load demo_ops from agent context or status(demo_world)",
 ]
 issues = ["#1627", "#1629", "#1630"]
+
+[concepts.bootstrap_pollution]
+category = "Agent Demo Cognition"
+doc_page = "demo"
+doc_order = 6
+definition = """
+Do **not** use bootstrap / analyze-spec / discover_entities as the default
+SPEC→DSL path. They invent chrome entities (Optional, Field, Display) and
+off-domain questions. Prefer brief → knowledge concepts → hand-author DSL →
+validate. Treat bootstrap output as untrusted draft (#1629 G4).
+Counter-prior: bootstrap_pollution.
+"""
+related = ["first_principles_demo", "demo_identity"]
+best_practices = [
+  "Rank bootstrap below validate loop",
+  "knowledge counter_prior bootstrap_pollution",
+]
+issues = ["#1629"]
+
+[concepts.version_cognition]
+category = "Agent Demo Cognition"
+doc_page = "demo"
+doc_order = 7
+definition = """
+Version decisions need three fields, not the CLI banner alone:
+
+1. **installed** — package version (`dazzle version` / status.mcp.version)
+2. **project_pin** — dazzle.toml `framework_version` (tilde minor pin)
+3. **compatible** — whether installed satisfies pin
+
+Init stamps `framework_version = "~{{major.minor}}"` from installed package.
+status.mcp exposes `version_cognition`. Counter-prior: version_pin_distrust.
+"""
+related = ["first_principles_demo"]
+best_practices = [
+  "Do not invent pins from banner folklore",
+  "status(operation=mcp) → version_cognition",
+]
+issues = ["#1629"]

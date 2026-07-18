@@ -73,3 +73,31 @@ def test_first_principles_workflow_guide() -> None:
     guide = get_workflow_guide("first_principles_demo")
     assert guide.get("found") is True
     assert len(guide.get("steps") or []) >= 6
+    assert "bootstrap_pollution" in (guide.get("counter_priors") or [])
+
+
+def test_version_cognition_triple() -> None:
+    from dazzle.core.version_cognition import framework_version_cognition
+
+    cog = framework_version_cognition(SIMPLE if SIMPLE.is_dir() else None)
+    assert "installed" in cog
+    assert cog["installed"] not in ("",)
+    assert "compatible" in cog
+    assert "hint" in cog
+
+
+def test_1629_g4_g5_g7_priors_catalogued() -> None:
+    from dazzle.mcp.semantics_kb.counter_priors import load_all_counter_priors
+
+    ids = {e.id for e in load_all_counter_priors()}
+    for need in (
+        "bootstrap_pollution",
+        "metric_current_user_lie",
+        "version_pin_distrust",
+    ):
+        assert need in ids
+    from dazzle.demo_data.test_mode_load import demo_ops_playbook
+
+    pb = demo_ops_playbook()
+    assert "bootstrap_pollution" in pb["counter_priors"]
+    assert "version_cognition" in pb["knowledge_concepts"]

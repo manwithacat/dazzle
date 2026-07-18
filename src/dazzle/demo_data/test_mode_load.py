@@ -86,18 +86,24 @@ def demo_ops_playbook() -> dict[str, Any]:
             "workspace_region_filters",
             "empty_desk_false_green",
             "first_principles_demo",
+            "bootstrap_pollution",
+            "version_cognition",
         ],
         "counter_priors": [
             "empty_desk_false_green",
             "free_persona_id_not_stable",
             "workspace_filter_or_silent_empty",
             "reseed_stable_users",
+            "bootstrap_pollution",
+            "metric_current_user_lie",
+            "version_pin_distrust",
         ],
         "workflow": "first_principles_demo",
         "knowledge_hint": (
-            "knowledge(operation='concept', name='demo_identity') · "
-            "knowledge(operation='counter_prior', …) · "
-            "knowledge(operation='workflow', workflow='first_principles_demo')"
+            "knowledge(concept='demo_identity'|'bootstrap_pollution'|'version_cognition') · "
+            "counter_priors empty_desk_false_green / metric_current_user_lie / "
+            "bootstrap_pollution · workflow first_principles_demo · "
+            "status.mcp version_cognition"
         ),
     }
 

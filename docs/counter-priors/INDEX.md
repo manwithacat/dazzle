@@ -43,6 +43,9 @@ naively importing human critique of AI code as ground truth) is
 - [free-persona-id-not-stable](free-persona-id-not-stable.md) — *(agent-era)* Domain vocabulary as persona *ids* (`promoter`) instead of STABLE keys (`requester`). Titles free; ids constrained for demo auth/seeds. #1630.
 - [workspace-filter-or-silent-empty](workspace-filter-or-silent-empty.md) — *(agent-era)* Compound region `or` filters. Same-field equality OR → `field__in`; mixed-field OR fail-closed. Prefer split regions. #1630.
 - [reseed-stable-users](reseed-stable-users.md) — *(agent-era)* Re-seeding `User.jsonl` at STABLE UUIDs after reset already mirrored principals → 400 already exists. #1630.
+- [bootstrap-pollution](bootstrap-pollution.md) — *(agent-era)* Bootstrap / analyze-spec invents chrome entities from SPEC markdown. Prefer hand-author + validate; distrust bootstrap as SSOT. #1629 G4.
+- [metric-current-user-lie](metric-current-user-lie.md) — *(agent-era)* Metric tiles with `current_user` read 0 while sibling lists have rows (F10). Trust lists/stills first. #1629 G5.
+- [version-pin-distrust](version-pin-distrust.md) — *(agent-era)* Banner vs package vs `framework_version` pin. Use version_cognition triple; init stamps installed minor. #1629 G7.
 
 ## Adding a new entry
 
