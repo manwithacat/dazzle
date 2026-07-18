@@ -20,6 +20,18 @@ scaffold_app = typer.Typer(
 )
 
 
+def _display_path(path: Path, root: Path) -> str:
+    """Pretty path for CLI echo — relative when under *root*, else absolute.
+
+    Absolute ``--output`` (e.g. ``/tmp/…`` for dry exercise) is a valid write
+    target; ``Path.relative_to`` must not crash after a successful write.
+    """
+    try:
+        return str(path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return str(path.resolve())
+
+
 @scaffold_app.command("service")
 def scaffold_service(
     name: str = typer.Argument(..., help="Domain service name from DSL"),
@@ -39,7 +51,9 @@ def scaffold_service(
         typer.echo(f"No domain service '{name}' in DSL.", err=True)
         raise typer.Exit(1)
 
-    out = root / output_dir
+    out = Path(output_dir)
+    if not out.is_absolute():
+        out = root / out
     out.mkdir(parents=True, exist_ok=True)
     path = out / f"{name}.py"
     if path.exists() and not force:
@@ -66,7 +80,7 @@ def {name}({inputs or "*args, **kwargs"}) -> dict[str, Any]:
     )
 '''
     path.write_text(body, encoding="utf-8")
-    typer.echo(f"Wrote {path.relative_to(root)}")
+    typer.echo(f"Wrote {_display_path(path, root)}")
     typer.echo(f"Bind stories with: executed_by: service.{name}")
     typer.echo("Prove with: dazzle prove story <ST-id>  # or agent(operation=prove)")
 
@@ -108,7 +122,7 @@ def handle_{fn}(ctx: dict) -> dict:
     raise NotImplementedError({story_id!r} + " handler not implemented")
 '''
     if path.exists() and f"handle_{fn}" in path.read_text(encoding="utf-8"):
-        typer.echo(f"Handler handle_{fn} already in {path}")
+        typer.echo(f"Handler handle_{fn} already in {_display_path(path, root)}")
     else:
         if not path.exists():
             path.write_text(
@@ -117,7 +131,7 @@ def handle_{fn}(ctx: dict) -> dict:
             )
         with path.open("a", encoding="utf-8") as f:
             f.write(stub)
-        typer.echo(f"Appended handle_{fn} to {path.relative_to(root)}")
+        typer.echo(f"Appended handle_{fn} to {_display_path(path, root)}")
 
     typer.echo("--- checklist ---")
     typer.echo(f"1. Edit stories.dsl: bind {story_id} via executed_by or narrative_only")
