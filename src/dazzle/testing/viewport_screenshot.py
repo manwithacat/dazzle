@@ -159,7 +159,7 @@ def compare_screenshots(
 
         # Resize if dimensions differ
         if img_current.size != img_baseline.size:
-            img_baseline = img_baseline.resize(img_current.size)  # type: ignore[assignment]
+            img_baseline = img_baseline.resize(img_current.size)
 
         diff = ImageChops.difference(img_current.convert("RGB"), img_baseline.convert("RGB"))
         # Per-pixel max across the RGB bands: a pixel differs iff any channel

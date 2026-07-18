@@ -529,7 +529,7 @@ def _region_tokens(value: str | None) -> list[str]:
     return [p for raw in str(value).split("+") if (p := raw.strip())]
 
 
-def _regions_from_tag_attrs(attrs: dict[str, str]) -> set[str]:
+def _regions_from_tag_attrs(attrs: dict[str, str | None]) -> set[str]:
     """Region names declared on one element (SSR card / region wrapper)."""
     found: set[str] = set()
     # Classic non-dashboard + post-#948 dashboard SSR markers.
