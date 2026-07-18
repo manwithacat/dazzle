@@ -61,9 +61,10 @@ def _project_error() -> str:
                     "'--working-dir <project>', which gives that project its own lock, "
                     "its own knowledge graph, and its pinned dazzle version instead of "
                     "the framework-dev install. See docs/architecture/mcp-server.md "
-                    "(Per-project vs. global configuration)."
+                    "(Per-project vs. global configuration). (#1629 G1)"
                 ),
                 "mode": "dev",
+                "hint": "Every project-scoped tool needs project_path=…/app or select_project.",
                 "available_projects": list(get_available_projects().keys()),
             }
         )
@@ -72,6 +73,10 @@ def _project_error() -> str:
             {
                 "error": "No dazzle.toml found in project root",
                 "project_root": str(get_project_root()),
+                "hint": (
+                    "Pass project_path to the app directory that contains dazzle.toml, "
+                    "or start MCP with --working-dir pointing at that app. (#1629 G1)"
+                ),
             }
         )
 
@@ -488,6 +493,14 @@ def handle_status(arguments: dict[str, Any]) -> str:
         from .handlers.project import get_active_project_info
 
         return get_active_project_info(resolved_path=arguments.get("_resolved_project_path"))
+    # #1629 G3 — demo/runtime world model (project-scoped read)
+    if arguments.get("operation") in ("demo_world", "runtime"):
+        from .handlers.status import get_demo_world_handler
+
+        project_path = _resolve_project(arguments)
+        if project_path is None:
+            return _project_error()
+        return get_demo_world_handler(project_path, arguments)
     return _status_standalone(arguments)
 
 
@@ -1172,6 +1185,9 @@ handle_policy: Callable[[dict[str, Any]], str] = _make_project_handler(
         "conflicts": _policy_inner,
         "coverage": _policy_inner,
         "simulate": _policy_inner,
+        # #1629 G6 — schema advertised these; consolidated map omitted them
+        "access_matrix": _policy_inner,
+        "verify_status": _policy_inner,
     },
 )
 

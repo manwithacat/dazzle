@@ -741,14 +741,6 @@
     ]
   },
   {
-    "signature": "ebb56b50b43ee3955fb78139278c765a",
-    "count": 2,
-    "names": [
-      "dazzle/mcp/server/handlers/db.py::db_status_handler",
-      "dazzle/mcp/server/handlers/db.py::db_verify_handler"
-    ]
-  },
-  {
     "signature": "86e2c0b93bf724702508f420253faf6f",
     "count": 2,
     "names": [

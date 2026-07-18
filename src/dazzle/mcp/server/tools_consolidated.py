@@ -577,18 +577,39 @@ def _tool_status() -> Tool:
     """Status (replaces 2 tools)."""
     return Tool(
         name="status",
-        description="Status operations: mcp, logs, active_project, telemetry, activity. Use 'activity' to see real-time MCP tool invocations and progress — supports cursor-based polling for watcher agents.",
+        description=(
+            "Status operations: mcp, logs, active_project, telemetry, activity, "
+            "demo_world (alias: runtime). "
+            "demo_world = agent-readable serve ports, test_secret present?, "
+            "masked DB URL, STABLE persona ids, persona-home seed residual (#1629). "
+            "activity = real-time MCP tool invocations (cursor polling)."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
                 "operation": {
                     "type": "string",
-                    "enum": ["mcp", "logs", "active_project", "telemetry", "activity"],
+                    "enum": [
+                        "mcp",
+                        "logs",
+                        "active_project",
+                        "telemetry",
+                        "activity",
+                        "demo_world",
+                        "runtime",
+                    ],
                     "description": "Operation to perform",
                 },
                 "reload": {
                     "type": "boolean",
                     "description": "Reload modules (for mcp)",
+                },
+                "include_changelog": {
+                    "type": "boolean",
+                    "description": (
+                        "For mcp: include full new_since_last_check CHANGELOG text "
+                        "(default false — compact count only; #1629 G6)"
+                    ),
                 },
                 "count": {
                     "type": "integer",
@@ -628,6 +649,7 @@ def _tool_status() -> Tool:
                     "enum": ["structured", "formatted"],
                     "description": "Response format (for activity): 'structured' (JSON, default) or 'formatted' (human-readable text)",
                 },
+                **PROJECT_PATH_SCHEMA,
             },
             "required": ["operation"],
         },

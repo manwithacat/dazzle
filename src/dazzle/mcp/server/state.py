@@ -188,11 +188,31 @@ def resolve_project_path(project_path: str | None = None) -> Path:
 
     # Try active project path
     active_path = get_active_project_path()
-    if active_path:
+    if active_path and project_manifest(active_path).exists():
         return active_path
 
-    # Fall back to project root
-    return _state.project_root
+    # Walk parents for nearest dazzle.toml (host cwd nested under an app).
+    root = _state.project_root.resolve()
+    for candidate in (root, *root.parents):
+        if project_manifest(candidate).exists():
+            return candidate
+        # stop at filesystem root
+        if candidate.parent == candidate:
+            break
+
+    # Dev mode monorepo without selection: refuse silent monorepo root (#1629 G1)
+    if _state.is_dev_mode and not project_manifest(root).exists():
+        available = sorted(_state.available_projects.keys())
+        raise ValueError(
+            "No active Dazzle project selected. This MCP server is rooted at a "
+            "framework checkout (no dazzle.toml here). Pass "
+            "project_path=/absolute/path/to/app (with dazzle.toml), or call "
+            "select_project with an examples/* name or absolute external path. "
+            f"available_examples={available[:30]}"
+        )
+
+    # Fall back to project root (may still lack dazzle.toml — callers handle)
+    return root
 
 
 # ============================================================================

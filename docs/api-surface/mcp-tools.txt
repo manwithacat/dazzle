@@ -1379,8 +1379,8 @@ tool: spec_analyze
   }
 
 tool: status
-  description_hash: 780c96d0bc8d
-  description_len: 184
+  description_hash: 5edef0a3021c
+  description_len: 289
   {
     "properties": {
       "count": {
@@ -1407,6 +1407,10 @@ tool: status
         ],
         "type": "string"
       },
+      "include_changelog": {
+        "description": "For mcp: include full new_since_last_check CHANGELOG text (default false \u2014 compact count only; #1629 G6)",
+        "type": "boolean"
+      },
       "level": {
         "description": "Filter by level (for logs)",
         "enum": [
@@ -1424,8 +1428,14 @@ tool: status
           "logs",
           "active_project",
           "telemetry",
-          "activity"
+          "activity",
+          "demo_world",
+          "runtime"
         ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
         "type": "string"
       },
       "reload": {

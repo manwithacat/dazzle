@@ -391,7 +391,12 @@ def _allocate_ports_and_runtime(ctx: _ServeContext) -> None:
             test_secret = secrets.token_urlsafe(24)
             os.environ["DAZZLE_TEST_SECRET"] = test_secret
 
-    write_runtime_file(ctx.project_root, allocation, test_secret=test_secret)
+    write_runtime_file(
+        ctx.project_root,
+        allocation,
+        test_secret=test_secret,
+        database_url=os.environ.get("DATABASE_URL") or getattr(ctx, "database_url", None),
+    )
 
     def cleanup_runtime() -> None:
         clear_runtime_file(ctx.project_root)

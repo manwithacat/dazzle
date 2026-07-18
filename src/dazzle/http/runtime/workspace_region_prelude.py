@@ -140,7 +140,7 @@ async def resolve_request_user_context(
             attrs.setdefault("id", user_id)
             attrs.setdefault("entity_id", user_id)
             set_current_rls_user_attrs(attrs)
-        except Exception:
+        except (TypeError, ValueError, RuntimeError, AttributeError):
             logger.debug("Could not bind current_user id for aggregate metrics", exc_info=True)
     if user_entity:
         filter_context["current_user_entity"] = user_entity

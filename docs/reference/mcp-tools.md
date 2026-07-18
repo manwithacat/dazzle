@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 37 tools, 166 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 37 tools, 168 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -44,7 +44,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`sentinel`](#sentinel) | 4 | Sentinel operations: findings (get findings from latest/specific scan), status (available agents and last scan), history (list recent scans), fuzz_summary (run a small mutation fuzz campaign and return the markdown report) |
 | [`sitespec`](#sitespec) | 14 | SiteSpec operations: get, validate, scaffold, coherence, review, advise |
 | [`spec_analyze`](#spec_analyze) | 6 | Analyze narrative specs before DSL generation |
-| [`status`](#status) | 5 | Status operations: mcp, logs, active_project, telemetry, activity |
+| [`status`](#status) | 7 | Status operations: mcp, logs, active_project, telemetry, activity, demo_world (alias: runtime) |
 | [`story`](#story) | 4 | Story operations: get, composition, coverage, scope_fidelity |
 | [`test_design`](#test_design) | 2 | Test design operations: get, gaps |
 | [`test_intelligence`](#test_intelligence) | 6 | Query persisted test result history |
@@ -532,13 +532,14 @@ Analyze narrative specs before DSL generation. Operations: discover_entities (ex
 
 ### `status`
 
-Status operations: mcp, logs, active_project, telemetry, activity. Use 'activity' to see real-time MCP tool invocations and progress — supports cursor-based polling for watcher agents.
+Status operations: mcp, logs, active_project, telemetry, activity, demo_world (alias: runtime). demo_world = agent-readable serve ports, test_secret present?, masked DB URL, STABLE persona ids, persona-home seed residual (#1629). activity = real-time MCP tool invocations (cursor polling).
 
-**Operations (5):** `mcp`, `logs`, `active_project`, `telemetry`, `activity`
+**Operations (7):** `mcp`, `logs`, `active_project`, `telemetry`, `activity`, `demo_world`, `runtime`
 
 **Parameters:**
 
 - `reload` *(boolean)* — Reload modules (for mcp)
+- `include_changelog` *(boolean)* — For mcp: include full new_since_last_check CHANGELOG text (default false — compact count only; #1629 G6)
 - `count` *(integer)* — Number of entries (for logs, telemetry, activity)
 - `level` *(string)* — Filter by level (for logs)
 - `errors_only` *(boolean)* — Show only errors (for logs)
@@ -548,6 +549,7 @@ Status operations: mcp, logs, active_project, telemetry, activity. Use 'activity
 - `cursor_seq` *(integer)* — Sequence number to read after (for activity, 0 = from start)
 - `cursor_epoch` *(integer)* — Epoch counter for staleness detection (for activity, 0 = initial)
 - `format` *(string)* — Response format (for activity): 'structured' (JSON, default) or 'formatted' (human-readable text)
+- `project_path` *(string)* — Optional: Absolute path to project directory. If omitted, uses active project.
 
 ---
 

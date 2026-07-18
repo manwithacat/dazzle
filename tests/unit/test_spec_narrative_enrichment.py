@@ -150,8 +150,10 @@ def test_actor_goals_and_explicit_workspaces(fieldtest_brief) -> None:
     by_id = {a.id: a for a in fieldtest_brief.actors}
     assert by_id["engineer"].goals, "persona goals: must reach the brief"
     assert "Engineering Dashboard" in by_id["engineer"].workspaces
-    # admin's only grant was the framework platform workspace — filtered out.
-    assert by_id["admin"].workspaces == []
+    # admin also lands on Manager Ops (job desk); framework platform workspaces
+    # stay filtered from the stakeholder brief.
+    assert "Manager Ops" in by_id["admin"].workspaces
+    assert "_platform_admin" not in by_id["admin"].workspaces
 
 
 def test_relationships_between_user_entities(fieldtest_brief) -> None:

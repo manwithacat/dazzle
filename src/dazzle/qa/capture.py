@@ -404,7 +404,7 @@ async def _capture_one(
                         "() => !document.querySelector('.htmx-request, .htmx-swapping')",
                         timeout=8_000,
                     )
-                except Exception:
+                except (TimeoutError, OSError, RuntimeError):
                     logger.debug(
                         "htmx settle wait timed out after capture navigate to %s",
                         full_url,
@@ -412,7 +412,7 @@ async def _capture_one(
                     )
                 try:
                     await page.wait_for_timeout(400)
-                except Exception:
+                except (TimeoutError, OSError, RuntimeError):
                     logger.debug("post-htmx settle timeout after capture navigate", exc_info=True)
                 await page.screenshot(path=str(screenshot_path), full_page=full_page)
                 logger.info(

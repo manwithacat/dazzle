@@ -1,6 +1,16 @@
 ## [Unreleased]
 
 ### Added
+- **#1629 MCP agentic cognition (world-model read plane)** — P0 gaps from the
+  antagonist Spend Desk A/B: (1) dev-mode MCP refuses silent monorepo root
+  without `select_project` / `project_path`; (2) `db.*` resolves project-local
+  `.dazzle/runtime.json` `database_url` and project `.env` *before* ambient
+  process `DATABASE_URL`; serve writes `database_url` into runtime.json;
+  (3) `status(operation=demo_world|runtime)` returns ports, test_secret
+  present, masked DB URL, STABLE persona ids, persona-home residual;
+  (4) policy consolidated map wires `access_matrix` + `verify_status` (schema
+  already advertised them); (5) `status.mcp` changelog is compact by default
+  (`include_changelog=true` for full text).
 - **`product_quality` MCP + `dazzle demo quality`** — single OBSERVE bar for
   felt commercial demo quality (#1626): product/demo/journey probes +
   assignment-aware persona-home seed residual (`current_user` filters vs

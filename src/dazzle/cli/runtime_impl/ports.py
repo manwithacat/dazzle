@@ -171,6 +171,7 @@ def write_runtime_file(
     allocation: PortAllocation,
     *,
     test_secret: str | None = None,
+    database_url: str | None = None,
 ) -> Path:
     """
     Write runtime state file with current port allocation.
@@ -186,10 +187,15 @@ def write_runtime_file(
             expect. Consumers (``dazzle test create-sessions``, etc.)
             read this to attach the ``X-Test-Secret`` header without
             needing the env var set on their side (#790).
+        database_url: Live Postgres URL for this serve process (#1629 G2).
+            MCP ``db.*`` and demo world-model reads use this when the MCP
+            process ambient ``DATABASE_URL`` differs from the app DB.
 
     Returns:
         Path to the runtime file
     """
+    import os
+
     runtime_dir = project_root / ".dazzle"
     runtime_dir.mkdir(parents=True, exist_ok=True)
 
@@ -203,6 +209,9 @@ def write_runtime_file(
     }
     if test_secret:
         runtime_data["test_secret"] = test_secret
+    db_url = database_url or os.environ.get("DATABASE_URL") or ""
+    if db_url:
+        runtime_data["database_url"] = db_url
 
     runtime_file.write_text(json.dumps(runtime_data, indent=2), encoding="utf-8")
     return runtime_file

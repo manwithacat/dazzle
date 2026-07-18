@@ -313,7 +313,7 @@ The table below is drift-gated against the live registry (`tests/unit/test_docs_
 | `sentinel` | findings, status, history, fuzz_summary |
 | `sitespec` | get, validate, scaffold, get_copy, scaffold_copy, review_copy, coherence, review, get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts, advise |
 | `spec_analyze` | discover_entities, identify_lifecycles, extract_personas, surface_rules, generate_questions, refine_spec |
-| `status` | mcp, logs, active_project, telemetry, activity |
+| `status` | mcp, logs, active_project, telemetry, activity, demo_world, runtime |
 | `story` | get, composition, coverage, scope_fidelity |
 | `test_design` | get, gaps |
 | `test_intelligence` | summary, failures, regression, coverage, context, journey |
