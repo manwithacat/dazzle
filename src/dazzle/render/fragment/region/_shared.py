@@ -17,6 +17,8 @@ See issue #1065 for the full decomposition plan.
 
 from __future__ import annotations
 
+import re
+from datetime import date, datetime
 from html import escape as _html_escape
 from typing import Any
 
@@ -29,6 +31,11 @@ from dazzle.render.fragment import (
     Region,
     Surface,
 )
+from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+
+# Defensive ISO / Postgres timestamptz leak detector (parity with _data_row.py).
+_ISO_DT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$")
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _region_title(region: Any) -> str:
@@ -158,10 +165,27 @@ def _render_typed_value(
     if value is None or value == "":
         return RawHTML("—")
 
-    if col_type == "date":
-        from dazzle.render.filters import _date_filter
+    # Explicit surface `format:` override when threaded onto workspace columns.
+    format_kind = str(col.get("format_kind") or "")
+    if format_kind:
+        return RawHTML(
+            _html_escape(
+                format_cell(
+                    value,
+                    col_type or "text",
+                    currency_code=str(col.get("currency_code") or ""),
+                    override=ResolvedFormat(format_kind, col.get("format_arg") or None),
+                )
+            )
+        )
 
-        return RawHTML(_date_filter(value))
+    # #1623 / #1597: workspace list datetime must share entity-list presentation
+    # (DisplayLocaleProfile: tenant TZ + locale.date_format) — not raw ISO dumps.
+    if col_type == "datetime":
+        return RawHTML(_html_escape(format_cell(value, "datetime")))
+
+    if col_type == "date":
+        return RawHTML(_html_escape(format_cell(value, "date")))
 
     if col_type == "currency":
         from dazzle.render.filters import _currency_filter
@@ -203,5 +227,18 @@ def _render_typed_value(
                 url = f"{ref_route}/{id_value}"
             return Link(label=display_str, href=URL(url))
         return RawHTML(_html_escape(display_str))
+
+    # Defensive temporal humanisation for mistyped `text` columns (parity
+    # with entity list rows in _data_row.py).
+    if isinstance(value, datetime):
+        return RawHTML(_html_escape(format_cell(value, "datetime")))
+    if isinstance(value, date):
+        return RawHTML(_html_escape(format_cell(value, "date")))
+    if isinstance(value, str):
+        s = value.strip()
+        if _ISO_DT_RE.match(s):
+            return RawHTML(_html_escape(format_cell(s, "datetime")))
+        if _ISO_DATE_RE.match(s):
+            return RawHTML(_html_escape(format_cell(s, "date")))
 
     return RawHTML(_html_escape(str(value)))
