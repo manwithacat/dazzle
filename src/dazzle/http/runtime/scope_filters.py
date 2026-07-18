@@ -38,6 +38,8 @@ if TYPE_CHECKING:
     from dazzle.http.runtime.service_generator import BaseService
     from dazzle.http.specs.auth import EntityAccessSpec
 
+from dazzle.core.scope_filter_or import or_tree_to_in_filters
+
 logger = logging.getLogger(__name__)
 
 
@@ -569,11 +571,10 @@ def _extract_condition_filters(
     logical_op = getattr(condition, "operator", None)
     if logical_op is not None:
         logical_op_val = logical_op.value if hasattr(logical_op, "value") else str(logical_op)
+        left = getattr(condition, "left", None)
+        right = getattr(condition, "right", None)
 
-        # Only push AND conditions to SQL; OR needs post-fetch filtering
         if logical_op_val == "and":
-            left = getattr(condition, "left", None)
-            right = getattr(condition, "right", None)
             if left:
                 _extract_condition_filters(
                     left,
@@ -598,8 +599,32 @@ def _extract_condition_filters(
                     all_ref_targets,
                     context_only,
                 )
-        # OR and other logical operators require post-fetch filtering
-        # which is handled by the visibility system already
+            return
+
+        if logical_op_val == "or" and not context_only:
+            # #1630: same-field equality OR → field__in (status = a or status = b).
+            # Previously OR was a silent no-op (no SQL filter) — desks looked
+            # empty or wrong when combined with scope. Collapse when possible.
+            in_filters = or_tree_to_in_filters(condition)
+            if in_filters is not None:
+                for fld, vals in in_filters.items():
+                    existing = filters.get(f"{fld}__in")
+                    if isinstance(existing, list):
+                        merged = list(dict.fromkeys([*existing, *vals]))
+                        filters[f"{fld}__in"] = merged
+                    else:
+                        filters[f"{fld}__in"] = list(vals)
+                return
+            _logger.warning(
+                "Workspace region filter uses OR that cannot be lowered to "
+                "field__in (mixed fields/operators). Split into regions or use "
+                "simple equality OR on one field (#1630)."
+            )
+            # Fail closed: empty result rather than silent full table
+            filters["__or_unsupported__in_subquery"] = ("SELECT NULL WHERE FALSE", [])
+            return
+
+        # Other logical ops: no SQL push
         return
 
     # Via-check condition (IR path)

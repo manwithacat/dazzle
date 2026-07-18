@@ -3,6 +3,8 @@
 Split verbatim from dazzle.core.validator per #1361.
 """
 
+from dazzle.core.scope_filter_or import warn_unsupported_region_or
+
 from .. import ir
 from ..access import workspace_allowed_personas
 from .conditions import _validate_condition_fields
@@ -152,6 +154,10 @@ def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         appspec=appspec,
                     )
                     errors.extend(field_errors)
+                    # #1630: OR that cannot lower to same-field __in is fail-closed
+                    or_warn = warn_unsupported_region_or(region.filter, workspace.name, region_id)
+                    if or_warn:
+                        warnings.append(or_warn)
 
                 # Validate sort fields
                 if region.sort:

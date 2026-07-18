@@ -137,3 +137,53 @@ def test_init_template_framework_version_placeholder() -> None:
     text = (REPO / "src/dazzle/templates/blank/dazzle.toml").read_text()
     assert "framework_minor" in text or "~0.106" in text
     assert "~0.38" not in text
+
+
+def test_or_filter_same_field_collapses_to_in() -> None:
+    from dazzle.core import ir
+    from dazzle.core.scope_filter_or import or_tree_to_in_filters
+    from dazzle.http.runtime.scope_filters import _extract_condition_filters
+
+    held = ir.ConditionExpr(
+        comparison=ir.Comparison(
+            field="status",
+            operator=ir.ComparisonOperator.EQUALS,
+            value=ir.ConditionValue(literal="held"),
+        )
+    )
+    conf = ir.ConditionExpr(
+        comparison=ir.Comparison(
+            field="status",
+            operator=ir.ComparisonOperator.EQUALS,
+            value=ir.ConditionValue(literal="confirmed"),
+        )
+    )
+    tree = ir.ConditionExpr(operator=ir.LogicalOperator.OR, left=held, right=conf)
+    assert or_tree_to_in_filters(tree) == {"status": ["held", "confirmed"]}
+    filters: dict = {}
+    _extract_condition_filters(tree, "u1", filters, __import__("logging").getLogger("t"))
+    assert filters.get("status__in") == ["held", "confirmed"]
+
+
+def test_or_filter_mixed_fields_fail_closed() -> None:
+    from dazzle.core import ir
+    from dazzle.http.runtime.scope_filters import _extract_condition_filters
+
+    a = ir.ConditionExpr(
+        comparison=ir.Comparison(
+            field="status",
+            operator=ir.ComparisonOperator.EQUALS,
+            value=ir.ConditionValue(literal="held"),
+        )
+    )
+    b = ir.ConditionExpr(
+        comparison=ir.Comparison(
+            field="priority",
+            operator=ir.ComparisonOperator.EQUALS,
+            value=ir.ConditionValue(literal="high"),
+        )
+    )
+    tree = ir.ConditionExpr(operator=ir.LogicalOperator.OR, left=a, right=b)
+    filters: dict = {}
+    _extract_condition_filters(tree, "u1", filters, __import__("logging").getLogger("t"))
+    assert any("or_unsupported" in k for k in filters)
