@@ -1,0 +1,3 @@
+{"id": "a1000000-0000-4000-8000-00000000000d", "name": "Alex Field", "email": "tester@demo.dazzle.local", "location": "Austin, TX", "skill_level": "enthusiast", "active": true}
+{"id": "a2000000-0000-4000-8000-000000000001", "name": "Sam Probe", "email": "sam.probe@demo.dazzle.local", "location": "Denver, CO", "skill_level": "engineer", "active": true}
+{"id": "a2000000-0000-4000-8000-000000000002", "name": "Jordan Range", "email": "jordan.range@demo.dazzle.local", "location": "Seattle, WA", "skill_level": "casual", "active": true}

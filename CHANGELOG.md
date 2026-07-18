@@ -7,6 +7,12 @@
   `STABLE_PERSONA_USER_IDS`) + empty-hero still floors. Package
   `dazzle.product_quality`; CLI `dazzle demo quality [--json|--strict]`;
   MCP `product_quality(operation=score)`.
+- **#1626 antagonist tooling pass** — expand stable demo personas (tester,
+  engineer, ops_engineer, …); flag `platform_admin_landing`; expand felt still
+  floors (customer/requester/auditor desks); wire `product_quality` into
+  `improve_example_probes` OBSERVE; product admin landings off `_platform_admin`
+  for support/contact/ops/fieldtest; fieldtest Tester/Device/IssueReport seeds
+  for tester desk residual=0.
 
 ### Fixed
 - **CI red after #1626 re-eval** — seed field-filter source gate follows

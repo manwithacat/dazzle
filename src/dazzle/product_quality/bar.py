@@ -313,16 +313,22 @@ def score_project(
     report.residual_total = probe_res + persona_residual + stills_residual
 
     nxt, strategy, force, recs = _recommend(report.probes, persona_residual, stills_residual)
-    if nxt is None and persona_residual > 0:
-        nxt = next(
-            (row.get("app") for row in report.persona_homes if row.get("residual")),
-            None,
-        )
-    report.next = nxt
+    report.next = nxt or _next_from_felt(report)
     report.next_strategy = strategy
     report.force = force
     report.recommended = recs
     return report
+
+
+def _next_from_felt(report: ProductQualityReport) -> str | None:
+    """Prefer residual persona-home app, then residual empty-hero still app."""
+    for row in report.persona_homes:
+        if row.get("residual") and row.get("app"):
+            return str(row["app"])
+    for row in report.stills:
+        if row.get("residual") and row.get("app"):
+            return str(row["app"])
+    return None
 
 
 def score_status_lines(report: ProductQualityReport) -> list[str]:

@@ -28,7 +28,17 @@ STABLE_PERSONA_USER_IDS: dict[str, str] = {
     "user": "a1000000-0000-4000-8000-00000000000a",
     "designer": "a1000000-0000-4000-8000-00000000000b",
     "reviewer": "a1000000-0000-4000-8000-00000000000c",
+    "tester": "a1000000-0000-4000-8000-00000000000d",
+    "engineer": "a1000000-0000-4000-8000-00000000000e",
+    "ops_engineer": "a1000000-0000-4000-8000-00000000000f",
+    "employee": "a1000000-0000-4000-8000-000000000010",
+    "hr_admin": "a1000000-0000-4000-8000-000000000011",
+    "tenant_admin": "a1000000-0000-4000-8000-000000000012",
+    "finance_admin": "a1000000-0000-4000-8000-000000000013",
 }
+
+# Framework-injected platform desk — not a product home for antagonist scoring.
+_PLATFORM_WORKSPACES = frozenset({"_platform_admin", "platform_admin"})
 
 _PLATFORM_PERSONAS = frozenset({"admin", "platform_admin", "superuser", "operator", "sysadmin"})
 
@@ -38,7 +48,8 @@ _DEFAULT_WS_RE = re.compile(r"default_workspace:\s*(\w+)")
 _SOURCE_RE = re.compile(r"source:\s*(\w+)")
 _FILTER_RE = re.compile(r"filter:\s*(.+)")
 _CURRENT_USER_RE = re.compile(
-    r"(assigned_to|created_by|submitted_by|reported_by_id|owner)\s*=\s*current_user"
+    r"(assigned_to|assigned_to_id|created_by|submitted_by|reported_by_id|"
+    r"owner|assigned_tester_id|tester_id)\s*=\s*current_user"
 )
 _CURRENT_CONTEXT_RE = re.compile(r"(assigned_to|created_by|submitted_by)\s*=\s*current_context")
 _STATUS_RE = re.compile(r"status\s*=\s*(\w+)")
@@ -327,6 +338,21 @@ def _score_one_persona(
         default_workspace=dws,
         stable_user_id=STABLE_PERSONA_USER_IDS.get(pid),
     )
+    # Product admin must not land on framework platform chrome (#1626 P0-3/4).
+    if dws and dws in _PLATFORM_WORKSPACES:
+        home.regions.append(
+            PersonaHomeRegion(
+                region="-",
+                source="-",
+                filter_text="",
+                bind_field="",
+                status=None,
+                seed_hits=0,
+                residual=True,
+                reason=f"platform_admin_landing:{dws}",
+            )
+        )
+        return home
     if not dws or dws not in workspaces:
         if dws:
             home.regions.append(

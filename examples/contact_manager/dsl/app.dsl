@@ -18,7 +18,8 @@ tenancy:
     show_browse: bool
 
 persona admin "Administrator":
-  default_workspace: _platform_admin
+  # Product home — not framework platform chrome (#1626 P0-3/4).
+  default_workspace: home
 
 # #1324: curated per-persona navigation. The `user` persona gets an
 # explicit, hand-ordered sidebar via `uses nav contact_nav` (below);

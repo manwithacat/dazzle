@@ -19,10 +19,39 @@ EXAMPLES = REPO / "examples"
 
 
 def test_stable_persona_ids_include_showcase_roles() -> None:
-    for role in ("member", "manager", "agent", "approver", "finance", "admin"):
+    for role in (
+        "member",
+        "manager",
+        "agent",
+        "approver",
+        "finance",
+        "admin",
+        "tester",
+        "engineer",
+        "ops_engineer",
+    ):
         assert role in STABLE_PERSONA_USER_IDS
         uid = STABLE_PERSONA_USER_IDS[role]
         assert uid.startswith("a1000000-")
+
+
+def test_platform_admin_landing_is_residual() -> None:
+    """Product admin must not land on framework _platform_admin (#1626)."""
+    from dazzle.product_quality.persona_homes import _score_one_persona
+
+    home = _score_one_persona("admin", "_platform_admin", {}, seed=None, min_hits=1)
+    assert home.residual
+    assert any("platform_admin_landing" in r.reason for r in home.regions)
+
+
+def test_fieldtest_tester_home_seeded() -> None:
+    app = EXAMPLES / "fieldtest_hub"
+    if not app.is_dir():
+        pytest.skip("fieldtest_hub missing")
+    homes = {h.persona: h for h in score_persona_homes(app)}
+    assert "tester" in homes
+    assert not homes["tester"].residual
+    assert any(r.seed_hits >= 1 for r in homes["tester"].regions)
 
 
 def test_persona_homes_simple_task_has_member_desk() -> None:

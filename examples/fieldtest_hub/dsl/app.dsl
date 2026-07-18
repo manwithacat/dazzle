@@ -16,7 +16,8 @@ app fieldtest_hub "FieldTest Hub":
 # =============================================================================
 
 persona admin "Administrator":
-  default_workspace: _platform_admin
+  # Product fleet desk — not framework platform chrome (#1626).
+  default_workspace: manager_ops
 
 persona engineer "Engineer":
   goals:
@@ -1301,7 +1302,7 @@ workspace tester_dashboard "Tester Dashboard":
 
 workspace manager_ops "Manager Ops":
   purpose: "Fleet health and field quality at a glance — no device warehouse hop"
-  access: persona(manager)
+  access: persona(manager, admin)
 
   fleet_overview:
     source: Device

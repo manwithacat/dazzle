@@ -115,7 +115,18 @@ dazzle demo quality -p examples --app support_tickets --json
 # MCP: product_quality(operation="score", project_root="examples/invoice_ops")
 ```
 
-Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → Tier 1**.
+`scripts/improve_example_probes.py` folds `product_quality` into OBSERVE so
+`residual_total` is not falsely 0 when persona homes or empty-hero stills remain.
+
+Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → felt (product_quality) → Tier 1**.
+
+### Antagonist residual classes (after structural green)
+
+| Class | Symptom | Fix altitude |
+|-------|---------|--------------|
+| `platform_admin_landing` | product `admin` `default_workspace: _platform_admin` | Example DSL: land on a product desk + access |
+| Persona-home seed residual | `current_user` region hits = 0 for stable demo UUID | Assignment-aware `*.jsonl` seeds |
+| Empty-hero still | Happy-path screenshot &lt; byte floor | Re-seed + `dazzle qa capture` after seeds |
 
 **Acceptance (showcase ready, per app):** no builder chrome on business desks;
 human singular CTAs; no raw JSON errors in browser; no platform-only nav for

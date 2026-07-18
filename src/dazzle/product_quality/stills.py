@@ -13,13 +13,20 @@ HERO_MIN_BYTES: dict[str, dict[str, int]] = {
     "invoice_ops": {
         "approval_desk_approver_desktop_light.png": 80_000,
         "pay_desk_finance_desktop_light.png": 70_000,
+        # Requester / auditor desks were empty-state theater (~45–48 KB).
+        "my_invoices_requester_desktop_light.png": 60_000,
+        "audit_review_auditor_desktop_light.png": 60_000,
     },
     "support_tickets": {
         "manager_ops_manager_desktop_light.png": 80_000,
+        "ticket_queue_agent_desktop_light.png": 90_000,
+        # Customer portal still was ~47 KB empty-state theater.
+        "my_tickets_customer_desktop_light.png": 60_000,
     },
     "simple_task": {
         "task_board_manager_desktop_light.png": 90_000,
         "my_work_member_desktop_light.png": 60_000,
+        "team_overview_manager_desktop_light.png": 80_000,
     },
 }
 

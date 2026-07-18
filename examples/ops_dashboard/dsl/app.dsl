@@ -160,7 +160,8 @@ entity Integration "Integration":
 # =============================================================================
 
 persona admin "Administrator":
-  default_workspace: _platform_admin
+  # Product command center — not framework platform chrome (#1626).
+  default_workspace: command_center
 
 persona ops_engineer "Operations Engineer":
   goals:
@@ -177,7 +178,7 @@ persona ops_engineer "Operations Engineer":
 workspace command_center "Command Center":
   purpose: "Real-time operations monitoring and incident response"
   stage: "command_center"
-  access: persona(ops_engineer)
+  access: persona(ops_engineer, admin)
   # #1399 — SSE live push: cards update instantly on alert mutations; the
   # per-region `refresh: every 30s` below stays as a fallback heartbeat.
   live: on

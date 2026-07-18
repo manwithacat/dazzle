@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Unified example-app probe status for /improve OBSERVE (agent-first loop).
 
-Runs the three machine-checkable maturity probes in one shot and prints
-status lines the cycle log can paste. Exit 1 if **any** residual remains
-(so loops keep firing until product + demo + journey are all clean).
+Runs structural maturity probes **plus** the felt product_quality bar
+(persona-home seeds + empty-hero stills). Exit 1 if **any** residual remains.
 
 ```bash
 python scripts/improve_example_probes.py --status
 python scripts/improve_example_probes.py --next    # first residual across probes
 python scripts/improve_example_probes.py --json
 python scripts/improve_example_probes.py --strict
+# preferred agent surface:
+#   dazzle demo quality -p examples
+#   MCP product_quality(operation=score)
 ```
 """
 
@@ -67,19 +69,32 @@ def _journey() -> tuple[str, str | None, int]:
     return line, nxt, len(residual)
 
 
+def _product_quality() -> tuple[list[str], str | None, int, str | None]:
+    """Felt demo bar — persona homes + stills + probe aggregate (#1626)."""
+    from dazzle.product_quality import score_project, score_status_lines
+
+    report = score_project(REPO / "examples")
+    lines = score_status_lines(report)
+    # residual_total includes structural probes already counted above; use the
+    # felt-only delta so status total isn't triple-counted.
+    probe_res = sum(max(p.residual, 0) for p in report.probes)
+    felt = max(report.residual_total - probe_res, 0)
+    return lines, report.next, felt, report.force
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--status", action="store_true", help="One-line suite (default)")
     ap.add_argument(
         "--next",
         action="store_true",
-        help="Print first residual app across probes (probe preference: product, demo, journey)",
+        help="Print first residual app across probes (probe preference: product, demo, journey, felt)",
     )
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true", help="Exit 1 if any residual")
     args = ap.parse_args(argv)
 
-    # Always collect all three (cheap, deterministic).
+    # Always collect structural three + felt product_quality.
     results: list[tuple[str, str, str | None, int]] = []
     for name, fn in (
         ("product_maturity", _product),
@@ -92,12 +107,22 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:  # noqa: BLE001
             results.append((name, f"{name} error={type(exc).__name__}", None, -1))
 
-    # Selection preference for --next: structural product → demo → journey
-    # Strategy force names match improve/strategies/*.md + /improve ARGUMENTS.
+    pq_lines: list[str] = []
+    pq_force: str | None = None
+    try:
+        pq_lines, pq_next, pq_felt, pq_force = _product_quality()
+        results.append(
+            ("product_quality", pq_lines[-1] if pq_lines else "product_quality", pq_next, pq_felt)
+        )
+    except Exception as exc:  # noqa: BLE001
+        results.append(("product_quality", f"product_quality error={type(exc).__name__}", None, -1))
+
+    # Selection: structural product → demo → journey → felt (persona/stills).
     STRATEGY_FOR = {
         "product_maturity": "product_maturity",
         "demo_fleet": "demo_fleet",
         "journey_maturity": "journey_dogfood",
+        "product_quality": "demo_fleet",
     }
     preferred_next: str | None = None
     preferred_probe: str | None = None
@@ -108,6 +133,10 @@ def main(argv: list[str] | None = None) -> int:
             preferred_probe = name
             preferred_strategy = STRATEGY_FOR.get(name, name)
             break
+    if preferred_strategy is None and pq_force:
+        # force like "example-apps demo_fleet"
+        parts = pq_force.split()
+        preferred_strategy = parts[-1] if parts else "demo_fleet"
 
     if args.next:
         print(preferred_next or "")
@@ -126,6 +155,7 @@ def main(argv: list[str] | None = None) -> int:
                         }
                         for name, line, nxt, n in results
                     ],
+                    "product_quality_lines": pq_lines,
                     "next": preferred_next,
                     "next_probe": preferred_probe,
                     "next_strategy": preferred_strategy,
@@ -135,9 +165,11 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
     else:
-        # Default: status lines for cycle log
-        for _name, line, _nxt, _n in results:
+        for _name, line, _nxt, _n in results[:3]:
             print(line)
+        for line in pq_lines:
+            if line not in {r[1] for r in results[:3]}:
+                print(line)
         total = sum(max(n, 0) for _a, _b, _c, n in results)
         force = f" force=example-apps {preferred_strategy}" if preferred_strategy else ""
         print(f"example_probes residual_total={total} next={preferred_next or '-'}{force}")

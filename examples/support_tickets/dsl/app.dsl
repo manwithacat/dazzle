@@ -446,7 +446,7 @@ surface comment_edit "Edit Comment":
 workspace ticket_queue "Ticket Queue":
   purpose: "Agent workspace for managing incoming support tickets"
   stage: "scanner_table"
-  access: persona(agent, manager)
+  access: persona(agent, manager, admin)
 
   # Job primary: at-a-glance pressure (tones on critical).
   # `summary` is a metrics alias — keep one fleet consumer for coverage gate.
@@ -725,7 +725,8 @@ workspace agent_console "Agent Console":
 # =============================================================================
 
 persona admin "Administrator":
-  default_workspace: _platform_admin
+  # Product admin lands on the work queue — not framework platform chrome (#1626).
+  default_workspace: ticket_queue
 
 persona customer "Customer":
   description: "End user submitting support requests and tracking their status"

@@ -59,6 +59,9 @@ PLATFORM_STILL_PREFIX = "_platform_admin_"
 # under the app's screenshot dir (CI often has no gitignored .dazzle stills —
 # skip). Empty-state theater stills are ~40–55 KB; populated job desks
 # typically ≥80 KB at desktop light above-fold.
+# Structural demo_fleet floors (ship residual=0). Felt empty-hero expansion
+# lives in dazzle.product_quality.stills.HERO_MIN_BYTES — agents use
+# `dazzle demo quality` / product_quality MCP for antagonist desks.
 HERO_MIN_BYTES: dict[str, dict[str, int]] = {
     "invoice_ops": {
         "approval_desk_approver_desktop_light.png": 80_000,

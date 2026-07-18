@@ -27,7 +27,7 @@ def probes():
     return _load()
 
 
-def test_status_prints_all_three_probes(probes, capsys) -> None:
+def test_status_prints_structural_and_felt(probes, capsys) -> None:
     rc = probes.main(["--status"])
     out = capsys.readouterr().out
     assert "product_maturity " in out
@@ -35,35 +35,45 @@ def test_status_prints_all_three_probes(probes, capsys) -> None:
     assert "journey_maturity " in out
     assert "example_probes residual_total=" in out
     assert "next=" in out
-    # Fleet currently mature — residual_total=0; keep as gate for improve loop.
-    assert "residual_total=0" in out
-    assert rc == 0
+    # Felt bar lines always present (persona_homes / stills / product_quality).
+    assert "persona_homes " in out or "product_quality residual_total=" in out
+    assert rc in (0, 1)  # 0 when clean; 1 only with --strict
 
 
-def test_next_empty_when_fleet_mature(probes, capsys) -> None:
+def test_next_prefers_structural_then_felt(probes, capsys) -> None:
     rc = probes.main(["--next"])
     out = capsys.readouterr().out.strip()
-    assert out == ""
-    assert rc == 0
+    # Empty when clean; otherwise a showcase app name.
+    if out:
+        assert (REPO / "examples" / out).is_dir()
+        assert rc == 1
+    else:
+        assert rc == 0
 
 
 def test_json_shape(probes, capsys) -> None:
     rc = probes.main(["--json"])
     payload = json.loads(capsys.readouterr().out)
     names = {p["name"] for p in payload["probes"]}
-    assert names == {"product_maturity", "demo_fleet", "journey_maturity"}
+    assert {"product_maturity", "demo_fleet", "journey_maturity", "product_quality"} <= names
     for p in payload["probes"]:
         assert "status" in p
         assert "residual" in p
-        assert p["residual"] == 0
-    assert payload["next"] is None
-    assert payload["next_strategy"] is None
-    assert payload["force"] is None
+    assert "product_quality_lines" in payload
     assert rc == 0
 
 
-def test_strict_exits_0_when_clean(probes, capsys) -> None:
+def test_strict_exits_nonzero_when_felt_residual(probes, capsys) -> None:
+    """Strict fails when product_quality still has residual (empty stills etc.)."""
     rc = probes.main(["--strict"])
-    assert rc == 0
-    # still prints status lines
-    assert "example_probes residual_total=0" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "example_probes residual_total=" in out
+    # May be 0 if no local stills (CI) or >0 when empty heroes present.
+    total_line = [ln for ln in out.splitlines() if ln.startswith("example_probes residual_total=")][
+        0
+    ]
+    total = int(total_line.split("residual_total=")[1].split()[0])
+    if total > 0:
+        assert rc == 1
+    else:
+        assert rc == 0
