@@ -12,11 +12,15 @@ Qualitative persona scenarios via `dazzle qa trial`. Each cycle picks one `(exam
 - **Backlog row format:** `| id | category | severity | app/scenario | description[:120] | seen | cycle | status |`
 - **Rotation cursor:** stored in lane-specific state file `.dazzle/trials-rotation.json` (last `(app, scenario)` and cycle counter)
 
-Each cycle burns substantial tokens (gen-2 defaults ~400k budget ceiling;
-real use is lower but still heavy). Prefer **depth over frequency**: one
-gen-2 run with `adoption_criteria` beats three shallow gen-1 skims. Use
-sparingly in the shared explore budget; force `/improve trials` or
-`--reset-budget` when you want a matrix night.
+Each cycle burns substantial tokens for **deep** nested trials (gen-2 ~400k
+ceiling). Prefer the **agent QA ladder** (`docs/recipes/agent-qa-ladder.md`):
+
+1. **Mechanical first** — `dazzle qa trial-coverage` (loop-cheap, no nested LLM)
+2. **Deep or journey** — `dazzle qa trial` / `--mode journey` when coverage is green
+3. **Auto-seed** only JSON `auto_seed` rows (`ownership=product`, medium+ bug|missing|confusion|story_gap)
+4. Empty discovery → Ask/backoff, not HOUSEKEEPING thrash
+
+Force `/improve trials` or `--reset-budget` for matrix nights.
 
 ## Signals
 
@@ -87,7 +91,13 @@ If the trial fails (exit code ≠ 0, or report missing): return the outcome abov
 
 ### 3. TRIAGE
 
-Parse the report. Dedup post-processor (v0.57.83) collapses near-duplicates; treat each remaining friction entry as a distinct signal. For each entry:
+Parse the report **JSON sidecar** (`qa-trial-*.json`) when present — use
+`auto_seed` (pre-filtered) rather than raw `friction`. Skip rows with
+`ownership` ∈ {seed, rbac_expected, harness} unless investigating the
+instrument. Dedup post-processor collapses near-duplicates; also cluster
+exact `(category, severity, normalised description)` before seeding.
+
+For each auto-seed-eligible entry:
 
 1. **Match against existing trials backlog rows** — same `(category, description[:80])`? Increment `seen`, update `last_seen_cycle`. ≥3 cross-cycle reinforcement → file an issue.
 2. **Otherwise**, append a new row:

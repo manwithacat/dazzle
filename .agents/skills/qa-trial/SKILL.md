@@ -1,15 +1,19 @@
 ---
 name: qa-trial
-description: Use when authoring or revising trial.toml scenarios for dazzle qa trial — puts an LLM in the shoes of a real business user evaluating a Dazzle app. Use when the user asks to "set up qa trials", "write a trial scenario", "evaluate this app as a user", or mentions qualitative/trial/business-user testing. Also use when a trial report is sparse or unhelpful — the scenario itself is usually the root cause. Gen-2: longer careful-pilot sessions, adoption_criteria scoring, phases.
+description: Use when authoring trial.toml, running agent QA ladder (coverage/journey/deep), or triaging friction for improve auto-seed. Agent-first live investigation of Dazzle apps; human is gated L4. Triggers: qa trial, trial.toml, business-user testing, coverage inventory, journey mode, adoption_criteria, ownership triage, #1625 ladder.
 ---
 
-# qa-trial (gen-2)
+# qa-trial — agent QA ladder + nested deep trial
 
-`dazzle qa trial` runs an LLM agent through a Dazzle app as a real business user deciding whether to **pilot** the software. Output is a markdown report: recommend decision, optional adoption-criteria scores, friction observations, verdict. It's a **qualitative signal generator** — not pass/fail, not CI, not coverage.
+**Doctrine:** agent-first live investigation. Human packs are **L4**, not the quality definition. Full recipe: `docs/recipes/agent-qa-ladder.md`.
 
-**Gen-2 posture (current models):** careful 25–40 minute pilot evaluator, one recovery attempt before recording failure, wrap-up at ~80% of step budget, default 50 steps / 400k tokens. See `docs/reference/qa-trial-gen2.md`.
+| Instrument | Command | Drive rule |
+|------------|---------|------------|
+| Coverage inventory | `dazzle qa trial-inventory` / `trial-coverage` | Direct URL OK |
+| Journey path | `dazzle qa trial --mode journey` | Rendered affordances only |
+| Deep pilot | `dazzle qa trial` (default) | Free navigate after start |
 
-This skill helps you author the `trial.toml` that drives the harness. A good scenario produces scorable pilot criteria + actionable friction; a weak scenario produces "the app looks fine" with empty criteria.
+Nested deep trial (gen-2): careful pilot, `adoption_criteria`, `ownership` on friction, JSON sidecar with `auto_seed`. Not CI.
 
 ## When to invoke
 
@@ -25,11 +29,12 @@ The agent:
 2. Reads `user_identity` + `business_context` as first-person context ("You are Sarah…")
 3. Optionally follows `phases` (orient → core jobs → stress → decide)
 4. Works through `tasks` as goals (free to reorder; try one recovery path on failure)
-5. Calls `record_friction(...)` with optional `blocks_pilot`, `framework_vs_app`
+5. Calls `record_friction(...)` with `ownership` (product|seed|rbac_expected|harness|framework|unclear), optional `blocks_pilot`
 6. Calls `submit_verdict(verdict, recommend, criteria_scores, pilot_blockers_summary)` when `stop_when` is satisfied
-7. Report clusters near-duplicates; renders Recommend + Adoption criteria when present
+7. Writes markdown + **JSON sidecar** (`auto_seed` pre-filtered for improve)
 
-Friction categories: `bug`, `missing`, `confusion`, `aesthetic`, `praise`, `other`. Severity: `low` | `medium` | `high`.
+Categories: `bug`, `missing`, `confusion`, `story_gap`, `aesthetic`, `praise`, `other`.
+Auto-seed: medium+ × product × {bug,missing,confusion,story_gap} only.
 
 ## Authoring rules
 
@@ -175,20 +180,22 @@ Use `--fresh-db` to avoid stale rows from prior trials corrupting the signal (#8
 2. **Verdict** — prose decision. Negative framing is serious; the agent is not adversarial by default.
 3. **Adoption criteria** — pass/partial/fail/untested per criterion when declared.
 4. **Run metadata** — steps, duration, tokens. Very low step counts still mean early abort.
-5. **Friction** — by category/severity; `blocks_pilot` and `scope: framework|app` when set; `reported: ×N` is dedup strength.
+5. **Friction** — category/severity/`ownership`/`blocks_pilot`; `reported: ×N` is dedup strength.
+6. **JSON `auto_seed`** — only rows safe for improve PENDING.
 
-## Framework-level vs app-level friction
+## Ownership triage (not “framework vs app” alone)
 
-Not all friction means the framework is broken:
-
-- **Framework-level**: 403 page with no explanation of why, filter dropdown silently empty, 404 with no suggestion, alphabetized irrelevant list
-- **App-level**: Missing CRUD surface, scope rule with wrong personas, copy that reads poorly
-
-When triaging a trial report, ask: *would this friction exist in a well-crafted app of the same category?* If yes, it's a framework gap. If no, it's DSL authoring. Only framework-level friction should drive upstream issues.
+| ownership | Seed PENDING? |
+|-----------|----------------|
+| product | yes (medium+) |
+| framework | only for Dazzle core improve |
+| seed / rbac_expected / harness | **no** — fix substrate or instrument |
 
 ## References
 
-- `docs/reference/qa-trial-gen2.md` — harness posture and schema
-- `references/authoring-guide.md` — deeper patterns per domain (SaaS, finserv, healthcare, logistics)
-- `templates/trial-toml-template.toml` — blank gen-2 scenario form
-- `examples/support_tickets/trial.toml` — flagship gen-2 reference (`manager_evaluation`)
+- `docs/recipes/agent-qa-ladder.md` — **published consumer recipe** (V&V ladder, modes, KPIs)
+- `docs/reference/qa-trial-gen2.md` — nested trial posture
+- `references/authoring-guide.md` — domain patterns
+- `templates/trial-toml-template.toml` — blank form
+- `examples/support_tickets/trial.toml` + `agent/domain-theory/` — flagship
+- GitHub #1625 — CyFuture + AegisMark field notes

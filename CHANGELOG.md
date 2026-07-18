@@ -1,13 +1,22 @@
 ## [Unreleased]
 
+### Added
+- **Agent QA ladder recipe** (`docs/recipes/agent-qa-ladder.md`, #1625) —
+  V&V L0–L4, coverage/journey/deep instruments, ownership-aware friction
+  auto-seed, harness-artifact appendix, domain-theory hook, consumer KPIs.
+- **`dazzle qa trial-inventory` / `trial-coverage` / `trial-hypotheses`** —
+  mechanical coverage inventory (static + live HTTP probe) and domain-theory
+  discovery for loop-safe L3.
+- **Friction schema** — `ownership` (product|seed|rbac_expected|harness|
+  framework|unclear), `story_gap` category, JSON report sidecar with
+  `auto_seed` for improve loops (`trial_friction.py`, `trial_report_to_json`).
+
 ### Changed
 - **`dazzle qa trial` gen-2 posture** — careful-pilot system prompt (recover
   once, wrap-up at 80% of steps), defaults `max_steps=50` / `token_budget=400k`,
-  optional scenario `adoption_criteria` + `phases`, richer
-  `record_friction` (`blocks_pilot`, `framework_vs_app`) and `submit_verdict`
-  (`recommend`, `criteria_scores`, `pilot_blockers_summary`). Report renders
-  Recommend + Adoption criteria. Flagship: `examples/support_tickets`
-  `manager_evaluation`. Skill + `docs/reference/qa-trial-gen2.md`.
+  optional `adoption_criteria` + `phases`, `--mode deep|journey`, richer
+  `record_friction` / `submit_verdict`. Flagship: `examples/support_tickets`
+  `manager_evaluation` + `agent/domain-theory/`.
 
 ## [0.105.11] - 2026-07-18
 

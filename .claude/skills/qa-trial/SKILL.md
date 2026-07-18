@@ -1,6 +1,6 @@
 ---
 name: qa-trial
-description: Use when authoring or revising trial.toml scenarios for dazzle qa trial — puts an LLM in the shoes of a real business user evaluating a Dazzle app. Use when the user asks to "set up qa trials", "write a trial scenario", "evaluate this app as a user", or mentions qualitative/trial/business-user testing. Also use when a trial report is sparse or unhelpful — the scenario itself is usually the root cause. Gen-2: longer careful-pilot sessions, adoption_criteria scoring, phases.
+description: Use when authoring trial.toml, running agent QA ladder (coverage/journey/deep), or triaging friction for improve auto-seed. Agent-first live investigation of Dazzle apps; human is gated L4. Triggers: qa trial, trial.toml, business-user testing, coverage inventory, journey mode, adoption_criteria, ownership triage, #1625 ladder.
 ---
 
-Read and follow `.agents/skills/qa-trial/SKILL.md` (portable home for this skill). See also `docs/reference/qa-trial-gen2.md`.
+Read and follow `.agents/skills/qa-trial/SKILL.md`. Recipe: `docs/recipes/agent-qa-ladder.md`.

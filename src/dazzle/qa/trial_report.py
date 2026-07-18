@@ -37,7 +37,15 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from dazzle.qa.signing_verifier import SigningOutcome
 
-_CATEGORY_ORDER = ("bug", "missing", "confusion", "aesthetic", "praise", "other")
+_CATEGORY_ORDER = (
+    "bug",
+    "missing",
+    "confusion",
+    "story_gap",
+    "aesthetic",
+    "praise",
+    "other",
+)
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 _CLUSTER_SIMILARITY_THRESHOLD = 0.65
 # TR-32: praise rephrases more freely than friction; lower SequenceMatcher
@@ -335,9 +343,11 @@ def render_trial_report(report: TrialReport) -> str:
                 meta.append(f"*where:* `{url}`")
             if entry.get("blocks_pilot"):
                 meta.append("*blocks_pilot:* yes")
-            fva = (entry.get("framework_vs_app") or "").strip()
-            if fva and fva != "unclear":
-                meta.append(f"*scope:* {fva}")
+            ownership = (entry.get("ownership") or "").strip()
+            if ownership and ownership != "unclear":
+                meta.append(f"*ownership:* {ownership}")
+            elif (entry.get("framework_vs_app") or "").strip() not in ("", "unclear"):
+                meta.append(f"*scope:* {entry.get('framework_vs_app')}")
             similar = entry.get("similar_count", 1)
             if similar > 1:
                 meta.append(f"*reported:* ×{similar}")
@@ -403,6 +413,8 @@ def build_trial_report(
 ) -> TrialReport:
     """Convenience builder — pulls the one-line identity headline
     from the multi-line user_identity block."""
+    from dazzle.qa.trial_friction import normalize_friction_entry
+
     signing_outcomes: dict[str, Any] | None = None
     if signing_outcome is not None:
         signing_outcomes = asdict(signing_outcome)
@@ -410,7 +422,7 @@ def build_trial_report(
         scenario_name=scenario_name,
         user_identity_headline=_first_line(user_identity),
         verdict=verdict,
-        friction=friction,
+        friction=[normalize_friction_entry(f) for f in friction],
         step_count=step_count,
         duration_seconds=duration_seconds,
         tokens_used=tokens_used,
@@ -420,3 +432,28 @@ def build_trial_report(
         criteria_scores=list(criteria_scores or []),
         pilot_blockers_summary=pilot_blockers_summary or "",
     )
+
+
+def trial_report_to_json(report: TrialReport) -> dict[str, Any]:
+    """Stable machine schema for consumer improve loops (#1625 T4)."""
+    from dazzle.qa.trial_friction import filter_auto_seed
+
+    friction = list(report.friction)
+    return {
+        "schema_version": 2,
+        "scenario": report.scenario_name,
+        "identity_headline": report.user_identity_headline,
+        "verdict": report.verdict,
+        "recommend": report.recommend,
+        "criteria_scores": list(report.criteria_scores),
+        "pilot_blockers_summary": report.pilot_blockers_summary,
+        "friction": friction,
+        "auto_seed": filter_auto_seed(friction, allow_framework=False),
+        "auto_seed_framework": filter_auto_seed(friction, allow_framework=True),
+        "step_count": report.step_count,
+        "duration_seconds": report.duration_seconds,
+        "tokens_used": report.tokens_used,
+        "outcome": report.outcome,
+        "generated_at": report.generated_at.isoformat(),
+        "signing_outcomes": report.signing_outcomes,
+    }

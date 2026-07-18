@@ -1310,18 +1310,29 @@ def qa_trial(
             "(placeholder values, old fixture data, etc.). Auth is preserved."
         ),
     ),
+    mode: str | None = typer.Option(
+        None,
+        "--mode",
+        help=(
+            "Trial instrument: deep (default careful pilot) or journey "
+            "(affordance-only discoverability — no URL shortcuts). "
+            "Overrides scenario mode= if set."
+        ),
+    ),
+    json_out: bool = typer.Option(
+        True,
+        "--json-out/--no-json-out",
+        help="Also write stable JSON sidecar for consumer improve loops (default: on).",
+    ),
 ) -> None:
-    """Run a qualitative business-user trial of a Dazzle app.
+    """Run an agent-first qualitative trial of a Dazzle app (gen-2).
 
-    Puts an LLM in the shoes of a real business user evaluating this
-    software. The LLM attempts meaningful tasks and records friction —
-    things that would make a real user hesitate to recommend the
-    software. Output is a markdown report for human triage, NOT a
-    pass/fail CI gate.
+    Nested LLM inhabits a persona, attempts goals, records structured
+    friction (ownership-aware). Markdown report for humans; JSON sidecar
+    for auto-seed. Not a pass/fail CI gate.
 
-    Requires ``trial.toml`` in the app directory declaring at least
-    one scenario. See ``examples/support_tickets/trial.toml`` for
-    format.
+    Requires ``trial.toml`` with at least one ``[[scenario]]``. See
+    ``docs/recipes/agent-qa-ladder.md`` and ``examples/support_tickets/trial.toml``.
 
     Example:
 
@@ -1347,6 +1358,7 @@ def qa_trial(
         build_trial_report,
         render_trial_report,
         trial_abort_message,
+        trial_report_to_json,
     )
     from dazzle.testing.ux.interactions.server_fixture import launch_interaction_server
 
@@ -1634,6 +1646,7 @@ def qa_trial(
                         base_url=site_url,
                         transcript_sink=transcript_sink,
                         signing_tools=signing_tools_list or None,
+                        mode=mode,
                     )
                     typer.echo(
                         f"Starting trial — up to {mission_inner.max_steps} steps, "
@@ -1725,6 +1738,13 @@ def qa_trial(
         output.parent.mkdir(parents=True, exist_ok=True)
 
     output.write_text(rendered, encoding="utf-8")
+    json_path: Path | None = None
+    if json_out:
+        json_path = output.with_suffix(".json")
+        json_path.write_text(
+            json.dumps(trial_report_to_json(report), indent=2) + "\n",
+            encoding="utf-8",
+        )
 
     # #1375: an agent-loop death (LLM billing/auth failure, observer
     # crash) must exit nonzero — autonomous consumers read the exit code
@@ -1737,7 +1757,52 @@ def qa_trial(
         typer.echo(f"\n{abort_msg}\nReport (forensics): {output}", err=True)
         raise typer.Exit(code=3)
 
+    seedable = 0
+    try:
+        from dazzle.qa.trial_friction import filter_auto_seed
+
+        seedable = len(filter_auto_seed(friction, allow_framework=False))
+    except Exception:
+        seedable = 0
+    extra = f" JSON: {json_path}" if json_path else ""
     typer.echo(
-        f"\nTrial complete. {len(friction)} friction observation(s) recorded. Report: {output}",
+        f"\nTrial complete. {len(friction)} friction observation(s) "
+        f"({seedable} auto-seed eligible). Report: {output}{extra}",
         file=sys.stdout,
     )
+
+
+@qa_app.command("trial-inventory")
+def qa_trial_inventory(
+    app: str | None = typer.Option(None, "--app", "-a", help="Example app name (defaults to cwd)"),
+    as_json: bool = typer.Option(True, "--json/--table", help="JSON (default) or text table"),
+) -> None:
+    """List mechanical coverage inventory (list/create surfaces + workspaces)."""
+    from dazzle.qa.trial_cli import run_trial_inventory
+
+    run_trial_inventory(_resolve_project_dir(app), as_json=as_json)
+
+
+@qa_app.command("trial-coverage")
+def qa_trial_coverage(
+    app: str | None = typer.Option(None, "--app", "-a", help="Example app name (defaults to cwd)"),
+    persona: str = typer.Option("", "--persona", "-p", help="Persona for live probe auth"),
+    base_url: str | None = typer.Option(
+        None, "--base-url", "-u", help="Running app base URL (omit for static inventory only)"
+    ),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write JSON report path"),
+) -> None:
+    """Mechanical coverage walk: inventory + optional live HTTP probe."""
+    from dazzle.qa.trial_cli import run_trial_coverage
+
+    run_trial_coverage(_resolve_project_dir(app), persona=persona, base_url=base_url, output=output)
+
+
+@qa_app.command("trial-hypotheses")
+def qa_trial_hypotheses(
+    app: str | None = typer.Option(None, "--app", "-a", help="Example app name (defaults to cwd)"),
+) -> None:
+    """Show domain-theory hypotheses files if present (T4 hook)."""
+    from dazzle.qa.trial_cli import run_trial_hypotheses
+
+    run_trial_hypotheses(_resolve_project_dir(app))

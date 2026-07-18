@@ -256,7 +256,7 @@ class TestBuildTrialMission:
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
         assert m.max_steps == 50
         assert m.token_budget == 400_000
-        assert m.context.get("gen") == 2
+        assert m.context.get("mode") == "deep"
 
     def test_adoption_criteria_and_phases_in_prompt(self, scenario: dict) -> None:
         sink: dict = {"friction": []}
@@ -282,10 +282,11 @@ class TestBuildTrialMission:
             evidence="blank tbody",
             severity="high",
             blocks_pilot=True,
-            framework_vs_app="framework",
+            ownership="framework",
         )
         entry = sink["friction"][0]
         assert entry["blocks_pilot"] is True
+        assert entry["ownership"] == "framework"
         assert entry["framework_vs_app"] == "framework"
 
     def test_submit_verdict_records_recommend_and_criteria(self, scenario: dict) -> None:
@@ -381,7 +382,7 @@ class TestReportRendering:
                     "evidence": "No rows",
                     "severity": "medium",
                     "blocks_pilot": False,
-                    "framework_vs_app": "framework",
+                    "ownership": "framework",
                 }
             ],
             verdict="Conditional — useful but empty states need work.",
@@ -396,8 +397,7 @@ class TestReportRendering:
         assert "**Recommend:** `conditional`" in md
         assert "## Adoption criteria" in md
         assert "Urgency visible" in md
-        assert "blocks_pilot" not in md or "Empty queue" in md
-        assert "*scope:* framework" in md
+        assert "*ownership:* framework" in md
         assert "Pilot blockers:" in md
 
     def test_empty_friction_renders_tombstone(self) -> None:

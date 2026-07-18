@@ -19,6 +19,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from dazzle.qa.trial_friction import (
+    FRICTION_CATEGORIES,
+    OWNERSHIP_VALUES,
+    clamp_category,
+    clamp_ownership,
+    clamp_severity,
+    normalize_friction_entry,
+)
+
 from ..core import AgentTool, Mission
 from ..models import ActionType, AgentAction, Step
 
@@ -90,12 +99,13 @@ When something would make you hesitate to recommend this to a colleague,
 call `record_friction` with category, severity, description, URL, and
 evidence. Prefer specific, reproducible observations.
 
-Categories: bug | missing | confusion | aesthetic | praise | other.
+Categories: bug | missing | confusion | story_gap | aesthetic | praise | other.
 Severity: low | medium | high.
 Optional friction fields:
 - blocks_pilot: true if this alone would block a pilot/go-live week.
-- framework_vs_app: "framework" if this would bite any well-authored app
-  of this class; "app" if it is this app's content/DSL; "unclear" otherwise.
+- ownership: product | seed | rbac_expected | harness | framework | unclear
+  (prefer product for real defects; seed for empty demo data; harness for
+  headless/lazy-IO timeouts; rbac_expected for correct denies).
 
 --- Stopping ---
 {stop_when}
@@ -157,9 +167,17 @@ def _format_phases_block(phases: list[Any]) -> str:
 # Tools
 # ---------------------------------------------------------------------------
 
-_CATEGORIES = ("bug", "missing", "confusion", "aesthetic", "praise", "other")
-_FRAMEWORK_VS_APP = ("framework", "app", "unclear")
 _CRITERION_SCORES = ("pass", "partial", "fail", "untested")
+_JOURNEY_DRIVE_RULE = """
+
+--- Journey-path drive rule (this scenario mode=journey) ---
+You measure *discoverability from rendered affordances*, not reachability
+by typing URLs. **Do not** navigate by inventing /app/... paths from memory
+or the task text. Only follow links, buttons, tabs, and nav items you can
+see. If you cannot find a surface without a URL shortcut, that *is* the
+finding — record friction (often story_gap or confusion), do not cheat.
+`starting_url` (if any) is only the cold start; after that, affordances only.
+"""
 
 
 def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]]) -> AgentTool:
@@ -172,19 +190,29 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
         evidence: str = "",
         severity: str = "medium",
         blocks_pilot: bool = False,
+        ownership: str = "unclear",
         framework_vs_app: str = "unclear",
     ) -> dict[str, Any]:
-        cat = category if category in _CATEGORIES else "other"
-        fva = framework_vs_app if framework_vs_app in _FRAMEWORK_VS_APP else "unclear"
-        entry: dict[str, Any] = {
-            "category": cat,
-            "description": description,
-            "url": url,
-            "evidence": evidence,
-            "severity": severity if severity in ("low", "medium", "high") else "medium",
-            "blocks_pilot": bool(blocks_pilot),
-            "framework_vs_app": fva,
-        }
+        # Prefer explicit ownership; fall back to legacy framework_vs_app.
+        own = ownership if ownership in OWNERSHIP_VALUES else ""
+        if not own or own == "unclear":
+            if framework_vs_app == "framework":
+                own = "framework"
+            elif framework_vs_app == "app":
+                own = "product"
+            else:
+                own = clamp_ownership(ownership or "unclear")
+        entry = normalize_friction_entry(
+            {
+                "category": clamp_category(category),
+                "description": description,
+                "url": url,
+                "evidence": evidence,
+                "severity": clamp_severity(severity),
+                "blocks_pilot": bool(blocks_pilot),
+                "ownership": own,
+            }
+        )
         transcript_sink.setdefault("friction", []).append(entry)
         return {
             "recorded": True,
@@ -197,16 +225,19 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
         description=(
             "Record a single friction observation from your trial. Call this "
             "every time you notice something worth flagging — good or bad. "
-            "You can call it many times per run. Prefer URL + reproducible "
-            "evidence; set blocks_pilot=true only for true pilot blockers."
+            "Set ownership carefully: product (auto-seedable), seed (demo data), "
+            "rbac_expected, harness (headless artifact), framework, or unclear. "
+            "blocks_pilot=true only for true pilot blockers."
         ),
         schema={
             "type": "object",
             "properties": {
                 "category": {
                     "type": "string",
-                    "description": "One of: bug, missing, confusion, aesthetic, praise, other.",
-                    "enum": list(_CATEGORIES),
+                    "description": (
+                        "bug | missing | confusion | story_gap | aesthetic | praise | other"
+                    ),
+                    "enum": list(FRICTION_CATEGORIES),
                 },
                 "description": {
                     "type": "string",
@@ -238,13 +269,17 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
                         "true if this issue alone would block a pilot or go-live week."
                     ),
                 },
-                "framework_vs_app": {
+                "ownership": {
                     "type": "string",
                     "description": (
-                        "framework | app | unclear — would this bite any well-authored "
-                        "app of this class, or is it this app's content?"
+                        "product | seed | rbac_expected | harness | framework | unclear"
                     ),
-                    "enum": list(_FRAMEWORK_VS_APP),
+                    "enum": list(OWNERSHIP_VALUES),
+                },
+                "framework_vs_app": {
+                    "type": "string",
+                    "description": ("Legacy alias: framework | app | unclear. Prefer ownership."),
+                    "enum": ["framework", "app", "unclear"],
                 },
             },
             "required": ["category", "description"],
@@ -497,6 +532,7 @@ def build_trial_mission(
     max_steps: int | None = None,
     token_budget: int = _DEFAULT_TOKEN_BUDGET,
     signing_tools: list[AgentTool] | None = None,
+    mode: str | None = None,
 ) -> Mission:
     """Build a :class:`Mission` for a qualitative trial (gen-2 defaults).
 
@@ -506,7 +542,8 @@ def build_trial_mission(
             ``business_context``, ``tasks``, ``stop_when``,
             ``max_steps`` (optional), ``time_budget_seconds`` (optional),
             ``token_budget`` (optional), ``adoption_criteria`` (optional
-            list[str]), ``phases`` (optional list[str]).
+            list[str]), ``phases`` (optional list[str]), ``mode`` optional
+            ``deep`` (default) or ``journey`` (affordance-only drive).
         base_url: Base URL of the running application.
         transcript_sink: Mutable dict tools write into
             (``friction``, ``verdict``).
@@ -514,6 +551,7 @@ def build_trial_mission(
         token_budget: Default LLM token budget; overridden by
             scenario ``token_budget`` when set.
         signing_tools: Optional signing harness tools.
+        mode: Override scenario ``mode`` (``deep`` | ``journey``).
     """
     stop_when = scenario.get("stop_when", "").strip() or (
         "When you feel you've explored enough to form an opinion, call "
@@ -526,26 +564,19 @@ def build_trial_mission(
         scenario.get("adoption_criteria") or scenario.get("criteria") or []
     )
     phases_list = _as_str_list(scenario.get("phases") or [])
-
-    system_prompt = _TRIAL_SYSTEM_PROMPT.format(
-        user_identity=(scenario.get("user_identity", "") or "").strip() or "(not specified)",
-        business_context=(scenario.get("business_context", "") or "").strip() or "(not specified)",
-        task_list=_format_task_list(scenario.get("tasks", [])),
-        criteria_block=_format_criteria_block(criteria_list),
-        phases_block=_format_phases_block(phases_list),
+    effective_mode = _resolve_trial_mode(mode, scenario)
+    system_prompt = _compose_system_prompt(
+        scenario=scenario,
+        tasks=scenario.get("tasks", []),
+        criteria_list=criteria_list,
+        phases_list=phases_list,
         stop_when=stop_when,
         max_steps=effective_max_steps,
         wrap_up_at=wrap_up_at,
+        mode=effective_mode,
+        signing_tools=signing_tools,
     )
-    if signing_tools:
-        system_prompt = system_prompt + _SIGNING_FLOW_GUIDANCE
-
-    tools: list[AgentTool] = [
-        _make_record_friction_tool(transcript_sink),
-        _make_submit_verdict_tool(transcript_sink, expected_criteria=criteria_list or None),
-    ]
-    if signing_tools:
-        tools.extend(signing_tools)
+    tools = _baseline_tools(transcript_sink, criteria_list, signing_tools)
 
     return Mission(
         name=f"trial:{scenario.get('name', 'unnamed')}",
@@ -557,9 +588,57 @@ def build_trial_mission(
         start_url=_resolve_start_url(base_url, scenario.get("starting_url") or ""),
         terminal_tools=["submit_verdict"],
         context={
-            "mode": "trial",
+            "mode": effective_mode,
             "persona": scenario.get("login_persona", ""),
             "scenario": scenario.get("name", "unnamed"),
             "gen": 2,
         },
     )
+
+
+def _resolve_trial_mode(mode: str | None, scenario: dict[str, Any]) -> str:
+    effective = (mode or scenario.get("mode") or "deep").strip().lower()
+    return effective if effective in ("deep", "journey") else "deep"
+
+
+def _compose_system_prompt(
+    *,
+    scenario: dict[str, Any],
+    tasks: list[Any],
+    criteria_list: list[str],
+    phases_list: list[str],
+    stop_when: str,
+    max_steps: int,
+    wrap_up_at: int,
+    mode: str,
+    signing_tools: list[AgentTool] | None,
+) -> str:
+    prompt = _TRIAL_SYSTEM_PROMPT.format(
+        user_identity=(scenario.get("user_identity", "") or "").strip() or "(not specified)",
+        business_context=(scenario.get("business_context", "") or "").strip() or "(not specified)",
+        task_list=_format_task_list(tasks),
+        criteria_block=_format_criteria_block(criteria_list),
+        phases_block=_format_phases_block(phases_list),
+        stop_when=stop_when,
+        max_steps=max_steps,
+        wrap_up_at=wrap_up_at,
+    )
+    if mode == "journey":
+        prompt = prompt + _JOURNEY_DRIVE_RULE
+    if signing_tools:
+        prompt = prompt + _SIGNING_FLOW_GUIDANCE
+    return prompt
+
+
+def _baseline_tools(
+    transcript_sink: dict[str, list[dict[str, Any]]],
+    criteria_list: list[str],
+    signing_tools: list[AgentTool] | None,
+) -> list[AgentTool]:
+    tools: list[AgentTool] = [
+        _make_record_friction_tool(transcript_sink),
+        _make_submit_verdict_tool(transcript_sink, expected_criteria=criteria_list or None),
+    ]
+    if signing_tools:
+        tools.extend(signing_tools)
+    return tools
