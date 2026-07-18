@@ -154,8 +154,11 @@ def compare_screenshots(
     try:
         from PIL import Image, ImageChops
 
-        img_current = Image.open(current)
-        img_baseline = Image.open(baseline)
+        # Image.open() is typed as ImageFile; resize() returns Image.Image.
+        # Annotate as Image.Image so the reassignment after resize type-checks
+        # under the viewport extra (Pillow stubs) — CI type-check installs that.
+        img_current: Image.Image = Image.open(current)
+        img_baseline: Image.Image = Image.open(baseline)
 
         # Resize if dimensions differ
         if img_current.size != img_baseline.size:
