@@ -28,7 +28,7 @@ Checks (machine):
 |-------|------------------------|
 | P0-4 nav | `nav_platform:` |
 | P0-5 seed mins | `seed_thin:` |
-| P0-6 stills | `stills_platform_only` |
+| P0-6 stills | `stills_platform_only` / `empty_hero:<file>=size<min` |
 
 **Open human P0s** (not fully scored by probe — drain via #1626 when residual=0):
 

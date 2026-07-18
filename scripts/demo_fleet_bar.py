@@ -2,11 +2,13 @@
 """Demo-fleet bar for #1626 (antagonist bake-off P0 checklist).
 
 Structural product maturity can be green while stills/seeds still fail a
-sales demo. This probe checks machine-checkable slices of P0-4..P0-6:
+sales demo. This probe checks machine-checkable slices of P0-4..P0-9:
 
 * product persona nav has no platform chrome (P0-4)
 * showcase blueprints declare minimum story row counts (P0-5)
 * QA screenshot dirs are not *only* stale ``_platform_admin_*`` stills (P0-6)
+* known happy-path stills are not empty-state theater by file size (P0-6)
+* invoice desk seeds have submitted/approved floors per tenant (P0-9)
 
 Usage::
 
@@ -52,6 +54,23 @@ MIN_ROWS: dict[str, dict[str, int]] = {
 }
 
 PLATFORM_STILL_PREFIX = "_platform_admin_"
+
+# P0-6 empty-hero floors (bytes). Only enforced when the still file exists
+# under the app's screenshot dir (CI often has no gitignored .dazzle stills —
+# skip). Empty-state theater stills are ~40–55 KB; populated job desks
+# typically ≥80 KB at desktop light above-fold.
+HERO_MIN_BYTES: dict[str, dict[str, int]] = {
+    "invoice_ops": {
+        "approval_desk_approver_desktop_light.png": 80_000,
+        "pay_desk_finance_desktop_light.png": 70_000,
+    },
+    "support_tickets": {
+        "manager_ops_manager_desktop_light.png": 80_000,
+    },
+    "simple_task": {
+        "task_board_manager_desktop_light.png": 90_000,
+    },
+}
 
 
 @dataclass
@@ -153,7 +172,7 @@ def score_app(app: str) -> AppDemoBar:
         else:
             row.issues.append("seed_desk_thin:missing_Invoice.jsonl")
 
-    # P0-6 stale platform-only stills
+    # P0-6 stale platform-only stills + empty-hero size floors
     shots = _shot_dir(app_dir)
     if shots is not None:
         pngs = list(shots.glob("*.png"))
@@ -161,6 +180,14 @@ def score_app(app: str) -> AppDemoBar:
             product = [p for p in pngs if not p.name.startswith(PLATFORM_STILL_PREFIX)]
             if not product:
                 row.issues.append("stills_platform_only")
+            # Empty-hero: known happy-path stills must not be empty-state theater
+            for name, min_bytes in (HERO_MIN_BYTES.get(app) or {}).items():
+                path = shots / name
+                if not path.is_file():
+                    continue
+                size = path.stat().st_size
+                if size < min_bytes:
+                    row.issues.append(f"empty_hero:{name}={size}<{min_bytes}")
 
     # P0-4 nav (needs appspec load)
     try:
