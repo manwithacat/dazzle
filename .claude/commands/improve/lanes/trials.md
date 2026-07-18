@@ -12,7 +12,11 @@ Qualitative persona scenarios via `dazzle qa trial`. Each cycle picks one `(exam
 - **Backlog row format:** `| id | category | severity | app/scenario | description[:120] | seen | cycle | status |`
 - **Rotation cursor:** stored in lane-specific state file `.dazzle/trials-rotation.json` (last `(app, scenario)` and cycle counter)
 
-Each cycle burns ~50–100k tokens (the `dazzle qa trial` invocation itself). Use sparingly.
+Each cycle burns substantial tokens (gen-2 defaults ~400k budget ceiling;
+real use is lower but still heavy). Prefer **depth over frequency**: one
+gen-2 run with `adoption_criteria` beats three shallow gen-1 skims. Use
+sparingly in the shared explore budget; force `/improve trials` or
+`--reset-budget` when you want a matrix night.
 
 ## Signals
 

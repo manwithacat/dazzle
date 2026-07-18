@@ -54,6 +54,7 @@
 | [CLI Reference](cli.md) | Complete reference for the `dazzle` command-line interface and its command groups. |
 | [E2E Environment (Mode A)](e2e-environment.md) | The Mode A developer one-shot harness that launches a live example app for end-to-end testing. |
 | [QA Trial Patterns](qa-trial-patterns.md) | Patterns surfaced by `dazzle qa trial` — qualitative business-user evaluation of a Dazzle app. |
+| [QA Trial gen-2](qa-trial-gen2.md) | Current-model trial posture: budgets, adoption_criteria, structured verdict, authoring defaults. |
 | [Fitness Methodology](fitness-methodology.md) | The optional Agent-Led Fitness Methodology V&V loop that checks app fitness against declared intent. |
 | [Fitness Investigator](fitness-investigator.md) | Agent-led investigation of ranked fitness clusters that produces actionable improvement proposals. |
 | [Fitness Triage](fitness-triage.md) | Turning a flat fitness backlog into ranked, actionable clusters for investigation. |

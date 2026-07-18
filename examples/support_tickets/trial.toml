@@ -8,26 +8,31 @@
 [[scenario]]
 name = "manager_evaluation"
 login_persona = "manager"
-time_budget_seconds = 400
-max_steps = 35
+# Gen-2: careful pilot budgets (current-gen models handle longer sessions).
+time_budget_seconds = 600
+max_steps = 55
+token_budget = 400000
 
 user_identity = """
 You are Sarah, founder of a small B2B SaaS company with about 50 paying
 customers. You handle customer success and escalations; your junior
 teammate Alex handles first-line support. Your current setup is Gmail +
 a shared Notion doc, which is starting to strain. You're trialling this
-support-tickets software today to decide whether to switch.
+support-tickets software today to decide whether to run a two-week pilot
+with Alex before a full switch.
 
 You are logged in as the "manager" account, which is what you'd use in
 production — you have oversight of the full support queue and Alex's
-work.
+work. You are thorough: you will try one recovery path when something
+fails before you write it off.
 """
 
 business_context = """
 You typically see 10-20 support requests a week. About a third are
 critical (customer can't use the product), half are medium, and the
 rest are feature requests or questions. You care about SLA — customers
-escalate to their account managers when tickets linger.
+escalate to their account managers when tickets linger. A pilot fails
+if managers cannot see urgency and reassign work without tribal knowledge.
 """
 
 tasks = [
@@ -35,13 +40,30 @@ tasks = [
     "Skim the critical and unassigned queues. Can you act on a ticket without diving into a generic entity list?",
     "One customer just called about a 2-day-old ticket that hasn't been resolved. See if urgency is visible from the open/critical queues or metrics — not only by scrolling a flat table.",
     "Alex just asked for more tickets. From Manager Ops, can you see open/WIP/critical counts and find unassigned work to reassign?",
+    "Stress lightly: if a filter or empty state appears, can you tell why the list is empty and recover?",
+]
+
+phases = [
+    "Orient on Manager Ops — first impression and pressure signals",
+    "Core jobs — queues, urgency, reassignment",
+    "Light stress — empty/filter/error recovery if encountered",
+    "Decide — score adoption criteria and submit_verdict",
+]
+
+adoption_criteria = [
+    "Urgency of open work is visible without spreadsheet mental math",
+    "Manager can find unassigned / critical work in under a minute",
+    "Reassignment or handoff path is discoverable from the primary workspace",
+    "Empty or filtered states explain themselves (not a blank wall)",
+    "Would run a two-week pilot with Alex on this tool as-is or with minor fixes",
 ]
 
 stop_when = """
-Stop when you've formed a rounded opinion on whether this software would
-work for Sarah's business. Don't feel obliged to try every feature — the
-aim is honest friction reporting, not exhaustive coverage. Call
-`submit_verdict` with a one-paragraph verdict when you're ready.
+Stop when you can score the adoption criteria and form a pilot decision
+(yes / conditional / no). Prefer depth on the criteria over exhaustive
+feature tourism. Call `submit_verdict` with recommend=yes|no|conditional,
+criteria_scores for each criterion (pass|partial|fail|untested), and a
+clear pilot_blockers_summary if any.
 """
 
 

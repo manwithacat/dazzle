@@ -1,4 +1,4 @@
-"""Qualitative trial mission.
+"""Qualitative trial mission (gen-2).
 
 A DazzleAgent mission that puts the LLM in the shoes of a real
 business user evaluating a Dazzle app. Unlike the discovery /
@@ -6,15 +6,13 @@ entity_completeness / workflow_coherence missions — which ask
 "does this component match the DSL?" — the trial mission asks
 "does this software actually let me do my job?"
 
-The output is a set of ``friction`` observations: things the user
-tried to do, whether they worked, and what felt off. It is
-explicitly *not* a pass/fail CI gate. Different runs will surface
-different things. That's the point — qualitative signal for human
-triage, not regression detection.
+Gen-2 (2026-07) raises ambition for current-generation models:
+longer careful-pilot sessions, recovery-before-give-up, optional
+adoption criteria scoring, and richer friction metadata. Still
+explicitly *not* a pass/fail CI gate.
 
-See docs/reference/implicitness-audit.md for the post-mortem that
-motivated this, and trial.toml files under examples/*/ for the
-per-app scenario definitions.
+See docs/reference/qa-trial-gen2.md, trial.toml under examples/*/,
+and .agents/skills/qa-trial/SKILL.md.
 """
 
 from __future__ import annotations
@@ -24,10 +22,16 @@ from typing import Any
 from ..core import AgentTool, Mission
 from ..models import ActionType, AgentAction, Step
 
+# Defaults sized for current-gen models (Grok 4.x / Claude Sonnet-class).
+# Older scenarios may still pin lower max_steps in trial.toml.
+_DEFAULT_MAX_STEPS = 50
+_DEFAULT_TOKEN_BUDGET = 400_000
+# Wrap later than gen-1 (60%) — current models can finish tasks *and* verdict.
+_WRAP_UP_FRACTION = 0.80
+
 # ---------------------------------------------------------------------------
 # System prompt
 # ---------------------------------------------------------------------------
-
 
 _SIGNING_FLOW_GUIDANCE = """
 
@@ -50,7 +54,8 @@ go straight to sign_document or decline_signing.
 """
 
 _TRIAL_SYSTEM_PROMPT = """\
-You are a real business user evaluating a piece of software.
+You are a real business user evaluating a piece of software for a
+serious pilot decision — not a five-minute drive-by.
 
 --- Who you are ---
 {user_identity}
@@ -59,56 +64,92 @@ You are a real business user evaluating a piece of software.
 {business_context}
 
 --- What you are trying to do today ---
-You have a short list of tasks you want to attempt. They're not a test
-and there's no scoring — you're trialling the software to decide if
-it's a fit:
+You have a list of goals to attempt. They are not a test script and
+there is no pass/fail score. Work them as a careful evaluator deciding
+whether this software is fit for your business:
 
 {task_list}
-
+{criteria_block}{phases_block}
 --- How to work ---
-Explore the app. Try to do each task as a real user would: follow the
-obvious path, click the things that look clickable, give up if something
-feels unreasonably hard. When you notice friction — anything that would
-make you hesitate to recommend this to a colleague — call the
-`record_friction` tool with the category, a description, and evidence
-(the URL you were on, a DOM snippet, the action that failed).
+Explore like a competent professional:
 
-You are NOT a QA engineer. You are NOT trying to exhaustively cover
-every feature. You are a busy founder giving this software 5-10 minutes
-of your time. Report honestly — if something felt great, that's also
-worth noting (category="praise"). If something is missing you'd expect,
-note it (category="missing"). If something is broken, note it
-(category="bug"). If the UX confused you, note it (category="confusion").
-Aesthetic observations are welcome (category="aesthetic") — we trust
-the triager to file them appropriately.
+1. **Orient** — land, read the primary workspace, form a first impression.
+2. **Core jobs** — attempt each task using the obvious path first.
+3. **Recover once** — if something fails or confuses you, try one
+   alternate path (search, different nav label, filter, back, refresh).
+   Then record friction and move on. Do not thrash the same dead end.
+4. **Stress lightly** — when time allows: empty/filter miss, a deep
+   link, an error or permission edge if you hit one naturally.
+5. **Decide** — call `submit_verdict` with an honest recommendation.
+
+You are NOT a QA engineer writing a test plan. You ARE more thorough
+than a distracted founder with 5 minutes. Budget about 25–40 minutes
+of careful evaluation energy.
+
+When something would make you hesitate to recommend this to a colleague,
+call `record_friction` with category, severity, description, URL, and
+evidence. Prefer specific, reproducible observations.
+
+Categories: bug | missing | confusion | aesthetic | praise | other.
+Severity: low | medium | high.
+Optional friction fields:
+- blocks_pilot: true if this alone would block a pilot/go-live week.
+- framework_vs_app: "framework" if this would bite any well-authored app
+  of this class; "app" if it is this app's content/DSL; "unclear" otherwise.
 
 --- Stopping ---
 {stop_when}
 
 You have a budget of **{max_steps} steps total**. Pace yourself — when
-you've used ~75% of your steps (that is, step {wrap_up_at} of
-{max_steps}), start wrapping up, whether or not you've finished all the
-tasks. A short-but-honest verdict is far more useful than running out
-of budget with nothing recorded. Call the `submit_verdict` tool with
-a one-paragraph verdict before your budget runs out. (Note: use
-`submit_verdict`, not the builtin `done` action — the builtin
-doesn't capture your verdict.)
+you've used ~80% of your steps (that is, step {wrap_up_at} of
+{max_steps}), start wrapping up, whether or not every task is perfect.
+A complete verdict with scored criteria beats a silent max_steps exit.
+Call `submit_verdict` before the budget ends (not the builtin `done`).
 
 --- Important grounding ---
-- Stay in character. If the DOM shows placeholder text like "Lorem
-  ipsum" or a TODO, note it as friction — that's real friction for a
-  real evaluator.
-- Do NOT invent features. If you can't find a way to do something,
-  that's itself the signal. Record it as friction.
-- **Don't record the same friction twice.** If you've already flagged
-  that /dashboard 404s, don't re-record it on a retry — move on to a
-  different task or call `submit_verdict`. A real user wouldn't file
-  the same complaint four times.
-- Evidence matters. Every friction record should have a URL and enough
-  detail that a human could reproduce what you saw. Vague complaints
-  get filtered out at triage time.
+- Stay in character. Placeholder text, TODOs, and fake demo names are
+  real friction for a real evaluator — record them.
+- Do NOT invent features. If you can't find a way, that *is* the signal.
+- **Don't record the same friction twice.** One entry per distinct issue.
+- Evidence matters: URL + enough detail to reproduce. Vague complaints die
+  at triage.
+- Distinguish product friction from fixture noise when you can (e.g.
+  empty DB vs broken UI). Prefer product signal.
 - The server is pre-authenticated as your persona — you do NOT need to
-  log in. Start at the home page and follow your nose.
+  log in. Start where you landed and follow your nose.
+"""
+
+
+def _format_task_list(tasks: list[str]) -> str:
+    if not tasks:
+        return "(no tasks declared — explore freely)"
+    return "\n".join(f"  {i + 1}. {t}" for i, t in enumerate(tasks))
+
+
+def _format_criteria_block(criteria: list[Any]) -> str:
+    """Render optional adoption_criteria into the system prompt."""
+    items = [str(c).strip() for c in (criteria or []) if str(c).strip()]
+    if not items:
+        return ""
+    body = "\n".join(f"  - {c}" for c in items)
+    return f"""
+--- Adoption criteria (score these in submit_verdict) ---
+For each criterion below, decide pass / partial / fail and note why
+in criteria_scores. These drive pilot decisions more than vibes alone:
+
+{body}
+"""
+
+
+def _format_phases_block(phases: list[Any]) -> str:
+    """Render optional multi-phase guidance."""
+    items = [str(p).strip() for p in (phases or []) if str(p).strip()]
+    if not items:
+        return ""
+    body = "\n".join(f"  {i + 1}. {p}" for i, p in enumerate(items))
+    return f"""
+--- Suggested phases (use as a guide, not a rigid script) ---
+{body}
 """
 
 
@@ -116,17 +157,13 @@ doesn't capture your verdict.)
 # Tools
 # ---------------------------------------------------------------------------
 
+_CATEGORIES = ("bug", "missing", "confusion", "aesthetic", "praise", "other")
+_FRAMEWORK_VS_APP = ("framework", "app", "unclear")
+_CRITERION_SCORES = ("pass", "partial", "fail", "untested")
+
 
 def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]]) -> AgentTool:
-    """Tool: ``record_friction``.
-
-    Captures a single friction observation into the mission's
-    transcript_sink. The DazzleAgent harness reads transcript_sink
-    after the run and promotes entries to ``Observation`` records
-    on the transcript.
-    """
-
-    _CATEGORIES = ("bug", "missing", "confusion", "aesthetic", "praise", "other")
+    """Tool: ``record_friction`` — one observation into the transcript sink."""
 
     def record_friction(
         category: str,
@@ -134,14 +171,19 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
         url: str = "",
         evidence: str = "",
         severity: str = "medium",
+        blocks_pilot: bool = False,
+        framework_vs_app: str = "unclear",
     ) -> dict[str, Any]:
         cat = category if category in _CATEGORIES else "other"
-        entry = {
+        fva = framework_vs_app if framework_vs_app in _FRAMEWORK_VS_APP else "unclear"
+        entry: dict[str, Any] = {
             "category": cat,
             "description": description,
             "url": url,
             "evidence": evidence,
-            "severity": severity,
+            "severity": severity if severity in ("low", "medium", "high") else "medium",
+            "blocks_pilot": bool(blocks_pilot),
+            "framework_vs_app": fva,
         }
         transcript_sink.setdefault("friction", []).append(entry)
         return {
@@ -155,7 +197,8 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
         description=(
             "Record a single friction observation from your trial. Call this "
             "every time you notice something worth flagging — good or bad. "
-            "You can call it many times per run."
+            "You can call it many times per run. Prefer URL + reproducible "
+            "evidence; set blocks_pilot=true only for true pilot blockers."
         ),
         schema={
             "type": "object",
@@ -169,7 +212,7 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
                     "type": "string",
                     "description": (
                         "First-person description of what you observed and how it "
-                        "felt. 1-3 sentences."
+                        "felt. 1-4 sentences; be specific."
                     ),
                 },
                 "url": {
@@ -189,6 +232,20 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
                     "description": "low | medium | high — your gut feel.",
                     "enum": ["low", "medium", "high"],
                 },
+                "blocks_pilot": {
+                    "type": "boolean",
+                    "description": (
+                        "true if this issue alone would block a pilot or go-live week."
+                    ),
+                },
+                "framework_vs_app": {
+                    "type": "string",
+                    "description": (
+                        "framework | app | unclear — would this bite any well-authored "
+                        "app of this class, or is it this app's content?"
+                    ),
+                    "enum": list(_FRAMEWORK_VS_APP),
+                },
             },
             "required": ["category", "description"],
         },
@@ -198,11 +255,7 @@ def _make_record_friction_tool(transcript_sink: dict[str, list[dict[str, Any]]])
 
 # Negative-sentiment tokens that indicate a verdict contains real
 # complaints. When `submit_verdict` is called with any of these present
-# AND `record_friction` was never called, the tool rejects and nudges
-# the agent to record specific friction observations first. This fixes
-# the observed pattern where the agent articulates 4+ concrete failures
-# in its verdict paragraph but calls `record_friction` zero times (the
-# simple_task trial on 2026-04-20 was the motivating case).
+# AND `record_friction` was never called, the tool rejects and nudges.
 _NEGATIVE_VERDICT_TOKENS: frozenset[str] = frozenset(
     {
         "broken",
@@ -230,28 +283,53 @@ _NEGATIVE_VERDICT_TOKENS: frozenset[str] = frozenset(
 )
 
 
-def _make_submit_verdict_tool(transcript_sink: dict[str, list[dict[str, Any]]]) -> AgentTool:
-    """Tool: ``submit_verdict`` — wrap up the trial with a verdict.
+def _normalize_criteria_scores(raw: Any) -> list[dict[str, str]]:
+    """Accept list[{criterion,score,note}] or dict{criterion: score|note}."""
+    if not raw:
+        return []
+    out: list[dict[str, str]] = []
+    if isinstance(raw, dict):
+        for k, v in raw.items():
+            if isinstance(v, dict):
+                score = str(v.get("score", v.get("result", "untested"))).lower()
+                note = str(v.get("note", v.get("why", "")) or "")
+            else:
+                score = str(v).lower()
+                note = ""
+            if score not in _CRITERION_SCORES:
+                score = "untested"
+            out.append({"criterion": str(k), "score": score, "note": note})
+        return out
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            criterion = str(
+                item.get("criterion") or item.get("name") or item.get("id") or ""
+            ).strip()
+            if not criterion:
+                continue
+            score = str(item.get("score", item.get("result", "untested"))).lower()
+            if score not in _CRITERION_SCORES:
+                score = "untested"
+            note = str(item.get("note", item.get("why", "")) or "")
+            out.append({"criterion": criterion, "score": score, "note": note})
+    return out
 
-    Named ``submit_verdict`` (not ``done``) specifically to avoid
-    colliding with the builtin ``done`` page action. During the first
-    two trials the agent called ``done`` expecting our handler, but
-    the SDK routed the tool_use to the builtin page action (which
-    takes no verdict arg), so our handler never fired and the verdict
-    was never captured. The core framework does warn about the
-    collision — we now heed that warning by picking a unique name.
 
-    Enforces a minimum friction-record gate: if the verdict text
-    contains negative-sentiment tokens (broken, 404, unusable, fail,
-    etc.) AND `record_friction` was never called, the tool rejects
-    with a nudge to record specific friction observations first.
-    This closes the #818-adjacent observation pattern where the
-    agent would articulate every failure in its verdict paragraph
-    but never call `record_friction` — leaving the report with zero
-    actionable rows even though the verdict was devastating.
-    """
+def _make_submit_verdict_tool(
+    transcript_sink: dict[str, list[dict[str, Any]]],
+    *,
+    expected_criteria: list[str] | None = None,
+) -> AgentTool:
+    """Tool: ``submit_verdict`` — wrap up with verdict + optional scores."""
 
-    def submit_verdict(verdict: str = "") -> dict[str, Any]:
+    def submit_verdict(
+        verdict: str = "",
+        recommend: str = "unclear",
+        criteria_scores: Any = None,
+        pilot_blockers_summary: str = "",
+    ) -> dict[str, Any]:
         verdict_lower = verdict.lower()
         has_negative = any(tok in verdict_lower for tok in _NEGATIVE_VERDICT_TOKENS)
         friction_count = len(transcript_sink.get("friction", []))
@@ -276,27 +354,71 @@ def _make_submit_verdict_tool(transcript_sink: dict[str, list[dict[str, Any]]]) 
                 ),
             }
 
-        transcript_sink["verdict"] = [{"text": verdict}]
-        return {"ended": True}
+        rec = (recommend or "unclear").strip().lower()
+        if rec not in ("yes", "no", "conditional", "unclear"):
+            rec = "unclear"
+
+        scores = _normalize_criteria_scores(criteria_scores)
+        # If scenario declared criteria and agent skipped scoring, leave empty
+        # for the report (do not invent scores). Soft hint only when empty.
+        soft_hint = ""
+        if expected_criteria and not scores:
+            soft_hint = (
+                "Note: this scenario declared adoption_criteria but none were "
+                "scored. Consider re-submitting with criteria_scores if you can."
+            )
+
+        transcript_sink["verdict"] = [
+            {
+                "text": verdict,
+                "recommend": rec,
+                "criteria_scores": scores,
+                "pilot_blockers_summary": (pilot_blockers_summary or "").strip(),
+            }
+        ]
+        result: dict[str, Any] = {"ended": True, "recommend": rec, "criteria_count": len(scores)}
+        if soft_hint:
+            result["hint"] = soft_hint
+        return result
 
     return AgentTool(
         name="submit_verdict",
         description=(
-            "End the trial by submitting your verdict. Provide a one-paragraph "
-            "verdict from your business user's perspective: would you recommend "
-            "this software to a colleague? What would need to change? This is "
-            "how you end the trial — do NOT use the `done` page action, which "
-            "won't capture your verdict. "
-            "NOTE: if your verdict describes concrete failures but you haven't "
-            "called `record_friction` for them, this tool will reject — call "
-            "record_friction for each specific failure first."
+            "End the trial by submitting your verdict. Provide an honest "
+            "paragraph from your business user's perspective: would you pilot "
+            "or recommend this software? What must change first? "
+            "Also set recommend=yes|no|conditional|unclear. If the scenario "
+            "listed adoption criteria, fill criteria_scores (pass|partial|fail|"
+            "untested per criterion). Do NOT use the `done` page action. "
+            "If your verdict describes concrete failures but you haven't "
+            "called `record_friction` for them, this tool will reject."
         ),
         schema={
             "type": "object",
             "properties": {
                 "verdict": {
                     "type": "string",
-                    "description": ("One-paragraph verdict. Honest — positive and negative."),
+                    "description": (
+                        "1-3 paragraph verdict. Honest — positive and negative. "
+                        "Lead with the pilot decision."
+                    ),
+                },
+                "recommend": {
+                    "type": "string",
+                    "description": "yes | no | conditional | unclear",
+                    "enum": ["yes", "no", "conditional", "unclear"],
+                },
+                "criteria_scores": {
+                    "description": (
+                        "Optional. List of {criterion, score, note} or a map of "
+                        "criterion → score. score ∈ pass|partial|fail|untested."
+                    ),
+                },
+                "pilot_blockers_summary": {
+                    "type": "string",
+                    "description": (
+                        "Optional one-liner of issues that would block a pilot, or empty if none."
+                    ),
                 },
             },
             "required": ["verdict"],
@@ -311,32 +433,12 @@ def _make_submit_verdict_tool(transcript_sink: dict[str, list[dict[str, Any]]]) 
 
 
 def _trial_completion(action: AgentAction, history: list[Step]) -> bool:
-    """Stop when the agent calls the ``done`` tool.
-
-    The agent can also be stopped by the ``max_steps`` budget (handled
-    by the harness). There is no stagnation detector — a trial run
-    that stops pressing buttons and just thinks is still productive
-    qualitative data.
-    """
+    """Stop when the agent calls submit_verdict (or builtin done)."""
     if action.type == ActionType.DONE:
         return True
-    # The `submit_verdict` mission tool shows up as a tool action;
-    # the handler has already stashed the verdict, and the framework
-    # records this as a mission-tool call. Treat it as a stop signal.
     if action.type == ActionType.TOOL and action.target == "submit_verdict":
         return True
     return False
-
-
-# ---------------------------------------------------------------------------
-# Scenario parsing
-# ---------------------------------------------------------------------------
-
-
-def _format_task_list(tasks: list[str]) -> str:
-    if not tasks:
-        return "(no tasks declared — explore freely)"
-    return "\n".join(f"  {i + 1}. {t}" for i, t in enumerate(tasks))
 
 
 # ---------------------------------------------------------------------------
@@ -349,42 +451,34 @@ def build_trial_mission(
     base_url: str,
     transcript_sink: dict[str, list[dict[str, Any]]],
     max_steps: int | None = None,
-    token_budget: int = 200_000,
+    token_budget: int = _DEFAULT_TOKEN_BUDGET,
     signing_tools: list[AgentTool] | None = None,
 ) -> Mission:
-    """Build a :class:`Mission` for a qualitative trial.
+    """Build a :class:`Mission` for a qualitative trial (gen-2 defaults).
 
     Args:
         scenario: Parsed scenario dict from ``trial.toml``. Expected
             keys: ``name``, ``login_persona``, ``user_identity``,
             ``business_context``, ``tasks``, ``stop_when``,
-            ``max_steps`` (optional), ``time_budget_seconds`` (optional).
-        base_url: Base URL of the running application (e.g.
-            ``http://localhost:3969``).
-        transcript_sink: Mutable dict the tools write into. The harness
-            reads ``transcript_sink["friction"]`` and
-            ``transcript_sink["verdict"]`` after the run.
+            ``max_steps`` (optional), ``time_budget_seconds`` (optional),
+            ``token_budget`` (optional), ``adoption_criteria`` (optional
+            list[str]), ``phases`` (optional list[str]).
+        base_url: Base URL of the running application.
+        transcript_sink: Mutable dict tools write into
+            (``friction``, ``verdict``).
         max_steps: Override the scenario's ``max_steps`` budget.
         token_budget: Default LLM token budget; overridden by
-            scenario ``token_budget`` when set (grok-cli trials often
-            need ≥400k for multi-step hub evaluation).
-        signing_tools: When provided, the trial driver registers these
-            alongside the baseline tools (used by the signing trial
-            harness when the app has any ``signable: true`` entity).
+            scenario ``token_budget`` when set.
+        signing_tools: Optional signing harness tools.
     """
     user_identity = scenario.get("user_identity", "").strip()
     business_context = scenario.get("business_context", "").strip()
     tasks = scenario.get("tasks", [])
     stop_when = scenario.get("stop_when", "").strip() or (
         "When you feel you've explored enough to form an opinion, call "
-        "`submit_verdict` with a verdict."
+        "`submit_verdict` with a verdict and recommend=yes|no|conditional."
     )
 
-    # starting_url: scenario-declared landing URL (relative to base_url).
-    # Lets a trial target a specific workspace, region anchor, or surface
-    # instead of always dropping the persona on /app. Absolute URLs are
-    # accepted as-is (useful for pointing at a different port or host,
-    # though in practice the runner boots a single app).
     starting_url_raw = (scenario.get("starting_url") or "").strip()
     if starting_url_raw:
         if starting_url_raw.startswith(("http://", "https://")):
@@ -394,23 +488,38 @@ def build_trial_mission(
     else:
         effective_start_url = f"{base_url}/app"
 
-    effective_max_steps = max_steps or int(scenario.get("max_steps", 35))
-    # Scenario may raise the token budget (subscription CLIs spend heavily
-    # per observed page). Fall back to the builder default.
+    if max_steps is not None:
+        effective_max_steps = int(max_steps)
+    elif scenario.get("max_steps") is not None:
+        effective_max_steps = int(scenario["max_steps"])
+    else:
+        effective_max_steps = _DEFAULT_MAX_STEPS
+
     try:
         effective_token_budget = int(scenario.get("token_budget") or token_budget)
     except (TypeError, ValueError):
         effective_token_budget = token_budget
-    # Wrap-up at 60% — trials 1-3 all ran out of budget at 75% wrap-up
-    # because exploration + recording takes more steps than the LLM
-    # estimates. Budget safety matters more than full coverage; the
-    # fallback verdict synthesiser picks up the slack either way.
-    wrap_up_at = max(1, int(effective_max_steps * 0.60))
+
+    wrap_up_at = max(1, int(effective_max_steps * _WRAP_UP_FRACTION))
+
+    raw_criteria = scenario.get("adoption_criteria") or scenario.get("criteria") or []
+    if isinstance(raw_criteria, str):
+        criteria_list = [raw_criteria]
+    else:
+        criteria_list = [str(c) for c in raw_criteria]
+
+    raw_phases = scenario.get("phases") or []
+    if isinstance(raw_phases, str):
+        phases_list = [raw_phases]
+    else:
+        phases_list = [str(p) for p in raw_phases]
 
     system_prompt = _TRIAL_SYSTEM_PROMPT.format(
         user_identity=user_identity or "(not specified)",
         business_context=business_context or "(not specified)",
         task_list=_format_task_list(tasks),
+        criteria_block=_format_criteria_block(criteria_list),
+        phases_block=_format_phases_block(phases_list),
         stop_when=stop_when,
         max_steps=effective_max_steps,
         wrap_up_at=wrap_up_at,
@@ -421,7 +530,7 @@ def build_trial_mission(
 
     base_tools = [
         _make_record_friction_tool(transcript_sink),
-        _make_submit_verdict_tool(transcript_sink),
+        _make_submit_verdict_tool(transcript_sink, expected_criteria=criteria_list or None),
     ]
     if signing_tools:
         base_tools.extend(signing_tools)
@@ -439,5 +548,6 @@ def build_trial_mission(
             "mode": "trial",
             "persona": scenario.get("login_persona", ""),
             "scenario": scenario.get("name", "unnamed"),
+            "gen": 2,
         },
     )

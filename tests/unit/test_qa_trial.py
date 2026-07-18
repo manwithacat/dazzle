@@ -225,18 +225,16 @@ class TestBuildTrialMission:
         assert m.max_steps == expected_max_steps
 
     def test_system_prompt_mentions_step_budget_and_wrap_up(self, scenario: dict) -> None:
-        """After the post-trial-1/2/3 tweaks: the prompt tells the agent
-        its total step count AND the specific step number to start
-        wrapping up at (60% of budget — lowered from 75% after trials
-        1-3 all ran out of budget before calling submit_verdict)."""
+        """Gen-2: prompt includes total step count and wrap-up at 80%
+        (raised from gen-1's 60% — current models can finish tasks *and*
+        call submit_verdict)."""
         sink: dict = {"friction": []}
         m = build_trial_mission(
             scenario, base_url="http://host:1234", transcript_sink=sink, max_steps=20
         )
-        # Total budget surfaces in the prompt
         assert "20 steps total" in m.system_prompt
-        # Wrap-up trigger point surfaces (60% of 20 = 12)
-        assert "step 12" in m.system_prompt
+        # Wrap-up at 80% of 20 = 16
+        assert "step 16" in m.system_prompt
 
     def test_system_prompt_forbids_duplicate_friction(self, scenario: dict) -> None:
         """The agent kept re-recording the same /dashboard 404 four
@@ -244,6 +242,69 @@ class TestBuildTrialMission:
         sink: dict = {"friction": []}
         m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
         assert "same friction twice" in m.system_prompt.lower()
+
+    def test_default_max_steps_and_token_budget_gen2(self) -> None:
+        """Scenarios without explicit budgets get gen-2 defaults."""
+        sink: dict = {"friction": []}
+        scenario = {
+            "name": "bare",
+            "login_persona": "manager",
+            "user_identity": "You are Sam.",
+            "business_context": "Busy.",
+            "tasks": ["Look around"],
+        }
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        assert m.max_steps == 50
+        assert m.token_budget == 400_000
+        assert m.context.get("gen") == 2
+
+    def test_adoption_criteria_and_phases_in_prompt(self, scenario: dict) -> None:
+        sink: dict = {"friction": []}
+        scenario = {
+            **scenario,
+            "adoption_criteria": ["Urgency is visible", "Can reassign work"],
+            "phases": ["Orient", "Core jobs", "Decide"],
+        }
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        assert "Adoption criteria" in m.system_prompt
+        assert "Urgency is visible" in m.system_prompt
+        assert "Suggested phases" in m.system_prompt
+        assert "Orient" in m.system_prompt
+
+    def test_record_friction_gen2_metadata(self, scenario: dict) -> None:
+        sink: dict = {"friction": []}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        tool = next(t for t in m.tools if t.name == "record_friction")
+        tool.handler(
+            category="bug",
+            description="Queue empty with no explanation",
+            url="/app/queues",
+            evidence="blank tbody",
+            severity="high",
+            blocks_pilot=True,
+            framework_vs_app="framework",
+        )
+        entry = sink["friction"][0]
+        assert entry["blocks_pilot"] is True
+        assert entry["framework_vs_app"] == "framework"
+
+    def test_submit_verdict_records_recommend_and_criteria(self, scenario: dict) -> None:
+        sink: dict = {"friction": []}
+        m = build_trial_mission(scenario, base_url="http://host:1234", transcript_sink=sink)
+        tool = next(t for t in m.tools if t.name == "submit_verdict")
+        result = tool.handler(
+            verdict="Conditional pilot — urgency works, reassignment is buried.",
+            recommend="conditional",
+            criteria_scores=[
+                {"criterion": "Urgency visible", "score": "pass", "note": "SLA strip clear"},
+                {"criterion": "Reassign", "score": "partial", "note": "three clicks deep"},
+            ],
+            pilot_blockers_summary="None blocking; reassignment UX friction only.",
+        )
+        assert result.get("ended") is True
+        assert sink["verdict"][0]["recommend"] == "conditional"
+        assert len(sink["verdict"][0]["criteria_scores"]) == 2
+        assert sink["verdict"][0]["criteria_scores"][0]["score"] == "pass"
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +368,37 @@ class TestReportRendering:
         out = _title_from_description(long, max_chars=50)
         assert out.endswith("…")
         assert len(out) == 50
+
+    def test_render_includes_recommend_and_criteria(self) -> None:
+        report = build_trial_report(
+            scenario_name="manager_evaluation",
+            user_identity="You are Sarah, founder.",
+            friction=[
+                {
+                    "category": "confusion",
+                    "description": "Empty queue unexplained.",
+                    "url": "/app/q",
+                    "evidence": "No rows",
+                    "severity": "medium",
+                    "blocks_pilot": False,
+                    "framework_vs_app": "framework",
+                }
+            ],
+            verdict="Conditional — useful but empty states need work.",
+            recommend="conditional",
+            criteria_scores=[
+                {"criterion": "Urgency visible", "score": "pass", "note": "ok"},
+                {"criterion": "Empty states", "score": "fail", "note": "blank wall"},
+            ],
+            pilot_blockers_summary="Empty states would confuse Alex on day one.",
+        )
+        md = render_trial_report(report)
+        assert "**Recommend:** `conditional`" in md
+        assert "## Adoption criteria" in md
+        assert "Urgency visible" in md
+        assert "blocks_pilot" not in md or "Empty queue" in md
+        assert "*scope:* framework" in md
+        assert "Pilot blockers:" in md
 
     def test_empty_friction_renders_tombstone(self) -> None:
         report = build_trial_report(

@@ -1652,7 +1652,15 @@ def qa_trial(
 
     friction = transcript_sink.get("friction", [])
     verdict_entries = transcript_sink.get("verdict", [])
-    verdict = verdict_entries[0]["text"] if verdict_entries else ""
+    verdict_entry = verdict_entries[0] if verdict_entries else {}
+    verdict = (verdict_entry.get("text") if isinstance(verdict_entry, dict) else "") or ""
+    recommend = (verdict_entry.get("recommend") if isinstance(verdict_entry, dict) else "") or ""
+    criteria_scores = (
+        verdict_entry.get("criteria_scores") if isinstance(verdict_entry, dict) else None
+    ) or []
+    pilot_blockers_summary = (
+        verdict_entry.get("pilot_blockers_summary") if isinstance(verdict_entry, dict) else ""
+    ) or ""
 
     # Fallback verdict synthesis — trials can run out of max_steps
     # before the LLM calls submit_verdict. The verdict is the most
@@ -1702,6 +1710,9 @@ def qa_trial(
         tokens_used=transcript.tokens_used,
         outcome=transcript.outcome,
         signing_outcome=signing_outcome,
+        recommend=str(recommend),
+        criteria_scores=list(criteria_scores) if isinstance(criteria_scores, list) else [],
+        pilot_blockers_summary=str(pilot_blockers_summary),
     )
     rendered = render_trial_report(report)
 

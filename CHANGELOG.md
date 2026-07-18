@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Changed
+- **`dazzle qa trial` gen-2 posture** — careful-pilot system prompt (recover
+  once, wrap-up at 80% of steps), defaults `max_steps=50` / `token_budget=400k`,
+  optional scenario `adoption_criteria` + `phases`, richer
+  `record_friction` (`blocks_pilot`, `framework_vs_app`) and `submit_verdict`
+  (`recommend`, `criteria_scores`, `pilot_blockers_summary`). Report renders
+  Recommend + Adoption criteria. Flagship: `examples/support_tickets`
+  `manager_evaluation`. Skill + `docs/reference/qa-trial-gen2.md`.
+
 ## [0.105.11] - 2026-07-18
 
 ### Fixed

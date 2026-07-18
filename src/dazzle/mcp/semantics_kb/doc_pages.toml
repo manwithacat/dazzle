@@ -1583,6 +1583,13 @@ order = 120
 handwritten = true
 intro = "Patterns surfaced by `dazzle qa trial` — qualitative business-user evaluation of a Dazzle app."
 
+[pages.qa-trial-gen2]
+title = "QA Trial gen-2"
+slug = "qa-trial-gen2"
+order = 120.5
+handwritten = true
+intro = "Current-model trial posture: budgets, adoption_criteria, structured verdict, authoring defaults."
+
 [pages.fitness-methodology]
 title = "Fitness Methodology"
 slug = "fitness-methodology"

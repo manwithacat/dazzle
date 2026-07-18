@@ -1,11 +1,10 @@
-# trial.toml — qualitative user trial scenarios for `dazzle qa trial`.
+# trial.toml — qualitative user trial scenarios for `dazzle qa trial` (gen-2).
 #
 # Replace every <PLACEHOLDER> with something specific to your domain.
 # Run: dazzle qa trial --fresh-db
 #
-# Read .agents/skills/qa-trial/SKILL.md before editing — the scenario
-# shape matters more than its length. Specific identities produce
-# specific friction.
+# Read .agents/skills/qa-trial/SKILL.md and docs/reference/qa-trial-gen2.md
+# before editing — scenario shape matters more than length.
 
 [[scenario]]
 # Internal handle for this scenario; pass via --scenario to select it.
@@ -15,59 +14,68 @@ name = "<SCENARIO_NAME>"
 # or personas DSL. Not a display name — the ID.
 login_persona = "<PERSONA_ID>"
 
-# Hard cap on agent work. 300–500s + 25–40 steps is a reasonable range
-# for most SaaS apps. Longer means more drift + more tokens; shorter
-# means shallow evaluation.
-time_budget_seconds = 400
-max_steps = 30
+# Gen-2 defaults (if omitted): max_steps=50, token_budget=400000, wrap@80%.
+# Pin lower for signing micro-scenarios; raise for hub/workspace evaluation.
+time_budget_seconds = 600
+max_steps = 50
+token_budget = 400000
 
 # Optional. Relative URL the persona lands on after login (default /app).
-# Set this when the trial targets a specific region/workspace — region
-# cards emit id="region-<name>" anchors, so fragment URLs like
-# /app/workspaces/<ws>#region-<name> drop the persona right on target
-# and save a dozen scroll steps. Leave unset for whole-app discovery
-# trials where finding the feature is part of the test.
+# Set when the trial targets a specific region/workspace — region cards
+# emit id="region-<name>" anchors. Leave unset for whole-app discovery.
 # starting_url = "/app/workspaces/<WORKSPACE>#region-<REGION>"
 
-# First-person narrative. The agent reads this as "who am I today".
-# Include: name, role, company size/context, the tool they currently
-# use, and the decision at stake right now. Specific > generic.
+# First-person narrative. Name, role, company, current tooling, decision
+# at stake. Specific > generic. Include that they will try one recovery
+# path before writing something off.
 user_identity = """
 You are <NAME>, <ROLE> at <COMPANY_DESCRIPTION>. You <CURRENT_WORKFLOW>
 but it's <WHAT_HURTS>. You're trialling this software today to decide
-whether <DECISION_AT_STAKE>.
+whether <DECISION_AT_STAKE — e.g. two-week pilot with teammate X>.
 
 You're logged in as the "<PERSONA_ID>" account — the same role you'd
-use in production.
+use in production. You evaluate carefully, not as a five-minute skim.
 """
 
-# Numbers and pressures that anchor task prioritisation. What volume of
-# work, what percentage is high-stakes, what external actors care.
+# Numbers and pressures that anchor prioritisation.
 business_context = """
 You <VOLUME_METRIC>. About <PERCENTAGE> are <HIGH_STAKES_CATEGORY>,
 <PERCENTAGE> are <MEDIUM>, and the rest are <LOW>. You care about
-<WHAT_BREAKS_TRUST_IF_MISSED>.
+<WHAT_BREAKS_TRUST_IF_MISSED>. A pilot fails if <PILOT_FAILURE_MODE>.
 """
 
-# Goals, not click-paths. Phrase each as a real business need the user
-# is trying to satisfy, not a UI interaction you want probed.
+# Goals, not click-paths.
 tasks = [
     "<GOAL_ONE_AS_A_QUESTION_THE_USER_IS_ASKING_THE_SOFTWARE>",
     "<GOAL_TWO_PROBABLY_A_FILTER_OR_SORT_NEED>",
     "<GOAL_THREE_MAYBE_A_CROSS_ENTITY_QUESTION>",
+    "Stress lightly: if an empty or filtered state appears, can you tell why and recover?",
 ]
 
-# When the agent should call submit_verdict. Emphasise rounded opinion
-# over exhaustive coverage — exhaustive coverage burns tokens and
-# produces noise.
+# Optional multi-phase guide (injected into the agent prompt).
+phases = [
+    "Orient — first impression of the primary workspace",
+    "Core jobs — the tasks above",
+    "Light stress — empty/filter/error recovery if encountered",
+    "Decide — score adoption criteria and submit_verdict",
+]
+
+# Optional. Agent should score each in submit_verdict.criteria_scores.
+adoption_criteria = [
+    "<CRITERION_ONE_PILOT_RELEVANT>",
+    "<CRITERION_TWO_DISCOVERABILITY_OR_URGENCY>",
+    "Would run a two-week pilot as-is or with minor fixes",
+]
+
 stop_when = """
-Stop when you've formed a rounded opinion on whether this software
-would work for <NAME>'s business. Don't feel obliged to try every
-feature — the aim is honest friction reporting, not exhaustive
-coverage. Call submit_verdict with a one-paragraph verdict when ready.
+Stop when you can score the adoption criteria and form a pilot decision
+(yes / conditional / no). Prefer depth on the criteria over exhaustive
+feature tourism. Call submit_verdict with recommend=yes|no|conditional,
+criteria_scores (pass|partial|fail|untested), and pilot_blockers_summary
+if any.
 """
 
-# Optional: add a second scenario for a different persona or decision.
+# Optional: second persona / decision.
 # [[scenario]]
 # name = "<SECOND_SCENARIO_NAME>"
 # ...

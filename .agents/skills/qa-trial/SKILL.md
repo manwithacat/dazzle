@@ -1,13 +1,15 @@
 ---
 name: qa-trial
-description: Use when authoring or revising trial.toml scenarios for dazzle qa trial — puts an LLM in the shoes of a real business user evaluating a Dazzle app. Use when the user asks to "set up qa trials", "write a trial scenario", "evaluate this app as a user", or mentions qualitative/trial/business-user testing. Also use when a trial report is sparse or unhelpful — the scenario itself is usually the root cause.
+description: Use when authoring or revising trial.toml scenarios for dazzle qa trial — puts an LLM in the shoes of a real business user evaluating a Dazzle app. Use when the user asks to "set up qa trials", "write a trial scenario", "evaluate this app as a user", or mentions qualitative/trial/business-user testing. Also use when a trial report is sparse or unhelpful — the scenario itself is usually the root cause. Gen-2: longer careful-pilot sessions, adoption_criteria scoring, phases.
 ---
 
-# qa-trial
+# qa-trial (gen-2)
 
-`dazzle qa trial` runs an LLM agent through a Dazzle app as a real business user evaluating whether to adopt the software. Output is a markdown report of friction observations plus a one-paragraph verdict. It's a **qualitative signal generator** — not pass/fail, not CI, not coverage.
+`dazzle qa trial` runs an LLM agent through a Dazzle app as a real business user deciding whether to **pilot** the software. Output is a markdown report: recommend decision, optional adoption-criteria scores, friction observations, verdict. It's a **qualitative signal generator** — not pass/fail, not CI, not coverage.
 
-This skill helps you author the `trial.toml` that drives the harness. A good scenario produces actionable friction; a weak scenario produces "the app looks fine" verdicts that are useless.
+**Gen-2 posture (current models):** careful 25–40 minute pilot evaluator, one recovery attempt before recording failure, wrap-up at ~80% of step budget, default 50 steps / 400k tokens. See `docs/reference/qa-trial-gen2.md`.
+
+This skill helps you author the `trial.toml` that drives the harness. A good scenario produces scorable pilot criteria + actionable friction; a weak scenario produces "the app looks fine" with empty criteria.
 
 ## When to invoke
 
@@ -21,12 +23,13 @@ This skill helps you author the `trial.toml` that drives the harness. A good sce
 The agent:
 1. Logs in as `login_persona` via `/__test__/authenticate`
 2. Reads `user_identity` + `business_context` as first-person context ("You are Sarah…")
-3. Works through `tasks` in order, but is free to skip, reorder, or improvise
-4. Calls `record_friction(category, severity, description, url, evidence)` when something makes them hesitate
-5. Calls `submit_verdict` when `stop_when` is satisfied
-6. The report post-processor clusters near-duplicates and sorts by category/severity
+3. Optionally follows `phases` (orient → core jobs → stress → decide)
+4. Works through `tasks` as goals (free to reorder; try one recovery path on failure)
+5. Calls `record_friction(...)` with optional `blocks_pilot`, `framework_vs_app`
+6. Calls `submit_verdict(verdict, recommend, criteria_scores, pilot_blockers_summary)` when `stop_when` is satisfied
+7. Report clusters near-duplicates; renders Recommend + Adoption criteria when present
 
-Friction categories the agent can record: `bug`, `missing`, `confusion`, `aesthetic`, `praise`, `other`. Severity: `low`, `medium`, `high`.
+Friction categories: `bug`, `missing`, `confusion`, `aesthetic`, `praise`, `other`. Severity: `low` | `medium` | `high`.
 
 ## Authoring rules
 
@@ -79,17 +82,37 @@ tasks = [
 
 The LLM should have to *figure out* how to do the thing. That's where friction surfaces. If you tell them every step, you'll get a report that says "I did the thing, it worked".
 
-### Rule 4: Stop_when protects signal quality
+### Rule 4: Stop_when + adoption_criteria protect signal quality
 
 ```toml
+adoption_criteria = [
+    "Urgency of open work is visible without spreadsheet mental math",
+    "Would run a two-week pilot as-is or with minor fixes",
+]
+
 stop_when = """
-Stop when you've formed a rounded opinion on whether this software would
-work for Sarah's business. Don't feel obliged to try every feature — the
-aim is honest friction reporting, not exhaustive coverage.
+Stop when you can score the adoption criteria and form a pilot decision
+(yes / conditional / no). Call submit_verdict with recommend=… and
+criteria_scores (pass|partial|fail|untested) for each criterion.
 """
 ```
 
-Without a stop condition, agents either exhaust their step budget doing nothing useful, or they keep re-exercising the same surface hoping to find more friction (surfaced as #812 — dedup made this tolerable but stop_when prevents it upstream).
+Without stop_when, agents thrash the same surface (#812). Without
+`adoption_criteria`, gen-2 still works but you get vibes instead of a
+scorable pilot gate. Prefer criteria that a human founder would actually
+use to say yes/no to a two-week pilot.
+
+### Rule 4b: Budgets for current models
+
+| Scenario type | max_steps | token_budget |
+|---------------|-----------|--------------|
+| Signing micro-path | 20–30 | 200k–300k |
+| Hub / workspace evaluation (gen-2 default) | 50–60 | 400k |
+| Deep multi-region stress | 70–80 | 500k |
+
+Do **not** pin gen-1 “25 steps / busy founder” budgets unless the scenario
+is intentionally tiny. Current models waste less on thrash and use the
+extra budget for recovery + criteria scoring.
 
 ### Rule 5: One persona per scenario — but multiple scenarios per trial.toml
 
@@ -148,11 +171,11 @@ Use `--fresh-db` to avoid stale rows from prior trials corrupting the signal (#8
 
 ## Reading the output
 
-The report has three sections:
-
-1. **Verdict** — the agent's bottom-line opinion. If it's clearly negative, take it seriously; the agent isn't adversarial, it's trying to evaluate the software fairly.
-2. **Run metadata** — steps, duration, tokens. Low step counts (<10) often mean the agent gave up early; look for why.
-3. **Friction observations** — grouped by category (bug > missing > confusion > aesthetic > praise), sorted by severity within each. Counts like `reported: ×4` mean dedup collapsed that many similar entries; treat those as stronger signals than one-offs.
+1. **Recommend** — `yes` / `conditional` / `no` / `unclear` (gen-2).
+2. **Verdict** — prose decision. Negative framing is serious; the agent is not adversarial by default.
+3. **Adoption criteria** — pass/partial/fail/untested per criterion when declared.
+4. **Run metadata** — steps, duration, tokens. Very low step counts still mean early abort.
+5. **Friction** — by category/severity; `blocks_pilot` and `scope: framework|app` when set; `reported: ×N` is dedup strength.
 
 ## Framework-level vs app-level friction
 
@@ -165,6 +188,7 @@ When triaging a trial report, ask: *would this friction exist in a well-crafted 
 
 ## References
 
+- `docs/reference/qa-trial-gen2.md` — harness posture and schema
 - `references/authoring-guide.md` — deeper patterns per domain (SaaS, finserv, healthcare, logistics)
-- `templates/trial-toml-template.toml` — blank scenario form
-- `examples/support_tickets/trial.toml` in the Dazzle repo — reference implementation
+- `templates/trial-toml-template.toml` — blank gen-2 scenario form
+- `examples/support_tickets/trial.toml` — flagship gen-2 reference (`manager_evaluation`)

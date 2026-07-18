@@ -75,6 +75,10 @@ class TrialReport:
     tokens_used: int = 0
     outcome: str = ""
     signing_outcomes: dict[str, Any] | None = None
+    # Gen-2 structured decision fields (optional; empty when agent omitted).
+    recommend: str = ""
+    criteria_scores: list[dict[str, str]] = field(default_factory=list)
+    pilot_blockers_summary: str = ""
 
 
 def _first_line(text: str) -> str:
@@ -244,13 +248,33 @@ def render_trial_report(report: TrialReport) -> str:
     if report.verdict:
         lines.append("## Verdict")
         lines.append("")
+        if report.recommend:
+            lines.append(f"**Recommend:** `{report.recommend}`")
+            lines.append("")
         for para in report.verdict.strip().split("\n\n"):
             lines.append(f"> {para.strip()}")
         lines.append("")
+        if report.pilot_blockers_summary:
+            lines.append(f"**Pilot blockers:** {report.pilot_blockers_summary}")
+            lines.append("")
     else:
         lines.append("## Verdict")
         lines.append("")
         lines.append("*(no verdict recorded — run ended before `done`)*")
+        lines.append("")
+
+    # Gen-2 adoption criteria scores (when agent provided them).
+    if report.criteria_scores:
+        lines.append("## Adoption criteria")
+        lines.append("")
+        for row in report.criteria_scores:
+            crit = row.get("criterion", "?")
+            score = row.get("score", "untested")
+            note = (row.get("note") or "").strip()
+            if note:
+                lines.append(f"- **{crit}** — `{score}`: {note}")
+            else:
+                lines.append(f"- **{crit}** — `{score}`")
         lines.append("")
 
     # Run metadata — compact, one line.
@@ -263,6 +287,8 @@ def render_trial_report(report: TrialReport) -> str:
         meta_bits.append(f"{report.tokens_used:,} tokens")
     if report.outcome:
         meta_bits.append(f"outcome={report.outcome}")
+    if report.recommend:
+        meta_bits.append(f"recommend={report.recommend}")
     if meta_bits:
         lines.append(f"*Run: {' · '.join(meta_bits)}*")
         lines.append("")
@@ -307,6 +333,11 @@ def render_trial_report(report: TrialReport) -> str:
             meta: list[str] = [f"*severity:* {severity}"]
             if url:
                 meta.append(f"*where:* `{url}`")
+            if entry.get("blocks_pilot"):
+                meta.append("*blocks_pilot:* yes")
+            fva = (entry.get("framework_vs_app") or "").strip()
+            if fva and fva != "unclear":
+                meta.append(f"*scope:* {fva}")
             similar = entry.get("similar_count", 1)
             if similar > 1:
                 meta.append(f"*reported:* ×{similar}")
@@ -366,6 +397,9 @@ def build_trial_report(
     tokens_used: int = 0,
     outcome: str = "",
     signing_outcome: SigningOutcome | None = None,
+    recommend: str = "",
+    criteria_scores: list[dict[str, str]] | None = None,
+    pilot_blockers_summary: str = "",
 ) -> TrialReport:
     """Convenience builder — pulls the one-line identity headline
     from the multi-line user_identity block."""
@@ -382,4 +416,7 @@ def build_trial_report(
         tokens_used=tokens_used,
         outcome=outcome,
         signing_outcomes=signing_outcomes,
+        recommend=recommend or "",
+        criteria_scores=list(criteria_scores or []),
+        pilot_blockers_summary=pilot_blockers_summary or "",
     )
