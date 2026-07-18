@@ -1590,6 +1590,13 @@ order = 120.5
 handwritten = true
 intro = "Current-model trial posture: budgets, adoption_criteria, structured verdict, authoring defaults."
 
+[pages.product-maturity]
+title = "Product Maturity"
+slug = "product-maturity"
+order = 120.6
+handwritten = true
+intro = "Instance-level anti-warehouse gate: answer-first landing, job coverage, warehouse density for example apps."
+
 [pages.fitness-methodology]
 title = "Fitness Methodology"
 slug = "fitness-methodology"

@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Added
+- **Product maturity probe** (`scripts/example_product_maturity.py`,
+  `docs/reference/product-maturity.md`) — instance-level anti-warehouse gate:
+  answer-first persona landings, job coverage, warehouse density. Improve
+  example-apps prioritises product residuals before journey/Tier-1 noise.
+
 ### Fixed
 - **App shell: no signed-in identity / logout / Home** — Phase 4 typed
   AppShell dropped persona affordances from the topbar. Topbar trailing now

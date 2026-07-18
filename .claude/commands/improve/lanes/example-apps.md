@@ -60,10 +60,11 @@ Read backlog section. **First, prune stale findings** (see Stale-finding TTL und
 Then selection priority:
 1. `IN_PROGRESS` with attempts < 3 → resume it
 2. `IN_PROGRESS` with attempts ≥ 3 → mark `BLOCKED`, file issue if framework-related, pick next `PENDING`
-3. **`journey_maturity` residuals** — if `python scripts/example_journey_maturity.py --next` prints an app, prefer a matching `PENDING` `journey_maturity` row (or create one from the probe) **before** STALE-clear Tier-1 noise. Strategy body: `improve/strategies/journey_dogfood.md`. Force path: `/improve example-apps journey_dogfood`.
-4. All gaps DONE/BLOCKED and journey residual empty → run **explore phase** (Step 6 below)
-5. Pick next `PENDING` (priority: critical > warning > info, then app alphabetical)
-6. Mark `IN_PROGRESS`
+3. **`product_maturity` residuals** — if `python scripts/example_product_maturity.py --next` prints an app, prefer a matching `PENDING` `product_maturity` row (or create one from the probe) **before** journey and Tier-1 noise. Probe: `scripts/example_product_maturity.py` (docs: `docs/reference/product-maturity.md`). Goal: answer-first landing + job coverage + lower warehouse density — **not** more entity list surfaces.
+4. **`journey_maturity` residuals** — if `python scripts/example_journey_maturity.py --next` prints an app, prefer a matching `PENDING` `journey_maturity` row (or create one from the probe) **before** STALE-clear Tier-1 noise. Strategy body: `improve/strategies/journey_dogfood.md`. Force path: `/improve example-apps journey_dogfood`.
+5. All gaps DONE/BLOCKED and product/journey residual empty → run **explore phase** (Step 6 below)
+6. Pick next `PENDING` (priority: critical > warning > info, then app alphabetical)
+7. Mark `IN_PROGRESS`
 
 If `$ARGUMENTS` provided as `<app>`, filter to that app only.
 If `$ARGUMENTS` is `journey_dogfood` (or lane+strategy force), run the journey_dogfood strategy playbook for one residual app and skip unrelated gap types.
