@@ -172,6 +172,26 @@ def score_app(app: str) -> AppDemoBar:
         else:
             row.issues.append("seed_desk_thin:missing_Invoice.jsonl")
 
+    # P0-5 project_tracker: kanban columns not empty (todo / in_progress / review)
+    if app == "project_tracker":
+        task = app_dir / "dsl" / "seeds" / "demo_data" / "Task.jsonl"
+        if not task.is_file():
+            row.issues.append("seed_board_thin:missing_Task.jsonl")
+        else:
+            try:
+                by_st: dict[str, int] = {}
+                for line in task.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    rec = json.loads(line)
+                    st = str(rec.get("status") or "")
+                    by_st[st] = by_st.get(st, 0) + 1
+                for col, need in (("todo", 3), ("in_progress", 3), ("review", 2)):
+                    if by_st.get(col, 0) < need:
+                        row.issues.append(f"seed_board_thin:{col}={by_st.get(col, 0)}<{need}")
+            except (OSError, json.JSONDecodeError) as exc:
+                row.issues.append(f"seed_board_unreadable:{type(exc).__name__}")
+
     # P0-8 design_studio: explicit Brand.jsonl with hex palettes (swatch seeds)
     if app == "design_studio":
         brand = app_dir / "dsl" / "seeds" / "demo_data" / "Brand.jsonl"

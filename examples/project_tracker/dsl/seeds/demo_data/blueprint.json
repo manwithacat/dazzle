@@ -2,7 +2,7 @@
   "version": "1.0",
   "blueprint": {
     "project_id": "project_tracker",
-    "domain_description": "Project delivery — one flagship project with milestones and a full kanban of tasks",
+    "domain_description": "Project delivery \u2014 one flagship project with milestones and a full kanban of tasks",
     "seed": 42,
     "tenants": [
       {
@@ -65,7 +65,7 @@
       {
         "name": "Project",
         "row_count_default": 2,
-        "notes": "Flagship projects",
+        "notes": "Explicit Project.jsonl \u2014 Website relaunch + Mobile app beta",
         "tenant_scoped": false,
         "field_patterns": [
           {
@@ -158,7 +158,7 @@
       {
         "name": "Task",
         "row_count_default": 16,
-        "notes": "Kanban tasks",
+        "notes": "Explicit Task.jsonl is source of truth (#1626 P0-5): multi-column board (\u22653 todo/in_progress/review)",
         "tenant_scoped": false,
         "field_patterns": [
           {
@@ -200,21 +200,25 @@
           },
           {
             "field_name": "status",
-            "strategy": "enum_weighted",
+            "strategy": "static_list",
             "params": {
-              "enum_values": [
-                "backlog",
+              "values": [
+                "todo",
+                "todo",
+                "todo",
                 "todo",
                 "in_progress",
+                "in_progress",
+                "in_progress",
+                "in_progress",
+                "in_progress",
                 "review",
-                "done"
-              ],
-              "weights": [
-                0.15,
-                0.25,
-                0.25,
-                0.15,
-                0.2
+                "review",
+                "review",
+                "done",
+                "done",
+                "backlog",
+                "backlog"
               ]
             }
           },
@@ -261,7 +265,7 @@
             "strategy": "static_list",
             "params": {
               "values": [
-                "Blocked on legal review — ETA Friday.",
+                "Blocked on legal review \u2014 ETA Friday.",
                 "Pushed a draft PR; please sanity-check tokens.",
                 "Customer confirmed the workaround works.",
                 "Moving to review after design sign-off."
