@@ -362,7 +362,26 @@ async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest)
             updated = deps.auth_store.update_user(user.id, roles=[role])
             if updated is not None:
                 user = updated
-        session = deps.auth_store.create_session(user)
+        # #1626 P0-9: multi-tenant shared_schema RLS binds dazzle.tenant_id
+        # ONLY from the session's active membership. Without it, every
+        # workspace region is empty (fail-closed fence) even when seed data
+        # exists. Prefer an active membership when the identity has one.
+        active_membership_id = None
+        try:
+            memberships = deps.auth_store.get_memberships_for_identity(str(user.id))
+            active = next(
+                (m for m in memberships if getattr(m, "status", "active") == "active"),
+                None,
+            )
+            if active is not None:
+                active_membership_id = active.id
+        except Exception:
+            logger.debug(
+                "Could not resolve membership for test auth user %s",
+                email,
+                exc_info=True,
+            )
+        session = deps.auth_store.create_session(user, active_membership_id=active_membership_id)
         session_token = session.id
         user_id = str(user.id)
 

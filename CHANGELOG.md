@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Fixed
+- **#1626 P0-9 invoice Approval Desk empty** — explicit `Invoice.jsonl` /
+  `Supplier.jsonl` with ≥4 `submitted` + ≥3 `approved` per tenant; blueprint
+  status list no longer weighted-random; `demo_fleet_bar` gates desk status
+  floors. `/__test__/authenticate` now binds `active_membership_id` when the
+  identity has a membership so shared_schema RLS shows seeded rows in QA
+  capture (was fail-closed empty queue).
+
+### Added
 ### Added
 - **`/improve` example maturity loop** — product / demo / journey probes wired
   as forceable agent-first strategies under example-apps:

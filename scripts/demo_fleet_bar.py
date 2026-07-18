@@ -120,6 +120,39 @@ def score_app(app: str) -> AppDemoBar:
         if have < need:
             row.issues.append(f"seed_thin:{entity}={have}<{need}")
 
+    # P0-9 desk population (invoice_ops): explicit Invoice.jsonl must put
+    # ≥3 submitted (Approval Desk) and ≥3 approved (Pay Desk) per status —
+    # weighted random alone can leave a tenant's queue empty.
+    if app == "invoice_ops":
+        inv = app_dir / "dsl" / "seeds" / "demo_data" / "Invoice.jsonl"
+        if inv.is_file():
+            by_status: dict[str, int] = {}
+            by_tenant_submitted: dict[str, int] = {}
+            try:
+                for line in inv.read_text(encoding="utf-8").splitlines():
+                    if not line.strip():
+                        continue
+                    rec = json.loads(line)
+                    st = str(rec.get("status") or "")
+                    by_status[st] = by_status.get(st, 0) + 1
+                    if st == "submitted":
+                        tid = str(rec.get("tenant_id") or "")
+                        by_tenant_submitted[tid] = by_tenant_submitted.get(tid, 0) + 1
+            except (OSError, json.JSONDecodeError) as exc:
+                row.issues.append(f"seed_invoice_unreadable:{type(exc).__name__}")
+            else:
+                if by_status.get("submitted", 0) < 3:
+                    row.issues.append(f"seed_desk_thin:submitted={by_status.get('submitted', 0)}<3")
+                if by_status.get("approved", 0) < 3:
+                    row.issues.append(f"seed_desk_thin:approved={by_status.get('approved', 0)}<3")
+                thin_tenants = [t for t, n in by_tenant_submitted.items() if n < 3]
+                if thin_tenants:
+                    row.issues.append(
+                        f"seed_desk_thin:submitted_per_tenant<{3} ({len(thin_tenants)} tenants)"
+                    )
+        else:
+            row.issues.append("seed_desk_thin:missing_Invoice.jsonl")
+
     # P0-6 stale platform-only stills
     shots = _shot_dir(app_dir)
     if shots is not None:

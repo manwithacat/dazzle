@@ -200,20 +200,6 @@
             }
           },
           {
-            "field_name": "bank_reference",
-            "strategy": "static_list",
-            "params": {
-              "values": [
-                "GB29NWBK60161331926819",
-                "GB82WEST12345698765432",
-                "GB33BUKB20201555555555",
-                "GB94BARC20714400048651",
-                "GB63CLYD82634110052715",
-                "GB91LOYD30968800135195"
-              ]
-            }
-          },
-          {
             "field_name": "region",
             "strategy": "static_list",
             "params": {
@@ -237,8 +223,8 @@
       },
       {
         "name": "Invoice",
-        "row_count_default": 12,
-        "notes": "6 invoices per tenant spanning every status. NOTE: an explicit Invoice.jsonl alongside this blueprint is recommended to guarantee all statuses are represented per tenant.",
+        "row_count_default": 20,
+        "notes": "Explicit Invoice.jsonl is the source of truth (#1626 P0-9): ≥4 submitted + ≥3 approved + disputed/paid/draft per tenant so Approval Desk and Pay Desk never open empty. Blueprint status list is a generate fallback only.",
         "tenant_scoped": true,
         "field_patterns": [
           {
@@ -301,23 +287,29 @@
           },
           {
             "field_name": "status",
-            "strategy": "enum_weighted",
+            "strategy": "static_list",
             "params": {
-              "enum_values": [
-                "draft",
+              "values": [
                 "submitted",
+                "submitted",
+                "submitted",
+                "submitted",
+                "approved",
+                "approved",
                 "approved",
                 "disputed",
                 "paid",
-                "rejected"
-              ],
-              "weights": [
-                0.15,
-                0.2,
-                0.2,
-                0.15,
-                0.2,
-                0.1
+                "draft",
+                "submitted",
+                "submitted",
+                "submitted",
+                "submitted",
+                "approved",
+                "approved",
+                "approved",
+                "disputed",
+                "paid",
+                "draft"
               ]
             }
           },
