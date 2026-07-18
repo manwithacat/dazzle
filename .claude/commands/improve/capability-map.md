@@ -36,7 +36,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
-| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 775 | USED |
+| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 785 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 784 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 776 | USED |
 | `dazzle qa trial` | CLI | trials | 778 | USED |
@@ -46,18 +46,18 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 782 | USED |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 782 | USED |
 | **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 782 | USED |
-| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 772 | USED |
+| `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 785 | USED |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 775 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 775 | USED |
 | fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 777 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 776 | USED |
-| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 771 | USED |
-| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 771 | USED |
-| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 772 | USED |
+| `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 785 | USED |
+| `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 785 | USED |
+| `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 785 | USED |
 | `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 784 | USED |
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 784 | USED |
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 784 | USED |
-| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 772 | USED |
+| `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 785 | USED |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 784 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 782 | USED |
 | `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 782 | USED |
@@ -72,15 +72,15 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 784 | USED |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 777 | USED |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 784 | USED |
-| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 777 | USED |
+| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 785 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 784 | USED |
-| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 772 | USED |
+| `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 785 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 777 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 777 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 777 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 777 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 784 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 784 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 785 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 785 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 
@@ -104,6 +104,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 785 (2026-07-18).** **example-apps** lag-13/14 Tier-1 QI: support_tickets validate+lint; story scope-fidelity (20 advisory scope gaps); rhythm gaps advisory; test-design coverage-actions; discovery report; process propose (3 skipped CRUD); deploy plan env list; coverage **61/61**. No hard PENDING rows. Stamps @785. Explore **92/100**.
 
 > **Cycle 784 (2026-07-18).** **framework-ux** lag-15 cluster: sentinel scan (support_tickets findings AA/MT/PR/BL advisory); fitness code hotspots; /smells via fitness; /fuzz via managed contracts 64/0/38; pulse radar 68%; composition audit design_studio **100**; rbac matrix; fragment-audit support_tickets exit 0. Stamps @784. Explore **91/100**.
 
