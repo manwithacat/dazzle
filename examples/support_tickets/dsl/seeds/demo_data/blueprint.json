@@ -173,19 +173,20 @@
             "strategy": "static_list",
             "params": {
               "values": [
-                "Cannot reset password after SSO cutover",
+                "Cannot login after password reset",
                 "Invoice PDF download returns blank page",
-                "Mobile app crashes on iOS 18.2 when opening tickets",
-                "SLA clock not pausing during customer wait",
-                "Webhook retries flooding partner API",
-                "Dashboard filters ignore priority=critical",
-                "Two-factor setup email never arrives",
-                "CSV export truncates ticket descriptions",
-                "Agent console shows stale assignment badge",
-                "Customer portal 403 on shared ticket links",
-                "Search by ticket number misses hyphenated IDs",
-                "Bulk close leaves child comments orphaned"
-              ]
+                "SLA breach on enterprise account",
+                "Refund request \u2014 Acme Corp order 4821",
+                "Two-factor codes not arriving by SMS",
+                "Bulk import stuck at 47%",
+                "Webhook signature verification failing",
+                "Billing address change not saving",
+                "API rate limit unexpected 429",
+                "Export CSV truncates Unicode names",
+                "Dark mode contrast issue on ticket board",
+                "Agent assignment flips after refresh"
+              ],
+              "sampling": "cycle"
             }
           },
           {
@@ -361,22 +362,14 @@
             "strategy": "static_list",
             "params": {
               "values": [
-                "Reached out to the customer for a HAR capture of the failed login.",
-                "Confirmed repro on staging with the same SSO IdP config.",
-                "Escalated to platform team \u2014 looking at the mail queue lag.",
-                "Customer replied: issue only happens after 5pm local time.",
-                "Temporary workaround: use the desktop app until the iOS build lands.",
-                "Internal note: do not restart the webhook worker mid-incident.",
-                "Customer accepted the SLA credit draft; waiting on finance sign-off.",
-                "Root cause looks like a bad cache key after the region failover.",
-                "Posted status update in #support-ops \u2014 ETA 2 hours.",
-                "Verified fix on production with the original reporter.",
-                "Need manager approval before we force-reset their MFA devices.",
-                "Closing the loop: monitoring for 24h with no recurrence.",
-                "Asked agent to attach the failed PDF from their laptop download folder.",
-                "Priority bumped to high after three more accounts reported the same.",
-                "Shared runbook link for pausing SLAs during maintenance windows."
-              ]
+                "Customer confirmed they still cannot sign in after clearing cache.",
+                "Escalating to engineering \u2014 reproducible on Chrome 126.",
+                "Sent temporary password; waiting for customer reply.",
+                "Root cause: stale CDN cache on the PDF endpoint.",
+                "Customer accepted workaround; leaving ticket open for permanent fix.",
+                "Manager: please prioritize \u2014 enterprise ARR at risk."
+              ],
+              "sampling": "cycle"
             }
           },
           {

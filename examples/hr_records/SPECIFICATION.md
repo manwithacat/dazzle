@@ -68,7 +68,7 @@ dedicated screens — fourteen in all, from the staff directory to
 - **Person Detail** — a career timeline, showing a person's employment history
   and salary history side by side. Open to all four roles, with each seeing
   only what their visibility rules allow.
-- **Org Chart** — the department tree and manager hierarchy, with role
+- **Departments & Roles** — the department tree and manager hierarchy, with role
   listings; used by HR admins and line managers.
 - **Compensation Review** — finance/HR home for salary work: compensation
   metrics strip, then the active salary list for band analysis.
@@ -108,4 +108,4 @@ which keeps the product fast, accessible, and simple to operate. (Verify:
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:f1bf66ff6f29f8c03ff3aa929c3df877fd420f155c0867118e593cd9052d9750 -->
+<!-- dazzle-spec-brief: sha256:7af1858ae928741e52e99fc74cf2f02464f6fd531845052d199640149e251184 -->

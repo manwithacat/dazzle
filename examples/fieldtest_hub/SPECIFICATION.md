@@ -14,7 +14,7 @@ Four kinds of people work in it — Engineers, Field Testers, Managers, and Admi
 
 **Acting on what the field finds.** A Task is a remediation or investigation task spawned from field testing, created by one person and optionally assigned to another, with a lifecycle from open to completed. A Firmware Release is a versioned firmware build that can be rolled out to a Device batch, transitioning from draft to released to deprecated.
 
-Every one of these six kinds of record can be browsed, inspected in detail, created, and edited through dedicated screens — twenty-four capabilities in all, from the Device Dashboard and Issue Board to Log Test Session and Create Firmware Release.
+Every one of these six kinds of record can be browsed, inspected in detail, created, and edited through dedicated screens — twenty-four capabilities in all, from the Device Dashboard and Issues to Log Test Session and Create Firmware Release.
 
 ## Who uses it
 
@@ -75,4 +75,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:1bd13b662d3b765a33c978cc4ebff29e179d3daa19b7a5aa064679a7f75c5343 -->
+<!-- dazzle-spec-brief: sha256:c468f35e85b503dcdb72abc6e962812908e8e15456354af79bada6261713d271 -->

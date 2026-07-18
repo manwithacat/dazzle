@@ -41,6 +41,9 @@ REPO = Path(__file__).resolve().parents[1]
 SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_example_spec_bar.py",
     "tests/unit/test_example_product_maturity.py",
+    "tests/unit/test_nav_platform_isolation_1626.py",
+    "tests/unit/test_human_create_cta_label.py",
+    "tests/unit/test_dashboard_card_remove_gating.py",
     "tests/unit/test_spec_narrative_brief_snapshot.py",
     "tests/unit/test_patterns_phase2_kb_1217.py::test_pattern_count_meta_matches_actual_count",
     "tests/unit/test_patterns_subtype_of_kb_1248.py::test_pattern_count_meta_matches_actual_count",

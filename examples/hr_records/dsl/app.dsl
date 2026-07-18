@@ -395,7 +395,7 @@ entity ManagerLink "Manager Link":
 # surface.
 # =============================================================================
 
-surface person_list "Staff Directory":
+surface person_list "People":
   uses entity Person
   mode: list
   open: Person via id
@@ -636,23 +636,12 @@ workspace person_detail "Person Detail":
     display: list
 
 
-workspace org_chart "Org Chart":
+# #1626 P0-7: honest name — not a true org *tree* until recursive_tree ships.
+workspace org_chart "Departments & Roles":
   access: persona(hr_admin, manager)
-  purpose: "Department tree + manager hierarchy"
+  purpose: "Department roster, job roles, and reporting-line records (not a visual org tree yet)"
 
-  # TODO(#hr-hierarchy): no recursive tree display for self-referencing
-  # entities. We have `display: tree` on group-keyed sources; we need a
-  # variant that follows a self-reference (parent_department or
-  # ManagerLink.manager) to N levels.
-  # ----- IF DAZZLE SUPPORTED IT, WE'D WRITE: -----
-  # department_tree:
-  #   source: Department
-  #   display: recursive_tree
-  #   recursive_tree_config:
-  #     parent_field: parent_department
-  #     label: name
-  #     expand_default: 2_levels
-  # ------------------------------------------------
+  # TODO(#hr-hierarchy): recursive tree for self-ref Department / ManagerLink.
   departments:
     source: Department
     display: list

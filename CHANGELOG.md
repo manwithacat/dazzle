@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Fixed
+- **#1626 demo-fleet P0 (antagonist bake-off)** — product personas no longer
+  see System Health / Deploy History / `_platform_admin` in auto-nav
+  (workspaces first); list create CTAs normalize to singular `New {entity}`;
+  builder chrome already gated. Story seed blueprints + honesty renames
+  (HR Departments & Roles, fieldtest device IDs, design_studio hex brands);
+  purged stale `_platform_admin_*` QA stills; `scripts/demo_fleet_bar.py`
+  + ship-surface tests gate residual=0.
+
 ## [0.106.0] - 2026-07-18
 
 ### Added

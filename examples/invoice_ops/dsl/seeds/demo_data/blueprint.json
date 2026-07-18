@@ -2,7 +2,7 @@
   "version": "1.0",
   "blueprint": {
     "project_id": "invoice_ops",
-    "domain_description": "Multi-tenant invoice approval & payment ops — two tenants exercising shared-schema isolation, maker-checker approval, and payment failure handling",
+    "domain_description": "Multi-tenant invoice approval & payment ops \u2014 two tenants exercising shared-schema isolation, maker-checker approval, and payment failure handling",
     "seed": 42,
     "tenants": [
       {
@@ -13,7 +13,7 @@
       {
         "name": "Contoso Supplies",
         "slug": "contoso",
-        "notes": "Demo tenant 2 — cross-tenant boundary"
+        "notes": "Demo tenant 2 \u2014 cross-tenant boundary"
       }
     ],
     "personas": [
@@ -301,15 +301,23 @@
           },
           {
             "field_name": "status",
-            "strategy": "static_list",
+            "strategy": "enum_weighted",
             "params": {
-              "values": [
+              "enum_values": [
                 "draft",
                 "submitted",
                 "approved",
-                "rejected",
                 "disputed",
-                "paid"
+                "paid",
+                "rejected"
+              ],
+              "weights": [
+                0.15,
+                0.2,
+                0.2,
+                0.15,
+                0.2,
+                0.1
               ]
             }
           },
@@ -354,10 +362,10 @@
             "strategy": "static_list",
             "params": {
               "values": [
-                "Professional services — Q1",
-                "Software licences — annual",
+                "Professional services \u2014 Q1",
+                "Software licences \u2014 annual",
                 "Hardware maintenance",
-                "Cloud hosting — monthly",
+                "Cloud hosting \u2014 monthly",
                 "Consultancy retainer",
                 "Freight & logistics",
                 "IT support contract",

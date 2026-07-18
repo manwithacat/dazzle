@@ -81,8 +81,16 @@
           },
           {
             "field_name": "name",
-            "strategy": "company_name",
-            "params": {}
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "Northwind",
+                "Contoso",
+                "Fabrikam",
+                "Adventure Works"
+              ],
+              "sampling": "cycle"
+            }
           },
           {
             "field_name": "description",
@@ -97,11 +105,14 @@
             "strategy": "static_list",
             "params": {
               "values": [
-                "#1a73e8",
-                "#0f9d58",
-                "#ea4335",
-                "#fbbc04"
-              ]
+                "#0F172A",
+                "#2563EB",
+                "#F59E0B",
+                "#10B981",
+                "#EF4444",
+                "#7C3AED"
+              ],
+              "sampling": "cycle"
             }
           },
           {
@@ -109,11 +120,14 @@
             "strategy": "static_list",
             "params": {
               "values": [
-                "#5f6368",
-                "#202124",
-                "#e8eaed",
-                "#334155"
-              ]
+                "#0F172A",
+                "#2563EB",
+                "#F59E0B",
+                "#10B981",
+                "#EF4444",
+                "#7C3AED"
+              ],
+              "sampling": "cycle"
             }
           },
           {
@@ -121,11 +135,14 @@
             "strategy": "static_list",
             "params": {
               "values": [
-                "#fbbc04",
-                "#ea4335",
-                "#1a73e8",
-                "#0f9d58"
-              ]
+                "#0F172A",
+                "#2563EB",
+                "#F59E0B",
+                "#10B981",
+                "#EF4444",
+                "#7C3AED"
+              ],
+              "sampling": "cycle"
             }
           }
         ]
@@ -143,10 +160,23 @@
           },
           {
             "field_name": "name",
-            "strategy": "free_text_lorem",
+            "strategy": "static_list",
             "params": {
-              "min_words": 2,
-              "max_words": 5
+              "values": [
+                "Primary logo (SVG)",
+                "Wordmark dark",
+                "App icon 1024",
+                "Social cover 1200\u00d7630",
+                "Email header",
+                "Packaging dieline v3",
+                "Illustration \u2014 hero wave",
+                "Icon set 24px",
+                "Brand guidelines PDF",
+                "Photography \u2014 storefront",
+                "Motion logo loop",
+                "Color chip sheet"
+              ],
+              "sampling": "cycle"
             }
           },
           {

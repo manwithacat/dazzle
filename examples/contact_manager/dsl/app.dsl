@@ -80,7 +80,7 @@ entity Contact "Contact":
     repr_fields: [first_name, last_name, email, company, is_favorite]
 
 # List view - browsable contact directory
-surface contact_list "Contact List":
+surface contact_list "Contacts":
   uses entity Contact
   mode: list
   render: fragment

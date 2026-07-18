@@ -634,7 +634,7 @@ surface tester_edit "Edit Tester":
       scope: all
 
 # Surface: Issue Report Board
-surface issue_report_list "Issue Board":
+surface issue_report_list "Issues":
   uses entity IssueReport
   mode: list
   render: fragment

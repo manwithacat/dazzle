@@ -99,6 +99,48 @@ def _persona_can_list(matrix: AccessMatrix, role: str, entity: str) -> bool:
     return matrix.get(role, entity, "list") != PolicyDecision.DENY
 
 
+# #1626 P0-4: platform/admin infrastructure must not pollute product sidebars.
+# System Health / Deploy History / Feedback Reports belong on `_platform_admin`,
+# not next to Tickets for an agent persona.
+_PLATFORM_NAV_ENTITY_NAMES: frozenset[str] = frozenset(
+    {
+        "SystemHealth",
+        "DeployHistory",
+        "FeedbackReport",
+        "SystemMetric",
+        "ProcessRun",
+        "JobRun",
+        "AuditEntry",
+        "AIJob",
+        "LogEntry",
+        "EventTrace",
+        "OnboardingState",
+        "Session",
+    }
+)
+_PLATFORM_PERSONA_IDS: frozenset[str] = frozenset(
+    {"admin", "platform_admin", "superuser", "operator", "sysadmin"}
+)
+
+
+def _is_platform_nav_target(appspec: AppSpec, target: str) -> bool:
+    """True for framework-injected admin/platform destinations."""
+    if not target:
+        return False
+    if target.startswith("_platform_") or target.startswith("_admin_"):
+        return True
+    if target in _PLATFORM_NAV_ENTITY_NAMES:
+        return True
+    for entity in getattr(getattr(appspec, "domain", None), "entities", None) or []:
+        if entity.name == target and getattr(entity, "domain", None) == "platform":
+            return True
+    return False
+
+
+def _persona_is_platform_operator(persona: PersonaSpec) -> bool:
+    return (persona.id or "").lower() in _PLATFORM_PERSONA_IDS
+
+
 def _workspace_for(appspec: AppSpec, target: str) -> WorkspaceSpec | None:
     """Return the WorkspaceSpec named ``target``, or ``None`` if ``target`` is
     not a declared workspace (i.e. it should be treated as an entity)."""
@@ -143,6 +185,12 @@ def _resolve_curated(
         for item in g.items:
             if not _persona_can_reach(appspec, item.entity, persona, matrix):
                 continue  # FR-3: drop dead links (entity- or workspace-gated)
+            # #1626 P0-4: curated nav still must not promote platform ops to
+            # product personas (authors sometimes copy admin groups).
+            if not _persona_is_platform_operator(persona) and _is_platform_nav_target(
+                appspec, item.entity
+            ):
+                continue
             route = _route_for(appspec, item.entity)
             if route is None:
                 continue
@@ -169,24 +217,48 @@ def _resolve_curated(
 
 
 def _auto_discover(appspec: AppSpec, persona: PersonaSpec, matrix: AccessMatrix) -> list[NavGroup]:
-    """Union of the persona's accessible workspaces' entity list-surfaces (FR-3).
+    """Product-first nav for a persona (FR-3 + #1626 P0-4).
 
-    `workspace_allowed_personas` returns ``None`` (visible to all personas) or a
-    list of persona **ID strings** — compare against ``persona.id`` directly."""
+    Order: accessible **product workspaces** first (job desks), then entity
+    list surfaces from those workspaces. Platform/admin destinations are
+    omitted for non-platform personas so System Health never sits next to
+    Tickets on a business desk.
+    """
     role = persona.effective_role
     personas = list(getattr(appspec, "personas", []) or [])
+    platform_ops = _persona_is_platform_operator(persona)
     seen: set[str] = set()
     links: list[NavLink] = []
+
     for ws in getattr(appspec, "workspaces", []) or []:
+        ws_name = str(getattr(ws, "name", "") or "")
+        if not platform_ops and _is_platform_nav_target(appspec, ws_name):
+            continue
         allowed = workspace_allowed_personas(ws, personas)  # None = all personas
         if allowed is not None and persona.id not in set(allowed):
             continue
+        # Workspace destination first (product maturity + antagonist bar)
+        if ws_name and ws_name not in seen:
+            route = _route_for(appspec, ws_name)
+            if route is not None:
+                seen.add(ws_name)
+                links.append(
+                    NavLink(
+                        label=_label_for(appspec, ws_name),
+                        route=route,
+                        entity=ws_name,
+                    )
+                )
         for region in ws.regions:
             region_sources = ([region.source] if region.source else []) + list(
                 getattr(region, "sources", []) or []
             )
             for src in region_sources:
-                if src in seen or not _persona_can_list(matrix, role, src):
+                if not src or src in seen:
+                    continue
+                if not platform_ops and _is_platform_nav_target(appspec, src):
+                    continue
+                if not _persona_can_list(matrix, role, src):
                     continue
                 route = _route_for(appspec, src)
                 if route is None:

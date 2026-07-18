@@ -94,6 +94,16 @@ commercial bake-off.
 human singular CTAs; no raw JSON errors in browser; no platform-only nav for
 non-admin personas; happy-path stills non-empty with story data.
 
+**Probe (partial, machine-checkable):**
+
+```bash
+python scripts/demo_fleet_bar.py
+python scripts/demo_fleet_bar.py --strict
+```
+
+Checks P0-4 nav isolation, P0-5 blueprint min rows, and P0-6 “not only
+`_platform_admin_*` stills”. Full visual re-score still needs fresh
+`dazzle qa capture` after seeds.
 ## Relationship to other gates
 
 | Gate | Altitude | Optimises |

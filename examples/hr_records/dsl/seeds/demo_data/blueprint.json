@@ -1,0 +1,215 @@
+{
+  "version": "1.0",
+  "blueprint": {
+    "project_id": "hr_records",
+    "domain_description": "HR records for Northwind — people, departments, employment and salary history",
+    "seed": 42,
+    "tenants": [
+      {
+        "name": "Northwind People",
+        "slug": "northwind-people",
+        "notes": "Demo company"
+      }
+    ],
+    "personas": [
+      {
+        "persona_name": "hr_admin",
+        "description": "HR administrator",
+        "default_role": "hr_admin",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "manager",
+        "description": "Line manager",
+        "default_role": "manager",
+        "default_user_count": 2
+      },
+      {
+        "persona_name": "finance",
+        "description": "Finance compensation",
+        "default_role": "finance",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "employee",
+        "description": "Employee",
+        "default_role": "employee",
+        "default_user_count": 8
+      }
+    ],
+    "entities": [
+      {
+        "name": "Department",
+        "row_count_default": 4,
+        "notes": "Org departments",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "Engineering",
+                "Sales",
+                "People Ops",
+                "Finance"
+              ],
+              "sampling": "cycle"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Role",
+        "row_count_default": 6,
+        "notes": "Job roles",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "title",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "Software Engineer",
+                "Senior Engineer",
+                "Account Executive",
+                "HR Business Partner",
+                "Financial Controller",
+                "Engineering Manager"
+              ],
+              "sampling": "cycle"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Person",
+        "row_count_default": 12,
+        "notes": "Employees",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "legal_name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "preferred_name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "email",
+            "strategy": "email_from_name",
+            "params": {
+              "source_field": "legal_name",
+              "domains": [
+                "northwind.test"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Employment",
+        "row_count_default": 12,
+        "notes": "Employment records",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "person",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Person"
+            }
+          },
+          {
+            "field_name": "role",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Role"
+            }
+          },
+          {
+            "field_name": "department",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Department"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Salary",
+        "row_count_default": 12,
+        "notes": "Salary history",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "person",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Person"
+            }
+          }
+        ]
+      },
+      {
+        "name": "ManagerLink",
+        "row_count_default": 8,
+        "notes": "Reporting lines",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "report",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Person"
+            }
+          },
+          {
+            "field_name": "manager",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Person"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

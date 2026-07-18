@@ -277,7 +277,7 @@ surface user_edit "Edit User":
 # TICKET SURFACES
 # ============================================================================
 
-surface ticket_list "Ticket List":
+surface ticket_list "Tickets":
   uses entity Ticket
   mode: list
   render: fragment

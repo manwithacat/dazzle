@@ -283,7 +283,7 @@ scenario overdue_crisis "Overdue Tasks":
 # =============================================================================
 
 # Task List - main overview
-surface task_list "Task List":
+surface task_list "Tasks":
   uses entity Task
   mode: list
   render: fragment

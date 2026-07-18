@@ -50,9 +50,31 @@
           },
           {
             "field_name": "name",
-            "strategy": "person_name",
+            "strategy": "static_list",
             "params": {
-              "locale": "en_GB"
+              "values": [
+                "FT-PROBE-A12",
+                "FT-PROBE-B07",
+                "FT-GATEWAY-01",
+                "FT-GATEWAY-02",
+                "FT-SENSOR-NORTH",
+                "FT-SENSOR-SOUTH",
+                "FT-LOGGER-R3",
+                "FT-LOGGER-R4",
+                "FT-HUB-ALPHA",
+                "FT-HUB-BETA",
+                "FT-EDGE-M1",
+                "FT-EDGE-M2",
+                "FT-RADIO-X9",
+                "FT-RADIO-X10",
+                "FT-CLAMP-22",
+                "FT-CLAMP-23",
+                "FT-METER-Q1",
+                "FT-METER-Q2",
+                "FT-BRIDGE-7",
+                "FT-BRIDGE-8"
+              ],
+              "sampling": "cycle"
             }
           },
           {
@@ -60,15 +82,13 @@
             "strategy": "static_list",
             "params": {
               "values": [
-                "PulseTrack X1",
-                "FieldMeter Pro 2",
-                "AetherSense Mini",
-                "NexusDAQ R4",
-                "VoltScope Handheld",
-                "ThermoLink Edge",
-                "GyroLab Bench Unit",
-                "SpectraCore Portable"
-              ]
+                "PX-100",
+                "PX-200",
+                "EdgeHub 3",
+                "RadioX",
+                "ClampPro"
+              ],
+              "sampling": "cycle"
             }
           },
           {
