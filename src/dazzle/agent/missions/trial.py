@@ -283,37 +283,49 @@ _NEGATIVE_VERDICT_TOKENS: frozenset[str] = frozenset(
 )
 
 
+def _clamp_criterion_score(score: str) -> str:
+    s = (score or "untested").lower()
+    return s if s in _CRITERION_SCORES else "untested"
+
+
+def _score_row(criterion: str, score: str, note: str = "") -> dict[str, str]:
+    return {"criterion": criterion, "score": _clamp_criterion_score(score), "note": note}
+
+
 def _normalize_criteria_scores(raw: Any) -> list[dict[str, str]]:
     """Accept list[{criterion,score,note}] or dict{criterion: score|note}."""
     if not raw:
         return []
-    out: list[dict[str, str]] = []
     if isinstance(raw, dict):
-        for k, v in raw.items():
-            if isinstance(v, dict):
-                score = str(v.get("score", v.get("result", "untested"))).lower()
-                note = str(v.get("note", v.get("why", "")) or "")
+        out: list[dict[str, str]] = []
+        for key, value in raw.items():
+            if isinstance(value, dict):
+                out.append(
+                    _score_row(
+                        str(key),
+                        str(value.get("score", value.get("result", "untested"))),
+                        str(value.get("note", value.get("why", "")) or ""),
+                    )
+                )
             else:
-                score = str(v).lower()
-                note = ""
-            if score not in _CRITERION_SCORES:
-                score = "untested"
-            out.append({"criterion": str(k), "score": score, "note": note})
+                out.append(_score_row(str(key), str(value)))
         return out
-    if isinstance(raw, list):
-        for item in raw:
-            if not isinstance(item, dict):
-                continue
-            criterion = str(
-                item.get("criterion") or item.get("name") or item.get("id") or ""
-            ).strip()
-            if not criterion:
-                continue
-            score = str(item.get("score", item.get("result", "untested"))).lower()
-            if score not in _CRITERION_SCORES:
-                score = "untested"
-            note = str(item.get("note", item.get("why", "")) or "")
-            out.append({"criterion": criterion, "score": score, "note": note})
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        criterion = str(item.get("criterion") or item.get("name") or item.get("id") or "").strip()
+        if not criterion:
+            continue
+        out.append(
+            _score_row(
+                criterion,
+                str(item.get("score", item.get("result", "untested"))),
+                str(item.get("note", item.get("why", "")) or ""),
+            )
+        )
     return out
 
 
@@ -446,6 +458,38 @@ def _trial_completion(action: AgentAction, history: list[Step]) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _resolve_start_url(base_url: str, starting_url_raw: str) -> str:
+    raw = (starting_url_raw or "").strip()
+    if not raw:
+        return f"{base_url}/app"
+    if raw.startswith(("http://", "https://")):
+        return raw
+    return f"{base_url.rstrip('/')}/{raw.lstrip('/')}"
+
+
+def _resolve_max_steps(scenario: dict[str, Any], max_steps: int | None) -> int:
+    if max_steps is not None:
+        return int(max_steps)
+    if scenario.get("max_steps") is not None:
+        return int(scenario["max_steps"])
+    return _DEFAULT_MAX_STEPS
+
+
+def _resolve_token_budget(scenario: dict[str, Any], token_budget: int) -> int:
+    try:
+        return int(scenario.get("token_budget") or token_budget)
+    except (TypeError, ValueError):
+        return token_budget
+
+
+def _as_str_list(raw: Any) -> list[str]:
+    if not raw:
+        return []
+    if isinstance(raw, str):
+        return [raw]
+    return [str(item) for item in raw]
+
+
 def build_trial_mission(
     scenario: dict[str, Any],
     base_url: str,
@@ -471,78 +515,46 @@ def build_trial_mission(
             scenario ``token_budget`` when set.
         signing_tools: Optional signing harness tools.
     """
-    user_identity = scenario.get("user_identity", "").strip()
-    business_context = scenario.get("business_context", "").strip()
-    tasks = scenario.get("tasks", [])
     stop_when = scenario.get("stop_when", "").strip() or (
         "When you feel you've explored enough to form an opinion, call "
         "`submit_verdict` with a verdict and recommend=yes|no|conditional."
     )
-
-    starting_url_raw = (scenario.get("starting_url") or "").strip()
-    if starting_url_raw:
-        if starting_url_raw.startswith(("http://", "https://")):
-            effective_start_url = starting_url_raw
-        else:
-            effective_start_url = f"{base_url.rstrip('/')}/{starting_url_raw.lstrip('/')}"
-    else:
-        effective_start_url = f"{base_url}/app"
-
-    if max_steps is not None:
-        effective_max_steps = int(max_steps)
-    elif scenario.get("max_steps") is not None:
-        effective_max_steps = int(scenario["max_steps"])
-    else:
-        effective_max_steps = _DEFAULT_MAX_STEPS
-
-    try:
-        effective_token_budget = int(scenario.get("token_budget") or token_budget)
-    except (TypeError, ValueError):
-        effective_token_budget = token_budget
-
+    effective_max_steps = _resolve_max_steps(scenario, max_steps)
+    effective_token_budget = _resolve_token_budget(scenario, token_budget)
     wrap_up_at = max(1, int(effective_max_steps * _WRAP_UP_FRACTION))
-
-    raw_criteria = scenario.get("adoption_criteria") or scenario.get("criteria") or []
-    if isinstance(raw_criteria, str):
-        criteria_list = [raw_criteria]
-    else:
-        criteria_list = [str(c) for c in raw_criteria]
-
-    raw_phases = scenario.get("phases") or []
-    if isinstance(raw_phases, str):
-        phases_list = [raw_phases]
-    else:
-        phases_list = [str(p) for p in raw_phases]
+    criteria_list = _as_str_list(
+        scenario.get("adoption_criteria") or scenario.get("criteria") or []
+    )
+    phases_list = _as_str_list(scenario.get("phases") or [])
 
     system_prompt = _TRIAL_SYSTEM_PROMPT.format(
-        user_identity=user_identity or "(not specified)",
-        business_context=business_context or "(not specified)",
-        task_list=_format_task_list(tasks),
+        user_identity=(scenario.get("user_identity", "") or "").strip() or "(not specified)",
+        business_context=(scenario.get("business_context", "") or "").strip() or "(not specified)",
+        task_list=_format_task_list(scenario.get("tasks", [])),
         criteria_block=_format_criteria_block(criteria_list),
         phases_block=_format_phases_block(phases_list),
         stop_when=stop_when,
         max_steps=effective_max_steps,
         wrap_up_at=wrap_up_at,
     )
-
     if signing_tools:
         system_prompt = system_prompt + _SIGNING_FLOW_GUIDANCE
 
-    base_tools = [
+    tools: list[AgentTool] = [
         _make_record_friction_tool(transcript_sink),
         _make_submit_verdict_tool(transcript_sink, expected_criteria=criteria_list or None),
     ]
     if signing_tools:
-        base_tools.extend(signing_tools)
+        tools.extend(signing_tools)
 
     return Mission(
         name=f"trial:{scenario.get('name', 'unnamed')}",
         system_prompt=system_prompt,
-        tools=base_tools,
+        tools=tools,
         completion_criteria=_trial_completion,
         max_steps=effective_max_steps,
         token_budget=effective_token_budget,
-        start_url=effective_start_url,
+        start_url=_resolve_start_url(base_url, scenario.get("starting_url") or ""),
         terminal_tools=["submit_verdict"],
         context={
             "mode": "trial",
