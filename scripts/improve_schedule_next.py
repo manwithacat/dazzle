@@ -109,6 +109,51 @@ def _read_int_file(path: Path, default: int = 0) -> int:
         return default
 
 
+_STATUS_TOKENS = (
+    ACTIONABLE_STATUSES
+    | URGENT_STATUSES
+    | SETTLED_STATUSES
+    | frozenset({"PROPOSED", "HOUSEKEEPING", "OPEN_UNKNOWN", "NEEDS_REINFORCE", "NOTED-POLLUTED"})
+)
+_TR_ID_RE = re.compile(r"^TR-\d+$", re.IGNORECASE)
+# Autonomous TR severity gate (improve.md Step 1 rule 6): high/medium or FIXED-VERIFY.
+_TR_HOT_SEVERITIES = frozenset({"high", "medium"})
+
+
+def _is_status_summary_row(cells: list[str]) -> bool:
+    """True for count tables like ``| PENDING | 0 |`` (not work rows)."""
+    if len(cells) < 2:
+        return False
+    head = cells[0]
+    if (
+        head not in _STATUS_TOKENS
+        and not head.startswith("OPEN_")
+        and not head.startswith("BLOCKED")
+    ):
+        return False
+    # Remaining cells are pure integers (counts) or empty.
+    rest = [c for c in cells[1:] if c]
+    return bool(rest) and all(c.isdigit() for c in rest)
+
+
+def _tr_row_is_schedule_hot(cells: list[str], status: str) -> bool:
+    """Whether a trials TR-* row should heat the improve chain.
+
+    Matches driver autonomous TR eligibility (severity high/medium, or
+    FIXED-VERIFY / OPEN_FRAMEWORK / OPEN_DSL). Plain OPEN + low is watch-only.
+    """
+    base = status.split("→", 1)[0]
+    if base in URGENT_STATUSES or base == "FIXED-VERIFY":
+        return True
+    if base in {"OPEN_FRAMEWORK", "OPEN_DSL"}:
+        return True
+    if base == "OPEN":
+        # TR tables: id | kind | severity | … | status
+        severity = cells[2].lower() if len(cells) > 2 else ""
+        return severity in _TR_HOT_SEVERITIES
+    return base in ACTIONABLE_STATUSES
+
+
 def parse_backlog_counts(text: str) -> dict[str, int]:
     """Count status tokens in markdown table rows (any lane section)."""
     counts: dict[str, int] = {
@@ -124,6 +169,11 @@ def parse_backlog_counts(text: str) -> dict[str, int]:
             continue
         cells = [c.strip() for c in line.strip("|").split("|")]
         if len(cells) < 2:
+            continue
+        # Skip markdown separators and status-count summary tables.
+        if all(set(c) <= {"-", ":", " "} for c in cells):
+            continue
+        if _is_status_summary_row(cells):
             continue
         hits = [
             c
@@ -142,12 +192,15 @@ def parse_backlog_counts(text: str) -> dict[str, int]:
         if base in URGENT_STATUSES or status in URGENT_STATUSES:
             counts["urgent"] = int(counts["urgent"]) + 1
             counts["actionable"] = int(counts["actionable"]) + 1
-        elif base in ACTIONABLE_STATUSES or status in ACTIONABLE_STATUSES:
-            counts["actionable"] = int(counts["actionable"]) + 1
         elif base.startswith("BLOCKED") or base == "BLOCKED":
             counts["blocked"] = int(counts["blocked"]) + 1
         elif base in SETTLED_STATUSES:
             counts["settled"] = int(counts["settled"]) + 1
+        elif base in ACTIONABLE_STATUSES or status in ACTIONABLE_STATUSES:
+            # TR watch-only rows must not thrash the 2m opportunistic chain.
+            if _TR_ID_RE.match(cells[0]) and not _tr_row_is_schedule_hot(cells, status):
+                continue
+            counts["actionable"] = int(counts["actionable"]) + 1
     counts["by_status"] = by_status  # type: ignore[assignment]
     return counts
 

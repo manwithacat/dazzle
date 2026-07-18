@@ -65,6 +65,45 @@ def test_parse_backlog_counts_actionable_and_urgent(sched):
     assert "OPEN_FRAMEWORK" in counts["by_status"]
 
 
+def test_parse_backlog_skips_status_summary_and_low_open_tr(sched):
+    """Count tables and watch-only TR OPEN/low must not heat the chain."""
+    text = """
+## Lane: example-apps
+| Status | Count |
+| PENDING | 0 |
+| DONE | 12 |
+
+## Lane: trials
+| id | kind | severity | scenario | desc | seen | cycle | status |
+| TR-43 | confusion | low | support_tickets/x | raw PDF note | 1 | 166 | OPEN |
+| TR-50 | bug | high | app/y | concrete | 2 | 200 | OPEN |
+| TR-51 | bug | medium | app/z | framework | 1 | 201 | OPEN_FRAMEWORK |
+"""
+    counts = sched.parse_backlog_counts(text)
+    # PENDING|0 summary ignored; TR-43 OPEN/low not actionable; TR-50 + TR-51 count
+    assert counts["actionable"] == 2  # TR-50 OPEN/high + TR-51 OPEN_FRAMEWORK
+    assert counts["by_status"].get("PENDING", 0) == 0
+    assert counts["by_status"].get("OPEN", 0) == 2  # TR-43 low + TR-50 high (tally)
+    assert "OPEN_FRAMEWORK" in counts["by_status"]
+
+
+def test_decide_ci_green_idle_when_only_noisy_actionable_cleared(sched):
+    """Explore at cap + zero real actionable → inbox reprobe, not 2m thrash."""
+    d = sched.decide(
+        **_base(
+            ci="green",
+            explore_used=100,
+            counts={"urgent": 0, "actionable": 0, "blocked": 14, "settled": 190},
+            last_self_audit=640,
+            last_capability_sweep=635,
+            current_cycle=647,
+        )
+    )
+    assert d["interval"] == "15m"
+    assert d["fire_immediately"] is False
+    assert "inbox_reprobe" in d["reason"] or "only_blocked" in d["reason"]
+
+
 def test_parse_log_meta(sched):
     text = """
 ## Cycle 630 — 2026-07-14 — lane: capability-sweep — outcome: PASS
