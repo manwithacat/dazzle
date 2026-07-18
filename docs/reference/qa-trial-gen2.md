@@ -69,4 +69,28 @@ Flagship reference: `examples/support_tickets/trial.toml` →
   vision manually when needed)
 - Explore-budget carve-out in `/improve` (ops decision; not required for
   harness correctness)
+
+## Consumer field notes (issue #1625)
+
+CyFuture + AegisMark dogfood (2026-07) argued **agent-first live
+investigation** with a machine V&V ladder — human QA is gated L4, not
+the quality definition. Gen-2 addresses only the *deep nested-LLM trial*
+posture. The larger product shape they want is:
+
+| Consumer ask | Framework status |
+|--------------|------------------|
+| Agent-first default; human optional | Documented here; still often framed as “pseudo-human” elsewhere |
+| Mechanical vs deep trial modes | Partial — improve lane rotation ≈ mechanical-ish; `qa trial` ≈ deep nested LLM |
+| **Coverage inventory** drive (URL from matrix OK) | Not first-class in `/qa-trial` — consumers use sibling skills |
+| **Journey path** drive (only rendered affordances) | Nested trial navigates freely; no hard “no URL shortcut” mode |
+| **Multi-act / handoff** | Not in harness |
+| Friction `ownership` (product/seed/rbac_expected/harness/framework) | Gen-2 has `framework_vs_app` only — coarser |
+| `story_gap` category | Not in enum yet |
+| Inventory walk after golden path | Consumer-side; framework should document + optionally script |
+| Domain-theory hypotheses | Not in trial.toml |
+| Empty discovery → structured Ask | Improve HOUSEKEEPING paths; no formal Ask protocol |
+| Harness false-positive appendix (lazy IO, actionability, magic-link) | Undocumented |
+| KPI: closed PENDING / false-positive rate | Not instrumented |
+
+See GitHub #1625 for full CyFuture thesis + AegisMark extensions.
 """
