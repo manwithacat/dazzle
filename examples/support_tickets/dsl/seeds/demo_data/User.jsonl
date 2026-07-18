@@ -1,3 +1,4 @@
-{"id": "a1000000-0000-4000-8000-000000000004", "email": "agent@test.local", "name": "Alex Agent", "role": "agent", "is_active": true, "created_at": "2026-01-01T10:00:00"}
-{"id": "a1000000-0000-4000-8000-000000000002", "email": "manager@test.local", "name": "Morgan Manager", "role": "manager", "is_active": true, "created_at": "2026-01-01T10:00:00"}
-{"id": "a1000000-0000-4000-8000-000000000005", "email": "customer@test.local", "name": "Casey Customer", "role": "customer", "is_active": true, "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-000000000004", "email": "agent@demo.dazzle.local", "name": "Alex Agent", "role": "agent", "is_active": true, "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-000000000002", "email": "manager@demo.dazzle.local", "name": "Morgan Manager", "role": "manager", "is_active": true, "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-000000000005", "email": "customer@demo.dazzle.local", "name": "Casey Customer", "role": "customer", "is_active": true, "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-000000000003", "email": "admin@demo.dazzle.local", "name": "Admin", "role": "admin", "is_active": true, "created_at": "2026-01-01T10:00:00"}

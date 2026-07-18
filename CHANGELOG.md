@@ -23,6 +23,11 @@
   the auth principal id; (3) `/__test__/reset` + authenticate did not force
   `STABLE_PERSONA_USER_IDS`. QA capture also waits for HTMX settle before
   screenshot. Simple_task member My Work still recaptured above floor.
+- **#1626 remaining empty-hero stills + seed completeness** — support_tickets
+  Ticket.jsonl gains required `description` + demo emails aligned to stable
+  principals; recaptured customer My Tickets, invoice requester My Invoices,
+  and auditor Audit Review above felt floors. Fleet
+  `product_quality residual_total=0`.
 - **CI red after #1626 re-eval** — seed field-filter source gate follows
   `_prepare_fixture_row`; tenant/membership best-effort paths log at warning
   (not debug) so the swallow ratchet stays at baseline.
