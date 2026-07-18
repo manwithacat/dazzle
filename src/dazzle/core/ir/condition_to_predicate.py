@@ -126,7 +126,19 @@ def condition_expr_to_scope_predicate(expr: ConditionExpr | None) -> ScopePredic
     if val.literal is None:
         return ColumnCheck(field=field_name, op=op, value=ValueRef(literal_null=True))
 
-    return ColumnCheck(field=field_name, op=op, value=ValueRef(literal=val.literal))
+    # DSL `assigned_to = current_user` parses as a string literal "current_user".
+    # Without this marker, compile_predicate binds the text 'current_user' as a
+    # uuid parameter and every aggregate fails (#1626 empty my_* desks).
+    lit = val.literal
+    if lit == "current_user":
+        return ColumnCheck(field=field_name, op=op, value=ValueRef(current_user=True))
+    if isinstance(lit, str) and lit.startswith("current_user."):
+        attr = lit[len("current_user.") :]
+        return ColumnCheck(field=field_name, op=op, value=ValueRef(user_attr=attr))
+    if lit == "current_tenant":
+        return ColumnCheck(field=field_name, op=op, value=ValueRef(current_tenant=True))
+
+    return ColumnCheck(field=field_name, op=op, value=ValueRef(literal=lit))
 
 
 def _operator_to_comp_op(op_str: str) -> CompOp:

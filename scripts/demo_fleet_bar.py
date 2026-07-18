@@ -55,13 +55,9 @@ MIN_ROWS: dict[str, dict[str, int]] = {
 
 PLATFORM_STILL_PREFIX = "_platform_admin_"
 
-# P0-6 empty-hero floors (bytes). Only enforced when the still file exists
-# under the app's screenshot dir (CI often has no gitignored .dazzle stills —
-# skip). Empty-state theater stills are ~40–55 KB; populated job desks
-# typically ≥80 KB at desktop light above-fold.
-# Structural demo_fleet floors (ship residual=0). Felt empty-hero expansion
-# lives in dazzle.product_quality.stills.HERO_MIN_BYTES — agents use
-# `dazzle demo quality` / product_quality MCP for antagonist desks.
+# P0-6 ship-gate floors (jobs already recaptured with story data). Expanded
+# felt floors (customer/requester/auditor desks) live only in
+# dazzle.product_quality.stills.HERO_MIN_BYTES — use `dazzle demo quality`.
 HERO_MIN_BYTES: dict[str, dict[str, int]] = {
     "invoice_ops": {
         "approval_desk_approver_desktop_light.png": 80_000,
@@ -72,6 +68,7 @@ HERO_MIN_BYTES: dict[str, dict[str, int]] = {
     },
     "simple_task": {
         "task_board_manager_desktop_light.png": 90_000,
+        "my_work_member_desktop_light.png": 60_000,
     },
 }
 
@@ -133,6 +130,21 @@ def score_app(app: str) -> AppDemoBar:
     if not app_dir.is_dir():
         row.issues.append("missing_app")
         return row
+
+    # P0-3/4: product personas must not land on framework platform chrome
+    try:
+        from dazzle.product_quality.persona_homes import score_persona_homes
+
+        for home in score_persona_homes(app_dir):
+            for reg in home.regions:
+                if reg.residual and reg.reason.startswith("platform_admin_landing"):
+                    row.issues.append(f"platform_landing:{home.persona}:{home.default_workspace}")
+                elif reg.residual and reg.reason.startswith("seed_hits="):
+                    row.issues.append(f"persona_home:{home.persona}:{reg.region}:{reg.reason}")
+                elif reg.residual and reg.reason.startswith("missing_seed_jsonl"):
+                    row.issues.append(f"persona_home:{home.persona}:{reg.reason}")
+    except Exception as exc:  # noqa: BLE001
+        row.issues.append(f"persona_home_check_failed:{type(exc).__name__}")
 
     # P0-5 seed mins
     mins = MIN_ROWS.get(app) or {}

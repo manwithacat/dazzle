@@ -22,6 +22,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from dazzle.http.runtime.auth.dependencies import _bind_rls_tenant_id
+from dazzle.http.runtime.tenant_isolation import (
+    get_current_rls_user_attrs,
+    set_current_rls_user_attrs,
+)
 from dazzle.http.runtime.workspace_context import WorkspaceRegionContext
 from dazzle.http.runtime.workspace_user import _resolve_workspace_user
 
@@ -129,6 +133,15 @@ async def resolve_request_user_context(
     filter_context: dict[str, Any] = {}
     if user_id:
         filter_context["current_user_id"] = user_id
+        # #1626: surface principal id for aggregate CurrentUserRef
+        # materialization (metrics ``count(... assigned_to = current_user)``).
+        try:
+            attrs = dict(get_current_rls_user_attrs())
+            attrs.setdefault("id", user_id)
+            attrs.setdefault("entity_id", user_id)
+            set_current_rls_user_attrs(attrs)
+        except Exception:
+            logger.debug("Could not bind current_user id for aggregate metrics", exc_info=True)
     if user_entity:
         filter_context["current_user_entity"] = user_entity
     # #1394: expose the host-resolved tenant for `current_tenant[.attr]` display

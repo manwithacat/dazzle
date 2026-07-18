@@ -18,17 +18,22 @@ python scripts/demo_fleet_bar.py --status        # cycle log line
 python scripts/demo_fleet_bar.py --next          # residual app id
 python scripts/demo_fleet_bar.py --app <name> --json
 python scripts/demo_fleet_bar.py --strict        # exit 1 if residual
-# unified OBSERVE (with product + journey):
+# felt bar (persona homes + expanded still floors) — preferred OBSERVE:
+dazzle demo quality -p examples
+# unified OBSERVE (product + demo + journey + felt):
 python scripts/improve_example_probes.py --status
+# MCP: product_quality(operation="score")
 ```
 
 Checks (machine):
 
 | Check | Residual issue prefix |
 |-------|------------------------|
+| P0-3/4 landing | `platform_landing:` |
 | P0-4 nav | `nav_platform:` |
-| P0-5 seed mins | `seed_thin:` |
+| P0-5 seed mins | `seed_thin:` / `persona_home:` |
 | P0-6 stills | `stills_platform_only` / `empty_hero:<file>=size<min` |
+| P0-9 desks | `seed_desk_thin:` |
 
 **Open human P0s** (not fully scored by probe — drain via #1626 when residual=0):
 

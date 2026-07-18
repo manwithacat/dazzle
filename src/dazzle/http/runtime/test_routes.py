@@ -398,7 +398,9 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
             except Exception:
                 logger.debug("Could not load test_credentials.json", exc_info=True)
 
-    # Recreate demo auth users from personas (#465, #688)
+    # Recreate demo auth users from personas (#465, #688).
+    # #1626: when a stable demo UUID is known, force that id so domain seeds
+    # (assigned_to / created_by / …) match the principal QA/auth logs in as.
     if deps.auth_store is not None and deps.personas:
         for p in deps.personas:
             pid = p.get("id", "")
@@ -409,29 +411,83 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
             email = persona_creds.get("email") or (pid + "@demo.dazzle.local")
             password = persona_creds.get("password") or ("demo_" + pid + "_password")  # nosec B106
             try:
-                user = deps.auth_store.get_user_by_email(email)
-                stable_id = STABLE_PERSONA_USER_IDS.get(pid)
-                if not user:
-                    user = deps.auth_store.create_user(
-                        email=email,
-                        password=password,
-                        username=p.get("label") or pid,
-                        roles=[pid],
-                        user_id=stable_id,
-                    )
-                elif user.roles != [pid]:
-                    # Roles may be stale -- reset to the canonical persona role
-                    # so authenticate calls after reset always get the right role.
-                    deps.auth_store.update_user(user.id, roles=[pid])
-                # Mirror into User domain entity (#778)
+                user = _ensure_stable_demo_user(
+                    deps,
+                    persona_id=pid,
+                    email=email,
+                    password=password,
+                    username=p.get("label") or pid,
+                )
                 if user:
                     _mirror_auth_user_to_domain(
                         deps, str(user.id), email, p.get("label") or pid, pid
                     )
             except Exception:
-                logger.debug("Could not recreate demo user for %s", pid, exc_info=True)
+                logger.warning("Could not recreate demo user for %s", pid, exc_info=True)
 
     return {"status": "reset_complete"}
+
+
+def _ensure_stable_demo_user(
+    deps: _TestDeps,
+    *,
+    persona_id: str,
+    email: str,
+    password: str,
+    username: str,
+) -> Any:
+    """Return an auth user for *persona_id* bound to STABLE_PERSONA_USER_IDS.
+
+    Pre-#1626 reset reused random UUIDs for pre-existing demo emails, so
+    assignment-aware seed jsonl (fixed UUIDs) never matched the login
+    principal — empty hero desks in qa capture despite seeded rows.
+    """
+    from uuid import UUID
+
+    assert deps.auth_store is not None
+    stable = STABLE_PERSONA_USER_IDS.get(persona_id)
+    if stable:
+        try:
+            by_id = deps.auth_store.get_user_by_id(UUID(stable))
+        except Exception:  # noqa: BLE001
+            by_id = None
+        if by_id is not None:
+            if by_id.roles != [persona_id]:
+                deps.auth_store.update_user(by_id.id, roles=[persona_id])
+            return by_id
+
+    existing = deps.auth_store.get_user_by_email(email)
+    if existing is not None:
+        if stable and str(existing.id) != stable:
+            # Drop the non-stable principal so we can re-create at the fixed id.
+            try:
+                deps.auth_store.delete_user_sessions(existing.id)
+            except Exception:  # noqa: BLE001
+                logger.debug("delete_user_sessions during rekey failed", exc_info=True)
+            try:
+                deps.auth_store._execute(  # noqa: SLF001 — test reset only
+                    'DELETE FROM "users" WHERE id = %s', (str(existing.id),)
+                )
+            except Exception:  # noqa: BLE001
+                logger.warning(
+                    "Could not rekey demo user %s → %s", existing.id, stable, exc_info=True
+                )
+                # Fall through: keep existing rather than fail reset
+                if existing.roles != [persona_id]:
+                    deps.auth_store.update_user(existing.id, roles=[persona_id])
+                return existing
+        else:
+            if existing.roles != [persona_id]:
+                deps.auth_store.update_user(existing.id, roles=[persona_id])
+            return existing
+
+    return deps.auth_store.create_user(
+        email=email,
+        password=password,
+        username=username,
+        roles=[persona_id],
+        user_id=stable,
+    )
 
 
 def _mirror_auth_user_to_domain(
@@ -484,6 +540,65 @@ async def _get_snapshot(deps: _TestDeps) -> SnapshotResponse:
     return SnapshotResponse(entities=result)
 
 
+def _lookup_test_auth_user(deps: _TestDeps, *, username: str, role: str) -> Any:
+    """Find or create the auth principal for a test authenticate call (#1626)."""
+    from uuid import UUID
+
+    assert deps.auth_store is not None
+    stable_id = STABLE_PERSONA_USER_IDS.get(role) or STABLE_PERSONA_USER_IDS.get(username)
+    user = None
+    if stable_id:
+        try:
+            user = deps.auth_store.get_user_by_id(UUID(stable_id))
+        except Exception:  # noqa: BLE001
+            user = None
+    if user is None:
+        for email in (
+            f"{username}@demo.dazzle.local",
+            f"{role}@demo.dazzle.local",
+            f"{username}@test.local",
+            f"{role}@test.local",
+            f"{username}@example.test",
+        ):
+            user = deps.auth_store.get_user_by_email(email)
+            if user is not None:
+                break
+    if user is None:
+        return deps.auth_store.create_user(
+            email=f"{username}@test.local",
+            password="test_password",  # nosec B106 - test-only credential
+            username=username,
+            roles=[role],
+            user_id=stable_id,
+        )
+    if user.roles != [role]:
+        updated = deps.auth_store.update_user(user.id, roles=[role])
+        if updated is not None:
+            return updated
+    return user
+
+
+def _session_for_test_user(deps: _TestDeps, user: Any) -> Any:
+    """Create a session, binding active membership when present (P0-9)."""
+    assert deps.auth_store is not None
+    active_membership_id = None
+    try:
+        memberships = deps.auth_store.get_memberships_for_identity(str(user.id))
+        active = next(
+            (m for m in memberships if getattr(m, "status", "active") == "active"),
+            None,
+        )
+        if active is not None:
+            active_membership_id = active.id
+    except Exception:
+        logger.warning(
+            "Could not resolve membership for test auth user %s",
+            getattr(user, "email", user.id),
+            exc_info=True,
+        )
+    return deps.auth_store.create_session(user, active_membership_id=active_membership_id)
+
+
 async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest) -> Any:
     """
     Create a test authentication session.
@@ -491,61 +606,27 @@ async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest)
     When auth_store is available, creates a real user and session so the
     returned token works with the auth middleware.  Otherwise falls back
     to returning a mock token.
+
+    Prefers :data:`STABLE_PERSONA_USER_IDS` so QA capture and assignment-aware
+    seeds share the same principal UUID (#1626 empty-desk theater).
     """
     import uuid
+
+    from starlette.responses import JSONResponse
 
     username = request.username or request.role or "test_user"
     role = request.role or "user"
 
     if deps.auth_store is not None:
-        # Create (or reuse) a real user + session in the auth store
-        email = username + "@test.local"
-        user = deps.auth_store.get_user_by_email(email)
-        stable_id = STABLE_PERSONA_USER_IDS.get(role) or STABLE_PERSONA_USER_IDS.get(username)
-        if not user:
-            user = deps.auth_store.create_user(
-                email=email,
-                password="test_password",  # nosec B106 - test-only credential
-                username=username,
-                roles=[role],
-                user_id=stable_id,
-            )
-        elif user.roles != [role]:
-            # Roles may be stale from a previous test cycle -- update them so
-            # the LIST gate (and other RBAC checks) sees the correct role.
-            updated = deps.auth_store.update_user(user.id, roles=[role])
-            if updated is not None:
-                user = updated
-        # #1626 P0-9: multi-tenant shared_schema RLS binds dazzle.tenant_id
-        # ONLY from the session's active membership. Without it, every
-        # workspace region is empty (fail-closed fence) even when seed data
-        # exists. Prefer an active membership when the identity has one.
-        active_membership_id = None
-        try:
-            memberships = deps.auth_store.get_memberships_for_identity(str(user.id))
-            active = next(
-                (m for m in memberships if getattr(m, "status", "active") == "active"),
-                None,
-            )
-            if active is not None:
-                active_membership_id = active.id
-        except Exception:
-            logger.warning(
-                "Could not resolve membership for test auth user %s",
-                email,
-                exc_info=True,
-            )
-        session = deps.auth_store.create_session(user, active_membership_id=active_membership_id)
+        user = _lookup_test_auth_user(deps, username=username, role=role)
+        email = getattr(user, "email", None) or f"{username}@test.local"
+        session = _session_for_test_user(deps, user)
         session_token = session.id
         user_id = str(user.id)
-
-        # Mirror auth user into User domain entity (#778)
         _mirror_auth_user_to_domain(deps, user_id, email, username, role)
     else:
         user_id = str(uuid.uuid4())
         session_token = str(uuid.uuid4())
-
-    from starlette.responses import JSONResponse
 
     # Return as JSON with Set-Cookie so both cookie-based and
     # token-based clients can authenticate.

@@ -34,37 +34,54 @@ async def _resolve_workspace_user(
         logger.debug("Failed to resolve current user for filter context", exc_info=True)
         return None, None
 
-    # Try to find the user entity record by email so filters use entity IDs.
-    # Uses the DSL user entity name (may be "Student", "Member", etc.) (#588).
+    # Prefer the auth principal UUID for ``current_user`` filters (#1626).
+    # Assignment-aware demo seeds use STABLE_PERSONA_USER_IDS which match
+    # auth user ids after reset rekey. Looking up domain User *only* by email
+    # can return a stale row with a different id (pre-rekey mirror) and empty
+    # every ``assigned_to = current_user`` desk while seeds look correct.
+    auth_id = str(auth.user.id)
     email = getattr(auth.user, "email", None)
-    if email and repositories:
+    if repositories:
         user_repo = repositories.get(user_entity_name)
         if user_repo:
+            entity_user = None
             try:
-                user_result = await user_repo.list(filters={"email": email}, page_size=1)
-                user_items = (
-                    user_result.get("items", [])
-                    if isinstance(user_result, dict)
-                    else getattr(user_result, "items", [])
+                # Prefer id match when the domain User row is the auth principal.
+                by_id = await user_repo.list(filters={"id": auth_id}, page_size=1)
+                id_items = (
+                    by_id.get("items", [])
+                    if isinstance(by_id, dict)
+                    else getattr(by_id, "items", [])
                 )
-                if user_items:
-                    entity_user = user_items[0]
-                    uid = (
-                        entity_user.get("id")
-                        if isinstance(entity_user, dict)
-                        else getattr(entity_user, "id", None)
+                if id_items:
+                    entity_user = id_items[0]
+                elif email:
+                    user_result = await user_repo.list(filters={"email": email}, page_size=1)
+                    user_items = (
+                        user_result.get("items", [])
+                        if isinstance(user_result, dict)
+                        else getattr(user_result, "items", [])
                     )
-                    if uid:
-                        entity_dict = (
-                            entity_user
-                            if isinstance(entity_user, dict)
-                            else entity_user.model_dump()
-                            if hasattr(entity_user, "model_dump")
-                            else {}
+                    if user_items:
+                        candidate = user_items[0]
+                        cand_id = (
+                            candidate.get("id")
+                            if isinstance(candidate, dict)
+                            else getattr(candidate, "id", None)
                         )
-                        return str(uid), entity_dict
+                        # Only trust email hit when ids match; else keep auth_id.
+                        if cand_id is not None and str(cand_id) == auth_id:
+                            entity_user = candidate
             except Exception:
-                logger.debug("Could not resolve User entity by email", exc_info=True)
+                logger.debug("Could not resolve User entity for filter context", exc_info=True)
+            if entity_user is not None:
+                entity_dict = (
+                    entity_user
+                    if isinstance(entity_user, dict)
+                    else entity_user.model_dump()
+                    if hasattr(entity_user, "model_dump")
+                    else {}
+                )
+                return auth_id, entity_dict
 
-    # Fallback to auth user ID
-    return str(auth.user.id), None
+    return auth_id, None

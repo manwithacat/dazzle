@@ -15,6 +15,14 @@
   for tester desk residual=0.
 
 ### Fixed
+- **#1626 empty desks: current_user not bound in aggregates + QA principal
+  mismatch** — three framework bugs that left assignment-aware seeds invisible
+  on product desks: (1) `condition_expr_to_scope_predicate` treated
+  `current_user` as a string literal (uuid cast error → metrics 0);
+  (2) `_resolve_workspace_user` preferred a stale domain-User email row over
+  the auth principal id; (3) `/__test__/reset` + authenticate did not force
+  `STABLE_PERSONA_USER_IDS`. QA capture also waits for HTMX settle before
+  screenshot. Simple_task member My Work still recaptured above floor.
 - **CI red after #1626 re-eval** — seed field-filter source gate follows
   `_prepare_fixture_row`; tenant/membership best-effort paths log at warning
   (not debug) so the swallow ratchet stays at baseline.

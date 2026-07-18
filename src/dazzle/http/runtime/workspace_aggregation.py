@@ -41,6 +41,16 @@ from dazzle.core.ir import AggregateRef, BucketRef, ConditionExpr, ConditionValu
 from dazzle.core.ir.aggregate_legacy import condition_expr_to_legacy_where
 from dazzle.core.ir.condition_to_predicate import condition_expr_to_scope_predicate
 from dazzle.core.ir.fk_graph import FKGraph as _FKGraph
+from dazzle.http.runtime.predicate_compiler import (
+    CurrentTenantRef,
+    CurrentUserRef,
+    UserAttrRef,
+    compile_predicate,
+)
+from dazzle.http.runtime.tenant_isolation import (
+    get_current_host_tenant_id,
+    get_current_rls_user_attrs,
+)
 from dazzle.page.runtime.comparison_resolver import resolve_comparison
 from dazzle.render.display_names import _resolve_display_name
 
@@ -158,6 +168,39 @@ def _format_bucket_label(value: Any, unit: str) -> str:
     return str(value)
 
 
+def _materialize_predicate_params(
+    where_params: list[Any], base: dict[str, Any]
+) -> list[Any] | None:
+    """Resolve CurrentUserRef / tenant markers to concrete SQL bind values (#1626)."""
+    attrs = get_current_rls_user_attrs()
+    resolved: list[Any] = []
+    for p in where_params:
+        if isinstance(p, CurrentUserRef):
+            uid = attrs.get("id") or attrs.get("entity_id")
+            if not uid:
+                for key in ("assigned_to", "created_by", "submitted_by", "owner"):
+                    if key in base and base[key]:
+                        uid = str(base[key])
+                        break
+            if not uid:
+                logger.debug("aggregate where current_user unresolvable — metric returns 0")
+                return None
+            resolved.append(uid)
+        elif isinstance(p, CurrentTenantRef):
+            host = get_current_host_tenant_id()
+            if not host:
+                return None
+            resolved.append(host)
+        elif isinstance(p, UserAttrRef):
+            val = attrs.get(p.attr_name)
+            if not val:
+                return None
+            resolved.append(val)
+        else:
+            resolved.append(p)
+    return resolved
+
+
 def _build_aggregate_filters(
     where: Any,  # ConditionExpr | str | None — strings retire when current_bucket migrates
     scope_filters: dict[str, Any] | None,
@@ -184,8 +227,6 @@ def _build_aggregate_filters(
     if where is None or (isinstance(where, str) and not where):
         return base or None
 
-    from dazzle.http.runtime.predicate_compiler import compile_predicate
-
     if isinstance(where, ConditionExpr):
         # Typed path — no string round-trip, no parse step.
         try:
@@ -196,6 +237,23 @@ def _build_aggregate_filters(
                 exc_info=True,
             )
             return base or None
+        where_sql, where_params = compile_predicate(pred, source_entity, _FKGraph())
+        if not where_sql:
+            return base or None
+        resolved = _materialize_predicate_params(where_params, base)
+        if resolved is None:
+            return {"id": "__unresolved_current_user__"}
+        existing_pred = base.get("__scope_predicate")
+        if existing_pred is None:
+            base["__scope_predicate"] = (where_sql, resolved)
+        else:
+            existing_sql, existing_params = existing_pred
+            base["__scope_predicate"] = (
+                f"({existing_sql}) AND ({where_sql})",
+                list(existing_params) + list(resolved),
+            )
+        return base
+
     else:
         # Legacy string path — used by bar_chart's `current_bucket`
         # sentinel substitution. Once that substitution moves to the

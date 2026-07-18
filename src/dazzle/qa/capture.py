@@ -396,6 +396,24 @@ async def _capture_one(
                         full_url,
                         exc_info=True,
                     )
+                # #1626 P0-6: workspace regions load via HTMX after first paint.
+                # Screenshotting before region fan-out freezes empty-state theater
+                # as the "happy path" still (customer/requester/member desks).
+                try:
+                    await page.wait_for_function(
+                        "() => !document.querySelector('.htmx-request, .htmx-swapping')",
+                        timeout=8_000,
+                    )
+                except Exception:
+                    logger.debug(
+                        "htmx settle wait timed out after capture navigate to %s",
+                        full_url,
+                        exc_info=True,
+                    )
+                try:
+                    await page.wait_for_timeout(400)
+                except Exception:
+                    logger.debug("post-htmx settle timeout after capture navigate", exc_info=True)
                 await page.screenshot(path=str(screenshot_path), full_page=full_page)
                 logger.info(
                     "Captured %s/%s → %s",
