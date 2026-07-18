@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Fixed
+- **#1626 demo_fleet seed contracts in unit tests** — invoice submitted-per-tenant, project_tracker board columns, design_studio hex brands; contact_manager dual-pane purpose honesty.
 - **#1626 P0-5 project_tracker board seeds** — explicit Project/Milestone/Task.jsonl with multi-column kanban distribution (≥3 todo/in_progress, ≥2 review); demo_fleet_bar `seed_board_thin` gate.
 - **#1626 P0-8 design_studio palette swatches + story seeds** — Brand list/hub color fields use `widget=color`; explicit Brand.jsonl (hex palettes + logo placeholders) and Asset.jsonl (≥4 in review); demo_fleet_bar gates `seed_swatches`.
 - **#1626 P0-7 honesty renames** — design_studio `Asset Gallery` → `Asset Catalog` (card grid, not media gallery); simple_task `due_timeline` → `upcoming_due` (sorted due list, not calendar/Gantt).

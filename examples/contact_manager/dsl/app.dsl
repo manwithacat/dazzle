@@ -233,7 +233,9 @@ workspace home "Home":
 
 # Workspace with list + detail pattern
 workspace contacts "Contacts":
-  purpose: "Browse contacts and view details"
+  # #1626 P0-7: dual_pane_flow stage selects list+detail layout when the shell
+  # supports it; captures may still show list-primary if selection is empty.
+  purpose: "Browse contacts (list + detail hub) — favourites strip and A–Z directory"
   access: persona(user, admin)
   stage: "dual_pane_flow"
 
