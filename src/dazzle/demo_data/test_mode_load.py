@@ -67,8 +67,10 @@ def demo_ops_playbook() -> dict[str, Any]:
             "trust list regions + product_quality score until runtime is fixed.",
             "After renaming personas, re-check every `as:` / permit role token — "
             "static residual can be 0 while a desk is empty (#1630).",
-            "Prefer simple region filters (`status = held`); compound `or` may "
-            "silently empty a region — split regions until OR is loud/supported.",
+            "Same-field region OR is OK (`status = held or status = confirmed` → "
+            "status__in); mixed-field OR fail-closed — split regions (#1630).",
+            "Residual 0 is necessary not sufficient — check live_desk / stills "
+            "(counter-prior empty_desk_false_green).",
         ],
         "stable_persona_ids": stable_ids,
         "stable_persona_user_ids": dict(STABLE_PERSONA_USER_IDS),
@@ -77,6 +79,26 @@ def demo_ops_playbook() -> dict[str, Any]:
         "cli": "dazzle demo reset-and-load --project <app> -y",
         "mcp_read": "status(operation=demo_world, project_path=…)",
         "verify": "dazzle demo quality --project <app>  # persona_homes residual",
+        # Always-on KG entry points (inference layer; ADR-0002 reads)
+        "knowledge_concepts": [
+            "demo_identity",
+            "stable_personas",
+            "workspace_region_filters",
+            "empty_desk_false_green",
+            "first_principles_demo",
+        ],
+        "counter_priors": [
+            "empty_desk_false_green",
+            "free_persona_id_not_stable",
+            "workspace_filter_or_silent_empty",
+            "reseed_stable_users",
+        ],
+        "workflow": "first_principles_demo",
+        "knowledge_hint": (
+            "knowledge(operation='concept', name='demo_identity') · "
+            "knowledge(operation='counter_prior', …) · "
+            "knowledge(operation='workflow', workflow='first_principles_demo')"
+        ),
     }
 
 

@@ -1,0 +1,177 @@
+# Agent demo identity & first-principles priors (#1627 / #1629 / #1630)
+# Inference-layer knowledge: STABLE personas, seed order, false greens, filters.
+
+[meta]
+file = "agent_demo"
+concept_count = 5
+category = "Agent Demo Cognition"
+version = "0.106.0"
+
+[concepts.demo_identity]
+category = "Agent Demo Cognition"
+doc_page = "demo"
+doc_order = 1
+definition = """
+How demo principals, emails, and assignment seeds share UUIDs so persona desks
+populate after seed. The closed map is STABLE_PERSONA_USER_IDS (framework
+test routes + product_quality.persona_homes).
+
+**Keys (persona *id*, not display title):** member, manager, admin, agent,
+customer, requester, approver, finance, auditor, user, designer, reviewer,
+tester, engineer, ops_engineer, employee, hr_admin, tenant_admin, finance_admin.
+
+**Email domain:** `{role}@demo.dazzle.local`
+
+**UUID range:** a1000000-0000-4000-8000-… reserved for these principals only.
+
+**Order:** serve → re-read runtime.json → `dazzle demo reset-and-load -y` →
+authenticate with `role=` *after* reset → open default_workspace (browser +
+HTMX settle). Never authenticate before reset.
+"""
+syntax = '''
+persona requester "Promoter":    # id = STABLE key; title free
+  default_workspace: my_holds
+
+# seeds reference a1000000-… requester id on assignment FKs
+'''
+example = '''
+# Good — STABLE id + human title
+persona approver "Booker":
+  default_workspace: booker_desk
+
+# Bad — free id; role=promoter will not match STABLE seed UUIDs
+persona promoter "Promoter":
+  default_workspace: my_holds
+'''
+related = [
+  "stable_personas",
+  "empty_desk_false_green",
+  "first_principles_demo",
+  "workspace_region_filters",
+]
+best_practices = [
+  "Persona *id* must be a STABLE key for assignment-aware demos",
+  "Display title can be domain language (Promoter, Booker)",
+  "Authenticate with role= only after reset-and-load",
+  "Do not re-seed User rows at STABLE UUIDs (reset already mirrors them)",
+  "MCP: status(operation=demo_world); knowledge concept demo_identity",
+  "Counter-priors: free_persona_id_not_stable, reseed_stable_users",
+]
+issues = ["#1626", "#1627", "#1629", "#1630"]
+
+[concepts.stable_personas]
+category = "Agent Demo Cognition"
+doc_page = "demo"
+doc_order = 2
+definition = """
+Alias of demo_identity focused on the closed STABLE principal map used by
+`/__test__/authenticate` and assignment-aware seeds. See demo_identity.
+"""
+related = ["demo_identity", "empty_desk_false_green"]
+best_practices = ["Use knowledge(concept='demo_identity') for the full map and order"]
+
+[concepts.workspace_region_filters]
+category = "Agent Demo Cognition"
+doc_page = "workspaces"
+doc_order = 3
+definition = """
+How workspace region `filter:` expressions become SQL at runtime.
+
+**Supported well:**
+- Simple equality: `status = open`
+- Same-field equality OR: `status = held or status = confirmed` → `status__in`
+- AND trees of equalities
+- `current_user` / `current_user.<attr>` / `current_context` on equality
+
+**Fail-closed / avoid:**
+- Mixed-field OR (`status = held or priority = high`) → empty region + validate warn
+- Assuming full SQL boolean algebra in region filters
+
+**Prefer** one criterion per region when unsure (split held vs confirmed).
+"""
+syntax = '''
+# Supported same-field OR (#1630)
+held_or_confirmed:
+  source: HoldRequest
+  filter: status = held or status = confirmed
+  display: list
+
+# Preferred clarity — split regions
+held:
+  source: HoldRequest
+  filter: status = held
+confirmed:
+  source: HoldRequest
+  filter: status = confirmed
+'''
+related = ["regions", "empty_desk_false_green", "demo_identity"]
+best_practices = [
+  "Same-field or is OK; mixed-field or is not",
+  "Split regions instead of inventing compound OR",
+  "Counter-prior: workspace_filter_or_silent_empty",
+]
+issues = ["#1630"]
+
+[concepts.empty_desk_false_green]
+category = "Agent Demo Cognition"
+doc_page = "demo"
+doc_order = 4
+definition = """
+**False green:** validate green + static persona_homes residual=0 while a
+persona default workspace is empty under session.
+
+Static residual checks seed assignment vs filter *text*. It does not prove
+live RBAC (`as:` roles), STABLE principal bind, or region filter runtime.
+
+**Verify for real:**
+1. `reset-and-load` report `live_desk_residual` (if present)
+2. Authenticate `role=` after reset; open default workspace with browser/HTMX settle
+3. `dazzle qa capture` / `dazzle demo quality`
+4. On empty: check scope `as:` tokens, STABLE persona ids, region filters
+"""
+related = [
+  "demo_identity",
+  "workspace_region_filters",
+  "first_principles_demo",
+]
+best_practices = [
+  "Never treat residual=0 alone as demo ready",
+  "Counter-prior: empty_desk_false_green",
+]
+issues = ["#1630"]
+
+[concepts.first_principles_demo]
+category = "Agent Demo Cognition"
+doc_page = "demo"
+doc_order = 5
+definition = """
+Closed-loop workflow from cold project to persona stills without tribal SQL.
+
+**Steps:**
+1. `dazzle init` / author DSL (STABLE persona ids + human titles)
+2. `dazzle validate` — fix errors; heed #1630 warns on as:/STABLE
+3. `dazzle serve` (test mode) — writes `.dazzle/runtime.json`
+4. **Re-read runtime.json** (ports/secret/database_url may change)
+5. `dazzle demo reset-and-load --project <app> -y`
+6. Authenticate with `role=<stable_id>` **after** reset
+7. Browser open default_workspace; or `dazzle qa capture`
+8. `status(operation=demo_world)` / `dazzle demo quality` for residual
+
+**MCP reads (ADR-0002):** knowledge concepts above; status demo_world; product_quality.
+**CLI writes:** serve, reset-and-load, capture.
+"""
+syntax = '''
+dazzle serve --project ./app
+dazzle demo reset-and-load --project ./app -y
+# then role= authenticate; capture
+'''
+related = [
+  "demo_identity",
+  "empty_desk_false_green",
+  "workspace_region_filters",
+]
+best_practices = [
+  "workflow: knowledge(operation='workflow', workflow='first_principles_demo')",
+  "Always load demo_ops from agent context or status(demo_world)",
+]
+issues = ["#1627", "#1629", "#1630"]

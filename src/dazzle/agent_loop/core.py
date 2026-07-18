@@ -492,11 +492,20 @@ def build_context(project_root: Path) -> dict[str, Any]:
     except Exception as exc:
         payload["services"]["contract_diff_deep"] = {"error": str(exc)[:200]}
     payload["next_steps"] = next_steps(payload)
-    # #1627 — tribal demo-ops knowledge for agents (no MCP required)
+    # #1627/#1630 — tribal demo-ops + KG prior index (no MCP required for the pack)
     binding = resolve_serve_binding(project_root)
+    playbook = demo_ops_playbook()
     payload["demo_ops"] = {
-        **demo_ops_playbook(),
+        **playbook,
         "serve_binding": {k: v for k, v in binding.items() if k != "test_secret"},
+    }
+    # Always surface inference-layer entry points so cold agents do not have
+    # to know to call knowledge first (still full text via MCP/KG).
+    payload["knowledge_priors"] = {
+        "concepts": playbook.get("knowledge_concepts", []),
+        "counter_priors": playbook.get("counter_priors", []),
+        "workflow": playbook.get("workflow"),
+        "hint": playbook.get("knowledge_hint"),
     }
     return payload
 

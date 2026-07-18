@@ -53,6 +53,7 @@ TOML_FILES = [
     "runtime.toml",
     "feedback.toml",
     "capabilities.toml",
+    "agent_demo.toml",
 ]
 
 # Alias mapping for common term variations — used by seed.py
@@ -81,6 +82,15 @@ ALIASES = {
     "has_one": "relationships",
     "belongs_to": "relationships",
     "embeds": "relationships",
+    # Agent demo cognition (#1627/#1629/#1630)
+    "stable_persona": "demo_identity",
+    "stable_personas": "demo_identity",
+    "demo_ops": "first_principles_demo",
+    "reset_and_load": "first_principles_demo",
+    "persona_homes": "empty_desk_false_green",
+    "false_green": "empty_desk_false_green",
+    "region_filter": "workspace_region_filters",
+    "filter_or": "workspace_region_filters",
     # Experience/wizard aliases
     "wizard": "experience",
     "wizards": "experience",

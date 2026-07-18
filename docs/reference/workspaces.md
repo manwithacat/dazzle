@@ -209,6 +209,50 @@ workspace dashboard "Dashboard":
 
 ---
 
+## Workspace Region Filters
+
+How workspace region `filter:` expressions become SQL at runtime.
+
+**Supported well:**
+- Simple equality: `status = open`
+- Same-field equality OR: `status = held or status = confirmed` → `status__in`
+- AND trees of equalities
+- `current_user` / `current_user.<attr>` / `current_context` on equality
+
+**Fail-closed / avoid:**
+- Mixed-field OR (`status = held or priority = high`) → empty region + validate warn
+- Assuming full SQL boolean algebra in region filters
+
+**Prefer** one criterion per region when unsure (split held vs confirmed).
+
+### Syntax
+
+```dsl
+# Supported same-field OR (#1630)
+held_or_confirmed:
+  source: HoldRequest
+  filter: status = held or status = confirmed
+  display: list
+
+# Preferred clarity — split regions
+held:
+  source: HoldRequest
+  filter: status = held
+confirmed:
+  source: HoldRequest
+  filter: status = confirmed
+```
+
+### Best Practices
+
+- Same-field or is OK; mixed-field or is not
+- Split regions instead of inventing compound OR
+- Counter-prior: workspace_filter_or_silent_empty
+
+**Related:** [Regions](workspaces.md#regions), [Empty Desk False Green](demo.md#empty-desk-false-green), [Demo Identity](demo.md#demo-identity)
+
+---
+
 ## Aggregates
 
 Computed metrics and aggregate functions for workspace regions.

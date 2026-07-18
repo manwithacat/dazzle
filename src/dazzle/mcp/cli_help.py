@@ -1240,6 +1240,80 @@ entity Task "Task":
                 },
             ],
         },
+        "first_principles_demo": {
+            "name": "First-principles persona demo (agent path)",
+            "description": (
+                "Cold project → seeded multi-persona desks without tribal SQL. "
+                "ADR-0002: CLI writes (serve/seed); MCP reads (knowledge/demo_world). "
+                "Issues #1627/#1629/#1630."
+            ),
+            "knowledge_concepts": [
+                "demo_identity",
+                "workspace_region_filters",
+                "empty_desk_false_green",
+                "first_principles_demo",
+            ],
+            "counter_priors": [
+                "empty_desk_false_green",
+                "free_persona_id_not_stable",
+                "workspace_filter_or_silent_empty",
+                "reseed_stable_users",
+            ],
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Author DSL with STABLE persona ids + human titles",
+                    "notes": (
+                        "id=requester/approver/ops_engineer…; title can be Promoter/Booker. "
+                        "knowledge concept=demo_identity"
+                    ),
+                },
+                {
+                    "step": 2,
+                    "action": "Validate",
+                    "command": "dazzle validate",
+                    "notes": "Heed #1630 warns on as:/non-STABLE personas",
+                },
+                {
+                    "step": 3,
+                    "action": "Serve (writes runtime.json)",
+                    "command": "dazzle serve --project <app>",
+                },
+                {
+                    "step": 4,
+                    "action": "Re-read .dazzle/runtime.json",
+                    "notes": "Ports and test_secret change across restarts",
+                },
+                {
+                    "step": 5,
+                    "action": "Reset + seed via test mode",
+                    "command": "dazzle demo reset-and-load --project <app> -y",
+                    "notes": "Skips STABLE User fixtures; check live_desk residual",
+                },
+                {
+                    "step": 6,
+                    "action": "Authenticate after reset",
+                    "notes": 'POST /__test__/authenticate {"role":"<stable_id>"} with X-Test-Secret',
+                },
+                {
+                    "step": 7,
+                    "action": "Open default_workspace (browser + HTMX settle)",
+                    "command": "dazzle qa capture  # or manual browser",
+                    "notes": "curl HTML is skeleton only — counter-prior empty_desk_false_green",
+                },
+                {
+                    "step": 8,
+                    "action": "Read world model",
+                    "mcp_tool": "status(operation='demo_world')",
+                    "notes": "Also product_quality / dazzle demo quality",
+                },
+            ],
+            "next_steps": [
+                "If desk empty with residual 0: check as: tokens and STABLE ids",
+                "knowledge(operation='counter_prior') for empty_desk_false_green",
+                "Prefer same-field OR or split regions for filters",
+            ],
+        },
     }
 
     workflow_normalized = workflow.lower().replace("-", "_").replace(" ", "_")

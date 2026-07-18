@@ -39,6 +39,10 @@ naively importing human critique of AI code as ground truth) is
 - [shell-without-strict-mode](shell-without-strict-mode.md) — Shell scripts missing `set -euo pipefail`. Silent continuation past failed commands is the corpus shape and the highest-leverage one-line fix in the catalogue.
 - [stringly-typed-refs](stringly-typed-refs.md) — `customer_email: str` instead of `customer: ref Customer`. The FK graph + scope predicate algebra depend on typed refs.
 - [subtype-polymorphism-default](subtype-polymorphism-default.md) — `subtype_of:` reached for reflexively whenever a spec mentions "variants of X." Walk the three alternatives (separate entities, state machine, nullable fields) first.
+- [empty-desk-false-green](empty-desk-false-green.md) — *(agent-era)* Residual 0 + validate green while a persona desk is empty (scope `as:` drift, wrong principal, region filter). Static residual ≠ live desk. #1630.
+- [free-persona-id-not-stable](free-persona-id-not-stable.md) — *(agent-era)* Domain vocabulary as persona *ids* (`promoter`) instead of STABLE keys (`requester`). Titles free; ids constrained for demo auth/seeds. #1630.
+- [workspace-filter-or-silent-empty](workspace-filter-or-silent-empty.md) — *(agent-era)* Compound region `or` filters. Same-field equality OR → `field__in`; mixed-field OR fail-closed. Prefer split regions. #1630.
+- [reseed-stable-users](reseed-stable-users.md) — *(agent-era)* Re-seeding `User.jsonl` at STABLE UUIDs after reset already mirrored principals → 400 already exists. #1630.
 
 ## Adding a new entry
 
