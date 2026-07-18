@@ -76,6 +76,53 @@ def _workspace_access_map(workspaces: list[Any], personas: list[Any]) -> dict[st
     return allowed_by_ws
 
 
+def _product_personas(appspec: Any) -> list[Any]:
+    """Prefer product personas over field-mixin archetypes (#1626).
+
+    AppSpec.archetypes are field mixins (Timestamped, Auditable). Pre-#1626
+    capture preferred archetypes when both existed, so plans walked list
+    surfaces as "Timestamped/Auditable" and produced platform stills instead
+    of job desks.
+    """
+    personas = list(getattr(appspec, "personas", None) or [])
+    if personas:
+        return personas
+    return list(getattr(appspec, "archetypes", None) or [])
+
+
+def _product_workspaces(appspec: Any) -> list[Any]:
+    """User-authored workspaces only — skip framework ``_platform_*`` (#1537)."""
+    all_workspaces = list(getattr(appspec, "workspaces", None) or [])
+    return [w for w in all_workspaces if not str(getattr(w, "name", "")).startswith("_platform_")]
+
+
+def _workspace_capture_targets(
+    workspaces: list[Any],
+    personas: list[Any],
+    *,
+    include_denied: bool,
+) -> list[CaptureTarget]:
+    """One CaptureTarget per accessible (persona, workspace) pair."""
+    allowed_by_ws = _workspace_access_map(workspaces, personas) if workspaces else {}
+    targets: list[CaptureTarget] = []
+    for persona in personas:
+        persona_id: str = str(spec_display_id(persona))
+        for workspace in workspaces:
+            workspace_name = str(getattr(workspace, "name", None) or "unknown")
+            allowed_set = allowed_by_ws[workspace_name]
+            accessible = allowed_set is None or persona_id in allowed_set
+            if not accessible and not include_denied:
+                continue
+            targets.append(
+                CaptureTarget(
+                    persona=persona_id,
+                    workspace=workspace_name,
+                    url=f"/app/workspaces/{workspace_name}",
+                )
+            )
+    return targets
+
+
 def build_capture_plan(appspec: Any, *, include_denied: bool = False) -> list[CaptureTarget]:
     """Build a list of capture targets from an AppSpec.
 
@@ -96,44 +143,12 @@ def build_capture_plan(appspec: Any, *, include_denied: bool = False) -> list[Ca
     Returns:
         Ordered list of :class:`CaptureTarget` instances.
     """
-    all_workspaces = list(getattr(appspec, "workspaces", None) or [])
-    # #1537: framework-injected workspaces (`_platform_*`) are plumbing
-    # gated to framework roles — never taste targets. Pre-#1536 they were
-    # the sole reason a workspace-less app "had" captures (all of them
-    # denial/admin pages), which quietly poisoned its baseline score.
-    workspaces = [
-        w for w in all_workspaces if not str(getattr(w, "name", "")).startswith("_platform_")
-    ]
-    # Prefer product personas. AppSpec.archetypes are *field* mixins
-    # (Timestamped, Auditable) — pre-#1626 this preferred archetypes over
-    # personas when both exist, so capture plans for support_tickets walked
-    # list surfaces as "Timestamped/Auditable" and produced platform stills
-    # (SystemHealth/DeployHistory) instead of job desks.
-    personas = list(getattr(appspec, "personas", None) or [])
-    if not personas:
-        personas = list(getattr(appspec, "archetypes", None) or [])
-
+    workspaces = _product_workspaces(appspec)
+    personas = _product_personas(appspec)
     if not personas:
         return []
 
-    allowed_by_ws = _workspace_access_map(workspaces, personas) if workspaces else {}
-
-    targets: list[CaptureTarget] = []
-    for persona in personas:
-        persona_id: str = str(spec_display_id(persona))
-        for workspace in workspaces:
-            workspace_name = str(getattr(workspace, "name", None) or "unknown")
-            allowed_set = allowed_by_ws[workspace_name]
-            accessible = allowed_set is None or persona_id in allowed_set
-            if not accessible and not include_denied:
-                continue
-            targets.append(
-                CaptureTarget(
-                    persona=persona_id,
-                    workspace=workspace_name,
-                    url=f"/app/workspaces/{workspace_name}",
-                )
-            )
+    targets = _workspace_capture_targets(workspaces, personas, include_denied=include_denied)
     if targets:
         return targets
 

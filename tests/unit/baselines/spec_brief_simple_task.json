@@ -103,7 +103,7 @@
   "capabilities": [
     {
       "name": "task_list",
-      "title": "Task List",
+      "title": "Tasks",
       "entity": "Task",
       "mode": "list"
     },

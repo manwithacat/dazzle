@@ -44,10 +44,12 @@ def test_contact_manager_user_persona_has_curated_nav() -> None:
     assert home_link.route == "/workspaces/home"
 
     # "Contacts" group → the Contact entity's list surface.
+    # Label comes from the LIST surface title (`surface contact_list "Contacts"`),
+    # not the legacy "{entity} List" fallback — product nav copy (#1626).
     contacts_group = next(g for g in model.groups if g.label == "Contacts")
     contact_link = next(link for link in contacts_group.links if link.entity == "Contact")
     assert contact_link.route == "/list/Contact"
-    assert contact_link.label == "Contact List"
+    assert contact_link.label == "Contacts"
 
     # "Browse" group → the `contacts` workspace page.
     browse_group = next(g for g in model.groups if g.label == "Browse")

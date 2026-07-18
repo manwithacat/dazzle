@@ -216,6 +216,64 @@ def _resolve_curated(
     return out
 
 
+def _try_nav_link(appspec: AppSpec, target: str, *, seen: set[str]) -> NavLink | None:
+    """Resolve a nav link for *target* once, recording it in *seen*."""
+    if not target or target in seen:
+        return None
+    route = _route_for(appspec, target)
+    if route is None:
+        return None
+    seen.add(target)
+    return NavLink(label=_label_for(appspec, target), route=route, entity=target)
+
+
+def _region_sources(region: object) -> list[str]:
+    primary = getattr(region, "source", None)
+    extras = list(getattr(region, "sources", None) or [])
+    out: list[str] = []
+    if primary:
+        out.append(str(primary))
+    out.extend(str(s) for s in extras if s)
+    return out
+
+
+def _auto_discover_workspace_links(
+    appspec: AppSpec,
+    ws: object,
+    *,
+    persona: PersonaSpec,
+    matrix: AccessMatrix,
+    personas: list[PersonaSpec],
+    platform_ops: bool,
+    seen: set[str],
+) -> list[NavLink]:
+    """Product workspace link + list sources for one accessible workspace."""
+    ws_name = str(getattr(ws, "name", "") or "")
+    if not platform_ops and _is_platform_nav_target(appspec, ws_name):
+        return []
+    allowed = workspace_allowed_personas(ws, personas)  # None = all personas
+    if allowed is not None and persona.id not in set(allowed):
+        return []
+
+    links: list[NavLink] = []
+    # Workspace destination first (product maturity + antagonist bar)
+    ws_link = _try_nav_link(appspec, ws_name, seen=seen)
+    if ws_link is not None:
+        links.append(ws_link)
+
+    role = persona.effective_role
+    for region in getattr(ws, "regions", None) or []:
+        for src in _region_sources(region):
+            if not platform_ops and _is_platform_nav_target(appspec, src):
+                continue
+            if not _persona_can_list(matrix, role, src):
+                continue
+            link = _try_nav_link(appspec, src, seen=seen)
+            if link is not None:
+                links.append(link)
+    return links
+
+
 def _auto_discover(appspec: AppSpec, persona: PersonaSpec, matrix: AccessMatrix) -> list[NavGroup]:
     """Product-first nav for a persona (FR-3 + #1626 P0-4).
 
@@ -224,47 +282,23 @@ def _auto_discover(appspec: AppSpec, persona: PersonaSpec, matrix: AccessMatrix)
     omitted for non-platform personas so System Health never sits next to
     Tickets on a business desk.
     """
-    role = persona.effective_role
     personas = list(getattr(appspec, "personas", []) or [])
     platform_ops = _persona_is_platform_operator(persona)
     seen: set[str] = set()
     links: list[NavLink] = []
 
     for ws in getattr(appspec, "workspaces", []) or []:
-        ws_name = str(getattr(ws, "name", "") or "")
-        if not platform_ops and _is_platform_nav_target(appspec, ws_name):
-            continue
-        allowed = workspace_allowed_personas(ws, personas)  # None = all personas
-        if allowed is not None and persona.id not in set(allowed):
-            continue
-        # Workspace destination first (product maturity + antagonist bar)
-        if ws_name and ws_name not in seen:
-            route = _route_for(appspec, ws_name)
-            if route is not None:
-                seen.add(ws_name)
-                links.append(
-                    NavLink(
-                        label=_label_for(appspec, ws_name),
-                        route=route,
-                        entity=ws_name,
-                    )
-                )
-        for region in ws.regions:
-            region_sources = ([region.source] if region.source else []) + list(
-                getattr(region, "sources", []) or []
+        links.extend(
+            _auto_discover_workspace_links(
+                appspec,
+                ws,
+                persona=persona,
+                matrix=matrix,
+                personas=personas,
+                platform_ops=platform_ops,
+                seen=seen,
             )
-            for src in region_sources:
-                if not src or src in seen:
-                    continue
-                if not platform_ops and _is_platform_nav_target(appspec, src):
-                    continue
-                if not _persona_can_list(matrix, role, src):
-                    continue
-                route = _route_for(appspec, src)
-                if route is None:
-                    continue
-                seen.add(src)
-                links.append(NavLink(label=_label_for(appspec, src), route=route, entity=src))
+        )
     return [NavGroup(label="", icon=None, collapsed=False, links=tuple(links))] if links else []
 
 
