@@ -133,6 +133,24 @@ def classify_http_status(code: int) -> tuple[str, str]:
     return "blocked", "unclear"
 
 
+def matrix_expected_deny(appspec: Any, persona: str, target: InventoryTarget) -> bool | None:
+    """True if RBAC matrix says persona should be denied list/create on entity.
+
+    Returns None when matrix cannot decide (workspace / no entity).
+    """
+    if not target.entity:
+        return None
+    try:
+        from dazzle.rbac.matrix import PolicyDecision, generate_access_matrix
+    except Exception:
+        return None
+    matrix = generate_access_matrix(appspec)
+    op = "create" if target.kind == "surface_create" else "list"
+    # Persona id is usually the role name in examples.
+    decision = matrix.get(persona, target.entity, op)
+    return decision == PolicyDecision.DENY
+
+
 def inventory_to_json(targets: list[InventoryTarget]) -> dict[str, Any]:
     return {
         "schema_version": 1,

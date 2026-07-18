@@ -57,7 +57,7 @@ def run_trial_coverage(
         typer.echo("--persona is required for live coverage probe", err=True)
         raise typer.Exit(code=2)
 
-    hits = _live_probe(base_url.rstrip("/"), persona, targets)
+    hits = _live_probe(base_url.rstrip("/"), persona, targets, appspec=appspec)
     report = coverage_report_to_json(app=app_name, persona=persona, targets=targets, hits=hits)
     path = _default_coverage_path(project_dir, output, f"qa-coverage-{persona}")
     path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -75,10 +75,20 @@ def _default_coverage_path(project_dir: Path, output: Path | None, stem: str) ->
     return out_dir / f"{stem}-{stamp}.json"
 
 
-def _live_probe(base: str, persona: str, targets: list[Any]) -> list[Any]:
+def _live_probe(
+    base: str,
+    persona: str,
+    targets: list[Any],
+    *,
+    appspec: Any = None,
+) -> list[Any]:
     import httpx
 
-    from dazzle.qa.trial_inventory import CoverageHit, classify_http_status
+    from dazzle.qa.trial_inventory import (
+        CoverageHit,
+        classify_http_status,
+        matrix_expected_deny,
+    )
 
     try:
         ml = httpx.post(
@@ -105,6 +115,16 @@ def _live_probe(base: str, persona: str, targets: list[Any]) -> list[Any]:
             try:
                 resp = client.get(t.url)
                 status, own = classify_http_status(resp.status_code)
+                detail = ""
+                if status == "rbac_denied" and appspec is not None:
+                    expected = matrix_expected_deny(appspec, persona, t)
+                    if expected is True:
+                        own = "rbac_expected"
+                        detail = "matrix DENY"
+                    elif expected is False:
+                        own = "product"
+                        detail = "matrix allows but HTTP denied — unexpected"
+                        status = "blocked"
                 hits.append(
                     CoverageHit(
                         url=t.url,
@@ -113,6 +133,7 @@ def _live_probe(base: str, persona: str, targets: list[Any]) -> list[Any]:
                         persona=persona,
                         status=status,
                         http_status=resp.status_code,
+                        detail=detail,
                         ownership_hint=own,
                     )
                 )

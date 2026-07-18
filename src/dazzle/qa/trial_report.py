@@ -436,15 +436,15 @@ def build_trial_report(
 
 def trial_report_to_json(report: TrialReport) -> dict[str, Any]:
     """Stable machine schema for consumer improve loops (#1625 T4)."""
-    from dazzle.qa.trial_friction import filter_auto_seed
+    from dazzle.qa.trial_friction import apply_ownership_heuristics, filter_auto_seed
 
-    friction = list(report.friction)
+    friction = [apply_ownership_heuristics(f) for f in report.friction]
     return {
         "schema_version": 2,
         "scenario": report.scenario_name,
         "identity_headline": report.user_identity_headline,
         "verdict": report.verdict,
-        "recommend": report.recommend,
+        "recommend": report.recommend or _infer_recommend(report.verdict),
         "criteria_scores": list(report.criteria_scores),
         "pilot_blockers_summary": report.pilot_blockers_summary,
         "friction": friction,
@@ -456,4 +456,38 @@ def trial_report_to_json(report: TrialReport) -> dict[str, Any]:
         "outcome": report.outcome,
         "generated_at": report.generated_at.isoformat(),
         "signing_outcomes": report.signing_outcomes,
+        "ladder": {
+            "instrument": "deep_nested",
+            "auto_seed_count": len(filter_auto_seed(friction, allow_framework=False)),
+        },
     }
+
+
+def _infer_recommend(verdict: str) -> str:
+    """Best-effort recommend when agent skipped submit_verdict fields."""
+    v = (verdict or "").lower()
+    v = (
+        v.replace("\u2019", "'")
+        .replace("\u2018", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+    )
+    if not v:
+        return "unclear"
+    if any(
+        x in v
+        for x in (
+            "don't switch",
+            "do not switch",
+            "cannot recommend",
+            "can't recommend",
+            "would not switch",
+            "wouldn't switch",
+        )
+    ):
+        return "no"
+    if "conditional" in v or "with fixes" in v or "minor fix" in v:
+        return "conditional"
+    if any(x in v for x in ("would pilot", "would switch", "recommend this")):
+        return "yes"
+    return "unclear"

@@ -49,13 +49,15 @@ class TestFrictionSchema:
             {
                 "category": "bug",
                 "severity": "high",
-                "description": "UUID leak",
+                "description": "UUID leak on Contact detail view",
+                "url": "/app/x",
                 "ownership": "product",
             },
             {
                 "category": "bug",
                 "severity": "high",
-                "description": "UUID   leak",
+                "description": "UUID  leak  on  Contact  detail  view",
+                "url": "/app/x",
                 "ownership": "product",
             },
             {
@@ -66,9 +68,24 @@ class TestFrictionSchema:
             },
         ]
         seeded = filter_auto_seed(rows)
-        assert len(seeded) == 2
+        assert len(seeded) == 1
         keys = {friction_cluster_key(r) for r in seeded}
         assert len(keys) == 1
+
+    def test_thrash_reclassified_harness_not_auto_seeded(self) -> None:
+        from dazzle.qa.trial_friction import apply_ownership_heuristics
+
+        e = apply_ownership_heuristics(
+            {
+                "category": "bug",
+                "severity": "high",
+                "description": "Manager Ops thrash",
+                "evidence": "htmx:error Failed to fetch and net::ERR_INSUFFICIENT_RESOURCES ×89",
+                "ownership": "product",
+            }
+        )
+        assert e["ownership"] == "harness"
+        assert filter_auto_seed([e]) == []
 
 
 class TestInventory:

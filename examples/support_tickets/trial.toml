@@ -9,9 +9,11 @@
 name = "manager_evaluation"
 login_persona = "manager"
 # Gen-2: careful pilot budgets (current-gen models handle longer sessions).
-time_budget_seconds = 600
-max_steps = 55
-token_budget = 400000
+time_budget_seconds = 720
+max_steps = 60
+# Nested Playwright snapshots + console storms burn tokens fast; gen-2
+# default 400k was exhausted in 5 steps on Manager Ops thrash (2026-07-18).
+token_budget = 800000
 
 user_identity = """
 You are Sarah, founder of a small B2B SaaS company with about 50 paying

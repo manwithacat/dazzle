@@ -125,6 +125,10 @@ Call `submit_verdict` before the budget ends (not the builtin `done`).
   at triage.
 - Distinguish product friction from fixture noise when you can (e.g.
   empty DB vs broken UI). Prefer product signal.
+- Console storms (htmx Failed to fetch, ERR_INSUFFICIENT_RESOURCES,
+  dozens of identical errors) → record **once** with ownership=harness
+  or framework, then move to another task. Do not re-scroll the same
+  broken region hoping for more signal.
 - The server is pre-authenticated as your persona — you do NOT need to
   log in. Start where you landed and follow your nose.
 """

@@ -96,28 +96,72 @@ def is_auto_seed_eligible(entry: dict[str, Any]) -> bool:
     return e["ownership"] == "product"
 
 
+def friction_cluster_key(entry: dict[str, Any]) -> tuple[str, ...]:
+    """Key for pre-seed clustering (category, severity, url, token head)."""
+    e = normalize_friction_entry(entry)
+    desc = " ".join(e["description"].lower().split())
+    # Soft-collapse near-dupes that share URL + first 8 significant tokens
+    tokens = [t for t in desc.split() if len(t) > 3][:8]
+    url = e.get("url") or ""
+    return (e["category"], e["severity"], url, " ".join(tokens))
+
+
+# Console thrash / headless resource exhaustion — AegisMark harness artifacts.
+_HARNESS_EVIDENCE_MARKERS: tuple[str, ...] = (
+    "err_insufficient_resources",
+    "net::err_insufficient_resources",
+    "failed to fetch",
+    "htmx:error failed to fetch",
+)
+
+
+def apply_ownership_heuristics(entry: dict[str, Any]) -> dict[str, Any]:
+    """Reclassify ownership when evidence matches known harness ghosts.
+
+    Agents often mark product for console storms that are instrument or
+    framework thrash (ERR_INSUFFICIENT_RESOURCES, mass htmx Failed to fetch).
+    Prefer harness unless the description names a clear user-visible deadend
+    *and* lacks thrash markers in evidence.
+    """
+    e = normalize_friction_entry(entry)
+    blob = f"{e.get('description', '')} {e.get('evidence', '')}".lower()
+    thrash_hits = sum(1 for m in _HARNESS_EVIDENCE_MARKERS if m in blob)
+    if thrash_hits >= 2 and e["ownership"] == "product":
+        e["ownership"] = "harness"
+        e["framework_vs_app"] = "unclear"
+        e["_ownership_note"] = "reclassified product→harness (console/network thrash markers)"
+    return e
+
+
 def filter_auto_seed(
     entries: list[dict[str, Any]],
     *,
     allow_framework: bool = False,
 ) -> list[dict[str, Any]]:
-    """Return friction rows safe to auto-seed into improve PENDING."""
-    out: list[dict[str, Any]] = []
+    """Return friction rows safe to auto-seed into improve PENDING.
+
+    Applies ownership heuristics, eligibility filter, then clusters near-
+    duplicates so one UUID-leak or thrash pattern is not 40 PENDING rows.
+    """
+    eligible: list[dict[str, Any]] = []
     for raw in entries:
-        e = normalize_friction_entry(raw)
+        e = apply_ownership_heuristics(raw)
         if e["category"] not in _AUTO_SEED_CATEGORIES:
             continue
         if e["severity"] not in _AUTO_SEED_SEVERITIES:
             continue
         if e["ownership"] == "product":
-            out.append(e)
+            eligible.append(e)
         elif allow_framework and e["ownership"] == "framework":
-            out.append(e)
+            eligible.append(e)
+
+    # Cluster: keep first of each key
+    seen: set[tuple[str, ...]] = set()
+    out: list[dict[str, Any]] = []
+    for e in eligible:
+        key = friction_cluster_key(e)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(e)
     return out
-
-
-def friction_cluster_key(entry: dict[str, Any]) -> tuple[str, str, str]:
-    """Key for exact pre-seed clustering (category, severity, normalised desc)."""
-    e = normalize_friction_entry(entry)
-    desc = " ".join(e["description"].lower().split())
-    return (e["category"], e["severity"], desc)

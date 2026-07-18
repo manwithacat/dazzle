@@ -5,11 +5,13 @@
   V&V L0–L4, coverage/journey/deep instruments, ownership-aware friction
   auto-seed, harness-artifact appendix, domain-theory hook, consumer KPIs.
 - **`dazzle qa trial-inventory` / `trial-coverage` / `trial-hypotheses`** —
-  mechanical coverage inventory (static + live HTTP probe) and domain-theory
-  discovery for loop-safe L3.
+  mechanical coverage inventory (static + live HTTP probe; matrix DENY
+  annotation on entity ops) and domain-theory discovery for loop-safe L3.
 - **Friction schema** — `ownership` (product|seed|rbac_expected|harness|
   framework|unclear), `story_gap` category, JSON report sidecar with
   `auto_seed` for improve loops (`trial_friction.py`, `trial_report_to_json`).
+  Auto-seed clusters near-dupes and reclassifies console thrash
+  (`ERR_INSUFFICIENT_RESOURCES` / mass htmx Failed to fetch) as harness.
 
 ### Changed
 - **`dazzle qa trial` gen-2 posture** — careful-pilot system prompt (recover

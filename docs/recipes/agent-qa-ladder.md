@@ -113,7 +113,19 @@ Do **not** file as product without checking:
 3. **Stale non-fingerprinted assets** after deploy — hard refresh / cache bust.
 4. **Magic-link sessions not tenant-bound** — HTMX/search 403 while page GET works (framework class).
 5. **Generic `/app/<entity>` 404** with workspace `source:` / route-override — check alternate reachability + `dazzle rbac matrix`.
-6. **Expected RBAC deny** — trust matrix over persona folklore.
+6. **Expected RBAC deny** — trust matrix over persona folklore (`trial-coverage` annotates entity list/create with matrix DENY).
+7. **Console thrash** — `net::ERR_INSUFFICIENT_RESOURCES` + mass `htmx:error Failed to fetch` on scroll: often browser resource exhaustion under nested Playwright, not a pilot-blocking product defect by itself. Auto-seed reclassifies to `ownership=harness` when thrash markers dominate. Still investigate if production browsers show the same storm.
+
+### Field notes (support_tickets, 2026-07-18)
+
+| Level | Result |
+|-------|--------|
+| L0 | `dazzle validate` OK (warnings only) |
+| L3 mechanical | 19 inventory targets; manager 15 reached / 4 rbac_denied (matrix DENY on platform entities) |
+| L3 deep | `manager_evaluation`: 5 steps, token budget exceeded; primary finding Manager Ops console thrash → reclassified harness for auto-seed |
+| Recommend (inferred) | no / don't switch (synthesized) — treat thrash finding carefully before product ship |
+
+**Lesson:** raise `token_budget` when workspaces are chatty; record thrash once and leave the region.
 
 ## Domain theory (optional)
 
