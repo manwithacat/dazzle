@@ -65,12 +65,20 @@ visibility rule reads, in effect, "its tenant is the signed-in user's tenant".
 
 ## Where work happens
 
-The **Finance Operations** workspace is the shared home for every persona —
-requester, approver, finance, auditor, and admins. It opens with invoice
-metrics (submitted, approved, disputed, paid), the lifecycle funnel, and real
-review queues: awaiting approval, ready to pay, and open disputes, plus a
-payment-attempt health chart. Each queue row opens the invoice itself, so
-triage and action happen in one place rather than a flat invoice list.
+Work is organised into **role-shaped desks**, not one shared invoice warehouse:
+
+- **My Invoices** — requester home: draft and in-flight queues with personal
+  pipeline metrics.
+- **Approval Desk** — approver home: awaiting-approval queue, recently decided
+  invoices, and approval-load metrics.
+- **Pay Desk** — finance home: ready-to-pay and dispute queues plus payment
+  health.
+- **Audit Review** — auditor home: payment-attempt trail and settled invoices.
+- **Finance Operations** — shared ops overview for tenant and finance admins
+  (metrics, lifecycle funnel, and the same review queues for oversight).
+
+Each queue row opens the invoice hub, so triage and action stay on the job
+surface rather than a flat entity list.
 
 ## How work flows through it
 
@@ -140,4 +148,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:030a0d837bf9ab94ca2df8e630506b72c4192b8e919d4e01bcd64899b7c322b6 -->
+<!-- dazzle-spec-brief: sha256:aae966b73251f46ffa64721f0546b9b3823433957c304b14f200cb2016d64135 -->

@@ -80,6 +80,7 @@ Apply the fix appropriate to the gap type:
 | `validation` | Edit DSL to satisfy parser/validator |
 | `conformance` | Add missing entity/surface/workspace per `mcp__dazzle__conformance` |
 | `fidelity` | Add missing IR-graph edges per `mcp__dazzle__dsl operation=fidelity` |
+| `product_maturity` | Anti-warehouse: job workspaces + persona `default_workspace` + density/nav ≤0.70. Probe: `scripts/example_product_maturity.py` (`--next` / `--strict`). Docs: `docs/reference/product-maturity.md`. Do **not** add entity lists to “pass”. |
 | `journey_maturity` | Agent-first dogfood: bound `executed_by` stories + list `open:` + multi-section VIEW hubs. Full playbook: `improve/strategies/journey_dogfood.md`. Force: `/improve example-apps journey_dogfood`. |
 | `rhythm_fidelity` | A rhythm scores `< 1.0` (a scene's surface/action/entity can't resolve) — add the missing surface/derive-binding, or fix the cited story's `entities`/`trigger`. **Only non-advisory `evaluate` failures are actionable** (advisory `surface_specialization` + orphan-story gaps are design nudges, not defects). |
 | `story_scope` | `dazzle story scope-fidelity` reports a story with `< full` process coverage (story⇄process axis) — add/point the implementing process. Distinct from `rhythm_fidelity` (story⇄rhythm axis). |

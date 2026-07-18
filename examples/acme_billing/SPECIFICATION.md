@@ -73,11 +73,17 @@ material through the record screens themselves.
 
 ## Where work happens
 
-**Acme Billing** — the single workspace for administrators, organization
-owners, and auditors. It opens with portfolio metrics (organizations,
-projects, invoices, memberships) and an invoice review queue, then the entity
-lists for organizations, projects, and memberships — pressure and open
-billing work before dense administration.
+Work is split across job desks so scoped workers never land in the org-admin
+warehouse:
+
+- **Acme Billing** — home for administrators, organization owners, and
+  auditors: portfolio metrics, an open-invoice queue, then organization,
+  project, and membership lists.
+- **My Work** — home for project members and external contractors: assigned
+  projects and invoices in their scope.
+- **Projects** — project-first path for owners, auditors, and project members
+  (project queue plus recent invoices), distinct from the org/memberships
+  portfolio.
 
 ## How work flows through it
 
@@ -125,4 +131,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:2de201e52fd3313322a1d6645ae7720797f8a7c648fbbe312d93a335b858d401 -->
+<!-- dazzle-spec-brief: sha256:96b32860e86c3022d66ad39aeb98fcb53ac03dd3bac6810e9047ad6fc1d870fb -->

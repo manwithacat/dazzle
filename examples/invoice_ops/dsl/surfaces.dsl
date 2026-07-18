@@ -304,3 +304,149 @@ workspace finance_ops "Finance Operations":
     display: queue
     action: invoice_detail
     empty: "No disputes open"
+
+# ── Job workspaces (product maturity: anti-warehouse) ────────────────────────
+# Separate product landings per role so density is not one mega-desk + 9 lists.
+# finance_ops remains the shared ops overview for admin/oversight personas.
+
+workspace my_invoices "My Invoices":
+  purpose: "Requester desk — drafts, submissions, and line-item work on my invoices"
+  access: persona(requester)
+
+  my_pipeline:
+    source: Invoice
+    display: metrics
+    aggregate:
+      draft: count(Invoice where status = draft)
+      submitted: count(Invoice where status = submitted)
+      approved: count(Invoice where status = approved)
+      paid: count(Invoice where status = paid)
+    tones:
+      draft: warning
+      submitted: accent
+      paid: positive
+
+  drafts:
+    source: Invoice
+    filter: status = draft
+    sort: updated_at desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "No draft invoices — create one to get started"
+
+  in_flight:
+    source: Invoice
+    filter: status = submitted
+    sort: amount desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "Nothing waiting on approval"
+
+workspace approval_desk "Approval Desk":
+  purpose: "Approver job — clear the awaiting-approval queue, open the invoice hub"
+  access: persona(approver, finance_admin)
+
+  approval_load:
+    source: Invoice
+    display: metrics
+    aggregate:
+      awaiting: count(Invoice where status = submitted)
+      approved: count(Invoice where status = approved)
+      rejected: count(Invoice where status = rejected)
+    tones:
+      awaiting: warning
+      approved: positive
+      rejected: destructive
+
+  awaiting_approval:
+    source: Invoice
+    filter: status = submitted
+    sort: amount desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "Nothing awaiting approval"
+
+  recently_decided:
+    source: Invoice
+    filter: status = approved
+    sort: updated_at desc
+    limit: 10
+    display: queue
+    action: invoice_detail
+    empty: "No recent approvals"
+
+workspace pay_desk "Pay Desk":
+  purpose: "Finance job — settle approved invoices and resolve open disputes"
+  access: persona(finance, finance_admin)
+
+  settle_metrics:
+    source: Invoice
+    display: metrics
+    aggregate:
+      ready: count(Invoice where status = approved)
+      disputed: count(Invoice where status = disputed)
+      paid: count(Invoice where status = paid)
+    tones:
+      ready: accent
+      disputed: destructive
+      paid: positive
+
+  ready_to_pay:
+    source: Invoice
+    filter: status = approved
+    sort: amount desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "Nothing ready to pay"
+
+  disputed_queue:
+    source: Invoice
+    filter: status = disputed
+    sort: updated_at desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "No disputes open"
+
+  payment_health:
+    source: PaymentAttempt
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(PaymentAttempt)
+    empty: "No payment attempts"
+
+workspace audit_review "Audit Review":
+  purpose: "Auditor job — payment trail and invoice evidence without warehouse CRUD"
+  access: persona(auditor, finance_admin, tenant_admin)
+
+  trail_metrics:
+    source: Invoice
+    display: metrics
+    aggregate:
+      paid: count(Invoice where status = paid)
+      disputed: count(Invoice where status = disputed)
+      attempts: count(PaymentAttempt)
+    tones:
+      disputed: destructive
+      paid: positive
+
+  payment_attempts:
+    source: PaymentAttempt
+    display: queue
+    sort: created_at desc
+    limit: 20
+    empty: "No payment attempts to review"
+
+  settled_invoices:
+    source: Invoice
+    filter: status = paid
+    sort: updated_at desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "No paid invoices yet"

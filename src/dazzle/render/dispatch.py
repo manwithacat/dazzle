@@ -342,6 +342,19 @@ def _build_sidebar_from_ctx(ctx: PageContext) -> Sidebar:
     )
 
 
+def _account_identity_label(ctx: PageContext) -> str:
+    """Email · role label for topbar identity (email preferred over name)."""
+    email = (getattr(ctx, "user_email", "") or "").strip()
+    name = (getattr(ctx, "user_name", "") or "").strip()
+    display = email or name or "Signed in"
+    roles = list(getattr(ctx, "user_roles", None) or [])
+    role_bits = [r.removeprefix("role_") for r in roles[:2] if r]
+    # Avoid "manager · manager" when username == role name.
+    if role_bits and not (len(role_bits) == 1 and role_bits[0].lower() == display.lower()):
+        return f"{display} · {', '.join(role_bits)}"
+    return display
+
+
 def _build_account_trailing(ctx: PageContext) -> object | None:
     """Session identity + home + logout for the app-shell topbar.
 
@@ -358,17 +371,7 @@ def _build_account_trailing(ctx: PageContext) -> object | None:
         return None
 
     app_prefix = (getattr(ctx, "app_prefix", None) or "/app").rstrip("/") or "/app"
-    roles = list(getattr(ctx, "user_roles", None) or [])
-    # Prefer email (stable identity); fall back to username. Role labels
-    # (stripped of role_ prefix) are secondary so the user always sees
-    # *who* is signed in, not only which persona role.
-    display = email or name or "Signed in"
-    role_bits = [r.removeprefix("role_") for r in roles[:2] if r]
-    # Avoid "manager · manager" when username == role name.
-    if role_bits and not (len(role_bits) == 1 and role_bits[0].lower() == display.lower()):
-        identity = f"{display} · {', '.join(role_bits)}"
-    else:
-        identity = display
+    identity = _account_identity_label(ctx)
 
     # Logout form: browser POST gets 303 → / (or IdP SLO). data-testid for
     # simple_task e2e; data-dazzle-auth-action for tier2 playwright locators.
@@ -382,10 +385,7 @@ def _build_account_trailing(ctx: PageContext) -> object | None:
     return Row(
         children=(
             Link(label="Home", href=URL(app_prefix), data_action="nav.home"),
-            Text(
-                body=identity,
-                tone="muted",
-            ),
+            Text(body=identity, tone="muted"),
             RawHTML(logout_html),
         ),
         gap="md",

@@ -1,12 +1,20 @@
 """Tests for --password flag on create-user and reset-password CLI commands."""
 
 import json
+import re
 from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
 
 runner = CliRunner()
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _plain(text: str) -> str:
+    """Strip ANSI/rich markup so assertions match both plain and styled output."""
+    return _ANSI_RE.sub("", text)
 
 
 def _make_fake_user(email: str = "bob@example.com") -> MagicMock:
@@ -89,7 +97,7 @@ class TestCreateUserExplicitPassword:
         with patch("dazzle.cli.auth._get_auth_store", return_value=create_store):
             result = runner.invoke(app, ["create-user", "bob@example.com", "--password", "short"])
         assert result.exit_code == 1
-        assert "at least 8 characters" in result.output
+        assert "at least 8 characters" in _plain(result.output)
         create_store.create_user.assert_not_called()
 
     def test_password_exactly_min_length_accepted(self, app, create_store):
@@ -141,5 +149,5 @@ class TestResetPasswordExplicitPassword:
                 app, ["reset-password", "bob@example.com", "--password", "short"]
             )
         assert result.exit_code == 1
-        assert "at least 8 characters" in result.output
+        assert "at least 8 characters" in _plain(result.output)
         reset_store.update_password.assert_not_called()

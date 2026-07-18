@@ -1,25 +1,14 @@
 ## [Unreleased]
 
+## [0.106.0] - 2026-07-18
+
 ### Added
 - **Product maturity probe** (`scripts/example_product_maturity.py`,
   `docs/reference/product-maturity.md`) — instance-level anti-warehouse gate:
-  answer-first persona landings, job coverage, warehouse density. Improve
-  example-apps prioritises product residuals before journey/Tier-1 noise.
-
-### Fixed
-- **App shell: no signed-in identity / logout / Home** — Phase 4 typed
-  AppShell dropped persona affordances from the topbar. Topbar trailing now
-  shows email · role, Home → `/app`, and Log out (POST `/auth/logout`) on
-  every chromed page when authenticated. Workspace routes thread
-  `is_authenticated` / `user_email` / `user_name` into PageContext.
-- **Demo User.role `role_staff` 422 on admin User detail** — persona default_role
-  no longer forces legacy `role_*` values when User.role is a business enum
-  (customer|agent|manager). Blueprint generator clamps; support_tickets and
-  contact_manager blueprints updated; auto-scaffold personas use persona id /
-  enum.
-
-### Added
-
+  answer-first persona landings, job coverage, warehouse density, nav list
+  share (compiled nav + accessible workspace credit). Improve example-apps
+  prioritises product residuals before journey/Tier-1 noise. Ship-surface
+  and unit tests gate fleet residual=0.
 - **Agent QA ladder recipe** (`docs/recipes/agent-qa-ladder.md`, #1625) —
   V&V L0–L4, coverage/journey/deep instruments, ownership-aware friction
   auto-seed, harness-artifact appendix, domain-theory hook, consumer KPIs.
@@ -33,11 +22,41 @@
   (`ERR_INSUFFICIENT_RESOURCES` / mass htmx Failed to fetch) as harness.
 
 ### Changed
+- **Example fleet job desks (product maturity residual 0/12)** — role-shaped
+  default workspaces instead of one mega-desk + entity warehouse:
+  invoice_ops (my_invoices / approval_desk / pay_desk / audit_review),
+  fieldtest_hub (manager_ops / issue_triage / firmware_pipeline / field_kit),
+  design_studio (brand_desk / review_desk), domain_join_co (announce),
+  project_tracker (my_tasks / milestone_plan), acme_billing (my_work /
+  projects_home). SPECs, stems, and onboarding copy aligned; fingerprints
+  refreshed.
 - **`dazzle qa trial` gen-2 posture** — careful-pilot system prompt (recover
   once, wrap-up at 80% of steps), defaults `max_steps=50` / `token_budget=400k`,
   optional `adoption_criteria` + `phases`, `--mode deep|journey`, richer
   `record_friction` / `submit_verdict`. Flagship: `examples/support_tickets`
   `manager_evaluation` + `agent/domain-theory/`.
+
+### Fixed
+- **App shell: no signed-in identity / logout / Home** — Phase 4 typed
+  AppShell dropped persona affordances from the topbar. Topbar trailing now
+  shows email · role, Home → `/app`, and Log out (POST `/auth/logout`) on
+  every chromed page when authenticated. Workspace routes thread
+  `is_authenticated` / `user_email` / `user_name` into PageContext.
+  Complexity split: `_account_identity_label` helper.
+- **Demo User.role `role_staff` 422 on admin User detail** — persona default_role
+  no longer forces legacy `role_*` values when User.role is a business enum
+  (customer|agent|manager). Blueprint generator clamps; support_tickets and
+  contact_manager blueprints updated; auto-scaffold personas use persona id /
+  enum.
+- **Preflight debt from QA ladder / trial inventory** — bare `except Exception`
+  in `trial_inventory.matrix_expected_deny` now logs; deferred-import baseline
+  raised for `cli/qa.py` and trial modules introduced in #1625.
+- **Local test env isolation** — suite forces `TERM=dumb` (Rich CLI markup no
+  longer breaks string assertions); does not load host `DATABASE_URL` from
+  `.env` into unit runs; alembic URL helper clears env for empty cases;
+  fragment-audit CLI tests use `sys.executable`; GraphQL live-server fixture
+  skips when serve cannot boot; `ci_local` re-syncs python-tests extras after
+  type-check so aiosqlite/HTTP e2e stay available.
 
 ## [0.105.11] - 2026-07-18
 

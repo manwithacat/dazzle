@@ -10,11 +10,11 @@ use fieldtest_hub.core
 #      a test session against an existing device, and learns how
 #      to file issue reports against the session.
 #
-# Managers see the same surfaces as engineers but already know the
-# workflow; admins are out of scope. Both guides are linker-validated
-# — renaming any of {device_create, firmware_release_create,
-# test_session_create, issue_report_create} fails `dazzle validate`
-# without an accompanying guide update.
+# Managers land on manager_ops (fleet KPIs); engineers on engineering_dashboard;
+# testers on tester_dashboard (+ field_kit). Guides still root on surfaces
+# (guide targets cannot be workspaces). Admins are out of scope. Linker-
+# validated — renaming device_create / firmware_release_create /
+# test_session_create / issue_report_create fails validate without guide update.
 
 # ─── Engineer journey ─────────────────────────────────────────────
 
@@ -114,7 +114,7 @@ guide manager_onboarding "Stay on top of product quality":
     kind: spotlight
     target: surface.issue_report_list
     title: "Keep an eye on critical issues"
-    body: "Filter by severity to surface blockers. Anything critical needs an owner before the build ships."
+    body: "Manager Ops opens with fleet health and critical issues. Anything critical needs an owner before the build ships."
     placement: center
     complete_on: dismiss
 

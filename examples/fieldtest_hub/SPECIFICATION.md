@@ -28,14 +28,20 @@ Every one of these six kinds of record can be browsed, inspected in detail, crea
 
 ## Where work happens
 
-**Engineering Dashboard** — field-testing oversight for engineers and managers,
-job-shaped first: fleet metrics, a non-active **device attention** queue, an open **triage queue** of reports
-by severity, critical-issue and open-task queues, then secondary demos (kanban
-boards, timelines, device tree, diagram, map, and tester directory).
-
-**Tester Dashboard** — the personal field-testing hub. A tester lands on
-personal metrics, queues of assigned Devices, their Issue Reports, and Tasks,
-plus a timeline of their Test Sessions.
+- **Engineering Dashboard** — engineer home: fleet metrics, device-attention
+  and triage queues, critical issues and open tasks, then secondary views
+  (kanban boards, timelines, device tree, diagram, map, tester directory).
+- **Manager Ops** — manager home: fleet health KPIs, non-active device queue,
+  quality strip, critical issues, tester activity, and open work — without the
+  engineering mega-board chrome.
+- **Issue Triage** — shared engineer/manager desk for open and critical field
+  reports (severity-first queue and status board).
+- **Firmware Pipeline** — release desk: draft/live metrics, release list and
+  board, related open tasks.
+- **Tester Dashboard** — tester home: personal metrics, assigned devices,
+  their issues and tasks, session timeline.
+- **Field Kit** — tester road desk: assigned devices, recent sessions, open
+  tasks.
 
 ## How work flows through it
 
@@ -69,4 +75,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:d3586c4aebf7a74b6bbf65ee5124932111ad71a93712abaaf761df1b8d57333d -->
+<!-- dazzle-spec-brief: sha256:1bd13b662d3b765a33c978cc4ebff29e179d3daa19b7a5aa064679a7f75c5343 -->

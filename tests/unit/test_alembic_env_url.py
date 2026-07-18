@@ -15,7 +15,10 @@ def _call_get_url(*, sqlalchemy_url: str = "", env_url: str = "") -> str:
     psycopg driver) via the shared helpers, without importing env.py
     (which has heavy alembic dependencies).
     """
-    with patch.dict("os.environ", {"DATABASE_URL": env_url} if env_url else {}, clear=False):
+    # clear=True so a host DATABASE_URL (common in dev) cannot leak into
+    # the empty_url case when env_url is intentionally blank.
+    env = {"DATABASE_URL": env_url} if env_url else {}
+    with patch.dict("os.environ", env, clear=True):
         url = sqlalchemy_url or os.environ.get("DATABASE_URL", "")
         return add_psycopg_driver(normalise_postgres_scheme(url))
 

@@ -27,7 +27,8 @@ persona member "Team Member":
   description: "An employee who self-joined with a verified company email — reads the team's announcements."
   goals: "Join my company workspace", "Stay up to date"
   proficiency: intermediate
-  default_workspace: home
+  # Answer-first: feed board after join (product maturity)
+  default_workspace: announce
 
 # ── Tenant root (resolved by host; members + their role declared here) ─────────
 
@@ -133,6 +134,27 @@ workspace home "Workspace Home":
         state: positive
 
   announcements:
+    source: Announcement
+    sort: title asc
+    display: list
+    action: announcement_detail
+    empty: "No announcements yet — post one to keep the team informed"
+
+# Second product workspace lowers warehouse density (3 lists / 1 ws → deepen).
+# Admin publish desk vs member reading feed (same entity, different job).
+workspace announce "Team Board":
+  purpose: "Announcement board — post and browse without warehouse list chrome"
+  access: persona(admin, member)
+
+  board_pulse:
+    source: Announcement
+    display: metrics
+    aggregate:
+      posts: count(Announcement)
+    tones:
+      posts: accent
+
+  feed:
     source: Announcement
     sort: title asc
     display: list

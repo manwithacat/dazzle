@@ -45,11 +45,12 @@ dedicated screens.
 
 ## Where work happens
 
-**Workspace Home** is the single place of work for admins and members. It opens
-with team pulse metrics (announcement count), a join-readiness status strip
-(verified domain, join policy, and announcements — join approval itself lives
-in the auth admin console, not in this workspace), then the announcement
-noticeboard for everyone who has joined.
+- **Workspace Home** — admin landing after domain join is configured: team
+  pulse metrics, a join-readiness status strip (verified domain, join policy,
+  announcements — join approval itself lives in the auth admin console), then
+  the announcement feed.
+- **Team Board** — member home (and shared board for admins): announcement
+  metrics and the team noticeboard without the join-readiness strip.
 
 ## The technical foundation
 
@@ -81,4 +82,4 @@ which keeps the product fast, accessible, and simple to operate. (Verify:
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:062c6df47aa2e251d1ccda082bed56e767d11f9f8166218a3e6c6ba393f9a6ba -->
+<!-- dazzle-spec-brief: sha256:b0634598d464b8728e235eed1e4c93d50ef1584aa54dbba5f2e1c3e8b9a72938 -->

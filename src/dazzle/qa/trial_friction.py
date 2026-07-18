@@ -93,7 +93,7 @@ def is_auto_seed_eligible(entry: dict[str, Any]) -> bool:
         return False
     if e["severity"] not in _AUTO_SEED_SEVERITIES:
         return False
-    return e["ownership"] == "product"
+    return bool(e["ownership"] == "product")
 
 
 def friction_cluster_key(entry: dict[str, Any]) -> tuple[str, ...]:

@@ -10,8 +10,11 @@ that mode is affordance-only (see trial mission ``mode=journey``).
 
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict, dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -143,6 +146,7 @@ def matrix_expected_deny(appspec: Any, persona: str, target: InventoryTarget) ->
     try:
         from dazzle.rbac.matrix import PolicyDecision, generate_access_matrix
     except Exception:
+        logger.debug("RBAC matrix import failed; cannot annotate inventory", exc_info=True)
         return None
     matrix = generate_access_matrix(appspec)
     op = "create" if target.kind == "surface_create" else "list"

@@ -9,12 +9,12 @@ story ST-001 "Approver works the awaiting-approval queue":
   trigger: user_click
   entities: [Invoice]
   given:
-    - "Approver is on the finance_ops workspace"
+    - "Approver is on the approval_desk workspace"
     - "Invoices exist with status submitted"
   then:
     - "Approver sees submitted invoices in the awaiting_approval queue sorted by amount"
     - "Row open hops to the Invoice detail hub"
-    - "Ops metrics show submitted / approved / disputed / paid counts"
+    - "Approval load metrics show awaiting / approved / rejected counts"
 
 story ST-002 "Approver opens invoice hub before approve or reject":
   status: accepted
@@ -35,7 +35,7 @@ story ST-003 "Finance settles invoices from the ready-to-pay queue":
   trigger: user_click
   entities: [Invoice, PaymentAttempt]
   given:
-    - "Finance Operator is on the finance_ops workspace"
+    - "Finance Operator is on the pay_desk workspace"
     - "Invoices exist with status approved"
   then:
     - "Finance sees approved invoices in the ready_to_pay queue"
@@ -48,7 +48,7 @@ story ST-004 "Finance works the open dispute queue":
   trigger: user_click
   entities: [Invoice]
   given:
-    - "Finance Operator is on the finance_ops workspace"
+    - "Finance Operator is on the pay_desk workspace"
     - "Invoices exist with status disputed"
   then:
     - "Disputed queue surfaces invoices needing resolution"
@@ -61,6 +61,7 @@ story ST-005 "Requester reviews own invoices and line items via hub":
   trigger: user_click
   entities: [Invoice, LineItem]
   given:
+    - "Requester is on the my_invoices workspace"
     - "Requester has list permission on Invoice"
   then:
     - "Requester opens Invoice hub with related line items"
@@ -73,6 +74,7 @@ story ST-006 "Auditor traces payment attempts back to the invoice hub":
   trigger: user_click
   entities: [PaymentAttempt, Invoice]
   given:
+    - "Auditor is on the audit_review workspace"
     - "Auditor has list permission on PaymentAttempt"
   then:
     - "Payment attempt rows open the parent Invoice hub (not an orphan warehouse row)"

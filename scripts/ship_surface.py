@@ -40,6 +40,7 @@ REPO = Path(__file__).resolve().parents[1]
 # module is large or mixed.
 SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_example_spec_bar.py",
+    "tests/unit/test_example_product_maturity.py",
     "tests/unit/test_spec_narrative_brief_snapshot.py",
     "tests/unit/test_patterns_phase2_kb_1217.py::test_pattern_count_meta_matches_actual_count",
     "tests/unit/test_patterns_subtype_of_kb_1248.py::test_pattern_count_meta_matches_actual_count",
@@ -67,6 +68,12 @@ Remediation by class (run from repo root):
     # or re-run /spec-narrate for prose; footer must match:
     #   dazzle spec brief -p examples/<app> --fingerprint
     pytest tests/unit/test_example_spec_bar.py -q
+
+  Product maturity residual (example fleet warehouse-shaped)
+    python scripts/example_product_maturity.py --strict
+    # Fix: job workspaces + persona default_workspace (not more entity lists).
+    # Docs: docs/reference/product-maturity.md
+    pytest tests/unit/test_example_product_maturity.py -q
 
   simple_task brief golden
     dazzle spec brief -p examples/simple_task -f json \\

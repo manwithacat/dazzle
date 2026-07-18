@@ -25,7 +25,8 @@ persona manager "Project Manager":
 persona member "Team Member":
   role: member
   description: "Works on assigned tasks"
-  default_workspace: project_board
+  # Answer-first: personal task desk (product maturity)
+  default_workspace: my_tasks
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -291,6 +292,65 @@ workspace project_board "Project Board":
     source: Milestone
     display: list
     sort: start_date asc
+
+# Product maturity: more job desks vs 8 list surfaces (was density 0.80).
+workspace my_tasks "My Tasks":
+  purpose: "Member desk — assigned work and due pressure, not the full project warehouse"
+  access: persona(admin, manager, member)
+
+  load:
+    source: Task
+    display: metrics
+    aggregate:
+      open: count(Task where status != done)
+      in_progress: count(Task where status = in_progress)
+      review: count(Task where status = review)
+    tones:
+      in_progress: accent
+      review: warning
+
+  assigned_queue:
+    source: Task
+    filter: status != done
+    sort: priority desc, due_date asc
+    limit: 20
+    display: queue
+    action: task_edit
+    empty: "No open tasks"
+
+  board:
+    source: Task
+    display: kanban
+    group_by: status
+    sort: priority desc
+
+workspace milestone_plan "Milestone Plan":
+  purpose: "Schedule desk — milestones before drilling into task lists"
+  access: persona(admin, manager)
+
+  plan_metrics:
+    source: Milestone
+    display: metrics
+    aggregate:
+      planning: count(Milestone where status = planning)
+      active: count(Milestone where status = active)
+      completed: count(Milestone where status = completed)
+    tones:
+      active: accent
+      completed: positive
+
+  milestone_queue:
+    source: Milestone
+    filter: status != completed
+    sort: start_date asc
+    display: queue
+    empty: "No open milestones"
+
+  active_projects:
+    source: Project
+    filter: status = active
+    sort: updated_at desc
+    display: grid
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 

@@ -2,10 +2,23 @@
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SIMPLE_TASK = _REPO_ROOT / "examples" / "simple_task"
+
+
+def _run_audit(*extra: str) -> subprocess.CompletedProcess[str]:
+    # Use the active interpreter (venv), never bare PATH ``python`` — host
+    # pythons often lack the editable dazzle install.
+    return subprocess.run(
+        [sys.executable, "-m", "dazzle.cli", "fragment-audit", str(_SIMPLE_TASK), *extra],
+        capture_output=True,
+        text=True,
+        cwd=_REPO_ROOT,
+        check=False,
+    )
 
 
 def test_fragment_audit_text_on_simple_task() -> None:
@@ -15,19 +28,7 @@ def test_fragment_audit_text_on_simple_task() -> None:
     output now shows the all-ready state — no Blocked section, no
     Aggregated blockers section. Verifies the structural shape of the
     100%-ready output."""
-    result = subprocess.run(
-        [
-            "python",
-            "-m",
-            "dazzle.cli",
-            "fragment-audit",
-            str(_SIMPLE_TASK),
-        ],
-        capture_output=True,
-        text=True,
-        cwd=_REPO_ROOT,
-        check=False,
-    )
+    result = _run_audit()
     assert result.returncode == 0, f"stderr: {result.stderr!r}"
     out = result.stdout
     assert "Coverage:" in out
@@ -40,20 +41,7 @@ def test_fragment_audit_text_on_simple_task() -> None:
 
 def test_fragment_audit_json_on_simple_task() -> None:
     """The --json flag emits structured JSON."""
-    result = subprocess.run(
-        [
-            "python",
-            "-m",
-            "dazzle.cli",
-            "fragment-audit",
-            str(_SIMPLE_TASK),
-            "--json",
-        ],
-        capture_output=True,
-        text=True,
-        cwd=_REPO_ROOT,
-        check=False,
-    )
+    result = _run_audit("--json")
     assert result.returncode == 0, f"stderr: {result.stderr!r}"
     payload = json.loads(result.stdout)
     assert "ready_count" in payload
@@ -71,20 +59,7 @@ def test_fragment_audit_fail_on_blocked_returns_consistent_exit_code() -> None:
     If a future plan extends the adapter to handle REF cleanly, exit
     flips back to 0 — both states are valid; what's not valid is a
     crash or an unrelated exit code."""
-    result = subprocess.run(
-        [
-            "python",
-            "-m",
-            "dazzle.cli",
-            "fragment-audit",
-            str(_SIMPLE_TASK),
-            "--fail-on-blocked",
-        ],
-        capture_output=True,
-        text=True,
-        cwd=_REPO_ROOT,
-        check=False,
-    )
+    result = _run_audit("--fail-on-blocked")
     assert result.returncode in (0, 1), (
         f"unexpected exit {result.returncode}; stderr: {result.stderr!r}"
     )

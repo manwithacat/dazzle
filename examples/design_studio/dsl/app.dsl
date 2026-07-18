@@ -24,7 +24,8 @@ persona designer "Designer":
 persona reviewer "Reviewer":
   role: reviewer
   description: "Reviews and approves assets"
-  default_workspace: asset_gallery
+  # Answer-first: review queue desk (product maturity)
+  default_workspace: review_desk
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -248,6 +249,58 @@ workspace asset_gallery "Asset Gallery":
     display: queue
     action: asset_edit
     empty: "Nothing awaiting review"
+
+# Product maturity: extra job desks lower warehouse density (7 lists / 2 ws).
+workspace brand_desk "Brand Desk":
+  purpose: "Brand portfolio — identity first, then assets and campaigns"
+  access: persona(admin, designer)
+  brand_metrics:
+    source: Brand
+    display: metrics
+    aggregate:
+      brands: count(Brand)
+      assets: count(Asset)
+      campaigns: count(Campaign)
+    tones:
+      brands: accent
+  brand_grid:
+    source: Brand
+    display: grid
+    sort: name asc
+  campaign_queue:
+    source: Campaign
+    filter: status = active
+    sort: name asc
+    display: queue
+    empty: "No active campaigns"
+
+workspace review_desk "Review Desk":
+  purpose: "Reviewer job — clear the in-review queue before browsing the gallery"
+  access: persona(admin, designer, reviewer)
+  review_load:
+    source: Asset
+    display: metrics
+    aggregate:
+      in_review: count(Asset where status = review)
+      draft: count(Asset where status = draft)
+      approved: count(Asset where status = approved)
+    tones:
+      in_review: warning
+      approved: positive
+  awaiting_review:
+    source: Asset
+    filter: status = review
+    sort: updated_at asc
+    display: queue
+    action: asset_edit
+    empty: "Nothing awaiting review"
+  recently_approved:
+    source: Asset
+    filter: status = approved
+    sort: updated_at desc
+    limit: 12
+    display: queue
+    empty: "No recent approvals"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 

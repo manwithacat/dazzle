@@ -53,7 +53,7 @@ guide member_onboarding "Working your tasks":
     kind: spotlight
     target: surface.task_list
     title: "Your assigned work"
-    body: "These are the tasks assigned to you. Start with what's next and open one to see the detail."
+    body: "My Tasks is your desk — open queue and board of work you own. Start with what's next and open one to see the detail."
     placement: center
     complete_on: dismiss
 

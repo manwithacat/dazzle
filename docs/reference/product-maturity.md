@@ -1,6 +1,8 @@
 # Product maturity (instance-level, anti-warehouse)
 
-**Status:** fleet probe + improve gate (2026-07).
+**Status:** fleet probe + improve gate (2026-07). Fleet residual **0/12** after
+job-desk lift (invoice_ops, fieldtest_hub, design_studio, domain_join_co,
+project_tracker, acme_billing, support_tickets, …).
 **Probe:** `python scripts/example_product_maturity.py`
 **Companion:** framework [UX maturity](ux-maturity.md) (primitives / defaults).
 
@@ -20,15 +22,16 @@ Persona jobs, answer-first landings, and contained CRUD are.
 | Metric | Pass when | Residual when |
 |--------|-----------|---------------|
 | **Answer-first landing** | Each **product** persona has `default_workspace` → real workspace with ≥1 region | Missing / empty / platform workspace for a product persona |
-| **Warehouse density** | `list_surfaces / (list_surfaces + product_workspaces)` &lt; 0.70 | Density ≥ 0.70 (deepen) or ≥ 0.85 with ≤1 product workspace (thin/critical) |
+| **Warehouse density** | `list_surfaces / (list_surfaces + product_workspaces)` ≤ 0.70 | Density &gt; 0.70 (deepen) or ≥ 0.85 with ≤1 product workspace (thin/critical) |
 | **Job coverage** | Each product persona has bound stories **or** multi-region default workspace | Uncovered product personas |
 | **CRUD without jobs** | Product workspaces exist when many list surfaces | Lists only, no product personas/workspaces |
-| **Nav list share** | Compiled persona sidebars are not mostly entity lists | Avg entity-list link share ≥ 0.70 (deepen) / ≥ 0.85 (heavier) |
+| **Nav list share** | Compiled persona sidebars are not mostly entity lists | Avg entity-list link share &gt; 0.70 (deepen) / ≥ 0.85 (heavier) |
 
 **Nav list share** uses `build_persona_nav` (same source as the live shell): for
 each product persona, `entity_list_links / (entity_list + workspace links)`.
-Auto-discovered nav that only mirrors list surfaces scores badly even when
-`default_workspace` is set.
+Auto-discover still emits entity list links; the probe **credits accessible
+product workspaces** (and the landing workspace) so apps with strong job desks
+are not false-flagged solely because the sidebar still lists region sources.
 
 **Product personas** exclude platform ids: `admin`, `platform_admin`, `superuser`, …
 **Product workspaces** exclude `_platform_*` / `admin_*` prefixes.
@@ -44,16 +47,27 @@ Auto-discovered nav that only mirrors list surfaces scores badly even when
 
 Higher `score` = higher residual priority for improve.
 
+## Playbook when residual
+
+1. **Do not** add more `mode: list` surfaces to “pass” completeness.
+2. **Add** job workspaces (queues + metrics + open-to-hub) per product persona.
+3. **Set** `default_workspace` to that desk (not one shared mega-workspace).
+4. **Gate** access so each persona has ≥2–3 accessible product workspaces when
+   auto-nav is list-heavy (nav list share).
+5. Align stories `given:` and stems with the new defaults; refresh
+   `SPECIFICATION.md` “Where work happens” + fingerprint.
+
 ## What this does *not* score (yet)
 
 - Visual kinship to Jira/Linear/GitHub Issues (needs design review or trial)
 - Conversation-thread quality vs field form
 - Action cost (≤N clicks) without a browser walk
 - Authored `product_jobs.toml` (future: explicit job registry)
+- Explicit `uses nav` that lists workspaces ahead of entity lists (probe already
+  credits access; authored nav would improve *felt* UX further)
 
-Structural pass can still *feel* warehouse if nav promotes entity lists
-for product personas — a later probe should score **compiled nav** once
-that is easy to snapshot without a live server.
+Structural pass can still *feel* warehouse if the live shell never surfaces the
+job desk in the sidebar — prefer multi-workspace access + clear default landings.
 
 ## Relationship to other gates
 
@@ -66,8 +80,9 @@ that is easy to snapshot without a live server.
 | ux-maturity | framework | primitive defaults |
 | qa trial | live instance | friction on whatever UI exists |
 
-Improve should prefer **product maturity residuals** before STALE Tier-1
-noise (lint field completeness) when both are open.
+Improve (`example-apps` lane) prefers **product maturity residuals** before
+STALE Tier-1 noise (lint field completeness) when both are open. Journey
+maturity residual is next.
 
 ## CLI
 
@@ -76,7 +91,7 @@ python scripts/example_product_maturity.py
 python scripts/example_product_maturity.py --status
 python scripts/example_product_maturity.py --next
 python scripts/example_product_maturity.py --app support_tickets --json
-python scripts/example_product_maturity.py --strict   # CI / improve gate
+python scripts/example_product_maturity.py --strict   # CI / improve gate (exit 1 if residual)
 ```
 
 ## Design intent (reward structure)

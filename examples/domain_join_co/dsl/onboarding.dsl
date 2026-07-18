@@ -46,7 +46,7 @@ guide member_onboarding "Catch up with your team":
     kind: spotlight
     target: surface.announcement_list
     title: "You're in"
-    body: "Your verified company email got you into the workspace. Team announcements show up on this board."
+    body: "Your verified company email got you into the workspace. Team Board is your home — announcements from your admin show up here."
     placement: center
     complete_on: dismiss
 

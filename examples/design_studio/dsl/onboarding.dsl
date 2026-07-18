@@ -51,7 +51,7 @@ guide reviewer_onboarding "Work the review queue":
     kind: spotlight
     target: surface.asset_list
     title: "Review what's waiting"
-    body: "Assets in Review need your sign-off. Open one to see the design and its brand context."
+    body: "Your Review Desk opens with the awaiting-review queue. Open an asset to see the design and its brand context."
     placement: center
     complete_on: dismiss
 

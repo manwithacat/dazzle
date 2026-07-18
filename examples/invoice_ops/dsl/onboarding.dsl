@@ -4,9 +4,10 @@ use invoice_ops.core
 
 # Per-persona onboarding for Invoice Ops, following the invoice
 # lifecycle: requester raises -> approver decides -> finance settles
-# -> auditor reviews. This app has no workspaces, so each guide roots
-# on the direct-route surface its persona lands on. Concordance
-# (targets / events / cta permits) is enforced at `dazzle validate`.
+# -> auditor reviews. Job desks (my_invoices, approval_desk, pay_desk,
+# audit_review) are default workspaces; guides still root on *surfaces*
+# (guide targets cannot be workspaces). Concordance is enforced at
+# `dazzle validate`.
 
 # ─── Requester (maker) journey ────────────────────────────────────
 
@@ -50,7 +51,7 @@ guide approver_onboarding "Approve invoices":
     kind: spotlight
     target: surface.invoice_list
     title: "Invoices waiting on you"
-    body: "Filter to submitted invoices to see what needs a decision, then open one to review the detail."
+    body: "Your Approval Desk opens with the awaiting-approval queue. From here, open a submitted invoice to review the detail and decide."
     placement: center
     complete_on: dismiss
 
@@ -76,7 +77,7 @@ guide finance_onboarding "Settle approved invoices":
     kind: spotlight
     target: surface.invoice_list
     title: "Approved and ready to pay"
-    body: "Filter to approved invoices — these are cleared for payment. Open one to record the settlement."
+    body: "Your Pay Desk lists approved invoices ready to settle. Open one to record payment or flag a dispute."
     placement: center
     complete_on: dismiss
 
@@ -109,7 +110,7 @@ guide auditor_onboarding "Review the audit trail":
     kind: spotlight
     target: surface.invoice_list
     title: "Every invoice, with its trail"
-    body: "Each invoice carries its full status history and timestamps — your starting point for any review."
+    body: "Audit Review opens with payment attempts and settled invoices. Each invoice carries its full status history — your starting point for any review."
     placement: center
     complete_on: dismiss
 

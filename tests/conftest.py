@@ -30,11 +30,30 @@ def _load_dotenv_for_tests() -> None:
         key, _, value = line.partition("=")
         key = key.strip()
         value = value.strip().strip("'").strip('"')
+        # Skip host DATABASE_URL — a developer's support_tickets / app DB
+        # must not hijack unit HTTP e2e fixtures that expect sqlite or a
+        # clean schema. Prefer TEST_DATABASE_URL for opt-in Postgres tests.
+        if key == "DATABASE_URL":
+            continue
         if key and key not in os.environ:
             os.environ[key] = value
 
 
 _load_dotenv_for_tests()
+
+# Rich/Typer highlight numbers and JSON when TERM looks interactive. Local
+# agent shells often set TERM=xterm-256color while CI is dumb — that made
+# CLI tests pass on Actions and fail on laptops (or vice versa). Force dumb
+# for the whole suite so CliRunner output matches bare text assertions.
+os.environ["TERM"] = "dumb"
+os.environ.setdefault("NO_COLOR", "1")
+
+# Local shells often export DATABASE_URL for an app under development
+# (support_tickets schema ≠ simple_task HTTP e2e fixtures). GitHub Actions
+# sets CI=true and its own DATABASE_URL for Postgres jobs — leave that alone.
+# Opt-in local Postgres: set TEST_DATABASE_URL (preferred) or CI=true.
+if not os.environ.get("CI") and not os.environ.get("DAZZLE_KEEP_DATABASE_URL"):
+    os.environ.pop("DATABASE_URL", None)
 
 
 @pytest.fixture(autouse=True, scope="session")

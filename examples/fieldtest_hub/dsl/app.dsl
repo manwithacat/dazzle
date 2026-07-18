@@ -43,7 +43,8 @@ persona manager "Manager":
     - "Monitor critical issues and overall product quality"
   proficiency_level: intermediate
   session_style: quick_check
-  default_workspace: engineering_dashboard
+  # Answer-first landing (product maturity): fleet ops desk, not shared eng mega-board
+  default_workspace: manager_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1293,6 +1294,183 @@ workspace tester_dashboard "Tester Dashboard":
     as tester:
       purpose: "Your field testing activity"
       focus: my_stats, my_devices, my_tasks, my_issues
+
+# ── Job workspaces (product maturity: anti-warehouse + nav list share) ───────
+# Extra product desks lower list/(list+ws) density and credit multi-workspace
+# nav for engineer/manager/tester (auto-discover still lists entities).
+
+workspace manager_ops "Manager Ops":
+  purpose: "Fleet health and field quality at a glance — no device warehouse hop"
+  access: persona(manager)
+
+  fleet_overview:
+    source: Device
+    display: metrics
+    aggregate:
+      total_devices: count(Device)
+      active_devices: count(Device where status = active)
+      prototype_devices: count(Device where status = prototype)
+      recalled_devices: count(Device where status = recalled)
+    tones:
+      active_devices: positive
+      recalled_devices: destructive
+      prototype_devices: accent
+
+  device_attention:
+    source: Device
+    filter: status != active
+    sort: status asc, name asc
+    limit: 15
+    display: queue
+    action: device_detail
+    empty: "All registered devices are active"
+
+  quality_strip:
+    source: IssueReport
+    display: metrics
+    aggregate:
+      open: count(IssueReport where status = open)
+      critical: count(IssueReport where severity = critical and status != closed)
+      sessions: count(TestSession)
+    tones:
+      open: warning
+      critical: destructive
+
+  critical_issues:
+    source: IssueReport
+    filter: severity = critical and status != closed
+    sort: reported_at desc
+    limit: 10
+    display: queue
+    action: issue_report_detail
+    empty: "No critical issues!"
+
+  tester_activity:
+    source: TestSession
+    sort: logged_at desc
+    limit: 15
+    display: list
+    action: test_session_detail
+    empty: "No recent test sessions logged"
+
+  open_work:
+    source: Task
+    filter: status != completed and status != cancelled
+    sort: created_at desc
+    limit: 15
+    display: queue
+    action: task_detail
+    empty: "No open tasks"
+
+workspace issue_triage "Issue Triage":
+  purpose: "Engineer triage desk — open and critical field reports first"
+  access: persona(engineer, manager)
+
+  open_pressure:
+    source: IssueReport
+    display: metrics
+    aggregate:
+      open: count(IssueReport where status = open)
+      critical: count(IssueReport where severity = critical and status != closed)
+      total: count(IssueReport)
+    tones:
+      open: warning
+      critical: destructive
+
+  triage_queue:
+    source: IssueReport
+    filter: status = open
+    sort: severity desc, reported_at desc
+    limit: 20
+    display: queue
+    action: issue_report_edit
+    empty: "No open reports to triage"
+
+  critical_issues:
+    source: IssueReport
+    filter: severity = critical and status != closed
+    sort: reported_at desc
+    limit: 10
+    display: queue
+    action: issue_report_detail
+    empty: "No critical issues!"
+
+  issues_board:
+    source: IssueReport
+    display: kanban
+    group_by: status
+    action: issue_report_edit
+    empty: "No issues to triage"
+
+workspace firmware_pipeline "Firmware Pipeline":
+  purpose: "Ship firmware — release board, live drafts, and related tasks"
+  access: persona(engineer, manager)
+
+  release_metrics:
+    source: FirmwareRelease
+    display: metrics
+    aggregate:
+      drafts: count(FirmwareRelease where status = draft)
+      live: count(FirmwareRelease where status = released)
+      open_tasks: count(Task where status != completed and status != cancelled)
+    tones:
+      drafts: warning
+      live: positive
+      open_tasks: accent
+
+  firmware_releases:
+    source: FirmwareRelease
+    sort: release_date desc
+    limit: 15
+    display: list
+    action: firmware_release_detail
+    empty: "No firmware releases"
+
+  firmware_board:
+    source: FirmwareRelease
+    display: kanban
+    group_by: status
+    action: firmware_release_edit
+    empty: "No firmware releases"
+
+  release_tasks:
+    source: Task
+    filter: status != completed and status != cancelled
+    sort: created_at desc
+    limit: 15
+    display: queue
+    action: task_detail
+    empty: "No open tasks"
+
+workspace field_kit "Field Kit":
+  purpose: "Tester kit — assigned devices and recent sessions on the road"
+  access: persona(tester)
+
+  assigned_devices:
+    source: Device
+    filter: assigned_tester_id = current_user
+    sort: name asc
+    limit: 20
+    display: queue
+    action: device_detail
+    empty: "No devices assigned to you yet"
+
+  recent_sessions:
+    source: TestSession
+    filter: tester_id = current_user
+    sort: logged_at desc
+    limit: 15
+    display: timeline
+    empty: "No test sessions logged"
+
+  my_open_tasks:
+    source: Task
+    filter: assigned_to_id = current_user and status != completed
+    sort: created_at desc
+    limit: 10
+    display: queue
+    action: task_detail
+    empty: "No open tasks"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts

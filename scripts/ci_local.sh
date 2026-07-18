@@ -260,6 +260,12 @@ cmd_tier1() {
   cmd_lint_extras
   cmd_security
   cmd_security_cli
+  # Type-check extras drop runtime test deps (aiosqlite, boto3, …). Re-sync
+  # the python-tests set before the unit matrix so local tier1 matches the
+  # GitHub python-tests job rather than failing on sqlite-backed HTTP e2e.
+  if [ "${CI_LOCAL_SKIP_SYNC:-0}" != "1" ]; then
+    cmd_sync_test
+  fi
   cmd_unit_full
   cmd_docs
   _ok "tier1 / ci-core complete — still missing Postgres/e2e/walks (Tier 2; see docs)"
