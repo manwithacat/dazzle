@@ -70,7 +70,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `qa-trial` skill | skill | trials (downstream authoring) | 488 | STALE (lag 264) |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 784 | USED |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 784 | USED |
-| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 777 | USED |
+| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 791 | USED |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 784 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 786 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 784 | USED |
@@ -79,8 +79,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 788 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 790 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 789 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 790 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 790 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 791 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 791 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 
@@ -110,6 +110,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 791 (2026-07-18).** **/xproject** lag-14: sibling validate cyfuture+AegisMark exit 0 (advisory surface gaps); pennydreadful parse fail #1559 → fixed actor→persona + scope→entities (16 stories); re-validate exit 0. Stamps @791. Explore **98/100**.
 
 > **Cycle 790 (2026-07-18).** **test-suite** lag-13 MCP test_intelligence@777: KG init on support_tickets; summary/coverage/failures/regression/context all OK (0 runs — empty history). Stamps @790. Explore **97/100**.
 
