@@ -104,9 +104,14 @@ def build_capture_plan(appspec: Any, *, include_denied: bool = False) -> list[Ca
     workspaces = [
         w for w in all_workspaces if not str(getattr(w, "name", "")).startswith("_platform_")
     ]
-    personas = list(
-        getattr(appspec, "archetypes", None) or getattr(appspec, "personas", None) or []
-    )
+    # Prefer product personas. AppSpec.archetypes are *field* mixins
+    # (Timestamped, Auditable) — pre-#1626 this preferred archetypes over
+    # personas when both exist, so capture plans for support_tickets walked
+    # list surfaces as "Timestamped/Auditable" and produced platform stills
+    # (SystemHealth/DeployHistory) instead of job desks.
+    personas = list(getattr(appspec, "personas", None) or [])
+    if not personas:
+        personas = list(getattr(appspec, "archetypes", None) or [])
 
     if not personas:
         return []
@@ -141,12 +146,31 @@ def build_capture_plan(appspec: Any, *, include_denied: bool = False) -> list[Ca
 
 def _surface_fallback_targets(appspec: Any, personas: list[Any]) -> list[CaptureTarget]:
     """Per-persona list-surface targets — the workspace-less-app fallback."""
+    # #1626: never fall back to platform admin list surfaces.
+    _platform_entities = {
+        "SystemHealth",
+        "DeployHistory",
+        "FeedbackReport",
+        "SystemMetric",
+        "ProcessRun",
+        "JobRun",
+        "AuditEntry",
+        "AIJob",
+        "LogEntry",
+        "EventTrace",
+        "OnboardingState",
+    }
     list_entities: list[str] = []
     seen: set[str] = set()
     for surface in getattr(appspec, "surfaces", None) or []:
         mode = getattr(surface, "mode", None)
         mode_val = getattr(mode, "value", mode)
         entity_ref = getattr(surface, "entity_ref", None)
+        sname = str(getattr(surface, "name", "") or "")
+        if sname.startswith("_admin_"):
+            continue
+        if entity_ref and str(entity_ref) in _platform_entities:
+            continue
         if mode_val == "list" and entity_ref and entity_ref not in seen:
             seen.add(str(entity_ref))
             list_entities.append(str(entity_ref))

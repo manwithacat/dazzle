@@ -8,6 +8,11 @@
   (HR Departments & Roles, fieldtest device IDs, design_studio hex brands);
   purged stale `_platform_admin_*` QA stills; `scripts/demo_fleet_bar.py`
   + ship-surface tests gate residual=0.
+- **`qa capture` used field archetypes as personas** — when `AppSpec.archetypes`
+  (Timestamped/Auditable) existed, capture plans preferred them over product
+  personas and fell through to list-surface fallback (SystemHealth stills).
+  Prefer `personas`; filter platform entities from surface fallback. Re-captured
+  simple_task / support_tickets / invoice_ops job desks with seeded data.
 
 ## [0.106.0] - 2026-07-18
 
