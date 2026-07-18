@@ -7,9 +7,25 @@ ARGUMENTS: $ARGUMENTS
 If `$ARGUMENTS` is empty: driver picks the lane.
 If `$ARGUMENTS` matches a lane name (`framework-ux` / `example-apps` / `trials` / `ux-converge` / `test-suite` / `hm-convergence`): force that lane. (`self-audit` forces the driver-level self-audit strategy; `capability-sweep` forces the capability-coverage sweep; `trial-signals` forces the TR-action drain strategy; `cimonitor` forces the CI-badge gate playbook even when main is green — re-check + report only unless red; `codeql` forces the CodeQL open-alert poll + remediate playbook; `consumer-issues` / `github-prs` force GitHub inbox strategies.)
 If `$ARGUMENTS` is `<lane> <strategy>`: force that lane and that sub-strategy.
-Known sub-strategies include `journey_dogfood` under `example-apps`
-(`.claude/commands/improve/strategies/journey_dogfood.md` — agent-first
-example maturity via `scripts/example_journey_maturity.py`).
+Known **example-apps** sub-strategies (agent-first maturity loop — run in order
+when residual remains: product → demo → journey):
+
+| Force | Playbook | Probe |
+|-------|----------|-------|
+| `example-apps product_maturity` | `improve/strategies/product_maturity.md` | `scripts/example_product_maturity.py` |
+| `example-apps demo_fleet` | `improve/strategies/demo_fleet.md` | `scripts/demo_fleet_bar.py` (+ #1626) |
+| `example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` | `scripts/example_journey_maturity.py` |
+
+Unified OBSERVE for every example-apps cycle (and for `--status`):
+
+```bash
+python scripts/improve_example_probes.py --status
+# product_maturity … residual=N next=…
+# demo_fleet … residual=N next=…
+# journey_maturity … residual=N next=…
+# example_probes residual_total=N next=…
+```
+
 If `$ARGUMENTS` is `--status`: emit a status report across all lanes and exit (no cycle).
 If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count`, log the manual reset, and exit (no cycle). Operator escape hatch — use when the cap was reached but exploration should continue (e.g. after a large framework change that a release signal didn't capture).
 
@@ -18,7 +34,7 @@ If `$ARGUMENTS` is `--reset-budget`: write `0` to `.dazzle/improve-explore-count
 | Lane | Targets | Backlog section | Playbook |
 |------|---------|-----------------|----------|
 | framework-ux | Dazzle's UI layer (templates, contracts, fitness walks) | `## Lane: framework-ux` | `improve/lanes/framework-ux.md` |
-| example-apps | example apps (DSL gaps, lint, conformance, fidelity, visual) | `## Lane: example-apps` | `improve/lanes/example-apps.md` |
+| example-apps | example apps (product/demo/journey maturity probes, DSL gaps, lint, visual) | `## Lane: example-apps` | `improve/lanes/example-apps.md` |
 | trials | qualitative persona scenarios (trial.toml) | `## Lane: trials` | `improve/lanes/trials.md` |
 | ux-converge | example apps with nonzero UX contract failures | `## Lane: ux-converge` | `improve/lanes/ux-converge.md` |
 | test-suite | test-suite redundancy-cluster collapse (#1530) | `## Lane: test-suite` | `improve/lanes/test-suite.md` |
@@ -184,6 +200,14 @@ For each lane, compute two numbers from the unified backlog:
 | `actionable_count(lane)` | Count rows in the lane's section with status ∈ {`REGRESSION`, `PENDING`, `IN_PROGRESS`, `DRAFT`, or qa:`PENDING`} |
 | `last_run_at(lane)` | Most recent `improve-log.md` entry for that lane that wasn't a housekeeping idle tick |
 
+**example-apps probe residual** (machine, free): also run
+`python scripts/improve_example_probes.py --status` and add
+`residual_total` to `actionable_count(example-apps)`. Prefer this lane when
+`residual_total > 0` even if the markdown backlog table is empty — the
+loop is agent-first, not backlog-table-first. Sub-strategy order inside the
+lane: `product_maturity` → `demo_fleet` → `journey_dogfood` (see
+`improve/lanes/example-apps.md`).
+
 Selection priority:
 
 1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge or CodeQL high/error already preempted this step via 0c / 0c2; GitHub inbox (0c3) already ran if it claimed the cycle.
@@ -236,7 +260,28 @@ Read `improve/lanes/{name}.md` and follow its playbook end-to-end. The lane:
 - Returns an outcome: `{status: PASS|FAIL|BLOCKED|EXPLORED|HOUSEKEEPING, summary: str, signals_to_emit: list, budget_consumed: int}`
 - Does **not** touch the lock, the preflight, the log, or other lanes' state
 
-If the lane requires sub-strategy dispatch (framework-ux explore phase has 7: `missing_contracts`, `edge_cases`, `contract_audit`, `framework_gap_analysis`, `finding_investigation`, `api_surface_audit`, `quality_intelligence_sweep`; **hm-convergence** strategies — pick order when floors green: **`hyperpart_coherence`** drain if `python scripts/hm_coherence_queue.py --status` shows `queue>0` or PENDING `coherence_drain *` backlog rows, else **investigate** if `coherence.json` missing/stale (`improve/strategies/hyperpart_coherence.md`; force `/improve hm-convergence hyperpart_coherence [investigate|drain]`); **`gallery_probes`** — `python scripts/hm_gallery_probes.py --run` / `improve/strategies/gallery_probes.md`; **`dual_lock_expand`** — `python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5` / `improve/strategies/dual_lock_expand.md`; **`shadcn_parity`** — `python packages/hatchi-maxchi/tools/shadcn_parity.py --gaps-only` / `improve/strategies/shadcn_parity.md`), the lane reads from `improve/strategies/*.md` and picks one per its own rules.
+If the lane requires sub-strategy dispatch, the lane reads from
+`improve/strategies/*.md` and picks one per its own rules:
+
+- **example-apps** (agent-first maturity): run
+  `python scripts/improve_example_probes.py --status` first; if
+  `force=example-apps <strategy>` is non-empty, follow that strategy
+  (`product_maturity` → `demo_fleet` → `journey_dogfood`). Else Tier 1–3
+  gap discovery in `improve/lanes/example-apps.md`.
+- **framework-ux** explore: `missing_contracts`, `edge_cases`, `contract_audit`,
+  `framework_gap_analysis`, `finding_investigation`, `api_surface_audit`,
+  `quality_intelligence_sweep`.
+- **hm-convergence** when floors green: **`hyperpart_coherence`** drain if
+  `python scripts/hm_coherence_queue.py --status` shows `queue>0` or PENDING
+  `coherence_drain *` backlog rows, else **investigate** if `coherence.json`
+  missing/stale (`improve/strategies/hyperpart_coherence.md`; force
+  `/improve hm-convergence hyperpart_coherence [investigate|drain]`);
+  **`gallery_probes`** — `python scripts/hm_gallery_probes.py --run` /
+  `improve/strategies/gallery_probes.md`; **`dual_lock_expand`** —
+  `python packages/hatchi-maxchi/tools/dual_lock_queue.py --top 5` /
+  `improve/strategies/dual_lock_expand.md`; **`shadcn_parity`** —
+  `python packages/hatchi-maxchi/tools/shadcn_parity.py --gaps-only` /
+  `improve/strategies/shadcn_parity.md`.
 
 ### Step 3: Apply outcome
 
@@ -383,20 +428,25 @@ Budget: X/100
 Lock: free | held by PID since TIME
 CI badge (main): green | red (run #id) | in_progress | unavailable
 GitHub inbox: heat=… consumer_bugs=N dependabot_ready=N (from improve_github_inbox.py)
+Example probes: (paste output of python scripts/improve_example_probes.py --status)
 Last cycle: N — lane: {name} — outcome: {status}
 
 Lane:           Actionable    Last run     Likely next?
 framework-ux    N             cycle M      yes/no
-example-apps    N             cycle M      yes/no
+example-apps    N (+probe)    cycle M      yes/no
 trials          N             cycle M      yes/no
 ux-converge     N             cycle M      yes/no
 test-suite      N             cycle M      yes/no
+hm-convergence  N             cycle M      yes/no
 
 Recent signals (last 24h):
 - {kind} from {source} at TIME
 ```
 
-Read-only — does not modify state, log, or lock. Status mode **does** run the cheap `gh` CI snapshot so the badge line is live.
+Read-only — does not modify state, log, or lock. Status mode **does** run the
+cheap `gh` CI snapshot so the badge line is live, and **does** run
+`python scripts/improve_example_probes.py --status` so product/demo/journey
+residual is visible without starting a cycle.
 
 ## Usage
 
@@ -404,6 +454,10 @@ Read-only — does not modify state, log, or lock. Status mode **does** run the 
 /improve                                # one cycle + self-schedule next one-shot
 /improve framework-ux                   # force a lane
 /improve framework-ux contract_audit    # force lane + sub-strategy
+/improve example-apps                   # force example-apps (OBSERVE runs probes)
+/improve example-apps product_maturity  # anti-warehouse job desks
+/improve example-apps demo_fleet        # #1626 felt bar / seeds / stills
+/improve example-apps journey_dogfood   # bound stories + hubs
 /improve cimonitor                      # force CI snapshot (+ repair if red)
 /improve github-prs                     # Dependabot / open PR processing
 /improve consumer-issues                # downstream consumer bug intake

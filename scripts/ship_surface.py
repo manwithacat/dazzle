@@ -41,6 +41,8 @@ REPO = Path(__file__).resolve().parents[1]
 SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_example_spec_bar.py",
     "tests/unit/test_example_product_maturity.py",
+    "tests/unit/test_demo_fleet_bar.py",
+    "tests/unit/test_improve_example_probes.py",
     "tests/unit/test_nav_platform_isolation_1626.py",
     "tests/unit/test_human_create_cta_label.py",
     "tests/unit/test_dashboard_card_remove_gating.py",
@@ -76,7 +78,19 @@ Remediation by class (run from repo root):
     python scripts/example_product_maturity.py --strict
     # Fix: job workspaces + persona default_workspace (not more entity lists).
     # Docs: docs/reference/product-maturity.md
+    # Improve: /improve example-apps product_maturity
     pytest tests/unit/test_example_product_maturity.py -q
+
+  Demo fleet residual (#1626 nav/seed/stills floors)
+    python scripts/demo_fleet_bar.py --strict
+    # Fix: product nav isolation, blueprint mins, product stills (not only platform).
+    # Improve: /improve example-apps demo_fleet
+    pytest tests/unit/test_demo_fleet_bar.py -q
+
+  Unified example probes (product + demo + journey for /improve OBSERVE)
+    python scripts/improve_example_probes.py --status
+    python scripts/improve_example_probes.py --strict
+    pytest tests/unit/test_improve_example_probes.py -q
 
   simple_task brief golden
     dazzle spec brief -p examples/simple_task -f json \\

@@ -166,14 +166,41 @@ def score_app(app: str) -> AppDemoBar:
     return row
 
 
+def format_status(rows: list[AppDemoBar]) -> str:
+    residual = [r for r in rows if not r.ok]
+    nxt = residual[0].app if residual else "-"
+    return (
+        f"demo_fleet apps={len(rows)} residual={len(residual)} "
+        f"ok={len(rows) - len(residual)} next={nxt}"
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--app", help="Score a single showcase app")
+    parser.add_argument("--status", action="store_true", help="One-line cycle log line")
+    parser.add_argument(
+        "--next",
+        action="store_true",
+        help="Print only the next residual app id (empty if fleet mature)",
+    )
     parser.add_argument("--strict", action="store_true", help="exit 1 if any residual")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
-    rows = [score_app(a) for a in SHOWCASE if (EXAMPLES / a).is_dir()]
+    apps = list(SHOWCASE)
+    if args.app:
+        apps = [args.app]
+    rows = [score_app(a) for a in apps if (EXAMPLES / a).is_dir()]
     residual = [r for r in rows if not r.ok]
+
+    if args.next:
+        print(residual[0].app if residual else "")
+        return 0 if not residual else 1
+
+    if args.status:
+        print(format_status(rows))
+        return 0 if not residual else 1
 
     if args.json:
         print(
@@ -191,6 +218,10 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"\ndemo_fleet apps={len(rows)} residual={len(residual)} ok={len(rows) - len(residual)}"
         )
+        if residual:
+            print(f"next={residual[0].app}")
+        else:
+            print("next=")
 
     if args.strict and residual:
         return 1

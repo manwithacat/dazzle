@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+### Added
+- **`/improve` example maturity loop** — product / demo / journey probes wired
+  as forceable agent-first strategies under example-apps:
+  `product_maturity`, `demo_fleet` (#1626), `journey_dogfood`. Unified OBSERVE
+  via `scripts/improve_example_probes.py` (status / next / strict / json);
+  driver Step 1 adds probe residual to `actionable_count(example-apps)`;
+  `--status` pastes probe lines. Strategies under
+  `improve/strategies/{product_maturity,demo_fleet,journey_dogfood}.md`.
+  Ship-surface gates `test_demo_fleet_bar` + `test_improve_example_probes`.
+
 ### Fixed
 - **#1626 demo-fleet P0 (antagonist bake-off)** — product personas no longer
   see System Health / Deploy History / `_platform_admin` in auto-nav

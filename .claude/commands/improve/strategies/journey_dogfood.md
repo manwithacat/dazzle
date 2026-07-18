@@ -24,7 +24,12 @@ python scripts/example_journey_maturity.py --next       # single app id
 python scripts/example_journey_maturity.py --json
 python scripts/example_journey_maturity.py --app <name> --min-bound 3
 # exit 0 when that app clears the bar
+# unified OBSERVE (product + demo + journey):
+python scripts/improve_example_probes.py --status
 ```
+
+Prefer this strategy only when product + demo residuals are already empty
+(see `improve/lanes/example-apps.md` selection order).
 
 Tiers (from probe):
 

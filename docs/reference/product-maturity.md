@@ -90,6 +90,23 @@ P0 target after fixes = **≥ 5.5**). Tracking: GitHub **#1626**.
 before STALE Tier-1 noise. Do **not** add entity list surfaces to “pass”
 commercial bake-off.
 
+### Agent loop (`/improve`)
+
+| Force path | Strategy | Probe |
+|------------|----------|-------|
+| `/improve example-apps product_maturity` | `improve/strategies/product_maturity.md` | `example_product_maturity.py` |
+| `/improve example-apps demo_fleet` | `improve/strategies/demo_fleet.md` | `demo_fleet_bar.py` |
+| `/improve example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` | `example_journey_maturity.py` |
+
+Every example-apps OBSERVE (and `/improve --status`) starts with the unified suite:
+
+```bash
+python scripts/improve_example_probes.py --status
+# product → demo → journey preference for residual_total / next=
+```
+
+Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → Tier 1**.
+
 **Acceptance (showcase ready, per app):** no builder chrome on business desks;
 human singular CTAs; no raw JSON errors in browser; no platform-only nav for
 non-admin personas; happy-path stills non-empty with story data.
@@ -122,11 +139,21 @@ maturity residual is next.
 ## CLI
 
 ```bash
+# Unified /improve OBSERVE (product + demo + journey)
+python scripts/improve_example_probes.py --status
+python scripts/improve_example_probes.py --next
+python scripts/improve_example_probes.py --strict
+
+# Product only
 python scripts/example_product_maturity.py
 python scripts/example_product_maturity.py --status
 python scripts/example_product_maturity.py --next
 python scripts/example_product_maturity.py --app support_tickets --json
 python scripts/example_product_maturity.py --strict   # CI / improve gate (exit 1 if residual)
+
+# Demo fleet (#1626 floors)
+python scripts/demo_fleet_bar.py --status
+python scripts/demo_fleet_bar.py --strict
 ```
 
 ## Design intent (reward structure)

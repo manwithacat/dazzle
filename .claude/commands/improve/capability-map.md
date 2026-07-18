@@ -85,6 +85,10 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 792 | STALE (lag 120) |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 793 | STALE (lag 119) |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
+| **example product maturity** (anti-warehouse job desks / landings / density) | `scripts/example_product_maturity.py` + strategy `product_maturity` | **example-apps** | — | OWNED-IDLE (force `/improve example-apps product_maturity`; OBSERVE every example-apps cycle) |
+| **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | — | OWNED-IDLE (force `/improve example-apps demo_fleet`) |
+| **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | — | OWNED-IDLE (force `/improve example-apps journey_dogfood`) |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | — | USED (every example-apps OBSERVE + `/improve --status`) |
 
 
 

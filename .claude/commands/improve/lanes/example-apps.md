@@ -4,7 +4,11 @@ Find a gap in an example app, fix it, verify, commit, move on. Adapted from form
 
 ## Targets
 
-DSL gaps in `examples/*/`: validation errors, lint violations, conformance gaps, fidelity gaps, visual quality findings. **Not** framework code — that's `framework-ux`.
+DSL gaps in `examples/*/`: validation errors, lint violations, conformance gaps,
+fidelity gaps, **product maturity**, **demo fleet (#1626)**, journey maturity,
+visual quality findings. **Not** framework code — that's `framework-ux`
+(except when a demo_fleet residual is clearly a framework bug — file issue /
+hand off).
 
 ## State
 
@@ -18,11 +22,22 @@ DSL gaps in `examples/*/`: validation errors, lint violations, conformance gaps,
 | Emit | `app-fixed` | Payload `{app, gap_type, commit}` — triggers framework-ux re-walk if contract relates |
 | Consume | `ux-component-shipped` | Re-verify apps using that component |
 | Consume | `convergence-clean` | Clear stale rows for that app |
-| Consume | `dazzle-updated` / `fix-deployed` | Re-scan affected apps |
+| Consume | `dazzle-updated` / `fix-deployed` | Re-scan affected apps; re-run example probes |
 
 ## actionable_count
 
-Rows in `## Lane: example-apps` with status ∈ {`PENDING`, `IN_PROGRESS`}.
+Rows in `## Lane: example-apps` with status ∈ {`PENDING`, `IN_PROGRESS`}
+**plus** non-zero residual from:
+
+```bash
+python scripts/improve_example_probes.py --status
+# product_maturity residual=N
+# demo_fleet residual=N
+# journey_maturity residual=N
+```
+
+Probe residual alone is enough to pick this lane even if the markdown backlog
+table is empty (agent-first loop).
 
 ## HM surface gate (fleet)
 
@@ -51,24 +66,43 @@ When a trial/visual finding says "Alpine residual" or "non-HM markup", re-run th
 audit on a **fresh** rebuild before filing an example-apps row. Stale `dnr-ui/`
 snapshots are not gaps.
 
+## Force sub-strategies
+
+| Arguments | Playbook |
+|-----------|----------|
+| `example-apps product_maturity` | `improve/strategies/product_maturity.md` |
+| `example-apps demo_fleet` | `improve/strategies/demo_fleet.md` |
+| `example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` |
+
 ## Playbook
 
 ### 1. OBSERVE
+
+**Always start with the unified probe suite** (cheap, deterministic):
+
+```bash
+python scripts/improve_example_probes.py --status
+# product_maturity apps=… residual=… next=…
+# demo_fleet apps=… residual=… next=…
+# journey_maturity … residual=… next=…
+# example_probes residual_total=… next=… force=example-apps <strategy>
+# (force= only when residual_total>0 — use that strategy this cycle)
+```
 
 Read backlog section. **First, prune stale findings** (see Stale-finding TTL under Hard rules): delete any `PENDING` `visual_quality` row with `seen=1` whose `ts=` is older than **14 days**. Don't action them and don't carry them — the next Tier-2 scrape re-discovers anything still extant with a fresh `ts`/`seen`. Never prune rows that track a filed issue (`FILED→#…`) or a shipped fix (`RESOLVED→#…`), and never prune reinforced rows (`seen≥2` — repeated observation is signal). Note the prune count in the cycle log.
 
 Then selection priority:
 1. `IN_PROGRESS` with attempts < 3 → resume it
 2. `IN_PROGRESS` with attempts ≥ 3 → mark `BLOCKED`, file issue if framework-related, pick next `PENDING`
-3. **`product_maturity` residuals** — if `python scripts/example_product_maturity.py --next` prints an app, prefer a matching `PENDING` `product_maturity` row (or create one from the probe) **before** journey and Tier-1 noise. Probe: `scripts/example_product_maturity.py` (docs: `docs/reference/product-maturity.md`). Goal: answer-first landing + job coverage + lower warehouse density — **not** more entity list surfaces.
-4. **`demo_fleet` / antagonist bar (#1626)** — when structural residual is empty, prefer open **#1626** P0 rows (builder chrome, human CTAs, no raw JSON 403, no platform nav on product personas, story seeds, non-empty happy-path stills, domain honesty). Target fleet demo score ≥ 5.5.
-5. **`journey_maturity` residuals** — if `python scripts/example_journey_maturity.py --next` prints an app, prefer a matching `PENDING` `journey_maturity` row (or create one from the probe) **before** STALE-clear Tier-1 noise. Strategy body: `improve/strategies/journey_dogfood.md`. Force path: `/improve example-apps journey_dogfood`.
-6. All gaps DONE/BLOCKED and product/journey/demo residual empty → run **explore phase** (Step 7 below)
-7. Pick next `PENDING` (priority: critical > warning > info, then app alphabetical)
-8. Mark `IN_PROGRESS`
+3. **`product_maturity` residual** — `python scripts/example_product_maturity.py --next` non-empty → force strategy `product_maturity` for that app (playbook `improve/strategies/product_maturity.md`). Prefer over demo/journey/Tier-1.
+4. **`demo_fleet` residual (#1626)** — product residual empty and `python scripts/demo_fleet_bar.py --next` non-empty → force strategy `demo_fleet`. If probe residual empty but #1626 still has open P0-5…P0-9 (empty heroes, invoice queues, design_studio visuals), still pick `demo_fleet` and work the highest open P0.
+5. **`journey_maturity` residual** — `python scripts/example_journey_maturity.py --next` non-empty → force `journey_dogfood`.
+6. All probe residuals empty and backlog gaps DONE/BLOCKED → **explore phase** (Step 6)
+7. Else pick next `PENDING` backlog row (priority: critical > warning > info, then app alphabetical)
+8. Mark chosen work `IN_PROGRESS`
 
 If `$ARGUMENTS` provided as `<app>`, filter to that app only.
-If `$ARGUMENTS` is `journey_dogfood` (or lane+strategy force), run the journey_dogfood strategy playbook for one residual app and skip unrelated gap types.
+If `$ARGUMENTS` is `product_maturity` | `demo_fleet` | `journey_dogfood` (or lane+strategy), run that strategy playbook for one residual app and skip unrelated gap types.
 
 ### 2. ENHANCE
 
@@ -81,9 +115,9 @@ Apply the fix appropriate to the gap type:
 | `validation` | Edit DSL to satisfy parser/validator |
 | `conformance` | Add missing entity/surface/workspace per `mcp__dazzle__conformance` |
 | `fidelity` | Add missing IR-graph edges per `mcp__dazzle__dsl operation=fidelity` |
-| `product_maturity` | Anti-warehouse: job workspaces + persona `default_workspace` + density/nav ≤0.70. Probe: `scripts/example_product_maturity.py` (`--next` / `--strict`). Docs: `docs/reference/product-maturity.md`. Do **not** add entity lists to “pass”. |
-| `demo_fleet` | Antagonist bake-off (#1626): P0-1 builder chrome, P0-2 singular CTAs, P0-3 product errors, P0-4 platform nav, P0-5 story seeds, P0-6 empty-hero ban, P0-7–9 domain honesty. Framework vs example split in product-maturity.md. |
-| `journey_maturity` | Agent-first dogfood: bound `executed_by` stories + list `open:` + multi-section VIEW hubs. Full playbook: `improve/strategies/journey_dogfood.md`. Force: `/improve example-apps journey_dogfood`. |
+| `product_maturity` | Full playbook: `improve/strategies/product_maturity.md`. Probe: `scripts/example_product_maturity.py`. Do **not** add entity lists to “pass”. |
+| `demo_fleet` | Full playbook: `improve/strategies/demo_fleet.md`. Probe: `scripts/demo_fleet_bar.py` + #1626. Seeds/stills/honesty; one P0 or one app per cycle. |
+| `journey_maturity` | Full playbook: `improve/strategies/journey_dogfood.md`. Force: `/improve example-apps journey_dogfood`. |
 | `rhythm_fidelity` | A rhythm scores `< 1.0` (a scene's surface/action/entity can't resolve) — add the missing surface/derive-binding, or fix the cited story's `entities`/`trigger`. **Only non-advisory `evaluate` failures are actionable** (advisory `surface_specialization` + orphan-story gaps are design nudges, not defects). |
 | `story_scope` | `dazzle story scope-fidelity` reports a story with `< full` process coverage (story⇄process axis) — add/point the implementing process. Distinct from `rhythm_fidelity` (story⇄rhythm axis). |
 | `test_design_coverage` | `dazzle test-design coverage-actions` / `runtime-gaps` flags an uncovered persona action — add the test-design coverage row. |
@@ -102,11 +136,27 @@ If errors → fix and retry (up to 3 attempts).
 
 ### 4. VERIFY
 
+Always:
+
 ```bash
-cd examples/<app> && dazzle ux verify --contracts 2>&1 | tail -20
+cd examples/<app> && dazzle validate
 ```
 
-Verify the gap closed. For visual_quality fixes, optionally re-run the Tier-2 visual scrape (`dazzle qa capture` + the visual_tier2 subagent) and compare.
+By gap type, also:
+
+| Gap type | Extra gate (must exit 0 / residual clear) |
+|----------|-------------------------------------------|
+| `product_maturity` | `python scripts/example_product_maturity.py --app <app>` (no residual reasons) |
+| `demo_fleet` | `python scripts/demo_fleet_bar.py --app <app>`; still evidence if P0-6/9 |
+| `journey_maturity` | `python scripts/example_journey_maturity.py --app <app> --min-bound 3` |
+| `visual_quality` | optional re-capture + category re-check |
+| default | `dazzle ux verify --contracts 2>&1 \| tail -20` |
+
+Fleet smoke after product/demo/journey work:
+
+```bash
+python scripts/improve_example_probes.py --status
+```
 
 ### 5. REPORT (lane-internal)
 
@@ -114,7 +164,7 @@ Verify the gap closed. For visual_quality fixes, optionally re-run the Tier-2 vi
 2. Note commit SHA in row's notes
 3. Return outcome: `{status: PASS|FAIL|BLOCKED, summary, signals_to_emit: [{kind: "app-fixed", payload: {app, gap_type, commit}}], budget_consumed: 0}`
 
-### 6. EXPLORE / TIERED GAP DISCOVERY (when backlog clean)
+### 6. EXPLORE / TIERED GAP DISCOVERY (when backlog clean **and** probe residual_total=0)
 
 Tiered to manage cost — start free, escalate only when the previous tier is exhausted.
 
@@ -126,12 +176,34 @@ python scripts/example_hm_surface_audit.py --status
 python scripts/example_hm_surface_audit.py --app <app>
 ```
 
-If the fleet is `HM_OK`, skip residual-markup investigations and go to Tier 1.
+If the fleet is `HM_OK`, skip residual-markup investigations and go to Tier 0.4.
 If `FAIL`, treat as framework residual unless custom project HTML is the source
 (see **HM surface gate** above). Do **not** open `visual_quality` rows for stale
 `dnr-ui/` Alpine — delete the local tree or rebuild; `examples/*/dnr-ui/` is gitignored.
 
-#### Tier 0.5 (every cycle, free): Journey maturity probe
+#### Tier 0.4 (every cycle, free): Product maturity probe
+
+```bash
+python scripts/example_product_maturity.py --status
+python scripts/example_product_maturity.py --next
+```
+
+If `next` non-empty, open/refresh `product_maturity` backlog row and **prefer
+strategy product_maturity on next OBSERVE**. One app per cycle.
+
+#### Tier 0.45 (every cycle when product residual empty, free): Demo fleet probe
+
+```bash
+python scripts/demo_fleet_bar.py --status
+python scripts/demo_fleet_bar.py --next
+# if residual empty, still check open #1626 P0-5…9:
+#   gh issue view 1626 --json body -q .body | head -40
+```
+
+If residual or open antagonist P0s, open/refresh `demo_fleet` row and prefer
+strategy `demo_fleet`.
+
+#### Tier 0.5 (every cycle when product+demo residual empty, free): Journey maturity
 
 ```bash
 python scripts/example_journey_maturity.py --status
@@ -139,8 +211,8 @@ python scripts/example_journey_maturity.py --next
 ```
 
 If `next` is non-empty, open/refresh a `journey_maturity` backlog row for that
-app (`PENDING`) and **prefer it on the next OBSERVE** (see selection priority).
-Do not batch-fix the whole residual list in one cycle — one app per cycle via
+app (`PENDING`) and **prefer it on the next OBSERVE**. Do not batch-fix the
+whole residual list in one cycle — one app per cycle via
 `improve/strategies/journey_dogfood.md`. When residual is empty, note
 `journey_maturity: fleet ok` in the cycle log and continue Tier 1.
 
@@ -181,6 +253,10 @@ Runs as a host-harness subagent (subagent-dispatch) — no direct API call, no A
 
 In short: `dazzle qa capture --manifest <path>` writes a fleet-wide JSON manifest of screenshots; `dazzle.qa.evaluate.build_subagent_prompt(...)` builds a multi-screen mission; the subagent Reads each PNG, evaluates against `dazzle.qa.categories.CATEGORIES`, and writes findings JSON; `dazzle.cli.runtime_impl.ux_cycle_impl.visual_tier2_ingest.ingest_visual_findings(...)` writes new `visual_quality` rows into this lane's section of the backlog (dedup by `(app, category, location)`, severity-sorted, `seen=K` reinforced on re-runs).
 
+**Prerequisite for capture plans:** product personas only (not field archetypes) —
+`dazzle.qa.capture.build_capture_plan` (#1626). Prefer seeded apps so happy-path
+stills are non-empty.
+
 Row shape: `| N | <app> | visual_quality | [<category>] <description> at <location> | PENDING | 0 | seen=1, screenshot=<path>, ts=<...> |`.
 
 Increments shared budget by 5 (single heavy dispatch, ~25-50 screens).
@@ -196,4 +272,6 @@ Increments shared budget by 5 (significantly more expensive).
 - **One gap per cycle.** Don't chain.
 - **Three attempts then BLOCKED.** Never let a gap run forever.
 - **Framework-related gaps file issues, don't fix.** This lane targets app DSL only — framework fixes belong in `framework-ux` or /issues.
+- **Probe residual outranks STALE Tier-1.** Never burn a cycle on lint field completeness when `improve_example_probes.py` reports residual_total>0.
+- **Do not tick #1626 without still/probe evidence.**
 - **Stale-finding TTL.** `visual_quality` rows come from Tier-2 `dazzle qa capture` scrapes (Step 6, via the visual_tier2 subagent). A single-observation row (`seen=1`) that stays `PENDING` longer than **14 days** ages out behind framework releases — by pickup time the issue is often already fixed, so it inflates `actionable_count`, mis-biases lane selection, and wastes investigation re-confirming non-issues. **Delete such rows in OBSERVE rather than carrying them**; the next Tier-2 scrape re-discovers anything still extant with a fresh `ts`/`seen` (cheap by design). Exceptions that are NEVER pruned on age: rows linked to a filed issue (`FILED→#…`), rows recording a shipped fix (`RESOLVED→#…`), and reinforced rows (`seen≥2`, where repeated observation across scrapes is signal). Validated by cycle 157 (2026-05-29): rows 103/106 sat `PENDING` 14 days, then proved stale — the empty list-region empty-state had since been wired (confirmed by direct `ListRegion` render at v0.80.27).
