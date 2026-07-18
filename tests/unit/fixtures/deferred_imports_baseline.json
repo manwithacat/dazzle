@@ -315,7 +315,7 @@
   "src/dazzle/render/fragment/region/_builders_metrics.py": 1,
   "src/dazzle/render/fragment/region/_builders_tables.py": 2,
   "src/dazzle/render/fragment/region/_builders_timeline.py": 2,
-  "src/dazzle/render/fragment/region/_shared.py": 4,
+  "src/dazzle/render/fragment/region/_shared.py": 3,
   "src/dazzle/render/fragment/renderer/_emit.py": 1,
   "src/dazzle/render/fragment/renderer/_render_charts.py": 7,
   "src/dazzle/render/fragment/renderer/_render_dashboard.py": 1,
