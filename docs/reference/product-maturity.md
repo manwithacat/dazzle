@@ -23,6 +23,12 @@ Persona jobs, answer-first landings, and contained CRUD are.
 | **Warehouse density** | `list_surfaces / (list_surfaces + product_workspaces)` &lt; 0.70 | Density ≥ 0.70 (deepen) or ≥ 0.85 with ≤1 product workspace (thin/critical) |
 | **Job coverage** | Each product persona has bound stories **or** multi-region default workspace | Uncovered product personas |
 | **CRUD without jobs** | Product workspaces exist when many list surfaces | Lists only, no product personas/workspaces |
+| **Nav list share** | Compiled persona sidebars are not mostly entity lists | Avg entity-list link share ≥ 0.70 (deepen) / ≥ 0.85 (heavier) |
+
+**Nav list share** uses `build_persona_nav` (same source as the live shell): for
+each product persona, `entity_list_links / (entity_list + workspace links)`.
+Auto-discovered nav that only mirrors list surfaces scores badly even when
+`default_workspace` is set.
 
 **Product personas** exclude platform ids: `admin`, `platform_admin`, `superuser`, …
 **Product workspaces** exclude `_platform_*` / `admin_*` prefixes.

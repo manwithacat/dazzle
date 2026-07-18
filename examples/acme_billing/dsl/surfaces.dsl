@@ -323,3 +323,43 @@ workspace billing "Acme Billing":
     source: Membership
     display: list
     empty: "No memberships found"
+
+# Product landing for scoped workers (product maturity: not warehouse-only).
+# Separate from billing so org-management chrome stays gated to owner/auditor.
+workspace my_work "My Work":
+  purpose: "What am I assigned to — projects and invoices I can act on"
+  stage: "simple_list"
+  access: persona(project_member, external_contractor)
+
+  assigned_projects:
+    source: Project
+    display: list
+    sort: name asc
+    empty: "No projects assigned to you yet"
+
+  my_invoices:
+    source: Invoice
+    display: queue
+    sort: created_at desc
+    limit: 15
+    empty: "No invoices in your scope"
+
+# Second product workspace lowers warehouse density and gives owners a
+# project-first path distinct from the org/memberships portfolio.
+workspace projects_home "Projects":
+  purpose: "Project portfolio — open a project before drilling into invoices"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor, project_member)
+
+  project_queue:
+    source: Project
+    display: list
+    sort: name asc
+    empty: "No projects found"
+
+  recent_invoices:
+    source: Invoice
+    display: queue
+    sort: created_at desc
+    limit: 10
+    empty: "No invoices yet"

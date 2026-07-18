@@ -81,6 +81,9 @@ class AppProductMaturity:
     list_surfaces: int = 0
     crud_surfaces: int = 0  # list+create+edit
     warehouse_density: float = 0.0
+    # Compiled-nav share of entity-list links among product personas (0–1).
+    nav_list_share: float = 0.0
+    nav_personas_scored: int = 0
     bound_stories: int = 0
     product_stories: int = 0
     job_personas_covered: int = 0
@@ -110,6 +113,68 @@ def _is_product_persona(persona_id: str) -> bool:
 def _mode_str(surface: Any) -> str:
     raw = getattr(surface, "mode", None)
     return str(getattr(raw, "value", raw) or "").lower()
+
+
+def _accessible_product_workspaces(appspec: Any, persona: Any) -> int:
+    """Count product workspaces this persona may open (access gate)."""
+    try:
+        from dazzle.page.converters.workspace_converter import workspace_allowed_personas
+    except Exception:  # noqa: BLE001
+        return 0
+    personas = list(getattr(appspec, "personas", None) or [])
+    n = 0
+    for ws in getattr(appspec, "workspaces", None) or []:
+        if _is_platform_workspace(ws.name):
+            continue
+        allowed = workspace_allowed_personas(ws, personas)
+        if allowed is None or persona.id in set(allowed):
+            n += 1
+    return n
+
+
+def _nav_list_share(appspec: Any, product_personas: list[Any]) -> tuple[float, int]:
+    """Average warehouse-ness of each product persona's navigation path.
+
+    Uses ``build_persona_nav`` (live shell). Auto-discover only emits entity
+    list links (by design); we therefore credit **accessible product
+    workspaces** as non-warehouse destinations so apps with strong
+    ``default_workspace`` landings are not false-flagged solely because
+    the sidebar still lists region source entities.
+    """
+    if not product_personas:
+        return 0.0, 0
+    try:
+        from dazzle.page.converters.nav_builder import build_persona_nav
+        from dazzle.rbac.matrix import generate_access_matrix
+
+        matrix = generate_access_matrix(appspec)
+        shares: list[float] = []
+        for p in product_personas:
+            nav = build_persona_nav(appspec, p, matrix)
+            list_n = 0
+            ws_n = 0
+            for g in nav.groups:
+                for link in g.links:
+                    route = link.route or ""
+                    if "/workspaces/" in route or route.startswith("/workspaces"):
+                        ws_n += 1
+                    else:
+                        list_n += 1
+            # Auto-discover never adds workspace destinations — credit access.
+            if getattr(nav, "auto_discovered", True):
+                ws_n = max(ws_n, _accessible_product_workspaces(appspec, p))
+            # Landing workspace is always a product destination for this persona.
+            dws = getattr(p, "default_workspace", None)
+            if dws and not _is_platform_workspace(str(dws)):
+                ws_n = max(ws_n, 1)
+            total = list_n + ws_n
+            if total:
+                shares.append(list_n / total)
+        if not shares:
+            return 0.0, 0
+        return sum(shares) / len(shares), len(shares)
+    except Exception:  # noqa: BLE001
+        return 0.0, 0
 
 
 def score_app(app_dir: Path) -> AppProductMaturity:
@@ -174,6 +239,9 @@ def score_app(app_dir: Path) -> AppProductMaturity:
                 product_story_personas.add(persona)
     m.bound_stories = bound
     m.product_stories = product_stories
+
+    # --- Compiled nav (entity-list share) ---
+    m.nav_list_share, m.nav_personas_scored = _nav_list_share(appspec, product_personas)
 
     # --- Landing (answer-first path) ---
     landing_ok = 0
@@ -244,9 +312,18 @@ def score_app(app_dir: Path) -> AppProductMaturity:
     if m.warehouse_density >= 0.85 and m.product_workspaces <= 1:
         score += 60
         reasons.append(f"warehouse_density({m.warehouse_density:.2f})")
-    elif m.warehouse_density >= 0.7:
+    elif m.warehouse_density > 0.70:
+        # Strict > so 7 lists + 3 workspaces (0.70) can clear after job landings.
         score += 30
         reasons.append(f"warehouse_density({m.warehouse_density:.2f})")
+
+    # Nav: if product personas' paths are mostly entity lists, warehouse.
+    if m.nav_personas_scored > 0 and m.nav_list_share >= 0.85:
+        score += 40
+        reasons.append(f"nav_list_share({m.nav_list_share:.2f})")
+    elif m.nav_personas_scored > 0 and m.nav_list_share > 0.70:
+        score += 20
+        reasons.append(f"nav_list_share({m.nav_list_share:.2f})")
 
     if m.product_personas > 0:
         uncovered = m.product_personas - m.job_personas_covered
@@ -294,9 +371,9 @@ def scan(app_filter: str | None = None) -> list[AppProductMaturity]:
 
 def format_table(rows: list[AppProductMaturity]) -> str:
     lines = [
-        f"{'app':28} {'tier':10} {'score':5} {'land':>5} {'dens':>5} "
+        f"{'app':28} {'tier':10} {'score':5} {'land':>5} {'dens':>5} {'navL':>5} "
         f"{'list':>4} {'ws':>3} {'jobs':>5} reasons",
-        "-" * 100,
+        "-" * 105,
     ]
     for r in rows:
         land = f"{r.landing_ok}/{r.product_personas}"
@@ -304,7 +381,8 @@ def format_table(rows: list[AppProductMaturity]) -> str:
         reasons = ",".join(r.reasons) if r.reasons else "-"
         lines.append(
             f"{r.app:28} {r.tier:10} {r.score:5} {land:>5} {r.warehouse_density:5.2f} "
-            f"{r.list_surfaces:4} {r.product_workspaces:3} {jobs:>5} {reasons}"
+            f"{r.nav_list_share:5.2f} {r.list_surfaces:4} {r.product_workspaces:3} "
+            f"{jobs:>5} {reasons}"
         )
     residual = [r for r in rows if r.is_residual]
     lines.append("")
