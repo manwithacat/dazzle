@@ -49,7 +49,7 @@ created, and edited through dedicated screens — fifteen in all.
 - **Reviewer** — reviews and approves assets.
 
 Admins and designers land on the **Studio Dashboard**; reviewers land on the
-**Asset Gallery** so review pressure is first. Visibility of every kind of
+**Review Desk** so review pressure is first. Visibility of every kind of
 record — users, brands, assets, campaigns, and feedback — is governed by
 declared rules; under the current rules, all three roles can see all records,
 and that grant is itself an explicit, auditable declaration.
@@ -62,7 +62,7 @@ and that grant is itself an explicit, auditable declaration.
   and active campaigns.
 - **Review Desk** — reviewer home: review-load metrics, the awaiting-review
   queue, and recently approved assets.
-- **Asset Gallery** — gallery metrics (draft / in review / approved), the asset
+- **Asset Catalog** — catalog metrics (draft / in review / approved), the asset
   grid, and a review queue for anyone browsing the full library.
 
 ## How work flows through it
@@ -113,4 +113,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:e1077368ca2cc910b03ff19f93804986661276c4ab3f6ae1829adee1302c3bde -->
+<!-- dazzle-spec-brief: sha256:63ebb6f4badbe805ee309596e1dcbe6e35240fc49004494b2501b5b17c18830f -->

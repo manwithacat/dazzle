@@ -48,7 +48,7 @@ they are the assignee or the creator, and can update only those.
 
 Work is organised into four job-shaped workspaces. The **Task Board** —
 shared by all three roles — is for managing flow visually: a kanban board of
-tasks, a due-date timeline, and recent comments. The **Admin Dashboard** is
+tasks, an upcoming-due list, and recent comments. The **Admin Dashboard** is
 the administrator home: metrics for tasks and users, plus urgent and overdue
 queues. The **Team Overview** is the manager home: metrics and queues for
 review, unassigned, and in-progress work. **My Work** is each person's

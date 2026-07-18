@@ -10,7 +10,7 @@ a shared asset warehouse.
 - designer default: `studio_dashboard` = portfolio metrics + grids.
 - designer also has `brand_desk` (brand-first path).
 - reviewer default: `review_desk` = review-load + awaiting-review queue.
-- `asset_gallery` remains the full library for all product personas.
+- `asset_catalog` remains the full library (card grid, not a media gallery) for all product personas.
 
 ## Not this
 

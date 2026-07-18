@@ -201,7 +201,7 @@ entity Feedback "Design Feedback":
 # ── Workspaces ───────────────────────────────────────────────────────
 
 # Story-driven: designer home = metrics + recent work; reviewer home =
-# asset_gallery review queue (docs/guides/story-to-composition.md).
+# review_desk / asset_catalog (docs/guides/story-to-composition.md).
 workspace studio_dashboard "Studio Dashboard":
   access: persona(admin, designer, reviewer)
   portfolio:
@@ -226,9 +226,11 @@ workspace studio_dashboard "Studio Dashboard":
     source: Campaign
     display: metrics
 
-workspace asset_gallery "Asset Gallery":
+# #1626 P0-7: not a visual media gallery (no thumbnails/swatches yet) — honest catalog.
+workspace asset_catalog "Asset Catalog":
+  purpose: "Browse assets as a card grid and metrics (not a thumbnail media gallery yet)"
   access: persona(admin, designer, reviewer)
-  gallery_metrics:
+  catalog_metrics:
     source: Asset
     display: metrics
     aggregate:
@@ -238,7 +240,7 @@ workspace asset_gallery "Asset Gallery":
     tones:
       in_review: warning
       approved: positive
-  gallery:
+  asset_grid:
     source: Asset
     display: grid
     sort: created_at desc
@@ -275,7 +277,7 @@ workspace brand_desk "Brand Desk":
     empty: "No active campaigns"
 
 workspace review_desk "Review Desk":
-  purpose: "Reviewer job — clear the in-review queue before browsing the gallery"
+  purpose: "Reviewer job — clear the in-review queue before browsing the catalog"
   access: persona(admin, designer, reviewer)
   review_load:
     source: Asset

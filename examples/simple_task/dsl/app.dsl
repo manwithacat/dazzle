@@ -585,7 +585,8 @@ workspace task_board "Task Board":
     display: kanban
     group_by: status
 
-  due_timeline:
+  # #1626 P0-7: not a calendar/Gantt — sorted due-date list with timeline display mode
+  upcoming_due:
     source: Task
     filter: due_date != null and status != done
     sort: due_date asc

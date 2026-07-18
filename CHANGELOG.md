@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 ### Fixed
+- **#1626 P0-7 honesty renames** — design_studio `Asset Gallery` → `Asset Catalog` (card grid, not media gallery); simple_task `due_timeline` → `upcoming_due` (sorted due list, not calendar/Gantt).
 - **#1626 P0-6 empty-hero still floors** — `demo_fleet_bar` flags known
   happy-path stills (invoice Approval Desk, support Manager Ops, simple_task
   Task Board) when present but under byte floors (empty-state theater).

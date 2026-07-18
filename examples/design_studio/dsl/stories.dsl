@@ -27,14 +27,14 @@ story ST-002 "Designer opens brand hub for assets and campaigns":
   then:
     - "Brand hub shows identity, palette strip, related assets and campaigns"
 
-story ST-003 "Reviewer works the review queue on asset gallery":
+story ST-003 "Reviewer works the review queue on asset catalog":
   status: accepted
   executed_by: surface.asset_edit
   persona: reviewer
   trigger: user_click
   entities: [Asset]
   given:
-    - "Reviewer is on the asset_gallery workspace"
+    - "Reviewer is on the asset_catalog workspace"
     - "Assets exist with status review"
   then:
     - "Review queue surfaces assets awaiting review"
