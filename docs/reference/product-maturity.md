@@ -69,6 +69,31 @@ Higher `score` = higher residual priority for improve.
 Structural pass can still *feel* warehouse if the live shell never surfaces the
 job desk in the sidebar — prefer multi-workspace access + clear default landings.
 
+## Antagonist demo bar (#1626)
+
+Structural product maturity is **necessary but not sufficient**. An independent
+artifact-only bake-off (QA screenshots + landings vs category SaaS) scored the
+example fleet **~2.8 / 10** (pass line for “keep watching a sales demo” = **7.0**;
+P0 target after fixes = **≥ 5.5**). Tracking: GitHub **#1626**.
+
+| P0 | Failure | Owner altitude |
+|----|---------|----------------|
+| **P0-1** | Builder chrome (Reset / Saved / + Add Card) on business desks | Framework workspace shell |
+| **P0-2** | CTA verbs from list titles (`New Contact List`) | Framework list adapter + surface titles |
+| **P0-3** | Raw JSON 403 / wrong landing (e.g. finance on `_platform_admin`) | Framework error path + QA capture + seeds |
+| **P0-4** | Platform nav pollution for product personas | Nav builder / admin injection |
+| **P0-5** | Story-grade demo seeds (one coherent company) | Example blueprints |
+| **P0-6** | Empty hero stills as happy-path QA names | QA capture + seed gate |
+| **P0-7–9** | False domain views (org chart, gallery, timeline); invoice desks empty | Example honesty + seeds |
+
+**Improve priority:** after structural residual is empty, drain **#1626 P0**
+before STALE Tier-1 noise. Do **not** add entity list surfaces to “pass”
+commercial bake-off.
+
+**Acceptance (showcase ready, per app):** no builder chrome on business desks;
+human singular CTAs; no raw JSON errors in browser; no platform-only nav for
+non-admin personas; happy-path stills non-empty with story data.
+
 ## Relationship to other gates
 
 | Gate | Altitude | Optimises |

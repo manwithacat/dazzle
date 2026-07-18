@@ -61,10 +61,11 @@ Then selection priority:
 1. `IN_PROGRESS` with attempts < 3 → resume it
 2. `IN_PROGRESS` with attempts ≥ 3 → mark `BLOCKED`, file issue if framework-related, pick next `PENDING`
 3. **`product_maturity` residuals** — if `python scripts/example_product_maturity.py --next` prints an app, prefer a matching `PENDING` `product_maturity` row (or create one from the probe) **before** journey and Tier-1 noise. Probe: `scripts/example_product_maturity.py` (docs: `docs/reference/product-maturity.md`). Goal: answer-first landing + job coverage + lower warehouse density — **not** more entity list surfaces.
-4. **`journey_maturity` residuals** — if `python scripts/example_journey_maturity.py --next` prints an app, prefer a matching `PENDING` `journey_maturity` row (or create one from the probe) **before** STALE-clear Tier-1 noise. Strategy body: `improve/strategies/journey_dogfood.md`. Force path: `/improve example-apps journey_dogfood`.
-5. All gaps DONE/BLOCKED and product/journey residual empty → run **explore phase** (Step 6 below)
-6. Pick next `PENDING` (priority: critical > warning > info, then app alphabetical)
-7. Mark `IN_PROGRESS`
+4. **`demo_fleet` / antagonist bar (#1626)** — when structural residual is empty, prefer open **#1626** P0 rows (builder chrome, human CTAs, no raw JSON 403, no platform nav on product personas, story seeds, non-empty happy-path stills, domain honesty). Target fleet demo score ≥ 5.5.
+5. **`journey_maturity` residuals** — if `python scripts/example_journey_maturity.py --next` prints an app, prefer a matching `PENDING` `journey_maturity` row (or create one from the probe) **before** STALE-clear Tier-1 noise. Strategy body: `improve/strategies/journey_dogfood.md`. Force path: `/improve example-apps journey_dogfood`.
+6. All gaps DONE/BLOCKED and product/journey/demo residual empty → run **explore phase** (Step 7 below)
+7. Pick next `PENDING` (priority: critical > warning > info, then app alphabetical)
+8. Mark `IN_PROGRESS`
 
 If `$ARGUMENTS` provided as `<app>`, filter to that app only.
 If `$ARGUMENTS` is `journey_dogfood` (or lane+strategy force), run the journey_dogfood strategy playbook for one residual app and skip unrelated gap types.
@@ -81,6 +82,7 @@ Apply the fix appropriate to the gap type:
 | `conformance` | Add missing entity/surface/workspace per `mcp__dazzle__conformance` |
 | `fidelity` | Add missing IR-graph edges per `mcp__dazzle__dsl operation=fidelity` |
 | `product_maturity` | Anti-warehouse: job workspaces + persona `default_workspace` + density/nav ≤0.70. Probe: `scripts/example_product_maturity.py` (`--next` / `--strict`). Docs: `docs/reference/product-maturity.md`. Do **not** add entity lists to “pass”. |
+| `demo_fleet` | Antagonist bake-off (#1626): P0-1 builder chrome, P0-2 singular CTAs, P0-3 product errors, P0-4 platform nav, P0-5 story seeds, P0-6 empty-hero ban, P0-7–9 domain honesty. Framework vs example split in product-maturity.md. |
 | `journey_maturity` | Agent-first dogfood: bound `executed_by` stories + list `open:` + multi-section VIEW hubs. Full playbook: `improve/strategies/journey_dogfood.md`. Force: `/improve example-apps journey_dogfood`. |
 | `rhythm_fidelity` | A rhythm scores `< 1.0` (a scene's surface/action/entity can't resolve) — add the missing surface/derive-binding, or fix the cited story's `entities`/`trigger`. **Only non-advisory `evaluate` failures are actionable** (advisory `surface_specialization` + orphan-story gaps are design nudges, not defects). |
 | `story_scope` | `dazzle story scope-fidelity` reports a story with `< full` process coverage (story⇄process axis) — add/point the implementing process. Distinct from `rhythm_fidelity` (story⇄rhythm axis). |

@@ -1001,7 +1001,11 @@ def render_workspace_content_typed(
             )
         )
 
-    inner_pieces.append(WorkspaceToolbar())
+    # #1626 P0-1: Reset/Saved toolbar + Add Card are builder chrome.
+    # Business personas must never see them (Linear/Zendesk never do).
+    # Card remove × is already gated via edit_enabled; match that here.
+    if can_edit_layout:
+        inner_pieces.append(WorkspaceToolbar())
     inner_pieces.append(
         DashboardGrid(
             cards=tuple(cards),
@@ -1010,7 +1014,8 @@ def render_workspace_content_typed(
             leading_html=leading_html,
         )
     )
-    inner_pieces.append(AddCardRow(picker=picker))
+    if can_edit_layout:
+        inner_pieces.append(AddCardRow(picker=picker))
 
     shell = WorkspaceShell(
         workspace_name=workspace.name,

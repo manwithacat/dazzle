@@ -149,6 +149,11 @@ class TestRenderWorkspaceContentTypedGating:
         )
         assert 'aria-label="Remove card"' not in html
         assert 'data-grid-editable="false"' in html
+        # #1626 P0-1: no builder chrome on business desks
+        assert "Add Card" not in html
+        assert 'data-test-id="dz-add-card-trigger"' not in html
+        assert "dz-workspace-toolbar" not in html
+        assert ">Reset<" not in html
 
     def test_can_edit_layout_true_emits_remove_buttons(self) -> None:
         from dazzle.page.runtime.workspace_renderer import (
@@ -166,3 +171,6 @@ class TestRenderWorkspaceContentTypedGating:
         assert 'aria-label="Remove card"' in html
         assert 'data-test-id="dz-card-remove"' in html
         assert 'data-grid-editable="true"' in html
+        # Superuser / layout-edit mode keeps builder chrome
+        assert "Add Card" in html
+        assert "dz-workspace-toolbar" in html

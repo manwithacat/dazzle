@@ -10,6 +10,7 @@ form, and dashboard modes.
 """
 
 import json
+import re
 from typing import Any
 
 from dazzle.core.ir.protocols import SurfaceLike, SurfaceMode
@@ -51,6 +52,50 @@ from dazzle.render.fragment import (
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
 from dazzle.render.fragment.renderer._data_row import _render_cell_display
 from dazzle.render.html import esc as _html_esc
+
+# Collection suffixes that leak from list surface titles into CTAs
+# (#1626 P0-2): "New Contact List" / "New Issue Board" / "New Staff Directory".
+_COLLECTION_CTA_SUFFIX = re.compile(
+    r"\s+(List|Board|Directory|Gallery|Registry|Queue|Table|Index)s?$",
+    re.IGNORECASE,
+)
+_CREATE_VERB_PREFIX = re.compile(r"^(Create|Add|New)\s+", re.IGNORECASE)
+
+
+def human_create_cta_label(
+    *,
+    explicit: str = "",
+    entity_title: str = "",
+    entity_name: str = "",
+) -> str:
+    """Primary list CTA: singular record language, never collection chrome.
+
+    #1626 P0-2 — buyers see ``+ New Contact List`` when the list surface
+    title (or a create surface named after the collection) leaks into
+    the button. Prefer entity display title; strip collection suffixes
+    and redundant Create/Add/New verbs.
+    """
+    candidate = (explicit or "").strip()
+    if candidate and _COLLECTION_CTA_SUFFIX.search(candidate):
+        candidate = ""
+    if candidate:
+        candidate = _CREATE_VERB_PREFIX.sub("", candidate).strip() or candidate
+        # Explicit full labels that already read as actions ("Invite user")
+        # keep their text; short noun phrases get "New ".
+        if _CREATE_VERB_PREFIX.match(explicit.strip()):
+            # Was "Create Contact" / "New Invoice" → "New Contact"
+            noun = _CREATE_VERB_PREFIX.sub("", explicit.strip()).strip()
+            if noun and not _COLLECTION_CTA_SUFFIX.search(noun):
+                return f"New {noun}"
+        if candidate.lower().startswith("new "):
+            return candidate
+        # Short noun ("Contact") → "New Contact"
+        if " " not in candidate or len(candidate) < 28:
+            return f"New {candidate}"
+        return candidate
+    noun = (entity_title or entity_name.replace("_", " ") or "item").strip()
+    noun = _COLLECTION_CTA_SUFFIX.sub("", noun).strip() or noun
+    return f"New {noun}"
 
 
 def _esc_attr(s: str) -> str:
@@ -189,10 +234,12 @@ class FragmentSurfaceAdapter:
         )
 
         empty_title, empty_description = _pick_empty_state(ctx)
-        # Prefer explicit create_label (persona action_primary / surface title);
-        # else #1487 entity display title — never the list surface title.
-        if not create_label and create_url:
-            create_label = f"New {entity_title or entity_name.replace('_', ' ')}"
+        # #1626 P0-2 / #1487: singular entity language — never list/board titles.
+        create_label = human_create_cta_label(
+            explicit=create_label,
+            entity_title=entity_title,
+            entity_name=entity_name,
+        )
         shell = DataListScroll(
             table=table,
             table_id=table_id,

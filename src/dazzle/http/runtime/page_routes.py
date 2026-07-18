@@ -2270,9 +2270,18 @@ async def _workspace_handler(
     if ws_allowed_personas and not is_superuser:
         normalized = [r.removeprefix("role_") for r in user_roles]
         if not normalized or not any(r in ws_allowed_personas for r in normalized):
+            # #1626 P0-3: structured detail so the HTML 403 page (#808 / #1536)
+            # can disclose roles — never a bare string that browsers may dump
+            # as raw JSON when Accept is ambiguous.
             raise HTTPException(
                 status_code=403,
-                detail="You don't have permission to access this workspace.",
+                detail={
+                    "error": "forbidden",
+                    "message": "You don't have permission to access this workspace.",
+                    "workspace": getattr(ws_context, "name", "") or "",
+                    "permitted_personas": list(ws_allowed_personas),
+                    "current_roles": list(normalized),
+                },
             )
 
     htmx = HtmxDetails.from_request(request)
