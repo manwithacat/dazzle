@@ -39,7 +39,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 775 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 770 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 776 | USED |
-| `dazzle qa trial` | CLI | trials | 758 | USED |
+| `dazzle qa trial` | CLI | trials | 778 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 776 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 775 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 772 | USED |
@@ -79,8 +79,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 777 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 777 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 777 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 777 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 777 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 778 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 778 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 
@@ -97,6 +97,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 778 (2026-07-18).** STALE-effective `dazzle qa trial`@758 lag20. Ran support_tickets `sla_waiver_already_signed` --fresh-db --llm-driver grok-cli: functional signing **pass**, agent praise (already-signed + Download CTA); seed 3× ticket_number conflict → **FILED #1624** (TR-48 seen=3). Stamps @778. Explore **87/100**.
 
 > **Cycle 777 (2026-07-18).** lag-10 cluster: coverage 61/61; compliance gaps; fitness code+vitality; MCP policy/semantics/ti; xproject sibling validates. qa trial designer_portfolio started (grok-cli) but no new report within budget — leave @758. Stamps @777. Explore **86/100**. Release v0.105.11 green.
 
