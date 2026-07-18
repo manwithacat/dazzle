@@ -25,6 +25,7 @@ from typing import Any
 import httpx
 
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.strings import to_api_plural
 from dazzle.demo_data.loader import find_seed_files, read_seed_file, topological_sort_entities
 from dazzle.product_quality.persona_homes import (
     STABLE_PERSONA_USER_IDS,
@@ -39,24 +40,37 @@ PERSONA_EMAIL_DOMAIN = "demo.dazzle.local"
 
 def demo_ops_playbook() -> dict[str, Any]:
     """Agent-readable tribal knowledge pack (no project needed)."""
+    stable_ids = sorted(STABLE_PERSONA_USER_IDS.keys())
     return {
         "title": "Closed-loop persona demo ops",
         "issue": 1627,
+        "related_issues": [1627, 1629, 1630],
         "order": [
             "dazzle serve --project <app>  # writes .dazzle/runtime.json",
+            "Re-read .dazzle/runtime.json after every serve (ports may change)",
             "dazzle demo reset-and-load --project <app> -y",
             'POST /__test__/authenticate {"role": "<persona>"} with X-Test-Secret',
             "Open persona default_workspace (browser/networkidle for HTMX regions)",
         ],
         "rules": [
             "Never authenticate before reset — random UUIDs break assignment seeds.",
+            "Persona *ids* for assignment-aware demo must be STABLE map keys "
+            f"({', '.join(stable_ids[:8])}, …) — use human titles for display names "
+            "(#1630: promoter→requester, booker→approver).",
             "Domain User / assignment FKs must use STABLE_PERSONA_USER_IDS values.",
             "Do not invent seed UUIDs in the a1000000-… reserved range for non-personas.",
+            "User.jsonl rows at STABLE ids are auto-skipped by reset-and-load "
+            "(reset already mirrors those principals) — #1630.",
             "Canonical persona email domain is @demo.dazzle.local.",
             "Workspace HTML without a browser is skeleton only (hx-trigger=load).",
             "Metrics that filter current_user may read 0 while lists show rows (F10) — "
             "trust list regions + product_quality score until runtime is fixed.",
+            "After renaming personas, re-check every `as:` / permit role token — "
+            "static residual can be 0 while a desk is empty (#1630).",
+            "Prefer simple region filters (`status = held`); compound `or` may "
+            "silently empty a region — split regions until OR is loud/supported.",
         ],
+        "stable_persona_ids": stable_ids,
         "stable_persona_user_ids": dict(STABLE_PERSONA_USER_IDS),
         "persona_email_domain": PERSONA_EMAIL_DOMAIN,
         "persona_email_template": f"{{role}}@{PERSONA_EMAIL_DOMAIN}",
@@ -107,16 +121,35 @@ def find_demo_data_dir(project_root: Path) -> Path | None:
     return None
 
 
+def _is_stable_persona_user_fixture(entity_name: str, row: dict[str, Any]) -> bool:
+    """True when this row is a domain User at a STABLE principal id (#1630).
+
+    ``/__test__/reset`` already mirrors auth users into domain User at those
+    ids; re-seeding them 400s with \"already exists\".
+    """
+    if entity_name != "User":
+        return False
+    row_id = row.get("id")
+    if not isinstance(row_id, str) or not row_id:
+        return False
+    return row_id in STABLE_PERSONA_USER_IDS.values()
+
+
 def jsonl_dir_to_fixtures(
     data_dir: Path,
     *,
     entity_order: list[str] | None = None,
+    skip_stable_users: bool = True,
 ) -> list[dict[str, Any]]:
     """Convert ``Entity.jsonl`` seed files into ``/__test__/seed`` FixtureData dicts.
 
     Each jsonl row becomes ``{id, entity, data}``. Row ``id`` is preferred;
     otherwise a synthetic fixture id is assigned. Files are ordered by
     ``entity_order`` when provided (parents first).
+
+    When *skip_stable_users* is True (default), domain ``User`` rows whose
+    ``id`` is in :data:`STABLE_PERSONA_USER_IDS` are omitted — reset already
+    provisioned them (#1630 User collision).
     """
     seed_files = find_seed_files(data_dir)
     if not seed_files:
@@ -138,6 +171,8 @@ def jsonl_dir_to_fixtures(
             continue
         for i, row in enumerate(rows):
             if not isinstance(row, dict):
+                continue
+            if skip_stable_users and _is_stable_persona_user_fixture(entity_name, row):
                 continue
             row_id = row.get("id")
             fid = str(row_id) if row_id else f"{entity_name}-{i + 1}"
@@ -166,12 +201,19 @@ def _entity_order(project_root: Path) -> list[str] | None:
         return None
 
 
-def _base_report(api_url: str, data_dir: Path, fixtures: list[dict[str, Any]]) -> dict[str, Any]:
+def _base_report(
+    api_url: str,
+    data_dir: Path,
+    fixtures: list[dict[str, Any]],
+    *,
+    skipped_stable_users: int = 0,
+) -> dict[str, Any]:
     return {
         "ok": False,
         "api_url": api_url,
         "data_dir": str(data_dir),
         "fixture_count": len(fixtures),
+        "skipped_stable_user_fixtures": skipped_stable_users,
         "entities": sorted({f["entity"] for f in fixtures}),
         "steps": [],
         "playbook": demo_ops_playbook(),
@@ -257,6 +299,59 @@ def _attach_persona_homes(report: dict[str, Any], project_root: Path) -> None:
         report["ok"] = True  # seed HTTP succeeded
 
 
+def _prepare_fixtures(
+    project_root: Path, data_dir: Path
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+    """Return (all, seedable, skipped_stable_count)."""
+    entity_order = _entity_order(project_root)
+    all_fixtures = jsonl_dir_to_fixtures(
+        data_dir, entity_order=entity_order, skip_stable_users=False
+    )
+    fixtures = [
+        f
+        for f in all_fixtures
+        if not _is_stable_persona_user_fixture(f["entity"], f.get("data") or {})
+    ]
+    return all_fixtures, fixtures, len(all_fixtures) - len(fixtures)
+
+
+def _reset_only(report: dict[str, Any], *, api_url: str, secret: str, timeout: float) -> bool:
+    headers = {"X-Test-Secret": secret, "Content-Type": "application/json"}
+    try:
+        with httpx.Client(base_url=api_url, timeout=timeout, headers=headers) as client:
+            reset_resp = client.post("/__test__/reset")
+            report["steps"].append(_step("reset", reset_resp))
+            if reset_resp.status_code != 200:
+                report["error"] = f"/__test__/reset failed: HTTP {reset_resp.status_code}"
+                return False
+    except httpx.HTTPError as exc:
+        report["error"] = f"HTTP error talking to {api_url}: {exc}"
+        return False
+    return True
+
+
+def _finalize_verify(
+    report: dict[str, Any],
+    project_root: Path,
+    *,
+    api_url: str,
+    secret: str,
+    timeout: float,
+    verify_persona_homes: bool,
+) -> None:
+    if not verify_persona_homes:
+        report["ok"] = True
+        return
+    _attach_persona_homes(report, project_root)
+    if report.get("ok"):
+        try:
+            _attach_live_desk_residual(
+                report, project_root, api_url=api_url, secret=secret, timeout=timeout
+            )
+        except Exception as exc:  # noqa: BLE001 — never fail seed on live probe infra
+            report["live_desk_error"] = str(exc)[:200]
+
+
 def reset_and_load(
     project_root: Path,
     *,
@@ -292,21 +387,152 @@ def reset_and_load(
             binding=public_binding,
         )
 
-    fixtures = jsonl_dir_to_fixtures(data_dir, entity_order=_entity_order(project_root))
-    if not fixtures:
+    all_fixtures, fixtures, skipped_stable = _prepare_fixtures(project_root, data_dir)
+    if not all_fixtures:
         return _fail(f"No seed rows found under {data_dir}", data_dir=str(data_dir))
 
-    report = _base_report(api_url, data_dir, fixtures)
+    report = _base_report(api_url, data_dir, fixtures, skipped_stable_users=skipped_stable)
+    if not fixtures:
+        if not _reset_only(report, api_url=api_url, secret=secret, timeout=timeout):
+            return report
+        report["note"] = "Only STABLE User fixtures present; skipped after reset mirror."
+        _finalize_verify(
+            report,
+            project_root,
+            api_url=api_url,
+            secret=secret,
+            timeout=timeout,
+            verify_persona_homes=verify_persona_homes,
+        )
+        return report
+
     if not _http_reset_and_seed(
         report, api_url=api_url, secret=secret, fixtures=fixtures, timeout=timeout
     ):
         return report
 
-    if verify_persona_homes:
-        _attach_persona_homes(report, project_root)
-    else:
-        report["ok"] = True
+    _finalize_verify(
+        report,
+        project_root,
+        api_url=api_url,
+        secret=secret,
+        timeout=timeout,
+        verify_persona_homes=verify_persona_homes,
+    )
     return report
+
+
+def _probe_one_persona(client: httpx.Client, persona: Any, appspec: Any) -> dict[str, Any] | None:
+    pid = getattr(persona, "id", None) or getattr(persona, "name", None)
+    dws = getattr(persona, "default_workspace", None)
+    if not pid or not dws or pid in ("admin", "platform_admin", "superuser"):
+        return None
+    entity_name = _default_workspace_list_entity(appspec, str(dws))
+    if not entity_name:
+        return None
+    auth = client.post("/__test__/authenticate", json={"role": str(pid)})
+    if auth.status_code != 200:
+        return {
+            "persona": str(pid),
+            "ok": False,
+            "error": f"authenticate HTTP {auth.status_code}",
+        }
+    list_resp = client.get(f"/{to_api_plural(entity_name)}")
+    total = _list_total(list_resp)
+    ok = list_resp.status_code == 200 and (total is None or total > 0)
+    entry: dict[str, Any] = {
+        "persona": str(pid),
+        "entity": entity_name,
+        "status_code": list_resp.status_code,
+        "total": total,
+        "ok": ok,
+    }
+    if not ok:
+        entry["hint"] = (
+            "Empty live list under authenticated persona while "
+            "static residual may still be 0 — check `as:` role "
+            "tokens and permits match declared personas (#1630)."
+        )
+    return entry
+
+
+def _attach_live_desk_residual(
+    report: dict[str, Any],
+    project_root: Path,
+    *,
+    api_url: str,
+    secret: str,
+    timeout: float,
+) -> None:
+    """Auth as each persona with a default workspace; flag empty list APIs (#1630).
+
+    Complements static persona_homes: residual 0 with empty live desks is the
+    scope ``as:`` drift failure mode.
+    """
+    try:
+        appspec = load_project_appspec(project_root)
+    except (OSError, ValueError, TypeError, RuntimeError, KeyError):
+        return
+
+    live: list[dict[str, Any]] = []
+    headers_base = {"X-Test-Secret": secret, "Content-Type": "application/json"}
+    try:
+        with httpx.Client(base_url=api_url, timeout=timeout, headers=headers_base) as client:
+            for persona in appspec.personas or []:
+                entry = _probe_one_persona(client, persona, appspec)
+                if entry is not None:
+                    live.append(entry)
+    except httpx.HTTPError as exc:
+        report["live_desk_error"] = str(exc)[:200]
+        return
+
+    report["live_desk"] = live
+    empty = [e for e in live if not e.get("ok")]
+    report["live_desk_residual"] = len(empty)
+    if empty:
+        report["ok"] = False
+        prefix = (report.get("warning") + " ") if report.get("warning") else ""
+        report["warning"] = prefix + (
+            f"live_desk residual={len(empty)} — desks empty under session "
+            f"for {[e['persona'] for e in empty]} (#1630)."
+        )
+
+
+def _default_workspace_list_entity(appspec: Any, workspace_name: str) -> str | None:
+    for ws in appspec.workspaces or []:
+        name = getattr(ws, "name", None) or getattr(ws, "id", None)
+        if str(name) != workspace_name:
+            continue
+        for region in getattr(ws, "regions", None) or []:
+            display = str(getattr(region, "display", "") or "")
+            if "metric" in display.lower():
+                continue
+            src = getattr(region, "source", None)
+            if src:
+                return str(src)
+    return None
+
+
+def _list_total(resp: httpx.Response) -> int | None:
+    if resp.status_code != 200:
+        return 0
+    try:
+        data = resp.json()
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return None
+    if isinstance(data, list):
+        return len(data)
+    if isinstance(data, dict):
+        if "total" in data:
+            try:
+                return int(data["total"])
+            except (TypeError, ValueError):
+                pass
+        for key in ("items", "results", "data", "rows"):
+            val = data.get(key)
+            if isinstance(val, list):
+                return len(val)
+    return None
 
 
 def _clip(text: str, limit: int = 400) -> str:

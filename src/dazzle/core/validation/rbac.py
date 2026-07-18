@@ -5,6 +5,8 @@ Split verbatim from dazzle.core.validator per #1361.
 
 from typing import Any
 
+from dazzle.product_quality.persona_homes import STABLE_PERSONA_USER_IDS
+
 from .. import ir
 from .conditions import _condition_field_references, _walk_role_names
 
@@ -352,6 +354,153 @@ def validate_role_references_against_enum(
                 )
 
     return errors, warnings
+
+
+_ALLOWED_SCOPE_WILDCARDS = frozenset(
+    {
+        "*",
+        "all",
+        "any",
+        "authenticated",
+        "anonymous",
+        "super_admin",
+        "platform_admin",
+        "sysadmin",
+        "system",
+        "operator",
+    }
+)
+
+
+def _declared_persona_ids(appspec: ir.AppSpec) -> set[str]:
+    declared = {getattr(p, "id", None) or getattr(p, "name", None) for p in appspec.personas or []}
+    declared.discard(None)
+    return {str(x) for x in declared}
+
+
+def _is_unknown_scope_persona(token: str, declared: set[str]) -> bool:
+    return token not in declared and token not in _ALLOWED_SCOPE_WILDCARDS
+
+
+def _warn_unknown_tokens(
+    tokens: list[str] | None,
+    *,
+    declared: set[str],
+    prefix: str,
+) -> list[str]:
+    out: list[str] = []
+    sorted_decl = sorted(declared)
+    for persona in tokens or []:
+        tok = str(persona)
+        if _is_unknown_scope_persona(tok, declared):
+            out.append(f"{prefix} {tok!r} ({sorted_decl}) (#1630).")
+    return out
+
+
+def validate_scope_personas_declared(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Warn when ``as:`` / scope personas are not declared personas (#1630).
+
+    A rename that leaves ``as: approver, ops`` while the persona is
+    ``ops_engineer`` validates green but empties the desk at runtime.
+    Wildcards (``*``) and platform admin tokens are allowed.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    declared_s = _declared_persona_ids(appspec)
+
+    for entity in appspec.domain.entities:
+        if entity.access is None:
+            continue
+        for rule in entity.access.scopes or []:
+            warnings.extend(
+                _warn_unknown_tokens(
+                    list(rule.personas or []),
+                    declared=declared_s,
+                    prefix=(f"Entity '{entity.name}': scope `as:` references persona"),
+                )
+            )
+        for rule in entity.access.permissions or []:
+            warnings.extend(
+                _warn_unknown_tokens(
+                    list(getattr(rule, "personas", None) or []),
+                    declared=declared_s,
+                    prefix=(f"Entity '{entity.name}': permission rule references persona"),
+                )
+            )
+
+    for ws in appspec.workspaces or []:
+        ws_name = getattr(ws, "name", None) or getattr(ws, "id", "?")
+        warnings.extend(
+            _warn_unknown_tokens(
+                list(getattr(ws, "allow_personas", None) or []),
+                declared=declared_s,
+                prefix=f"Workspace '{ws_name}': allow_personas references",
+            )
+        )
+
+    return errors, warnings
+
+
+def validate_stable_persona_ids_for_demo(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Warn when persona ids fall outside STABLE map but use current_user (#1630).
+
+    Assignment-aware demo seeds + ``/__test__/authenticate role=`` only share
+    UUIDs for :data:`STABLE_PERSONA_USER_IDS` keys. Domain ids like
+    ``promoter`` / ``booker`` empty desks under demo ops.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    if not _appspec_uses_current_user(appspec):
+        return errors, warnings
+
+    stable = set(STABLE_PERSONA_USER_IDS)
+    sample = sorted(stable)[:8]
+    for persona in appspec.personas or []:
+        pid = str(getattr(persona, "id", None) or getattr(persona, "name", "") or "")
+        if not pid or pid in stable:
+            continue
+        if pid in ("admin", "platform_admin", "superuser", "operator", "sysadmin"):
+            continue
+        if not getattr(persona, "default_workspace", None):
+            continue
+        warnings.append(
+            f"Persona '{pid}' is not in STABLE_PERSONA_USER_IDS "
+            f"({sample}…). Demo ``role=`` auth and assignment "
+            f"seeds will not share a principal UUID — rename the persona "
+            f"*id* to a STABLE key and keep a human title, or declare "
+            f"stable ids (#1630)."
+        )
+
+    return errors, warnings
+
+
+def _appspec_uses_current_user(appspec: ir.AppSpec) -> bool:
+    """True if any scope/region filter text mentions current_user."""
+    for entity in appspec.domain.entities:
+        if entity.access is None:
+            continue
+        for rule in entity.access.scopes or []:
+            if _condition_mentions_current_user(rule.condition):
+                return True
+    for ws in appspec.workspaces or []:
+        for region in getattr(ws, "regions", None) or []:
+            if _condition_mentions_current_user(getattr(region, "filter", None)):
+                return True
+    return False
+
+
+def _condition_mentions_current_user(cond: Any) -> bool:
+    if cond is None:
+        return False
+    try:
+        text = str(cond.model_dump() if hasattr(cond, "model_dump") else cond)
+    except Exception:  # noqa: BLE001 — best-effort walk
+        text = str(cond)
+    return "current_user" in text
 
 
 def validate_admin_personas_scope_conflict(

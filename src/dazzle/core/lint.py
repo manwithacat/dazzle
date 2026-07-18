@@ -29,10 +29,12 @@ from .validator import (
     validate_rag_decorators,
     validate_rbac_matrix_diagnostics,
     validate_role_references_against_enum,
+    validate_scope_personas_declared,
     validate_scope_predicates,
     validate_sensitive_fields,
     validate_services,
     validate_slas,
+    validate_stable_persona_ids_for_demo,
     validate_surfaces,
     validate_tenancy_partition_key,
     validate_transition_invocations,
@@ -244,6 +246,8 @@ def lint_appspec(
     # Validator hardening — closes #1061
     for check in (
         validate_role_references_against_enum,
+        validate_scope_personas_declared,
+        validate_stable_persona_ids_for_demo,
         validate_tenancy_partition_key,
         validate_admin_personas_scope_conflict,
         validate_process_step_service_refs,

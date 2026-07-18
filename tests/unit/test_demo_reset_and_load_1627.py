@@ -86,7 +86,7 @@ def test_reset_and_load_http_roundtrip() -> None:
             verify_persona_homes=True,
         )
     assert report["fixture_count"] > 0
-    assert mock_client.post.call_count == 2
+    assert mock_client.post.call_count >= 2
     assert mock_client.post.call_args_list[0][0][0] == "/__test__/reset"
     assert mock_client.post.call_args_list[1][0][0] == "/__test__/seed"
     # seed HTTP ok; residual score is static over seeds (may be 0)

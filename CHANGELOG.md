@@ -1,5 +1,17 @@
 ## [Unreleased]
 
+### Fixed
+- **#1630 agent cognition follow-up (Venue Hold Desk)** — (1) `demo
+  reset-and-load` **skips** domain `User` fixtures at STABLE persona UUIDs
+  (reset already mirrors them; re-seed 400ed); (2) validate **errors** when
+  scope `as:` / workspace `allow_personas` name undeclared personas; (3)
+  validate **warns** when persona ids fall outside STABLE map but use
+  `current_user` desks; (4) optional **live desk residual** after seed
+  (auth + list under each default workspace); (5) `demo_ops` rules for
+  STABLE id taxonomy, User skip, `as:` renames, re-read runtime after serve;
+  (6) blank init `framework_version` pins to installed minor
+  (`~{{framework_minor}}`) instead of stale `~0.38`.
+
 ### Added
 - **#1627 `dazzle demo reset-and-load`** — closed-loop persona demo via
   `/__test__/reset` + `/__test__/seed` (jsonl → FixtureData), reading ports

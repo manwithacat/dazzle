@@ -2,7 +2,7 @@
 name = "{{project_name}}"
 version = "0.1.0"
 root = "{{module_name}}.core"
-framework_version = "~0.38"
+framework_version = "~{{framework_minor}}"
 
 [modules]
 paths = ["./dsl"]

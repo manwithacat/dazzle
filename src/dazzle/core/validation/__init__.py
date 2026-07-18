@@ -118,7 +118,9 @@ from .rbac import (
     validate_admin_personas_scope_conflict,
     validate_rbac_matrix_diagnostics,
     validate_role_references_against_enum,
+    validate_scope_personas_declared,
     validate_scope_predicates,
+    validate_stable_persona_ids_for_demo,
     validate_visibility_bool_field_scope_coverage,
 )
 from .surfaces import (
@@ -226,7 +228,9 @@ __all__ = [
     "validate_process_step_service_refs",
     "validate_rbac_matrix_diagnostics",
     "validate_role_references_against_enum",
+    "validate_scope_personas_declared",
     "validate_scope_predicates",
+    "validate_stable_persona_ids_for_demo",
     "validate_sensitive_fields",
     "validate_services",
     "validate_slas",

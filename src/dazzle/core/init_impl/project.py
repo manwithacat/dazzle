@@ -11,6 +11,8 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from dazzle._version import get_version
+
 from ..llm_context import create_llm_instrumentation
 from .spec import create_spec_template, create_specs_scaffold
 from .templates import copy_template
@@ -18,6 +20,16 @@ from .validation import InitError, sanitize_name
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+def _installed_framework_minor() -> str:
+    """Major.minor of the installed dazzle package for init pin (#1630)."""
+    try:
+        ver = get_version()
+        parts = ver.split(".")
+        return f"{parts[0]}.{parts[1]}" if len(parts) >= 2 else ver
+    except Exception:  # noqa: BLE001 — init must not fail on version probe
+        return "0.106"
 
 
 _GITIGNORE_TEMPLATE = """# Python
@@ -178,10 +190,13 @@ def init_project(
     log(f"  Project title: {title}")
 
     # Prepare template variables
+    # framework_minor pins serve policy to installed major.minor (#1630 / G7)
+    framework_minor = _installed_framework_minor()
     variables = {
         "project_name": project_name,
         "module_name": module_name,
         "project_title": title,
+        "framework_minor": framework_minor,
     }
 
     # Determine source directory
