@@ -2339,16 +2339,8 @@ async def _workspace_handler(
 
     # Phase 4 app-shell migration (v0.67.44): the workspace page
     # renders unconditionally through the typed-Fragment substrate.
-    # The `fragment_chrome` flag is no longer consulted; the typed
-    # AppShell primitive provides the sidebar / topbar / body chrome.
-    #
-    # Known regression accepted per the Phase 4 plan: persona
-    # affordances that lived in the legacy Jinja navbar
-    # (`user_email`, `user_name`, `user_preferences`) are not yet
-    # surfaced in the typed AppShell. They can be re-added as typed
-    # primitives once the persona-dropdown design lands. This is an
-    # explicit "adapt to the new system" trade-off, not a parity gap.
-    _ = (user_email, user_name, user_preferences, is_authenticated)
+    # Account chrome (identity + Home + logout) is threaded via
+    # PageContext → ``build_app_chrome_page`` topbar trailing.
 
     from dazzle.page.runtime.workspace_renderer import (
         render_workspace_content_typed,
@@ -2406,6 +2398,11 @@ async def _workspace_handler(
         # tenant_config when the app has no tenancy / no tenant state.
         user_roles=list(user_roles),
         tenant_config=getattr(getattr(request, "state", None), "tenant_config", {}) or {},
+        # Account chrome (topbar trailing): who is signed in + logout.
+        is_authenticated=is_authenticated,
+        user_email=user_email,
+        user_name=user_name,
+        user_preferences=user_preferences,
     )
     _assets = _resolve_chrome_assets(request.app.state)
     html = dispatch_render_page(

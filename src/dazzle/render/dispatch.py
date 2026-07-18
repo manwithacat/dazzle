@@ -35,9 +35,11 @@ from dazzle.core.renderer_registry import default_renderer_names
 from dazzle.render.fragment import (
     URL,
     AppShell,
+    Link,
     NavGroup,
     NavItem,
     Page,
+    Row,
     Sidebar,
     Text,
     Topbar,
@@ -340,6 +342,57 @@ def _build_sidebar_from_ctx(ctx: PageContext) -> Sidebar:
     )
 
 
+def _build_account_trailing(ctx: PageContext) -> object | None:
+    """Session identity + home + logout for the app-shell topbar.
+
+    Phase 4 dropped persona affordances from the typed AppShell; every
+    example app then lacked "who am I / log out / home". Compose from
+    existing primitives (Link, Text, Row) + a small logout form
+    (POST /auth/logout) matching e2e locator
+    ``[data-dazzle-auth-action="logout"]``.
+    """
+    authenticated = bool(getattr(ctx, "is_authenticated", False))
+    email = (getattr(ctx, "user_email", "") or "").strip()
+    name = (getattr(ctx, "user_name", "") or "").strip()
+    if not authenticated and not email and not name:
+        return None
+
+    app_prefix = (getattr(ctx, "app_prefix", None) or "/app").rstrip("/") or "/app"
+    roles = list(getattr(ctx, "user_roles", None) or [])
+    # Prefer email (stable identity); fall back to username. Role labels
+    # (stripped of role_ prefix) are secondary so the user always sees
+    # *who* is signed in, not only which persona role.
+    display = email or name or "Signed in"
+    role_bits = [r.removeprefix("role_") for r in roles[:2] if r]
+    # Avoid "manager · manager" when username == role name.
+    if role_bits and not (len(role_bits) == 1 and role_bits[0].lower() == display.lower()):
+        identity = f"{display} · {', '.join(role_bits)}"
+    else:
+        identity = display
+
+    # Logout form: browser POST gets 303 → / (or IdP SLO). data-testid for
+    # simple_task e2e; data-dazzle-auth-action for tier2 playwright locators.
+    logout_html = (
+        '<form method="post" action="/auth/logout" class="dz-account-logout">'
+        '<button type="submit" class="dz-link" data-dazzle-auth-action="logout" '
+        'data-testid="logout" data-dazzle-action="logout">'
+        "Log out</button></form>"
+    )
+
+    return Row(
+        children=(
+            Link(label="Home", href=URL(app_prefix), data_action="nav.home"),
+            Text(
+                body=identity,
+                tone="muted",
+            ),
+            RawHTML(logout_html),
+        ),
+        gap="md",
+        align="center",
+    )
+
+
 def build_app_chrome_page(
     ctx: PageContext,
     inner_html: str,
@@ -370,7 +423,12 @@ def build_app_chrome_page(
     app_name = (ctx.app_name or "Dazzle").strip()
     title = f"{page_title} — {app_name}" if page_title else app_name
     sidebar = _build_sidebar_from_ctx(ctx)
-    topbar = Topbar(title=app_name, show_sidebar_toggle=True)
+    trailing = _build_account_trailing(ctx)
+    topbar = Topbar(
+        title=app_name,
+        show_sidebar_toggle=True,
+        trailing=trailing,
+    )
     # Phase 4 app-shell migration (v0.67.44): thread the contract
     # `data-dazzle-view` / `data-dz-surface` / `data-dz-workspace`
     # attrs from PageContext into the typed AppShell so the same

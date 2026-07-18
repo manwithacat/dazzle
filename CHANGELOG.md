@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Fixed
+- **App shell: no signed-in identity / logout / Home** — Phase 4 typed
+  AppShell dropped persona affordances from the topbar. Topbar trailing now
+  shows email · role, Home → `/app`, and Log out (POST `/auth/logout`) on
+  every chromed page when authenticated. Workspace routes thread
+  `is_authenticated` / `user_email` / `user_name` into PageContext.
 - **Demo User.role `role_staff` 422 on admin User detail** — persona default_role
   no longer forces legacy `role_*` values when User.role is a business enum
   (customer|agent|manager). Blueprint generator clamps; support_tickets and
