@@ -100,7 +100,7 @@
           },
           {
             "field_name": "ticket_number",
-            "strategy": "static_list",
+            "strategy": "sequential",
             "params": {
               "values": [
                 "TKT-0001",

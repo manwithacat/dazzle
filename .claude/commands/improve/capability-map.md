@@ -79,8 +79,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 777 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 777 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 777 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 778 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 778 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 779 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 779 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 
 
@@ -98,6 +98,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 779 (2026-07-18).** **consumer-issues / owner_bug #1624** Tier-1 fix: STATIC_LIST without-replacement within generate_entity; support_tickets ticket_number strategy sequential. Unit test + regenerate 20 unique TKTs. Explore **87/100** (budget 0 for triage-fix? implemented → 1). Stamps inbox/codeql @779.
 
 > **Cycle 778 (2026-07-18).** STALE-effective `dazzle qa trial`@758 lag20. Ran support_tickets `sla_waiver_already_signed` --fresh-db --llm-driver grok-cli: functional signing **pass**, agent praise (already-signed + Download CTA); seed 3× ticket_number conflict → **FILED #1624** (TR-48 seen=3). Stamps @778. Explore **87/100**.
 

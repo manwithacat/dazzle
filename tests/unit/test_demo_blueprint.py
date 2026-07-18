@@ -474,6 +474,37 @@ class TestBlueprintDataGenerator:
         # 6 rows over 3 values: deterministic round-robin, two of each.
         assert buckets == ["a", "b", "c", "a", "b", "c"]
 
+    def test_static_list_without_replacement_within_entity_batch(self):
+        """STATIC_LIST random_pick draws without replacement within one
+        generate_entity pass so unique business keys do not collide when
+        len(values) >= row_count (#1624 / TR-48)."""
+        values = [f"TKT-{i:04d}" for i in range(1, 21)]  # 20 values
+        blueprint = DemoDataBlueprint(
+            project_id="test",
+            domain_description="Test",
+            seed=42,
+            entities=[
+                EntityBlueprint(
+                    name="Ticket",
+                    row_count_default=20,
+                    field_patterns=[
+                        FieldPattern(field_name="id", strategy=FieldStrategy.UUID_GENERATE),
+                        FieldPattern(
+                            field_name="ticket_number",
+                            strategy=FieldStrategy.STATIC_LIST,
+                            params={"values": values, "random_pick": True},
+                        ),
+                    ],
+                ),
+            ],
+        )
+        generator = BlueprintDataGenerator(blueprint, seed=42)
+        rows = generator.generate_entity(blueprint.entities[0])
+        nums = [r["ticket_number"] for r in rows]
+        assert len(nums) == 20
+        assert len(set(nums)) == 20, f"expected unique ticket_numbers, got dups in {nums}"
+        assert set(nums) == set(values)
+
     def test_sequential_strategy_empty_values_falls_back(self):
         """SEQUENTIAL with no `values` returns the safe default, no crash."""
         generator = BlueprintDataGenerator(
