@@ -75,6 +75,15 @@ class TestFallback:
         out = realistic_str("description", max_length=20)
         assert len(out) <= 20
 
+    def test_color_fields_emit_hex(self) -> None:
+        """Brand primary_color etc. are str(7) — free text fails Pydantic
+        validation on workspace metric aggregation (design_studio)."""
+        for name in ("primary_color", "secondary_color", "accent_color", "hex_color"):
+            out = realistic_str(name, index=0, max_length=7)
+            assert out.startswith("#"), f"{name}={out!r}"
+            assert len(out) == 7
+            assert all(c in "0123456789abcdefABCDEF#" for c in out)
+
 
 class TestRealisticEmail:
     def test_domain_is_entity_scoped(self) -> None:

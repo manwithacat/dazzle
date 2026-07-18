@@ -98,6 +98,30 @@ def _safe_free_text(field_name: str, index: int, *, nb_words: int = 4) -> str:
     return _example_fallback(field_name, index)
 
 
+# CSS hex palette for color-picker / brand-token fields (str(7) etc.).
+_HEX_COLORS = (
+    "#1a73e8",
+    "#0f9d58",
+    "#ea4335",
+    "#fbbc04",
+    "#5f6368",
+    "#202124",
+    "#334155",
+    "#7c3aed",
+)
+
+
+def _looks_like_color_field(field_name: str) -> bool:
+    lname = field_name.lower()
+    return (
+        lname.endswith("_color")
+        or lname.endswith("_colour")
+        or lname in ("color", "colour", "hex", "hex_color", "bg", "fg")
+        or "hex_color" in lname
+        or lname.startswith("color_")
+    )
+
+
 def realistic_str(
     field_name: str,
     index: int = 0,
@@ -117,6 +141,15 @@ def realistic_str(
     strings — the key word "Example" signals demo-ness without looking
     like a placeholder a developer forgot to replace.
     """
+    # Color / hex fields must stay within str(7) (#RRGGBB). Faker free text
+    # produces multi-word strings that fail Brand.primary_color validation
+    # on design_studio (cycle 787 managed serve / workspace metrics).
+    if _looks_like_color_field(field_name):
+        value = _HEX_COLORS[index % len(_HEX_COLORS)]
+        if max_length is not None and len(value) > max_length:
+            value = value[:max_length]
+        return value
+
     if _faker is not None:
         method = _lookup_faker_method(field_name)
         if method == "name":

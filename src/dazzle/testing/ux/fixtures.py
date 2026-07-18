@@ -107,7 +107,14 @@ def _generate_field_value(field_name: str, field_type: str, entity_name: str, in
         return realistic_email(entity_name, index)
 
     if "str" in t or "text" in t:
-        return realistic_str(field_name, index)
+        # Honour DSL length ceilings (e.g. str(7) for #RRGGBB colors).
+        max_length: int | None = None
+        if "(" in field_type and ")" in field_type:
+            try:
+                max_length = int(field_type[field_type.index("(") + 1 : field_type.index(")")])
+            except ValueError:
+                max_length = None
+        return realistic_str(field_name, index, max_length=max_length)
     if t == "email":
         return realistic_email(entity_name, index)
     if "int" in t or "decimal" in t or "float" in t:
