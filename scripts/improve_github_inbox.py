@@ -68,6 +68,18 @@ BUG_LABELS = frozenset(
     }
 )
 
+# Multi-week epics / bake-off trackers often say "fail" in the title without
+# being instant Tier-1 bugs. Keep them out of owner_bug heat so /improve can
+# self-audit and other lanes while the epic stays open for partial work.
+UMBRELLA_LABELS = frozenset(
+    {
+        "tracking",
+        "epic",
+        "umbrella",
+        "multi-week",
+    }
+)
+
 BUG_TITLE_RE = re.compile(
     r"(?i)\b(bugs?|crashes?|fails?|failed|broken|errors?|exceptions?|"
     r"regress(?:ion|ed|es)?|tracebacks?|panics?|cve)\b",
@@ -129,9 +141,27 @@ def is_consumer_author(login: str, owner_login: str) -> bool:
 
 
 def is_bug_shaped(title: str, labels: list[str]) -> bool:
+    """True when the issue should claim an improve cycle as a bug.
+
+    Label ``bug`` / ``regression`` / etc. always win. Title keywords (fail,
+    crash, …) also match — **except** for umbrella/tracking enhancement epics
+    (e.g. #1626 antagonist bake-off) that must not starve self-audit forever
+    once their P0 work is partial/complete.
+    """
     lab = {x.lower() for x in labels}
     if lab & BUG_LABELS:
         return True
+    # Tracking + enhancement (no bug label): product epic, not inbox heat.
+    if (lab & UMBRELLA_LABELS) and "enhancement" in lab:
+        return False
+    if lab & UMBRELLA_LABELS and not (lab & {"regression", "crash", "security", "blocker"}):
+        # Bare tracking without enhancement still suppresses title-only "fail"
+        # unless a real bug-class label is present (already handled above).
+        if not BUG_TITLE_RE.search(title or ""):
+            return False
+        # Title says fail/broken but labels say tracking-only → treat as epic.
+        if "enhancement" in lab or "tracking" in lab:
+            return False
     if BUG_TITLE_RE.search(title or ""):
         return True
     return False

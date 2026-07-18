@@ -52,6 +52,33 @@ def test_dependabot_detect(inbox):
     assert not inbox.is_dependabot("some-human")
 
 
+def test_tracking_enhancement_epic_not_bug_shaped(inbox):
+    """#1626-class antagonist epics must not claim owner_bug heat forever."""
+    title = (
+        "Antagonist review: example apps fail commercial bake-off "
+        "(fleet mean 2.8/10) — P0 demo-fleet UX"
+    )
+    labels = [
+        "enhancement",
+        "needs-triage",
+        "needs-ai-assistance",
+        "tracking",
+        "ux-architect",
+    ]
+    assert not inbox.is_bug_shaped(title, labels)
+
+
+def test_tracking_epic_still_bug_if_bug_label(inbox):
+    assert inbox.is_bug_shaped(
+        "Antagonist review fails bake-off",
+        ["tracking", "enhancement", "bug"],
+    )
+
+
+def test_plain_fail_title_still_bug_shaped(inbox):
+    assert inbox.is_bug_shaped("serve fails on empty workspace", ["needs-triage"])
+
+
 def test_summarize_checks_ready(inbox):
     rollup = [
         {"name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS"},
