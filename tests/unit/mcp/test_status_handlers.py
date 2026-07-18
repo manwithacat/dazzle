@@ -189,7 +189,9 @@ class TestGetMcpStatusHandler:
 class TestNewSinceLastCheck:
     """Tests for new_since_last_check in status(mcp) response."""
 
-    def _call_with_changelog(self, temp_project, changelog_text, last_seen=None):
+    def _call_with_changelog(
+        self, temp_project, changelog_text, last_seen=None, *, include_changelog=False
+    ):
         """Helper: call status handler with a fake changelog and optional last_seen."""
         import dazzle.core.changelog as _cl
 
@@ -201,13 +203,16 @@ class TestNewSinceLastCheck:
             dazzle_dir.mkdir(exist_ok=True)
             (dazzle_dir / "last_seen_version").write_text(last_seen)
 
+        args = {
+            "_resolved_project_path": temp_project,
+            "include_changelog": include_changelog,
+        }
         with patch.object(_cl, "get_changelog_path", return_value=tmp_changelog):
-            result = get_mcp_status_handler({"_resolved_project_path": temp_project})
+            result = get_mcp_status_handler(args)
         return json.loads(result)
 
-    def test_first_run_includes_new_items(self, temp_project) -> None:
-        """First run (no last_seen_version file) should include new items."""
-        # Use the actual framework version from the handler
+    def test_first_run_compact_by_default(self, temp_project) -> None:
+        """First run: compact new_since_last_check by default (#1629 G6)."""
         from dazzle._version import get_version
 
         ver = get_version()
@@ -215,12 +220,25 @@ class TestNewSinceLastCheck:
         data = self._call_with_changelog(temp_project, sample)
 
         assert "new_since_last_check" in data
-        assert isinstance(data["new_since_last_check"], list)
-        assert len(data["new_since_last_check"]) > 0
+        nslc = data["new_since_last_check"]
+        assert isinstance(nslc, dict)
+        assert "count" in nslc and "hint" in nslc
+        assert nslc["count"] > 0
         assert data["last_seen_version"] is None
 
-    def test_same_version_returns_empty_list(self, temp_project) -> None:
-        """When last_seen == current, new_since_last_check should be empty."""
+    def test_first_run_full_changelog_opt_in(self, temp_project) -> None:
+        """include_changelog=true returns full list of new items."""
+        from dazzle._version import get_version
+
+        ver = get_version()
+        sample = f"## [{ver}] - 2026-01-01\n\n### Added\n- **Cool feature** — does things\n"
+        data = self._call_with_changelog(temp_project, sample, include_changelog=True)
+
+        assert isinstance(data["new_since_last_check"], list)
+        assert len(data["new_since_last_check"]) > 0
+
+    def test_same_version_returns_compact_zero(self, temp_project) -> None:
+        """When last_seen == current, compact count is 0 (#1629 G6)."""
         from dazzle._version import get_version
 
         ver = get_version()
@@ -228,8 +246,21 @@ class TestNewSinceLastCheck:
         data = self._call_with_changelog(temp_project, sample, last_seen=ver)
 
         assert "new_since_last_check" in data
-        assert data["new_since_last_check"] == []
+        nslc = data["new_since_last_check"]
+        assert isinstance(nslc, dict)
+        assert nslc["count"] == 0
         assert data["last_seen_version"] == ver
+
+    def test_same_version_full_list_empty(self, temp_project) -> None:
+        """include_changelog=true + same version → empty list."""
+        from dazzle._version import get_version
+
+        ver = get_version()
+        sample = f"## [{ver}]\n### Added\n- Feature\n"
+        data = self._call_with_changelog(
+            temp_project, sample, last_seen=ver, include_changelog=True
+        )
+        assert data["new_since_last_check"] == []
 
     def test_version_file_written_after_check(self, temp_project) -> None:
         """After status(mcp), last_seen_version file should contain current version."""
