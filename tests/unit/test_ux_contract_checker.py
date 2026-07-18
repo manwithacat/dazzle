@@ -176,6 +176,38 @@ class TestCheckWorkspace:
         assert result.status == "failed"
         assert "not_declared" in result.error
 
+    def test_passes_dual_pane_master_detail_region_pair(self) -> None:
+        """dual_pane master-detail shell stamps list+detail as one
+        data-card-region and data-dz-master-detail-* attrs — both region
+        names must satisfy the workspace contract (contact_manager shape)."""
+        md_html = """
+        <div id="card-master-detail-md-0"
+             data-card-id="md-0"
+             data-card-region="contact_list+contact_detail"
+             data-card-col-span="12">
+          <div class="dz-master-detail" data-dz-master-detail
+               data-dz-master-detail-list="contact_list"
+               data-dz-master-detail-detail="contact_detail">
+            <div data-dz-master-detail-list-body="true"></div>
+            <div data-dz-master-detail-detail-body="true"></div>
+          </div>
+        </div>
+        <div data-card-region="contact_search"></div>
+        <div data-card-region="favourites_queue"></div>
+        """
+        contract = WorkspaceContract(
+            workspace="contacts",
+            regions=[
+                "contact_search",
+                "favourites_queue",
+                "contact_list",
+                "contact_detail",
+            ],
+            fold_count=4,
+        )
+        result = check_contract(contract, md_html)
+        assert result.status == "passed", result.error
+
 
 class TestCheckRBAC:
     def test_passes_when_expected_present_and_found(self) -> None:

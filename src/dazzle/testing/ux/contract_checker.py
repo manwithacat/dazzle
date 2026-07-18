@@ -541,9 +541,25 @@ def _check_workspace(
     #      Closes the false-positive originally reported in #803.
     found_regions: set[str] = set()
     for _tag_name, attrs in tags:
+        # Classic / dashboard SSR markers.
         region = attrs.get("data-dz-region-name") or attrs.get("data-card-region")
         if region:
-            found_regions.add(region)
+            # dual_pane master-detail shell uses a single card whose
+            # data-card-region is "list+detail" (see dual_pane_master_detail
+            # render_master_detail_shell). Split so both region names count.
+            for part in str(region).split("+"):
+                part = part.strip()
+                if part:
+                    found_regions.add(part)
+        # Master-detail composite also stamps the pair explicitly (#1624-adjacent
+        # contract false-positive on contact_manager contacts workspace).
+        for key in (
+            "data-dz-master-detail-list",
+            "data-dz-master-detail-detail",
+        ):
+            md = attrs.get(key)
+            if md:
+                found_regions.add(str(md))
 
     if html:
         layout = _extract_workspace_layout(html)
@@ -552,7 +568,10 @@ def _check_workspace(
                 if isinstance(card, dict):
                     region = card.get("region")
                     if isinstance(region, str):
-                        found_regions.add(region)
+                        for part in region.split("+"):
+                            part = part.strip()
+                            if part:
+                                found_regions.add(part)
 
     for region in contract.regions:
         if region not in found_regions:
