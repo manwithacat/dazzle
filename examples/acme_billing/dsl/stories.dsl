@@ -6,7 +6,7 @@ module acme_billing.stories
 
 story ST-001 "Org owner manages projects within their organization":
   status: accepted
-  narrative_only: true
+  executed_by: surface.project_create
   persona: org_owner
   trigger: form_submitted
   entities: [Project, Organization]
@@ -25,7 +25,7 @@ story ST-001 "Org owner manages projects within their organization":
 
 story ST-002 "Auditor reviews invoices but cannot modify them":
   status: accepted
-  narrative_only: true
+  executed_by: surface.invoice_list
   persona: auditor
   trigger: user_click
   entities: [Invoice, Project]
@@ -43,7 +43,7 @@ story ST-002 "Auditor reviews invoices but cannot modify them":
 
 story ST-003 "Project member sees only their assigned projects":
   status: accepted
-  narrative_only: true
+  executed_by: surface.project_list
   persona: project_member
   trigger: user_click
   entities: [Project, Membership]
@@ -62,7 +62,7 @@ story ST-003 "Project member sees only their assigned projects":
 
 story ST-004 "External contractor views non-sensitive invoices within their organization":
   status: accepted
-  narrative_only: true
+  executed_by: surface.invoice_list
   persona: external_contractor
   trigger: user_click
   entities: [Invoice]

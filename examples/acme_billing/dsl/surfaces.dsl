@@ -393,3 +393,31 @@ workspace invoices_home "Invoices":
     display: list
     sort: name asc
     empty: "No projects found"
+
+# Fourth product workspace (WI density D): team membership desk separate from
+# org portfolio / projects / invoices — lowers list:workspace ratio.
+workspace team_home "Team":
+  purpose: "Team desk — who has access to which projects"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor)
+
+  membership_pulse:
+    source: Membership
+    display: metrics
+    aggregate:
+      memberships: count(Membership)
+      projects: count(Project)
+      people: count(User)
+    tones:
+      memberships: accent
+
+  roster:
+    source: Membership
+    display: list
+    empty: "No memberships yet"
+
+  people:
+    source: User
+    display: list
+    sort: name asc
+    empty: "No users found"
