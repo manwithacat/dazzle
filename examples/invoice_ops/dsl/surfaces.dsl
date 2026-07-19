@@ -854,3 +854,59 @@ workspace line_items_desk "Line Items":
     aggregate:
       count: count(Invoice)
     empty: "No invoices to chart"
+
+# Tenth product desk (WI D): 7 lists floor dens ~0.44 with 9 full desks — need 10.
+workspace disputed_ops "Disputes":
+  purpose: "Dispute resolution desk — open disputes, payment attempts, and settlement trail"
+  access: persona(finance, finance_admin, auditor)
+
+  dispute_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      disputed: count(Invoice where status = disputed)
+      approved: count(Invoice where status = approved)
+      paid: count(Invoice where status = paid)
+      attempts: count(PaymentAttempt)
+    tones:
+      disputed: destructive
+      paid: positive
+      approved: accent
+
+  # WI D: queue family — disputed invoices first
+  disputed_queue:
+    source: Invoice
+    filter: status = disputed
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "No open disputes"
+
+  # WI D: kanban family — dispute / settle pipeline
+  dispute_board:
+    source: Invoice
+    filter: status = disputed or status = approved or status = paid
+    display: kanban
+    group_by: status
+    sort: amount desc
+    action: invoice_detail
+    empty: "No invoices in dispute pipeline"
+
+  # WI D: context family — payment attempt trail
+  attempt_trail:
+    source: PaymentAttempt
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No payment attempts yet"
+
+  # WI D: chart family — dispute vs paid mix
+  status_mix:
+    source: Invoice
+    filter: status = disputed or status = paid or status = rejected
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices to chart"

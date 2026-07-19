@@ -61,6 +61,7 @@ nav finance_nav:
   group "Settle":
     pay_desk
     payments_trail
+    disputed_ops
     suppliers_desk
     finance_ops
     line_items_desk
@@ -71,6 +72,7 @@ nav auditor_nav:
     finance_ops
     team_desk
     payments_trail
+    disputed_ops
     line_items_desk
 
 nav tenant_admin_nav:
@@ -87,6 +89,7 @@ nav finance_admin_nav:
     approval_desk
     audit_review
     payments_trail
+    disputed_ops
     suppliers_desk
     team_desk
     line_items_desk

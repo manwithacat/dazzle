@@ -83,6 +83,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   chart.
 - **Line Items** — composition desk: line metrics, line grid, draft/submitted
   invoice queue, invoice trail, and status mix chart.
+- **Disputes** — finance/auditor dispute desk: dispute metrics, disputed queue,
+  settle pipeline board, payment-attempt trail, and status mix chart.
 
 Each queue row opens the invoice hub, so triage and action stay on the job
 surface rather than a flat entity list.
@@ -155,4 +157,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:f7bcdde01eb755ec031d46a0552023f1d3cbb81ae96ff4dc2f645536c131f367 -->
+<!-- dazzle-spec-brief: sha256:7627e91d2779f3a076d74d75cb2b5a9bce016523b27b87c470af3314c2200b87 -->
