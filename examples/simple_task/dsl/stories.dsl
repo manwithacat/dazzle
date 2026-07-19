@@ -114,6 +114,8 @@ story ST-015 "Team Manager views all tasks for team":
     - "Row open hops to the assignee overview (User via assigned_to)"
 
 story ST-016 "Team Manager views unassigned tasks":
+  status: accepted
+  executed_by: surface.task_list
   persona: manager
   trigger: user_click
   entities: [Task]
@@ -137,6 +139,8 @@ story ST-017 "Team Manager assigns a task to a Team Member":
     - "Team Member sees the new Task in their my_work view"
 
 story ST-018 "Team Manager reviews tasks awaiting review":
+  status: accepted
+  executed_by: surface.task_list
   persona: manager
   trigger: user_click
   entities: [Task]
@@ -148,6 +152,8 @@ story ST-018 "Team Manager reviews tasks awaiting review":
     - "Team Manager can approve a Task to done or send it back to in_progress"
 
 story ST-019 "Team Member updates own task status":
+  status: accepted
+  executed_by: surface.task_edit
   persona: member
   trigger: status_changed
   entities: [Task]

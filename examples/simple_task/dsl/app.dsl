@@ -749,3 +749,34 @@ workspace my_work "My Work":
     limit: 5
     display: list
     empty: "No completed tasks yet"
+
+# Fourth product workspace (WI density D): discussion desk so list surfaces
+# no longer dominate vs job shells (comments as collaboration, not CRUD dump).
+workspace comments_desk "Discussion":
+  purpose: "Recent task discussion across the team"
+  access: persona(admin, manager, member)
+
+  comment_pulse:
+    source: TaskComment
+    display: metrics
+    aggregate:
+      comments: count(TaskComment)
+      tasks: count(Task)
+    tones:
+      comments: accent
+
+  recent:
+    source: TaskComment
+    sort: created_at desc
+    limit: 25
+    display: queue
+    empty: "No comments yet"
+
+  active_tasks:
+    source: Task
+    filter: status = in_progress
+    sort: priority desc
+    limit: 15
+    display: list
+    action: task_detail
+    empty: "No tasks in progress"
