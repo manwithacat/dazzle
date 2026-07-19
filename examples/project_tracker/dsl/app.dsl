@@ -320,9 +320,10 @@ workspace project_board "Project Board":
     action: task_edit
     empty: "Every open task has an assignee"
 
+  # WI D: context family for schedule (not list pad)
   milestones:
     source: Milestone
-    display: list
+    display: timeline
     sort: start_date asc
 
 # Product maturity: more job desks vs 8 list surfaces (was density 0.80).
@@ -356,11 +357,12 @@ workspace my_tasks "My Tasks":
     group_by: status
     sort: priority desc
 
+  # WI D: context family for discussion pulse
   recent_discussion:
     source: Comment
     sort: created_at desc
     limit: 10
-    display: list
+    display: timeline
     empty: "No recent comments"
 
 workspace milestone_plan "Milestone Plan":
@@ -391,6 +393,15 @@ workspace milestone_plan "Milestone Plan":
     sort: updated_at desc
     display: grid
 
+  # WI D: chart family — milestone status mix
+  milestone_mix:
+    source: Milestone
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Milestone)
+    empty: "No milestones"
+
 # Fifth product workspace (WI density D): discussion desk vs bare comment list.
 workspace discussion_desk "Discussion":
   purpose: "Cross-task discussion pulse and recent comments"
@@ -405,19 +416,21 @@ workspace discussion_desk "Discussion":
     tones:
       comments: accent
 
+  # WI D: timeline of comments (context family)
   recent:
     source: Comment
     sort: created_at desc
     limit: 25
-    display: queue
+    display: timeline
     empty: "No comments yet"
 
+  # WI D: grid family for open task cards
   open_tasks:
     source: Task
     filter: status != done
     sort: priority desc
     limit: 15
-    display: list
+    display: grid
     action: task_detail
     empty: "No open tasks"
 
@@ -436,19 +449,21 @@ workspace files_desk "Files":
     tones:
       files: accent
 
+  # WI D: grid family for file cards
   recent_files:
     source: Attachment
     sort: created_at desc
     limit: 25
-    display: queue
+    display: grid
     empty: "No attachments yet"
 
+  # WI D: context family for linked open work
   open_tasks:
     source: Task
     filter: status != done
     sort: updated_at desc
     limit: 15
-    display: list
+    display: timeline
     action: task_detail
     empty: "No open tasks"
 
