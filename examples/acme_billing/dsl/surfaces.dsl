@@ -307,21 +307,26 @@ workspace billing "Acme Billing":
     display: queue
     empty: "No invoices found"
 
+  # WI D: grid + chart families (not three list pads)
   organizations:
     source: Organization
-    display: list
+    display: grid
     sort: name asc
     empty: "No organizations found"
 
   projects:
     source: Project
-    display: list
+    display: kanban
+    group_by: name
     sort: name asc
     empty: "No projects found"
 
-  memberships:
+  membership_mix:
     source: Membership
-    display: list
+    display: bar_chart
+    group_by: role
+    aggregate:
+      count: count(Membership)
     empty: "No memberships found"
 
 # Product landing for scoped workers (product maturity: not warehouse-only).
@@ -342,7 +347,7 @@ workspace my_work "My Work":
 
   assigned_projects:
     source: Project
-    display: list
+    display: grid
     sort: name asc
     empty: "No projects assigned to you yet"
 
@@ -353,9 +358,10 @@ workspace my_work "My Work":
     limit: 15
     empty: "No invoices in your scope"
 
+  # WI D: timeline context for team membership
   team_context:
     source: Membership
-    display: list
+    display: timeline
     empty: "No memberships in your scope"
 
 # Second product workspace lowers warehouse density and gives owners a
@@ -376,7 +382,8 @@ workspace projects_home "Projects":
 
   project_queue:
     source: Project
-    display: list
+    display: kanban
+    group_by: name
     sort: name asc
     empty: "No projects found"
 
@@ -385,6 +392,15 @@ workspace projects_home "Projects":
     display: queue
     sort: created_at desc
     limit: 10
+    empty: "No invoices yet"
+
+  # WI D: chart family for project invoice load
+  invoice_by_project:
+    source: Invoice
+    display: bar_chart
+    group_by: project
+    aggregate:
+      count: count(Invoice)
     empty: "No invoices yet"
 
 # Third product workspace (WI density D): invoice-first job desk so entity
@@ -412,9 +428,17 @@ workspace invoices_home "Invoices":
     limit: 20
     empty: "No open invoices"
 
+  # WI D: timeline of open bills (context family)
+  bill_timeline:
+    source: Invoice
+    display: timeline
+    sort: created_at desc
+    limit: 15
+    empty: "No open invoices"
+
   projects_context:
     source: Project
-    display: list
+    display: grid
     sort: name asc
     empty: "No projects found"
 
@@ -437,11 +461,20 @@ workspace team_home "Team":
 
   roster:
     source: Membership
-    display: list
+    display: queue
     empty: "No memberships yet"
 
   people:
     source: User
-    display: list
+    display: grid
     sort: name asc
     empty: "No users found"
+
+  # WI D: chart of membership load
+  membership_chart:
+    source: Membership
+    display: bar_chart
+    group_by: role
+    aggregate:
+      count: count(Membership)
+    empty: "No memberships yet"
