@@ -118,10 +118,34 @@ surface payment_attempt_list "Payment Attempts":
 surface tenant_list "Tenants":
   uses entity Tenant
   mode: list
+  open: Tenant via id
   section main:
     field name "Name"
     field region "Region"
     field status "Status"
+  ux:
+    purpose: "Tenant roster — open a row for the tenant hub"
+
+surface tenant_detail "Tenant":
+  uses entity Tenant
+  mode: view
+  section identity "Identity":
+    field name "Name"
+    field slug "Slug"
+  section ops "Ops":
+    layout: strip
+    field region "Region"
+    field status "Status"
+  related people "Users":
+    display: table
+    show: User
+    columns: name, email
+  related suppliers "Suppliers":
+    display: table
+    show: Supplier
+    columns: name, region, contact_email
+  ux:
+    purpose: "Tenant hub — identity, users, and suppliers"
 
 # =============================================================================
 # USER SURFACES
@@ -130,10 +154,29 @@ surface tenant_list "Tenants":
 surface user_list "Users":
   uses entity User
   mode: list
+  open: User via id
   section main:
     field email "Email"
     field name "Name"
     field tenant_id "Tenant"
+  ux:
+    purpose: "Team roster — open a row for the person hub"
+
+surface user_detail "User":
+  uses entity User
+  mode: view
+  section identity "Identity":
+    field name "Name"
+    field email "Email"
+  section tenant_link "Tenant":
+    layout: strip
+    field tenant_id "Tenant"
+  related invoices_raised "Invoices raised":
+    display: table
+    show: Invoice
+    columns: invoice_number, amount, status
+  ux:
+    purpose: "Person hub — identity and invoices they submitted"
 
 # =============================================================================
 # LINE ITEM SURFACES
@@ -190,10 +233,13 @@ surface supplier_edit "Edit Supplier":
 surface supplier_bank_account_list "Supplier Bank Accounts":
   uses entity SupplierBankAccount
   mode: list
+  open: Supplier via supplier
   section main:
     field supplier "Supplier"
     field bank_account_ref "Bank Ref"
     field account_name "Account Name"
+  ux:
+    purpose: "Bank refs — open a row for the parent supplier hub"
 
 surface supplier_bank_account_edit "Edit Supplier Bank Account":
   uses entity SupplierBankAccount
@@ -451,3 +497,81 @@ workspace audit_review "Audit Review":
     display: queue
     action: invoice_detail
     empty: "No paid invoices yet"
+
+
+# Sixth product workspace (WI density D): supplier / vendor desk so list shells
+# no longer dominate vs job workspaces (vendors + bank refs, not bare CRUD).
+workspace suppliers_desk "Suppliers":
+  purpose: "Vendor desk — supplier roster, bank refs, and recent invoices"
+  access: persona(finance, tenant_admin, finance_admin, approver)
+
+  vendor_pulse:
+    source: Supplier
+    display: metrics
+    aggregate:
+      suppliers: count(Supplier)
+      bank_accounts: count(SupplierBankAccount)
+      invoices: count(Invoice)
+    tones:
+      suppliers: accent
+
+  roster:
+    source: Supplier
+    display: list
+    sort: name asc
+    limit: 25
+    action: supplier_detail
+    empty: "No suppliers yet"
+
+  bank_refs:
+    source: SupplierBankAccount
+    display: list
+    limit: 20
+    empty: "No bank accounts on file"
+
+  recent_invoices:
+    source: Invoice
+    sort: updated_at desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "No invoices yet"
+
+
+# Seventh product workspace (WI density D): tenant admin people desk.
+workspace team_desk "Team":
+  purpose: "Tenant admin desk — people and tenant context"
+  access: persona(tenant_admin, finance_admin, auditor)
+
+  team_pulse:
+    source: User
+    display: metrics
+    aggregate:
+      people: count(User)
+      suppliers: count(Supplier)
+      tenants: count(Tenant)
+    tones:
+      people: accent
+
+  people:
+    source: User
+    display: list
+    sort: name asc
+    limit: 25
+    action: user_detail
+    empty: "No users yet"
+
+  suppliers:
+    source: Supplier
+    display: list
+    sort: name asc
+    limit: 15
+    action: supplier_detail
+    empty: "No suppliers"
+
+  tenants:
+    source: Tenant
+    display: list
+    limit: 10
+    action: tenant_detail
+    empty: "No tenants"
