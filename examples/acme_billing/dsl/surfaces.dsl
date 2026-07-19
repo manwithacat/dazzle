@@ -59,12 +59,16 @@ surface user_list "Users":
   uses entity User
   mode: list
   render: fragment
+  open: User via id
 
   section main "Users":
     field email "Email"
     field name "Name"
     field org "Organization"
     field created_at "Created"
+
+  ux:
+    purpose: "Browse users — open a row for the user hub"
 
 surface user_detail "User":
   uses entity User
@@ -364,6 +368,15 @@ workspace my_work "My Work":
     display: timeline
     empty: "No memberships in your scope"
 
+  # WI D: chart family — invoice load in my scope
+  my_invoice_mix:
+    source: Invoice
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices in your scope"
+
 # Second product workspace lowers warehouse density and gives owners a
 # project-first path distinct from the org/memberships portfolio.
 workspace projects_home "Projects":
@@ -402,6 +415,13 @@ workspace projects_home "Projects":
     aggregate:
       count: count(Invoice)
     empty: "No invoices yet"
+
+  # WI D: context family — project activity trail
+  project_trail:
+    source: Project
+    display: timeline
+    sort: name asc
+    empty: "No projects found"
 
 # Third product workspace (WI density D): invoice-first job desk so entity
 # lists no longer dominate product shell count vs workspaces.
@@ -490,6 +510,13 @@ workspace team_home "Team":
       count: count(Membership)
     empty: "No memberships yet"
 
+  # WI D: queue family — open memberships needing attention
+  membership_queue:
+    source: Membership
+    display: queue
+    limit: 20
+    empty: "No memberships yet"
+
 # Fifth job desk (WI density D): organization portfolio separate from billing shell
 workspace orgs_home "Organizations":
   purpose: "Org portfolio — tenants before project/invoice drill-down"
@@ -524,4 +551,12 @@ workspace orgs_home "Organizations":
     group_by: project
     aggregate:
       count: count(Invoice)
+    empty: "No invoices yet"
+
+  # WI D: queue family — open invoices from the org portfolio
+  open_bills:
+    source: Invoice
+    display: queue
+    sort: created_at desc
+    limit: 15
     empty: "No invoices yet"

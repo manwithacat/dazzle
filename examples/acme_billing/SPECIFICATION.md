@@ -78,12 +78,16 @@ warehouse:
 
 - **Acme Billing** — home for administrators, organization owners, and
   auditors: portfolio metrics, an open-invoice queue, then organization,
-  project, and membership lists.
+  project, and membership context.
 - **My Work** — home for project members and external contractors: assigned
-  projects and invoices in their scope.
-- **Projects** — project-first path for owners, auditors, and project members
-  (project queue plus recent invoices), distinct from the org/memberships
-  portfolio.
+  projects, invoices, membership timeline, and invoice mix chart.
+- **Projects** — project-first path: kanban portfolio, recent invoices, load
+  chart, and project trail.
+- **Invoices** — invoice desk with status board, timeline, projects grid, and
+  status mix chart.
+- **Team** — membership timeline, people grid, role chart, and membership queue.
+- **Organizations** — org portfolio grid, project trail, invoice load chart,
+  and open bills queue.
 
 ## How work flows through it
 
@@ -131,4 +135,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:42994445464ca6b9bee28731b2f1cd1f713594f4ec626833c6175680760950e7 -->
+<!-- dazzle-spec-brief: sha256:c46bd685e28e4fa48e16d5dc812d21e35798dc028d6453336974aead4ec1a709 -->
