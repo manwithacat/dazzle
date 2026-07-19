@@ -85,13 +85,13 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 969 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 970 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse job desks / landings / density) | `scripts/example_product_maturity.py` + strategy `product_maturity` | **example-apps** | 943 | USED |
-| **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 943 | USED |
-| **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 943 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 972 | USED |
-| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 943 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 943 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 943 | USED |
+| **example product maturity** (anti-warehouse job desks / landings / density) | `scripts/example_product_maturity.py` + strategy `product_maturity` | **example-apps** | 979 | USED |
+| **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 979 | USED |
+| **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 979 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 979 | USED |
+| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 979 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 979 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 979 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 959 | USED |
 | MCP `db` project-local DATABASE_URL resolve (#1629 G2) | MCP | example-apps + agent DX | 959 | USED |
 
