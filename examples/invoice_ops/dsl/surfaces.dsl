@@ -390,11 +390,22 @@ workspace my_invoices "My Invoices":
     action: invoice_detail
     empty: "Nothing waiting on approval"
 
+  # WI D: pipeline board (kanban family) for requester status overview
+  my_status_board:
+    source: Invoice
+    filter: status = draft or status = submitted or status = approved or status = paid
+    display: kanban
+    group_by: status
+    sort: updated_at desc
+    action: invoice_detail
+    empty: "No invoices yet"
+
+  # WI D: grid family for supplier context (not list pad)
   suppliers_nearby:
     source: Supplier
     sort: name asc
     limit: 10
-    display: list
+    display: grid
     action: supplier_detail
     empty: "No suppliers yet"
 
@@ -621,12 +632,13 @@ workspace payments_trail "Payments":
     display: queue
     empty: "No payment attempts yet"
 
+  # WI D: timeline of settlements (context family)
   settled:
     source: Invoice
     filter: status = paid
     sort: updated_at desc
     limit: 15
-    display: list
+    display: timeline
     action: invoice_detail
     empty: "No paid invoices yet"
 
