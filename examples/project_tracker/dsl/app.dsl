@@ -16,17 +16,49 @@ persona admin "Admin":
   role: admin
   description: "Full access to all projects and settings"
   default_workspace: dashboard
+  uses nav admin_nav
 
 persona manager "Project Manager":
   role: manager
   description: "Manages projects and assigns tasks"
   default_workspace: dashboard
+  # WI N: job desks first — not auto entity-list soup
+  uses nav manager_nav
 
 persona member "Team Member":
   role: member
   description: "Works on assigned tasks"
   # Answer-first: personal task desk (product maturity)
   default_workspace: my_tasks
+  uses nav member_nav
+
+# Curated sidebars: workspace destinations only (WI primary N).
+# Names must match workspace ids (not labels) — validate warns on orphans.
+nav admin_nav:
+  group "Ops":
+    dashboard
+    project_board
+    milestone_plan
+    discussion_desk
+    files_desk
+    my_tasks
+
+nav manager_nav:
+  group "Manage":
+    dashboard
+    project_board
+    milestone_plan
+    discussion_desk
+    files_desk
+    my_tasks
+
+nav member_nav:
+  group "My work":
+    my_tasks
+    project_board
+    discussion_desk
+    files_desk
+    dashboard
 
 # ── Entities ─────────────────────────────────────────────────────────
 
