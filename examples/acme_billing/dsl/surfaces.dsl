@@ -331,6 +331,15 @@ workspace my_work "My Work":
   stage: "simple_list"
   access: persona(project_member, external_contractor)
 
+  my_pulse:
+    source: Project
+    display: metrics
+    aggregate:
+      projects: count(Project)
+      invoices: count(Invoice)
+    tones:
+      projects: accent
+
   assigned_projects:
     source: Project
     display: list
@@ -344,12 +353,26 @@ workspace my_work "My Work":
     limit: 15
     empty: "No invoices in your scope"
 
+  team_context:
+    source: Membership
+    display: list
+    empty: "No memberships in your scope"
+
 # Second product workspace lowers warehouse density and gives owners a
 # project-first path distinct from the org/memberships portfolio.
 workspace projects_home "Projects":
   purpose: "Project portfolio — open a project before drilling into invoices"
   stage: "simple_list"
-  access: persona(admin, org_owner, auditor, project_member)
+  access: persona(admin, org_owner, auditor, project_member, external_contractor)
+
+  project_pulse:
+    source: Project
+    display: metrics
+    aggregate:
+      projects: count(Project)
+      invoices: count(Invoice)
+    tones:
+      projects: accent
 
   project_queue:
     source: Project
@@ -369,7 +392,8 @@ workspace projects_home "Projects":
 workspace invoices_home "Invoices":
   purpose: "Invoice desk — cash context and open bills before org/project drill-down"
   stage: "simple_list"
-  access: persona(admin, org_owner, auditor)
+  # WI N: project_member needs a second job desk (not only my_work + lists)
+  access: persona(admin, org_owner, auditor, project_member)
 
   invoice_pulse:
     source: Invoice
