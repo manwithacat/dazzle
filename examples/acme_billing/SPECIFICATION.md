@@ -88,6 +88,8 @@ warehouse:
 - **Team** — membership timeline, people grid, role chart, and membership queue.
 - **Organizations** — org portfolio grid, project trail, invoice load chart,
   and open bills queue.
+- **Membership Ops** — access desk: membership metrics, roster grid, project
+  queue, people trail, and role mix chart.
 
 ## How work flows through it
 
@@ -135,4 +137,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:c46bd685e28e4fa48e16d5dc812d21e35798dc028d6453336974aead4ec1a709 -->
+<!-- dazzle-spec-brief: sha256:4e16ece1f323321d7ed84df2bd4feedfdd0b59216eea38cad4dfc6c98382d48c -->

@@ -560,3 +560,52 @@ workspace orgs_home "Organizations":
     sort: created_at desc
     limit: 15
     empty: "No invoices yet"
+
+# Seventh product desk (WI D): 5 lists floor dens ~0.45 with 6 full desks — need 7.
+workspace membership_ops "Membership Ops":
+  purpose: "Access membership desk — who is on which project, without warehouse CRUD"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor)
+
+  membership_pulse:
+    source: Membership
+    display: metrics
+    aggregate:
+      memberships: count(Membership)
+      people: count(User)
+      projects: count(Project)
+    tones:
+      memberships: accent
+      people: positive
+
+  # WI D: grid family for membership cards
+  roster:
+    source: Membership
+    display: grid
+    limit: 25
+    empty: "No memberships yet"
+
+  # WI D: queue family — project access work
+  project_queue:
+    source: Project
+    display: queue
+    sort: name asc
+    limit: 20
+    empty: "No projects found"
+
+  # WI D: context family — people trail via users
+  people_trail:
+    source: User
+    display: timeline
+    sort: name asc
+    limit: 15
+    empty: "No users found"
+
+  # WI D: chart family — memberships by role
+  role_mix:
+    source: Membership
+    display: bar_chart
+    group_by: role
+    aggregate:
+      count: count(Membership)
+    empty: "No memberships yet"
