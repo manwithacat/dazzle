@@ -108,6 +108,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 
 ## Cycle notes (newest first)
 
+> **Cycle 1058 (2026-07-19).** **self-audit** (cadence ≥15 since 1043): window `f23faac93..HEAD`.
+> Sampled 5: domain research, Core Entities filter, STALE policy, cimonitor auditspec, simple_task AGENT_DOMAIN — **5 CLEAN / 0 DISCREPANCY**. budget_consumed 0. Explore **3/100**. Next self-audit ~**1073**.
+
 > **Cycle 1057 (2026-07-19).** **example-apps HYGIENE STALE dig** (COGNITION STALE cleared recently):
 > support_tickets `prove story` 18+ OK; `prove representation` OK; representation patterns+classify;
 > compliance gaps 10 tier-3; pulse radar 68%. scaffold CLI exercised. No WI D. budget_consumed 1.
