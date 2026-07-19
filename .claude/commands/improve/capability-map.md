@@ -38,9 +38,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 |---|---|---|---|---|
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 1030 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 1029 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 1010 | USED |
+| `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 1032 | USED |
 | `dazzle qa trial` | CLI | trials | 1017 | USED |
-| `dazzle qa login` | CLI | (support for qa capture/verify) | 1010 | USED |
+| `dazzle qa login` | CLI | (support for qa capture/verify) | 1032 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 1027 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 1027 | USED |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 1017 | USED |
@@ -79,16 +79,16 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1030 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1030 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1030 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1031 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1031 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1032 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1032 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1026 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1026 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1026 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1031 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1032 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1012 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1016 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1031 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1032 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1012 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1012 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1012 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1032 (2026-07-19).** **example-apps** STALE-clear (qa login+capture@1010 lag~22): design_studio serve :3935 test-mode QA; magic-link login **designer** OK; capture **6** above-fold screens (studio_dashboard, asset_catalog, brand_desk, review_desk, campaign_desk, feedback_desk). residual=0; wi_fleet **0.185≤floor**. Stamps qa login/capture + probes + CodeQL/inbox **USED@1032**. Explore **88/100**. Next STALE: sentinel@1011 lag~21 or demo quality@1012 lag~20; wi_next=invoice_ops (D); sweep ~1034.
 
 > **Cycle 1031 (2026-07-19).** **example-apps + xproject** STALE-clear (sweep/coverage/xproject/fuzz@1009 lag~22): `coverage` **61/61 (100%)**; `sweep examples` exit 0; sibling validate cyfuture+AegisMark+pennydreadful exit 0; support_tickets serve :3988 test-mode boot-stderr clean (no known-bug signatures). residual=0; wi_fleet **0.185≤floor**. Stamps sweep/coverage/xproject/fuzz + probes + CodeQL/inbox **USED@1031**. Explore **87/100**. Next STALE: qa login/capture@1010 lag~21; wi_next=invoice_ops (D); sweep ~1034.
 
