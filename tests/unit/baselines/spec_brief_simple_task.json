@@ -69,7 +69,8 @@
         "Task Board",
         "Admin Dashboard",
         "Team Overview",
-        "Discussion"
+        "Discussion",
+        "People"
       ]
     },
     {
@@ -84,7 +85,8 @@
       "workspaces": [
         "Task Board",
         "Team Overview",
-        "Discussion"
+        "Discussion",
+        "People"
       ]
     },
     {
@@ -401,6 +403,7 @@
         "metrics of Task",
         "queue of Task",
         "queue of Task",
+        "queue of Task",
         "queue of Task"
       ]
     },
@@ -431,6 +434,22 @@
       "contents": [
         "metrics of TaskComment",
         "queue of TaskComment",
+        "list of Task"
+      ]
+    },
+    {
+      "name": "people_desk",
+      "title": "People",
+      "kind": "workspace",
+      "purpose": "Team roster and capacity — who is active and what is on their plate",
+      "personas": [
+        "admin",
+        "manager"
+      ],
+      "contents": [
+        "metrics of User",
+        "list of User",
+        "queue of Task",
         "list of Task"
       ]
     }

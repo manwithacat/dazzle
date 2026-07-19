@@ -206,6 +206,7 @@ persona admin "Administrator":
   proficiency: expert
   default_workspace: admin_dashboard
   default_route: "/admin"
+  uses nav admin_nav
 
 persona manager "Team Manager":
   description: "Oversee team tasks and assignments"
@@ -213,6 +214,8 @@ persona manager "Team Manager":
   proficiency: intermediate
   default_workspace: team_overview
   default_route: "/team"
+  # WI N: job desks first — not auto entity-list soup
+  uses nav manager_nav
 
 persona member "Team Member":
   description: "Work on assigned tasks"
@@ -220,6 +223,30 @@ persona member "Team Member":
   proficiency: novice
   default_workspace: my_work
   default_route: "/my-work"
+  uses nav member_nav
+
+# Curated sidebars: workspace destinations only (WI N).
+# admin_dashboard is platform-prefix excluded from product D; still a valid nav target.
+nav admin_nav:
+  group "Ops":
+    admin_dashboard
+    team_overview
+    task_board
+    comments_desk
+    people_desk
+
+nav manager_nav:
+  group "Lead":
+    team_overview
+    task_board
+    people_desk
+    comments_desk
+
+nav member_nav:
+  group "My work":
+    my_work
+    task_board
+    comments_desk
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -653,6 +680,7 @@ workspace admin_dashboard "Admin Dashboard":
     action: task_edit
     empty: "No overdue tasks"
 
+# WI L: manager default landing — denser regions (cap 6).
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
   purpose: "Monitor team progress and workload"
@@ -697,6 +725,31 @@ workspace team_overview "Team Overview":
     display: queue
     action: task_detail
     empty: "No tasks in progress"
+
+  overdue_pressure:
+    source: Task
+    filter: due_date < today and status != done
+    sort: due_date asc
+    limit: 10
+    display: queue
+    action: task_edit
+    empty: "Nothing overdue"
+
+  lead_readiness:
+    display: status_list
+    entries:
+      - title: "Review queue"
+        caption: "Clear review before assigning more WIP"
+        icon: "eye"
+        state: warning
+      - title: "Unassigned"
+        caption: "Todo with no owner blocks progress"
+        icon: "user"
+        state: accent
+      - title: "People desk"
+        caption: "Roster and capacity live on People"
+        icon: "users"
+        state: positive
 
 workspace my_work "My Work":
   access: authenticated
@@ -780,3 +833,58 @@ workspace comments_desk "Discussion":
     display: list
     action: task_detail
     empty: "No tasks in progress"
+
+# Fifth product workspace (WI density D): people/roster desk.
+workspace people_desk "People":
+  purpose: "Team roster and capacity — who is active and what is on their plate"
+  access: persona(admin, manager)
+
+  people_pulse:
+    source: User
+    display: metrics
+    aggregate:
+      people: count(User)
+      active: count(User where is_active = true)
+      open_tasks: count(Task where status != done)
+    tones:
+      active: positive
+      open_tasks: accent
+
+  roster:
+    source: User
+    filter: is_active = true
+    sort: name asc
+    limit: 25
+    display: list
+    action: user_detail
+    empty: "No active teammates"
+
+  unassigned_work:
+    source: Task
+    filter: assigned_to = null and status != done
+    sort: priority desc
+    limit: 15
+    display: queue
+    action: task_edit
+    empty: "Every open task has an owner"
+
+  in_flight:
+    source: Task
+    filter: status = in_progress
+    sort: priority desc
+    limit: 15
+    display: list
+    action: task_detail
+    empty: "No tasks in progress"
+
+  capacity_hint:
+    display: status_list
+    entries:
+      - title: "Assign from Team Overview"
+        caption: "Unassigned and review queues live on the manager desk"
+        icon: "list-checks"
+        state: accent
+      - title: "Board view"
+        caption: "Kanban flow is on Task Board for visual WIP"
+        icon: "columns"
+        state: positive
