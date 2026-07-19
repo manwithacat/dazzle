@@ -79,19 +79,19 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1030 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1030 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1030 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1034 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1034 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1035 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1035 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1026 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1026 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1026 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1034 | USED |
-| **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1012 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1035 | USED |
+| **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1035 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1016 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1034 | USED |
-| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1012 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1012 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1012 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1035 | USED |
+| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1035 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1035 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1035 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 1017 | USED |
 | MCP `db` project-local DATABASE_URL resolve (#1629 G2) | MCP | example-apps + agent DX | 1017 | USED |
 
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1035 (2026-07-19).** **example-apps** STALE-clear (demo quality/reset-and-load/product_quality/demo_fleet@1012 lag~23): `demo quality` design_studio residual=0; demo_fleet_bar **9/9 ok**; design_studio serve :3936 + `demo reset-and-load -y` **created 16 fixtures**, persona_homes residual=0. residual=0; wi_fleet **0.185≤floor**. Stamps demo quality/reset-and-load/product_quality/demo_fleet + probes + CodeQL/inbox **USED@1035**. Explore **90/100**. Next: STALE smells/fitness@1015 lag~20 or ordinary explore wi_next=invoice_ops (D); self-audit ~1043; sweep ~1054.
 
 > **Cycle 1034 (2026-07-19) capability-sweep.** Inventory: MCP consolidated tools **38** (stable); skills stable (dsl-authoring/phase-contract/qa-trial/spec-narrate/stems + agent skills); improve strategies **17** / lanes **6** unchanged; CLI groups present (demo quality/reset-and-load/prove/representation/scaffold). **No UNOWNED.** STALE-effective @1034: **4** (demo quality/reset-and-load/product_quality/demo_fleet@1012 lag22). Re-stamp CodeQL + GitHub inbox + probes + product_maturity **USED@1034**. Next sweep ~**1054**. Next self-audit ~**1043** (last@1028). Explore **89/100**. residual=0; wi_fleet **0.185≤floor**; wi_next=invoice_ops (D).
 
