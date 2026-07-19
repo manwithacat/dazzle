@@ -79,16 +79,16 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1008 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1008 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1008 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1013 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1013 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1014 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1014 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1005 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1005 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1005 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1013 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1014 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1012 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 993 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1013 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1014 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1012 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1012 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1012 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1014 (2026-07-19) capability-sweep.** Inventory: MCP consolidated tools **38** (stable set; prior note 37); skills stable (dsl-authoring/phase-contract/qa-trial/spec-narrate/stems + agent skills); improve strategies/lanes unchanged; CLI groups present (demo quality/reset-and-load/prove/representation/scaffold). **No UNOWNED.** **WI** still owned under product_maturity (USED). STALE-effective @1014: **14** (highest: smells@974 lag40; qa trial@980 lag34; component/property vision + status/db@981 lag33; story/rhythm/process/discovery@982 lag32; deploy plan/test-design@985 lag29; journey@993 lag21). Re-stamp CodeQL + GitHub inbox + probes + product_maturity USED@1014. Next sweep ~**1034**. Next self-audit ~**1028** (last@1013). Explore **71/100**. residual=0; wi_fleet **0.245≤floor**.
 
 > **Cycle 1013 (2026-07-19).** **self-audit** (cadence ≥15 since 998): window `8db899802..HEAD` (14 improve commits). Sampled top-5 by churn: **51645160d** prove/compliance STALE-clear CLEAN (prove story still 18/18 class; privacy on tree); **3cfad98a8** design_studio campaign/feedback desks + nav CLEAN (WI≈0.19 N=0); **f310bc63e** ops systems/alerts desks CLEAN (WI≈0.10 N=J=0); **0d4565f4c** acme curated nav CLEAN (N=0); **227bf7822** hr_records curated nav CLEAN (N=0). residual_total=0; wi_fleet **0.245≤floor**; maturity tests **10 pass**. **5 CLEAN / 0 DISCREPANCY**. End SHA post-stamp. budget_consumed 0. Explore **71/100**. Next: capability-sweep due@1013 (lag≥20 since 993); next self-audit ~**1028**.
 
