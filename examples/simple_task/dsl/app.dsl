@@ -680,7 +680,7 @@ workspace admin_dashboard "Admin Dashboard":
     action: task_edit
     empty: "No overdue tasks"
 
-# WI L: manager default landing — denser regions (cap 6).
+# WI L v2: manager landing — distinct mode×source signals (not four Task queues).
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
   purpose: "Monitor team progress and workload"
@@ -698,42 +698,42 @@ workspace team_overview "Team Overview":
       in_review: warning
       completed_today: positive
 
-  # ST-018 review queue + ST-016 unassigned — manager jobs.
+  # Status mix chart — different mode family than queues.
+  flow_chart:
+    source: Task
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No tasks yet"
+
+  # ST-018 review queue (one listish Task signal for the review job).
   needs_review:
     source: Task
     filter: status = review
     sort: updated_at asc
-    limit: 10
+    limit: 12
     display: queue
     action: task_edit
     empty: "No tasks awaiting review"
 
-  unassigned:
-    source: Task
-    filter: assigned_to = null and status = todo
-    sort: priority desc
-    limit: 10
-    display: queue
-    action: task_edit
-    empty: "All tasks are assigned"
+  # People source — not another Task queue pad.
+  team_roster:
+    source: User
+    filter: is_active = true
+    sort: name asc
+    limit: 15
+    display: list
+    action: user_detail
+    empty: "No active teammates"
 
-  team_workload:
-    source: Task
-    filter: status = in_progress
-    sort: priority desc, due_date asc
-    limit: 10
-    display: queue
-    action: task_detail
-    empty: "No tasks in progress"
-
-  overdue_pressure:
-    source: Task
-    filter: due_date < today and status != done
-    sort: due_date asc
-    limit: 10
-    display: queue
-    action: task_edit
-    empty: "Nothing overdue"
+  # Discussion pulse — TaskComment source.
+  recent_discussion:
+    source: TaskComment
+    sort: created_at desc
+    limit: 12
+    display: list
+    empty: "No recent comments"
 
   lead_readiness:
     display: status_list
@@ -742,15 +742,16 @@ workspace team_overview "Team Overview":
         caption: "Clear review before assigning more WIP"
         icon: "eye"
         state: warning
-      - title: "Unassigned"
-        caption: "Todo with no owner blocks progress"
-        icon: "user"
-        state: accent
       - title: "People desk"
-        caption: "Roster and capacity live on People"
+        caption: "Unassigned work and capacity live on People"
         icon: "users"
+        state: accent
+      - title: "Board"
+        caption: "Kanban flow is on Task Board"
+        icon: "columns"
         state: positive
 
+# WI L v2: member landing — diversify signals (metrics/kanban/timeline/comments/context).
 workspace my_work "My Work":
   access: authenticated
   purpose: "Personal task view for assigned work"
@@ -768,40 +769,49 @@ workspace my_work "My Work":
       in_review: warning
       done: positive
 
-  my_in_progress:
+  # Kanban for personal flow — mode family distinct from listish queues.
+  my_board:
     source: Task
-    filter: status = in_progress and assigned_to = current_user
-    sort: priority desc, due_date asc
-    limit: 10
-    display: queue
+    filter: assigned_to = current_user and status != done
+    display: kanban
+    group_by: status
+    sort: priority desc
     action: task_edit
-    empty: "No tasks in progress - pick one from your backlog!"
+    empty: "No open tasks assigned to you"
 
-  my_todo:
+  # Due-date timeline — another mode family on Task.
+  my_upcoming:
     source: Task
-    filter: status = todo and assigned_to = current_user
-    sort: priority desc, due_date asc
-    limit: 10
-    display: queue
+    filter: assigned_to = current_user and due_date != null and status != done
+    sort: due_date asc
+    limit: 15
+    display: timeline
     action: task_edit
-    empty: "No pending tasks - ask your manager for work"
+    empty: "No upcoming due dates on your work"
 
-  my_in_review:
-    source: Task
-    filter: status = review and assigned_to = current_user
-    sort: updated_at desc
-    limit: 5
-    display: queue
-    action: task_detail
-    empty: "No tasks in review"
-
-  my_completed:
-    source: Task
-    filter: status = done and assigned_to = current_user
-    sort: updated_at desc
-    limit: 5
+  # Comments source — not another Task list pad.
+  my_discussion:
+    source: TaskComment
+    sort: created_at desc
+    limit: 12
     display: list
-    empty: "No completed tasks yet"
+    empty: "No comments on tasks yet"
+
+  focus_hint:
+    display: status_list
+    entries:
+      - title: "Work the board"
+        caption: "Move cards through todo → in progress → review"
+        icon: "columns"
+        state: accent
+      - title: "Due dates"
+        caption: "Timeline shows what is due next on your plate"
+        icon: "calendar"
+        state: warning
+      - title: "Team board"
+        caption: "Full team kanban lives on Task Board"
+        icon: "layout-grid"
+        state: positive
 
 # Fourth product workspace (WI density D): discussion desk so list surfaces
 # no longer dominate vs job shells (comments as collaboration, not CRUD dump).

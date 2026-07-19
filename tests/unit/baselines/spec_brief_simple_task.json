@@ -401,10 +401,10 @@
       ],
       "contents": [
         "metrics of Task",
+        "bar_chart of Task",
         "queue of Task",
-        "queue of Task",
-        "queue of Task",
-        "queue of Task"
+        "list of User",
+        "list of TaskComment"
       ]
     },
     {
@@ -415,10 +415,9 @@
       "personas": [],
       "contents": [
         "metrics of Task",
-        "queue of Task",
-        "queue of Task",
-        "queue of Task",
-        "list of Task"
+        "kanban of Task",
+        "timeline of Task",
+        "list of TaskComment"
       ]
     },
     {
