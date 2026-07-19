@@ -3,7 +3,7 @@
 
 story ST-001 "User creates a new Contact":
   status: accepted
-  narrative_only: true
+  executed_by: surface.contact_create
   persona: user
   trigger: form_submitted
   entities: [Contact]
@@ -67,7 +67,7 @@ story ST-007 "User pins a favourite from the directory queue":
 
 story ST-008 "User edits an existing contact":
   status: accepted
-  narrative_only: true
+  executed_by: surface.contact_edit
   persona: user
   trigger: form_submitted
   entities: [Contact]

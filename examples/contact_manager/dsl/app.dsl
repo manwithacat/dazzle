@@ -35,14 +35,13 @@ persona user "User":
 # list surface, a workspace to its page. Both targets here are real —
 # Contact has a `mode: list` surface and `contacts` is a declared workspace.
 nav contact_nav:
-  # TR-2: Home first so the sidebar matches the post-login landing.
+  # TR-2 / WI N: job desks first — workspaces only (not auto entity-list soup).
   group "Home":
     home
-  group "Contacts":
-    Contact
-  # #1324 FR-4: the "Browse" group is hidden unless the tenant enables the
-  # `show_browse` per-tenant config flag — render-time VISIBILITY only (the
-  # `contacts` workspace stays reachable by direct URL / RBAC is unchanged).
+  group "Directory":
+    contacts
+  # #1324 FR-4: optional Browse group still exposes the contacts desk when
+  # the tenant enables `show_browse` (workspace target, not bare Contact list).
   group "Browse" when: tenant_config.show_browse = true:
     contacts
 
@@ -203,8 +202,10 @@ workspace home "Home":
     aggregate:
       total_contacts: count(Contact)
       favourites: count(Contact where is_favorite = true)
+      companies: count(Contact where company != null)
     tones:
       favourites: accent
+      total_contacts: positive
 
   # ST-007 — favourites as a work queue, not buried in the full list sort.
   favourite_contacts:
@@ -223,6 +224,21 @@ workspace home "Home":
     display: list
     action: contact_detail
     empty: "No contacts yet. Open Contacts or use New Contact to add your first person or company."
+
+  # WI L: richer landing — company strip + A–Z sample for answer-first home.
+  company_contacts:
+    source: Contact
+    filter: company != null
+    sort: company asc, last_name asc
+    limit: 8
+    display: list
+    action: contact_detail
+    empty: "No company contacts yet"
+
+  find_contact:
+    source: Contact
+    display: search_box
+    title: "Find a contact"
 
   ux:
     as user:
