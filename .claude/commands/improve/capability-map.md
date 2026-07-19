@@ -49,14 +49,14 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 1016 | USED |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 1030 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 1030 | USED |
-| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 1015 | USED |
+| fitness **engine** (`run_fitness_strategy`) | Python API | framework-ux (Phase B) | 1036 | USED |
 | `dazzle sentinel mutate` | CLI | test-suite (mutation floor) | 1033 | USED |
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 1016 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 1016 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 1016 | USED |
 | `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 1026 | USED |
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 1033 | USED |
-| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 1029 | USED |
+| `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 1036 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 1016 | USED |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 1029 | USED |
 | `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 1027 | USED |
@@ -69,7 +69,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
 | `qa-trial` skill | skill | trials (downstream authoring) | 1017 | USED |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 1031 | USED |
-| `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 1015 | USED |
+| `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 1036 | USED |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 1031 | USED |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 1029 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 1031 | USED |
@@ -79,16 +79,16 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1030 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1030 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1030 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1035 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1035 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1036 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1036 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1026 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1026 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1026 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1035 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1036 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1035 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1016 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1035 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1036 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1035 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1035 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1035 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1036 (2026-07-19).** **framework-ux/smells** STALE-clear (smells/fitness@1015 lag~21): `dazzle fitness code` hotspot queue top30 (handlers_consolidated #1); complexity ratchet + bare-except + import contracts **8 pass**; fitness vitality support_tickets 0 islets. residual=0; wi_fleet **0.185≤floor**. Stamps smells + fitness code/engine + probes + CodeQL/inbox **USED@1036**. Explore **91/100**. Next STALE: story/rhythm/process/discovery/deploy/journey@1016 lag~20; or wi_next=invoice_ops (D); self-audit ~1043; sweep ~1054.
 
 > **Cycle 1035 (2026-07-19).** **example-apps** STALE-clear (demo quality/reset-and-load/product_quality/demo_fleet@1012 lag~23): `demo quality` design_studio residual=0; demo_fleet_bar **9/9 ok**; design_studio serve :3936 + `demo reset-and-load -y` **created 16 fixtures**, persona_homes residual=0. residual=0; wi_fleet **0.185≤floor**. Stamps demo quality/reset-and-load/product_quality/demo_fleet + probes + CodeQL/inbox **USED@1035**. Explore **90/100**. Next: STALE smells/fitness@1015 lag~20 or ordinary explore wi_next=invoice_ops (D); self-audit ~1043; sweep ~1054.
 
