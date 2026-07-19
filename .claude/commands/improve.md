@@ -212,21 +212,48 @@ Selection priority:
 
 1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge or CodeQL high/error already preempted this step via 0c / 0c2; GitHub inbox (0c3) already ran if it claimed the cycle.
 2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`.
-3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute `STALE` (last-exercised ≥20 cycles behind the current cycle). Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt.
+3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute STALE-effective (lag ≥20), and report **actionable digs** split by **Class** (`COGNITION` vs `HYGIENE`) — not a raw STALE count alone. Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt.
 4. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
 5. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
 6. **TR-signal drain (autonomous-only).** If the trials backlog (`## Lane: trials`) has any **autonomous-actionable** TR row (see below), pick the owning lane for that row and run `improve/strategies/trial_signal_action.md` this cycle (log `picked {lane} for TR-N — {status}/{severity}`). Forceable via `/improve trial-signals`. Preempts pure capability re-stamps when product signal is sitting idle. Does **not** preempt REGRESSION / self-audit / capability-sweep / fresh signal bias.
-7. **Explore phase, capability-coverage-directed.** Consult `improve/capability-map.md`. Recompute lag as `current_cycle − last-exercised` (treat map status `USED` with lag ≥20 as **STALE-effective**). Pick **one** capability in this order and hand the owning lane that specific exercise (log `picked {lane} to exercise {capability} — {reason}`):
+7. **Explore phase, cognition-directed (not lag-only STALE).** Consult `improve/capability-map.md`. Recompute lag as `current_cycle − last-exercised` (treat `USED` with lag ≥20 as **STALE-effective**). Read each row's **Class** (`COGNITION` | `HYGIENE` | `DRIVER` | `EXEMPT`).
+
+   **Probe residual still outranks this rule** when `improve_example_probes.py` reports `residual_total > 0` — pick example-apps residual dig first (product → demo → journey).
+
+   When residual is clear, pick **one** capability in this order (log `picked {lane} to exercise {capability} — {class}/{reason}`):
    1. Any `UNOWNED` (strongest gap)
-   2. Any `STALE` or STALE-effective, highest lag first
-   3. Any `OWNED-IDLE` with `last-exercised = —` (never first-exercised), preferring **in-loop** owners over `(standalone)` when both exist; exercise playbook: `improve/strategies/owned_idle_exercise.md`
-   4. Any `OWNED-IDLE` that has been exercised before but not for ≥20 cycles (treat like STALE)
-   5. Else oldest `last_run_at` lane ordinary **explore phase**
-8. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit. The log entry must name the two renewal routes so the loop never looks permanently stuck: the budget resets automatically on the next `dazzle-updated` release signal, or manually via `/improve --reset-budget`.
+   2. **COGNITION** STALE / STALE-effective — rank by **epistemic value**, not lag alone:
+      prefer (in order) residual/risk signals, counter-priors, `domain` / `demo_world` /
+      `product_quality` / `demo quality` / `reset-and-load` / `qa trial` / persona-home
+      paths over pure re-touch. Among equal value, highest lag first.
+   3. **When `residual_total=0` and `wi_fleet ≤ wi_floor`:** prefer COGNITION-STALE (2)
+      over ordinary **WI D diversify** (item 7). WI polish is optional once the fleet is
+      under floor — do not burn explore on D-mode desks while agent-cognition STALE remains.
+   4. **HYGIENE** STALE / STALE-effective (validate/prove/coverage/sentinel/MCP re-touch) —
+      cheap CLI re-exercise; may stamp several related HYGIENE surfaces in one dig if
+      they share a lane and a single app, but still one owning lane per cycle.
+   5. Any `OWNED-IDLE` with `last-exercised = —` (never first-exercised), preferring
+      **in-loop** owners; playbook: `improve/strategies/owned_idle_exercise.md`
+   6. Any `OWNED-IDLE` exercised before but lag ≥20 (treat as its Class above)
+   7. Else ordinary explore (WI D/N/L, framework-ux edge cases, …)
+
+   **Metered vision policy:** never select `component-vision` / `property-vision` /
+   `taste-panel` as “top STALE” on the metered API path. Always exercise the
+   **subscription substitute** (`hm_visual_smoke` / host-Read / gallery probes) and
+   stamp that free path. **Do not** idle or housekeeping-cite “vision STALE (metered)”.
+
+   STALE is a **priority bias for explore**, not a product bar and not a reason to
+   skip residual, domain rebuild, or CI repair.
+
+8. **Explore budget at cap (100)** → housekeeping idle tick; log + release lock + exit.
+   Log **must** say: `explore capped by policy — no digs` and name the two renewal
+   routes (`dazzle-updated` release signal, or `/improve --reset-budget`).
+   **Do not** list STALE rows as “deferred work the loop is blocked on” — STALE did
+   not cause the stop; the budget did. Raw STALE counts in housekeeping are noise.
 
 **GitHub inbox note:** Dependabot-ready merges, consumer bugs, and owner/pilot bugs are claimed in **Step 0c3** (before this list). If 0c3 only logged a non-blocking inbox summary, do not re-pick github-prs unless heat remains and product selection is empty.
 
-Record the choice. Bias from signals, TR-drain, or capability-coverage must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N"; "picked hm-convergence to expand dual-locks — STALE 24 cycles"; "picked framework-ux for TR-50 OPEN_FRAMEWORK high") so future operators can audit.
+Record the choice. Bias from signals, TR-drain, or capability-coverage must be logged ("picked example-apps because of fresh ux-component-shipped from cycle N"; "picked example-apps to exercise domain — COGNITION STALE"; "picked framework-ux for TR-50 OPEN_FRAMEWORK high") so future operators can audit.
 
 ### Autonomous TR eligibility (rule 6)
 
