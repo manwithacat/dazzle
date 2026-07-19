@@ -324,6 +324,13 @@ workspace my_tasks "My Tasks":
     group_by: status
     sort: priority desc
 
+  recent_discussion:
+    source: Comment
+    sort: created_at desc
+    limit: 10
+    display: list
+    empty: "No recent comments"
+
 workspace milestone_plan "Milestone Plan":
   purpose: "Schedule desk — milestones before drilling into task lists"
   access: persona(admin, manager)
@@ -351,6 +358,67 @@ workspace milestone_plan "Milestone Plan":
     filter: status = active
     sort: updated_at desc
     display: grid
+
+# Fifth product workspace (WI density D): discussion desk vs bare comment list.
+workspace discussion_desk "Discussion":
+  purpose: "Cross-task discussion pulse and recent comments"
+  access: persona(admin, manager, member)
+
+  discussion_pulse:
+    source: Comment
+    display: metrics
+    aggregate:
+      comments: count(Comment)
+      open_tasks: count(Task where status != done)
+    tones:
+      comments: accent
+
+  recent:
+    source: Comment
+    sort: created_at desc
+    limit: 25
+    display: queue
+    empty: "No comments yet"
+
+  open_tasks:
+    source: Task
+    filter: status != done
+    sort: priority desc
+    limit: 15
+    display: list
+    action: task_detail
+    empty: "No open tasks"
+
+# Sixth product workspace (WI density D): files desk for attachment work.
+workspace files_desk "Files":
+  purpose: "Attachment desk — files linked to tasks, not a warehouse dump"
+  access: persona(admin, manager, member)
+
+  files_pulse:
+    source: Attachment
+    display: metrics
+    aggregate:
+      files: count(Attachment)
+      tasks: count(Task)
+      projects: count(Project)
+    tones:
+      files: accent
+
+  recent_files:
+    source: Attachment
+    sort: created_at desc
+    limit: 25
+    display: queue
+    empty: "No attachments yet"
+
+  open_tasks:
+    source: Task
+    filter: status != done
+    sort: updated_at desc
+    limit: 15
+    display: list
+    action: task_detail
+    empty: "No open tasks"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
@@ -546,12 +614,14 @@ surface milestone_edit "Edit Milestone":
 surface attachment_list "Attachments":
   uses entity Attachment
   mode: list
+  open: Task via task
   section main:
     field task "Task"
     field filename "File"
     field uploaded_by "Uploaded By"
     field created_at "Date"
   ux:
+    purpose: "Files across tasks — open hops to the task hub"
     sort: created_at desc
     filter: task
     empty: "No attachments uploaded yet."
