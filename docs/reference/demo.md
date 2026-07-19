@@ -115,7 +115,7 @@ Closed-loop workflow from cold project to persona stills without tribal SQL.
 
 **Steps:**
 1. Founder brief → `dazzle domain extract` (AGENT_DOMAIN.md — agent audience)
-2. `dazzle domain gaps` — research into open_questions; no chrome invents
+2. `dazzle domain gaps` + `dazzle domain research` — answer open_questions; no chrome invents
 3. `dazzle domain promote` when ready → hand-author DSL (STABLE persona ids)
 4. `dazzle validate` — fix errors; heed #1630 warns on as:/STABLE
 5. `dazzle serve` (test mode) — writes `.dazzle/runtime.json`
@@ -134,6 +134,7 @@ Closed-loop workflow from cold project to persona stills without tribal SQL.
 ```dsl
 dazzle domain extract -p ./app
 dazzle domain gaps -p ./app
+dazzle domain research -p ./app --answer q_owner=requester binds desks
 dazzle domain promote -p ./app
 # hand-author DSL from AGENT_DOMAIN, then:
 dazzle serve --project ./app
@@ -144,7 +145,8 @@ dazzle demo reset-and-load --project ./app -y
 
 - workflow: knowledge(operation='workflow', workflow='first_principles_demo')
 - Always load demo_ops from agent context or status(demo_world)
-- domain extract before DSL; promote checklist before entity blocks
+- domain extract → research → promote before entity blocks
+- bootstrap instructions are domain-first; ignore analysis.entities as SSOT
 
 **Related:** [Demo Identity](demo.md#demo-identity), [Empty Desk False Green](demo.md#empty-desk-false-green), [Workspace Region Filters](workspaces.md#workspace-region-filters), [Agent Domain](demo.md#agent-domain), [Bootstrap Pollution](demo.md#bootstrap-pollution)
 
@@ -162,12 +164,14 @@ dazzle demo reset-and-load --project ./app -y
 | Investor | SPECIFICATION.md (from DSL via spec brief) |
 
 Rules: grounded nouns only; hypotheses explicit; no chrome entities; research
-into open_questions/research_notes. Promote only when `dazzle domain promote`
-is ready. CLI: `dazzle domain extract|show|gaps|promote`. MCP: `domain(operation=…)`.
+into open_questions/research_notes via `domain research`. Promote only when
+`dazzle domain promote` is ready. CLI: `dazzle domain extract|show|gaps|research|promote`.
+MCP: `domain(operation=…)`.
 
 ### Best Practices
 
 - domain extract before bootstrap entities
+- domain research for answers/owners — never invent chrome nouns
 - knowledge counter_prior bootstrap_pollution
 - Never invent entity names not in founder vocabulary
 

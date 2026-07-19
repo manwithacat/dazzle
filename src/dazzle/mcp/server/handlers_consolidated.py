@@ -1170,6 +1170,7 @@ handle_domain: Callable[[dict[str, Any]], str] = _make_project_handler(
         "show": f"{_MOD_DOMAIN}:domain_show_handler",
         "gaps": f"{_MOD_DOMAIN}:domain_gaps_handler",
         "promote": f"{_MOD_DOMAIN}:domain_promote_handler",
+        "research": f"{_MOD_DOMAIN}:domain_research_handler",
     },
 )
 

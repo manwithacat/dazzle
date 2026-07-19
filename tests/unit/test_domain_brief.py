@@ -115,7 +115,7 @@ def test_mcp_tool_registered() -> None:
     tools = {t.name: t for t in get_consolidated_tools()}
     assert "domain" in tools
     ops = tools["domain"].inputSchema["properties"]["operation"]["enum"]
-    assert "extract" in ops and "promote" in ops
+    assert "extract" in ops and "promote" in ops and "research" in ops
 
 
 def test_mcp_handler_extract(tmp_path: Path) -> None:
@@ -131,6 +131,61 @@ def test_mcp_handler_extract(tmp_path: Path) -> None:
     assert "SpendRequest" in {n["name"] for n in data["domain"]["nouns"]}
 
 
+def test_research_refuses_ungrounded_noun(tmp_path: Path) -> None:
+    from dazzle.domain_brief import extract_from_text, research_and_save, save_domain
+
+    d = extract_from_text(SPEND, source_path="inline")
+    save_domain(tmp_path, d)
+    (tmp_path / "SPEC.md").write_text(SPEND, encoding="utf-8")
+    chrome = research_and_save(
+        tmp_path,
+        add_noun={"name": "Optional"},
+        note="tried chrome",
+    )
+    assert any("noun_was_chrome" in r for r in (chrome.get("refused") or [])), chrome
+    invent = research_and_save(
+        tmp_path,
+        add_noun={"name": "BookingRefund"},
+    )
+    assert any("noun_not_in_brief" in r for r in (invent.get("refused") or [])), invent
+    assert "research_note" in (chrome.get("applied") or [])
+
+
+def test_research_answers_question_and_sets_owner(tmp_path: Path) -> None:
+    from dazzle.domain_brief import extract_from_text, load_domain, research_and_save, save_domain
+    from dazzle.domain_brief.models import OpenQuestion
+
+    d = extract_from_text(SPEND, source_path=str(tmp_path / "SPEC.md"))
+    d.open_questions.append(OpenQuestion(id="q_block", text="threshold?", blocks_promote=True))
+    save_domain(tmp_path, d)
+    (tmp_path / "SPEC.md").write_text(SPEND, encoding="utf-8")
+    result = research_and_save(
+        tmp_path,
+        answer_question_id="q_block",
+        answer_text="Managers approve under 5k",
+        set_owner_field="requester",
+        owner_for="SpendRequest",
+    )
+    assert result.get("ok") is True
+    assert any(a.startswith("answered:") for a in (result.get("applied") or []))
+    loaded = load_domain(tmp_path)
+    assert loaded is not None
+    assert not any(q.id == "q_block" for q in loaded.open_questions)
+    assert any(n.owner_field_hint == "requester" for n in loaded.nouns if n.name == "SpendRequest")
+
+
+def test_bootstrap_instructions_are_domain_first() -> None:
+    from dazzle.mcp.server.handlers.bootstrap import _build_instructions
+
+    inst = _build_instructions(False, [], None)
+    steps = "\n".join(inst["steps"])
+    assert "AGENT_DOMAIN" in steps
+    assert "analysis.entities" in steps
+    assert "based on analysis" not in steps.lower() or "untrusted" in steps
+    rules = "\n".join(inst["dsl_generation_rules"])
+    assert "bootstrap_pollution" in rules
+
+
 def test_cli_help_lists_domain() -> None:
     from typer.testing import CliRunner
 
@@ -139,3 +194,4 @@ def test_cli_help_lists_domain() -> None:
     r = CliRunner().invoke(app, ["domain", "--help"])
     assert r.exit_code == 0
     assert "extract" in r.stdout
+    assert "research" in r.stdout

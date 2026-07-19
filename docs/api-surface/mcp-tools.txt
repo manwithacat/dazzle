@@ -355,18 +355,55 @@ tool: discovery
   }
 
 tool: domain
-  description_hash: 88ca19e2bf5e
-  description_len: 410
+  description_hash: 356f2239b3d8
+  description_len: 421
   {
     "properties": {
+      "add_noun": {
+        "description": "Noun dict: name, lifecycle_hint, owner_field_hint (research; grounded)",
+        "type": "object"
+      },
+      "add_persona": {
+        "description": "Persona dict: label, id_hint, job, desk (research; must be in brief)",
+        "type": "object"
+      },
+      "add_spine": {
+        "description": "Demo spine row: persona, story, entity_hint (research)",
+        "type": "object"
+      },
+      "answer_question_id": {
+        "description": "Open question id to answer (research)",
+        "type": "string"
+      },
+      "answer_text": {
+        "description": "Answer body for answer_question_id (research)",
+        "type": "string"
+      },
+      "clear_question_id": {
+        "description": "Drop an open question by id (research)",
+        "type": "string"
+      },
+      "mark_hypothesis": {
+        "description": "Mark noun name as hypothesis (research)",
+        "type": "string"
+      },
+      "note": {
+        "description": "Research note to append (research)",
+        "type": "string"
+      },
       "operation": {
         "description": "Operation to perform",
         "enum": [
           "extract",
           "show",
           "gaps",
+          "research",
           "promote"
         ],
+        "type": "string"
+      },
+      "owner_for": {
+        "description": "Noun or desk name for set_owner_field (research)",
         "type": "string"
       },
       "project_path": {
@@ -375,6 +412,10 @@ tool: domain
       },
       "project_root": {
         "description": "Project directory for AGENT_DOMAIN files",
+        "type": "string"
+      },
+      "set_owner_field": {
+        "description": "Owner field hint e.g. requester (research)",
         "type": "string"
       },
       "spec_path": {
@@ -386,7 +427,7 @@ tool: domain
         "type": "string"
       },
       "write": {
-        "description": "Write AGENT_DOMAIN files on extract (default true)",
+        "description": "Write AGENT_DOMAIN files (extract/research, default true)",
         "type": "boolean"
       }
     },

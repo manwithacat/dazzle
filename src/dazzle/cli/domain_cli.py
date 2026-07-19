@@ -13,6 +13,7 @@ from dazzle.domain_brief import (
     find_founder_brief,
     load_domain,
     promote_checklist,
+    research_and_save,
     save_domain,
     score_gaps,
 )
@@ -108,6 +109,58 @@ def gaps_cmd(
         for g in report.gaps:
             typer.echo(f"  [{g.severity}] {g.code}: {g.message}")
     if not report.ready_to_promote:
+        raise typer.Exit(2)
+
+
+@domain_app.command("research")
+def research_cmd(
+    project: Path | None = typer.Option(None, "--project", "-p"),
+    note: str | None = typer.Option(None, "--note", help="Append research note"),
+    answer: str | None = typer.Option(
+        None, "--answer", help="question_id=text — answer and clear open question"
+    ),
+    clear: str | None = typer.Option(None, "--clear", help="Clear open question by id"),
+    owner: str | None = typer.Option(
+        None, "--owner", help="field:noun_or_desk — set owner_field_hint"
+    ),
+    write: bool = typer.Option(True, "--write/--no-write"),
+    json_out: bool = typer.Option(False, "--json"),
+) -> None:
+    """Amend AGENT_DOMAIN (answers/notes/owners). Never invents chrome nouns or writes DSL."""
+    root = _root(project)
+    kwargs: dict[str, object] = {"write": write}
+    if note:
+        kwargs["note"] = note
+    if answer and "=" in answer:
+        qid, _, text = answer.partition("=")
+        kwargs["answer_question_id"] = qid.strip()
+        kwargs["answer_text"] = text.strip()
+    elif answer:
+        typer.echo("--answer requires question_id=text", err=True)
+        raise typer.Exit(1)
+    if clear:
+        kwargs["clear_question_id"] = clear
+    if owner and ":" in owner:
+        field, _, target = owner.partition(":")
+        kwargs["set_owner_field"] = field.strip()
+        kwargs["owner_for"] = target.strip()
+    elif owner:
+        typer.echo("--owner requires field:noun_or_desk", err=True)
+        raise typer.Exit(1)
+
+    result = research_and_save(root, **kwargs)
+    if not result.get("ok"):
+        typer.echo(result.get("error") or "research failed", err=True)
+        raise typer.Exit(1)
+    if json_out:
+        typer.echo(json.dumps(result, indent=2))
+        return
+    typer.echo(f"applied={result.get('applied')} refused={result.get('refused')}")
+    if result.get("written"):
+        typer.echo(f"wrote {result['written'].get('markdown')}")
+    gaps = result.get("gaps") or {}
+    typer.echo(f"ready_to_promote={gaps.get('ready_to_promote')}")
+    if result.get("refused"):
         raise typer.Exit(2)
 
 

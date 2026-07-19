@@ -22,7 +22,7 @@ class GapsReport:
     personas: int = 0
     desks: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "ready_to_promote": self.ready_to_promote,
             "grounded_nouns": self.grounded_nouns,

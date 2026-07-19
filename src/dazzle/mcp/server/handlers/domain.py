@@ -12,6 +12,7 @@ from dazzle.domain_brief import (
     find_founder_brief,
     load_domain,
     promote_checklist,
+    research_and_save,
     save_domain,
     score_gaps,
 )
@@ -88,3 +89,25 @@ def domain_promote_handler(project_path: Path, args: dict[str, Any]) -> str:
     if domain is None:
         return json.dumps({"error": "No AGENT_DOMAIN"}, indent=2)
     return json.dumps(promote_checklist(domain), indent=2)
+
+
+@wrap_handler_errors
+def domain_research_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Amend AGENT_DOMAIN via research (answers, notes, grounded adds). Never writes DSL."""
+    root = Path(args["project_root"]) if args.get("project_root") else project_path
+    root = root.resolve()
+    result = research_and_save(
+        root,
+        write=args.get("write", True),
+        note=args.get("note"),
+        answer_question_id=args.get("answer_question_id"),
+        answer_text=args.get("answer_text"),
+        clear_question_id=args.get("clear_question_id"),
+        set_owner_field=args.get("set_owner_field"),
+        owner_for=args.get("owner_for"),
+        add_persona=args.get("add_persona"),
+        add_noun=args.get("add_noun"),
+        add_spine=args.get("add_spine"),
+        mark_hypothesis=args.get("mark_hypothesis"),
+    )
+    return json.dumps(result, indent=2)

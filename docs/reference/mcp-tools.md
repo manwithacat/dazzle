@@ -5,7 +5,7 @@
 
 Live inventory of the MCP tools exposed by `dazzle mcp run`. Generated from the tool registry — every operation, parameter, and description below comes straight from `dazzle.mcp.server.tools_consolidated.get_all_consolidated_tools()` at build time. Run `dazzle docs generate` to refresh after adding, renaming, or removing tools or operations. The drift gate at `tests/unit/test_api_surface_drift.py` (mcp_tools baseline) catches surface changes that didn't update the docs.
 
-**Live count:** 38 tools, 172 operations. Regenerated from the registry every time `dazzle docs generate` runs.
+**Live count:** 38 tools, 173 operations. Regenerated from the registry every time `dazzle docs generate` runs.
 
 Each tool is a single MCP entry point that dispatches on the `operation` argument. The Bootstrap tool (`bootstrap`) is the exception — it takes free-form spec text, not an operation enum, and is the canonical entry point for "build me an app" requests.
 
@@ -23,7 +23,7 @@ Each tool is a single MCP entry point that dispatches on the `operation` argumen
 | [`db`](#db) | 2 | Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection) |
 | [`demo_data`](#demo_data) | 1 | Demo data operations: get |
 | [`discovery`](#discovery) | 1 | Capability discovery operations: coherence (persona-by-persona authenticated UX coherence score) |
-| [`domain`](#domain) | 4 | Agent-audience domain brief — the cognition draft between founder prose and DSL |
+| [`domain`](#domain) | 5 | Agent-audience domain brief — the cognition draft between founder prose and DSL |
 | [`dsl`](#dsl) | 11 | DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief |
 | [`e2e`](#e2e) | 4 | E2E environment operations (read-only) |
 | [`feedback`](#feedback) | 4 | Feedback operations: list, get, triage, resolve |
@@ -196,16 +196,26 @@ Capability discovery operations: coherence (persona-by-persona authenticated UX 
 
 ### `domain`
 
-Agent-audience domain brief — the cognition draft between founder prose and DSL. Operations: extract (offline chrome-safe extract → AGENT_DOMAIN.md + agent_domain.json), show (load current domain), gaps (promote blockers), promote (DSL hand-author checklist). Prefer this over bootstrap/spec_analyze as SSOT. Research into open_questions only; grounded nouns only. CLI: dazzle domain extract|show|gaps|promote.
+Agent-audience domain brief — the cognition draft between founder prose and DSL. Operations: extract (offline chrome-safe → AGENT_DOMAIN.md + agent_domain.json), show, gaps, research (answer questions / notes / grounded adds — never invent chrome), promote (DSL hand-author checklist). Prefer over bootstrap/spec_analyze as cognition draft. DSL remains runtime SSOT. CLI: dazzle domain extract|show|gaps|research|promote.
 
-**Operations (4):** `extract`, `show`, `gaps`, `promote`
+**Operations (5):** `extract`, `show`, `gaps`, `research`, `promote`
 
 **Parameters:**
 
 - `spec_text` *(string)* — Founder brief text (extract)
 - `spec_path` *(string)* — Path to founder SPEC.md (extract)
 - `project_root` *(string)* — Project directory for AGENT_DOMAIN files
-- `write` *(boolean)* — Write AGENT_DOMAIN files on extract (default true)
+- `write` *(boolean)* — Write AGENT_DOMAIN files (extract/research, default true)
+- `note` *(string)* — Research note to append (research)
+- `answer_question_id` *(string)* — Open question id to answer (research)
+- `answer_text` *(string)* — Answer body for answer_question_id (research)
+- `clear_question_id` *(string)* — Drop an open question by id (research)
+- `set_owner_field` *(string)* — Owner field hint e.g. requester (research)
+- `owner_for` *(string)* — Noun or desk name for set_owner_field (research)
+- `add_persona` *(object)* — Persona dict: label, id_hint, job, desk (research; must be in brief)
+- `add_noun` *(object)* — Noun dict: name, lifecycle_hint, owner_field_hint (research; grounded)
+- `add_spine` *(object)* — Demo spine row: persona, story, entity_hint (research)
+- `mark_hypothesis` *(string)* — Mark noun name as hypothesis (research)
 - `project_path` *(string)* — Optional absolute project path
 
 ---

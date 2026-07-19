@@ -1006,17 +1006,17 @@ def _tool_domain() -> Tool:
         name="domain",
         description=(
             "Agent-audience domain brief — the cognition draft between founder prose and DSL. "
-            "Operations: extract (offline chrome-safe extract → AGENT_DOMAIN.md + agent_domain.json), "
-            "show (load current domain), gaps (promote blockers), promote (DSL hand-author checklist). "
-            "Prefer this over bootstrap/spec_analyze as SSOT. Research into open_questions only; "
-            "grounded nouns only. CLI: dazzle domain extract|show|gaps|promote."
+            "Operations: extract (offline chrome-safe → AGENT_DOMAIN.md + agent_domain.json), "
+            "show, gaps, research (answer questions / notes / grounded adds — never invent chrome), "
+            "promote (DSL hand-author checklist). Prefer over bootstrap/spec_analyze as cognition "
+            "draft. DSL remains runtime SSOT. CLI: dazzle domain extract|show|gaps|research|promote."
         ),
         inputSchema={
             "type": "object",
             "properties": {
                 "operation": {
                     "type": "string",
-                    "enum": ["extract", "show", "gaps", "promote"],
+                    "enum": ["extract", "show", "gaps", "research", "promote"],
                     "description": "Operation to perform",
                 },
                 "spec_text": {
@@ -1033,7 +1033,47 @@ def _tool_domain() -> Tool:
                 },
                 "write": {
                     "type": "boolean",
-                    "description": "Write AGENT_DOMAIN files on extract (default true)",
+                    "description": "Write AGENT_DOMAIN files (extract/research, default true)",
+                },
+                "note": {
+                    "type": "string",
+                    "description": "Research note to append (research)",
+                },
+                "answer_question_id": {
+                    "type": "string",
+                    "description": "Open question id to answer (research)",
+                },
+                "answer_text": {
+                    "type": "string",
+                    "description": "Answer body for answer_question_id (research)",
+                },
+                "clear_question_id": {
+                    "type": "string",
+                    "description": "Drop an open question by id (research)",
+                },
+                "set_owner_field": {
+                    "type": "string",
+                    "description": "Owner field hint e.g. requester (research)",
+                },
+                "owner_for": {
+                    "type": "string",
+                    "description": "Noun or desk name for set_owner_field (research)",
+                },
+                "add_persona": {
+                    "type": "object",
+                    "description": "Persona dict: label, id_hint, job, desk (research; must be in brief)",
+                },
+                "add_noun": {
+                    "type": "object",
+                    "description": "Noun dict: name, lifecycle_hint, owner_field_hint (research; grounded)",
+                },
+                "add_spine": {
+                    "type": "object",
+                    "description": "Demo spine row: persona, story, entity_hint (research)",
+                },
+                "mark_hypothesis": {
+                    "type": "string",
+                    "description": "Mark noun name as hypothesis (research)",
                 },
                 "project_path": {
                     "type": "string",

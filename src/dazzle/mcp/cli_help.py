@@ -1280,10 +1280,11 @@ entity Task "Task":
                 {
                     "step": 2,
                     "action": "Close domain gaps (research into AGENT_DOMAIN)",
-                    "command": "dazzle domain gaps -p <app>",
-                    "mcp_tool": "domain(operation='gaps')",
+                    "command": "dazzle domain research -p <app> --answer qid=… --owner field:Noun",
+                    "mcp_tool": "domain(operation='research') / domain(operation='gaps')",
                     "notes": (
-                        "Answer open_questions in the domain doc; mark hypotheses explicitly. "
+                        "Answer open_questions via research op; mark hypotheses explicitly. "
+                        "Refuses ungrounded/chrome nouns. "
                         "knowledge concepts: entity, persona, workspace, demo_identity."
                     ),
                 },

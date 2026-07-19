@@ -239,7 +239,7 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
         ),
         "preferred_next": [
             "domain(operation='show') or read AGENT_DOMAIN.md",
-            "domain(operation='gaps') — close open questions in the domain doc",
+            "domain(operation='research') / gaps — close open questions in the domain doc",
             "domain(operation='promote') when ready — then hand-author DSL",
             "knowledge(operation='concept') for entity/persona/workspace syntax",
             "dsl.validate loop — never trust bootstrap entities as SSOT",
@@ -280,183 +280,203 @@ def _representation_instruction_bits(
     ]
 
 
+def _domain_first_generation_steps(
+    rep_bits: list[str],
+) -> list[str]:
+    """Domain-first DSL authoring — AGENT_DOMAIN is cognition draft; DSL is SSOT."""
+    return [
+        # --- Domain intermediate (before DSL) ---
+        (
+            "0a. Read AGENT_DOMAIN (domain show / AGENT_DOMAIN.md). "
+            "analysis.entities is untrusted draft — do not author DSL from it "
+            "(counter-prior bootstrap_pollution)."
+        ),
+        (
+            "0b. Close domain gaps: domain(operation='research') or dazzle domain research "
+            "for open_questions / owner hints / demo spine. Never invent chrome nouns."
+        ),
+        (
+            "0c. domain(operation='promote') must be ready before entity blocks. "
+            "Follow promote checklist; STABLE persona ids only."
+        ),
+        # --- Structure ---
+        "1. Create dsl/ directory if it doesn't exist",
+        "2. Generate module header with app name and description",
+        (
+            "3. Define personas from AGENT_DOMAIN personas (STABLE id_hint + human title) "
+            "with default_workspace = desk names from domain.desks"
+        ),
+        # --- Data model ---
+        (
+            "4. Author entities for AGENT_DOMAIN grounded nouns only "
+            "(never rejected_chrome; never analysis.entities chrome)"
+        ),
+        *rep_bits,
+        "5. Add state machines where domain.nouns[].lifecycle_hint is non-empty",
+        (
+            "6. If spec mentions third-party services (payments, email, identity, etc.), "
+            "call api_pack(operation='search', query=<vendor>) to check for existing "
+            "integration packs before writing integration DSL blocks."
+        ),
+        # --- Access control (mandatory) ---
+        (
+            "7a. Add permit: blocks to EVERY entity — these are authorization gates. "
+            "permit: rules MUST contain ONLY role() checks (e.g. 'list: role(admin)'). "
+            "Field conditions (e.g. 'owner = current_user') are a parser error inside "
+            "permit: and will fail validation. Every role that needs access to an entity "
+            "must appear in a permit: block. Default-deny: roles not listed are blocked. "
+            "Use forbid: for separation-of-duty constraints. "
+            "Use knowledge(operation='concept', term='access_rules') for syntax."
+        ),
+        (
+            "7b. Add scope: blocks for row filtering — these control what rows each role "
+            "sees, not whether they may access the endpoint. Use field conditions with "
+            "an as: clause naming the persona(s) the rule binds to: "
+            "'scope: school = current_user.school as: teacher'. "
+            "Bind current_user using domain owner_field_hint values. "
+            "Every role permitted in step 7a MUST have a matching scope: rule unless "
+            "the intent is to grant unrestricted row access, in which case use "
+            "'scope: all as: admin'. The '*' wildcard grants all rows to all "
+            "permitted personas when no per-persona scoping is needed. "
+            "scope: and permit: are separate DSL blocks — never mix them. "
+            "(`as:` was renamed from `for:` in #998.)"
+        ),
+        # --- UI ---
+        "8. Generate surfaces (CRUD views) for each grounded entity",
+        (
+            "8a. If the app has auth enabled, add `feedback_widget: enabled` after "
+            "the app declaration. This creates a human→agent feedback loop — users "
+            "report issues via an in-app widget, agents read and resolve them via "
+            "the feedback MCP tool."
+        ),
+        (
+            "9. Add ux blocks to list surfaces: sort (default ordering), "
+            "filter (enum/bool/status fields), search (text fields users "
+            "would search by), empty messages. "
+            "Use knowledge(operation='concept', term='ux_block') for syntax"
+        ),
+        (
+            "10. Create workspaces/desks from AGENT_DOMAIN desks with "
+            "access: persona() and filters using owner_field_hint + current_user"
+        ),
+        # --- Seeds ---
+        (
+            "10b. Seed demo_spine stories under dsl/seeds/demo_data using "
+            "STABLE_PERSONA_USER_IDS (knowledge concept demo_identity)"
+        ),
+        # --- Validation gates ---
+        "11. Validate with dsl(operation='validate')",
+        "12. Run dsl(operation='lint', extended=true) for quality check",
+        (
+            "12a. Review the 'Relevant capabilities' section of the lint output. "
+            "Consider whether any surfaced capabilities (widgets, layout modes, "
+            "components) are applicable to your generated DSL and incorporate them "
+            "before proceeding."
+        ),
+        (
+            "13. Run dsl(operation='fidelity') to verify each surface has all "
+            "fields the entity defines. Fix any missing fields."
+        ),
+        # --- Security verification ---
+        (
+            "14. Run policy(operation='access_matrix') to verify the RBAC model. "
+            "Check that: no entity shows PERMIT_UNPROTECTED, sensitive entities "
+            "are DENY for unauthorized roles, and the matrix matches the intended "
+            "access policy. Fix any gaps before proceeding."
+        ),
+        (
+            "15. Run sentinel(operation='findings') to check for SaaS failure "
+            "modes: missing audit fields, unsafe state transitions, exposed PII. "
+            "Fix any high-severity findings."
+        ),
+        (
+            "16. Run semantics(operation='tenancy') to verify multi-tenant data "
+            "isolation is correctly scoped. Run semantics(operation='compliance') "
+            "if the app handles user data or regulated fields."
+        ),
+        # --- Coverage + demo loop ---
+        (
+            "17. If stories or processes were defined, run story(operation='coverage') "
+            "and process(operation='coverage') to verify the generated app covers them."
+        ),
+        (
+            "18. Demo close: dazzle serve → re-read runtime.json → "
+            "demo reset-and-load -y → auth role= after reset → product_quality / "
+            "status(demo_world). Workflow: knowledge first_principles_demo."
+        ),
+    ]
+
+
+def _dsl_generation_rules() -> list[str]:
+    return [
+        "SSOT chain: founder brief → AGENT_DOMAIN (cognition) → hand-author DSL (runtime) "
+        "→ SPECIFICATION.md is investor prose only",
+        "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
+        "Generate only from AGENT_DOMAIN grounded nouns + promote checklist — "
+        "never analysis.entities (bootstrap_pollution)",
+        "Generate incrementally and validate frequently",
+        (
+            "EVERY entity MUST have permit: blocks (role-only checks) AND scope: blocks "
+            "(field conditions with as: clauses binding the rule to one or more personas). "
+            "Field conditions inside permit: are a parser error. "
+            "After all entities are defined, run "
+            "policy(operation='access_matrix') — zero PERMIT_UNPROTECTED cells required."
+        ),
+        "Do NOT copy from example projects - generate from first principles",
+        (
+            "After validation, run sentinel(operation='findings') and "
+            "semantics(operation='tenancy') as security gates."
+        ),
+        (
+            "Data representation: honour analysis.representation_decision pattern_id; "
+            "never dual-lock open-via or invent subject_type+subject_id pairs."
+        ),
+    ]
+
+
 def _build_instructions(
     has_questions: bool,
     questions: list[dict[str, Any]],
     representation_decision: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build the agent instruction block."""
+    """Build the agent instruction block (domain-first)."""
     rep_bits = _representation_instruction_bits(representation_decision)
+    steps = _domain_first_generation_steps(rep_bits)
+    rules = _dsl_generation_rules()
+    setup = {
+        "action": "Run `dazzle agent sync` to install autonomous development commands",
+        "description": (
+            "Installs agent commands (/improve, /qa, /ship, etc.) that "
+            "enable autonomous quality improvement and development workflows."
+        ),
+        "when": "after_first_successful_validate",
+    }
     if has_questions:
-        # Format questions for the agent to ask
-        question_texts = [q.get("question", "") for q in questions[:5]]  # Max 5 questions
+        question_texts = [q.get("question", "") for q in questions[:5]]
 
         return {
             "phase": "clarification",
             "action": "ask_questions",
             "questions_to_ask": question_texts,
             "present_as": (
-                "Before I generate the app, I have a few questions to make sure "
-                "I build exactly what you need:"
+                "Before I author DSL, I need to close domain questions so "
+                "AGENT_DOMAIN stays grounded:"
             ),
             "on_answers": (
-                "Once the user answers, call spec_analyze(operation='refine_spec', "
-                "spec_text=<original_spec>, answers=<user_answers_dict>) to produce "
-                "the refined specification, then follow the generation steps below."
+                "Record answers with domain(operation='research', answer_question_id=…, "
+                "answer_text=…) or dazzle domain research — not into bootstrap entities. "
+                "Optionally refine_spec for founder prose only. Then follow generation steps."
             ),
-            "generation_steps": [
-                "Follow the same 18-step generation workflow as the direct-generation phase:",
-                "Structure (1-3) → Data model (4-6) → Access control (7a-7b) → UI (8-10) → ",
-                "Validation (11-13) → Security verification (14-16) → Coverage (17)",
-                "See the generation phase 'steps' array for exact instructions per step.",
-                *rep_bits,
-            ],
+            "generation_steps": steps,
             "representation_decision": representation_decision,
-            "dsl_generation_rules": [
-                "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
-                "Generate incrementally: entities first, then surfaces, then workspaces",
-                (
-                    "EVERY entity MUST have permit: blocks (role-only checks) AND scope: blocks "
-                    "(field conditions with as: clauses binding the rule to one or more personas). "
-                    "No field conditions inside permit: — that is a parser error. "
-                    "After all entities are defined, run "
-                    "policy(operation='access_matrix') to verify zero PERMIT_UNPROTECTED cells."
-                ),
-                "After generating list surfaces, add ux blocks with sort/filter/search/empty",
-                "Validate after each major section with dsl(operation='validate')",
-                (
-                    "After validation, run sentinel(operation='findings') and "
-                    "semantics(operation='tenancy') as security gates."
-                ),
-                "Do NOT copy from example projects - generate from first principles",
-                (
-                    "Data representation: honour analysis.representation_decision pattern_id; "
-                    "never dual-lock open-via or invent subject_type+subject_id pairs."
-                ),
-            ],
-            "agent_commands_setup": {
-                "action": "Run `dazzle agent sync` to install autonomous development commands",
-                "description": (
-                    "Installs agent commands (/improve, /qa, /ship, etc.) that "
-                    "enable autonomous quality improvement and development workflows."
-                ),
-                "when": "after_first_successful_validate",
-            },
+            "dsl_generation_rules": rules,
+            "agent_commands_setup": setup,
         }
-    else:
-        return {
-            "phase": "generation",
-            "action": "generate_dsl",
-            "representation_decision": representation_decision,
-            "steps": [
-                # --- Structure ---
-                "1. Create dsl/ directory if it doesn't exist",
-                "2. Generate module header with app name and description",
-                "3. Define personas with descriptions and default_workspace assignments",
-                # --- Data model ---
-                "4. Generate entity definitions based on analysis",
-                *rep_bits,
-                "5. Add state machines for entities with lifecycles",
-                (
-                    "6. If spec mentions third-party services (payments, email, identity, etc.), "
-                    "call api_pack(operation='search', query=<vendor>) to check for existing "
-                    "integration packs before writing integration DSL blocks."
-                ),
-                # --- Access control (mandatory) ---
-                (
-                    "7a. Add permit: blocks to EVERY entity — these are authorization gates. "
-                    "permit: rules MUST contain ONLY role() checks (e.g. 'list: role(admin)'). "
-                    "Field conditions (e.g. 'owner = current_user') are a parser error inside "
-                    "permit: and will fail validation. Every role that needs access to an entity "
-                    "must appear in a permit: block. Default-deny: roles not listed are blocked. "
-                    "Use forbid: for separation-of-duty constraints. "
-                    "Use knowledge(operation='concept', term='access_rules') for syntax."
-                ),
-                (
-                    "7b. Add scope: blocks for row filtering — these control what rows each role "
-                    "sees, not whether they may access the endpoint. Use field conditions with "
-                    "an as: clause naming the persona(s) the rule binds to: "
-                    "'scope: school = current_user.school as: teacher'. "
-                    "Every role permitted in step 7a MUST have a matching scope: rule unless "
-                    "the intent is to grant unrestricted row access, in which case use "
-                    "'scope: all as: admin'. The '*' wildcard grants all rows to all "
-                    "permitted personas when no per-persona scoping is needed. "
-                    "scope: and permit: are separate DSL blocks — never mix them. "
-                    "(`as:` was renamed from `for:` in #998.)"
-                ),
-                # --- UI ---
-                "8. Generate surfaces (CRUD views) for each entity",
-                (
-                    "8a. If the app has auth enabled, add `feedback_widget: enabled` after "
-                    "the app declaration. This creates a human→agent feedback loop — users "
-                    "report issues via an in-app widget, agents read and resolve them via "
-                    "the feedback MCP tool."
-                ),
-                (
-                    "9. Add ux blocks to list surfaces: sort (default ordering), "
-                    "filter (enum/bool/status fields), search (text fields users "
-                    "would search by), empty messages. "
-                    "Use knowledge(operation='concept', term='ux_block') for syntax"
-                ),
-                "10. Create workspaces for each persona with access: persona() declarations",
-                # --- Validation gates ---
-                "11. Validate with dsl(operation='validate')",
-                "12. Run dsl(operation='lint', extended=true) for quality check",
-                (
-                    "12a. Review the 'Relevant capabilities' section of the lint output. "
-                    "Consider whether any surfaced capabilities (widgets, layout modes, "
-                    "components) are applicable to your generated DSL and incorporate them "
-                    "before proceeding."
-                ),
-                (
-                    "13. Run dsl(operation='fidelity') to verify each surface has all "
-                    "fields the entity defines. Fix any missing fields."
-                ),
-                # --- Security verification ---
-                (
-                    "14. Run policy(operation='access_matrix') to verify the RBAC model. "
-                    "Check that: no entity shows PERMIT_UNPROTECTED, sensitive entities "
-                    "are DENY for unauthorized roles, and the matrix matches the intended "
-                    "access policy. Fix any gaps before proceeding."
-                ),
-                (
-                    "15. Run sentinel(operation='findings') to check for SaaS failure "
-                    "modes: missing audit fields, unsafe state transitions, exposed PII. "
-                    "Fix any high-severity findings."
-                ),
-                (
-                    "16. Run semantics(operation='tenancy') to verify multi-tenant data "
-                    "isolation is correctly scoped. Run semantics(operation='compliance') "
-                    "if the app handles user data or regulated fields."
-                ),
-                # --- Coverage verification ---
-                (
-                    "17. If stories or processes were defined, run story(operation='coverage') "
-                    "and process(operation='coverage') to verify the generated app covers them."
-                ),
-            ],
-            "dsl_generation_rules": [
-                "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
-                "Generate incrementally and validate frequently",
-                (
-                    "EVERY entity MUST have permit: blocks (role-only checks) AND scope: blocks "
-                    "(field conditions with as: clauses binding the rule to one or more personas). "
-                    "Field conditions inside permit: are a parser error. "
-                    "After all entities are defined, run "
-                    "policy(operation='access_matrix') — zero PERMIT_UNPROTECTED cells required."
-                ),
-                "Do NOT copy from example projects - generate from first principles",
-                (
-                    "After validation, run sentinel(operation='findings') and "
-                    "semantics(operation='tenancy') as security gates."
-                ),
-            ],
-            "agent_commands_setup": {
-                "action": "Run `dazzle agent sync` to install autonomous development commands",
-                "description": (
-                    "Installs agent commands (/improve, /qa, /ship, etc.) that "
-                    "enable autonomous quality improvement and development workflows."
-                ),
-                "when": "after_first_successful_validate",
-            },
-        }
+    return {
+        "phase": "generation",
+        "action": "generate_dsl",
+        "representation_decision": representation_decision,
+        "steps": steps,
+        "dsl_generation_rules": rules,
+        "agent_commands_setup": setup,
+    }
