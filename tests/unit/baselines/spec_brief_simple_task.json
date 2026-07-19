@@ -68,7 +68,8 @@
       "workspaces": [
         "Task Board",
         "Admin Dashboard",
-        "Team Overview"
+        "Team Overview",
+        "Discussion"
       ]
     },
     {
@@ -82,7 +83,8 @@
       ],
       "workspaces": [
         "Task Board",
-        "Team Overview"
+        "Team Overview",
+        "Discussion"
       ]
     },
     {
@@ -96,7 +98,8 @@
       ],
       "workspaces": [
         "Task Board",
-        "My Work"
+        "My Work",
+        "Discussion"
       ]
     }
   ],
@@ -412,6 +415,22 @@
         "queue of Task",
         "queue of Task",
         "queue of Task",
+        "list of Task"
+      ]
+    },
+    {
+      "name": "comments_desk",
+      "title": "Discussion",
+      "kind": "workspace",
+      "purpose": "Recent task discussion across the team",
+      "personas": [
+        "admin",
+        "manager",
+        "member"
+      ],
+      "contents": [
+        "metrics of TaskComment",
+        "queue of TaskComment",
         "list of Task"
       ]
     }

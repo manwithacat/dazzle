@@ -131,4 +131,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:96b32860e86c3022d66ad39aeb98fcb53ac03dd3bac6810e9047ad6fc1d870fb -->
+<!-- dazzle-spec-brief: sha256:d4eeb6ce00a26cb4d2f0839609123857ea5a551c3cf3b4570d7cff58006d3651 -->

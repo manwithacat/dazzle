@@ -390,6 +390,14 @@ workspace my_invoices "My Invoices":
     action: invoice_detail
     empty: "Nothing waiting on approval"
 
+  suppliers_nearby:
+    source: Supplier
+    sort: name asc
+    limit: 10
+    display: list
+    action: supplier_detail
+    empty: "No suppliers yet"
+
 workspace approval_desk "Approval Desk":
   purpose: "Approver job — clear the awaiting-approval queue, open the invoice hub"
   access: persona(approver, finance_admin)
@@ -424,6 +432,14 @@ workspace approval_desk "Approval Desk":
     display: list
     action: invoice_detail
     empty: "No recent approvals"
+
+  supplier_context:
+    source: Supplier
+    sort: name asc
+    limit: 10
+    display: list
+    action: supplier_detail
+    empty: "No suppliers"
 
 workspace pay_desk "Pay Desk":
   purpose: "Finance job — settle approved invoices and resolve open disputes"
@@ -575,3 +591,45 @@ workspace team_desk "Team":
     limit: 10
     action: tenant_detail
     empty: "No tenants"
+
+
+# Eighth product workspace (WI density D): payment trail desk.
+workspace payments_trail "Payments":
+  purpose: "Payment attempt trail — health metrics and recent attempts"
+  access: persona(finance, finance_admin, auditor)
+
+  payment_pulse:
+    source: PaymentAttempt
+    display: metrics
+    aggregate:
+      attempts: count(PaymentAttempt)
+      invoices: count(Invoice)
+      paid: count(Invoice where status = paid)
+    tones:
+      paid: positive
+      attempts: accent
+
+  recent_attempts:
+    source: PaymentAttempt
+    sort: created_at desc
+    limit: 25
+    display: queue
+    empty: "No payment attempts yet"
+
+  settled:
+    source: Invoice
+    filter: status = paid
+    sort: updated_at desc
+    limit: 15
+    display: list
+    action: invoice_detail
+    empty: "No paid invoices yet"
+
+  ready_context:
+    source: Invoice
+    filter: status = approved
+    sort: amount desc
+    limit: 10
+    display: queue
+    action: invoice_detail
+    empty: "Nothing ready to pay"
