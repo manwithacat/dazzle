@@ -711,6 +711,23 @@ workspace staff_directory "Staff Directory":
         icon: "user-plus"
         state: positive
 
+  # WI D: grid family for people cards
+  people_cards:
+    source: Person
+    display: grid
+    limit: 20
+    action: person_detail
+    empty: "No people on record"
+
+  # WI D: chart family — employment rows by department
+  dept_mix:
+    source: Employment
+    display: bar_chart
+    group_by: department
+    aggregate:
+      count: count(Employment)
+    empty: "No employment rows"
+
 
 # WI L: employee default landing — denser career desk.
 workspace person_detail "Person Detail":
@@ -778,16 +795,45 @@ workspace person_detail "Person Detail":
         icon: "users"
         state: positive
 
+  # WI D: context family — employment trail
+  employment_trail:
+    source: Employment
+    display: timeline
+    limit: 15
+    empty: "No employment rows"
+
+  # WI D: chart family — salary reason mix
+  salary_mix:
+    source: Salary
+    display: bar_chart
+    group_by: reason
+    aggregate:
+      count: count(Salary)
+    empty: "No salary rows"
+
 
 # #1626 P0-7: honest name — not a true org *tree* until recursive_tree ships.
 workspace org_chart "Departments & Roles":
   access: persona(hr_admin, manager)
   purpose: "Department roster, job roles, and reporting-line records (not a visual org tree yet)"
 
+  org_pulse:
+    source: Department
+    display: metrics
+    aggregate:
+      departments: count(Department)
+      roles: count(Role)
+      reporting_lines: count(ManagerLink)
+    tones:
+      departments: accent
+
   # TODO(#hr-hierarchy): recursive tree for self-ref Department / ManagerLink.
+  # WI D: grid family for department cards
   departments:
     source: Department
-    display: list
+    display: grid
+    action: department_detail
+    empty: "No departments"
 
   # Job roles (title/level/department) are org reference data managed by
   # hr_admin — surfacing them here makes role_list/role_create reachable
@@ -795,7 +841,10 @@ workspace org_chart "Departments & Roles":
   # lint; #improve example-apps row 121).
   roles:
     source: Role
-    display: list
+    display: queue
+    limit: 25
+    action: role_detail
+    empty: "No roles"
 
   # TODO(#hr-hierarchy) + (#hr-temporal): manager chain visualisation.
   # The manager hierarchy is a temporal self-ref — drawing it requires
@@ -803,7 +852,18 @@ workspace org_chart "Departments & Roles":
   # `manager` FK recursively. Two pattern gaps compounded.
   reporting_lines:
     source: ManagerLink
-    display: list
+    display: timeline
+    limit: 20
+    empty: "No reporting lines"
+
+  # WI D: chart family — roles by level
+  role_level_mix:
+    source: Role
+    display: bar_chart
+    group_by: level
+    aggregate:
+      count: count(Role)
+    empty: "No roles"
 
 
 # WI L: finance default landing — denser regions (cap 6).
@@ -869,6 +929,23 @@ workspace compensation_review "Compensation Review":
         icon: "briefcase"
         state: positive
 
+  # WI D: chart family — salary rows by reason
+  reason_mix:
+    source: Salary
+    display: bar_chart
+    group_by: reason
+    aggregate:
+      count: count(Salary)
+    empty: "No active salaries"
+
+  # WI D: grid family for people context
+  people_cards:
+    source: Person
+    display: grid
+    limit: 15
+    action: person_detail
+    empty: "No people on record"
+
 
 workspace time_machine "Time Machine":
   access: persona(hr_admin)
@@ -887,17 +964,42 @@ workspace time_machine "Time Machine":
   # side route override (e.g. a custom landing page that POSTs a date
   # form and redirects to the time_machine URL with ?as_of= appended).
 
+  snapshot_pulse:
+    source: Employment
+    display: metrics
+    aggregate:
+      employment_rows: count(Employment)
+      salary_rows: count(Salary)
+      reporting_lines: count(ManagerLink)
+    tones:
+      employment_rows: accent
+
   employment_snapshot:
     source: Employment
-    display: list
+    display: queue
+    limit: 25
+    empty: "No employment rows for this as-of"
 
   salary_snapshot:
     source: Salary
-    display: list
+    display: grid
+    limit: 20
+    empty: "No salary rows for this as-of"
 
   reporting_lines_snapshot:
     source: ManagerLink
-    display: list
+    display: timeline
+    limit: 20
+    empty: "No reporting lines for this as-of"
+
+  # WI D: chart family — employment load in the snapshot
+  employment_mix:
+    source: Employment
+    display: bar_chart
+    group_by: department
+    aggregate:
+      count: count(Employment)
+    empty: "No employment rows for this as-of"
 
 
 # Sixth product workspace (WI density D): manager team desk — reports first,
@@ -956,6 +1058,23 @@ workspace my_team "My Team":
         icon: "git-branch"
         state: positive
 
+  # WI D: grid family for report cards
+  report_cards:
+    source: Person
+    display: grid
+    limit: 20
+    action: person_detail
+    empty: "No people in scope"
+
+  # WI D: chart family — role mix on the team
+  role_mix_chart:
+    source: Role
+    display: bar_chart
+    group_by: level
+    aggregate:
+      count: count(Role)
+    empty: "No roles defined"
+
 
 # Seventh product workspace (WI density D): HR starters / onboarding desk.
 workspace starters_desk "New Starters":
@@ -979,16 +1098,28 @@ workspace starters_desk "New Starters":
     action: person_detail
     empty: "No people on record"
 
-  employment_queue:
-    source: Employment
-    display: list
+  # WI D: grid family for starter cards
+  starter_cards:
+    source: Person
+    display: grid
     limit: 20
+    action: person_detail
+    empty: "No people on record"
+
+  # WI D: context family — employment trail
+  employment_trail:
+    source: Employment
+    display: timeline
+    limit: 15
     empty: "No employment rows yet"
 
-  salary_setup:
+  # WI D: chart family — salary setup by reason
+  salary_mix:
     source: Salary
-    display: list
-    limit: 15
+    display: bar_chart
+    group_by: reason
+    aggregate:
+      count: count(Salary)
     empty: "No salary rows yet"
 
 # Eighth product workspace (WI density D): reporting-line desk.
@@ -1012,18 +1143,28 @@ workspace reporting_desk "Reporting":
     limit: 25
     empty: "No reporting lines yet"
 
-  people_context:
+  # WI D: grid family for people context
+  people_cards:
     source: Person
-    display: list
+    display: grid
     limit: 20
     action: person_detail
     empty: "No people on record"
 
-  department_context:
+  # WI D: context family — reporting trail
+  link_trail:
+    source: ManagerLink
+    display: timeline
+    limit: 20
+    empty: "No reporting lines yet"
+
+  # WI D: chart family — links by department context
+  dept_mix:
     source: Department
-    display: list
-    limit: 15
-    action: department_detail
+    display: bar_chart
+    group_by: name
+    aggregate:
+      count: count(Department)
     empty: "No departments"
 
   chain_hint:

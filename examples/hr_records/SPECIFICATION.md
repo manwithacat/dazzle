@@ -63,19 +63,19 @@ dedicated screens — fourteen in all, from the staff directory to
 
 ## Where work happens
 
-- **Staff Directory** — shared entry for all four roles: headcount metrics
-  (people, departments, roles) first, then current staff and recent starters.
-- **Person Detail** — a career timeline, showing a person's employment history
-  and salary history side by side. Open to all four roles, with each seeing
-  only what their visibility rules allow.
-- **Departments & Roles** — the department tree and manager hierarchy, with role
-  listings; used by HR admins and line managers.
-- **Compensation Review** — finance/HR home for salary work: compensation
-  metrics strip, then the active salary list for band analysis.
-- **Time Machine** — an HR-admin-only workspace that re-projects employment,
-  salary, and reporting-line views as of any chosen date: append
-  `?as_of=YYYY-MM-DD` and every region shows the organisation as it stood on
-  that day.
+- **Staff Directory** — shared entry: headcount metrics, staff queue, department
+  context, people cards, and employment-by-department chart.
+- **Person Detail** — career desk: employment and salary history, employment
+  trail, and salary reason chart.
+- **Departments & Roles** — org pulse, department grid, role queue, reporting
+  trail, and roles-by-level chart (not a visual org tree yet).
+- **Compensation Review** — finance/HR salary desk: metrics, active salary
+  queue, reason chart, and people cards.
+- **Time Machine** — HR-admin as-of snapshot: metrics, employment queue, salary
+  grid, reporting trail, and employment chart (`?as_of=YYYY-MM-DD`).
+- **My Team** — manager desk with reports queue, cards, and role mix chart.
+- **New Starters** — HR onboarding desk with starter cards and employment trail.
+- **Reporting** — ManagerLink trail with people cards and department chart.
 
 ## The technical foundation
 
@@ -108,4 +108,4 @@ which keeps the product fast, accessible, and simple to operate. (Verify:
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:3e3d4efc9152f6d8027382bc4017b8d494326fc5c9cc99e8c062db167eee755a -->
+<!-- dazzle-spec-brief: sha256:708b5e1c041979721efa8aba3309b6abdb127788db83a889081df625db1eaeaa -->
