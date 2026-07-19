@@ -62,8 +62,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1060 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1060 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1060 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1032 | USED |
-| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1062 | USED |
+| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1063 | USED |
+| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1063 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1027 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1037 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | USED |
@@ -82,9 +82,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1027 | USED |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1061 | USED |
-| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1031 | USED |
+| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1063 | USED |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1062 | USED |
-| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1031 | USED |
+| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1063 | USED |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1060 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1061 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1060 | USED |
@@ -107,6 +107,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1063 (2026-07-19).** **example-apps HYGIENE dig** — xproject sibling validate
+> (cyfuture/AegisMark/pennydreadful exit 0 warn-only); support_tickets boot-stderr clean;
+> design_studio qa capture **6** designer screens. budget_consumed 1. Explore **8/100**.
 
 > **Cycle 1062 (2026-07-19).** **framework-ux HYGIENE dig** — fitness code top30 hotspots;
 > vitality support_tickets 0 islets; qa login designer magic-link OK (design_studio :3948);
