@@ -64,31 +64,31 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 1027 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
-| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 1009 | USED |
+| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 1031 | USED |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
 | `qa-trial` skill | skill | trials (downstream authoring) | 1017 | USED |
-| `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 1009 | USED |
+| `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 1031 | USED |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 1015 | USED |
-| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 1009 | USED |
+| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 1031 | USED |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 1029 | USED |
-| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 1009 | USED |
+| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 1031 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 1029 | USED |
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 1016 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 1026 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1030 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1030 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1030 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1030 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1030 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1031 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1031 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1026 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1026 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1026 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1030 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1031 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1012 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1016 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1030 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1031 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1012 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1012 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1012 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1031 (2026-07-19).** **example-apps + xproject** STALE-clear (sweep/coverage/xproject/fuzz@1009 lag~22): `coverage` **61/61 (100%)**; `sweep examples` exit 0; sibling validate cyfuture+AegisMark+pennydreadful exit 0; support_tickets serve :3988 test-mode boot-stderr clean (no known-bug signatures). residual=0; wi_fleet **0.185≤floor**. Stamps sweep/coverage/xproject/fuzz + probes + CodeQL/inbox **USED@1031**. Explore **87/100**. Next STALE: qa login/capture@1010 lag~21; wi_next=invoice_ops (D); sweep ~1034.
 
 > **Cycle 1030 (2026-07-19).** **example-apps** STALE-clear (MCP/validate cluster@1008 lag~22): support_tickets validate OK + lint 0 errors; MCP policy analyze (User/SlaWaiver unprotected; full coverage count) + conflicts **0**; conformance summary **481** cases; MCP dsl validate/lint; tenant list (multi-tenancy not enabled); test_intelligence summary (KG not init — exercised). residual=0; wi_fleet **0.185≤floor**. Stamps validate/lint + MCP policy/conformance/dsl/semantics-adjacent + probes + CodeQL/inbox **USED@1030**. Explore **86/100**. Next STALE: xproject/fuzz/sweep/coverage@1009 lag~21; wi_next=invoice_ops (D); sweep ~1034.
 
