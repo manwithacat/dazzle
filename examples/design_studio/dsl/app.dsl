@@ -20,12 +20,32 @@ persona designer "Designer":
   role: designer
   description: "Creates and manages design assets"
   default_workspace: studio_dashboard
+  # WI N: job desks first — not auto entity-list soup
+  uses nav designer_nav
 
 persona reviewer "Reviewer":
   role: reviewer
   description: "Reviews and approves assets"
   # Answer-first: review queue desk (product maturity)
   default_workspace: review_desk
+  uses nav reviewer_nav
+
+# Curated sidebars: workspace destinations only (WI N).
+nav designer_nav:
+  group "Studio":
+    studio_dashboard
+    brand_desk
+    asset_catalog
+    campaign_desk
+    review_desk
+    feedback_desk
+
+nav reviewer_nav:
+  group "Review":
+    review_desk
+    asset_catalog
+    studio_dashboard
+    feedback_desk
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -303,6 +323,81 @@ workspace review_desk "Review Desk":
     limit: 12
     display: queue
     empty: "No recent approvals"
+
+  recent_feedback:
+    source: Feedback
+    sort: created_at desc
+    limit: 10
+    display: list
+    empty: "No feedback notes yet"
+
+# Fifth product workspace (WI density D): campaign desk vs bare campaign list.
+workspace campaign_desk "Campaigns":
+  purpose: "Campaign schedule desk — active briefs and brand context"
+  access: persona(admin, designer, reviewer)
+
+  campaign_pulse:
+    source: Campaign
+    display: metrics
+    aggregate:
+      campaigns: count(Campaign)
+      active: count(Campaign where status = active)
+      brands: count(Brand)
+    tones:
+      active: accent
+
+  active_queue:
+    source: Campaign
+    filter: status = active
+    sort: name asc
+    limit: 20
+    display: queue
+    empty: "No active campaigns"
+
+  all_campaigns:
+    source: Campaign
+    sort: name asc
+    limit: 25
+    display: list
+    empty: "No campaigns yet"
+
+  brand_context:
+    source: Brand
+    sort: name asc
+    display: grid
+    empty: "No brands"
+
+# Sixth product workspace (WI density D): feedback trail desk.
+workspace feedback_desk "Feedback":
+  purpose: "Feedback desk — recent notes on assets in review"
+  access: persona(admin, designer, reviewer)
+
+  feedback_pulse:
+    source: Feedback
+    display: metrics
+    aggregate:
+      notes: count(Feedback)
+      assets: count(Asset)
+      in_review: count(Asset where status = review)
+    tones:
+      notes: accent
+      in_review: warning
+
+  recent_notes:
+    source: Feedback
+    sort: created_at desc
+    limit: 25
+    display: queue
+    empty: "No feedback yet"
+
+  assets_in_review:
+    source: Asset
+    filter: status = review
+    sort: updated_at asc
+    limit: 15
+    display: list
+    action: asset_edit
+    empty: "Nothing in review"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
