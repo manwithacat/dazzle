@@ -89,7 +89,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1035 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1037 | USED |
 | **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1037 | USED |
-| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1039 | USED |
+| `dazzle domain` / MCP `domain` (AGENT_DOMAIN extract/gaps/promote) | CLI+MCP | **example-apps** + agent DX | 1041 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | script | **hm-convergence** | 1041 | USED |
+| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1041 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1039 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1035 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 1039 | USED |
@@ -155,6 +157,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 1041 (2026-07-19).** **hm-convergence + domain quality:** gallery probes **6/6 PASS**; domain extract first-exercise on simple_task SPEC — tightened noun filter (reject mid-sentence adjectives; 33→2 nouns). residual=0. Explore **95/100**.
 
 > **Cycle 1039 (2026-07-19).** **trials** STALE-clear (qa trial/demo_world/db@1017 lag~22): preflight complexity refactor metric_list/bar; simple_task serve :3941 + reset-and-load 8 fixtures; demo_world + trial-inventory/coverage; grok-cli qa-trial agency_lead journey (record_friction) budget-capped. residual_total=0. Stamps qa trial + status demo_world + db **USED@1039**. Explore **94/100**.
 

@@ -145,6 +145,64 @@ def _life_by_entity(lifecycles_raw: dict[str, Any]) -> dict[str, list[str]]:
     return out
 
 
+# Adjectives / verbs / doc chrome that discover_entities still emits on long SPECs
+_NOUN_DENY = frozenset(
+    {
+        "urgent",
+        "several",
+        "specific",
+        "discrete",
+        "right",
+        "need",
+        "create",
+        "test",
+        "demo",
+        "work",
+        "list",
+        "level",
+        "state",
+        "mix",
+        "pre",
+        "surface",
+        "control",
+        "scenario",
+        "completed",
+        "review",
+        "transition",
+        "implementation",
+        "development",
+        "organization",
+        "intention",
+        "declared",
+        "various",
+        "require",
+        "signal",
+        "variant",
+        "progre",
+        "workload",
+        "lifecycle",
+        "machine",
+        "administrator",
+        "team",  # too generic alone unless CamelCase compound
+    }
+)
+
+
+def _strong_noun_signal(name: str, source: str, text: str) -> bool:
+    """Prefer deliberate domain types over mid-sentence capital adjectives."""
+    if re.search(r"[a-z][A-Z]", name):  # CamelCase multi-hump
+        return True
+    if source in ("comma_list", "article_noun"):
+        return True
+    # Appears ≥2 times as a token in the brief
+    if len(re.findall(rf"\b{re.escape(name)}\b", text, re.I)) >= 2:
+        return True
+    # Explicit entity-ish phrasing
+    if re.search(rf"\b(entity|record|type|model)\s+{re.escape(name)}\b", text, re.I):
+        return True
+    return False
+
+
 def _extract_nouns(
     entities_raw: dict[str, Any],
     text: str,
@@ -158,16 +216,23 @@ def _extract_nouns(
         name = str(e.get("name") or "").strip()
         if not name:
             continue
+        source = str(e.get("source") or "")
+        if e.get("type") == "user_role":
+            continue
+        if name.lower() in _NOUN_DENY or len(name) < 4:
+            rejected.append(name)
+            continue
         if not _grounded_in_brief(name, text):
             rejected.append(name)
             continue
-        if e.get("type") == "user_role":
+        if not _strong_noun_signal(name, source, text):
+            rejected.append(name)
             continue
         nouns.append(
             DomainNoun(
                 name=name,
                 status="grounded",
-                evidence=f"appears in founder brief (source={e.get('source', '?')})",
+                evidence=f"appears in founder brief (source={source or '?'})",
                 lifecycle_hint=life_by_entity.get(name, []),
                 owner_field_hint=_owner_for_noun(name, text),
             )

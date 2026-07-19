@@ -39,6 +39,23 @@ def test_extract_grounded_spend_no_chrome() -> None:
     assert d.rejected_chrome or "Optional" not in names
 
 
+def test_extract_rejects_mid_sentence_adjectives() -> None:
+    """Long SPECs must not promote 'Urgent'/'Several' as domain nouns."""
+    brief = """
+# Product
+
+Create several urgent Task records. The TaskComment holds discussion.
+A Task has a status lifecycle draft to done.
+"""
+    d = extract_from_text(brief)
+    names = {n.name.lower() for n in d.nouns}
+    assert "urgent" not in names
+    assert "several" not in names
+    assert "create" not in names
+    # CamelCase multi-hump still accepted
+    assert "taskcomment" in names or "TaskComment" in {n.name for n in d.nouns}
+
+
 def test_save_load_roundtrip(tmp_path: Path) -> None:
     d = extract_from_text(SPEND)
     paths = save_domain(tmp_path, d)
