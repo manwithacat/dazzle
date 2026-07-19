@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1059 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1059 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1059 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1072 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1073 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1056 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1054 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1072 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1073 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1055 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1055 | USED |

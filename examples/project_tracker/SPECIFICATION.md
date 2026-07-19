@@ -33,17 +33,19 @@ the **Project Board**. Both places stay available to everyone with access.
 ## Where work happens
 
 - **Dashboard** — manager/admin portfolio: task metrics, open-task queue,
-  project grid, and task-flow kanban.
+  project grid, task-flow kanban, and priority mix chart.
 - **Project Board** — delivery board: board metrics, task kanban, unassigned
-  queue, and milestone timeline.
+  queue, milestone timeline, and project status chart.
 - **My Tasks** — member home: personal load metrics, open-task queue,
-  kanban of assigned work, and recent discussion timeline.
+  kanban of assigned work, discussion timeline, and priority chart.
 - **Milestone Plan** — manager schedule desk: milestone metrics, open
-  milestone queue, active project grid, and status mix chart.
+  milestone queue, active project grid, status mix chart, and open-work trail.
 - **Discussion** — cross-task comment pulse, timeline, open-task grid,
   in-flight kanban, and priority mix chart.
 - **Files** — attachment pulse, file grid, open-task timeline, urgent queue,
   and status mix chart.
+- **People** — admin/manager team pulse: roster grid, unassigned queue,
+  discussion timeline, and open-work load chart.
 
 ## How work flows through it
 
@@ -70,4 +72,4 @@ byte-serving route to that boundary, so no new route can stream attachment
 bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:87f837782aa54f641bffa877ca558328885dfabbbfbae216e600cc60c90bd3e1 -->
+<!-- dazzle-spec-brief: sha256:cdc40ff554efd000887f0540b08efafe5c1cd36532a21c4a69610d365f20ea82 -->

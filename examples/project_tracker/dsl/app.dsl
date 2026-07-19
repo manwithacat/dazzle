@@ -42,6 +42,7 @@ nav admin_nav:
     discussion_desk
     files_desk
     my_tasks
+    people_desk
 
 nav manager_nav:
   group "Manage":
@@ -51,6 +52,7 @@ nav manager_nav:
     discussion_desk
     files_desk
     my_tasks
+    people_desk
 
 nav member_nav:
   group "My work":
@@ -290,6 +292,16 @@ workspace dashboard "Dashboard":
     group_by: status
     sort: priority desc
 
+  # WI D: chart family — priority pressure across open work
+  priority_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks"
+
 workspace project_board "Project Board":
   access: persona(admin, manager, member)
   purpose: "Task and milestone management"
@@ -325,6 +337,15 @@ workspace project_board "Project Board":
     source: Milestone
     display: timeline
     sort: start_date asc
+
+  # WI D: chart family — project status mix beside the board
+  project_status_mix:
+    source: Project
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Project)
+    empty: "No projects"
 
 # Product maturity: more job desks vs 8 list surfaces (was density 0.80).
 workspace my_tasks "My Tasks":
@@ -365,6 +386,16 @@ workspace my_tasks "My Tasks":
     display: timeline
     empty: "No recent comments"
 
+  # WI D: chart family — personal open work by priority
+  my_priority_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks"
+
 workspace milestone_plan "Milestone Plan":
   purpose: "Schedule desk — milestones before drilling into task lists"
   access: persona(admin, manager)
@@ -401,6 +432,16 @@ workspace milestone_plan "Milestone Plan":
     aggregate:
       count: count(Milestone)
     empty: "No milestones"
+
+  # WI D: context family — open tasks tied to the plan
+  open_work_trail:
+    source: Task
+    filter: status != done
+    sort: due_date asc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No open tasks"
 
 # Fifth product workspace (WI density D): discussion desk vs bare comment list.
 workspace discussion_desk "Discussion":
@@ -498,6 +539,58 @@ workspace files_desk "Files":
 
   # WI D: chart family — open task status mix next to files
   status_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks"
+
+# Seventh product desk (WI D): people context without bare user-list warehouse.
+workspace people_desk "People":
+  purpose: "Team pulse — who is on the roster and open work load by status"
+  access: persona(admin, manager)
+
+  team_pulse:
+    source: User
+    display: metrics
+    aggregate:
+      people: count(User)
+      open_tasks: count(Task where status != done)
+      projects: count(Project where status = active)
+    tones:
+      open_tasks: accent
+      people: positive
+
+  # WI D: grid family for roster cards
+  roster:
+    source: User
+    sort: name asc
+    limit: 25
+    display: grid
+    empty: "No team members yet"
+
+  # WI D: queue family — unassigned open work
+  unassigned:
+    source: Task
+    filter: assigned_to = null and status != done
+    sort: priority desc
+    limit: 15
+    display: queue
+    action: task_edit
+    empty: "Every open task has an assignee"
+
+  # WI D: context family — recent comments across the team
+  discussion_pulse:
+    source: Comment
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No recent comments"
+
+  # WI D: chart family — open work status mix
+  load_mix:
     source: Task
     filter: status != done
     display: bar_chart
