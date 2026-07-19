@@ -1,7 +1,7 @@
 {
   "version": "2.0",
-  "dsl_hash": "532905f8a26cbe99",
-  "generated_at": "2026-05-04T15:27:55.972432",
+  "dsl_hash": "622aaf343cbd6aad",
+  "generated_at": "2026-07-19T17:14:05.705457",
   "project_name": "support_tickets",
   "coverage": {
     "entities": [
@@ -10,12 +10,14 @@
       "DeployHistory",
       "FeedbackReport",
       "JobRun",
+      "OnboardingState",
+      "SlaWaiver",
       "SystemHealth",
       "SystemMetric",
       "Ticket",
       "User"
     ],
-    "entities_total": 9,
+    "entities_total": 11,
     "state_machines": [
       "FeedbackReport",
       "Ticket"
@@ -30,11 +32,13 @@
     "personas_total": 4,
     "workspaces": [
       "_platform_admin",
+      "agent_console",
       "agent_dashboard",
+      "manager_ops",
       "my_tickets",
       "ticket_queue"
     ],
-    "workspaces_total": 4,
+    "workspaces_total": 6,
     "events": [],
     "events_total": 0,
     "processes": [],
@@ -60,7 +64,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_7bbd0893@example.com",
+            "email": "test_1fb7ff45@example.com",
             "name": "Test name"
           },
           "rationale": "Create valid User"
@@ -89,7 +93,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.971868"
+      "created_at": "2026-07-19T17:14:05.704832"
     },
     {
       "test_id": "CRUD_USER_READ",
@@ -103,7 +107,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_d783b4c9@example.com",
+            "email": "test_42ad2842@example.com",
             "name": "Test name"
           },
           "rationale": "Seed test data"
@@ -137,7 +141,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.971883"
+      "created_at": "2026-07-19T17:14:05.704849"
     },
     {
       "test_id": "VAL_USER_REQUIRED",
@@ -177,7 +181,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.971887"
+      "created_at": "2026-07-19T17:14:05.704854"
     },
     {
       "test_id": "VAL_USER_EMAIL_UNIQUE",
@@ -191,7 +195,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_6dbdd391@example.com",
+            "email": "test_0b67342f@example.com",
             "name": "Test name"
           },
           "rationale": "Create first entity"
@@ -200,7 +204,7 @@
           "action": "create_expect_error",
           "target": "entity:User",
           "data": {
-            "email": "test_6dbdd391@example.com",
+            "email": "test_0b67342f@example.com",
             "name": "Test name"
           },
           "rationale": "Attempt duplicate email"
@@ -229,7 +233,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.971899"
+      "created_at": "2026-07-19T17:14:05.704866"
     },
     {
       "test_id": "CRUD_TICKET_CREATE",
@@ -243,7 +247,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_293573e0@example.com",
+            "email": "test_1203d871@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -285,7 +289,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.971939"
+      "created_at": "2026-07-19T17:14:05.704912"
     },
     {
       "test_id": "CRUD_TICKET_READ",
@@ -299,7 +303,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_293573e0@example.com",
+            "email": "test_1203d871@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -346,7 +350,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.971952"
+      "created_at": "2026-07-19T17:14:05.704926"
     },
     {
       "test_id": "VAL_TICKET_REQUIRED",
@@ -386,7 +390,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.971956"
+      "created_at": "2026-07-19T17:14:05.704931"
     },
     {
       "test_id": "VAL_TICKET_TICKET_NUMBER_UNIQUE",
@@ -400,7 +404,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_293573e0@example.com",
+            "email": "test_1203d871@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -413,7 +417,8 @@
             "title": "Test title",
             "description": "Test description for description",
             "resolution": "Test description for resolution",
-            "created_by": "$ref:parent_user.id"
+            "created_by": "$ref:parent_user.id",
+            "ticket_number": "Test ticket_00543c33"
           },
           "rationale": "Create first entity"
         },
@@ -424,7 +429,8 @@
             "title": "Test title",
             "description": "Test description for description",
             "resolution": "Test description for resolution",
-            "created_by": "$ref:parent_user.id"
+            "created_by": "$ref:parent_user.id",
+            "ticket_number": "Test ticket_00543c33"
           },
           "rationale": "Attempt duplicate ticket_number"
         },
@@ -453,7 +459,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.971970"
+      "created_at": "2026-07-19T17:14:05.704953"
     },
     {
       "test_id": "CRUD_COMMENT_CREATE",
@@ -467,7 +473,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_4156d5fa@example.com",
+            "email": "test_a6a396c8@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -521,7 +527,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972007"
+      "created_at": "2026-07-19T17:14:05.704990"
     },
     {
       "test_id": "CRUD_COMMENT_READ",
@@ -535,7 +541,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_4156d5fa@example.com",
+            "email": "test_a6a396c8@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -594,7 +600,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972012"
+      "created_at": "2026-07-19T17:14:05.704995"
     },
     {
       "test_id": "VAL_COMMENT_REQUIRED",
@@ -634,7 +640,47 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972014"
+      "created_at": "2026-07-19T17:14:05.704998"
+    },
+    {
+      "test_id": "CRUD_SLAWAIVER_READ",
+      "title": "Read SLA Waiver list",
+      "description": "Test reading SLA Waiver list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:SlaWaiver",
+          "rationale": "Fetch SLA Waiver list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read SLA Waiver list succeeds"
+      ],
+      "entities": [
+        "SlaWaiver"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705029"
     },
     {
       "test_id": "CRUD_AUDITENTRY_READ",
@@ -674,7 +720,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972021"
+      "created_at": "2026-07-19T17:14:05.705039"
     },
     {
       "test_id": "CRUD_JOBRUN_READ",
@@ -714,7 +760,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972026"
+      "created_at": "2026-07-19T17:14:05.705045"
     },
     {
       "test_id": "CRUD_FEEDBACKREPORT_CREATE",
@@ -728,7 +774,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description"
           },
           "rationale": "Create valid Feedback Report"
@@ -757,7 +803,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972039"
+      "created_at": "2026-07-19T17:14:05.705059"
     },
     {
       "test_id": "CRUD_FEEDBACKREPORT_READ",
@@ -771,7 +817,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description"
           },
           "rationale": "Seed test data"
@@ -805,7 +851,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972046"
+      "created_at": "2026-07-19T17:14:05.705067"
     },
     {
       "test_id": "VAL_FEEDBACKREPORT_REQUIRED",
@@ -845,7 +891,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972050"
+      "created_at": "2026-07-19T17:14:05.705072"
     },
     {
       "test_id": "VAL_FEEDBACKREPORT_IDEMPOTENCY_KEY_UNIQUE",
@@ -859,8 +905,9 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
-            "description": "Test description for description"
+            "category": "behaviour",
+            "description": "Test description for description",
+            "idempotency_key": "Test idempotency_key_cbb3560f"
           },
           "rationale": "Create first entity"
         },
@@ -868,8 +915,9 @@
           "action": "create_expect_error",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
-            "description": "Test description for description"
+            "category": "behaviour",
+            "description": "Test description for description",
+            "idempotency_key": "Test idempotency_key_cbb3560f"
           },
           "rationale": "Attempt duplicate idempotency_key"
         },
@@ -897,7 +945,47 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972060"
+      "created_at": "2026-07-19T17:14:05.705089"
+    },
+    {
+      "test_id": "CRUD_ONBOARDINGSTATE_READ",
+      "title": "Read Onboarding State list",
+      "description": "Test reading Onboarding State list (read-only entity)",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "read_list",
+          "target": "entity:OnboardingState",
+          "rationale": "Fetch Onboarding State list"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify list endpoint exists"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Onboarding State list succeeds"
+      ],
+      "entities": [
+        "OnboardingState"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "read_only",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705095"
     },
     {
       "test_id": "CRUD_SYSTEMHEALTH_READ",
@@ -937,7 +1025,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972065"
+      "created_at": "2026-07-19T17:14:05.705099"
     },
     {
       "test_id": "CRUD_SYSTEMMETRIC_READ",
@@ -977,7 +1065,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972069"
+      "created_at": "2026-07-19T17:14:05.705103"
     },
     {
       "test_id": "CRUD_DEPLOYHISTORY_READ",
@@ -1017,7 +1105,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972073"
+      "created_at": "2026-07-19T17:14:05.705107"
     },
     {
       "test_id": "SM_TICKET_OPEN_IN_PROGRESS",
@@ -1031,7 +1119,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1083,7 +1171,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972104"
+      "created_at": "2026-07-19T17:14:05.705136"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_RESOLVED",
@@ -1097,7 +1185,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1149,7 +1237,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972107"
+      "created_at": "2026-07-19T17:14:05.705140"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_OPEN",
@@ -1163,7 +1251,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1215,7 +1303,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972110"
+      "created_at": "2026-07-19T17:14:05.705143"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_CLOSED",
@@ -1229,7 +1317,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1281,7 +1369,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972112"
+      "created_at": "2026-07-19T17:14:05.705146"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_IN_PROGRESS",
@@ -1295,7 +1383,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1347,7 +1435,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972115"
+      "created_at": "2026-07-19T17:14:05.705149"
     },
     {
       "test_id": "SM_TICKET_CLOSED_OPEN",
@@ -1361,7 +1449,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1413,7 +1501,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972165"
+      "created_at": "2026-07-19T17:14:05.705152"
     },
     {
       "test_id": "SM_TICKET_OPEN_CLOSED_INVALID",
@@ -1427,7 +1515,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1479,7 +1567,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972170"
+      "created_at": "2026-07-19T17:14:05.705158"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_CLOSED_INVALID",
@@ -1493,7 +1581,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1545,7 +1633,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972174"
+      "created_at": "2026-07-19T17:14:05.705163"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_OPEN_INVALID",
@@ -1559,7 +1647,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1611,12 +1699,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972178"
+      "created_at": "2026-07-19T17:14:05.705166"
     },
     {
-      "test_id": "SM_TICKET_CLOSED_IN_PROGRESS_INVALID",
-      "title": "Support Ticket: closed \u2192 in_progress (invalid)",
-      "description": "Test that invalid transition from closed to in_progress is rejected",
+      "test_id": "SM_TICKET_CLOSED_RESOLVED_INVALID",
+      "title": "Support Ticket: closed \u2192 resolved (invalid)",
+      "description": "Test that invalid transition from closed to resolved is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1625,7 +1713,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_8c975fac@example.com",
+            "email": "test_9559d196@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -1647,9 +1735,9 @@
           "action": "transition_expect_error",
           "target": "entity:Ticket",
           "data": {
-            "to_state": "in_progress"
+            "to_state": "resolved"
           },
-          "rationale": "Attempt invalid transition to in_progress"
+          "rationale": "Attempt invalid transition to resolved"
         },
         {
           "action": "assert_state",
@@ -1662,7 +1750,7 @@
         }
       ],
       "expected_outcomes": [
-        "Support Ticket: closed \u2192 in_progress (invalid) succeeds"
+        "Support Ticket: closed \u2192 resolved (invalid) succeeds"
       ],
       "entities": [
         "Ticket",
@@ -1677,7 +1765,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972181"
+      "created_at": "2026-07-19T17:14:05.705169"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_NEW_TRIAGED",
@@ -1691,7 +1779,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "new"
           },
@@ -1730,7 +1818,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972199"
+      "created_at": "2026-07-19T17:14:05.705185"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_TRIAGED_IN_PROGRESS",
@@ -1744,7 +1832,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "triaged"
           },
@@ -1783,7 +1871,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972201"
+      "created_at": "2026-07-19T17:14:05.705188"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_TRIAGED_WONT_FIX",
@@ -1797,7 +1885,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "triaged"
           },
@@ -1836,7 +1924,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972204"
+      "created_at": "2026-07-19T17:14:05.705190"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_TRIAGED_DUPLICATE",
@@ -1850,7 +1938,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "triaged"
           },
@@ -1889,7 +1977,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972206"
+      "created_at": "2026-07-19T17:14:05.705193"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_TRIAGED_RESOLVED",
@@ -1903,7 +1991,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "triaged"
           },
@@ -1942,7 +2030,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972208"
+      "created_at": "2026-07-19T17:14:05.705196"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_RESOLVED",
@@ -1956,7 +2044,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "in_progress"
           },
@@ -1995,7 +2083,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972211"
+      "created_at": "2026-07-19T17:14:05.705198"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_WONT_FIX",
@@ -2009,7 +2097,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "in_progress"
           },
@@ -2048,7 +2136,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972213"
+      "created_at": "2026-07-19T17:14:05.705202"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_RESOLVED_VERIFIED",
@@ -2062,7 +2150,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "resolved"
           },
@@ -2101,7 +2189,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972215"
+      "created_at": "2026-07-19T17:14:05.705205"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_RESOLVED_IN_PROGRESS",
@@ -2115,7 +2203,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "resolved"
           },
@@ -2154,7 +2242,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972217"
+      "created_at": "2026-07-19T17:14:05.705207"
     },
     {
       "test_id": "SM_FEEDBACKREPORT_NEW_VERIFIED_INVALID",
@@ -2168,7 +2256,7 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "new"
           },
@@ -2207,12 +2295,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972222"
+      "created_at": "2026-07-19T17:14:05.705212"
     },
     {
-      "test_id": "SM_FEEDBACKREPORT_TRIAGED_NEW_INVALID",
-      "title": "Feedback Report: triaged \u2192 new (invalid)",
-      "description": "Test that invalid transition from triaged to new is rejected",
+      "test_id": "SM_FEEDBACKREPORT_TRIAGED_VERIFIED_INVALID",
+      "title": "Feedback Report: triaged \u2192 verified (invalid)",
+      "description": "Test that invalid transition from triaged to verified is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2221,276 +2309,11 @@
           "action": "create",
           "target": "entity:FeedbackReport",
           "data": {
-            "category": "bug",
+            "category": "behaviour",
             "description": "Test description for description",
             "status": "triaged"
           },
           "rationale": "Create entity in triaged state"
-        },
-        {
-          "action": "transition_expect_error",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "to_state": "new"
-          },
-          "rationale": "Attempt invalid transition to new"
-        },
-        {
-          "action": "assert_state",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "field": "status",
-            "value": "triaged"
-          },
-          "rationale": "Verify state unchanged"
-        }
-      ],
-      "expected_outcomes": [
-        "Feedback Report: triaged \u2192 new (invalid) succeeds"
-      ],
-      "entities": [
-        "FeedbackReport"
-      ],
-      "surfaces": [],
-      "tags": [
-        "state_machine",
-        "invalid_transition",
-        "generated",
-        "dsl-derived"
-      ],
-      "status": "accepted",
-      "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972226"
-    },
-    {
-      "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_TRIAGED_INVALID",
-      "title": "Feedback Report: in_progress \u2192 triaged (invalid)",
-      "description": "Test that invalid transition from in_progress to triaged is rejected",
-      "trigger": "state_change",
-      "persona": null,
-      "scenario": null,
-      "steps": [
-        {
-          "action": "create",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "category": "bug",
-            "description": "Test description for description",
-            "status": "in_progress"
-          },
-          "rationale": "Create entity in in_progress state"
-        },
-        {
-          "action": "transition_expect_error",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "to_state": "triaged"
-          },
-          "rationale": "Attempt invalid transition to triaged"
-        },
-        {
-          "action": "assert_state",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "field": "status",
-            "value": "in_progress"
-          },
-          "rationale": "Verify state unchanged"
-        }
-      ],
-      "expected_outcomes": [
-        "Feedback Report: in_progress \u2192 triaged (invalid) succeeds"
-      ],
-      "entities": [
-        "FeedbackReport"
-      ],
-      "surfaces": [],
-      "tags": [
-        "state_machine",
-        "invalid_transition",
-        "generated",
-        "dsl-derived"
-      ],
-      "status": "accepted",
-      "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972229"
-    },
-    {
-      "test_id": "SM_FEEDBACKREPORT_RESOLVED_TRIAGED_INVALID",
-      "title": "Feedback Report: resolved \u2192 triaged (invalid)",
-      "description": "Test that invalid transition from resolved to triaged is rejected",
-      "trigger": "state_change",
-      "persona": null,
-      "scenario": null,
-      "steps": [
-        {
-          "action": "create",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "category": "bug",
-            "description": "Test description for description",
-            "status": "resolved"
-          },
-          "rationale": "Create entity in resolved state"
-        },
-        {
-          "action": "transition_expect_error",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "to_state": "triaged"
-          },
-          "rationale": "Attempt invalid transition to triaged"
-        },
-        {
-          "action": "assert_state",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "field": "status",
-            "value": "resolved"
-          },
-          "rationale": "Verify state unchanged"
-        }
-      ],
-      "expected_outcomes": [
-        "Feedback Report: resolved \u2192 triaged (invalid) succeeds"
-      ],
-      "entities": [
-        "FeedbackReport"
-      ],
-      "surfaces": [],
-      "tags": [
-        "state_machine",
-        "invalid_transition",
-        "generated",
-        "dsl-derived"
-      ],
-      "status": "accepted",
-      "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972233"
-    },
-    {
-      "test_id": "SM_FEEDBACKREPORT_VERIFIED_DUPLICATE_INVALID",
-      "title": "Feedback Report: verified \u2192 duplicate (invalid)",
-      "description": "Test that invalid transition from verified to duplicate is rejected",
-      "trigger": "state_change",
-      "persona": null,
-      "scenario": null,
-      "steps": [
-        {
-          "action": "create",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "category": "bug",
-            "description": "Test description for description",
-            "status": "verified"
-          },
-          "rationale": "Create entity in verified state"
-        },
-        {
-          "action": "transition_expect_error",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "to_state": "duplicate"
-          },
-          "rationale": "Attempt invalid transition to duplicate"
-        },
-        {
-          "action": "assert_state",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "field": "status",
-            "value": "verified"
-          },
-          "rationale": "Verify state unchanged"
-        }
-      ],
-      "expected_outcomes": [
-        "Feedback Report: verified \u2192 duplicate (invalid) succeeds"
-      ],
-      "entities": [
-        "FeedbackReport"
-      ],
-      "surfaces": [],
-      "tags": [
-        "state_machine",
-        "invalid_transition",
-        "generated",
-        "dsl-derived"
-      ],
-      "status": "accepted",
-      "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972236"
-    },
-    {
-      "test_id": "SM_FEEDBACKREPORT_WONT_FIX_DUPLICATE_INVALID",
-      "title": "Feedback Report: wont_fix \u2192 duplicate (invalid)",
-      "description": "Test that invalid transition from wont_fix to duplicate is rejected",
-      "trigger": "state_change",
-      "persona": null,
-      "scenario": null,
-      "steps": [
-        {
-          "action": "create",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "category": "bug",
-            "description": "Test description for description",
-            "status": "wont_fix"
-          },
-          "rationale": "Create entity in wont_fix state"
-        },
-        {
-          "action": "transition_expect_error",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "to_state": "duplicate"
-          },
-          "rationale": "Attempt invalid transition to duplicate"
-        },
-        {
-          "action": "assert_state",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "field": "status",
-            "value": "wont_fix"
-          },
-          "rationale": "Verify state unchanged"
-        }
-      ],
-      "expected_outcomes": [
-        "Feedback Report: wont_fix \u2192 duplicate (invalid) succeeds"
-      ],
-      "entities": [
-        "FeedbackReport"
-      ],
-      "surfaces": [],
-      "tags": [
-        "state_machine",
-        "invalid_transition",
-        "generated",
-        "dsl-derived"
-      ],
-      "status": "accepted",
-      "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972239"
-    },
-    {
-      "test_id": "SM_FEEDBACKREPORT_DUPLICATE_VERIFIED_INVALID",
-      "title": "Feedback Report: duplicate \u2192 verified (invalid)",
-      "description": "Test that invalid transition from duplicate to verified is rejected",
-      "trigger": "state_change",
-      "persona": null,
-      "scenario": null,
-      "steps": [
-        {
-          "action": "create",
-          "target": "entity:FeedbackReport",
-          "data": {
-            "category": "bug",
-            "description": "Test description for description",
-            "status": "duplicate"
-          },
-          "rationale": "Create entity in duplicate state"
         },
         {
           "action": "transition_expect_error",
@@ -2505,13 +2328,13 @@
           "target": "entity:FeedbackReport",
           "data": {
             "field": "status",
-            "value": "duplicate"
+            "value": "triaged"
           },
           "rationale": "Verify state unchanged"
         }
       ],
       "expected_outcomes": [
-        "Feedback Report: duplicate \u2192 verified (invalid) succeeds"
+        "Feedback Report: triaged \u2192 verified (invalid) succeeds"
       ],
       "entities": [
         "FeedbackReport"
@@ -2525,7 +2348,272 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972243"
+      "created_at": "2026-07-19T17:14:05.705216"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_IN_PROGRESS_VERIFIED_INVALID",
+      "title": "Feedback Report: in_progress \u2192 verified (invalid)",
+      "description": "Test that invalid transition from in_progress to verified is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "behaviour",
+            "description": "Test description for description",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "verified"
+          },
+          "rationale": "Attempt invalid transition to verified"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: in_progress \u2192 verified (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705221"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_RESOLVED_NEW_INVALID",
+      "title": "Feedback Report: resolved \u2192 new (invalid)",
+      "description": "Test that invalid transition from resolved to new is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "behaviour",
+            "description": "Test description for description",
+            "status": "resolved"
+          },
+          "rationale": "Create entity in resolved state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "new"
+          },
+          "rationale": "Attempt invalid transition to new"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "resolved"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: resolved \u2192 new (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705225"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_VERIFIED_NEW_INVALID",
+      "title": "Feedback Report: verified \u2192 new (invalid)",
+      "description": "Test that invalid transition from verified to new is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "behaviour",
+            "description": "Test description for description",
+            "status": "verified"
+          },
+          "rationale": "Create entity in verified state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "new"
+          },
+          "rationale": "Attempt invalid transition to new"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "verified"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: verified \u2192 new (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705228"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_WONT_FIX_NEW_INVALID",
+      "title": "Feedback Report: wont_fix \u2192 new (invalid)",
+      "description": "Test that invalid transition from wont_fix to new is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "behaviour",
+            "description": "Test description for description",
+            "status": "wont_fix"
+          },
+          "rationale": "Create entity in wont_fix state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "new"
+          },
+          "rationale": "Attempt invalid transition to new"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "wont_fix"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: wont_fix \u2192 new (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705232"
+    },
+    {
+      "test_id": "SM_FEEDBACKREPORT_DUPLICATE_NEW_INVALID",
+      "title": "Feedback Report: duplicate \u2192 new (invalid)",
+      "description": "Test that invalid transition from duplicate to new is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "category": "behaviour",
+            "description": "Test description for description",
+            "status": "duplicate"
+          },
+          "rationale": "Create entity in duplicate state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "to_state": "new"
+          },
+          "rationale": "Attempt invalid transition to new"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FeedbackReport",
+          "data": {
+            "field": "status",
+            "value": "duplicate"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Feedback Report: duplicate \u2192 new (invalid) succeeds"
+      ],
+      "entities": [
+        "FeedbackReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705235"
     },
     {
       "test_id": "ACL_ADMIN_ACCESS",
@@ -2559,7 +2647,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972247"
+      "created_at": "2026-07-19T17:14:05.705240"
     },
     {
       "test_id": "ACL_CUSTOMER_ACCESS",
@@ -2593,7 +2681,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972249"
+      "created_at": "2026-07-19T17:14:05.705243"
     },
     {
       "test_id": "GOAL_CUSTOMER_SUBMIT_NEW_TICKETS_E",
@@ -2627,7 +2715,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972292"
+      "created_at": "2026-07-19T17:14:05.705293"
     },
     {
       "test_id": "GOAL_CUSTOMER_TRACK_TICKET_STATUS_",
@@ -2661,7 +2749,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972297"
+      "created_at": "2026-07-19T17:14:05.705299"
     },
     {
       "test_id": "GOAL_CUSTOMER_RECEIVE_TIMELY_RESPO",
@@ -2695,7 +2783,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972301"
+      "created_at": "2026-07-19T17:14:05.705302"
     },
     {
       "test_id": "ACL_AGENT_ACCESS",
@@ -2729,7 +2817,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972303"
+      "created_at": "2026-07-19T17:14:05.705305"
     },
     {
       "test_id": "GOAL_AGENT_PROCESS_TICKETS_EFFI",
@@ -2763,7 +2851,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972306"
+      "created_at": "2026-07-19T17:14:05.705308"
     },
     {
       "test_id": "GOAL_AGENT_MAINTAIN_SLA_COMPLIA",
@@ -2797,7 +2885,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972309"
+      "created_at": "2026-07-19T17:14:05.705311"
     },
     {
       "test_id": "GOAL_AGENT_ESCALATE_COMPLEX_ISS",
@@ -2831,7 +2919,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972312"
+      "created_at": "2026-07-19T17:14:05.705314"
     },
     {
       "test_id": "ACL_MANAGER_ACCESS",
@@ -2865,7 +2953,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972314"
+      "created_at": "2026-07-19T17:14:05.705316"
     },
     {
       "test_id": "GOAL_MANAGER_MONITOR_TEAM_METRICS",
@@ -2899,7 +2987,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972317"
+      "created_at": "2026-07-19T17:14:05.705319"
     },
     {
       "test_id": "GOAL_MANAGER_IDENTIFY_BOTTLENECKS",
@@ -2933,7 +3021,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972320"
+      "created_at": "2026-07-19T17:14:05.705322"
     },
     {
       "test_id": "GOAL_MANAGER_ENSURE_QUALITY_AND_C",
@@ -2967,7 +3055,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972323"
+      "created_at": "2026-07-19T17:14:05.705325"
     },
     {
       "test_id": "AUTH_LOGIN_VALID_ADMIN",
@@ -3016,7 +3104,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972326"
+      "created_at": "2026-07-19T17:14:05.705329"
     },
     {
       "test_id": "AUTH_LOGIN_INVALID_ADMIN",
@@ -3066,7 +3154,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972328"
+      "created_at": "2026-07-19T17:14:05.705332"
     },
     {
       "test_id": "AUTH_REDIRECT_ADMIN",
@@ -3107,7 +3195,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972330"
+      "created_at": "2026-07-19T17:14:05.705334"
     },
     {
       "test_id": "AUTH_SESSION_VALID_ADMIN",
@@ -3152,7 +3240,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972332"
+      "created_at": "2026-07-19T17:14:05.705336"
     },
     {
       "test_id": "AUTH_SESSION_EXPIRED_ADMIN",
@@ -3204,7 +3292,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972334"
+      "created_at": "2026-07-19T17:14:05.705339"
     },
     {
       "test_id": "AUTH_LOGOUT_ADMIN",
@@ -3271,7 +3359,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972337"
+      "created_at": "2026-07-19T17:14:05.705341"
     },
     {
       "test_id": "AUTH_LOGIN_VALID_CUSTOMER",
@@ -3320,7 +3408,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972340"
+      "created_at": "2026-07-19T17:14:05.705347"
     },
     {
       "test_id": "AUTH_LOGIN_INVALID_CUSTOMER",
@@ -3370,7 +3458,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972342"
+      "created_at": "2026-07-19T17:14:05.705349"
     },
     {
       "test_id": "AUTH_REDIRECT_CUSTOMER",
@@ -3411,7 +3499,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972343"
+      "created_at": "2026-07-19T17:14:05.705351"
     },
     {
       "test_id": "AUTH_SESSION_VALID_CUSTOMER",
@@ -3456,7 +3544,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972345"
+      "created_at": "2026-07-19T17:14:05.705353"
     },
     {
       "test_id": "AUTH_SESSION_EXPIRED_CUSTOMER",
@@ -3508,7 +3596,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972347"
+      "created_at": "2026-07-19T17:14:05.705355"
     },
     {
       "test_id": "AUTH_LOGOUT_CUSTOMER",
@@ -3575,7 +3663,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972350"
+      "created_at": "2026-07-19T17:14:05.705357"
     },
     {
       "test_id": "AUTH_LOGIN_VALID_AGENT",
@@ -3624,7 +3712,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972352"
+      "created_at": "2026-07-19T17:14:05.705360"
     },
     {
       "test_id": "AUTH_LOGIN_INVALID_AGENT",
@@ -3674,7 +3762,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972354"
+      "created_at": "2026-07-19T17:14:05.705362"
     },
     {
       "test_id": "AUTH_REDIRECT_AGENT",
@@ -3715,7 +3803,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972356"
+      "created_at": "2026-07-19T17:14:05.705364"
     },
     {
       "test_id": "AUTH_SESSION_VALID_AGENT",
@@ -3760,7 +3848,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972357"
+      "created_at": "2026-07-19T17:14:05.705366"
     },
     {
       "test_id": "AUTH_SESSION_EXPIRED_AGENT",
@@ -3812,7 +3900,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972359"
+      "created_at": "2026-07-19T17:14:05.705367"
     },
     {
       "test_id": "AUTH_LOGOUT_AGENT",
@@ -3879,7 +3967,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972361"
+      "created_at": "2026-07-19T17:14:05.705369"
     },
     {
       "test_id": "AUTH_LOGIN_VALID_MANAGER",
@@ -3928,7 +4016,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972363"
+      "created_at": "2026-07-19T17:14:05.705372"
     },
     {
       "test_id": "AUTH_LOGIN_INVALID_MANAGER",
@@ -3978,7 +4066,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972365"
+      "created_at": "2026-07-19T17:14:05.705373"
     },
     {
       "test_id": "AUTH_REDIRECT_MANAGER",
@@ -4019,7 +4107,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972367"
+      "created_at": "2026-07-19T17:14:05.705375"
     },
     {
       "test_id": "AUTH_SESSION_VALID_MANAGER",
@@ -4064,7 +4152,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972369"
+      "created_at": "2026-07-19T17:14:05.705377"
     },
     {
       "test_id": "AUTH_SESSION_EXPIRED_MANAGER",
@@ -4116,7 +4204,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972371"
+      "created_at": "2026-07-19T17:14:05.705379"
     },
     {
       "test_id": "AUTH_LOGOUT_MANAGER",
@@ -4183,16 +4271,21 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972373"
+      "created_at": "2026-07-19T17:14:05.705381"
     },
     {
       "test_id": "WS_TICKET_QUEUE_NAV",
       "title": "Navigate to Ticket Queue",
       "description": "Verify Ticket Queue workspace loads and displays correctly",
       "trigger": "playwright",
-      "persona": null,
+      "persona": "agent",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as agent"
+        },
         {
           "action": "navigate_to",
           "target": "workspace:ticket_queue",
@@ -4232,16 +4325,21 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972377"
+      "created_at": "2026-07-19T17:14:05.705386"
     },
     {
       "test_id": "WS_TICKET_QUEUE_ROUTE",
       "title": "Workspace Ticket Queue route exists",
       "description": "Verify Ticket Queue workspace route is configured",
       "trigger": "api_call",
-      "persona": null,
+      "persona": "agent",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as agent"
+        },
         {
           "action": "check_route",
           "target": "workspace:ticket_queue",
@@ -4264,16 +4362,112 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972379"
+      "created_at": "2026-07-19T17:14:05.705389"
+    },
+    {
+      "test_id": "WS_MANAGER_OPS_NAV",
+      "title": "Navigate to Manager Ops",
+      "description": "Verify Manager Ops workspace loads and displays correctly",
+      "trigger": "playwright",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as manager"
+        },
+        {
+          "action": "navigate_to",
+          "target": "workspace:manager_ops",
+          "data": {
+            "route": "/app/workspaces/manager_ops"
+          },
+          "rationale": "Navigate to Manager Ops workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='manager_ops']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Manager Ops succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "playwright",
+        "tier1",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705394"
+    },
+    {
+      "test_id": "WS_MANAGER_OPS_ROUTE",
+      "title": "Workspace Manager Ops route exists",
+      "description": "Verify Manager Ops workspace route is configured",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as manager"
+        },
+        {
+          "action": "check_route",
+          "target": "workspace:manager_ops",
+          "data": {
+            "route": "/app/workspaces/manager_ops"
+          },
+          "rationale": "Verify route for Manager Ops is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Manager Ops route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705397"
     },
     {
       "test_id": "WS_AGENT_DASHBOARD_NAV",
       "title": "Navigate to Agent Dashboard",
       "description": "Verify Agent Dashboard workspace loads and displays correctly",
       "trigger": "playwright",
-      "persona": null,
+      "persona": "agent",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as agent"
+        },
         {
           "action": "navigate_to",
           "target": "workspace:agent_dashboard",
@@ -4313,16 +4507,21 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972383"
+      "created_at": "2026-07-19T17:14:05.705401"
     },
     {
       "test_id": "WS_AGENT_DASHBOARD_ROUTE",
       "title": "Workspace Agent Dashboard route exists",
       "description": "Verify Agent Dashboard workspace route is configured",
       "trigger": "api_call",
-      "persona": null,
+      "persona": "agent",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "agent",
+          "rationale": "Authenticate as agent"
+        },
         {
           "action": "check_route",
           "target": "workspace:agent_dashboard",
@@ -4345,16 +4544,21 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972384"
+      "created_at": "2026-07-19T17:14:05.705403"
     },
     {
       "test_id": "WS_MY_TICKETS_NAV",
       "title": "Navigate to My Tickets",
       "description": "Verify My Tickets workspace loads and displays correctly",
       "trigger": "playwright",
-      "persona": null,
+      "persona": "customer",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "customer",
+          "rationale": "Authenticate as customer"
+        },
         {
           "action": "navigate_to",
           "target": "workspace:my_tickets",
@@ -4394,16 +4598,21 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972387"
+      "created_at": "2026-07-19T17:14:05.705406"
     },
     {
       "test_id": "WS_MY_TICKETS_ROUTE",
       "title": "Workspace My Tickets route exists",
       "description": "Verify My Tickets workspace route is configured",
       "trigger": "api_call",
-      "persona": null,
+      "persona": "customer",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "customer",
+          "rationale": "Authenticate as customer"
+        },
         {
           "action": "check_route",
           "target": "workspace:my_tickets",
@@ -4426,7 +4635,98 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972389"
+      "created_at": "2026-07-19T17:14:05.705409"
+    },
+    {
+      "test_id": "WS_AGENT_CONSOLE_NAV",
+      "title": "Navigate to Agent Console",
+      "description": "Verify Agent Console workspace loads and displays correctly",
+      "trigger": "playwright",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
+        {
+          "action": "navigate_to",
+          "target": "workspace:agent_console",
+          "data": {
+            "route": "/app/workspaces/agent_console"
+          },
+          "rationale": "Navigate to Agent Console workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='agent_console']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Agent Console succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "playwright",
+        "tier1",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705412"
+    },
+    {
+      "test_id": "WS_AGENT_CONSOLE_ROUTE",
+      "title": "Workspace Agent Console route exists",
+      "description": "Verify Agent Console workspace route is configured",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
+        {
+          "action": "check_route",
+          "target": "workspace:agent_console",
+          "data": {
+            "route": "/app/workspaces/agent_console"
+          },
+          "rationale": "Verify route for Agent Console is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Agent Console route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-07-19T17:14:05.705414"
     },
     {
       "test_id": "WS__PLATFORM_ADMIN_NAV",
@@ -4480,7 +4780,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972392"
+      "created_at": "2026-07-19T17:14:05.705417"
     },
     {
       "test_id": "WS__PLATFORM_ADMIN_ROUTE",
@@ -4517,7 +4817,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-05-04T15:27:55.972394"
+      "created_at": "2026-07-19T17:14:05.705419"
     }
   ]
 }

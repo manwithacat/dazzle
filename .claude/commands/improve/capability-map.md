@@ -54,7 +54,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle rhythm` (fidelity/gaps/evaluate/lifecycle/propose) | CLI | example-apps (Tier 1) | 982 | USED |
 | `dazzle story` (scope-fidelity/list/generate-tests/propose) | CLI + MCP (composition/coverage) | example-apps (Tier 1) | 982 | USED |
 | `dazzle test-design` (coverage-actions/runtime-gaps/…) | CLI | example-apps | 985 | USED |
-| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 970 | USED |
+| `dazzle pulse` (run/radar/persona/timeline/decisions/wfs) | CLI | framework-ux | 1005 | USED |
 | `dazzle sentinel scan` (findings/fuzz/history) | CLI + MCP | framework-ux | 984 | USED |
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 974 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 982 | USED |
@@ -75,20 +75,20 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 982 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 984 | USED |
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 982 | USED |
-| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 969 | USED |
+| `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 1005 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 975 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 975 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 975 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 998 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 998 | USED |
-| `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 970 | USED |
-| `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 969 | USED |
-| `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 970 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1005 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1005 | USED |
+| `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1005 | USED |
+| `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1005 | USED |
+| `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1005 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
 | **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 998 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 993 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 993 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 998 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1005 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 993 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 979 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 979 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1005 (2026-07-19).** **example-apps** STALE-clear (prove/compliance@969 lag~36; representation/scaffold@970 lag~35; pulse@970): support_tickets `prove story` **18/18**, `prove representation` OK; `compliance gaps` 10 tier-3; `compliance privacy` regenerated; `representation patterns` OK; scaffold CLI present; `pulse radar` **68%**. residual=0; wi_fleet **0.245≤floor**. Stamps prove/compliance/representation/scaffold/pulse + CodeQL/inbox/probes **USED@1005**. Explore **64/100**. Remaining STALE: HM gallery/dual_lock/shadcn/zero-floor/coherence@973 lag~32.
 
 > **Cycle 998 (2026-07-19).** **self-audit** (cadence ≥15 since 983): window `a47b1804d..HEAD` (13 improve commits). Sampled top-5 by churn: **752d6cb63** WI metric+acme invoices_home CLEAN; **a49a64301** invoice_ops suppliers/team desks+open-via CLEAN (G=0, ws=7); **448650d09** hr_records my_team/starters CLEAN; **0d13a38bb** platform-list exclusion + ST-013–018 binds CLEAN (G=0,J=0,bound 17/17; maturity tests 10 pass); **8e90e0584** project_tracker discussion/files desks CLEAN (G=0,ws=6). residual_total=0; wi_fleet≈0.334. **5 CLEAN / 0 DISCREPANCY**. End SHA post-stamp. budget_consumed 0. Explore **57/100**. Next self-audit ~**1013**. Next product feature_creep wi_next=acme_billing (N).
 
