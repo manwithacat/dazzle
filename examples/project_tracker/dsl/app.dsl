@@ -434,6 +434,25 @@ workspace discussion_desk "Discussion":
     action: task_detail
     empty: "No open tasks"
 
+  # WI D: kanban family — discuss work still in flight
+  open_flow:
+    source: Task
+    filter: status != done
+    display: kanban
+    group_by: status
+    sort: priority desc
+    empty: "No open tasks"
+
+  # WI D: chart family — priority mix on open work
+  priority_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks"
+
 # Sixth product workspace (WI density D): files desk for attachment work.
 workspace files_desk "Files":
   purpose: "Attachment desk — files linked to tasks, not a warehouse dump"
@@ -465,6 +484,26 @@ workspace files_desk "Files":
     limit: 15
     display: timeline
     action: task_detail
+    empty: "No open tasks"
+
+  # WI D: queue family — attach evidence to urgent open work
+  urgent_queue:
+    source: Task
+    filter: status != done and (priority = critical or priority = high)
+    sort: priority desc, due_date asc
+    limit: 12
+    display: queue
+    action: task_edit
+    empty: "No high-priority open tasks"
+
+  # WI D: chart family — open task status mix next to files
+  status_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
     empty: "No open tasks"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
