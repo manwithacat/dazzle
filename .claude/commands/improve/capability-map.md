@@ -79,17 +79,17 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 975 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 975 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 975 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 983 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 983 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 993 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 993 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 970 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 969 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 970 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse job desks / landings / density) | `scripts/example_product_maturity.py` + strategy `product_maturity` | **example-apps** | 979 | USED |
-| **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 979 | USED |
-| **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 979 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 983 | USED |
-| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 979 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 993 | USED |
+| **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 993 | USED |
+| **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 993 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 993 | USED |
+| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 993 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 979 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 979 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 981 | USED |
@@ -152,6 +152,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 993 (2026-07-19) capability-sweep.** Inventory: MCP still **37** tools; skills unchanged (dsl-authoring/phase-contract/qa-trial/spec-narrate/stems). CLI: `demo quality` / `reset-and-load` present. **New since last sweep:** continuous **Warehouse Index (WI)** on `example_product_maturity` (D/N/L/J/G, `--warehouse-index`, `wi_fleet`/`wi_next` in probes status) + example-apps feature_creep lane rule — owned by example-apps product_maturity (USED@993), **not UNOWNED**. Feature_creep shipped 987–992 (acme_billing/support_tickets/fieldtest_hub/llm_ticket_classifier/simple_task). STALE-effective @993: **10** (prove/compliance@969 lag24; pulse/representation/scaffold@970 lag23; HM gallery/dual_lock/shadcn/zero-floor/coherence@973 lag20). Re-stamp CodeQL + GitHub inbox + probes + maturity suite USED@993. Next sweep ~**1013**. Next self-audit ~**998** (last@983). Explore **53/100**. wi_fleet≈0.44 wi_next=hr_records (D).
 
 > **Cycle 983 (2026-07-19).** **self-audit** (cadence ≥15 since 968): window `f0ae037f6..dce96082f`. 12 improve commits — all **capability-map only** (STALE-clear stamp campaign). Sampled re-verify NOW: gallery probes **6/6 PASS**, display_locale mutate **58% kill**, coverage 61/61, composition 100, trial report present, visual_smoke scores present, test_db_status 3 pass. Explore stamps scope-honest. **5 CLEAN / 0 DISCREPANCY**. End SHA (post-stamp). budget_consumed 0. Explore **44/100**. Next self-audit ~**998**.
 
