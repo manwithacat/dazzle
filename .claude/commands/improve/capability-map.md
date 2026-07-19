@@ -79,16 +79,16 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1008 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1008 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1008 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1012 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1012 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1013 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1013 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1005 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1005 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1005 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 998 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1013 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1012 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 993 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1012 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1013 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1012 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1012 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1012 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1013 (2026-07-19).** **self-audit** (cadence ≥15 since 998): window `8db899802..HEAD` (14 improve commits). Sampled top-5 by churn: **51645160d** prove/compliance STALE-clear CLEAN (prove story still 18/18 class; privacy on tree); **3cfad98a8** design_studio campaign/feedback desks + nav CLEAN (WI≈0.19 N=0); **f310bc63e** ops systems/alerts desks CLEAN (WI≈0.10 N=J=0); **0d4565f4c** acme curated nav CLEAN (N=0); **227bf7822** hr_records curated nav CLEAN (N=0). residual_total=0; wi_fleet **0.245≤floor**; maturity tests **10 pass**. **5 CLEAN / 0 DISCREPANCY**. End SHA post-stamp. budget_consumed 0. Explore **71/100**. Next: capability-sweep due@1013 (lag≥20 since 993); next self-audit ~**1028**.
 
 > **Cycle 1012 (2026-07-19).** **example-apps** STALE-clear (demo quality/reset-and-load@979 lag~33): `demo quality` residual_total=0; demo_fleet_bar 9/9 ok; design_studio serve :3930 + `demo reset-and-load -y` **created_count=16**, persona_homes_residual=0, live_desk Brand×9 Asset×12 residual=0. residual=0; wi_fleet **0.245≤floor**. Stamps demo quality/reset-and-load/demo_fleet/product_quality **USED@1012**. Explore **71/100**. Next: self-audit (lag≥15 since 998 → due @1013) or capability-sweep (lag≥20 since 993 → due @1013).
 
