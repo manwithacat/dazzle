@@ -145,7 +145,7 @@ def _life_by_entity(lifecycles_raw: dict[str, Any]) -> dict[str, list[str]]:
     return out
 
 
-# Adjectives / verbs / doc chrome that discover_entities still emits on long SPECs
+# Adjectives / verbs / UI / status chrome that discover_entities still emits on long SPECs
 _NOUN_DENY = frozenset(
     {
         "urgent",
@@ -184,23 +184,190 @@ _NOUN_DENY = frozenset(
         "machine",
         "administrator",
         "team",  # too generic alone unless CamelCase compound
+        # status / severity / lifecycle adjectives (fieldtest-class SPECs)
+        "retired",
+        "recalled",
+        "prototype",
+        "active",
+        "draft",
+        "released",
+        "deprecated",
+        "cancelled",
+        "canceled",
+        "triaged",
+        "fixed",
+        "verified",
+        "closed",
+        "open",
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "casual",
+        "enthusiast",
+        "indoor",
+        "outdoor",
+        "vehicle",
+        "industrial",
+        "full",
+        "auto",
+        "automated",
+        "assigned",
+        "connectivity",
+        "mechanical",
+        "battery",
+        "crash",
+        "other",
+        # UI / workspace chrome mistaken for entities
+        "kanban",
+        "timeline",
+        "dashboard",
+        "queue",
+        "page",
+        "directory",
+        "report",
+        "board",
+        "filter",
+        "form",
+        "detail",
+        "number",
+        "date",
+        "version",
+        "hardware",
+        "capture",
+        "assign",
+        "update",
+        "batch",
+        "release",
+        "session",
+        "result",
+        "problem",
+        "latch",
+        "recall",
+        "triage",
+        "cluster",
+        "wearable",
+        "engineer",  # persona title alone
+        "tester",
+        "manager",
+        "admin",
+        "user",
+        "member",
     }
 )
 
+# ### **Device** under Core Entities — not every H2/H3 in a long SPEC
+_CORE_ENTITY_SECTION_RE = re.compile(r"(?is)##\s*core\s+entities\b(.*?)(?=\n##\s+(?!#))")
+_ENTITY_HEADER_RE = re.compile(
+    r"^#{3,4}\s+\*{0,2}([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)*)\*{0,2}\s*$",
+    re.M,
+)
 
-def _strong_noun_signal(name: str, source: str, text: str) -> bool:
+
+def _header_entities(text: str) -> set[str]:
+    """Entity titles under ``## Core Entities`` (### **Device**)."""
+    out: set[str] = set()
+    section = _CORE_ENTITY_SECTION_RE.search(text)
+    body = section.group(1) if section else ""
+    if not body:
+        return out
+    for m in _ENTITY_HEADER_RE.finditer(body):
+        label = m.group(1).strip()
+        compact = re.sub(r"\s+", "", label)
+        out.add(compact)
+        if " " not in label:
+            out.add(label)
+    return out
+
+
+def _strong_noun_signal(
+    name: str,
+    source: str,
+    text: str,
+    *,
+    header_names: set[str],
+) -> bool:
     """Prefer deliberate domain types over mid-sentence capital adjectives."""
     if re.search(r"[a-z][A-Z]", name):  # CamelCase multi-hump
         return True
-    if source in ("comma_list", "article_noun"):
+    if name in header_names or name.replace(" ", "") in header_names:
         return True
-    # Appears ≥2 times as a token in the brief
-    if len(re.findall(rf"\b{re.escape(name)}\b", text, re.I)) >= 2:
-        return True
-    # Explicit entity-ish phrasing
     if re.search(rf"\b(entity|record|type|model)\s+{re.escape(name)}\b", text, re.I):
         return True
+    hits = len(re.findall(rf"\b{re.escape(name)}\b", text, re.I))
+    # article_noun ("The TaskComment…") — accept non-deny compounds
+    if source == "article_noun" and hits >= 1:
+        return True
+    if source == "comma_list" and hits >= 1:
+        return True
+    # bare Capitalized — need repetition (status adjectives often appear once/twice)
+    if source == "capitalized_noun" and hits >= 3:
+        return True
+    if hits >= 4:
+        return True
     return False
+
+
+def _try_add_header_noun(
+    name: str,
+    text: str,
+    life_by_entity: dict[str, list[str]],
+    seen: set[str],
+    nouns: list[DomainNoun],
+) -> None:
+    if " " in name or name.lower() in _NOUN_DENY or len(name) < 3 or name in seen:
+        return
+    spaced = re.sub(r"([a-z])([A-Z])", r"\1 \2", name)
+    if not _grounded_in_brief(name, text) and not any(
+        _grounded_in_brief(tok, text) for tok in spaced.split()
+    ):
+        return
+    seen.add(name)
+    nouns.append(
+        DomainNoun(
+            name=name,
+            status="grounded",
+            evidence="entity section header in founder brief",
+            lifecycle_hint=life_by_entity.get(name, []),
+            owner_field_hint=_owner_for_noun(name, text),
+        )
+    )
+
+
+def _try_add_discovered_noun(
+    raw: dict[str, Any],
+    text: str,
+    life_by_entity: dict[str, list[str]],
+    headers: set[str],
+    seen: set[str],
+    nouns: list[DomainNoun],
+    rejected: list[str],
+) -> None:
+    name = str(raw.get("name") or "").strip()
+    if not name or name in seen:
+        return
+    source = str(raw.get("source") or "")
+    if raw.get("type") == "user_role":
+        return
+    if name.lower() in _NOUN_DENY or len(name) < 4:
+        rejected.append(name)
+        return
+    if not _grounded_in_brief(name, text):
+        rejected.append(name)
+        return
+    if not _strong_noun_signal(name, source, text, header_names=headers):
+        rejected.append(name)
+        return
+    seen.add(name)
+    nouns.append(
+        DomainNoun(
+            name=name,
+            status="grounded",
+            evidence=f"appears in founder brief (source={source or '?'})",
+            lifecycle_hint=life_by_entity.get(name, []),
+            owner_field_hint=_owner_for_noun(name, text),
+        )
+    )
 
 
 def _extract_nouns(
@@ -210,33 +377,13 @@ def _extract_nouns(
 ) -> tuple[list[DomainNoun], list[str]]:
     rejected: list[str] = []
     nouns: list[DomainNoun] = []
+    seen: set[str] = set()
+    headers = _header_entities(text)
+    for h in sorted(headers):
+        _try_add_header_noun(h, text, life_by_entity, seen, nouns)
     for e in entities_raw.get("entities", []):
-        if not isinstance(e, dict):
-            continue
-        name = str(e.get("name") or "").strip()
-        if not name:
-            continue
-        source = str(e.get("source") or "")
-        if e.get("type") == "user_role":
-            continue
-        if name.lower() in _NOUN_DENY or len(name) < 4:
-            rejected.append(name)
-            continue
-        if not _grounded_in_brief(name, text):
-            rejected.append(name)
-            continue
-        if not _strong_noun_signal(name, source, text):
-            rejected.append(name)
-            continue
-        nouns.append(
-            DomainNoun(
-                name=name,
-                status="grounded",
-                evidence=f"appears in founder brief (source={source or '?'})",
-                lifecycle_hint=life_by_entity.get(name, []),
-                owner_field_hint=_owner_for_noun(name, text),
-            )
-        )
+        if isinstance(e, dict):
+            _try_add_discovered_noun(e, text, life_by_entity, headers, seen, nouns, rejected)
     return nouns, rejected
 
 

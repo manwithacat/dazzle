@@ -39,6 +39,28 @@ def test_extract_grounded_spend_no_chrome() -> None:
     assert d.rejected_chrome or "Optional" not in names
 
 
+def test_extract_prefers_core_entity_headers() -> None:
+    brief = """
+# App
+## Core Entities
+### **Device**
+- Name
+### **Issue Report**
+- Severity – High, Critical
+## User Interface
+### **Dashboard**
+Kanban and Timeline views.
+"""
+    d = extract_from_text(brief)
+    names = {n.name for n in d.nouns}
+    assert "Device" in names
+    assert "IssueReport" in names
+    assert "Dashboard" not in names
+    assert "Kanban" not in names
+    assert "High" not in names
+    assert "Critical" not in names
+
+
 def test_extract_rejects_mid_sentence_adjectives() -> None:
     """Long SPECs must not promote 'Urgent'/'Several' as domain nouns."""
     brief = """

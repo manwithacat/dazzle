@@ -43,7 +43,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1055 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1056 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1055 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1055 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1055 | USED |
@@ -52,14 +52,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle qa trial` | COGNITION | CLI | trials | 1039 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1039 | USED |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1054 | USED |
-| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1035 | USED |
+| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1056 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1054 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1054 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1055 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1055 | USED |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1027 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1041 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1056 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1056 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1030 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1029 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1032 | USED |
@@ -107,6 +107,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1056 (2026-07-19).** **example-apps COGNITION dig** — domain extract quality on
+> long SPECs: Core Entities headers + expanded deny; fieldtest_hub nouns **41→7**
+> (Device, IssueReport, TestSession, FirmwareRelease, Task, …). demo_fleet 9/9;
+> HM coherence queue=0 mean=8.7; gallery probes 6/6. metric_list risk=2 remains
+> OBSERVE-only (F10). budget_consumed 1. Explore **2/100**.
 
 > **Cycle 1055 (2026-07-19).** **example-apps COGNITION dig** after policy + budget reset:
 > `domain extract/gaps/promote` on simple_task (Task+Taskcomment grounded; chrome rejected;
