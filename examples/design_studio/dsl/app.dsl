@@ -224,6 +224,7 @@ entity Feedback "Design Feedback":
 # review_desk / asset_catalog (docs/guides/story-to-composition.md).
 workspace studio_dashboard "Studio Dashboard":
   access: persona(admin, designer, reviewer)
+  purpose: "Studio portfolio — metrics and mixed job views, not warehouse grids only"
   portfolio:
     source: Asset
     display: metrics
@@ -242,9 +243,30 @@ workspace studio_dashboard "Studio Dashboard":
     source: Asset
     display: grid
     sort: updated_at desc
-  campaigns:
-    source: Campaign
-    display: metrics
+  # WI D: context family — recent asset activity
+  asset_trail:
+    source: Asset
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    empty: "No assets yet"
+  # WI D: chart family — asset status mix
+  asset_status_mix:
+    source: Asset
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Asset)
+    empty: "No assets yet"
+  # WI D: queue family — in-review work
+  review_pressure:
+    source: Asset
+    filter: status = review
+    sort: updated_at asc
+    limit: 12
+    display: queue
+    action: asset_edit
+    empty: "Nothing awaiting review"
 
 # #1626 P0-7: not a visual media gallery (no thumbnails/swatches yet) — honest catalog.
 workspace asset_catalog "Asset Catalog":
@@ -271,6 +293,23 @@ workspace asset_catalog "Asset Catalog":
     display: queue
     action: asset_edit
     empty: "Nothing awaiting review"
+  # WI D: kanban family — full pipeline board
+  pipeline_board:
+    source: Asset
+    filter: status = draft or status = review or status = approved
+    display: kanban
+    group_by: status
+    sort: updated_at asc
+    action: asset_edit
+    empty: "No assets in the pipeline"
+  # WI D: chart family — status mix
+  status_mix:
+    source: Asset
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Asset)
+    empty: "No assets yet"
 
 # Product maturity: extra job desks lower warehouse density (7 lists / 2 ws).
 workspace brand_desk "Brand Desk":
@@ -295,6 +334,21 @@ workspace brand_desk "Brand Desk":
     sort: name asc
     display: queue
     empty: "No active campaigns"
+  # WI D: context family — asset trail by brand work
+  asset_trail:
+    source: Asset
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    empty: "No assets yet"
+  # WI D: chart family — campaign status mix
+  campaign_mix:
+    source: Campaign
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Campaign)
+    empty: "No campaigns yet"
 
 workspace review_desk "Review Desk":
   purpose: "Reviewer job — clear the in-review queue before browsing the catalog"
@@ -341,6 +395,15 @@ workspace review_desk "Review Desk":
     sort: updated_at asc
     action: asset_edit
     empty: "No assets in the pipeline"
+
+  # WI D: chart family — review load by status
+  review_status_mix:
+    source: Asset
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Asset)
+    empty: "No assets yet"
 
 # Fifth product workspace (WI density D): campaign desk vs bare campaign list.
 workspace campaign_desk "Campaigns":
@@ -429,6 +492,15 @@ workspace feedback_desk "Feedback":
     limit: 15
     display: timeline
     empty: "No feedback yet"
+
+  # WI D: chart family — asset status next to feedback trail
+  asset_status_mix:
+    source: Asset
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Asset)
+    empty: "No assets yet"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
