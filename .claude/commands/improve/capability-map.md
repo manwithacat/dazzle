@@ -39,7 +39,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 1030 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 1029 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 1032 | USED |
-| `dazzle qa trial` | CLI | trials | 1017 | USED |
+| `dazzle qa trial` | CLI | trials | 1039 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 1032 | USED |
 | `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 1027 | USED |
 | `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 1027 | USED |
@@ -67,7 +67,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 1031 | USED |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
-| `qa-trial` skill | skill | trials (downstream authoring) | 1017 | USED |
+| `qa-trial` skill | skill | trials (downstream authoring) | 1039 | USED |
 | `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 1031 | USED |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 1036 | USED |
 | `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 1031 | USED |
@@ -89,11 +89,11 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1035 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1037 | USED |
 | **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1037 | USED |
-| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1038 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1038 | USED |
+| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1039 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1039 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1035 | USED |
-| MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 1017 | USED |
-| MCP `db` project-local DATABASE_URL resolve (#1629 G2) | MCP | example-apps + agent DX | 1017 | USED |
+| MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 1039 | USED |
+| MCP `db` project-local DATABASE_URL resolve (#1629 G2) | MCP | example-apps + agent DX | 1039 | USED |
 
 
 
@@ -154,6 +154,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 1039 (2026-07-19).** **trials** STALE-clear (qa trial/demo_world/db@1017 lag~22): preflight complexity refactor metric_list/bar; simple_task serve :3941 + reset-and-load 8 fixtures; demo_world + trial-inventory/coverage; grok-cli qa-trial agency_lead journey (record_friction) budget-capped. residual_total=0. Stamps qa trial + status demo_world + db **USED@1039**. Explore **94/100**.
 
 > **Cycle 1038 (2026-07-19).** **example-apps** metric_list residual/risk split: seed-level metric-empty residual vs current_user pattern **risk** (OBSERVE, not residual_total). residual_total **0**, risk=2 (simple_task/fieldtest). Stamps product_quality/demo quality **USED@1038**. Explore **93/100**.
 

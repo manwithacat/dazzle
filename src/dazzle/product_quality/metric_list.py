@@ -242,6 +242,67 @@ def _metric_seed_hits(
     return best
 
 
+def _pair_reason(*, residual: bool, m_hits: int, list_region: str, list_hits: int) -> str:
+    if residual:
+        return (
+            f"metric_current_user_lie: metrics current_user seed_hits={m_hits} "
+            f"while sibling list {list_region} has seed_hits={list_hits} "
+            f"(trust lists/stills over KPI tiles; F10/#1632)"
+        )
+    return (
+        f"metric_current_user_risk: metrics use current_user "
+        f"(seed_hits={m_hits}) with sibling list {list_region} "
+        f"seed_hits={list_hits} — trust lists/stills over KPI tiles at runtime"
+    )
+
+
+def _score_persona_metric_list(
+    pid: str,
+    dws: str | None,
+    workspaces: dict[str, str],
+    *,
+    seed: Path | None,
+    min_list_hits: int,
+) -> MetricListHome:
+    home = MetricListHome(persona=pid, default_workspace=dws)
+    if not dws or dws in _PLATFORM_WORKSPACES or dws not in workspaces:
+        return home
+
+    uid = STABLE_PERSONA_USER_IDS.get(pid)
+    regions = _parse_regions_rich(workspaces[dws])
+    metric_regs = [r for r in regions if _metrics_use_current_user(r)]
+    if not metric_regs:
+        return home
+    list_regs = [r for r in regions if _is_list_like(r) and r not in metric_regs]
+
+    for mreg in metric_regs:
+        m_hits = _metric_seed_hits(mreg, uid=uid, seed=seed)
+        for lreg in list_regs:
+            hits = _list_seed_hits(lreg, uid=uid, seed=seed)
+            if hits < min_list_hits:
+                continue
+            is_residual = m_hits < min_list_hits
+            home.pairs.append(
+                MetricListPair(
+                    persona=pid,
+                    workspace=dws,
+                    metric_region=mreg["region"],
+                    list_region=lreg["region"],
+                    list_seed_hits=hits,
+                    metric_seed_hits=m_hits,
+                    residual=is_residual,
+                    risk=True,
+                    reason=_pair_reason(
+                        residual=is_residual,
+                        m_hits=m_hits,
+                        list_region=lreg["region"],
+                        list_hits=hits,
+                    ),
+                )
+            )
+    return home
+
+
 def score_metric_list(
     app_dir: Path,
     *,
@@ -259,55 +320,7 @@ def score_metric_list(
 
     personas, workspaces = _collect_personas_and_workspaces(text)
     seed = _seed_dir(app_dir)
-    homes: list[MetricListHome] = []
-
-    for pid, dws in personas:
-        home = MetricListHome(persona=pid, default_workspace=dws)
-        if not dws or dws in _PLATFORM_WORKSPACES or dws not in workspaces:
-            homes.append(home)
-            continue
-
-        uid = STABLE_PERSONA_USER_IDS.get(pid)
-        regions = _parse_regions_rich(workspaces[dws])
-        metric_regs = [r for r in regions if _metrics_use_current_user(r)]
-        list_regs = [r for r in regions if _is_list_like(r) and r not in metric_regs]
-
-        if not metric_regs:
-            homes.append(home)
-            continue
-
-        for mreg in metric_regs:
-            m_hits = _metric_seed_hits(mreg, uid=uid, seed=seed)
-            for lreg in list_regs:
-                hits = _list_seed_hits(lreg, uid=uid, seed=seed)
-                if hits < min_list_hits:
-                    continue
-                # residual: list seeded, metric tiles seed-empty (disagreement)
-                is_residual = m_hits < min_list_hits
-                if is_residual:
-                    reason = (
-                        f"metric_current_user_lie: metrics current_user seed_hits={m_hits} "
-                        f"while sibling list {lreg['region']} has seed_hits={hits} "
-                        f"(trust lists/stills over KPI tiles; F10/#1632)"
-                    )
-                else:
-                    reason = (
-                        f"metric_current_user_risk: metrics use current_user "
-                        f"(seed_hits={m_hits}) with sibling list {lreg['region']} "
-                        f"seed_hits={hits} — trust lists/stills over KPI tiles at runtime"
-                    )
-                home.pairs.append(
-                    MetricListPair(
-                        persona=pid,
-                        workspace=dws,
-                        metric_region=mreg["region"],
-                        list_region=lreg["region"],
-                        list_seed_hits=hits,
-                        metric_seed_hits=m_hits,
-                        residual=is_residual,
-                        risk=True,
-                        reason=reason,
-                    )
-                )
-        homes.append(home)
-    return homes
+    return [
+        _score_persona_metric_list(pid, dws, workspaces, seed=seed, min_list_hits=min_list_hits)
+        for pid, dws in personas
+    ]

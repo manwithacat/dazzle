@@ -399,24 +399,28 @@ def _next_from_felt(report: ProductQualityReport) -> str | None:
     return None
 
 
+def _count_flag(rows: list[dict[str, Any]], key: str) -> int:
+    return sum(1 for r in rows if r.get(key))
+
+
+def _app_span(rows: list[dict[str, Any]]) -> int:
+    return len({r.get("app") for r in rows})
+
+
 def score_status_lines(report: ProductQualityReport) -> list[str]:
     """One-line status strings for cycle logs / agent OBSERVE."""
+    nxt = report.next or "-"
     lines = [p.status for p in report.probes]
-    ph_res = sum(1 for h in report.persona_homes if h.get("residual"))
     lines.append(
-        f"persona_homes apps={len({h.get('app') for h in report.persona_homes})} "
-        f"residual={ph_res} next={report.next or '-'}"
+        f"persona_homes apps={_app_span(report.persona_homes)} "
+        f"residual={_count_flag(report.persona_homes, 'residual')} next={nxt}"
     )
-    ml_res = sum(1 for h in report.metric_list if h.get("residual"))
-    ml_risk = sum(1 for h in report.metric_list if h.get("risk"))
     lines.append(
-        f"metric_list apps={len({h.get('app') for h in report.metric_list})} "
-        f"residual={ml_res} risk={ml_risk} next={report.next or '-'}"
+        f"metric_list apps={_app_span(report.metric_list)} "
+        f"residual={_count_flag(report.metric_list, 'residual')} "
+        f"risk={_count_flag(report.metric_list, 'risk')} next={nxt}"
     )
-    st_res = sum(1 for s in report.stills if s.get("residual"))
-    lines.append(f"stills residual={st_res} next={report.next or '-'}")
+    lines.append(f"stills residual={_count_flag(report.stills, 'residual')} next={nxt}")
     force = f" force={report.force}" if report.force else ""
-    lines.append(
-        f"product_quality residual_total={report.residual_total} next={report.next or '-'}{force}"
-    )
+    lines.append(f"product_quality residual_total={report.residual_total} next={nxt}{force}")
     return lines
