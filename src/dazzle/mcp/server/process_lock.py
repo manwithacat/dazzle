@@ -1,10 +1,13 @@
-"""Single-instance guard for the DAZZLE MCP server.
+"""Single-instance guard for the DAZZLE MCP server (shared mode).
 
-A second `dazzle mcp run` against the same project root would race the first on
-the SQLite WAL of `.dazzle/knowledge_graph.db` — long enough on a cold seed to
-exceed Claude Code's 30s MCP handshake timeout. The guard takes a non-blocking
-fcntl lock so the second instance fails immediately with a message naming the
-holder, instead of hanging.
+Default multi-session mode (#1628) isolates each MCP process under
+``.dazzle/mcp-sessions/<id>/`` and does **not** take a cross-process exclusive
+lock — agent hosts spawn a new stdio child per session and never attach to an
+existing PID.
+
+When ``DAZZLE_MCP_SHARED=1``, this module enforces a non-blocking fcntl lock so
+a second shared instance fails immediately with a message naming the holder
+instead of racing the SQLite WAL of a shared ``knowledge_graph.db``.
 
 Lock file format (JSON, written by the holder on acquire):
 
@@ -29,6 +32,9 @@ logger = logging.getLogger(__name__)
 
 _LOCK_FILENAME = "mcp.lock"
 
+# Exit code when another live process holds the shared-mode lock (#1628).
+EXIT_LOCK_CONTENTION = 2
+
 
 @dataclass(frozen=True)
 class LockConflict:
@@ -39,8 +45,20 @@ class LockConflict:
     working_dir: str | None
 
 
+@dataclass(frozen=True)
+class LockDiagnosis:
+    """Structured diagnosis of an MCP lock file for doctor / mcp check."""
+
+    lock_path: Path
+    exists: bool
+    holder: LockConflict | None
+    pid_alive: bool | None
+    classification: str  # absent | live | stale | corrupt | empty
+    age_seconds: float | None = None
+
+
 class ProcessLock:
-    """Non-blocking single-instance lock keyed by project root.
+    """Non-blocking single-instance lock keyed by project root (or explicit path).
 
     Usage:
         lock = ProcessLock(project_root)
@@ -54,9 +72,17 @@ class ProcessLock:
             lock.release()
     """
 
-    def __init__(self, project_root: Path) -> None:
+    def __init__(
+        self,
+        project_root: Path,
+        *,
+        lock_path: Path | None = None,
+    ) -> None:
         self.project_root = project_root
-        self.lock_path = project_root / ".dazzle" / _LOCK_FILENAME
+        if lock_path is not None:
+            self.lock_path = lock_path
+        else:
+            self.lock_path = project_root / ".dazzle" / _LOCK_FILENAME
         self._fd: IO[str] | None = None
 
     def acquire(self) -> LockConflict | None:
@@ -175,6 +201,136 @@ class ProcessLock:
             pass
 
 
+def diagnose_lock(lock_path: Path) -> LockDiagnosis:
+    """Classify a lock file without taking the flock (doctor / mcp check)."""
+    if not lock_path.exists():
+        return LockDiagnosis(
+            lock_path=lock_path,
+            exists=False,
+            holder=None,
+            pid_alive=None,
+            classification="absent",
+        )
+    try:
+        raw = lock_path.read_text(encoding="utf-8")
+    except OSError:
+        return LockDiagnosis(
+            lock_path=lock_path,
+            exists=True,
+            holder=None,
+            pid_alive=None,
+            classification="corrupt",
+        )
+    if not raw.strip():
+        return LockDiagnosis(
+            lock_path=lock_path,
+            exists=True,
+            holder=None,
+            pid_alive=None,
+            classification="empty",
+        )
+    try:
+        data = json.loads(raw)
+        holder = LockConflict(
+            pid=int(data["pid"]),
+            started_at=data.get("started_at"),
+            working_dir=data.get("working_dir"),
+        )
+    except (ValueError, KeyError, TypeError):
+        return LockDiagnosis(
+            lock_path=lock_path,
+            exists=True,
+            holder=None,
+            pid_alive=None,
+            classification="corrupt",
+        )
+
+    alive = _pid_alive(holder.pid)
+    age: float | None = None
+    if holder.started_at is not None:
+        age = max(0.0, time.time() - float(holder.started_at))
+    return LockDiagnosis(
+        lock_path=lock_path,
+        exists=True,
+        holder=holder,
+        pid_alive=alive,
+        classification="live" if alive else "stale",
+        age_seconds=age,
+    )
+
+
+def clear_stale_lock(lock_path: Path) -> tuple[bool, str]:
+    """Remove lock file only when absent-of-live-holder.
+
+    Returns (changed, message). Refuses to clear a live holder.
+    """
+    diag = diagnose_lock(lock_path)
+    if diag.classification == "absent":
+        return False, f"No lock file at {lock_path}"
+    if diag.classification == "live" and diag.holder is not None:
+        return (
+            False,
+            f"LOCK_HELD_BY_PID={diag.holder.pid} — refuse to clear live holder "
+            f"(kill {diag.holder.pid} first, or use multi-session default without "
+            f"DAZZLE_MCP_SHARED=1)",
+        )
+    try:
+        lock_path.unlink(missing_ok=True)
+    except OSError as e:
+        return False, f"Failed to remove {lock_path}: {e}"
+    return True, f"Cleared {diag.classification} lock at {lock_path}"
+
+
+def format_conflict_message(conflict: LockConflict, project_root: Path) -> str:
+    """Render a human-readable failure message for stderr."""
+    age_part = ""
+    if conflict.started_at:
+        age = time.time() - conflict.started_at
+        age_part = f" age={_format_age(age)}"
+    lines = [
+        f"LOCK_HELD_BY_PID={conflict.pid}{age_part}",
+        f"Another DAZZLE MCP server is already running for {project_root} "
+        f"(shared mode / exclusive lock).",
+        f"  PID:     {conflict.pid}",
+    ]
+    if conflict.started_at:
+        age = time.time() - conflict.started_at
+        lines.append(
+            f"  Started: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(conflict.started_at))} "
+            f"({_format_age(age)} ago)"
+        )
+    if conflict.working_dir:
+        lines.append(f"  Cwd:     {conflict.working_dir}")
+    lines.append("")
+    lines.append(f"To release: kill {conflict.pid}")
+    lines.append("Or: dazzle mcp check --clear-stale   # only if the PID is dead")
+    lines.append(
+        "Multi-session hosts (Grok, Claude Code): default is per-process state under "
+        ".dazzle/mcp-sessions/ (no exclusive lock). Unset DAZZLE_MCP_SHARED if set."
+    )
+    # A single global MCP rooted at a framework checkout pins one project root
+    # for *every* session, so the second session to boot can't acquire this
+    # per-root lock (#1374). If this root is a framework checkout, nudge toward
+    # a project-scoped config, which gets its own lock + KG and sidesteps this.
+    try:
+        from .state import _detect_dev_environment
+
+        is_framework_checkout = _detect_dev_environment(project_root)
+    except Exception:
+        # Never let a guidance hint break the (already-failing) boot path.
+        logger.debug("dev-environment probe for conflict hint failed", exc_info=True)
+        is_framework_checkout = False
+    if is_framework_checkout:
+        lines.append("")
+        lines.append(
+            "This root is a framework checkout. If you meant to work on a "
+            "specific project, point the MCP at that project's directory "
+            "(--working-dir <project>) so it gets its own lock, knowledge "
+            "graph, and pinned version rather than sharing this global one."
+        )
+    return "\n".join(lines)
+
+
 def _read_holder(fd: IO[str]) -> LockConflict | None:
     """Read holder metadata from an open lock file. Returns None on parse error."""
     try:
@@ -206,44 +362,6 @@ def _pid_alive(pid: int) -> bool:
     except OSError:
         return False
     return True
-
-
-def format_conflict_message(conflict: LockConflict, project_root: Path) -> str:
-    """Render a human-readable failure message for stderr."""
-    lines = [
-        f"Another DAZZLE MCP server is already running for {project_root}.",
-        f"  PID:     {conflict.pid}",
-    ]
-    if conflict.started_at:
-        age = time.time() - conflict.started_at
-        lines.append(
-            f"  Started: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(conflict.started_at))} ({_format_age(age)} ago)"
-        )
-    if conflict.working_dir:
-        lines.append(f"  Cwd:     {conflict.working_dir}")
-    lines.append("")
-    lines.append(f"To release: kill {conflict.pid}")
-    # A single global MCP rooted at a framework checkout pins one project root
-    # for *every* session, so the second session to boot can't acquire this
-    # per-root lock (#1374). If this root is a framework checkout, nudge toward
-    # a project-scoped config, which gets its own lock + KG and sidesteps this.
-    try:
-        from .state import _detect_dev_environment
-
-        is_framework_checkout = _detect_dev_environment(project_root)
-    except Exception:
-        # Never let a guidance hint break the (already-failing) boot path.
-        logger.debug("dev-environment probe for conflict hint failed", exc_info=True)
-        is_framework_checkout = False
-    if is_framework_checkout:
-        lines.append("")
-        lines.append(
-            "This root is a framework checkout. If you meant to work on a "
-            "specific project, point the MCP at that project's directory "
-            "(--working-dir <project>) so it gets its own lock, knowledge "
-            "graph, and pinned version rather than sharing this global one."
-        )
-    return "\n".join(lines)
 
 
 def _format_age(seconds: float) -> str:

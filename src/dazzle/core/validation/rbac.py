@@ -5,6 +5,7 @@ Split verbatim from dazzle.core.validator per #1361.
 
 from typing import Any
 
+from dazzle.core.ir.identity import spec_display_id
 from dazzle.product_quality.persona_homes import STABLE_PERSONA_USER_IDS
 
 from .. import ir
@@ -373,7 +374,7 @@ _ALLOWED_SCOPE_WILDCARDS = frozenset(
 
 
 def _declared_persona_ids(appspec: ir.AppSpec) -> set[str]:
-    declared = {getattr(p, "id", None) or getattr(p, "name", None) for p in appspec.personas or []}
+    declared = {spec_display_id(p, default=None, prefer="id") for p in appspec.personas or []}
     declared.discard(None)
     return {str(x) for x in declared}
 
@@ -413,25 +414,25 @@ def validate_scope_personas_declared(
     for entity in appspec.domain.entities:
         if entity.access is None:
             continue
-        for rule in entity.access.scopes or []:
+        for scope_rule in entity.access.scopes or []:
             warnings.extend(
                 _warn_unknown_tokens(
-                    list(rule.personas or []),
+                    list(scope_rule.personas or []),
                     declared=declared_s,
                     prefix=(f"Entity '{entity.name}': scope `as:` references persona"),
                 )
             )
-        for rule in entity.access.permissions or []:
+        for perm_rule in entity.access.permissions or []:
             warnings.extend(
                 _warn_unknown_tokens(
-                    list(getattr(rule, "personas", None) or []),
+                    list(getattr(perm_rule, "personas", None) or []),
                     declared=declared_s,
                     prefix=(f"Entity '{entity.name}': permission rule references persona"),
                 )
             )
 
     for ws in appspec.workspaces or []:
-        ws_name = getattr(ws, "name", None) or getattr(ws, "id", "?")
+        ws_name = spec_display_id(ws, default="?")
         warnings.extend(
             _warn_unknown_tokens(
                 list(getattr(ws, "allow_personas", None) or []),
@@ -460,7 +461,7 @@ def validate_stable_persona_ids_for_demo(
     stable = set(STABLE_PERSONA_USER_IDS)
     sample = sorted(stable)[:8]
     for persona in appspec.personas or []:
-        pid = str(getattr(persona, "id", None) or getattr(persona, "name", "") or "")
+        pid = str(spec_display_id(persona, default="", prefer="id") or "")
         if not pid or pid in stable:
             continue
         if pid in ("admin", "platform_admin", "superuser", "operator", "sysadmin"):

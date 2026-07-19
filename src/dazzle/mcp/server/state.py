@@ -12,10 +12,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.paths import (
-    project_activity_log,
-    project_kg_db,
     project_manifest,
 )
+from dazzle.mcp.server.mcp_session import mcp_activity_log_path, mcp_kg_db_path
 
 if TYPE_CHECKING:
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
@@ -302,19 +301,12 @@ def init_knowledge_graph(root: Path) -> None:
     """
     Initialize the knowledge graph for the server.
 
-    In dev mode, uses the Dazzle source code as the graph source.
-    In normal mode, uses the project's .dazzle directory.
+    Path is session-scoped under ``.dazzle/mcp-sessions/<id>/`` by default
+    (#1628); shared mode uses ``.dazzle/knowledge_graph.db``.
     """
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
 
-    # Determine database path
-    if _state.is_dev_mode:
-        # Dev mode: store in Dazzle's .dazzle directory
-        _state.graph_db_path = project_kg_db(root)
-    else:
-        # Normal mode: store in project's .dazzle directory
-        _state.graph_db_path = project_kg_db(root)
-
+    _state.graph_db_path = mcp_kg_db_path(root)
     _state.graph_db_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Initialize the graph
@@ -397,8 +389,8 @@ def reinit_knowledge_graph(project_root: Path) -> None:
     # Close existing DB (file-based connections are per-call, so just discard)
     _state.knowledge_graph = None
 
-    # Open new per-project DB
-    _state.graph_db_path = project_kg_db(project_root)
+    # Open new per-project (session-scoped) DB
+    _state.graph_db_path = mcp_kg_db_path(project_root)
     _state.graph_db_path.parent.mkdir(parents=True, exist_ok=True)
 
     _state.knowledge_graph = KnowledgeGraph(_state.graph_db_path)
@@ -426,13 +418,15 @@ def reinit_knowledge_graph(project_root: Path) -> None:
 def init_activity_log(root: Path) -> None:
     """Initialize the activity log for the server.
 
-    Creates a fresh log at ``{root}/.dazzle/mcp-activity.log``,
-    clearing any stale entries from a previous session.
-    Also initializes the SQLite-backed ActivityStore if the KG is available.
+    Creates a fresh log under the MCP session state dir
+    (``.dazzle/mcp-sessions/<id>/mcp-activity.log`` by default; shared mode
+    uses ``.dazzle/mcp-activity.log``), clearing any stale entries from a
+    previous session. Also initializes the SQLite-backed ActivityStore if
+    the KG is available.
     """
     from dazzle.mcp.server.activity_log import ActivityLog
 
-    log_path = project_activity_log(root)
+    log_path = mcp_activity_log_path(root)
     _state.activity_log = ActivityLog(log_path)
     _state.activity_log.clear()  # Fresh log per server session
     logger.info("Activity log initialized at: %s", log_path)

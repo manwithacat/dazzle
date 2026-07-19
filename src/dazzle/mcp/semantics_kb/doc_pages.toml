@@ -48,6 +48,17 @@ for specific user needs. This page covers workspace definitions, regions, \
 aggregates, display modes, and layout stages.
 """
 
+[pages.demo]
+title = "Demo Identity & Cognition"
+slug = "demo"
+order = 4.5
+intro = """
+Agent-facing priors for commercial demos: STABLE persona identities, \
+reset-and-load, empty-desk false greens, and version cognition. \
+Companion to counter-priors under `docs/counter-priors/`. Issues \
+#1626–#1630.
+"""
+
 [pages.ux]
 title = "UX Semantic Layer"
 slug = "ux"

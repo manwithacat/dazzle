@@ -15,7 +15,7 @@
     },
     "examples/invoice_ops": {
       "expected_errors": 0,
-      "expected_warnings_min": 11,
+      "expected_warnings_min": 24,
       "rationale": "invoice_ops is the keystone migration-story example. The 11 warnings are: 1 decimal monetary field (LineItem.unit_amount), 2 approval-gate preview notices, 2 audit-enabled info notices (audit+field-changes), and 7 fitness.repr_fields advisory notices (1 per audited/scoped entity). These are known, expected, and tracking the DSL design state."
     },
     "examples/fieldtest_hub": {
@@ -66,7 +66,7 @@
     },
     "examples/hr_records": {
       "expected_errors": 0,
-      "expected_warnings_min": 12,
+      "expected_warnings_min": 18,
       "rationale": "Includes 4 #1324-FR-6 nav auto-discovery-reliance notices (personas with no `uses nav`) \u2014 these are informational nudges, not defects."
     },
     "fixtures/rbac_validation": {
@@ -77,6 +77,22 @@
       "expected_errors": 0,
       "expected_warnings_min": 20,
       "rationale": "#1355 fixed Shape's dead non-oracle scope rules (permits added, blanket forbid removed, material != shadow conjuncts express the documented intent) \u2014 the 8 [RBAC scope_without_permit] warnings are gone. Current 20 = fitness/nav advisories + oracle no_scope_rule create/update/delete probes + 1 [RBAC orphan_role] on 'outsider', which is deliberate: outsider is the deny-all baseline persona and now relies purely on default-deny (re-adding a forbid for it would just trade orphan_role for redundant_forbid)."
+    },
+    "fixtures/asset_registry": {
+      "expected_warnings_min": 8,
+      "expected_errors": 0
+    },
+    "fixtures/tenant_hierarchy": {
+      "expected_warnings_min": 9,
+      "expected_errors": 0
+    },
+    "fixtures/tenant_rls": {
+      "expected_warnings_min": 11,
+      "expected_errors": 0
+    },
+    "fixtures/transition_atomic": {
+      "expected_warnings_min": 6,
+      "expected_errors": 0
     }
   }
 }

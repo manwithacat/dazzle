@@ -25,6 +25,7 @@ from typing import Any
 import httpx
 
 from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.ir.identity import spec_display_id
 from dazzle.core.strings import to_api_plural
 from dazzle.demo_data.loader import find_seed_files, read_seed_file, topological_sort_entities
 from dazzle.product_quality.persona_homes import (
@@ -451,7 +452,7 @@ def reset_and_load(
 
 
 def _probe_one_persona(client: httpx.Client, persona: Any, appspec: Any) -> dict[str, Any] | None:
-    pid = getattr(persona, "id", None) or getattr(persona, "name", None)
+    pid = spec_display_id(persona, default=None, prefer="id")
     dws = getattr(persona, "default_workspace", None)
     if not pid or not dws or pid in ("admin", "platform_admin", "superuser"):
         return None
@@ -519,7 +520,8 @@ def _attach_live_desk_residual(
     report["live_desk_residual"] = len(empty)
     if empty:
         report["ok"] = False
-        prefix = (report.get("warning") + " ") if report.get("warning") else ""
+        prior = report.get("warning")
+        prefix = f"{prior} " if isinstance(prior, str) and prior else ""
         report["warning"] = prefix + (
             f"live_desk residual={len(empty)} — desks empty under session "
             f"for {[e['persona'] for e in empty]} (#1630)."
@@ -528,7 +530,7 @@ def _attach_live_desk_residual(
 
 def _default_workspace_list_entity(appspec: Any, workspace_name: str) -> str | None:
     for ws in appspec.workspaces or []:
-        name = getattr(ws, "name", None) or getattr(ws, "id", None)
+        name = spec_display_id(ws, default=None)
         if str(name) != workspace_name:
             continue
         for region in getattr(ws, "regions", None) or []:

@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Fixed
+- **#1628 MCP multi-session lock** — agent hosts spawn a new stdio process
+  per session; exclusive `.dazzle/mcp.lock` made the monorepo a machine-wide
+  mutex and the second client only saw opaque handshake failure. Default is
+  now **per-process state** under `.dazzle/mcp-sessions/<id>/` (KG + activity)
+  with **no** cross-process exclusive lock. `DAZZLE_MCP_SHARED=1` restores
+  legacy shared KG + exclusive lock. Shared-mode contention prints
+  `LOCK_HELD_BY_PID=…` and exits **2**. `dazzle mcp check` diagnoses locks/
+  sessions, supports `--clear-stale`, and warns on dual Grok+Claude
+  registration. Optional `DAZZLE_MCP_SESSION_ID` pins a stable session dir.
+
 ### Added
 - **Agent demo cognition priors (KG)** — concepts `demo_identity`,
   `workspace_region_filters`, `empty_desk_false_green`,

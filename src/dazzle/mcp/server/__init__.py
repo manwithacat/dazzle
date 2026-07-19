@@ -530,22 +530,44 @@ async def run_server(project_root: Path | None = None) -> None:
     else:
         logger.info("Using default project root: %s", get_project_root())
 
-    # Single-instance guard: prevent two MCP servers from racing on the
-    # SQLite WAL of .dazzle/knowledge_graph.db. A stale holder (PID dead)
-    # is taken over silently; a live conflict fails fast so the client
-    # sees an error instead of a 30s handshake timeout.
-    from .process_lock import ProcessLock, format_conflict_message
+    # Multi-session isolation (#1628): default each process gets its own
+    # state under .dazzle/mcp-sessions/<id>/ (KG + activity). Exclusive
+    # fcntl lock only when DAZZLE_MCP_SHARED=1 (legacy shared KG).
+    from .mcp_session import (
+        ensure_mcp_session_id,
+        exclusive_lock_required,
+        mcp_lock_path,
+        mcp_shared_mode,
+        mcp_state_dir,
+    )
+    from .process_lock import EXIT_LOCK_CONTENTION, ProcessLock, format_conflict_message
 
-    lock = ProcessLock(get_project_root())
-    conflict = lock.acquire()
-    if conflict is not None:
-        message = format_conflict_message(conflict, get_project_root())
-        logger.error("MCP server already running:\n%s", message)
-        print(message, file=sys.stderr)
-        sys.exit(1)
+    root = get_project_root()
+    session_id = ensure_mcp_session_id()
+    state_dir = mcp_state_dir(root)
+    state_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(
+        "MCP session=%s shared=%s state_dir=%s",
+        session_id,
+        mcp_shared_mode(),
+        state_dir,
+    )
+
+    lock: ProcessLock | None = None
+    if exclusive_lock_required():
+        # Shared mode: prevent two servers racing the SQLite WAL of the
+        # shared knowledge_graph.db. Stale holder (PID dead) is taken over;
+        # live conflict fails fast with structured stderr (exit 2).
+        lock = ProcessLock(root, lock_path=mcp_lock_path(root))
+        conflict = lock.acquire()
+        if conflict is not None:
+            message = format_conflict_message(conflict, root)
+            logger.error("MCP server already running:\n%s", message)
+            print(message, file=sys.stderr)
+            sys.exit(EXIT_LOCK_CONTENTION)
 
     # Initialize dev mode detection
-    init_dev_mode(get_project_root())
+    init_dev_mode(root)
 
     if is_dev_mode():
         logger.info("Running in DEV MODE with %s example projects", len(get_available_projects()))
@@ -557,7 +579,7 @@ async def run_server(project_root: Path | None = None) -> None:
         logger.info("Running in NORMAL MODE")
 
     # Initialize knowledge graph first — needed by ActivityStore (SQLite backend)
-    init_knowledge_graph(get_project_root())
+    init_knowledge_graph(root)
     logger.info("Knowledge graph initialized")
 
     # Initialize activity log (JSONL + SQLite store).
@@ -566,7 +588,7 @@ async def run_server(project_root: Path | None = None) -> None:
     # None and SQLite-backed readers (e.g. status.activity) see nothing.
     from .state import init_activity_log
 
-    init_activity_log(get_project_root())
+    init_activity_log(root)
 
     logger.info("Starting DAZZLE MCP server...")
     try:
@@ -577,7 +599,8 @@ async def run_server(project_root: Path | None = None) -> None:
         logger.exception("Server error: %s", e)
         raise
     finally:
-        lock.release()
+        if lock is not None:
+            lock.release()
 
 
 class DazzleMCPServer:

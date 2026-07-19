@@ -384,10 +384,14 @@ auto-selects one. That is correct for working *on the framework*, but if you
 point one global MCP entry at the framework checkout and then open an unrelated
 project, two silent traps follow (#1374):
 
-- **Concurrent sessions collide.** The MCP lock is keyed per project root
-  (`<root>/.dazzle/mcp.lock`) to stop two servers racing the knowledge-graph
-  SQLite WAL. A global config pins *one* root for every session, so the second
-  session to boot fails with "Another DAZZLE MCP server is already running."
+- **Concurrent sessions no longer share one exclusive process** (#1628).
+  By default each MCP process isolates state under
+  `<root>/.dazzle/mcp-sessions/<session_id>/` (knowledge graph + activity log)
+  and does **not** take a machine-wide exclusive lock. Agent hosts (Grok,
+  Claude Code) always spawn a new stdio child per session; process uniqueness
+  was the wrong isolation primitive. Optional `DAZZLE_MCP_SHARED=1` restores
+  the legacy shared `.dazzle/knowledge_graph.db` + exclusive
+  `.dazzle/mcp.lock` for operators who want one shared graph.
 - **Other projects are mis-rooted.** A project living outside `examples/` is
   invisible to a framework-rooted server. Project tools either error ("No
   project selected…") or operate on the framework-dev install — the wrong
@@ -408,10 +412,28 @@ using the project's own interpreter:
 }
 ```
 
-Each project-scoped entry gets its own lock, its own knowledge graph, and the
-`dazzle` version pinned in that project's environment. Reserve a
-framework-rooted entry (`--working-dir <dazzle-checkout>`) for working *in* the
-framework repo, and use `select_project` to choose among its example apps.
+Each project-scoped entry gets its own session state (or shared lock when
+`DAZZLE_MCP_SHARED=1`), its own knowledge graph, and the `dazzle` version
+pinned in that project's environment. Reserve a framework-rooted entry
+(`--working-dir <dazzle-checkout>`) for working *in* the framework repo, and
+use `select_project` to choose among its example apps.
+
+### Multi-session hosts and locks (#1628)
+
+| Mode | Env | State paths | Exclusive lock |
+|------|-----|-------------|----------------|
+| **Default (multi-session)** | unset | `.dazzle/mcp-sessions/<id>/knowledge_graph.db` | No |
+| **Shared** | `DAZZLE_MCP_SHARED=1` | `.dazzle/knowledge_graph.db` | Yes (`.dazzle/mcp.lock`) |
+| **Test bypass** | `DAZZLE_MCP_SKIP_LOCK=1` | per mode | No |
+
+- Pin a stable session directory with `DAZZLE_MCP_SESSION_ID=<name>`.
+- Diagnose holders: `dazzle mcp check [--working-dir <root>] [--clear-stale]`.
+  Live shared-mode contention exits **2** with `LOCK_HELD_BY_PID=<n> age=…`.
+  Stale locks (dead PID) clear on next shared-mode acquire and via `--clear-stale`.
+- **Avoid dual registration:** if `dazzle` is listed in both Grok
+  (`~/.grok/config.toml`) and Claude (`~/.claude.json` / mcp_servers.json),
+  hosts that import Claude sources may double-spawn. Prefer one registration
+  per host. `dazzle mcp check` warns when both are present.
 
 ## Internal Architecture
 
@@ -451,12 +473,18 @@ src/dazzle/mcp/server/
 ### Server not starting
 
 ```bash
-# Check MCP status
+# Check registration + lock / multi-session diagnosis
 dazzle mcp check
+dazzle mcp check --working-dir /path/to/project --clear-stale
 
 # View logs
 dazzle mcp run --debug
 ```
+
+If the host reports only `handshake failed: connection closed` and
+`dazzle mcp check` shows `LOCK_HELD_BY_PID=…` with a live PID, either
+`kill <pid>` or unset `DAZZLE_MCP_SHARED` (default multi-session does not
+need an exclusive process). Exit code **2** means lock contention for agents.
 
 ### Tool not found
 

@@ -85,38 +85,33 @@ def mcp_setup(
 
 
 @mcp_app.command("check")
-def mcp_check() -> None:
+def mcp_check(
+    working_dir: Path = typer.Option(  # noqa: B008
+        None,
+        "--working-dir",
+        help="Project root for lock/session diagnosis (default: cwd)",
+    ),
+    clear_stale: bool = typer.Option(
+        False,
+        "--clear-stale",
+        help="Remove stale/corrupt MCP lock files (never kills a live PID)",
+    ),
+    json_out: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit diagnosis as JSON",
+    ),
+) -> None:
     """
     Check DAZZLE MCP server status.
 
-    Verifies that the MCP server is registered with Claude Code and
-    shows available tools.
+    Verifies registration with Claude Code, diagnoses process locks and
+    multi-session state (#1628), and warns on dual host registration.
     """
-    from dazzle.mcp.setup import check_mcp_server
+    from dazzle.mcp.lock_doctor import run_mcp_check
 
-    status = check_mcp_server()
-
-    typer.echo("DAZZLE MCP Server Status")
-    typer.echo("=" * 50)
-    typer.echo(f"Status:        {status['status']}")
-    typer.echo(f"Registered:    {'✓ Yes' if status['registered'] else '✗ No'}")
-
-    if status["config_path"]:
-        typer.echo(f"Config:        {status['config_path']}")
-
-    if status["server_command"]:
-        typer.echo(f"Command:       {status['server_command']}")
-
-    if status["tools"]:
-        typer.echo("")
-        typer.echo(f"Available Tools ({len(status['tools'])}):")
-        for tool in sorted(status["tools"]):
-            typer.echo(f"  • {tool}")
-    elif status["registered"]:
-        typer.echo("")
-        typer.echo("Tools: Unable to enumerate (MCP SDK not available)")
-
-    if not status["registered"]:
-        typer.echo("")
-        typer.echo("💡 To register the MCP server, run: dazzle mcp-setup")
-        raise typer.Exit(code=1)
+    project_root = working_dir.resolve() if working_dir else Path.cwd()
+    body, code = run_mcp_check(project_root, clear_stale=clear_stale, as_json=json_out)
+    typer.echo(body)
+    if code:
+        raise typer.Exit(code=code)

@@ -31,6 +31,14 @@ class TestProcessLockAcquire:
         assert data["working_dir"] == str(tmp_path)
         lock.release()
 
+    def test_custom_lock_path(self, tmp_path: Path) -> None:
+        custom = tmp_path / "nested" / "session.lock"
+        lock = ProcessLock(tmp_path, lock_path=custom)
+        assert lock.acquire() is None
+        assert custom.exists()
+        lock.release()
+        assert not custom.exists()
+
     def test_release_removes_lock_file(self, tmp_path: Path) -> None:
         lock = ProcessLock(tmp_path)
         assert lock.acquire() is None
