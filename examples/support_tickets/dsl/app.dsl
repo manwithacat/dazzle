@@ -443,6 +443,7 @@ surface comment_edit "Edit Comment":
 #   manager → manager_ops  = metrics + SLA strip + focused queues (ST-027–029)
 #   customer → my_tickets  = my metrics + open queue + history (ST-024–026)
 
+# WI L: agent default landing — denser regions (cap 6).
 workspace ticket_queue "Ticket Queue":
   purpose: "Agent workspace for managing incoming support tickets"
   stage: "scanner_table"
@@ -473,6 +474,15 @@ workspace ticket_queue "Ticket Queue":
     action: ticket_edit
     empty: "No open tickets"
 
+  critical_now:
+    source: Ticket
+    filter: priority = critical and status != closed
+    sort: created_at asc
+    limit: 12
+    display: queue
+    action: ticket_edit
+    empty: "No critical tickets open"
+
   # Lifecycle board (secondary) — status columns for flow, not the primary worklist.
   ticket_board:
     source: Ticket
@@ -481,6 +491,27 @@ workspace ticket_queue "Ticket Queue":
     group_by: status
     action: ticket_edit
     empty: "No open tickets"
+
+  recent_comments:
+    source: Comment
+    sort: created_at desc
+    limit: 12
+    display: list
+    action: comment_detail
+    empty: "No recent comments"
+
+  queue_readiness:
+    display: status_list
+    entries:
+      - title: "Open queue"
+        caption: "Work highest priority first — critical surfaces above the board"
+        icon: "inbox"
+        state: warning
+      - title: "SLA clock"
+        caption: "First response warning at 2h — see Manager Ops for team SLA strip"
+        icon: "clock"
+        state: accent
+
 
 workspace manager_ops "Manager Ops":
   # ST-027 team performance + SLA narrative; critical/unassigned queues for
@@ -621,6 +652,7 @@ workspace agent_dashboard "Agent Dashboard":
     action: comment_detail
     empty: "No activity yet"
 
+# WI L: customer default landing — denser regions (cap 6).
 workspace my_tickets "My Tickets":
   purpose: "Customer view of their submitted tickets"
   stage: "simple_list"
@@ -647,6 +679,15 @@ workspace my_tickets "My Tickets":
     action: ticket_detail
     empty: "You have no open tickets"
 
+  waiting_on_us:
+    source: Ticket
+    filter: created_by = current_user and status = in_progress
+    sort: updated_at desc
+    limit: 10
+    display: queue
+    action: ticket_detail
+    empty: "Nothing currently in progress"
+
   all_cases:
     source: Ticket
     filter: created_by = current_user
@@ -654,6 +695,32 @@ workspace my_tickets "My Tickets":
     display: list
     action: ticket_detail
     empty: "You have not submitted any tickets yet"
+
+  resolved_recent:
+    source: Ticket
+    filter: created_by = current_user and status = resolved
+    sort: updated_at desc
+    limit: 10
+    display: list
+    action: ticket_detail
+    empty: "No resolved tickets yet"
+
+  how_it_works:
+    display: status_list
+    entries:
+      - title: "Submit a ticket"
+        caption: "Describe the issue — agents pick it up from the open queue"
+        icon: "plus-circle"
+        state: accent
+      - title: "Track status"
+        caption: "Open and in-progress cases stay on this desk until closed"
+        icon: "list-checks"
+        state: positive
+      - title: "Replies"
+        caption: "Open a case to read agent comments and updates"
+        icon: "message-square"
+        state: warning
+
 
 # =============================================================================
 # CONTEXT-SELECTOR SCENARIO (#1304 verification)
@@ -727,18 +794,22 @@ workspace agent_console "Agent Console":
 persona admin "Administrator":
   # Product admin lands on the work queue — not framework platform chrome (#1626).
   default_workspace: ticket_queue
+  uses nav admin_nav
 
 persona customer "Customer":
   description: "End user submitting support requests and tracking their status"
   goals: "Submit new tickets easily", "Track ticket status and updates", "Receive timely responses from support"
   proficiency: novice
   default_workspace: my_tickets
+  # WI N: job desks first — not auto entity-list soup
+  uses nav customer_nav
 
 persona agent "Support Agent":
   description: "First-line support handling incoming tickets"
   goals: "Process tickets efficiently", "Maintain SLA compliance", "Escalate complex issues to managers"
   proficiency: intermediate
   default_workspace: ticket_queue
+  uses nav agent_nav
 
 persona manager "Support Manager":
   description: "Team lead monitoring performance and handling escalations"
@@ -747,6 +818,31 @@ persona manager "Support Manager":
   # Metrics-first team home (ST-027). Team work queue remains accessible via
   # ticket_queue access: persona(agent, manager). Avoids TR-52 empty personal list.
   default_workspace: manager_ops
+  uses nav manager_nav
+
+# Curated sidebars: workspace destinations only (WI primary N).
+# Names must match workspace ids — validate warns on orphans.
+nav admin_nav:
+  group "Ops":
+    ticket_queue
+    agent_console
+
+nav customer_nav:
+  group "My support":
+    my_tickets
+
+nav agent_nav:
+  group "Work":
+    ticket_queue
+    agent_dashboard
+    agent_console
+
+nav manager_nav:
+  group "Lead":
+    manager_ops
+    ticket_queue
+    agent_console
+    agent_dashboard
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
