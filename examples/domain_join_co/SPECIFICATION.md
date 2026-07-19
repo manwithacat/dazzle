@@ -45,12 +45,12 @@ dedicated screens.
 
 ## Where work happens
 
-- **Workspace Home** — admin landing after domain join is configured: team
-  pulse metrics, a join-readiness status strip (verified domain, join policy,
-  announcements — join approval itself lives in the auth admin console), then
-  the announcement feed.
-- **Team Board** — member home (and shared board for admins): announcement
-  metrics and the team noticeboard without the join-readiness strip.
+- **Workspace Home** — admin landing: team pulse metrics, join-readiness strip,
+  announcement queue, board cards, and posts-by-workspace chart.
+- **Team Board** — member home: board pulse, feed queue, feed cards, post trail,
+  posts chart, and workspace cards.
+- **Publish** — admin publish desk: draft queue, live cards, readiness strip,
+  publish trail, and posts chart.
 
 ## The technical foundation
 
@@ -82,4 +82,4 @@ which keeps the product fast, accessible, and simple to operate. (Verify:
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:3b02c9127d872c23d5e41cf1759dd70b46d2b2e98247c71b8b27a8a80a90a2a0 -->
+<!-- dazzle-spec-brief: sha256:306b23f53d8121de8b634e07fa1b57c95d08cb9c62412583f67e0291b310c905 -->

@@ -185,9 +185,27 @@ workspace home "Workspace Home":
         icon: "pen"
         state: accent
 
+  # WI D: grid family for announcement cards
+  board_cards:
+    source: Announcement
+    sort: title asc
+    limit: 12
+    display: grid
+    action: announcement_detail
+    empty: "No announcements yet"
+
+  # WI D: chart family — announcement load by workspace
+  post_mix:
+    source: Announcement
+    display: bar_chart
+    group_by: workspace
+    aggregate:
+      count: count(Announcement)
+    empty: "No announcements yet"
+
 # Second product workspace lowers warehouse density (3 lists / 1 ws → deepen).
 # Admin publish desk vs member reading feed (same entity, different job).
-# WI L: member default landing — aim for ≥5 regions (cap 6).
+# WI L: member default landing — aim for ≥5 signal-rich mode×source pairs.
 workspace announce "Team Board":
   purpose: "Announcement board — post and browse without warehouse list chrome"
   access: persona(admin, member)
@@ -209,11 +227,12 @@ workspace announce "Team Board":
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
 
-  feed:
+  # WI D: grid family for feed cards (not list pad)
+  feed_cards:
     source: Announcement
     sort: title asc
     limit: 15
-    display: list
+    display: grid
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
 
@@ -229,20 +248,31 @@ workspace announce "Team Board":
         icon: "megaphone"
         state: positive
 
-  workspace_strip:
+  # WI D: context family — recent posts trail
+  post_trail:
+    source: Announcement
+    sort: title asc
+    limit: 12
+    display: timeline
+    action: announcement_detail
+    empty: "No announcements yet"
+
+  # WI D: chart family — posts by workspace
+  post_mix:
+    source: Announcement
+    display: bar_chart
+    group_by: workspace
+    aggregate:
+      count: count(Announcement)
+    empty: "No announcements yet"
+
+  # WI D: workspace context grid
+  workspace_cards:
     source: Workspace
     sort: name asc
     limit: 8
-    display: list
+    display: grid
     empty: "No workspace context"
-
-  recent_spotlight:
-    source: Announcement
-    sort: title asc
-    limit: 5
-    display: list
-    action: announcement_detail
-    empty: "Nothing spotlighted yet"
 
 # Third product workspace (WI D): admin publish desk vs read-only board.
 workspace publish_desk "Publish":
@@ -266,11 +296,12 @@ workspace publish_desk "Publish":
     action: announcement_detail
     empty: "No posts yet — create one to brief the team"
 
-  live_board:
+  # WI D: grid family for live board cards
+  live_cards:
     source: Announcement
     sort: title asc
     limit: 15
-    display: list
+    display: grid
     action: announcement_detail
     empty: "Board empty"
 
@@ -286,9 +317,20 @@ workspace publish_desk "Publish":
         icon: "shield"
         state: accent
 
-  tenant_roster:
-    source: Workspace
-    sort: name asc
-    limit: 10
-    display: list
-    empty: "No workspaces"
+  # WI D: context family — publish trail
+  publish_trail:
+    source: Announcement
+    sort: title asc
+    limit: 12
+    display: timeline
+    action: announcement_detail
+    empty: "No posts yet"
+
+  # WI D: chart family — posts by workspace
+  post_mix:
+    source: Announcement
+    display: bar_chart
+    group_by: workspace
+    aggregate:
+      count: count(Announcement)
+    empty: "No posts yet"
