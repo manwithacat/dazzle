@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Fixed
+- **CI red after #1626/#1630** — mixed-field OR path uses module logger when
+  extract is called without logger; validate persona-declared warnings skip
+  when app has no personas (framework SystemHealth/admin noise); docs gen
+  page count 22 (demo); cedar OR test expects fail-closed filter.
 - **#1626 hygiene + priors** — product_quality success copy no longer claims
   recapture still needed when residual=0; live_desk tries all list/queue
   sources (empty PaymentAttempt no longer fails auditor when Invoice has

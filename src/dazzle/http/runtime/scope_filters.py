@@ -615,7 +615,8 @@ def _extract_condition_filters(
                     else:
                         filters[f"{fld}__in"] = list(vals)
                 return
-            _logger.warning(
+            log = _logger if _logger is not None else logger
+            log.warning(
                 "Workspace region filter uses OR that cannot be lowered to "
                 "field__in (mixed fields/operators). Split into regions or use "
                 "simple equality OR on one field (#1630)."

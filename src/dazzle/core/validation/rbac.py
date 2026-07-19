@@ -364,6 +364,7 @@ _ALLOWED_SCOPE_WILDCARDS = frozenset(
         "any",
         "authenticated",
         "anonymous",
+        "admin",  # framework entities + platform operator
         "super_admin",
         "platform_admin",
         "sysadmin",
@@ -410,6 +411,11 @@ def validate_scope_personas_declared(
     errors: list[str] = []
     warnings: list[str] = []
     declared_s = _declared_persona_ids(appspec)
+    # No project personas → cannot diagnose rename drift; framework-injected
+    # entities (SystemHealth, …) often reference platform `admin` and would
+    # spam warnings on minimal apps (#1630 + validate CLI smoke tests).
+    if not declared_s:
+        return errors, warnings
 
     for entity in appspec.domain.entities:
         if entity.access is None:

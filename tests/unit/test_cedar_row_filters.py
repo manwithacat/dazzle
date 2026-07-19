@@ -415,14 +415,15 @@ class TestExtractConditionFiltersIR:
         assert filters == {"student": "user-abc", "active": True}
 
     def test_ir_or_not_pushed(self) -> None:
-        """IR ConditionExpr: OR compound is not pushed to SQL."""
+        """Mixed-field IR OR is fail-closed (#1630), not a silent no-op."""
         cond = self._make_ir_or(
             self._make_ir_condition("owner_id", "current_user"),
             self._make_ir_condition("is_public", True),
         )
         filters: dict[str, object] = {}
         _extract_condition_filters(cond, "user-abc", filters, None)
-        assert filters == {}
+        # Cannot lower mixed-field OR to field__in → empty subquery, not {}.
+        assert "__or_unsupported__in_subquery" in filters
 
     def test_ir_nested_and(self) -> None:
         """IR ConditionExpr: nested AND extracts all conditions."""

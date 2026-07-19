@@ -37,9 +37,6 @@ entity Task "Task":
   permit:
     list: authenticated
     read: authenticated
-    create: authenticated
-    update: authenticated
-    delete: authenticated
 
   scope:
     list: all
