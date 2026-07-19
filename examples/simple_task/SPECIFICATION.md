@@ -46,13 +46,15 @@ they are the assignee or the creator, and can update only those.
 
 ## Where work happens
 
-Work is organised into four job-shaped workspaces. The **Task Board** —
-shared by all three roles — is for managing flow visually: a kanban board of
-tasks, an upcoming-due list, and recent comments. The **Admin Dashboard** is
-the administrator home: metrics for tasks and users, plus urgent and overdue
-queues. The **Team Overview** is the manager home: metrics and queues for
-review, unassigned, and in-progress work. **My Work** is each person's
-assigned pressure strip and work queues.
+Work is organised into job-shaped workspaces. The **Task Board** — shared by
+all three roles — has board metrics, a kanban of tasks, due timeline, urgent
+queue, status chart, and comment trail. The **Admin Dashboard** is the
+administrator home: metrics for tasks and users, plus urgent and overdue
+queues. The **Team Overview** is the manager home: metrics, flow chart, review
+queue, and team roster. **My Work** is each person's assigned pressure strip,
+personal board, and due timeline. **Discussion** is the comment desk with
+trail, active cards, and status chart. **People** is the roster and capacity
+desk with unassigned queue, in-flight board, and load chart.
 
 ## How work flows through it
 
@@ -116,4 +118,4 @@ an explicit trigger, prompt contract, and timeout — rather than ad-hoc calls
 buried in code, so what the AI is allowed to touch is reviewable in one place
 (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:cd828749c8950a56c45495c8e5dbe2bb79967e9eb8645258be92dda0063fa0a1 -->
+<!-- dazzle-spec-brief: sha256:79b0cdc16365637e7c2f2cee358cda5946b328fe070e1e12006c95056b186c70 -->

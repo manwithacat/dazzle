@@ -607,6 +607,18 @@ surface user_edit "Edit Team Member":
 workspace task_board "Task Board":
   access: persona(admin, manager, member)
   purpose: "Manage tasks visually"
+
+  board_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      open: count(Task where status != done)
+      in_progress: count(Task where status = in_progress)
+      in_review: count(Task where status = review)
+    tones:
+      in_progress: accent
+      in_review: warning
+
   tasks:
     source: Task
     display: kanban
@@ -622,11 +634,31 @@ workspace task_board "Task Board":
     action: task_edit
     empty: "No upcoming due dates"
 
+  # WI D: queue family — urgent open work
+  urgent_queue:
+    source: Task
+    filter: priority = urgent and status != done
+    sort: due_date asc
+    limit: 12
+    display: queue
+    action: task_edit
+    empty: "No urgent tasks"
+
+  # WI D: chart family — status mix
+  status_mix:
+    source: Task
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No tasks yet"
+
+  # WI D: context family — recent discussion
   recent_comments:
     source: TaskComment
-    display: list
+    display: timeline
     sort: created_at desc
-    limit: 10
+    limit: 12
     empty: "No comments yet"
 
 # Story-driven compositions (docs/guides/story-to-composition.md):
@@ -835,14 +867,33 @@ workspace comments_desk "Discussion":
     display: queue
     empty: "No comments yet"
 
+  # WI D: context family — discussion trail
+  comment_trail:
+    source: TaskComment
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No comments yet"
+
+  # WI D: grid family for active work cards
   active_tasks:
     source: Task
     filter: status = in_progress
     sort: priority desc
     limit: 15
-    display: list
+    display: grid
     action: task_detail
     empty: "No tasks in progress"
+
+  # WI D: chart family — open task status mix
+  status_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks"
 
 # Fifth product workspace (WI density D): people/roster desk.
 workspace people_desk "People":
@@ -860,12 +911,13 @@ workspace people_desk "People":
       active: positive
       open_tasks: accent
 
+  # WI D: grid family for roster cards
   roster:
     source: User
     filter: is_active = true
     sort: name asc
     limit: 25
-    display: list
+    display: grid
     action: user_detail
     empty: "No active teammates"
 
@@ -878,14 +930,25 @@ workspace people_desk "People":
     action: task_edit
     empty: "Every open task has an owner"
 
-  in_flight:
+  # WI D: kanban family — in-flight work
+  in_flight_board:
     source: Task
-    filter: status = in_progress
+    filter: status = in_progress or status = review
+    display: kanban
+    group_by: status
     sort: priority desc
-    limit: 15
-    display: list
     action: task_detail
-    empty: "No tasks in progress"
+    empty: "No tasks in progress or review"
+
+  # WI D: chart family — open work by status
+  load_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks"
 
   capacity_hint:
     display: status_list
