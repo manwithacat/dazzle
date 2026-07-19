@@ -59,28 +59,28 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1055 | USED |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1056 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1060 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1064 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1060 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1060 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1063 | USED |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1063 | USED |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1027 | USED |
-| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1037 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1064 | USED |
+| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1064 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1061 | USED |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1062 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1061 | USED |
-| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1037 | USED |
-| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
-| `dazzle test-design` | HYGIENE | CLI | example-apps | 1037 | USED |
+| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1064 | USED |
+| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1064 | USED |
+| `dazzle test-design` | HYGIENE | CLI | example-apps | 1064 | USED |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1057 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1061 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1062 | USED |
-| `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
+| `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1064 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1060 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
-| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1027 | USED |
+| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1064 | USED |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1061 | USED |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1063 | USED |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1062 | USED |
@@ -88,7 +88,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1060 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1061 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1060 | USED |
-| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
+| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1064 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1057 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1061 | USED |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1062 | USED |
@@ -107,6 +107,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1064 (2026-07-19).** **example-apps HYGIENE dig** — story/rhythm/discovery/process/deploy/
+> test-design on support_tickets; HM gallery 6/6; zero-floor GREEN. budget_consumed 1. Explore **9/100**.
 
 > **Cycle 1063 (2026-07-19).** **example-apps HYGIENE dig** — xproject sibling validate
 > (cyfuture/AegisMark/pennydreadful exit 0 warn-only); support_tickets boot-stderr clean;
