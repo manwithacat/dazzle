@@ -79,16 +79,16 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1008 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1008 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1008 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1027 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1027 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1028 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1028 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1026 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1026 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1026 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1027 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1028 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1012 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1016 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1027 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1028 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1012 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1012 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1012 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1028 (2026-07-19).** **self-audit** (cadence ≥15 since 1013): window `6303ac9a5..HEAD`. Sampled top-5 by churn: **ab163e8e4** WI v2 anti-gaming CLEAN (13 maturity tests; pad richness≤0.2; --paths scores cyfuture); **b79ec2829** hr_records landings+open-via+reporting_desk CLEAN (ws=8, G=0,L=0); **82d3b7272** simple_task L signals CLEAN (richness 1.0/1.0, L=0); **60f49f984** support_tickets curated nav CLEAN (N=0); **c3daa1fd8** invoice_ops nav+payments_trail CLEAN (N=0, ws=8; WI figure rose under later v2 metric — claim held at ship). residual_total=0; wi_fleet **0.185≤floor**. **5 CLEAN / 0 DISCREPANCY**. End SHA post-stamp. budget_consumed 0. Explore **84/100**. Next self-audit ~**1043**. Next: framework-ux STALE@1007 lag~21 or wi_next=invoice_ops (D); sweep ~1034.
 
 > **Cycle 1027 (2026-07-19).** **hm-convergence** STALE-clear (HM cluster@1006 lag~21): gallery probes **6/6 PASS**; dual_lock queue **0**; shadcn gaps **0**; coherence queue=0 mean=8.7; zero-floor **GREEN** (tw=0 css=0); hm_visual_smoke --dazzle-emit (taste substitute, 11 parts). residual=0; wi_fleet **0.185≤floor**. Stamps HM gallery/dual_lock/shadcn/coherence/zero-floor/visual_smoke + CodeQL/inbox **USED@1027**. Explore **84/100**. Next: self-audit due@1028; framework-ux STALE@1007 lag~20 (ux verify/rbac/composition/fragment-audit); wi_next=invoice_ops (D). sweep ~1034.
 
