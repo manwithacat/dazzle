@@ -27,6 +27,8 @@ persona engineer "Engineer":
   proficiency_level: expert
   session_style: deep_work
   default_workspace: engineering_dashboard
+  # WI N: job desks first — not auto entity-list soup
+  uses nav engineer_nav
 
 persona tester "Field Tester":
   goals:
@@ -36,6 +38,7 @@ persona tester "Field Tester":
   proficiency_level: intermediate
   session_style: task_based
   default_workspace: tester_dashboard
+  uses nav tester_nav
 
 persona manager "Manager":
   goals:
@@ -46,6 +49,26 @@ persona manager "Manager":
   session_style: quick_check
   # Answer-first landing (product maturity): fleet ops desk, not shared eng mega-board
   default_workspace: manager_ops
+  uses nav manager_nav
+
+# Curated sidebars: workspace destinations only (WI primary N).
+nav engineer_nav:
+  group "Engineering":
+    engineering_dashboard
+    issue_triage
+    firmware_pipeline
+
+nav tester_nav:
+  group "Field":
+    tester_dashboard
+    field_kit
+
+nav manager_nav:
+  group "Ops":
+    manager_ops
+    engineering_dashboard
+    issue_triage
+    firmware_pipeline
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
