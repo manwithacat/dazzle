@@ -36,7 +36,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 | Capability | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|
-| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 933 | USED |
+| `dazzle validate` / `lint` | CLI | example-apps (Tier 1) | 959 | USED |
 | `dazzle ux verify` (contracts/interactions) | CLI | framework-ux, ux-converge, example-apps | 935 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 939 | USED |
 | `dazzle qa trial` | CLI | trials | 941 | USED |
@@ -92,8 +92,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 943 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 943 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 943 | USED |
-| MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 932 | USED |
-| MCP `db` project-local DATABASE_URL resolve (#1629 G2) | MCP | example-apps + agent DX | 932 | USED |
+| MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 959 | USED |
+| MCP `db` project-local DATABASE_URL resolve (#1629 G2) | MCP | example-apps + agent DX | 959 | USED |
 
 
 

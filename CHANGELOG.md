@@ -1,6 +1,12 @@
 ## [Unreleased]
 
 ### Fixed
+- **MCP `db.status` platform table noise** — platform-domain entities
+  (SystemHealth, SystemMetric, …) inject into every AppSpec but often
+  lack tables until ops surfaces materialise them. Missing platform
+  tables now report `status=not_materialized` (not error) so agent
+  world-model reads stay clean alongside project-local DATABASE_URL
+  resolve (#1629).
 - **qa trial / managed serve DB pin** — managed interaction servers and
   `dazzle qa trial` force `DATABASE_URL` / `REDIS_URL` from the project
   `.env` (`apply_project_infra_urls`) so a shell export from another
