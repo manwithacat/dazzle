@@ -68,9 +68,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
 | `qa-trial` skill | skill | trials (downstream authoring) | 941 | USED |
-| `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 935 | USED |
+| `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 976 | USED |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 974 | USED |
-| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 937 | USED |
+| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 976 | USED |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 962 | USED |
 | `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 960 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 964 | USED |
