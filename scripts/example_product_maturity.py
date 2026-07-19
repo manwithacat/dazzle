@@ -11,6 +11,20 @@ or HM purity. A product-mature app has:
 * **Job coverage** — product personas have bound stories (``executed_by``) or
   at least one accessible workspace with multiple regions (a job surface)
 
+**Warehouse Index (WI)** — continuous 0–1 objective (higher = more warehouse)
+agents minimize when discrete residual is already 0. Components:
+
+* **D** ``warehouse_density`` — list surfaces vs product workspaces
+* **N** ``nav_list_share`` — persona nav list-link share
+* **L** landing thinness — inverse of landing region richness (cap 6)
+* **J** job thinness — unbound product stories / uncovered personas
+* **G** graph poverty — list surfaces without open-via on multi-entity apps
+
+``WI = 0.30·D + 0.25·N + 0.20·L + 0.15·J + 0.10·G``
+
+Residual (critical/thin/deepen) remains the *floor* gate; WI is the *gradient*
+for managed scope-creep feature slices after residual clears.
+
 This is the instance-level counterpart to framework ``ux-maturity``
 (``docs/reference/ux-maturity.md``): that rubric asks whether *primitives*
 default right; this probe asks whether *example products* use those
@@ -21,7 +35,9 @@ Usage (from monorepo root)::
     python scripts/example_product_maturity.py
     python scripts/example_product_maturity.py --json
     python scripts/example_product_maturity.py --status
+    python scripts/example_product_maturity.py --warehouse-index
     python scripts/example_product_maturity.py --next
+    python scripts/example_product_maturity.py --next-wi
     python scripts/example_product_maturity.py --app support_tickets
     python scripts/example_product_maturity.py --strict
 
@@ -33,6 +49,7 @@ Exit codes:
 Consumed by:
   - ``improve/lanes/example-apps.md`` (prefer product residuals before Tier-1)
   - agents deciding whether an app is a warehouse or a product
+  - quiet-fleet feature_creep: minimize ``wi_fleet`` / ``wi_next``
 """
 
 from __future__ import annotations
@@ -58,6 +75,21 @@ _PLATFORM_PERSONA_IDS = frozenset(
     }
 )
 _PLATFORM_WORKSPACE_PREFIXES = ("_", "platform_", "admin_")
+
+# Landing region richness saturates at this many regions (job desk, not mega-page).
+_LANDING_REGION_CAP = 6
+
+# WI weights (sum = 1.0). Higher component → more warehouse.
+_WI_WEIGHTS = {
+    "D": 0.30,  # warehouse_density
+    "N": 0.25,  # nav_list_share
+    "L": 0.20,  # landing thinness
+    "J": 0.15,  # job thinness
+    "G": 0.10,  # graph poverty
+}
+
+# Soft floor for "true all-clear" feature-creep stop (agents may still deepen).
+WI_FLOOR = 0.25
 
 
 @dataclass
@@ -87,6 +119,16 @@ class AppProductMaturity:
     bound_stories: int = 0
     product_stories: int = 0
     job_personas_covered: int = 0
+    entity_count: int = 0
+    open_via_lists: int = 0  # list surfaces with open_via / open_entity
+    # Continuous warehouse components (0–1, higher = more warehouse).
+    wi_D: float = 0.0
+    wi_N: float = 0.0
+    wi_L: float = 0.0
+    wi_J: float = 0.0
+    wi_G: float = 0.0
+    wi: float = 0.0  # weighted Warehouse Index
+    wi_primary: str = "-"  # largest component key (D|N|L|J|G)
     score: int = 0  # residual priority (higher = worse / act sooner)
     tier: str = "ok"  # critical | thin | deepen | ok
     reasons: list[str] = field(default_factory=list)
@@ -113,6 +155,102 @@ def _is_product_persona(persona_id: str) -> bool:
 def _mode_str(surface: Any) -> str:
     raw = getattr(surface, "mode", None)
     return str(getattr(raw, "value", raw) or "").lower()
+
+
+def _clamp01(x: float) -> float:
+    if x < 0.0:
+        return 0.0
+    if x > 1.0:
+        return 1.0
+    return float(x)
+
+
+def _list_has_open_via(surface: Any) -> bool:
+    """True when a list surface declares context-hop open targets."""
+    ov = getattr(surface, "open_via", None)
+    oe = getattr(surface, "open_entity", None)
+    targets = getattr(surface, "open_via_targets", None)
+    if ov is not None and str(ov).strip():
+        return True
+    if oe is not None and str(oe).strip():
+        return True
+    if targets:
+        return True
+    return False
+
+
+def compute_warehouse_index(m: AppProductMaturity) -> AppProductMaturity:
+    """Fill continuous WI fields on an already-scored maturity row.
+
+    Pure-ish: only uses fields already on ``m`` (no IR re-load). Idempotent.
+    """
+    d = _clamp01(m.warehouse_density)
+    n = _clamp01(m.nav_list_share)
+
+    # L — landing thinness (inverse mean region richness, cap 6).
+    region_rich: list[float] = []
+    for pl in m.landings:
+        if not isinstance(pl, dict):
+            continue
+        if not pl.get("ok"):
+            # Failed landing = full thinness for that persona.
+            region_rich.append(0.0)
+            continue
+        rc = int(pl.get("region_count") or 0)
+        region_rich.append(min(rc, _LANDING_REGION_CAP) / float(_LANDING_REGION_CAP))
+    if region_rich:
+        landing_thin = _clamp01(1.0 - (sum(region_rich) / len(region_rich)))
+    elif m.product_personas > 0:
+        landing_thin = 1.0
+    elif m.list_surfaces > 0:
+        landing_thin = 1.0
+    else:
+        landing_thin = 0.0
+
+    # J — job thinness (unbound stories or uncovered personas).
+    if m.product_stories > 0:
+        job_thin = _clamp01(1.0 - (m.bound_stories / float(m.product_stories)))
+    elif m.product_personas > 0:
+        job_thin = _clamp01(1.0 - (m.job_personas_covered / float(m.product_personas)))
+    elif m.list_surfaces > 0:
+        job_thin = 1.0
+    else:
+        job_thin = 0.0
+
+    # G — graph poverty (lists without open-via on multi-entity apps).
+    list_n = max(m.list_surfaces, 0)
+    if list_n <= 0 or m.entity_count < 2:
+        graph_poor = 0.0
+    else:
+        open_share = m.open_via_lists / float(list_n)
+        graph_poor = _clamp01(1.0 - open_share)
+        # Tiny apps (1–2 entities) are less "warehouse graph" failures.
+        if m.entity_count < 3:
+            graph_poor = _clamp01(graph_poor * 0.5)
+
+    m.wi_D = d
+    m.wi_N = n
+    m.wi_L = landing_thin
+    m.wi_J = job_thin
+    m.wi_G = graph_poor
+    m.wi = _clamp01(
+        _WI_WEIGHTS["D"] * d
+        + _WI_WEIGHTS["N"] * n
+        + _WI_WEIGHTS["L"] * landing_thin
+        + _WI_WEIGHTS["J"] * job_thin
+        + _WI_WEIGHTS["G"] * graph_poor
+    )
+    components = {
+        "D": d,
+        "N": n,
+        "L": landing_thin,
+        "J": job_thin,
+        "G": graph_poor,
+    }
+    # Stable tie-break: prefer earlier weight order D→N→L→J→G.
+    _order = {"D": 0, "N": 1, "L": 2, "J": 3, "G": 4}
+    m.wi_primary = max(components.items(), key=lambda kv: (kv[1], -_order[kv[0]]))[0]
+    return m
 
 
 def _accessible_product_workspaces(appspec: Any, persona: Any) -> int:
@@ -206,15 +344,23 @@ def score_app(app_dir: Path) -> AppProductMaturity:
     surfaces = list(getattr(appspec, "surfaces", None) or [])
     list_n = 0
     crud_n = 0
+    open_via_lists = 0
     for s in surfaces:
         mode = _mode_str(s)
         if "list" in mode:
             list_n += 1
             crud_n += 1
+            if _list_has_open_via(s):
+                open_via_lists += 1
         elif "create" in mode or "edit" in mode:
             crud_n += 1
     m.list_surfaces = list_n
     m.crud_surfaces = crud_n
+    m.open_via_lists = open_via_lists
+
+    domain = getattr(appspec, "domain", None)
+    entities = list(getattr(domain, "entities", None) or getattr(appspec, "entities", None) or [])
+    m.entity_count = len(entities)
 
     # Density: lists relative to product workspaces. High = warehouse.
     denom = list_n + max(m.product_workspaces, 0)
@@ -350,7 +496,7 @@ def score_app(app_dir: Path) -> AppProductMaturity:
     else:
         m.tier = "ok"
 
-    return m
+    return compute_warehouse_index(m)
 
 
 def discover_apps() -> list[Path]:
@@ -365,26 +511,41 @@ def scan(app_filter: str | None = None) -> list[AppProductMaturity]:
         if app_filter and app_dir.name != app_filter:
             continue
         rows.append(score_app(app_dir))
-    rows.sort(key=lambda r: (-r.score, r.app))
+    rows.sort(key=lambda r: (-r.score, -r.wi, r.app))
     return rows
+
+
+def fleet_wi_mean(rows: list[AppProductMaturity]) -> float:
+    if not rows:
+        return 0.0
+    return sum(r.wi for r in rows) / float(len(rows))
+
+
+def next_wi_app(rows: list[AppProductMaturity]) -> AppProductMaturity | None:
+    """Highest-WI app (managed scope-creep target)."""
+    if not rows:
+        return None
+    return max(rows, key=lambda r: (r.wi, r.score, r.app))
 
 
 def format_table(rows: list[AppProductMaturity]) -> str:
     lines = [
-        f"{'app':28} {'tier':10} {'score':5} {'land':>5} {'dens':>5} {'navL':>5} "
-        f"{'list':>4} {'ws':>3} {'jobs':>5} reasons",
-        "-" * 105,
+        f"{'app':28} {'tier':10} {'score':5} {'WI':>5} {'pri':>3} {'land':>5} "
+        f"{'dens':>5} {'navL':>5} {'list':>4} {'ws':>3} {'jobs':>5} reasons",
+        "-" * 115,
     ]
     for r in rows:
         land = f"{r.landing_ok}/{r.product_personas}"
         jobs = f"{r.job_personas_covered}/{r.product_personas}"
         reasons = ",".join(r.reasons) if r.reasons else "-"
         lines.append(
-            f"{r.app:28} {r.tier:10} {r.score:5} {land:>5} {r.warehouse_density:5.2f} "
-            f"{r.nav_list_share:5.2f} {r.list_surfaces:4} {r.product_workspaces:3} "
-            f"{jobs:>5} {reasons}"
+            f"{r.app:28} {r.tier:10} {r.score:5} {r.wi:5.2f} {r.wi_primary:>3} "
+            f"{land:>5} {r.warehouse_density:5.2f} {r.nav_list_share:5.2f} "
+            f"{r.list_surfaces:4} {r.product_workspaces:3} {jobs:>5} {reasons}"
         )
     residual = [r for r in rows if r.is_residual]
+    wi_mean = fleet_wi_mean(rows)
+    wi_next = next_wi_app(rows)
     lines.append("")
     lines.append(
         f"residual={len(residual)}/{len(rows)}  "
@@ -392,10 +553,52 @@ def format_table(rows: list[AppProductMaturity]) -> str:
         f"thin={sum(1 for r in residual if r.tier == 'thin')}  "
         f"deepen={sum(1 for r in residual if r.tier == 'deepen')}"
     )
+    lines.append(
+        f"wi_fleet={wi_mean:.3f}  wi_floor={WI_FLOOR:.2f}  "
+        f"wi_next={wi_next.app if wi_next else '-'}  "
+        f"wi_primary={wi_next.wi_primary if wi_next else '-'}"
+    )
     if residual:
         lines.append(f"next={residual[0].app}")
     else:
         lines.append("next=")
+    return "\n".join(lines)
+
+
+def format_warehouse_index(rows: list[AppProductMaturity]) -> str:
+    """Component breakdown for managed scope-creep (minimize WI)."""
+    ordered = sorted(rows, key=lambda r: (-r.wi, r.app))
+    lines = [
+        f"{'app':28} {'WI':>5} {'D':>5} {'N':>5} {'L':>5} {'J':>5} {'G':>5} "
+        f"{'pri':>3}  intervention",
+        "-" * 90,
+    ]
+    interventions = {
+        "D": "more multi-region job workspaces (fewer list-primary shells)",
+        "N": "persona nav job destinations (not auto entity-list soup)",
+        "L": "denser landing regions (queue/chart/related/strip/activity)",
+        "J": "bind stories executed_by + process/surface paths",
+        "G": "open-via on lists + related hubs for multi-entity graphs",
+    }
+    for r in ordered:
+        hint = interventions.get(r.wi_primary, "-")
+        lines.append(
+            f"{r.app:28} {r.wi:5.2f} {r.wi_D:5.2f} {r.wi_N:5.2f} {r.wi_L:5.2f} "
+            f"{r.wi_J:5.2f} {r.wi_G:5.2f} {r.wi_primary:>3}  {hint}"
+        )
+    wi_mean = fleet_wi_mean(rows)
+    wi_next = next_wi_app(rows)
+    lines.append("")
+    lines.append(
+        f"wi_fleet={wi_mean:.3f}  wi_floor={WI_FLOOR:.2f}  "
+        f"wi_next={wi_next.app if wi_next else '-'}  "
+        f"wi_primary={wi_next.wi_primary if wi_next else '-'}  "
+        f"above_floor={sum(1 for r in rows if r.wi > WI_FLOOR)}/{len(rows)}"
+    )
+    lines.append(
+        "objective: when residual=0, minimize wi_next (product DSL slice that "
+        "moves wi_primary); map-only commits do not count"
+    )
     return "\n".join(lines)
 
 
@@ -405,9 +608,15 @@ def format_status(rows: list[AppProductMaturity]) -> str:
     thin = sum(1 for r in residual if r.tier == "thin")
     deepen = sum(1 for r in residual if r.tier == "deepen")
     nxt = residual[0].app if residual else "-"
+    wi_mean = fleet_wi_mean(rows)
+    wi_next = next_wi_app(rows)
+    wi_n = wi_next.app if wi_next else "-"
+    wi_p = wi_next.wi_primary if wi_next else "-"
     return (
         f"product_maturity apps={len(rows)} residual={len(residual)} "
-        f"critical={crit} thin={thin} deepen={deepen} next={nxt}"
+        f"critical={crit} thin={thin} deepen={deepen} next={nxt} "
+        f"wi_fleet={wi_mean:.3f} wi_next={wi_n} wi_primary={wi_p} "
+        f"wi_floor={WI_FLOOR:.2f}"
     )
 
 
@@ -417,14 +626,29 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", action="store_true", help="Emit full JSON payload")
     ap.add_argument("--status", action="store_true", help="One-line cycle log line")
     ap.add_argument(
+        "--warehouse-index",
+        action="store_true",
+        help="Print continuous Warehouse Index table (minimize wi_next)",
+    )
+    ap.add_argument(
         "--next",
         action="store_true",
         help="Print only the next residual app id (empty if fleet mature)",
     )
     ap.add_argument(
+        "--next-wi",
+        action="store_true",
+        help="Print highest-WI app id for feature_creep (empty if no apps)",
+    )
+    ap.add_argument(
         "--strict",
         action="store_true",
         help="Exit 1 when any residual remains",
+    )
+    ap.add_argument(
+        "--strict-wi",
+        action="store_true",
+        help=f"Exit 1 when wi_fleet > wi_floor ({WI_FLOOR})",
     )
     args = ap.parse_args(argv)
 
@@ -432,6 +656,11 @@ def main(argv: list[str] | None = None) -> int:
     if not rows:
         print("no example apps found", file=sys.stderr)
         return 2
+
+    if args.next_wi:
+        nxt = next_wi_app(rows)
+        print(nxt.app if nxt else "")
+        return 0
 
     if args.next:
         residual = [r for r in rows if r.is_residual]
@@ -442,6 +671,12 @@ def main(argv: list[str] | None = None) -> int:
         print(format_status(rows))
         return 0
 
+    if args.warehouse_index:
+        print(format_warehouse_index(rows))
+        if args.strict_wi and fleet_wi_mean(rows) > WI_FLOOR:
+            return 1
+        return 0
+
     if args.json:
         print(json.dumps([asdict(r) for r in rows], indent=2))
     else:
@@ -449,10 +684,14 @@ def main(argv: list[str] | None = None) -> int:
 
     residual = [r for r in rows if r.is_residual]
     if args.app and not residual:
-        return 0
-    if args.strict or (not args.app and residual):
-        return 1 if residual else 0
-    return 0
+        rc = 0
+    elif args.strict or (not args.app and residual):
+        rc = 1 if residual else 0
+    else:
+        rc = 0
+    if args.strict_wi and fleet_wi_mean(rows) > WI_FLOOR:
+        return 1
+    return rc
 
 
 if __name__ == "__main__":

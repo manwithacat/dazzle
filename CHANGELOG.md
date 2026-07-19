@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Added
+- **Warehouse Index (WI)** — continuous anti-warehouse score on
+  `example_product_maturity.py` (`D/N/L/J/G` → `wi` / `wi_fleet` /
+  `wi_next` / `wi_primary`). Status and `improve_example_probes` emit
+  WI so quiet residual=0 fleets still have a gradient for managed
+  scope-creep feature slices (`--warehouse-index`, `--next-wi`).
+
 ### Fixed
 - **MCP `db.status` platform table noise** — platform-domain entities
   (SystemHealth, SystemMetric, …) inject into every AppSpec but often

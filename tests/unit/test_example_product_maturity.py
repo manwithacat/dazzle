@@ -75,3 +75,77 @@ def test_status_line(pm) -> None:
     assert "residual=" in line
     assert "residual=0" in line
     assert "critical=0" in line
+    assert "wi_fleet=" in line
+    assert "wi_next=" in line
+    assert "wi_primary=" in line
+
+
+def test_warehouse_index_components_in_unit_interval(pm) -> None:
+    """WI and components are continuous 0–1 (agent-minimizable gradient)."""
+    rows = pm.scan()
+    assert rows
+    for r in rows:
+        for attr in ("wi", "wi_D", "wi_N", "wi_L", "wi_J", "wi_G"):
+            v = getattr(r, attr)
+            assert 0.0 <= v <= 1.0 + 1e-9, f"{r.app}.{attr}={v}"
+        assert r.wi_primary in {"D", "N", "L", "J", "G"}
+        # Weighted sum consistency (allow float noise).
+        expected = 0.30 * r.wi_D + 0.25 * r.wi_N + 0.20 * r.wi_L + 0.15 * r.wi_J + 0.10 * r.wi_G
+        assert abs(r.wi - expected) < 1e-6
+
+
+def test_compute_warehouse_index_pure(pm) -> None:
+    """Synthetic row: high density/nav → high WI and primary D or N."""
+    m = pm.AppProductMaturity(app="synthetic")
+    m.warehouse_density = 0.9
+    m.nav_list_share = 0.8
+    m.product_personas = 2
+    m.product_stories = 4
+    m.bound_stories = 0
+    m.job_personas_covered = 0
+    m.list_surfaces = 8
+    m.entity_count = 5
+    m.open_via_lists = 0
+    m.landings = [
+        {
+            "persona_id": "a",
+            "default_workspace": "home",
+            "workspace_exists": True,
+            "region_count": 1,
+            "ok": True,
+            "reason": "ok",
+        },
+        {
+            "persona_id": "b",
+            "default_workspace": "home",
+            "workspace_exists": True,
+            "region_count": 1,
+            "ok": True,
+            "reason": "ok",
+        },
+    ]
+    m = pm.compute_warehouse_index(m)
+    assert m.wi > 0.5
+    assert m.wi_D == 0.9
+    assert m.wi_N == 0.8
+    assert m.wi_G == 1.0  # multi-entity lists, no open-via
+    assert m.wi_J == 1.0  # 0/4 bound stories
+    assert m.wi_L > 0.8  # 1/6 region richness
+    assert m.wi_primary in {"D", "N", "L", "J", "G"}
+
+
+def test_warehouse_index_cli(pm, capsys) -> None:
+    rc = pm.main(["--warehouse-index"])
+    out = capsys.readouterr().out
+    assert "wi_fleet=" in out
+    assert "wi_next=" in out
+    assert "objective:" in out
+    assert rc == 0
+
+
+def test_next_wi_cli(pm, capsys) -> None:
+    rc = pm.main(["--next-wi"])
+    out = capsys.readouterr().out.strip()
+    assert rc == 0
+    assert out
+    assert (REPO / "examples" / out).is_dir()

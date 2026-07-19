@@ -363,3 +363,33 @@ workspace projects_home "Projects":
     sort: created_at desc
     limit: 10
     empty: "No invoices yet"
+
+# Third product workspace (WI density D): invoice-first job desk so entity
+# lists no longer dominate product shell count vs workspaces.
+workspace invoices_home "Invoices":
+  purpose: "Invoice desk — cash context and open bills before org/project drill-down"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor)
+
+  invoice_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      invoices: count(Invoice)
+      projects: count(Project)
+      organizations: count(Organization)
+    tones:
+      invoices: accent
+
+  open_bills:
+    source: Invoice
+    display: queue
+    sort: created_at desc
+    limit: 20
+    empty: "No open invoices"
+
+  projects_context:
+    source: Project
+    display: list
+    sort: name asc
+    empty: "No projects found"

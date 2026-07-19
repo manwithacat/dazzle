@@ -45,6 +45,21 @@ def _product() -> tuple[str, str | None, int]:
     return line, nxt, len(residual)
 
 
+def _warehouse_index_line() -> str:
+    """One-line WI summary for quiet-fleet feature_creep (residual may already be 0)."""
+    mod = _load("example_product_maturity", REPO / "scripts" / "example_product_maturity.py")
+    rows = mod.scan()
+    wi_mean = mod.fleet_wi_mean(rows)
+    wi_next = mod.next_wi_app(rows)
+    above = sum(1 for r in rows if r.wi > mod.WI_FLOOR)
+    return (
+        f"warehouse_index apps={len(rows)} wi_fleet={wi_mean:.3f} "
+        f"wi_floor={mod.WI_FLOOR:.2f} wi_next={wi_next.app if wi_next else '-'} "
+        f"wi_primary={wi_next.wi_primary if wi_next else '-'} "
+        f"above_floor={above}/{len(rows)}"
+    )
+
+
 def _demo() -> tuple[str, str | None, int]:
     mod = _load("demo_fleet_bar", REPO / "scripts" / "demo_fleet_bar.py")
     rows = [mod.score_app(a) for a in mod.SHOWCASE if (mod.EXAMPLES / a).is_dir()]
@@ -142,10 +157,18 @@ def main(argv: list[str] | None = None) -> int:
         print(preferred_next or "")
         return 0 if preferred_next is None else 1
 
+    # Always emit WI line on --status / default / --json (continuous anti-warehouse).
+    wi_line = ""
+    try:
+        wi_line = _warehouse_index_line()
+    except Exception as exc:  # noqa: BLE001
+        wi_line = f"warehouse_index error={type(exc).__name__}"
+
     if args.json:
         print(
             json.dumps(
                 {
+                    "warehouse_index": wi_line,
                     "probes": [
                         {
                             "name": name,
@@ -170,6 +193,8 @@ def main(argv: list[str] | None = None) -> int:
         for line in pq_lines:
             if line not in {r[1] for r in results[:3]}:
                 print(line)
+        if wi_line:
+            print(wi_line)
         total = sum(max(n, 0) for _a, _b, _c, n in results)
         force = f" force=example-apps {preferred_strategy}" if preferred_strategy else ""
         print(f"example_probes residual_total={total} next={preferred_next or '-'}{force}")

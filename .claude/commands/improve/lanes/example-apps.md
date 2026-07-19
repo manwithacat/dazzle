@@ -97,7 +97,8 @@ Then selection priority:
 3. **`product_maturity` residual** — `python scripts/example_product_maturity.py --next` non-empty → force strategy `product_maturity` for that app (playbook `improve/strategies/product_maturity.md`). Prefer over demo/journey/Tier-1.
 4. **`demo_fleet` residual (#1626)** — product residual empty and `python scripts/demo_fleet_bar.py --next` non-empty → force strategy `demo_fleet`. If probe residual empty but #1626 still has open P0-5…P0-9 (empty heroes, invoice queues, design_studio visuals), still pick `demo_fleet` and work the highest open P0.
 5. **`journey_maturity` residual** — `python scripts/example_journey_maturity.py --next` non-empty → force `journey_dogfood`.
-6. All probe residuals empty and backlog gaps DONE/BLOCKED → **explore phase** (Step 6)
+6. **Warehouse Index (WI) feature_creep** — all probe residuals empty **and** `wi_fleet > wi_floor` (see `example_product_maturity.py --warehouse-index` / status `wi_*` fields): minimize continuous warehouse-ness on `wi_next` by shipping a **product DSL slice** that moves `wi_primary` (D density / N nav / L landing / J jobs / G graph). Map-only commits do **not** count. Residual remains the floor gate; WI is the gradient after residual=0.
+7. All probe residuals empty, `wi_fleet ≤ wi_floor`, and backlog gaps DONE/BLOCKED → **explore phase** (Step 6)
 7. Else pick next `PENDING` backlog row (priority: critical > warning > info, then app alphabetical)
 8. Mark chosen work `IN_PROGRESS`
 
@@ -186,6 +187,8 @@ If `FAIL`, treat as framework residual unless custom project HTML is the source
 ```bash
 python scripts/example_product_maturity.py --status
 python scripts/example_product_maturity.py --next
+python scripts/example_product_maturity.py --warehouse-index   # continuous WI (minimize wi_next)
+python scripts/example_product_maturity.py --next-wi
 ```
 
 If `next` non-empty, open/refresh `product_maturity` backlog row and **prefer
