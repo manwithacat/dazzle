@@ -1279,12 +1279,13 @@ workspace tester_dashboard "Tester Dashboard":
       critical_found: destructive
       open_tasks: accent
 
+  # WI D: grid family for assigned devices
   my_devices:
     source: Device
     filter: assigned_tester_id = current_user
     sort: name asc
     limit: 15
-    display: queue
+    display: grid
     action: device_detail
     empty: "No devices assigned to you yet"
 
@@ -1369,22 +1370,32 @@ workspace manager_ops "Manager Ops":
     action: issue_report_detail
     empty: "No critical issues!"
 
+  # WI D: context family (not list pad)
   tester_activity:
     source: TestSession
     sort: logged_at desc
     limit: 15
-    display: list
+    display: timeline
     action: test_session_detail
     empty: "No recent test sessions logged"
 
+  # WI D: kanban family for open work
   open_work:
     source: Task
     filter: status != completed and status != cancelled
-    sort: created_at desc
-    limit: 15
-    display: queue
+    display: kanban
+    group_by: status
     action: task_detail
     empty: "No open tasks"
+
+  # WI D: chart family — fleet status mix
+  fleet_status_mix:
+    source: Device
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Device)
+    empty: "No devices"
 
 workspace issue_triage "Issue Triage":
   purpose: "Engineer triage desk — open and critical field reports first"
@@ -1410,12 +1421,13 @@ workspace issue_triage "Issue Triage":
     action: issue_report_edit
     empty: "No open reports to triage"
 
+  # WI D: grid family for critical cards
   critical_issues:
     source: IssueReport
     filter: severity = critical and status != closed
     sort: reported_at desc
     limit: 10
-    display: queue
+    display: grid
     action: issue_report_detail
     empty: "No critical issues!"
 
@@ -1425,6 +1437,16 @@ workspace issue_triage "Issue Triage":
     group_by: status
     action: issue_report_edit
     empty: "No issues to triage"
+
+  # WI D: context family — recent critical timeline
+  critical_trail:
+    source: IssueReport
+    filter: severity = critical
+    sort: reported_at desc
+    limit: 12
+    display: timeline
+    action: issue_report_detail
+    empty: "No critical history"
 
 workspace firmware_pipeline "Firmware Pipeline":
   purpose: "Ship firmware — release board, live drafts, and related tasks"
@@ -1442,11 +1464,12 @@ workspace firmware_pipeline "Firmware Pipeline":
       live: positive
       open_tasks: accent
 
+  # WI D: grid family for release cards
   firmware_releases:
     source: FirmwareRelease
     sort: release_date desc
     limit: 15
-    display: list
+    display: grid
     action: firmware_release_detail
     empty: "No firmware releases"
 
@@ -1457,12 +1480,13 @@ workspace firmware_pipeline "Firmware Pipeline":
     action: firmware_release_edit
     empty: "No firmware releases"
 
+  # WI D: context family for release tasks
   release_tasks:
     source: Task
     filter: status != completed and status != cancelled
     sort: created_at desc
     limit: 15
-    display: queue
+    display: timeline
     action: task_detail
     empty: "No open tasks"
 
@@ -1470,12 +1494,24 @@ workspace field_kit "Field Kit":
   purpose: "Tester kit — assigned devices and recent sessions on the road"
   access: persona(tester)
 
+  kit_pulse:
+    source: Device
+    display: metrics
+    aggregate:
+      assigned: count(Device where assigned_tester_id = current_user)
+      open_tasks: count(Task where assigned_to_id = current_user and status != completed)
+      sessions: count(TestSession where tester_id = current_user)
+    tones:
+      open_tasks: accent
+      assigned: positive
+
+  # WI D: grid family for device cards
   assigned_devices:
     source: Device
     filter: assigned_tester_id = current_user
     sort: name asc
     limit: 20
-    display: queue
+    display: grid
     action: device_detail
     empty: "No devices assigned to you yet"
 
