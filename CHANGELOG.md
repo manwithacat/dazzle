@@ -1,6 +1,12 @@
 ## [Unreleased]
 
 ### Fixed
+- **#1626 hygiene + priors** — product_quality success copy no longer claims
+  recapture still needed when residual=0; live_desk tries all list/queue
+  sources (empty PaymentAttempt no longer fails auditor when Invoice has
+  rows); recapture script captures per-persona; counter-prior
+  `faker_seed_over_story_spine`; agent_demo notes for story seeds, tenant
+  User, HTMX capture, local stills.
 - **#1626 demo fleet stills + desk chrome** — (1) queue rows show domain
   meta (amount / supplier / …) not title-only cards; (2) child entities
   (`*Comment`, line items, attachments) no longer compete as workspace

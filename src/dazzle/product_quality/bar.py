@@ -233,7 +233,9 @@ def _recommend(
 
     rec = (
         "Structural + persona-home + still floors clean for this scope. "
-        "Fleet bake-off still needs recapture of remaining showcase apps."
+        "Machine demo bar is green; human bake-off re-score (#1626) is separate "
+        "from residual (stills are local under .dazzle/ — re-run recapture after "
+        "seed changes)."
     )
     return None, None, None, [rec]
 

@@ -45,6 +45,27 @@ def _db_url(app: str) -> str:
     )
 
 
+def _personas_for_app(project: Path) -> list[str]:
+    """Stable persona ids with default_workspace (skip pure admin)."""
+    try:
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.core.ir.identity import spec_display_id
+
+        appspec = load_project_appspec(project)
+    except Exception:
+        return []
+    out: list[str] = []
+    skip = {"admin", "platform_admin", "superuser"}
+    for p in appspec.personas or []:
+        pid = spec_display_id(p, default=None, prefer="id")
+        if not pid or pid in skip:
+            continue
+        if not getattr(p, "default_workspace", None):
+            continue
+        out.append(str(pid))
+    return out
+
+
 def _wait_http(url: str, timeout: float = 90.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -159,10 +180,15 @@ def _run_app(app: str, *, skip_capture: bool = False) -> int:
             print(f"WARN {app}: seed not clean — capture may be empty theater", file=sys.stderr)
 
         if skip_capture:
-            return 0 if reset.returncode == 0 else reset.returncode
+            return 0 if seed_ok else 1
 
-        cap = subprocess.run(
-            [
+        # Per-persona capture avoids 600s full-app timeouts on multi-desk apps.
+        personas = _personas_for_app(project)
+        if not personas:
+            personas = [None]  # single full capture
+        any_fail = False
+        for persona in personas:
+            cmd = [
                 py,
                 "-m",
                 "dazzle",
@@ -175,20 +201,29 @@ def _run_app(app: str, *, skip_capture: bool = False) -> int:
                 "--above-fold",
                 "--viewport",
                 "desktop",
-            ],
-            cwd=str(REPO),
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=600,
-        )
-        print(cap.stdout[-2500:] if cap.stdout else "")
-        if cap.returncode != 0:
-            print(cap.stderr[-1500:] if cap.stderr else "", file=sys.stderr)
-            print(f"FAIL {app}: capture exit {cap.returncode}", file=sys.stderr)
-            return cap.returncode
+            ]
+            label = persona or "(all)"
+            if persona:
+                cmd.extend(["--persona", persona])
+            print(f"  capture persona={label}", flush=True)
+            cap = subprocess.run(
+                cmd,
+                cwd=str(REPO),
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            if cap.stdout:
+                print(cap.stdout[-1200:], flush=True)
+            if cap.returncode != 0:
+                print(cap.stderr[-800:] if cap.stderr else "", file=sys.stderr)
+                print(f"FAIL {app}: capture persona={label} exit {cap.returncode}", file=sys.stderr)
+                any_fail = True
+        if any_fail:
+            return 1
         print(f"OK {app}: capture done", flush=True)
-        return 0
+        return 0 if seed_ok else 1
     finally:
         try:
             os.killpg(proc.pid, signal.SIGTERM)

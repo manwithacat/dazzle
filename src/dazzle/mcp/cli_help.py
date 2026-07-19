@@ -1257,6 +1257,7 @@ entity Task "Task":
             ],
             "counter_priors": [
                 "empty_desk_false_green",
+                "faker_seed_over_story_spine",
                 "free_persona_id_not_stable",
                 "workspace_filter_or_silent_empty",
                 "reseed_stable_users",

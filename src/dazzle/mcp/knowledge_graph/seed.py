@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 31  # v31: #1629 G4/G5/G7 priors (bootstrap/metric/version)
+SEED_SCHEMA_VERSION = 32  # v32: #1626 hygiene priors (story seeds / live_desk / stills)
 
 
 def compute_seed_version() -> str:

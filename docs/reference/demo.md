@@ -25,6 +25,11 @@ tester, engineer, ops_engineer, employee, hr_admin, tenant_admin, finance_admin.
 authenticate with `role=` *after* reset → open default_workspace (browser +
 HTMX settle). Never authenticate before reset.
 
+**Seeds:** prefer `dsl/seeds/demo_data/*.jsonl` (STABLE FKs). Generated
+`.dazzle/demo_data` faker is last resort (counter-prior
+`faker_seed_over_story_spine`). Multi-tenant apps: keep User.jsonl rows that
+carry `tenant_id` — auth mirror cannot placeholder required refs.
+
 ### Syntax
 
 ```dsl
@@ -51,9 +56,10 @@ persona promoter "Promoter":
 - Persona *id* must be a STABLE key for assignment-aware demos
 - Display title can be domain language (Promoter, Booker)
 - Authenticate with role= only after reset-and-load
-- Do not re-seed User rows at STABLE UUIDs (reset already mirrors them)
+- Do not re-seed scalar-only User rows at STABLE UUIDs (reset mirrors them)
+- Do keep multi-tenant User.jsonl with tenant_id when domain User requires it
 - MCP: status(operation=demo_world); knowledge concept demo_identity
-- Counter-priors: free_persona_id_not_stable, reseed_stable_users
+- Counter-priors: free_persona_id_not_stable, reseed_stable_users, faker_seed_over_story_spine
 
 **Related:** [Stable Personas](demo.md#stable-personas), [Empty Desk False Green](demo.md#empty-desk-false-green), [First Principles Demo](demo.md#first-principles-demo), [Workspace Region Filters](workspaces.md#workspace-region-filters)
 
@@ -80,11 +86,19 @@ persona default workspace is empty under session.
 Static residual checks seed assignment vs filter *text*. It does not prove
 live RBAC (`as:` roles), STABLE principal bind, or region filter runtime.
 
+**live_desk probe:** tries list/queue sources on the default workspace until
+one has rows. An empty satellite entity (e.g. PaymentAttempt with no story
+seed) is not residual if a sibling list/queue (Invoice) is populated.
+
+**Stills:** hero floors are local under gitignored `.dazzle/qa/screenshots`.
+CI residual does not prove stills — re-run recapture after seed changes.
+
 **Verify for real:**
 1. `reset-and-load` report `live_desk_residual` (if present)
 2. Authenticate `role=` after reset; open default workspace with browser/HTMX settle
-3. `dazzle qa capture` / `dazzle demo quality`
-4. On empty: check scope `as:` tokens, STABLE persona ids, region filters
+3. `dazzle qa capture` (curl HTML is skeleton only — regions `hx-trigger=load`)
+4. `dazzle demo quality` / product_quality residual
+5. On empty: check scope `as:` tokens, STABLE persona ids, region filters, story seeds
 
 ### Best Practices
 
@@ -104,9 +118,11 @@ Closed-loop workflow from cold project to persona stills without tribal SQL.
 2. `dazzle validate` — fix errors; heed #1630 warns on as:/STABLE
 3. `dazzle serve` (test mode) — writes `.dazzle/runtime.json`
 4. **Re-read runtime.json** (ports/secret/database_url may change)
-5. `dazzle demo reset-and-load --project <app> -y`
+5. `dazzle demo reset-and-load --project <app> -y` (story seeds under
+   `dsl/seeds/demo_data`, not only faker dumps)
 6. Authenticate with `role=<stable_id>` **after** reset
-7. Browser open default_workspace; or `dazzle qa capture`
+7. Browser open default_workspace with HTMX settle; or `dazzle qa capture`
+   (per-persona if full-app capture times out)
 8. `status(operation=demo_world)` / `dazzle demo quality` for residual
 
 **MCP reads (ADR-0002):** knowledge concepts above; status demo_world; product_quality.

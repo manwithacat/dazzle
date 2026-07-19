@@ -95,6 +95,7 @@ def demo_ops_playbook() -> dict[str, Any]:
             "free_persona_id_not_stable",
             "workspace_filter_or_silent_empty",
             "reseed_stable_users",
+            "faker_seed_over_story_spine",
             "bootstrap_pollution",
             "metric_current_user_lie",
             "version_pin_distrust",
@@ -486,8 +487,8 @@ def _probe_one_persona(client: httpx.Client, persona: Any, appspec: Any) -> dict
     dws = getattr(persona, "default_workspace", None)
     if not pid or not dws or pid in ("admin", "platform_admin", "superuser"):
         return None
-    entity_name = _default_workspace_list_entity(appspec, str(dws))
-    if not entity_name:
+    entities = _default_workspace_list_entities(appspec, str(dws))
+    if not entities:
         return None
     auth = client.post("/__test__/authenticate", json={"role": str(pid)})
     if auth.status_code != 200:
@@ -496,23 +497,32 @@ def _probe_one_persona(client: httpx.Client, persona: Any, appspec: Any) -> dict
             "ok": False,
             "error": f"authenticate HTTP {auth.status_code}",
         }
-    list_resp = client.get(f"/{to_api_plural(entity_name)}")
-    total = _list_total(list_resp)
-    ok = list_resp.status_code == 200 and (total is None or total > 0)
-    entry: dict[str, Any] = {
-        "persona": str(pid),
-        "entity": entity_name,
-        "status_code": list_resp.status_code,
-        "total": total,
-        "ok": ok,
-    }
-    if not ok:
-        entry["hint"] = (
-            "Empty live list under authenticated persona while "
-            "static residual may still be 0 — check `as:` role "
-            "tokens and permits match declared personas (#1630)."
-        )
-    return entry
+    # Try list/queue sources until one has rows — first region may be an
+    # empty satellite (e.g. PaymentAttempt) while Invoice is populated.
+    fail_entry: dict[str, Any] | None = None
+    for entity_name in entities:
+        list_resp = client.get(f"/{to_api_plural(entity_name)}")
+        total = _list_total(list_resp)
+        ok = list_resp.status_code == 200 and (total is None or total > 0)
+        entry: dict[str, Any] = {
+            "persona": str(pid),
+            "entity": entity_name,
+            "status_code": list_resp.status_code,
+            "total": total,
+            "ok": ok,
+        }
+        if ok:
+            return entry
+        if fail_entry is None:
+            entry["hint"] = (
+                "Empty live list under authenticated persona while "
+                "static residual may still be 0 — check `as:` role "
+                "tokens and permits match declared personas (#1630). "
+                "Tried list/queue sources on the default workspace; "
+                "satellite entities without story seeds are not residual."
+            )
+            fail_entry = entry
+    return fail_entry
 
 
 def _attach_live_desk_residual(
@@ -558,19 +568,47 @@ def _attach_live_desk_residual(
         )
 
 
-def _default_workspace_list_entity(appspec: Any, workspace_name: str) -> str | None:
+def _is_listish_display(display: str) -> bool:
+    d = display.lower()
+    return d in ("list", "queue") or "list" in d or "queue" in d
+
+
+def _is_aggregate_display(display: str) -> bool:
+    d = display.lower()
+    return "metric" in d or "chart" in d or "funnel" in d
+
+
+def _default_workspace_list_entities(appspec: Any, workspace_name: str) -> list[str]:
+    """Ordered list/queue sources on a workspace (job densest first).
+
+    Prefer ``list`` / ``queue`` display regions over charts. Metrics-only
+    regions are skipped. Returns unique entity names so live_desk can try
+    each until one has rows (audit desks with empty PaymentAttempt +
+    populated Invoice).
+    """
+    preferred: list[str] = []
+    other: list[str] = []
     for ws in appspec.workspaces or []:
-        name = spec_display_id(ws, default=None)
-        if str(name) != workspace_name:
+        if str(spec_display_id(ws, default=None)) != workspace_name:
             continue
         for region in getattr(ws, "regions", None) or []:
             display = str(getattr(region, "display", "") or "")
-            if "metric" in display.lower():
+            if _is_aggregate_display(display):
                 continue
             src = getattr(region, "source", None)
-            if src:
-                return str(src)
-    return None
+            if not src:
+                continue
+            src_s = str(src)
+            bucket = preferred if _is_listish_display(display) else other
+            if src_s not in preferred and src_s not in other:
+                bucket.append(src_s)
+    return preferred + other
+
+
+def _default_workspace_list_entity(appspec: Any, workspace_name: str) -> str | None:
+    """First list/queue source for a workspace (compat helper)."""
+    entities = _default_workspace_list_entities(appspec, workspace_name)
+    return entities[0] if entities else None
 
 
 def _list_total(resp: httpx.Response) -> int | None:

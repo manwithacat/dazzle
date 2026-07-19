@@ -51,11 +51,14 @@ Workaround folklore: delete User.jsonl by hand.
 ## Right shape
 
 1. `dazzle demo reset-and-load` **skips** domain User fixtures whose id is in
-   `STABLE_PERSONA_USER_IDS` (report: `skipped_stable_user_fixtures`).
-2. Seed assignment-aware domain rows (Task, HoldRequest, …) that **reference**
-   STABLE ids — do not recreate the principals.
+   `STABLE_PERSONA_USER_IDS` **unless** the row carries required refs the auth
+   mirror cannot set (e.g. multi-tenant `tenant_id: ref Tenant required`) —
+   report: `skipped_stable_user_fixtures`.
+2. Seed assignment-aware domain rows (Task, HoldRequest, Invoice, …) that
+   **reference** STABLE ids — do not recreate scalar-only principals.
 3. Non-persona domain Users (vendors, contacts) may still be seeded if their
    ids are **outside** the reserved `a1000000-…` range.
+4. Seed upserts on id collision so re-capture is idempotent.
 
 ## Why this matters here
 
