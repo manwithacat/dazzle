@@ -45,6 +45,7 @@ nav owner_nav:
     projects_home
     invoices_home
     team_home
+    orgs_home
 
 nav auditor_nav:
   group "Review":
@@ -52,6 +53,7 @@ nav auditor_nav:
     invoices_home
     projects_home
     team_home
+    orgs_home
 
 nav member_nav:
   group "My desk":

@@ -421,11 +421,12 @@ workspace invoices_home "Invoices":
     tones:
       invoices: accent
 
+  # WI D: kanban family for invoice status board
   open_bills:
     source: Invoice
-    display: queue
+    display: kanban
+    group_by: status
     sort: created_at desc
-    limit: 20
     empty: "No open invoices"
 
   # WI D: timeline of open bills (context family)
@@ -441,6 +442,15 @@ workspace invoices_home "Invoices":
     display: grid
     sort: name asc
     empty: "No projects found"
+
+  # WI D: chart family — invoices by status
+  invoice_status_mix:
+    source: Invoice
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices yet"
 
 # Fourth product workspace (WI density D): team membership desk separate from
 # org portfolio / projects / invoices — lowers list:workspace ratio.
@@ -459,9 +469,10 @@ workspace team_home "Team":
     tones:
       memberships: accent
 
+  # WI D: timeline of membership changes (context family)
   roster:
     source: Membership
-    display: queue
+    display: timeline
     empty: "No memberships yet"
 
   people:
@@ -478,3 +489,39 @@ workspace team_home "Team":
     aggregate:
       count: count(Membership)
     empty: "No memberships yet"
+
+# Fifth job desk (WI density D): organization portfolio separate from billing shell
+workspace orgs_home "Organizations":
+  purpose: "Org portfolio — tenants before project/invoice drill-down"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor)
+
+  org_pulse:
+    source: Organization
+    display: metrics
+    aggregate:
+      organizations: count(Organization)
+      projects: count(Project)
+      invoices: count(Invoice)
+    tones:
+      organizations: accent
+
+  org_roster:
+    source: Organization
+    display: grid
+    sort: name asc
+    empty: "No organizations found"
+
+  project_context:
+    source: Project
+    display: timeline
+    sort: name asc
+    empty: "No projects found"
+
+  org_invoice_load:
+    source: Invoice
+    display: bar_chart
+    group_by: project
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices yet"
