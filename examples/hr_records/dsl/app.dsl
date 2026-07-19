@@ -30,18 +30,53 @@ app hr_records "HR Records"
 persona hr_admin "HR Admin":
   description: "Full CRUD across all entities and history. Thinks in events."
   default_workspace: staff_directory
+  # WI N: job desks first — not auto entity-list soup
+  uses nav hr_admin_nav
 
 persona manager "Line Manager":
   description: "Read own direct reports (current and historical). No salary access."
   default_workspace: my_team
+  uses nav manager_nav
 
 persona finance "Finance":
   description: "Read all salary data + employment history. No manager hierarchy."
   default_workspace: compensation_review
+  uses nav finance_nav
 
 persona employee "Employee":
   description: "Read self only — own employment + salary history + current manager."
   default_workspace: person_detail
+  uses nav employee_nav
+
+# Curated sidebars: workspace destinations only (WI primary N).
+nav hr_admin_nav:
+  group "People":
+    staff_directory
+    my_team
+    starters_desk
+    person_detail
+  group "Org & pay":
+    org_chart
+    compensation_review
+    time_machine
+
+nav manager_nav:
+  group "Team":
+    my_team
+    staff_directory
+    person_detail
+    org_chart
+
+nav finance_nav:
+  group "Compensation":
+    compensation_review
+    staff_directory
+    person_detail
+
+nav employee_nav:
+  group "My record":
+    person_detail
+    staff_directory
 
 
 # =============================================================================
