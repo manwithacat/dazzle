@@ -1,6 +1,6 @@
 story ST-001 "Operations Engineer creates a new System":
   status: accepted
-  narrative_only: true
+  executed_by: surface.system_create
   persona: ops_engineer
   trigger: form_submitted
   entities: [System]
@@ -12,7 +12,7 @@ story ST-001 "Operations Engineer creates a new System":
 
 story ST-002 "Operations Engineer changes System from healthy to degraded":
   status: accepted
-  narrative_only: true
+  executed_by: surface.system_edit
   persona: ops_engineer
   trigger: status_changed
   entities: [System]
@@ -24,7 +24,7 @@ story ST-002 "Operations Engineer changes System from healthy to degraded":
 
 story ST-003 "Operations Engineer changes System from healthy to critical":
   status: accepted
-  narrative_only: true
+  executed_by: surface.system_edit
   persona: ops_engineer
   trigger: status_changed
   entities: [System]
@@ -36,7 +36,7 @@ story ST-003 "Operations Engineer changes System from healthy to critical":
 
 story ST-004 "Operations Engineer changes System from degraded to healthy":
   status: accepted
-  narrative_only: true
+  executed_by: surface.system_edit
   persona: ops_engineer
   trigger: status_changed
   entities: [System]
@@ -48,7 +48,7 @@ story ST-004 "Operations Engineer changes System from degraded to healthy":
 
 story ST-005 "Operations Engineer creates a new Alert":
   status: accepted
-  narrative_only: true
+  executed_by: surface.alert_create
   persona: ops_engineer
   trigger: form_submitted
   entities: [Alert]

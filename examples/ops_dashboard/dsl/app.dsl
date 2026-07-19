@@ -170,6 +170,16 @@ persona ops_engineer "Operations Engineer":
   proficiency_level: expert
   session_style: deep_work
   default_workspace: command_center
+  # WI N: job desks first — not auto entity-list soup
+  uses nav ops_nav
+
+# Curated sidebar: workspace destinations only (WI N).
+nav ops_nav:
+  group "Ops":
+    command_center
+    incident_review
+    systems_desk
+    alerts_desk
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage
@@ -692,6 +702,77 @@ workspace incident_review "Incident Review":
     as ops_engineer:
       scope: all
       purpose: "Pair-strip review of pending incidents"
+
+# Third product workspace (WI density D): systems portfolio desk.
+workspace systems_desk "Systems":
+  purpose: "Fleet health desk — systems pulse and attention queue"
+  access: persona(ops_engineer, admin)
+
+  fleet_pulse:
+    source: System
+    display: metrics
+    aggregate:
+      systems: count(System)
+      critical: count(System where status = critical)
+      alerts: count(Alert where status = active)
+    tones:
+      critical: destructive
+      alerts: warning
+
+  systems:
+    source: System
+    sort: name asc
+    display: list
+    action: system_detail
+    empty: "No systems registered"
+
+  active_alerts:
+    source: Alert
+    filter: status = active
+    sort: severity desc, triggered_at desc
+    limit: 15
+    display: queue
+    empty: "No active alerts"
+
+# Fourth product workspace (WI density D): alerts-first on-call desk.
+workspace alerts_desk "Alerts":
+  purpose: "On-call desk — active and recent alerts without warehouse CRUD"
+  access: persona(ops_engineer, admin)
+
+  alert_pulse:
+    source: Alert
+    display: metrics
+    aggregate:
+      active: count(Alert where status = active)
+      resolved: count(Alert where status = resolved)
+      systems: count(System)
+    tones:
+      active: warning
+      resolved: positive
+
+  active_queue:
+    source: Alert
+    filter: status = active
+    sort: severity desc, triggered_at desc
+    limit: 25
+    display: queue
+    empty: "No active alerts"
+
+  recent_resolved:
+    source: Alert
+    filter: status = resolved
+    sort: triggered_at desc
+    limit: 15
+    display: list
+    empty: "No resolved alerts yet"
+
+  systems_context:
+    source: System
+    sort: name asc
+    limit: 15
+    display: list
+    action: system_detail
+    empty: "No systems"
 
 # =============================================================================
 # Surfaces
