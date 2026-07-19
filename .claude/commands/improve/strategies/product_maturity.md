@@ -17,6 +17,8 @@ python scripts/example_product_maturity.py --status     # cycle log line
 python scripts/example_product_maturity.py --next       # single app id
 python scripts/example_product_maturity.py --json
 python scripts/example_product_maturity.py --app <name>
+python scripts/example_product_maturity.py --warehouse-index
+python scripts/example_product_maturity.py --paths ../cyfuture   # sibling/real apps
 python scripts/example_product_maturity.py --strict     # exit 1 if residual
 # unified OBSERVE:
 python scripts/improve_example_probes.py --status
@@ -26,8 +28,13 @@ python scripts/improve_example_probes.py --status
 |------|---------|--------------|
 | `critical` | no answer-first landing / warehouse-only | Add `default_workspace` + multi-region job desk |
 | `thin` | density ≥0.85 or weak product workspaces | Split role desks; diversify defaults |
-| `deepen` | landings OK but density/nav still warehouse-heavy | More product workspaces; access multi-desk nav |
-| `ok` | structural product path present | Skip; prefer `demo_fleet` if that residual remains |
+| `deepen` | landings OK but density/nav still warehouse-heavy | Job desks with mixed modes/sources; curated nav |
+| `ok` | structural product path present | Skip; if residual=0 minimize `wi_next` (WI gradient) |
+
+**WI anti-gaming (v2):** L = inverse signal richness (unique mode_family×source,
+not raw region count). D = lists / (lists + effective job weight), scale-capped
+by entity count — empty desk sprawl and same-entity list pads do not clear WI.
+See `docs/reference/product-maturity.md`.
 
 Fleet residual → exit **1**. Fleet mature → exit **0**.
 

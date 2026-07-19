@@ -57,12 +57,42 @@ Higher `score` = higher residual priority for improve.
 5. Align stories `given:` and stems with the new defaults; refresh
    `SPECIFICATION.md` “Where work happens” + fingerprint.
 
+## Warehouse Index (WI) — continuous inverse-utility gradient
+
+After residual is **0**, improve minimizes **WI** (0–1, higher = more warehouse).
+Intent: a single statistic that maps **inversely** to product utility as
+expressed in DSL structure — not a claim about runtime UX or sales demos.
+
+```bash
+python scripts/example_product_maturity.py --warehouse-index
+python scripts/example_product_maturity.py --next-wi
+# Sibling / real apps (not only examples/):
+python scripts/example_product_maturity.py --warehouse-index \
+  --paths ../cyfuture ../pennydreadful ../AegisMark
+```
+
+| Component | Weight | What it measures | Anti-gaming (v2) |
+|-----------|--------|------------------|------------------|
+| **D** | 0.30 | list shells vs job desks | Denominator is *effective* job weight (mode×source diversity per workspace), scale-capped by entity count — empty desk sprawl does not fully dilute density |
+| **N** | 0.25 | nav list-link share | Compiled `build_persona_nav`; credits accessible product workspaces |
+| **L** | 0.25 | landing thinness | **Signal richness**: unique `(mode_family, source)` pairs (cap 5). Six list regions of one entity ≈ one signal |
+| **J** | 0.10 | unbound stories / uncovered personas | — |
+| **G** | 0.10 | lists without open-via | Platform admin lists excluded |
+
+`WI = 0.30D + 0.25N + 0.25L + 0.10J + 0.10G`. Soft floor `wi_floor=0.25`.
+Mode families collapse `list`/`queue` so parallel listish pads do not stack.
+
+**Interpretation:** high WI ⇒ list-primary shells, thin/padded landings, soup
+nav, unbound jobs, no graph hops. Low WI is **necessary** for product shape,
+not sufficient for utility (see antagonist demo bar / trials below).
+
 ## What this does *not* score (yet)
 
 - Visual kinship to Jira/Linear/GitHub Issues (needs design review or trial)
 - Conversation-thread quality vs field form
 - Action cost (≤N clicks) without a browser walk
 - Authored `product_jobs.toml` (future: explicit job registry)
+- Whether seeded data makes desks *useful* at runtime (`demo quality` / trials)
 - Explicit `uses nav` that lists workspaces ahead of entity lists (probe already
   credits access; authored nav would improve *felt* UX further)
 

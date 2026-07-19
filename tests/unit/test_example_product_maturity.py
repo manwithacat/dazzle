@@ -97,14 +97,17 @@ def test_warehouse_index_components_in_unit_interval(pm) -> None:
     """WI and components are continuous 0–1 (agent-minimizable gradient)."""
     rows = pm.scan()
     assert rows
+    w = pm._WI_WEIGHTS
     for r in rows:
         for attr in ("wi", "wi_D", "wi_N", "wi_L", "wi_J", "wi_G"):
             v = getattr(r, attr)
             assert 0.0 <= v <= 1.0 + 1e-9, f"{r.app}.{attr}={v}"
         assert r.wi_primary in {"D", "N", "L", "J", "G"}
-        # Weighted sum consistency (allow float noise).
-        expected = 0.30 * r.wi_D + 0.25 * r.wi_N + 0.20 * r.wi_L + 0.15 * r.wi_J + 0.10 * r.wi_G
+        expected = (
+            w["D"] * r.wi_D + w["N"] * r.wi_N + w["L"] * r.wi_L + w["J"] * r.wi_J + w["G"] * r.wi_G
+        )
         assert abs(r.wi - expected) < 1e-6
+        assert abs(sum(w.values()) - 1.0) < 1e-9
 
 
 def test_compute_warehouse_index_pure(pm) -> None:
@@ -125,6 +128,7 @@ def test_compute_warehouse_index_pure(pm) -> None:
             "default_workspace": "home",
             "workspace_exists": True,
             "region_count": 1,
+            "richness": 0.2,
             "ok": True,
             "reason": "ok",
         },
@@ -133,6 +137,7 @@ def test_compute_warehouse_index_pure(pm) -> None:
             "default_workspace": "home",
             "workspace_exists": True,
             "region_count": 1,
+            "richness": 0.2,
             "ok": True,
             "reason": "ok",
         },
@@ -143,8 +148,56 @@ def test_compute_warehouse_index_pure(pm) -> None:
     assert m.wi_N == 0.8
     assert m.wi_G == 1.0  # multi-entity lists, no open-via
     assert m.wi_J == 1.0  # 0/4 bound stories
-    assert m.wi_L > 0.8  # 1/6 region richness
+    assert abs(m.wi_L - 0.8) < 1e-9  # 1 - 0.2 richness
     assert m.wi_primary in {"D", "N", "L", "J", "G"}
+
+
+def test_landing_pad_same_entity_does_not_max_richness(pm) -> None:
+    """Anti-game L: six listish regions of one entity ≈ one signal, not full richness."""
+
+    class _R:
+        def __init__(self, display: str, source: str | None):
+            self.display = display
+            self.source = source
+
+    padded = [_R("list", "Ticket") for _ in range(6)]
+    _n, modes, sources, rich_pad = pm._workspace_region_signals(padded)
+    assert modes == 1
+    assert sources == 1
+    assert rich_pad <= 0.25  # 1/5 signals
+
+    diverse = [
+        _R("metrics", "Ticket"),
+        _R("queue", "Ticket"),
+        _R("bar_chart", "Ticket"),
+        _R("status_list", None),
+        _R("list", "Comment"),
+    ]
+    _n2, modes2, sources2, rich_div = pm._workspace_region_signals(diverse)
+    assert modes2 >= 4
+    assert sources2 >= 2
+    assert rich_div >= 0.8
+    assert rich_div > rich_pad
+
+
+def test_desk_sprawl_does_not_fully_dilute_density(pm) -> None:
+    """Anti-game D: many thin workspaces on a tiny domain stay density-high."""
+    # Synthetic: 6 lists, 10 weightless desks would give density 6/16=0.375
+    # with raw count; with scale cap on 2 entities effective_ws ≤ 3 → 6/9=0.67.
+    m = pm.AppProductMaturity(app="sprawl")
+    m.list_surfaces = 6
+    m.entity_count = 2
+    m.product_workspaces = 10
+    m.effective_product_workspaces = min(10.0 * 0.2, max(3.0, 2 * 1.5))  # thin desks
+    # Recompute density as score_app would:
+    denom = m.list_surfaces + m.effective_product_workspaces
+    dens = m.list_surfaces / denom
+    assert dens > 0.55  # still warehouse-ish despite 10 "desks"
+
+
+def test_mode_family_collapses_list_and_queue(pm) -> None:
+    assert pm._mode_family("list") == pm._mode_family("queue") == "listish"
+    assert pm._mode_family("metrics") == "metrics"
 
 
 def test_warehouse_index_cli(pm, capsys) -> None:

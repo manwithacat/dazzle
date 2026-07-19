@@ -11,18 +11,22 @@ or HM purity. A product-mature app has:
 * **Job coverage** — product personas have bound stories (``executed_by``) or
   at least one accessible workspace with multiple regions (a job surface)
 
-**Warehouse Index (WI)** — continuous 0–1 objective (higher = more warehouse)
-agents minimize when discrete residual is already 0. Components:
+**Warehouse Index (WI)** — continuous 0–1 objective (higher = more warehouse /
+lower inverse product utility). Agents minimize when discrete residual is 0.
 
-* **D** ``warehouse_density`` — product list surfaces vs product workspaces
-  (platform ``_admin_*`` / ``*_admin`` shells excluded — same spirit as
-  product-workspace counting)
-* **N** ``nav_list_share`` — persona nav list-link share
-* **L** landing thinness — inverse of landing region richness (cap 6)
+Components (anti-gaming v2):
+
+* **D** warehouse density — product list surfaces vs *effective job desks*
+  (workspace weight from mode/source diversity; desk-sprawl capped by
+  entity scale so padding empty desks cannot dilute D forever)
+* **N** ``nav_list_share`` — persona nav list-link share (compiled shell)
+* **L** landing thinness — inverse of *signal richness* on default workspaces
+  (unique display-mode × source pairs, not raw region count — pads of the
+  same entity list do not score)
 * **J** job thinness — unbound product stories / uncovered personas
 * **G** graph poverty — product list surfaces without open-via
 
-``WI = 0.30·D + 0.25·N + 0.20·L + 0.15·J + 0.10·G``
+``WI = 0.30·D + 0.25·N + 0.25·L + 0.10·J + 0.10·G``
 
 Residual (critical/thin/deepen) remains the *floor* gate; WI is the *gradient*
 for managed scope-creep feature slices after residual clears.
@@ -41,6 +45,7 @@ Usage (from monorepo root)::
     python scripts/example_product_maturity.py --next
     python scripts/example_product_maturity.py --next-wi
     python scripts/example_product_maturity.py --app support_tickets
+    python scripts/example_product_maturity.py --paths /path/to/other_app
     python scripts/example_product_maturity.py --strict
 
 Exit codes:
@@ -78,20 +83,95 @@ _PLATFORM_PERSONA_IDS = frozenset(
 )
 _PLATFORM_WORKSPACE_PREFIXES = ("_", "platform_", "admin_")
 
-# Landing region richness saturates at this many regions (job desk, not mega-page).
-_LANDING_REGION_CAP = 6
+# Landing signal richness saturates at this many unique (mode_family, source) pairs.
+_LANDING_SIGNAL_CAP = 5
+
+# A product workspace counts as a full "job desk" toward D when job_weight ≥ this.
+_JOB_DESK_WEIGHT_FULL = 0.55
+
+# Soft cap: effective job desks cannot exceed this multiple of entity_count
+# (prevents infinite D dilution by empty desk sprawl on thin domains).
+_DESK_ENTITY_SCALE = 1.5
+_DESK_SCALE_FLOOR = 3.0
 
 # WI weights (sum = 1.0). Higher component → more warehouse.
+# L weight raised (v2): signal richness is the inverse-utility proxy for landings.
 _WI_WEIGHTS = {
-    "D": 0.30,  # warehouse_density
+    "D": 0.30,  # warehouse_density (effective job desks)
     "N": 0.25,  # nav_list_share
-    "L": 0.20,  # landing thinness
-    "J": 0.15,  # job thinness
+    "L": 0.25,  # landing thinness (signal richness)
+    "J": 0.10,  # job thinness
     "G": 0.10,  # graph poverty
 }
 
 # Soft floor for "true all-clear" feature-creep stop (agents may still deepen).
 WI_FLOOR = 0.25
+
+
+def _mode_family(display: Any) -> str:
+    """Collapse display modes into families so list+queue of same entity ≠ 2 jobs."""
+    raw = str(getattr(display, "value", display) or "").lower()
+    if not raw:
+        return "unknown"
+    if raw in {"list", "queue", "table", "scanner_table"}:
+        return "listish"
+    if raw in {"metrics", "summary", "kpi"}:
+        return "metrics"
+    if raw in {"bar_chart", "funnel_chart", "line_chart", "pie_chart", "chart"}:
+        return "chart"
+    if raw in {"kanban", "board"}:
+        return "kanban"
+    if raw in {"status_list", "strip", "activity", "timeline", "day_timeline"}:
+        return "context"
+    if raw in {"grid", "cards", "gallery"}:
+        return "grid"
+    return raw
+
+
+def _region_source_key(region: Any) -> str:
+    src = getattr(region, "source", None)
+    if src is None:
+        return ""
+    return str(getattr(src, "name", src) or "").strip()
+
+
+def _workspace_region_signals(regions: list[Any]) -> tuple[int, int, int, float]:
+    """Return (region_count, mode_families, sources, signal_richness 0–1).
+
+    Signal richness uses unique ``(mode_family, source)`` pairs (cap
+    ``_LANDING_SIGNAL_CAP``). Padding six list regions of one entity yields
+    one signal; metrics + queue + chart + status_list yield four.
+    """
+    n = len(regions)
+    if n == 0:
+        return 0, 0, 0, 0.0
+    modes: set[str] = set()
+    sources: set[str] = set()
+    signals: set[tuple[str, str]] = set()
+    for r in regions:
+        fam = _mode_family(getattr(r, "display", None))
+        src = _region_source_key(r)
+        modes.add(fam)
+        if src:
+            sources.add(src)
+        # Sourceless context regions still count (status strips, readiness).
+        signals.add((fam, src or f"__{fam}__"))
+    richness = min(len(signals), _LANDING_SIGNAL_CAP) / float(_LANDING_SIGNAL_CAP)
+    return n, len(modes), len(sources), _clamp01(richness)
+
+
+def _workspace_job_weight(regions: list[Any]) -> float:
+    """0–1 how job-like a product workspace is (feeds D effective desks).
+
+    Requires multi-signal desks: a single list dump scores near zero even if
+    the workspace exists. Mix of mode families + entity sources scores high.
+    """
+    _n, modes, sources, richness = _workspace_region_signals(regions)
+    if _n == 0:
+        return 0.0
+    # Half from signal richness, half from mode diversity (cap 4 families).
+    mode_part = min(modes, 4) / 4.0
+    return _clamp01(0.55 * richness + 0.45 * mode_part)
 
 
 @dataclass
@@ -100,6 +180,10 @@ class PersonaLanding:
     default_workspace: str | None
     workspace_exists: bool = False
     region_count: int = 0
+    mode_count: int = 0
+    source_count: int = 0
+    signal_count: int = 0
+    richness: float = 0.0  # 0–1 anti-game landing quality
     ok: bool = False
     reason: str = ""
 
@@ -112,6 +196,8 @@ class AppProductMaturity:
     landing_fail: int = 0
     workspaces: int = 0
     product_workspaces: int = 0
+    # Job-weighted product workspaces (anti desk-sprawl); used in D.
+    effective_product_workspaces: float = 0.0
     list_surfaces: int = 0
     crud_surfaces: int = 0  # list+create+edit
     warehouse_density: float = 0.0
@@ -207,21 +293,29 @@ def compute_warehouse_index(m: AppProductMaturity) -> AppProductMaturity:
     """Fill continuous WI fields on an already-scored maturity row.
 
     Pure-ish: only uses fields already on ``m`` (no IR re-load). Idempotent.
+
+    Inverse-utility intent: higher WI ⇒ more warehouse structure (list-primary
+    shells, thin/padded landings, unbound jobs, list-soup nav, no graph hops).
+    Anti-gaming v2: L uses signal richness; D uses effective job desks.
     """
     d = _clamp01(m.warehouse_density)
     n = _clamp01(m.nav_list_share)
 
-    # L — landing thinness (inverse mean region richness, cap 6).
+    # L — landing thinness (inverse mean signal richness, not raw region count).
     region_rich: list[float] = []
     for pl in m.landings:
         if not isinstance(pl, dict):
             continue
         if not pl.get("ok"):
-            # Failed landing = full thinness for that persona.
             region_rich.append(0.0)
             continue
-        rc = int(pl.get("region_count") or 0)
-        region_rich.append(min(rc, _LANDING_REGION_CAP) / float(_LANDING_REGION_CAP))
+        # Prefer precomputed richness; fall back for synthetic test rows.
+        if "richness" in pl:
+            region_rich.append(_clamp01(float(pl.get("richness") or 0.0)))
+        else:
+            rc = int(pl.get("region_count") or 0)
+            # Legacy fallback: raw count / cap (tests without richness).
+            region_rich.append(min(rc, _LANDING_SIGNAL_CAP) / float(_LANDING_SIGNAL_CAP))
     if region_rich:
         landing_thin = _clamp01(1.0 - (sum(region_rich) / len(region_rich)))
     elif m.product_personas > 0:
@@ -248,7 +342,6 @@ def compute_warehouse_index(m: AppProductMaturity) -> AppProductMaturity:
     else:
         open_share = m.open_via_lists / float(list_n)
         graph_poor = _clamp01(1.0 - open_share)
-        # Tiny apps (1–2 entities) are less "warehouse graph" failures.
         if m.entity_count < 3:
             graph_poor = _clamp01(graph_poor * 0.5)
 
@@ -271,7 +364,6 @@ def compute_warehouse_index(m: AppProductMaturity) -> AppProductMaturity:
         "J": job_thin,
         "G": graph_poor,
     }
-    # Stable tie-break: prefer earlier weight order D→N→L→J→G.
     _order = {"D": 0, "N": 1, "L": 2, "J": 3, "G": 4}
     m.wi_primary = max(components.items(), key=lambda kv: (kv[1], -_order[kv[0]]))[0]
     return m
@@ -389,8 +481,19 @@ def score_app(app_dir: Path) -> AppProductMaturity:
     entities = list(getattr(domain, "entities", None) or getattr(appspec, "entities", None) or [])
     m.entity_count = len(entities)
 
-    # Density: lists relative to product workspaces. High = warehouse.
-    denom = list_n + max(m.product_workspaces, 0)
+    # Effective job desks for D (anti desk-sprawl): weight each product
+    # workspace by mode/source signal diversity, then scale-cap by entities.
+    job_weight_sum = 0.0
+    for w in workspaces:
+        if _is_platform_workspace(w.name):
+            continue
+        regions = list(getattr(w, "regions", None) or [])
+        job_weight_sum += _workspace_job_weight(regions)
+    scale_cap = max(_DESK_SCALE_FLOOR, float(m.entity_count) * _DESK_ENTITY_SCALE)
+    m.effective_product_workspaces = min(job_weight_sum, scale_cap)
+
+    # Density: lists vs effective job desks (not raw workspace count).
+    denom = list_n + max(m.effective_product_workspaces, 0.0)
     m.warehouse_density = (list_n / denom) if denom else (1.0 if list_n else 0.0)
 
     personas = list(getattr(appspec, "personas", None) or [])
@@ -441,7 +544,13 @@ def score_app(app_dir: Path) -> AppProductMaturity:
             else:
                 regions = list(getattr(ws, "regions", None) or [])
                 pl.workspace_exists = True
-                pl.region_count = len(regions)
+                rc, modes, sources, richness = _workspace_region_signals(regions)
+                pl.region_count = rc
+                pl.mode_count = modes
+                pl.source_count = sources
+                # signal_count approximated via richness * cap for diagnostics
+                pl.signal_count = int(round(richness * _LANDING_SIGNAL_CAP))
+                pl.richness = richness
                 if pl.region_count == 0:
                     pl.reason = "landing_workspace_empty"
                     landing_fail += 1
@@ -532,12 +641,23 @@ def discover_apps() -> list[Path]:
     return sorted(p for p in EXAMPLES.iterdir() if p.is_dir() and (p / "dazzle.toml").exists())
 
 
-def scan(app_filter: str | None = None) -> list[AppProductMaturity]:
+def scan(
+    app_filter: str | None = None,
+    paths: list[Path] | None = None,
+) -> list[AppProductMaturity]:
+    """Score example fleet and/or arbitrary project paths (sibling apps)."""
     rows: list[AppProductMaturity] = []
-    for app_dir in discover_apps():
-        if app_filter and app_dir.name != app_filter:
-            continue
-        rows.append(score_app(app_dir))
+    if paths:
+        for p in paths:
+            app_dir = Path(p).expanduser().resolve()
+            if app_dir.is_file() and app_dir.name == "dazzle.toml":
+                app_dir = app_dir.parent
+            rows.append(score_app(app_dir))
+    else:
+        for app_dir in discover_apps():
+            if app_filter and app_dir.name != app_filter:
+                continue
+            rows.append(score_app(app_dir))
     rows.sort(key=lambda r: (-r.score, -r.wi, r.app))
     return rows
 
@@ -601,9 +721,9 @@ def format_warehouse_index(rows: list[AppProductMaturity]) -> str:
         "-" * 90,
     ]
     interventions = {
-        "D": "more multi-region job workspaces (fewer list-primary shells)",
+        "D": "job desks with mixed modes/sources (not empty desk sprawl / list shells)",
         "N": "persona nav job destinations (not auto entity-list soup)",
-        "L": "denser landing regions (queue/chart/related/strip/activity)",
+        "L": "diversify landing signals (mode×source); pads of same-entity lists do not score",
         "J": "bind stories executed_by + process/surface paths",
         "G": "open-via on lists + related hubs for multi-entity graphs",
     }
@@ -649,7 +769,13 @@ def format_status(rows: list[AppProductMaturity]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--app", help="Score a single app")
+    ap.add_argument("--app", help="Score a single example app by name")
+    ap.add_argument(
+        "--paths",
+        nargs="+",
+        metavar="DIR",
+        help="Score arbitrary project dirs (sibling/real apps; not only examples/)",
+    )
     ap.add_argument("--json", action="store_true", help="Emit full JSON payload")
     ap.add_argument("--status", action="store_true", help="One-line cycle log line")
     ap.add_argument(
@@ -679,7 +805,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    rows = scan(args.app)
+    path_list = [Path(p) for p in (args.paths or [])] or None
+    rows = scan(args.app, paths=path_list)
     if not rows:
         print("no example apps found", file=sys.stderr)
         return 2
