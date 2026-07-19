@@ -419,27 +419,29 @@ workspace approval_desk "Approval Desk":
     filter: status = submitted
     sort: amount desc
     limit: 20
-    display: list
-    # list shows amount/supplier columns; queue was state-button farm only
+    display: queue
     action: invoice_detail
     empty: "Nothing awaiting approval"
 
+  # WI D: kanban family (not listish) — pipeline view of invoice status
+  approval_board:
+    source: Invoice
+    filter: status = submitted or status = approved or status = rejected
+    display: kanban
+    group_by: status
+    sort: amount desc
+    action: invoice_detail
+    empty: "No invoices in the approval pipeline"
+
+  # WI D: context family — recent decisions as a timeline, not another list pad
   recently_decided:
     source: Invoice
-    filter: status = approved
+    filter: status = approved or status = rejected
     sort: updated_at desc
-    limit: 10
-    display: list
+    limit: 12
+    display: timeline
     action: invoice_detail
-    empty: "No recent approvals"
-
-  supplier_context:
-    source: Supplier
-    sort: name asc
-    limit: 10
-    display: list
-    action: supplier_detail
-    empty: "No suppliers"
+    empty: "No recent decisions"
 
 workspace pay_desk "Pay Desk":
   purpose: "Finance job — settle approved invoices and resolve open disputes"
@@ -531,9 +533,10 @@ workspace suppliers_desk "Suppliers":
     tones:
       suppliers: accent
 
+  # WI D: grid family for vendor cards (not list pad)
   roster:
     source: Supplier
-    display: list
+    display: grid
     sort: name asc
     limit: 25
     action: supplier_detail
@@ -541,7 +544,7 @@ workspace suppliers_desk "Suppliers":
 
   bank_refs:
     source: SupplierBankAccount
-    display: list
+    display: queue
     limit: 20
     empty: "No bank accounts on file"
 
@@ -569,9 +572,10 @@ workspace team_desk "Team":
     tones:
       people: accent
 
+  # WI D: diversify mode families on team desk (grid + queue + chart)
   people:
     source: User
-    display: list
+    display: grid
     sort: name asc
     limit: 25
     action: user_detail
@@ -579,17 +583,18 @@ workspace team_desk "Team":
 
   suppliers:
     source: Supplier
-    display: list
+    display: queue
     sort: name asc
     limit: 15
     action: supplier_detail
     empty: "No suppliers"
 
-  tenants:
+  tenant_mix:
     source: Tenant
-    display: list
-    limit: 10
-    action: tenant_detail
+    display: bar_chart
+    group_by: name
+    aggregate:
+      count: count(Tenant)
     empty: "No tenants"
 
 

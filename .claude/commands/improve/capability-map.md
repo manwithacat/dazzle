@@ -89,9 +89,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1035 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1037 | USED |
 | **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1037 | USED |
-| `dazzle domain` / MCP `domain` (AGENT_DOMAIN extract/gaps/promote) | CLI+MCP | **example-apps** + agent DX | 1041 | USED |
+| `dazzle domain` / MCP `domain` (AGENT_DOMAIN extract/gaps/promote) | CLI+MCP | **example-apps** + agent DX | 1042 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | script | **hm-convergence** | 1041 | USED |
-| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1041 | USED |
+| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1042 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1039 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1035 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 1039 | USED |
@@ -158,6 +158,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 1042 (2026-07-19).** **example-apps** ordinary explore invoice_ops (WI D): approval_desk kanban+timeline; suppliers grid+queue; team grid+queue+chart. WI **0.26→0.24**, D **0.58→0.55**, wi_fleet **0.185→0.183**, above_floor **0/12**. residual=0. Explore **96/100**.
 
 > **Cycle 1041 (2026-07-19).** **hm-convergence + domain quality:** gallery probes **6/6 PASS**; domain extract first-exercise on simple_task SPEC — tightened noun filter (reject mid-sentence adjectives; 33→2 nouns). residual=0. Explore **95/100**.
 
