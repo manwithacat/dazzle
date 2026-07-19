@@ -59,6 +59,7 @@ nav engineer_nav:
     firmware_pipeline
     session_ops
     tester_roster
+    task_ops
 
 nav tester_nav:
   group "Field":
@@ -73,6 +74,7 @@ nav manager_nav:
     firmware_pipeline
     session_ops
     tester_roster
+    task_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1679,6 +1681,61 @@ workspace tester_roster "Tester Roster":
     aggregate:
       count: count(Tester)
     empty: "No testers yet"
+
+
+# Ninth product desk (WI D): 6 lists floor dens ~0.43 with 8 full desks — need 9.
+workspace task_ops "Task Ops":
+  purpose: "Field task pulse — open work, assignments, and priority pressure"
+  access: persona(engineer, manager)
+
+  task_metrics:
+    source: Task
+    display: metrics
+    aggregate:
+      open: count(Task where status != completed and status != cancelled)
+      in_progress: count(Task where status = in_progress)
+      unassigned: count(Task where assigned_to_id = null and status != completed)
+    tones:
+      open: warning
+      in_progress: accent
+      unassigned: destructive
+
+  # WI D: queue family — open tasks first
+  open_queue:
+    source: Task
+    filter: status != completed and status != cancelled
+    sort: created_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No open tasks"
+
+  # WI D: kanban family — task pipeline board
+  task_board:
+    source: Task
+    filter: status != completed and status != cancelled
+    display: kanban
+    group_by: status
+    action: task_detail
+    empty: "No open tasks"
+
+  # WI D: context family — recent task trail
+  task_trail:
+    source: Task
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No tasks yet"
+
+  # WI D: chart family — task status mix
+  status_mix:
+    source: Task
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No tasks yet"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts
