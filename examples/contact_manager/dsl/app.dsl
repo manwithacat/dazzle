@@ -217,22 +217,32 @@ workspace home "Home":
     action: contact_detail
     empty: "No favourites yet — star a contact from the directory."
 
+  # WI D/L: grid + timeline families (not dual list pads)
   recent_contacts:
     source: Contact
     sort: last_name asc, first_name asc
     limit: 8
-    display: list
+    display: grid
     action: contact_detail
     empty: "No contacts yet. Open Contacts or use New Contact to add your first person or company."
 
-  # WI L: richer landing — company strip + A–Z sample for answer-first home.
   company_contacts:
     source: Contact
     filter: company != null
     sort: company asc, last_name asc
     limit: 8
-    display: list
+    display: timeline
     action: contact_detail
+    empty: "No company contacts yet"
+
+  # WI D: chart of company mix on the home landing
+  company_mix:
+    source: Contact
+    filter: company != null
+    display: bar_chart
+    group_by: company
+    aggregate:
+      count: count(Contact)
     empty: "No company contacts yet"
 
   find_contact:
@@ -272,7 +282,7 @@ workspace contacts "Contacts":
     action: contact_detail
     empty: "No favourites pinned"
 
-  # List signal - browsable contact list
+  # List signal - browsable contact list (dual_pane needs listish)
   contact_list:
     source: Contact
     sort: last_name asc, first_name asc
@@ -287,6 +297,57 @@ workspace contacts "Contacts":
     display: detail
     action: contact_edit
     # Weight: 0.5 (base) + 0.2 (detail) = 0.7 (DETAIL_VIEW)
+
+  # WI D: kanban of favourites vs rest for directory triage
+  favorite_board:
+    source: Contact
+    display: kanban
+    group_by: is_favorite
+    sort: last_name asc
+    action: contact_detail
+    empty: "No contacts yet"
+
+# Third product workspace (WI density D): company-first job desk.
+workspace companies "Companies":
+  purpose: "Company roll-up — who works where before opening a person"
+  access: persona(user, admin)
+
+  company_pulse:
+    source: Contact
+    display: metrics
+    aggregate:
+      companies: count(Contact where company != null)
+      people: count(Contact)
+      favourites: count(Contact where is_favorite = true)
+    tones:
+      companies: accent
+      favourites: positive
+
+  by_company:
+    source: Contact
+    filter: company != null
+    sort: company asc, last_name asc
+    limit: 30
+    display: grid
+    action: contact_detail
+    empty: "No company contacts yet"
+
+  company_chart:
+    source: Contact
+    filter: company != null
+    display: bar_chart
+    group_by: company
+    aggregate:
+      count: count(Contact)
+    empty: "No company contacts yet"
+
+  recent_people:
+    source: Contact
+    sort: updated_at desc
+    limit: 12
+    display: timeline
+    action: contact_detail
+    empty: "No contacts yet"
 
 # Stage Selection:
 # - list_weight = 0.6 >= 0.3 ✓

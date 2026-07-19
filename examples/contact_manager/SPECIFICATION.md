@@ -82,4 +82,4 @@ static proof holds every byte-serving route to that boundary, so no new route
 can stream document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:2c7a9f9799c4506287af8de23b926f9009689ebfdac5b1f7cf8a25760d6bc29f -->
+<!-- dazzle-spec-brief: sha256:618109ad26799080fdc84452bd0138b7f074eeccd05031f2af72e5d46450e713 -->
