@@ -108,4 +108,4 @@ which keeps the product fast, accessible, and simple to operate. (Verify:
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:0d1117bfb873eee5f7c7ba843572f8a597c0cadf92ecf91665837e89040b8ade -->
+<!-- dazzle-spec-brief: sha256:3e3d4efc9152f6d8027382bc4017b8d494326fc5c9cc99e8c062db167eee755a -->

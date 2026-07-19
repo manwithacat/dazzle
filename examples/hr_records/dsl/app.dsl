@@ -55,6 +55,7 @@ nav hr_admin_nav:
     my_team
     starters_desk
     person_detail
+    reporting_desk
   group "Org & pay":
     org_chart
     compensation_review
@@ -66,6 +67,7 @@ nav manager_nav:
     staff_directory
     person_detail
     org_chart
+    reporting_desk
 
 nav finance_nav:
   group "Compensation":
@@ -488,9 +490,25 @@ surface person_edit "Edit Person":
 surface department_list "Departments":
   uses entity Department
   mode: list
+  # WI G: graph hop into department hub (not a dead warehouse row)
+  open: Department via id
   section main:
     field name "Name"
     field parent_department "Parent"
+  ux:
+    purpose: "Org units — open a row for the department hub"
+
+surface department_detail "Department":
+  uses entity Department
+  mode: view
+  section main "Unit":
+    field name "Name"
+    field parent_department "Parent"
+  related roles "Roles in unit":
+    display: table
+    show: Role
+  ux:
+    purpose: "Department hub — unit identity and roles"
 
 surface department_create "Add Department":
   uses entity Department
@@ -502,10 +520,26 @@ surface department_create "Add Department":
 surface role_list "Roles":
   uses entity Role
   mode: list
+  open: Role via id
   section main:
     field title "Title"
     field level "Level"
     field department "Department"
+  ux:
+    purpose: "Job roles — open a row for the role hub"
+
+surface role_detail "Role":
+  uses entity Role
+  mode: view
+  section main "Role":
+    field title "Title"
+    field level "Level"
+    field department "Department"
+  related employment "Employment in role":
+    display: table
+    show: Employment
+  ux:
+    purpose: "Role hub — title, level, and employment history"
 
 surface role_create "Add Role":
   uses entity Role
@@ -613,6 +647,7 @@ surface managerlink_edit "End Reporting Line":
 # =============================================================================
 
 
+# WI L: hr_admin default landing — denser regions (cap 6).
 workspace staff_directory "Staff Directory":
   access: persona(hr_admin, manager, finance, employee)
   purpose: "Current employees, filterable by department + level"
@@ -625,12 +660,16 @@ workspace staff_directory "Staff Directory":
       people: count(Person)
       departments: count(Department)
       roles: count(Role)
+      employment_rows: count(Employment)
     tones:
       people: accent
 
   current_staff:
     source: Person
-    display: list
+    display: queue
+    limit: 25
+    action: person_detail
+    empty: "No people on record"
     # TODO(#hr-temporal): `default_scope: where ended_at = null` on the
     # Person entity would obviate this region-level filter. Today we'd
     # need a `filter:` block here — but the example exists to demonstrate
@@ -639,11 +678,41 @@ workspace staff_directory "Staff Directory":
   recent_starters:
     source: Person
     display: list
+    limit: 15
+    action: person_detail
+    empty: "No recent joiners listed"
     # TODO(#hr-temporal): "filter: started_at > today - 90d" — date
     # arithmetic in filters isn't first-class for list region filters
     # outside aggregate where clauses.
 
+  department_context:
+    source: Department
+    display: list
+    limit: 15
+    action: department_detail
+    empty: "No departments"
 
+  role_context:
+    source: Role
+    display: list
+    limit: 15
+    action: role_detail
+    empty: "No roles"
+
+  directory_readiness:
+    display: status_list
+    entries:
+      - title: "Person hub"
+        caption: "Open a person for employment + salary career timeline"
+        icon: "user"
+        state: accent
+      - title: "Starters desk"
+        caption: "Onboarding queue lives on New Starters"
+        icon: "user-plus"
+        state: positive
+
+
+# WI L: employee default landing — denser career desk.
 workspace person_detail "Person Detail":
   access: persona(hr_admin, manager, finance, employee)
   purpose: "Career timeline — employment + salary history side-by-side"
@@ -668,21 +737,46 @@ workspace person_detail "Person Detail":
     aggregate:
       employment_rows: count(Employment)
       salary_rows: count(Salary)
+      reporting_lines: count(ManagerLink)
     tones:
       employment_rows: accent
 
   employment_history:
     source: Employment
-    display: list
+    display: queue
+    limit: 20
+    empty: "No employment rows"
 
   salary_history:
     source: Salary
     display: list
+    limit: 15
+    empty: "No salary rows"
 
   reporting_history:
     source: ManagerLink
     display: list
+    limit: 15
     empty: "No reporting lines on record"
+
+  org_context:
+    source: Department
+    display: list
+    limit: 10
+    action: department_detail
+    empty: "No departments"
+
+  record_hint:
+    display: status_list
+    entries:
+      - title: "Your record"
+        caption: "Employment and salary history scope to your person row"
+        icon: "id-card"
+        state: accent
+      - title: "Directory"
+        caption: "Browse colleagues from Staff Directory when permitted"
+        icon: "users"
+        state: positive
 
 
 # #1626 P0-7: honest name — not a true org *tree* until recursive_tree ships.
@@ -712,6 +806,7 @@ workspace org_chart "Departments & Roles":
     display: list
 
 
+# WI L: finance default landing — denser regions (cap 6).
 workspace compensation_review "Compensation Review":
   access: persona(hr_admin, finance)
   purpose: "Salary band analysis — by department, by role level"
@@ -724,6 +819,7 @@ workspace compensation_review "Compensation Review":
       active_salaries: count(Salary)
       people: count(Person)
       roles: count(Role)
+      departments: count(Department)
     tones:
       active_salaries: accent
 
@@ -735,20 +831,43 @@ workspace compensation_review "Compensation Review":
   # active salary rows by default; appending `?effective_to__isnull=false`
   # to the URL opts out for history views (the future `?include_closed`
   # hook from #1218 will surface this as a friendlier param).
+  salary_queue:
+    source: Salary
+    display: queue
+    limit: 25
+    empty: "No active salaries"
+
   salary_list:
     source: Salary
     display: list
+    limit: 20
     empty: "No active salaries"
 
   role_catalogue:
     source: Role
     display: list
+    limit: 20
+    action: role_detail
     empty: "No roles defined"
 
   headcount_context:
     source: Person
     display: list
+    limit: 15
+    action: person_detail
     empty: "No people on record"
+
+  pay_readiness:
+    display: status_list
+    entries:
+      - title: "Active salaries"
+        caption: "Temporal default keeps closed bands out of the queue"
+        icon: "banknote"
+        state: accent
+      - title: "Role catalogue"
+        caption: "Levels and departments anchor band analysis"
+        icon: "briefcase"
+        state: positive
 
 
 workspace time_machine "Time Machine":
@@ -783,6 +902,7 @@ workspace time_machine "Time Machine":
 
 # Sixth product workspace (WI density D): manager team desk — reports first,
 # not a bare Person warehouse list.
+# WI L: manager default landing — denser regions (cap 6).
 workspace my_team "My Team":
   purpose: "Line manager desk — direct reports, roles, and reporting lines"
   access: persona(manager, hr_admin)
@@ -794,23 +914,47 @@ workspace my_team "My Team":
       people: count(Person)
       employment_rows: count(Employment)
       reporting_lines: count(ManagerLink)
+      roles: count(Role)
     tones:
       people: accent
 
   reports:
     source: Person
-    display: list
+    display: queue
+    limit: 25
+    action: person_detail
     empty: "No people in scope"
 
   team_employment:
     source: Employment
     display: list
+    limit: 20
     empty: "No employment rows for your team"
 
   reporting_lines:
     source: ManagerLink
     display: list
+    limit: 20
     empty: "No reporting lines yet"
+
+  role_mix:
+    source: Role
+    display: list
+    limit: 15
+    action: role_detail
+    empty: "No roles defined"
+
+  team_readiness:
+    display: status_list
+    entries:
+      - title: "Reports first"
+        caption: "Open a person for career timeline without warehouse chrome"
+        icon: "users"
+        state: accent
+      - title: "Reporting lines"
+        caption: "ManagerLink history also lives on the Reporting desk"
+        icon: "git-branch"
+        state: positive
 
 
 # Seventh product workspace (WI density D): HR starters / onboarding desk.
@@ -831,14 +975,65 @@ workspace starters_desk "New Starters":
   recent_people:
     source: Person
     display: queue
+    limit: 25
+    action: person_detail
     empty: "No people on record"
 
   employment_queue:
     source: Employment
     display: list
+    limit: 20
     empty: "No employment rows yet"
 
   salary_setup:
     source: Salary
     display: list
+    limit: 15
     empty: "No salary rows yet"
+
+# Eighth product workspace (WI density D): reporting-line desk.
+workspace reporting_desk "Reporting":
+  purpose: "ManagerLink trail — who reports to whom across the org"
+  access: persona(hr_admin, manager)
+
+  reporting_pulse:
+    source: ManagerLink
+    display: metrics
+    aggregate:
+      links: count(ManagerLink)
+      people: count(Person)
+      departments: count(Department)
+    tones:
+      links: accent
+
+  active_links:
+    source: ManagerLink
+    display: queue
+    limit: 25
+    empty: "No reporting lines yet"
+
+  people_context:
+    source: Person
+    display: list
+    limit: 20
+    action: person_detail
+    empty: "No people on record"
+
+  department_context:
+    source: Department
+    display: list
+    limit: 15
+    action: department_detail
+    empty: "No departments"
+
+  chain_hint:
+    display: status_list
+    entries:
+      - title: "Temporal links"
+        caption: "ManagerLink rows are time-bounded — use Time Machine for as-of snapshots"
+        icon: "clock"
+        state: accent
+      - title: "Team desk"
+        caption: "Line managers start from My Team for report-first work"
+        icon: "users"
+        state: positive
