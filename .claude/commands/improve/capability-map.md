@@ -79,8 +79,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 937 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 937 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 937 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 943 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 943 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 952 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 952 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 936 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 936 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 936 | USED |
@@ -88,7 +88,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **example product maturity** (anti-warehouse job desks / landings / density) | `scripts/example_product_maturity.py` + strategy `product_maturity` | **example-apps** | 943 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 943 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 943 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 943 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 952 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 943 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 943 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 943 | USED |
@@ -150,6 +150,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 > **Cycle 794 (2026-07-18).** **HOUSEKEEPING idle** — explore budget **100/100** cap; no REGRESSION/PENDING; self-audit lag11 (due ~798); sweep@792. Renewal: next `dazzle-updated` release signal, or `/improve --reset-budget`. Stamps inbox/codeql @794. Explore **100/100**.
 
+
+> **Cycle 952 (2026-07-19) capability-sweep.** Inventory: CLI groups unchanged (representation/scaffold/prove/agent/demo quality/reset-and-load present); skills unchanged (dsl-authoring/phase-contract/qa-trial/spec-narrate/stems + agent skills); improve strategies/lanes unchanged; MCP still **37** tools. **No newly-built UNOWNED.** STALE recompute at @952: **0** product STALE-effective (lag≥20) — recent STALE-clear 933–943 left map USED. Re-stamp **CodeQL + GitHub inbox USED@952**. Next sweep ~**972**. Next self-audit ~**953** (last@938). Explore **18/100**.
 
 > **Cycle 943 (2026-07-19).** **example-apps** first-exercise OWNED-IDLE `dazzle demo reset-and-load` (#1627): design_studio serve :3930; reset-and-load **-y** exit 0 — created_count=16; persona_homes_residual=0 (admin/designer/reviewer); live_desk residual=0 (Brand×9, Asset×12). CI tip 063e675ba in_progress (preflight repair). Stamps **USED@943**. Explore **9/100**. Product STALE set cleared (only EXEMPT/idle remain).
 
