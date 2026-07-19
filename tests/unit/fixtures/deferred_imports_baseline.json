@@ -340,7 +340,7 @@
   "src/dazzle/testing/test_runner.py": 1,
   "src/dazzle/testing/ux/contracts.py": 1,
   "src/dazzle/testing/ux/fixtures.py": 1,
-  "src/dazzle/testing/ux/interactions/server_fixture.py": 4,
+  "src/dazzle/testing/ux/interactions/server_fixture.py": 3,
   "src/dazzle/testing/ux/reconciler.py": 1,
   "src/dazzle/testing/ux/runner.py": 3,
   "src/dazzle/testing/vendor_mock/fixtures.py": 1,

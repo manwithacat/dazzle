@@ -16,6 +16,7 @@ from typing import Any
 
 import typer
 
+from dazzle.cli.dotenv import apply_project_infra_urls, load_project_dotenv
 from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 from dazzle.core.manifest import load_manifest
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
@@ -1352,7 +1353,6 @@ def qa_trial(
     from dazzle.agent.executor import PlaywrightExecutor
     from dazzle.agent.missions.trial import build_trial_mission
     from dazzle.agent.observer import PlaywrightObserver
-    from dazzle.cli.dotenv import apply_project_infra_urls, load_project_dotenv
     from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
     from dazzle.cli.utils import load_project_appspec
     from dazzle.qa.trial_report import (
