@@ -558,6 +558,7 @@ surface tester_list "Tester Directory":
   uses entity Tester
   mode: list
   render: fragment
+  open: Tester via id
 
   section main "Testers":
     field name "Name"
@@ -568,7 +569,7 @@ surface tester_list "Tester Directory":
     field joined_at "Joined"
 
   ux:
-    purpose: "Manage field testers and device assignments"
+    purpose: "Manage field testers — open a row for the tester hub"
     sort: name asc
     filter: location, skill_level, active
     search: name, email, location
@@ -883,6 +884,7 @@ surface firmware_release_list "Firmware Releases":
   uses entity FirmwareRelease
   mode: list
   render: fragment
+  open: FirmwareRelease via id
 
   section main "Firmware Releases":
     field version "Version"
@@ -891,7 +893,7 @@ surface firmware_release_list "Firmware Releases":
     field applies_to_batch "Applies to Batch"
 
   ux:
-    purpose: "Track firmware versions and release history"
+    purpose: "Track firmware versions — open a row for the release hub"
     sort: release_date desc
     filter: status, applies_to_batch
     search: version, release_notes
@@ -978,6 +980,7 @@ surface task_list "Tasks":
   uses entity Task
   mode: list
   render: fragment
+  open: Task via id
 
   section main "Tasks":
     field type "Type"
@@ -986,7 +989,7 @@ surface task_list "Tasks":
     field created_at "Created"
 
   ux:
-    purpose: "Track debugging and maintenance tasks"
+    purpose: "Track debugging tasks — open a row for the task hub"
     sort: status asc, created_at desc
     filter: type, status, assigned_to_id
     search: notes
