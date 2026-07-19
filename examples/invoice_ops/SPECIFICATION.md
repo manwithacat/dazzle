@@ -81,6 +81,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 - **Team** — tenant admin people desk with supplier and tenant context.
 - **Payments** — payment-attempt trail with settle board and attempt health
   chart.
+- **Line Items** — composition desk: line metrics, line grid, draft/submitted
+  invoice queue, invoice trail, and status mix chart.
 
 Each queue row opens the invoice hub, so triage and action stay on the job
 surface rather than a flat entity list.
@@ -153,4 +155,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:e7bb3a3fa5db03a68015d9264aabc9a542930e95e5b66f433d9b00795ddf0af4 -->
+<!-- dazzle-spec-brief: sha256:f7bcdde01eb755ec031d46a0552023f1d3cbb81ae96ff4dc2f645536c131f367 -->

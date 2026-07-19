@@ -429,6 +429,24 @@ workspace my_invoices "My Invoices":
     action: supplier_detail
     empty: "No suppliers yet"
 
+  # WI D: context family — recent invoice trail
+  my_trail:
+    source: Invoice
+    sort: updated_at desc
+    limit: 12
+    display: timeline
+    action: invoice_detail
+    empty: "No invoices yet"
+
+  # WI D: chart family — personal pipeline status mix
+  my_status_mix:
+    source: Invoice
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices yet"
+
 workspace approval_desk "Approval Desk":
   purpose: "Approver job — clear the awaiting-approval queue, open the invoice hub"
   access: persona(approver, finance_admin)
@@ -587,6 +605,25 @@ workspace audit_review "Audit Review":
       count: count(Invoice)
     empty: "No invoices to chart"
 
+  # WI D: queue family — disputed invoices needing review
+  disputed_queue:
+    source: Invoice
+    filter: status = disputed
+    sort: updated_at desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "No disputes open"
+
+  # WI D: kanban family — paid/disputed trail board
+  audit_board:
+    source: Invoice
+    filter: status = paid or status = disputed or status = rejected
+    display: kanban
+    group_by: status
+    sort: updated_at desc
+    action: invoice_detail
+    empty: "No invoices in the audit trail"
 
 # Sixth product workspace (WI density D): supplier / vendor desk so list shells
 # no longer dominate vs job workspaces (vendors + bank refs, not bare CRUD).
@@ -686,6 +723,24 @@ workspace team_desk "Team":
       count: count(Tenant)
     empty: "No tenants"
 
+  # WI D: context family — people activity via invoice trail
+  invoice_trail:
+    source: Invoice
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No invoices yet"
+
+  # WI D: queue family — open invoices for admin context
+  open_invoices:
+    source: Invoice
+    filter: status = submitted or status = approved
+    sort: amount desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "Nothing awaiting action"
 
 # Eighth product workspace (WI density D): payment trail desk.
 workspace payments_trail "Payments":
@@ -747,3 +802,55 @@ workspace payments_trail "Payments":
     aggregate:
       count: count(PaymentAttempt)
     empty: "No payment attempts"
+
+# Ninth product workspace (WI density D): line-item composition desk vs bare list.
+workspace line_items_desk "Line Items":
+  purpose: "Line-item composition desk — what is on open invoices without warehouse CRUD"
+  access: persona(requester, finance, finance_admin, auditor)
+
+  line_pulse:
+    source: LineItem
+    display: metrics
+    aggregate:
+      lines: count(LineItem)
+      invoices: count(Invoice)
+      open_invoices: count(Invoice where status != paid and status != rejected)
+    tones:
+      open_invoices: accent
+      lines: positive
+
+  # WI D: grid family for line cards
+  recent_lines:
+    source: LineItem
+    sort: id desc
+    limit: 25
+    display: grid
+    empty: "No line items yet"
+
+  # WI D: queue family — invoices that still need lines / review
+  draft_invoices:
+    source: Invoice
+    filter: status = draft or status = submitted
+    sort: updated_at desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "No draft or submitted invoices"
+
+  # WI D: context family — recent invoice trail
+  invoice_trail:
+    source: Invoice
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No invoices yet"
+
+  # WI D: chart family — invoice status mix next to lines
+  invoice_status_mix:
+    source: Invoice
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices to chart"

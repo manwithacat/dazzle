@@ -49,6 +49,7 @@ nav requester_nav:
   group "My work":
     my_invoices
     finance_ops
+    line_items_desk
 
 nav approver_nav:
   group "Approvals":
@@ -62,6 +63,7 @@ nav finance_nav:
     payments_trail
     suppliers_desk
     finance_ops
+    line_items_desk
 
 nav auditor_nav:
   group "Audit":
@@ -69,6 +71,7 @@ nav auditor_nav:
     finance_ops
     team_desk
     payments_trail
+    line_items_desk
 
 nav tenant_admin_nav:
   group "Admin":
@@ -86,3 +89,4 @@ nav finance_admin_nav:
     payments_trail
     suppliers_desk
     team_desk
+    line_items_desk
