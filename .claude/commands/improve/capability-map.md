@@ -79,8 +79,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 937 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 937 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 937 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 952 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 952 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 953 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 953 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 936 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 936 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 936 | USED |
@@ -150,6 +150,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 > **Cycle 794 (2026-07-18).** **HOUSEKEEPING idle** — explore budget **100/100** cap; no REGRESSION/PENDING; self-audit lag11 (due ~798); sweep@792. Renewal: next `dazzle-updated` release signal, or `/improve --reset-budget`. Stamps inbox/codeql @794. Explore **100/100**.
 
+
+> **Cycle 953 (2026-07-19).** **self-audit** (cadence ≥15 since 938): window `0daa756bb..bd3548fa2`. Sampled a53ab312a (qa DB pin) + 063e675ba (import hoist) + explore stamps 939/940/943/952. Tests **21 pass** (dotenv + deferred-import + display_locale). Module-top dotenv imports present; residual_total=0. Explore stamps scope-honest (capability-map only). **5 CLEAN / 0 DISCREPANCY**. End SHA `bd3548fa2`. budget_consumed 0. Explore **17/100**. Next self-audit ~**968**.
 
 > **Cycle 952 (2026-07-19) capability-sweep.** Inventory: CLI groups unchanged (representation/scaffold/prove/agent/demo quality/reset-and-load present); skills unchanged (dsl-authoring/phase-contract/qa-trial/spec-narrate/stems + agent skills); improve strategies/lanes unchanged; MCP still **37** tools. **No newly-built UNOWNED.** STALE recompute at @952: **0** product STALE-effective (lag≥20) — recent STALE-clear 933–943 left map USED. Re-stamp **CodeQL + GitHub inbox USED@952**. Next sweep ~**972**. Next self-audit ~**953** (last@938). Explore **18/100**.
 
