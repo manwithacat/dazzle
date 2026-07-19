@@ -67,15 +67,20 @@ visibility rule reads, in effect, "its tenant is the signed-in user's tenant".
 
 Work is organised into **role-shaped desks**, not one shared invoice warehouse:
 
-- **My Invoices** — requester home: draft and in-flight queues with personal
-  pipeline metrics.
-- **Approval Desk** — approver home: awaiting-approval queue, recently decided
-  invoices, and approval-load metrics.
-- **Pay Desk** — finance home: ready-to-pay and dispute queues plus payment
-  health.
+- **My Invoices** — requester home: draft and in-flight queues, status kanban,
+  supplier grid, and personal pipeline metrics.
+- **Approval Desk** — approver home: awaiting-approval queue, approval board,
+  recently decided timeline, and supplier context grid.
+- **Pay Desk** — finance home: ready-to-pay and dispute queues, settle board,
+  payment health, and dispute trail.
 - **Audit Review** — auditor home: payment-attempt trail and settled invoices.
-- **Finance Operations** — shared ops overview for tenant and finance admins
-  (metrics, lifecycle funnel, and the same review queues for oversight).
+- **Finance Operations** — shared ops overview: metrics, lifecycle funnel,
+  review queues, ops kanban, and recent paid timeline.
+- **Suppliers** — vendor desk: roster grid, bank refs, invoice trail and
+  status mix chart.
+- **Team** — tenant admin people desk with supplier and tenant context.
+- **Payments** — payment-attempt trail with settle board and attempt health
+  chart.
 
 Each queue row opens the invoice hub, so triage and action stay on the job
 surface rather than a flat entity list.
@@ -148,4 +153,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:375d234c45a3c34e5fa0e30397679107e61cd3721860c17e4dea848aff05252d -->
+<!-- dazzle-spec-brief: sha256:e7bb3a3fa5db03a68015d9264aabc9a542930e95e5b66f433d9b00795ddf0af4 -->

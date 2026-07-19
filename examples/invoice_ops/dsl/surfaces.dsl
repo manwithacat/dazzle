@@ -351,6 +351,26 @@ workspace finance_ops "Finance Operations":
     action: invoice_detail
     empty: "No disputes open"
 
+  # WI D: kanban family — full pipeline board (not another queue pad)
+  ops_board:
+    source: Invoice
+    filter: status != draft
+    display: kanban
+    group_by: status
+    sort: amount desc
+    action: invoice_detail
+    empty: "No invoices in the pipeline"
+
+  # WI D: context family — recent paid settlements
+  recent_paid:
+    source: Invoice
+    filter: status = paid
+    sort: updated_at desc
+    limit: 12
+    display: timeline
+    action: invoice_detail
+    empty: "No paid invoices yet"
+
 # ── Job workspaces (product maturity: anti-warehouse) ────────────────────────
 # Separate product landings per role so density is not one mega-desk + 9 lists.
 # finance_ops remains the shared ops overview for admin/oversight personas.
@@ -453,6 +473,15 @@ workspace approval_desk "Approval Desk":
     display: timeline
     action: invoice_detail
     empty: "No recent decisions"
+
+  # WI D: supplier context grid (extra source + grid family)
+  suppliers_nearby:
+    source: Supplier
+    sort: name asc
+    limit: 12
+    display: grid
+    action: supplier_detail
+    empty: "No suppliers yet"
 
 workspace pay_desk "Pay Desk":
   purpose: "Finance job — settle approved invoices and resolve open disputes"
@@ -598,6 +627,24 @@ workspace suppliers_desk "Suppliers":
     action: invoice_detail
     empty: "No invoices yet"
 
+  # WI D: context family — invoice trail by vendor activity
+  invoice_trail:
+    source: Invoice
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No invoice history"
+
+  # WI D: chart family — invoice status mix next to vendor roster
+  invoice_status_mix:
+    source: Invoice
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices to chart"
+
 
 # Seventh product workspace (WI density D): tenant admin people desk.
 workspace team_desk "Team":
@@ -681,3 +728,22 @@ workspace payments_trail "Payments":
     display: queue
     action: invoice_detail
     empty: "Nothing ready to pay"
+
+  # WI D: kanban family — settle pipeline on the payment trail desk
+  settle_board:
+    source: Invoice
+    filter: status = approved or status = disputed or status = paid
+    display: kanban
+    group_by: status
+    sort: amount desc
+    action: invoice_detail
+    empty: "No invoices in settle pipeline"
+
+  # WI D: chart family — payment attempt health mix
+  attempt_health:
+    source: PaymentAttempt
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(PaymentAttempt)
+    empty: "No payment attempts"
