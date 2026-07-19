@@ -1252,6 +1252,7 @@ entity Task "Task":
                 "workspace_region_filters",
                 "empty_desk_false_green",
                 "first_principles_demo",
+                "agent_domain",
                 "bootstrap_pollution",
                 "version_cognition",
             ],
@@ -1268,51 +1269,72 @@ entity Task "Task":
             "steps": [
                 {
                     "step": 1,
-                    "action": "Author DSL with STABLE persona ids + human titles",
+                    "action": "Extract agent-audience domain from founder brief",
+                    "command": "dazzle domain extract -p <app>",
+                    "mcp_tool": "domain(operation='extract')",
                     "notes": (
-                        "id=requester/approver/ops_engineer…; title can be Promoter/Booker. "
-                        "knowledge concept=demo_identity. Prefer hand-author over bootstrap "
-                        "(counter-prior bootstrap_pollution)."
+                        "Writes AGENT_DOMAIN.md + agent_domain.json. Cognition draft, not DSL. "
+                        "Chrome-safe offline extract; grounded nouns only."
                     ),
                 },
                 {
                     "step": 2,
+                    "action": "Close domain gaps (research into AGENT_DOMAIN)",
+                    "command": "dazzle domain gaps -p <app>",
+                    "mcp_tool": "domain(operation='gaps')",
+                    "notes": (
+                        "Answer open_questions in the domain doc; mark hypotheses explicitly. "
+                        "knowledge concepts: entity, persona, workspace, demo_identity."
+                    ),
+                },
+                {
+                    "step": 3,
+                    "action": "Promote checklist then hand-author DSL",
+                    "command": "dazzle domain promote -p <app>",
+                    "mcp_tool": "domain(operation='promote')",
+                    "notes": (
+                        "STABLE persona ids + human titles. Never use bootstrap entities as SSOT "
+                        "(bootstrap_pollution)."
+                    ),
+                },
+                {
+                    "step": 4,
                     "action": "Validate",
                     "command": "dazzle validate",
                     "notes": "Heed #1630 warns on as:/non-STABLE personas",
                 },
                 {
-                    "step": 3,
+                    "step": 5,
                     "action": "Serve (writes runtime.json)",
                     "command": "dazzle serve --project <app>",
                 },
                 {
-                    "step": 4,
+                    "step": 6,
                     "action": "Re-read .dazzle/runtime.json",
                     "notes": "Ports and test_secret change across restarts",
                 },
                 {
-                    "step": 5,
+                    "step": 7,
                     "action": "Reset + seed via test mode",
                     "command": "dazzle demo reset-and-load --project <app> -y",
-                    "notes": "Skips STABLE User fixtures; check live_desk residual",
+                    "notes": "Story seeds from demo_spine; check live_desk residual",
                 },
                 {
-                    "step": 6,
+                    "step": 8,
                     "action": "Authenticate after reset",
                     "notes": 'POST /__test__/authenticate {"role":"<stable_id>"} with X-Test-Secret',
                 },
                 {
-                    "step": 7,
+                    "step": 9,
                     "action": "Open default_workspace (browser + HTMX settle)",
                     "command": "dazzle qa capture  # or manual browser",
                     "notes": "curl HTML is skeleton only — counter-prior empty_desk_false_green",
                 },
                 {
-                    "step": 8,
+                    "step": 10,
                     "action": "Read world model",
                     "mcp_tool": "status(operation='demo_world')",
-                    "notes": "Also product_quality / dazzle demo quality",
+                    "notes": "Also product_quality / dazzle demo quality (metric_list risk)",
                 },
             ],
             "next_steps": [
@@ -1320,7 +1342,7 @@ entity Task "Task":
                 "knowledge counter_prior empty_desk_false_green / metric_current_user_lie",
                 "Prefer same-field OR or split regions for filters",
                 "status.mcp version_cognition for pin decisions (not banner alone)",
-                "Avoid bootstrap as default SPEC→DSL (bootstrap_pollution)",
+                "Default path: domain extract → gaps → promote → DSL (not bootstrap)",
             ],
         },
     }

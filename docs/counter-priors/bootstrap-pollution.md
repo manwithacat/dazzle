@@ -52,15 +52,14 @@ Worse than hand-authoring from the brief.
 
 ## Right shape
 
-1. **Default path:** brief → knowledge concepts (entity, money, state_machine,
-   persona, workspace) → hand-author DSL → `dazzle validate` / MCP `dsl.validate`.
-2. Rank bootstrap **below** validate loop in first-principles demos.
-3. If bootstrap is used: treat output as **draft to discard chrome**, not SSOT;
-   require every entity to appear in the brief vocabulary.
-4. **Offline path (#1631):** `discover_entities` / `dazzle analyze-spec --offline`
-   strips markdown tables and refuses chrome vocabulary (`Optional`, `Field`,
-   `Display`, …). LLM `analyze-spec` uses a default 90s timeout and fails loud
-   on hang — never wait on bootstrap to ship a demo.
+1. **Default path:** founder brief → **`dazzle domain extract`** / `domain(extract)`
+   → AGENT_DOMAIN.md (agent audience) → `domain gaps` research → `domain promote`
+   → knowledge concepts → hand-author DSL → validate.
+2. Rank bootstrap **below** domain intermediate and validate loop.
+3. If bootstrap is used: it should write/refresh AGENT_DOMAIN; treat
+   `analysis.entities` as **untrusted draft**, not SSOT.
+4. **Offline path (#1631):** domain extract uses chrome-safe offline noun mining;
+   LLM `analyze-spec` times out loud (90s) — never wait on bootstrap to ship.
 
 ## Why this matters here
 

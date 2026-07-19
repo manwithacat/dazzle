@@ -9,7 +9,7 @@
 # in the diff without bloating it. Adding/removing an operation enum value,
 # changing a property type, or renaming a tool are all breaking changes.
 
-# Count: 38 tools
+# Count: 39 tools
 
 tool: agent
   description_hash: 644a118f9248
@@ -346,6 +346,48 @@ tool: discovery
       "project_path": {
         "description": "Optional: Absolute path to project directory. If omitted, uses active project.",
         "type": "string"
+      }
+    },
+    "required": [
+      "operation"
+    ],
+    "type": "object"
+  }
+
+tool: domain
+  description_hash: 88ca19e2bf5e
+  description_len: 410
+  {
+    "properties": {
+      "operation": {
+        "description": "Operation to perform",
+        "enum": [
+          "extract",
+          "show",
+          "gaps",
+          "promote"
+        ],
+        "type": "string"
+      },
+      "project_path": {
+        "description": "Optional absolute project path",
+        "type": "string"
+      },
+      "project_root": {
+        "description": "Project directory for AGENT_DOMAIN files",
+        "type": "string"
+      },
+      "spec_path": {
+        "description": "Path to founder SPEC.md (extract)",
+        "type": "string"
+      },
+      "spec_text": {
+        "description": "Founder brief text (extract)",
+        "type": "string"
+      },
+      "write": {
+        "description": "Write AGENT_DOMAIN files on extract (default true)",
+        "type": "boolean"
       }
     },
     "required": [
@@ -1340,8 +1382,8 @@ tool: sitespec
   }
 
 tool: spec_analyze
-  description_hash: 60b430c5e80f
-  description_len: 331
+  description_hash: b2b8157a09d8
+  description_len: 439
   {
     "properties": {
       "answers": {

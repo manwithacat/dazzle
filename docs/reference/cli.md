@@ -147,6 +147,7 @@ there requires a row here.
 | `dazzle demo` | Demo data management commands |
 | `dazzle deploy` | Plan infrastructure + generate buildpack (Heroku) deploy files |
 | `dazzle discovery` | App discovery and coherence analysis |
+| `dazzle domain` | Agent-audience domain brief — extract/gaps/promote before DSL |
 | `dazzle dlq` | Dead letter queue commands |
 | `dazzle docs` | Documentation generation, validation, and maintenance |
 | `dazzle events` | Event system commands |

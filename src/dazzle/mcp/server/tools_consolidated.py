@@ -1000,18 +1000,65 @@ def _tool_bootstrap() -> Tool:
     )
 
 
+def _tool_domain() -> Tool:
+    """Agent-audience domain brief (cognition draft before DSL)."""
+    return Tool(
+        name="domain",
+        description=(
+            "Agent-audience domain brief — the cognition draft between founder prose and DSL. "
+            "Operations: extract (offline chrome-safe extract → AGENT_DOMAIN.md + agent_domain.json), "
+            "show (load current domain), gaps (promote blockers), promote (DSL hand-author checklist). "
+            "Prefer this over bootstrap/spec_analyze as SSOT. Research into open_questions only; "
+            "grounded nouns only. CLI: dazzle domain extract|show|gaps|promote."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["extract", "show", "gaps", "promote"],
+                    "description": "Operation to perform",
+                },
+                "spec_text": {
+                    "type": "string",
+                    "description": "Founder brief text (extract)",
+                },
+                "spec_path": {
+                    "type": "string",
+                    "description": "Path to founder SPEC.md (extract)",
+                },
+                "project_root": {
+                    "type": "string",
+                    "description": "Project directory for AGENT_DOMAIN files",
+                },
+                "write": {
+                    "type": "boolean",
+                    "description": "Write AGENT_DOMAIN files on extract (default true)",
+                },
+                "project_path": {
+                    "type": "string",
+                    "description": "Optional absolute project path",
+                },
+            },
+            "required": ["operation"],
+        },
+    )
+
+
 def _tool_spec_analyze() -> Tool:
     """Spec analyze (individual cognition operations)."""
     return Tool(
         name="spec_analyze",
         description=(
-            "Analyze narrative specs before DSL generation. Operations: "
+            "Low-level narrative analysis (untrusted draft). Prefer domain(operation=extract) "
+            "for the agent-audience intermediate. Operations: "
             "discover_entities (extract nouns/relationships), "
             "identify_lifecycles (find state transitions), "
             "extract_personas (identify user roles), "
             "surface_rules (extract business rules), "
             "generate_questions (surface ambiguities), "
-            "refine_spec (produce structured spec from all analyses)"
+            "refine_spec (produce structured spec from all analyses). "
+            "Counter-prior: bootstrap_pollution."
         ),
         inputSchema={
             "type": "object",
@@ -1832,6 +1879,7 @@ def get_consolidated_tools() -> list[Tool]:
         _tool_bootstrap(),
         _tool_agent(),
         _tool_representation(),
+        _tool_domain(),
         _tool_spec_analyze(),
         _tool_graph(),
         _tool_discovery(),

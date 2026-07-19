@@ -1158,6 +1158,23 @@ handle_product_quality: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
+# Domain brief Handler (agent-audience intermediate)
+# =============================================================================
+
+_MOD_DOMAIN = "dazzle.mcp.server.handlers.domain"
+
+handle_domain: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "domain",
+    {
+        "extract": f"{_MOD_DOMAIN}:domain_extract_handler",
+        "show": f"{_MOD_DOMAIN}:domain_show_handler",
+        "gaps": f"{_MOD_DOMAIN}:domain_gaps_handler",
+        "promote": f"{_MOD_DOMAIN}:domain_promote_handler",
+    },
+)
+
+
+# =============================================================================
 # User Profile Handler
 # =============================================================================
 
@@ -1397,6 +1414,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "pitch": handle_pitch,
     "user_management": handle_user_management,
     "bootstrap": handle_bootstrap,
+    "domain": handle_domain,
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
     "discovery": handle_discovery,

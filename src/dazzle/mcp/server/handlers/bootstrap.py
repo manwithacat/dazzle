@@ -182,6 +182,24 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
             seen_names.add(name)
             clean_entities.append(e)
 
+    # Agent-audience domain intermediate (preferred cognition path)
+    agent_domain_payload: dict[str, Any] | None = None
+    try:
+        from dazzle.domain_brief import extract_from_text, save_domain, score_gaps
+
+        if work_dir is not None:
+            ad = extract_from_text(spec_text, source_path=spec_source)
+            paths = save_domain(work_dir, ad)
+            agent_domain_payload = {
+                "written": paths,
+                "gaps": score_gaps(ad).to_dict(),
+                "title": ad.title,
+                "personas": len(ad.personas),
+                "grounded_nouns": len([n for n in ad.nouns if n.status == "grounded"]),
+            }
+    except Exception as exc:  # noqa: BLE001 — best-effort; bootstrap must not fail
+        agent_domain_payload = {"ok": False, "error": str(exc)[:200]}
+
     briefing = {
         "status": "analyzed",
         "spec_source": spec_source,
@@ -191,33 +209,41 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
             "lifecycles": lifecycles_result.get("lifecycles", []),
             "business_rules": rules_result.get("business_rules", []),
             "detected_actions": entities_result.get("actions", []),
-            # #1249 — surface pattern proposals + anti-pattern flags so
-            # the agent's DSL generation reaches for the canonical idiom
-            # on the first try (and refuses the Rails-style polymorphic
-            # shapes the framework deliberately doesn't support).
+            # #1249 — pattern proposals + anti-pattern flags
             "pattern_proposals": patterns_result.get("pattern_proposals", []),
             "antipattern_flags": patterns_result.get("antipattern_flags", []),
-            # #1342 — when the spec states a requirement gated behind an opt-in
-            # capability the app hasn't declared, surface the enable command +
-            # runbook instead of pushing guidance the app can't use yet.
+            # #1342 — capability opt-in suggestions
             "capability_suggestions": patterns_result.get("capability_suggestions", []),
-            # #1617 S1 — executable hatch choice for data shape
+            # #1617 S1 — representation hatch choice
             "representation_decision": representation_decision,
-            # #1631 — offline extract is draft; prefer hand-author
+            # #1631 — offline extract is draft
             "extract_mode": entities_result.get("extract_mode", "offline_deterministic"),
+            # Agent-domain intermediate (preferred over analysis.entities)
+            "agent_domain": agent_domain_payload,
         },
         "clarification_needed": has_questions,
         "questions": questions,
         "warnings": [
             (
-                "bootstrap_pollution (#1631): treat analysis.entities as untrusted draft. "
-                "Prefer brief → knowledge concepts → hand-author DSL → validate. "
-                "Markdown table chrome is stripped; still discard non-domain names."
+                "bootstrap_pollution: analysis.entities is untrusted draft. "
+                "Prefer AGENT_DOMAIN (domain extract) → research gaps → promote checklist "
+                "→ hand-author DSL → validate. Counter-prior: bootstrap_pollution."
+            ),
+            (
+                "Default path: dazzle domain extract | domain(operation=extract) → "
+                "domain gaps/promote → knowledge concepts → DSL. Do not invent chrome entities."
             ),
         ],
         "agent_instructions": _build_instructions(
             has_questions, questions, representation_decision
         ),
+        "preferred_next": [
+            "domain(operation='show') or read AGENT_DOMAIN.md",
+            "domain(operation='gaps') — close open questions in the domain doc",
+            "domain(operation='promote') when ready — then hand-author DSL",
+            "knowledge(operation='concept') for entity/persona/workspace syntax",
+            "dsl.validate loop — never trust bootstrap entities as SSOT",
+        ],
     }
 
     return json.dumps(briefing, indent=2)

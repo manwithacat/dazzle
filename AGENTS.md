@@ -292,6 +292,7 @@ The table below is drift-gated against the live registry (`tests/unit/test_docs_
 | `db` | status, verify |
 | `demo_data` | get |
 | `discovery` | coherence |
+| `domain` | extract, show, gaps, promote |
 | `dsl` | validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec, brief |
 | `e2e` | list_modes, describe_mode, status, list_baselines |
 | `feedback` | list, get, triage, resolve |

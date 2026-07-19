@@ -27,6 +27,7 @@ def test_agent_demo_toml_and_aliases() -> None:
         "empty_desk_false_green",
         "first_principles_demo",
         "bootstrap_pollution",
+        "agent_domain",
         "metric_current_user_lie",
         "version_cognition",
     ):

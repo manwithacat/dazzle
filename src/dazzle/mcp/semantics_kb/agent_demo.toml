@@ -3,7 +3,7 @@
 
 [meta]
 file = "agent_demo"
-concept_count = 8
+concept_count = 9
 category = "Agent Demo Cognition"
 version = "0.106.1"
 
@@ -162,61 +162,92 @@ definition = """
 Closed-loop workflow from cold project to persona stills without tribal SQL.
 
 **Steps:**
-1. `dazzle init` / author DSL (STABLE persona ids + human titles)
-2. `dazzle validate` — fix errors; heed #1630 warns on as:/STABLE
-3. `dazzle serve` (test mode) — writes `.dazzle/runtime.json`
-4. **Re-read runtime.json** (ports/secret/database_url may change)
-5. `dazzle demo reset-and-load --project <app> -y` (story seeds under
-   `dsl/seeds/demo_data`, not only faker dumps)
-6. Authenticate with `role=<stable_id>` **after** reset
-7. Browser open default_workspace with HTMX settle; or `dazzle qa capture`
-   (per-persona if full-app capture times out)
-8. `status(operation=demo_world)` / `dazzle demo quality` for residual
+1. Founder brief → `dazzle domain extract` (AGENT_DOMAIN.md — agent audience)
+2. `dazzle domain gaps` — research into open_questions; no chrome invents
+3. `dazzle domain promote` when ready → hand-author DSL (STABLE persona ids)
+4. `dazzle validate` — fix errors; heed #1630 warns on as:/STABLE
+5. `dazzle serve` (test mode) — writes `.dazzle/runtime.json`
+6. **Re-read runtime.json** (ports/secret/database_url may change)
+7. `dazzle demo reset-and-load --project <app> -y` (story seeds / demo_spine)
+8. Authenticate with `role=<stable_id>` **after** reset
+9. Browser open default_workspace with HTMX settle; or `dazzle qa capture`
+10. `status(operation=demo_world)` / `dazzle demo quality` for residual
 
-**MCP reads (ADR-0002):** knowledge concepts above; status demo_world; product_quality.
-**CLI writes:** serve, reset-and-load, capture.
+**MCP:** domain, knowledge, status demo_world, product_quality.
+**CLI writes:** domain extract, serve, reset-and-load, capture.
+**Do not** use bootstrap entities as SSOT (bootstrap_pollution).
 """
 syntax = '''
+dazzle domain extract -p ./app
+dazzle domain gaps -p ./app
+dazzle domain promote -p ./app
+# hand-author DSL from AGENT_DOMAIN, then:
 dazzle serve --project ./app
 dazzle demo reset-and-load --project ./app -y
-# then role= authenticate; capture
 '''
 related = [
   "demo_identity",
   "empty_desk_false_green",
   "workspace_region_filters",
+  "agent_domain",
+  "bootstrap_pollution",
 ]
 best_practices = [
   "workflow: knowledge(operation='workflow', workflow='first_principles_demo')",
   "Always load demo_ops from agent context or status(demo_world)",
+  "domain extract before DSL; promote checklist before entity blocks",
 ]
-issues = ["#1627", "#1629", "#1630"]
+issues = ["#1627", "#1629", "#1630", "#1631"]
 
-[concepts.bootstrap_pollution]
+[concepts.agent_domain]
 category = "Agent Demo Cognition"
 doc_page = "demo"
 doc_order = 6
 definition = """
+**AGENT_DOMAIN** is the agent-audience intermediate between founder prose and DSL.
+
+| Audience | Artifact |
+|----------|----------|
+| Human founder | SPEC.md / chat brief |
+| AI agent | AGENT_DOMAIN.md + agent_domain.json |
+| Runtime | *.dsl (validate/serve SSOT) |
+| Investor | SPECIFICATION.md (from DSL via spec brief) |
+
+Rules: grounded nouns only; hypotheses explicit; no chrome entities; research
+into open_questions/research_notes. Promote only when `dazzle domain promote`
+is ready. CLI: `dazzle domain extract|show|gaps|promote`. MCP: `domain(operation=…)`.
+"""
+related = ["first_principles_demo", "bootstrap_pollution", "demo_identity"]
+best_practices = [
+  "domain extract before bootstrap entities",
+  "knowledge counter_prior bootstrap_pollution",
+  "Never invent entity names not in founder vocabulary",
+]
+issues = ["#1629", "#1631"]
+
+[concepts.bootstrap_pollution]
+category = "Agent Demo Cognition"
+doc_page = "demo"
+doc_order = 7
+definition = """
 Do **not** use bootstrap / analyze-spec / discover_entities as the default
-SPEC→DSL path. They invent chrome entities (Optional, Field, Display) and
-off-domain questions. Prefer brief → knowledge concepts → hand-author DSL →
-validate. Treat bootstrap output as untrusted draft (#1629 G4).
-Offline path (#1631): analyze-spec --offline / discover_entities strips
-markdown tables and refuses chrome; LLM analyze-spec times out loud (90s).
+SPEC→DSL path. Prefer founder brief → domain extract → gaps/promote →
+hand-author DSL → validate. Treat bootstrap analysis.entities as untrusted.
+Offline chrome-safe extract (#1631); domain intermediate is the cognition draft.
 Counter-prior: bootstrap_pollution.
 """
-related = ["first_principles_demo", "demo_identity"]
+related = ["first_principles_demo", "agent_domain", "demo_identity"]
 best_practices = [
-  "Rank bootstrap below validate loop",
+  "Rank bootstrap below domain intermediate + validate loop",
   "knowledge counter_prior bootstrap_pollution",
-  "Prefer dazzle analyze-spec --offline or hand-author",
+  "Prefer dazzle domain extract over bootstrap entities",
 ]
 issues = ["#1629", "#1631"]
 
 [concepts.metric_current_user_lie]
 category = "Agent Demo Cognition"
 doc_page = "demo"
-doc_order = 7
+doc_order = 8
 definition = """
 When workspace metrics use count(... = current_user) and sibling lists for
 the same persona have rows, trust **lists and stills over KPI tiles** (F10).
@@ -234,7 +265,7 @@ issues = ["#1629", "#1632"]
 [concepts.version_cognition]
 category = "Agent Demo Cognition"
 doc_page = "demo"
-doc_order = 8
+doc_order = 9
 definition = """
 Version decisions need three fields, not the CLI banner alone:
 

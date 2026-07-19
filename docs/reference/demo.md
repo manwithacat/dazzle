@@ -114,54 +114,82 @@ CI residual does not prove stills — re-run recapture after seed changes.
 Closed-loop workflow from cold project to persona stills without tribal SQL.
 
 **Steps:**
-1. `dazzle init` / author DSL (STABLE persona ids + human titles)
-2. `dazzle validate` — fix errors; heed #1630 warns on as:/STABLE
-3. `dazzle serve` (test mode) — writes `.dazzle/runtime.json`
-4. **Re-read runtime.json** (ports/secret/database_url may change)
-5. `dazzle demo reset-and-load --project <app> -y` (story seeds under
-   `dsl/seeds/demo_data`, not only faker dumps)
-6. Authenticate with `role=<stable_id>` **after** reset
-7. Browser open default_workspace with HTMX settle; or `dazzle qa capture`
-   (per-persona if full-app capture times out)
-8. `status(operation=demo_world)` / `dazzle demo quality` for residual
+1. Founder brief → `dazzle domain extract` (AGENT_DOMAIN.md — agent audience)
+2. `dazzle domain gaps` — research into open_questions; no chrome invents
+3. `dazzle domain promote` when ready → hand-author DSL (STABLE persona ids)
+4. `dazzle validate` — fix errors; heed #1630 warns on as:/STABLE
+5. `dazzle serve` (test mode) — writes `.dazzle/runtime.json`
+6. **Re-read runtime.json** (ports/secret/database_url may change)
+7. `dazzle demo reset-and-load --project <app> -y` (story seeds / demo_spine)
+8. Authenticate with `role=<stable_id>` **after** reset
+9. Browser open default_workspace with HTMX settle; or `dazzle qa capture`
+10. `status(operation=demo_world)` / `dazzle demo quality` for residual
 
-**MCP reads (ADR-0002):** knowledge concepts above; status demo_world; product_quality.
-**CLI writes:** serve, reset-and-load, capture.
+**MCP:** domain, knowledge, status demo_world, product_quality.
+**CLI writes:** domain extract, serve, reset-and-load, capture.
+**Do not** use bootstrap entities as SSOT (bootstrap_pollution).
 
 ### Syntax
 
 ```dsl
+dazzle domain extract -p ./app
+dazzle domain gaps -p ./app
+dazzle domain promote -p ./app
+# hand-author DSL from AGENT_DOMAIN, then:
 dazzle serve --project ./app
 dazzle demo reset-and-load --project ./app -y
-# then role= authenticate; capture
 ```
 
 ### Best Practices
 
 - workflow: knowledge(operation='workflow', workflow='first_principles_demo')
 - Always load demo_ops from agent context or status(demo_world)
+- domain extract before DSL; promote checklist before entity blocks
 
-**Related:** [Demo Identity](demo.md#demo-identity), [Empty Desk False Green](demo.md#empty-desk-false-green), [Workspace Region Filters](workspaces.md#workspace-region-filters)
+**Related:** [Demo Identity](demo.md#demo-identity), [Empty Desk False Green](demo.md#empty-desk-false-green), [Workspace Region Filters](workspaces.md#workspace-region-filters), [Agent Domain](demo.md#agent-domain), [Bootstrap Pollution](demo.md#bootstrap-pollution)
+
+---
+
+## Agent Domain
+
+**AGENT_DOMAIN** is the agent-audience intermediate between founder prose and DSL.
+
+| Audience | Artifact |
+|----------|----------|
+| Human founder | SPEC.md / chat brief |
+| AI agent | AGENT_DOMAIN.md + agent_domain.json |
+| Runtime | *.dsl (validate/serve SSOT) |
+| Investor | SPECIFICATION.md (from DSL via spec brief) |
+
+Rules: grounded nouns only; hypotheses explicit; no chrome entities; research
+into open_questions/research_notes. Promote only when `dazzle domain promote`
+is ready. CLI: `dazzle domain extract|show|gaps|promote`. MCP: `domain(operation=…)`.
+
+### Best Practices
+
+- domain extract before bootstrap entities
+- knowledge counter_prior bootstrap_pollution
+- Never invent entity names not in founder vocabulary
+
+**Related:** [First Principles Demo](demo.md#first-principles-demo), [Bootstrap Pollution](demo.md#bootstrap-pollution), [Demo Identity](demo.md#demo-identity)
 
 ---
 
 ## Bootstrap Pollution
 
 Do **not** use bootstrap / analyze-spec / discover_entities as the default
-SPEC→DSL path. They invent chrome entities (Optional, Field, Display) and
-off-domain questions. Prefer brief → knowledge concepts → hand-author DSL →
-validate. Treat bootstrap output as untrusted draft (#1629 G4).
-Offline path (#1631): analyze-spec --offline / discover_entities strips
-markdown tables and refuses chrome; LLM analyze-spec times out loud (90s).
+SPEC→DSL path. Prefer founder brief → domain extract → gaps/promote →
+hand-author DSL → validate. Treat bootstrap analysis.entities as untrusted.
+Offline chrome-safe extract (#1631); domain intermediate is the cognition draft.
 Counter-prior: bootstrap_pollution.
 
 ### Best Practices
 
-- Rank bootstrap below validate loop
+- Rank bootstrap below domain intermediate + validate loop
 - knowledge counter_prior bootstrap_pollution
-- Prefer dazzle analyze-spec --offline or hand-author
+- Prefer dazzle domain extract over bootstrap entities
 
-**Related:** [First Principles Demo](demo.md#first-principles-demo), [Demo Identity](demo.md#demo-identity)
+**Related:** [First Principles Demo](demo.md#first-principles-demo), [Agent Domain](demo.md#agent-domain), [Demo Identity](demo.md#demo-identity)
 
 ---
 

@@ -346,5 +346,8 @@
   "src/dazzle/testing/vendor_mock/fixtures.py": 1,
   "src/dazzle/testing/vendor_mock/orchestrator.py": 1,
   "src/dazzle/testing/vendor_mock/webhooks.py": 3,
-  "src/dazzle/testing/viewport_runner.py": 6
+  "src/dazzle/testing/viewport_runner.py": 6,
+  "src/dazzle/cli/domain_cli.py": 1,
+  "src/dazzle/domain_brief/extract.py": 1,
+  "src/dazzle/mcp/server/handlers/bootstrap.py": 1
 }
