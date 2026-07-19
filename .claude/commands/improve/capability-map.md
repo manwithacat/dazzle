@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1059 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1059 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1059 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1067 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1068 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1056 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1054 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1067 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1068 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1055 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1055 | USED |
@@ -107,6 +107,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1068 (2026-07-19).** **example-apps ordinary explore** fieldtest_hub WI D cont:
+> engineering_dashboard list→timeline/grid/chart. WI dens still ~0.51; fleet **0.159**.
+> Explore **13/100**.
 
 > **Cycle 1067 (2026-07-19).** **example-apps ordinary explore** project_tracker WI D:
 > milestones/discussion/files/my_tasks diversify (timeline/grid/chart). WI **0.21→0.20**

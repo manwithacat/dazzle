@@ -75,4 +75,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:902679bea853ae5c0abad8867fd96e1a01df683747d9f1a8d45719e0c87118ce -->
+<!-- dazzle-spec-brief: sha256:ace6602da690535155389b82e6e44648fe95b789470a0834f35f6dd5a7c43442 -->
