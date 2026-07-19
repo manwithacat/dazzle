@@ -26,6 +26,9 @@ def test_agent_demo_toml_and_aliases() -> None:
         "workspace_region_filters",
         "empty_desk_false_green",
         "first_principles_demo",
+        "bootstrap_pollution",
+        "metric_current_user_lie",
+        "version_cognition",
     ):
         assert name in concepts, name
         assert concepts[name].get("definition")

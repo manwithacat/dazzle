@@ -36,22 +36,22 @@ def test_contact_manager_user_persona_has_curated_nav() -> None:
 
     group_labels = [g.label for g in model.groups]
     # TR-2: Home first so the sidebar matches the post-login landing.
-    assert group_labels == ["Home", "Contacts", "Browse"]
+    # Job-desk nav (#1626): Directory/Browse target the `contacts` workspace,
+    # not bare Contact list soup.
+    assert group_labels == ["Home", "Directory", "Browse"]
 
     # "Home" group → the `home` workspace page.
     home_group = next(g for g in model.groups if g.label == "Home")
     home_link = next(link for link in home_group.links if link.entity == "home")
     assert home_link.route == "/workspaces/home"
 
-    # "Contacts" group → the Contact entity's list surface.
-    # Label comes from the LIST surface title (`surface contact_list "Contacts"`),
-    # not the legacy "{entity} List" fallback — product nav copy (#1626).
-    contacts_group = next(g for g in model.groups if g.label == "Contacts")
-    contact_link = next(link for link in contacts_group.links if link.entity == "Contact")
-    assert contact_link.route == "/list/Contact"
-    assert contact_link.label == "Contacts"
+    # "Directory" group → the `contacts` workspace (desk), not /list/Contact.
+    directory = next(g for g in model.groups if g.label == "Directory")
+    desk_link = next(link for link in directory.links if link.entity == "contacts")
+    assert desk_link.route == "/workspaces/contacts"
+    assert desk_link.label == "Contacts"
 
-    # "Browse" group → the `contacts` workspace page.
+    # "Browse" group → same workspace (tenant-gated optional second entry).
     browse_group = next(g for g in model.groups if g.label == "Browse")
     workspace_link = next(link for link in browse_group.links if link.entity == "contacts")
     assert workspace_link.route == "/workspaces/contacts"
@@ -94,7 +94,7 @@ def test_contact_manager_browse_group_gated_by_tenant_config() -> None:
         model, PageContext(page_title="x", tenant_config={"show_browse": False})
     )
     assert "Browse" not in {g.label for g in off.groups}
-    assert "Contacts" in {g.label for g in off.groups}
+    assert "Directory" in {g.label for g in off.groups}
 
     # Tenant with the flag ON → "Browse" group present.
     on = _sidebar_from_nav_model(

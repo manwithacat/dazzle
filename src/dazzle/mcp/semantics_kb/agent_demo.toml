@@ -3,7 +3,7 @@
 
 [meta]
 file = "agent_demo"
-concept_count = 7
+concept_count = 8
 category = "Agent Demo Cognition"
 version = "0.106.1"
 
