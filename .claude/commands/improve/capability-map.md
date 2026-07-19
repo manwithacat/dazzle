@@ -79,19 +79,19 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1030 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1030 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1030 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1037 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1037 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1054 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1054 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1026 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1026 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1026 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1037 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1054 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1035 | USED |
-| **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1037 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1037 | USED |
-| `dazzle domain` / MCP `domain` (AGENT_DOMAIN extract/gaps/promote) | CLI+MCP | **example-apps** + agent DX | 1042 | USED |
+| **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1054 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1054 | USED |
+| `dazzle domain` / MCP `domain` (AGENT_DOMAIN extract/gaps/research/promote) | CLI+MCP | **example-apps** + agent DX | 1054 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | script | **hm-convergence** | 1041 | USED |
-| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1042 | USED |
+| MCP `product_quality` (score — persona homes + stills + maturity + metric_list risk) | MCP | **example-apps** | 1054 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1039 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1035 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 1039 | USED |
@@ -165,6 +165,14 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1054 (2026-07-19) capability-sweep.** Inventory: MCP consolidated tools **38** (domain ops now extract/show/gaps/**research**/promote); improve strategies **17** / lanes **6**; CLI groups present (domain/demo/prove/representation/scaffold). Skills stable. **No UNOWNED.** STALE-effective @1054: **26** (highest: component/property-vision@1017 lag37 metered; prove/representation/scaffold/pulse/compliance@1026 lag28; HM cluster@1027 lag27; ux/rbac/composition@1029 lag25; validate@1030 lag24; sweep/coverage/fuzz/xproject@1031 lag23; qa login/capture@1032 lag22; sentinel@1033 lag21). Re-stamp domain+research + product_quality + CodeQL + GitHub inbox + probes + product_maturity + journey **USED@1054**. Next sweep ~**1074**. Next self-audit ~**1058**. Explore **100/100** (cap). residual=0; wi_fleet **0.164≤floor**; wi_next=invoice_ops (D).
+
+> **Cycle 1053 (2026-07-19).** **housekeeping idle** — explore **100/100**; CI green; sweep lag19. Next: capability-sweep due@1054.
+
+> **Cycle 1052 (2026-07-19).** **housekeeping idle** — explore **100/100**; CI green (1049 repair verified). Next sweep ~1054; self-audit ~1058.
+
+> **Cycle 1049 (2026-07-19).** **cimonitor** CI repair: mypy gaps type-arg + research complexity refactor + acme_billing compliance-auditspec dsl_hash. budget_consumed 0. Explore **100/100**.
 
 > **Cycle 1048 (2026-07-19).** **housekeeping idle** (rule 8): explore **100/100**, residual=0, heat=idle, preflight green. STALE vision@1017 lag31 (metered) + prove/representation cluster@1026 lag22 deferred (no explore budget). Next: capability-sweep ~**1054**; self-audit ~**1058**; renew via dazzle-updated or `/improve --reset-budget`.
 
