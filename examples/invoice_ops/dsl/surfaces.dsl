@@ -488,6 +488,16 @@ workspace pay_desk "Pay Desk":
     action: invoice_detail
     empty: "No disputes open"
 
+  # WI D: kanban family — settle pipeline by status (not another queue pad)
+  settle_board:
+    source: Invoice
+    filter: status = approved or status = disputed or status = paid
+    display: kanban
+    group_by: status
+    sort: updated_at desc
+    action: invoice_detail
+    empty: "No invoices in settle pipeline"
+
   payment_health:
     source: PaymentAttempt
     display: bar_chart
@@ -495,6 +505,16 @@ workspace pay_desk "Pay Desk":
     aggregate:
       count: count(PaymentAttempt)
     empty: "No payment attempts"
+
+  # WI D: context family — recent dispute timeline
+  dispute_trail:
+    source: Invoice
+    filter: status = disputed
+    sort: updated_at desc
+    limit: 12
+    display: timeline
+    action: invoice_detail
+    empty: "No dispute history"
 
 workspace audit_review "Audit Review":
   purpose: "Auditor job — payment trail and invoice evidence without warehouse CRUD"
@@ -511,21 +531,32 @@ workspace audit_review "Audit Review":
       disputed: destructive
       paid: positive
 
+  # WI D: grid family for payment attempt cards (not list pad)
   payment_attempts:
     source: PaymentAttempt
-    display: queue
+    display: grid
     sort: created_at desc
     limit: 20
     empty: "No payment attempts to review"
 
+  # WI D: timeline of settled invoices (context family)
   settled_invoices:
     source: Invoice
     filter: status = paid
     sort: updated_at desc
     limit: 15
-    display: queue
+    display: timeline
     action: invoice_detail
     empty: "No paid invoices yet"
+
+  # WI D: chart family — dispute vs paid mix
+  audit_mix:
+    source: Invoice
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices to chart"
 
 
 # Sixth product workspace (WI density D): supplier / vendor desk so list shells
