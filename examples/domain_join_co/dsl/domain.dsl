@@ -22,6 +22,7 @@ persona admin "Workspace Admin":
   goals: "Verify our domain", "Approve the right joiners", "Keep the team informed"
   proficiency: expert
   default_workspace: home
+  uses nav admin_nav
 
 persona member "Team Member":
   description: "An employee who self-joined with a verified company email — reads the team's announcements."
@@ -29,6 +30,19 @@ persona member "Team Member":
   proficiency: intermediate
   # Answer-first: feed board after join (product maturity)
   default_workspace: announce
+  uses nav member_nav
+
+# Curated sidebars: workspace destinations only (WI N).
+nav admin_nav:
+  group "Workspace":
+    home
+    announce
+    publish_desk
+
+nav member_nav:
+  group "Team":
+    announce
+    home
 
 # ── Tenant root (resolved by host; members + their role declared here) ─────────
 
@@ -106,7 +120,9 @@ surface announcement_create "Post Announcement":
 # Story-driven home: metrics + readiness strip before the announcement feed.
 # Join-request approval lives in runtime admin console (not DSL) — see
 # docs/reference/verified-domain-join.md.
+# WI L: denser landing regions (queue/chart/related/strip/activity).
 workspace home "Workspace Home":
+  purpose: "Admin desk — join readiness, team pulse, and announcement queue"
   access: persona(admin, member)
 
   team_pulse:
@@ -114,6 +130,7 @@ workspace home "Workspace Home":
     display: metrics
     aggregate:
       announcements: count(Announcement)
+      workspaces: count(Workspace)
     tones:
       announcements: accent
 
@@ -133,15 +150,44 @@ workspace home "Workspace Home":
         icon: "megaphone"
         state: positive
 
-  announcements:
+  announcement_queue:
     source: Announcement
     sort: title asc
-    display: list
+    limit: 15
+    display: queue
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
 
+  board_preview:
+    source: Announcement
+    sort: title asc
+    limit: 10
+    display: list
+    action: announcement_detail
+    empty: "Board is empty"
+
+  tenant_roots:
+    source: Workspace
+    sort: name asc
+    limit: 10
+    display: list
+    empty: "No workspaces yet"
+
+  activity_strip:
+    display: status_list
+    entries:
+      - title: "Member feed"
+        caption: "Joined members land on the Team Board after domain join"
+        icon: "users"
+        state: positive
+      - title: "Publish desk"
+        caption: "Admins draft and post from Publish"
+        icon: "pen"
+        state: accent
+
 # Second product workspace lowers warehouse density (3 lists / 1 ws → deepen).
 # Admin publish desk vs member reading feed (same entity, different job).
+# WI L: member default landing — aim for ≥5 regions (cap 6).
 workspace announce "Team Board":
   purpose: "Announcement board — post and browse without warehouse list chrome"
   access: persona(admin, member)
@@ -151,12 +197,98 @@ workspace announce "Team Board":
     display: metrics
     aggregate:
       posts: count(Announcement)
+      workspaces: count(Workspace)
     tones:
       posts: accent
+
+  feed_queue:
+    source: Announcement
+    sort: title asc
+    limit: 20
+    display: queue
+    action: announcement_detail
+    empty: "No announcements yet — post one to keep the team informed"
 
   feed:
     source: Announcement
     sort: title asc
+    limit: 15
     display: list
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
+
+  join_context:
+    display: status_list
+    entries:
+      - title: "Verified domain join"
+        caption: "You are reading posts scoped to your company workspace"
+        icon: "globe"
+        state: accent
+      - title: "Stay informed"
+        caption: "Open any post for the full announcement hub"
+        icon: "megaphone"
+        state: positive
+
+  workspace_strip:
+    source: Workspace
+    sort: name asc
+    limit: 8
+    display: list
+    empty: "No workspace context"
+
+  recent_spotlight:
+    source: Announcement
+    sort: title asc
+    limit: 5
+    display: list
+    action: announcement_detail
+    empty: "Nothing spotlighted yet"
+
+# Third product workspace (WI D): admin publish desk vs read-only board.
+workspace publish_desk "Publish":
+  purpose: "Admin publish desk — draft queue and live board pulse before posting"
+  access: persona(admin)
+
+  publish_pulse:
+    source: Announcement
+    display: metrics
+    aggregate:
+      posts: count(Announcement)
+      workspaces: count(Workspace)
+    tones:
+      posts: accent
+
+  draft_queue:
+    source: Announcement
+    sort: title asc
+    limit: 20
+    display: queue
+    action: announcement_detail
+    empty: "No posts yet — create one to brief the team"
+
+  live_board:
+    source: Announcement
+    sort: title asc
+    limit: 15
+    display: list
+    action: announcement_detail
+    empty: "Board empty"
+
+  readiness:
+    display: status_list
+    entries:
+      - title: "Domain verified?"
+        caption: "Confirm DNS-TXT in dazzle auth before inviting joiners"
+        icon: "globe"
+        state: warning
+      - title: "Join policy"
+        caption: "admin_approval keeps the roster intentional"
+        icon: "shield"
+        state: accent
+
+  tenant_roster:
+    source: Workspace
+    sort: name asc
+    limit: 10
+    display: list
+    empty: "No workspaces"
