@@ -64,23 +64,23 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 1006 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
-| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 978 | USED |
+| `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 1009 | USED |
 | `dsl-authoring` skill | skill | — | — | EXEMPT (in-session authoring aid) |
 | `phase-contract` skill | skill | — | — | EXEMPT (execution harness) |
 | `qa-trial` skill | skill | trials (downstream authoring) | 980 | USED |
-| `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 976 | USED |
+| `/fuzz` (boot-stderr integration sweep) | standalone loop | own entrypoint (complementary) | 1009 | USED |
 | `/smells` (code-smell scan; consumes `fitness code`) | standalone loop | own entrypoint (complementary) | 974 | USED |
-| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 976 | USED |
+| `/xproject` (cross-project scan; pulse/sentinel/discovery on siblings) | standalone loop | own entrypoint (complementary) | 1009 | USED |
 | `dazzle rbac` (matrix/prove/verify/routes/report/byte-routes/access-review) | CLI | framework-ux | 1007 | USED |
-| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 982 | USED |
+| `dazzle coverage` (framework-artefact coverage across example apps) | CLI | example-apps | 1009 | USED |
 | `dazzle fragment-audit` (Fragment-rendering coverage per project) | CLI | framework-ux | 1007 | USED |
 | `dazzle process` (propose/save/diagram) | CLI + MCP `process` | example-apps | 982 | USED |
 | `dazzle compliance` (compile/evidence/gaps/privacy/validate-citations) | CLI + MCP `compliance` | example-apps | 1005 | USED |
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1008 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1008 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1008 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1008 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1008 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1009 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1009 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1005 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1005 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1005 | USED |
@@ -88,7 +88,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 998 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 993 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 993 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1008 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1009 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 993 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 979 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 979 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1009 (2026-07-19).** **example-apps + xproject** STALE-clear (fuzz/xproject@976 lag~33): sibling validate AegisMark+cyfuture+pennydreadful exit 0; `dazzle sweep examples` exit 0 coverage **100%** (display 38/38, dsl 23/23); support_tickets boot-stderr sample no known-bug signatures (clean startup/shutdown). residual=0; wi_fleet **0.245≤floor**. Stamps fuzz/xproject/sweep/coverage **USED@1009**. Explore **68/100**. Next STALE: qa capture/login@977 lag~32 or sentinel mutate@978.
 
 > **Cycle 1008 (2026-07-19).** **example-apps** STALE-clear (MCP cluster@975 lag~33): support_tickets MCP conformance summary **481** cases; dsl validate OK + lint 0 errors/17 warnings; policy analyze (User/SlaWaiver unprotected; 4 full coverage) + conflicts **0**; semantics extract + tenancy shared_schema configured; test_intelligence summary 0 runs. residual=0; wi_fleet **0.245≤floor**. Stamps MCP conformance/dsl/policy/semantics/test_intelligence + validate/lint **USED@1008**. Explore **67/100**. Next STALE: xproject/fuzz@976 lag~32 or qa capture@977.
 
