@@ -324,12 +324,23 @@ workspace review_desk "Review Desk":
     display: queue
     empty: "No recent approvals"
 
+  # WI D: timeline of feedback (context family, not list pad)
   recent_feedback:
     source: Feedback
     sort: created_at desc
     limit: 10
-    display: list
+    display: timeline
     empty: "No feedback notes yet"
+
+  # WI D: asset pipeline board for reviewers
+  review_board:
+    source: Asset
+    filter: status = draft or status = review or status = approved
+    display: kanban
+    group_by: status
+    sort: updated_at asc
+    action: asset_edit
+    empty: "No assets in the pipeline"
 
 # Fifth product workspace (WI density D): campaign desk vs bare campaign list.
 workspace campaign_desk "Campaigns":
@@ -354,11 +365,13 @@ workspace campaign_desk "Campaigns":
     display: queue
     empty: "No active campaigns"
 
+  # WI D: kanban by campaign status (not list pad)
   all_campaigns:
     source: Campaign
     sort: name asc
     limit: 25
-    display: list
+    display: kanban
+    group_by: status
     empty: "No campaigns yet"
 
   brand_context:
@@ -366,6 +379,15 @@ workspace campaign_desk "Campaigns":
     sort: name asc
     display: grid
     empty: "No brands"
+
+  # WI D: chart of campaign load
+  campaign_mix:
+    source: Campaign
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Campaign)
+    empty: "No campaigns yet"
 
 # Sixth product workspace (WI density D): feedback trail desk.
 workspace feedback_desk "Feedback":
@@ -390,14 +412,23 @@ workspace feedback_desk "Feedback":
     display: queue
     empty: "No feedback yet"
 
+  # WI D: grid of assets in review (not list pad)
   assets_in_review:
     source: Asset
     filter: status = review
     sort: updated_at asc
     limit: 15
-    display: list
+    display: grid
     action: asset_edit
     empty: "Nothing in review"
+
+  # WI D: timeline of notes
+  note_timeline:
+    source: Feedback
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No feedback yet"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
