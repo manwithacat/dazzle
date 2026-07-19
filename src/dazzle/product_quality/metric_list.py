@@ -1,13 +1,17 @@
 """Metric vs sibling-list residual — F10 / #1632 / metric_current_user_lie.
 
-When a persona home workspace has ``display: metrics`` aggregates that bind
-``current_user``, and a sibling list/queue/kanban/timeline region for the same
-persona has seed hits, product_quality flags residual. Agents must not trust
-KPI tiles over lists (aggregate materialization can disagree at runtime).
+Two signals (static analysis only):
 
-Static analysis only — does not execute the running app. Residual means
-"trust order is lists/stills first; metrics last" when the footgun pattern
-is present with seeded desks.
+1. **risk** — metrics aggregates bind ``current_user`` and a sibling list has
+   seed hits. OBSERVE: trust lists/stills over KPI tiles (runtime materialization
+   can still lie even when seed-level metric filters would match).
+
+2. **residual** — same pattern **and** every ``current_user`` aggregate tile
+   scores 0 seed hits while the sibling list has hits (seed-level metric/list
+   disagreement). Counts toward product_quality ``residual_total``.
+
+Risk alone does not thrash the improve residual loop when desks are correctly
+seeded for both KPI filters and lists.
 """
 
 from __future__ import annotations
@@ -37,6 +41,11 @@ _AGG_CURRENT_USER_RE = re.compile(r"\bcurrent_user\b")
 _COUNT_BIND_RE = re.compile(
     r"(assigned_to|assigned_to_id|created_by|submitted_by|reported_by_id|"
     r"owner|assigned_tester_id|tester_id|requester)\s*=\s*current_user",
+    re.I,
+)
+# count(Entity where … current_user …)
+_COUNT_EXPR_RE = re.compile(
+    r"count\s*\(\s*(\w+)\s+where\s+([^)]+)\)",
     re.I,
 )
 
@@ -73,7 +82,9 @@ class MetricListPair:
     metric_region: str
     list_region: str
     list_seed_hits: int
+    metric_seed_hits: int
     residual: bool
+    risk: bool
     reason: str
 
 
@@ -88,8 +99,16 @@ class MetricListHome:
         return any(p.residual for p in self.pairs)
 
     @property
+    def risk(self) -> bool:
+        return any(p.risk for p in self.pairs)
+
+    @property
     def residual_reasons(self) -> list[str]:
         return [f"{p.metric_region}/{p.list_region}:{p.reason}" for p in self.pairs if p.residual]
+
+    @property
+    def risk_reasons(self) -> list[str]:
+        return [f"{p.metric_region}/{p.list_region}:{p.reason}" for p in self.pairs if p.risk]
 
 
 def _parse_regions_rich(body: str) -> list[dict[str, str]]:
@@ -144,9 +163,6 @@ def _metrics_use_current_user(reg: dict[str, str]) -> bool:
     if reg.get("display") != "metrics":
         return False
     block = reg.get("block", "")
-    if "aggregate:" not in block and "aggregate :" not in block:
-        # still allow metrics without aggregate keyword if block has current_user
-        return bool(_AGG_CURRENT_USER_RE.search(block))
     return bool(_AGG_CURRENT_USER_RE.search(block))
 
 
@@ -154,7 +170,6 @@ def _is_list_like(reg: dict[str, str]) -> bool:
     display = reg.get("display") or ""
     if display in _LIST_DISPLAYS:
         return True
-    # Regions with a filter + source but no display still act as lists
     return bool(reg.get("source") and reg.get("filter") and display != "metrics")
 
 
@@ -185,16 +200,58 @@ def _list_seed_hits(
     return _count_seed_hits(rows, bind_field=bind_field, user_id=uid, status=status)
 
 
+def _metric_seed_hits(
+    reg: dict[str, str],
+    *,
+    uid: str | None,
+    seed: Path | None,
+) -> int:
+    """Max seed hits across current_user count() tiles in a metrics region.
+
+    Returns 0 when no countable current_user tiles or no seed rows match.
+    """
+    if not uid or seed is None:
+        return 0
+    block = reg.get("block", "")
+    best = 0
+    found_tile = False
+    for m in _COUNT_EXPR_RE.finditer(block):
+        entity, where = m.group(1), m.group(2)
+        if "current_user" not in where:
+            continue
+        bind_m = _COUNT_BIND_RE.search(where) or _CURRENT_USER_RE.search(where)
+        if not bind_m:
+            continue
+        found_tile = True
+        bind_field = bind_m.group(1)
+        status_m = _STATUS_RE.search(where)
+        status = status_m.group(1) if status_m else None
+        rows = _load_jsonl(seed / f"{entity}.jsonl")
+        if not rows:
+            continue
+        hits = _count_seed_hits(rows, bind_field=bind_field, user_id=uid, status=status)
+        best = max(best, hits)
+    if not found_tile:
+        # Fallback: region source + any current_user in block without parseable count()
+        source = reg.get("source") or ""
+        if source:
+            rows = _load_jsonl(seed / f"{source}.jsonl")
+            bind_m = _COUNT_BIND_RE.search(block) or _CURRENT_USER_RE.search(block)
+            if rows and bind_m:
+                best = _count_seed_hits(rows, bind_field=bind_m.group(1), user_id=uid, status=None)
+    return best
+
+
 def score_metric_list(
     app_dir: Path,
     *,
     min_list_hits: int = 1,
 ) -> list[MetricListHome]:
-    """Score metric↔list current_user disagreement risk for one app.
+    """Score metric↔list current_user risk/residual for one app.
 
-    Residual when:
-    - default workspace has a metrics region whose aggregates reference current_user
-    - a sibling list-like region has seed hits ≥ min_list_hits for the persona
+    * **risk** when metrics use current_user and a sibling list has seed hits.
+    * **residual** when risk holds **and** metric seed hits for those aggregates
+      are 0 (list full, KPI seed-empty) — F10 seed-level disagreement.
     """
     text = _read_dsl(app_dir)
     if not text.strip():
@@ -220,10 +277,25 @@ def score_metric_list(
             continue
 
         for mreg in metric_regs:
+            m_hits = _metric_seed_hits(mreg, uid=uid, seed=seed)
             for lreg in list_regs:
                 hits = _list_seed_hits(lreg, uid=uid, seed=seed)
                 if hits < min_list_hits:
                     continue
+                # residual: list seeded, metric tiles seed-empty (disagreement)
+                is_residual = m_hits < min_list_hits
+                if is_residual:
+                    reason = (
+                        f"metric_current_user_lie: metrics current_user seed_hits={m_hits} "
+                        f"while sibling list {lreg['region']} has seed_hits={hits} "
+                        f"(trust lists/stills over KPI tiles; F10/#1632)"
+                    )
+                else:
+                    reason = (
+                        f"metric_current_user_risk: metrics use current_user "
+                        f"(seed_hits={m_hits}) with sibling list {lreg['region']} "
+                        f"seed_hits={hits} — trust lists/stills over KPI tiles at runtime"
+                    )
                 home.pairs.append(
                     MetricListPair(
                         persona=pid,
@@ -231,12 +303,10 @@ def score_metric_list(
                         metric_region=mreg["region"],
                         list_region=lreg["region"],
                         list_seed_hits=hits,
-                        residual=True,
-                        reason=(
-                            f"metric_current_user_lie: metrics use current_user while "
-                            f"sibling list {lreg['region']} has seed_hits={hits} "
-                            f"(trust lists/stills over KPI tiles; F10/#1632)"
-                        ),
+                        metric_seed_hits=m_hits,
+                        residual=is_residual,
+                        risk=True,
+                        reason=reason,
                     )
                 )
         homes.append(home)

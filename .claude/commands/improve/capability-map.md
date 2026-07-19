@@ -89,8 +89,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1035 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1037 | USED |
 | **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1037 | USED |
-| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1035 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1035 | USED |
+| MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1038 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1038 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1035 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 agent world-model read) | MCP | example-apps + agent DX | 1017 | USED |
 | MCP `db` project-local DATABASE_URL resolve (#1629 G2) | MCP | example-apps + agent DX | 1017 | USED |
@@ -153,6 +153,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+
+> **Cycle 1038 (2026-07-19).** **example-apps** metric_list residual/risk split: seed-level metric-empty residual vs current_user pattern **risk** (OBSERVE, not residual_total). residual_total **0**, risk=2 (simple_task/fieldtest). Stamps product_quality/demo quality **USED@1038**. Explore **93/100**.
 
 > **Cycle 1037 (2026-07-19).** **example-apps** STALE-clear (journey@1016 + story/rhythm/process/discovery/deploy/test-design@1016 lag~21): journey residual=0 (12/12); story list + scope-fidelity advisory; rhythm gaps advisory; discovery report; process propose (3 CRUD skipped); deploy plan (db+storage); test-design coverage-actions. residual=0; wi_fleet **0.185≤floor**. Stamps journey/story/rhythm/process/discovery/deploy/test-design **USED@1037**. Explore **92/100**. Next STALE: qa trial/vision@1017 lag~20; or wi_next=invoice_ops (D); self-audit ~1043; sweep ~1054.
 

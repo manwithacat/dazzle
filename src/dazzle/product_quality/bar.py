@@ -164,32 +164,43 @@ def _stills_payload(stills: list[StillScore]) -> tuple[list[dict[str, Any]], int
     ], residual
 
 
-def _metric_list_payload(homes: list[MetricListHome]) -> tuple[list[dict[str, Any]], int]:
-    """Serialize metric↔list residual; count residual personas (#1632)."""
+def _metric_list_payload(homes: list[MetricListHome]) -> tuple[list[dict[str, Any]], int, int]:
+    """Serialize metric↔list; residual personas + risk personas (#1632).
+
+    Only seed-level metric-empty + list-full counts as residual (force path).
+    Pattern risk (current_user metrics + seeded lists) is reported separately.
+    """
     residual = 0
+    risk = 0
     out: list[dict[str, Any]] = []
     for h in homes:
         if h.residual:
             residual += 1
+        if h.risk:
+            risk += 1
         out.append(
             {
                 "persona": h.persona,
                 "default_workspace": h.default_workspace,
                 "residual": h.residual,
+                "risk": h.risk,
                 "reasons": h.residual_reasons,
+                "risk_reasons": h.risk_reasons,
                 "pairs": [
                     {
                         "metric_region": p.metric_region,
                         "list_region": p.list_region,
                         "list_seed_hits": p.list_seed_hits,
+                        "metric_seed_hits": p.metric_seed_hits,
                         "residual": p.residual,
+                        "risk": p.risk,
                         "reason": p.reason,
                     }
                     for p in h.pairs
                 ],
             }
         )
-    return out, residual
+    return out, residual, risk
 
 
 _SHOWCASE = (
@@ -311,7 +322,7 @@ def _score_targets(
         persona_residual += pr
 
         ml_homes = score_metric_list(tdir, min_list_hits=min_home_hits)
-        ml_payload, mlr = _metric_list_payload(ml_homes)
+        ml_payload, mlr, _ml_risk = _metric_list_payload(ml_homes)
         for row in ml_payload:
             row["app"] = tdir.name
             report.metric_list.append(row)
@@ -397,9 +408,10 @@ def score_status_lines(report: ProductQualityReport) -> list[str]:
         f"residual={ph_res} next={report.next or '-'}"
     )
     ml_res = sum(1 for h in report.metric_list if h.get("residual"))
+    ml_risk = sum(1 for h in report.metric_list if h.get("risk"))
     lines.append(
         f"metric_list apps={len({h.get('app') for h in report.metric_list})} "
-        f"residual={ml_res} next={report.next or '-'}"
+        f"residual={ml_res} risk={ml_risk} next={report.next or '-'}"
     )
     st_res = sum(1 for s in report.stills if s.get("residual"))
     lines.append(f"stills residual={st_res} next={report.next or '-'}")

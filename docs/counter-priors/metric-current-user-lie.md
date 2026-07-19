@@ -59,10 +59,10 @@ Static persona_homes residual can still be 0.
    footgun** until disproven (F10, #1629 G5) — not missing seeds.
 3. Prefer list residual / `live_desk` / `qa capture` for demo bar.
 4. **Machine residual (#1632):** `product_quality` / `dazzle demo quality`
-   flags `metric_list` residual when a persona home has metrics aggregates
-   with `current_user` **and** a sibling list/queue/kanban has seed hits.
-   OBSERVE that residual; do not treat residual=0 persona_homes alone as
-   “KPIs are honest.”
+   report `metric_list risk=` when metrics aggregates use `current_user` and
+   sibling lists have seed hits (trust order still lists → stills → metrics).
+   `metric_list residual=` only when seed-level metric filters score 0 while
+   lists have hits (true disagreement). Risk does not thrash residual_total.
 
 ## Why this matters here
 
