@@ -82,7 +82,7 @@ story ST-019 "Support Agent works the open ticket queue":
 
 story ST-020 "Support Agent picks up a ticket":
   status: accepted
-  narrative_only: true
+  executed_by: surface.ticket_edit
   persona: agent
   trigger: form_submitted
   entities: [Ticket]
@@ -107,7 +107,7 @@ story ST-021 "Support Agent views full ticket detail with comment history":
 
 story ST-022 "Support Agent adds an internal note":
   status: accepted
-  narrative_only: true
+  executed_by: surface.comment_create
   persona: agent
   trigger: form_submitted
   entities: [Comment]
@@ -119,7 +119,7 @@ story ST-022 "Support Agent adds an internal note":
 
 story ST-023 "Support Agent resolves a ticket":
   status: accepted
-  narrative_only: true
+  executed_by: surface.ticket_edit
   persona: agent
   trigger: status_changed
   entities: [Ticket]
@@ -156,6 +156,8 @@ story ST-025 "Customer views their submitted tickets":
     - "Row open hops to the ticket context hub"
 
 story ST-026 "Customer follows up on an existing ticket":
+  status: accepted
+  executed_by: surface.comment_create
   persona: customer
   trigger: form_submitted
   entities: [Comment]
@@ -166,6 +168,8 @@ story ST-026 "Customer follows up on an existing ticket":
     - "Support Agent is notified of the new comment"
 
 story ST-027 "Support Manager reviews team performance":
+  status: accepted
+  executed_by: surface.ticket_list
   persona: manager
   trigger: user_click
   entities: [Ticket, User]
@@ -176,6 +180,8 @@ story ST-027 "Support Manager reviews team performance":
     - "Manager sees the SLA readiness strip and critical / unassigned queues"
 
 story ST-028 "Support Manager reassigns a ticket":
+  status: accepted
+  executed_by: surface.ticket_edit
   persona: manager
   trigger: form_submitted
   entities: [Ticket]
@@ -187,6 +193,8 @@ story ST-028 "Support Manager reassigns a ticket":
     - "Previous assignee is notified of the reassignment"
 
 story ST-029 "Support Manager escalates a critical ticket":
+  status: accepted
+  executed_by: surface.ticket_edit
   persona: manager
   trigger: status_changed
   entities: [Ticket]
@@ -197,6 +205,8 @@ story ST-029 "Support Manager escalates a critical ticket":
     - "All online agents are notified"
 
 story ST-030 "Administrator triages the full ticket queue":
+  status: accepted
+  executed_by: surface.ticket_list
   persona: admin
   trigger: user_click
   entities: [Ticket]
