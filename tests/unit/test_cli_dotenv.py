@@ -36,6 +36,26 @@ class TestLoadProjectDotenv:
         assert "DATABASE_URL" not in loaded
         assert os.environ["DATABASE_URL"] == "postgresql://shell-wins"
 
+    def test_apply_project_infra_urls_overrides_shell(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, clean_env: None
+    ) -> None:
+        """Managed servers must pin the project DB despite shell pollution."""
+        from dazzle.cli.dotenv import apply_project_infra_urls, project_infra_env
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql://invoice_ops")
+        monkeypatch.setenv("REDIS_URL", "redis://shell")
+        (tmp_path / ".env").write_text(
+            "DATABASE_URL=postgresql://support_tickets\nREDIS_URL=redis://project\nOTHER=x\n"
+        )
+        assert project_infra_env(tmp_path) == {
+            "DATABASE_URL": "postgresql://support_tickets",
+            "REDIS_URL": "redis://project",
+        }
+        applied = apply_project_infra_urls(tmp_path)
+        assert set(applied) == {"DATABASE_URL", "REDIS_URL"}
+        assert os.environ["DATABASE_URL"] == "postgresql://support_tickets"
+        assert os.environ["REDIS_URL"] == "redis://project"
+
     def test_strips_quotes_and_export_prefix(self, tmp_path: Path, clean_env: None) -> None:
         (tmp_path / ".env").write_text(
             "export TEST_KEY_814=\"value with spaces\"\nREDIS_URL='redis://host:6379'\n"

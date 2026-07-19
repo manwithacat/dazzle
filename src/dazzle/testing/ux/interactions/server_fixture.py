@@ -181,13 +181,27 @@ def launch_interaction_server(
     # migration queries don't block on phantom transactions. Best-
     # effort; failures swallowed.
     with suppress(Exception):
-        from dazzle.cli.dotenv import load_project_dotenv
+        from dazzle.cli.dotenv import apply_project_infra_urls, load_project_dotenv
         from dazzle.e2e._pg_cleanup import terminate_stale_sessions
 
         load_project_dotenv(project_root)
+        # Managed servers must use the project under test's DB even when the
+        # host shell still holds another example's DATABASE_URL (multi-app
+        # agent hosts / residual exports after invoice_ops work).
+        apply_project_infra_urls(project_root)
         db_url = os.environ.get("DATABASE_URL", "")
         if db_url:
             terminate_stale_sessions(db_url)
+
+    # Ensure parent process has project infra before env.copy() for the child.
+    from dazzle.cli.dotenv import (
+        apply_project_infra_urls,
+        load_project_dotenv,
+        project_infra_env,
+    )
+
+    load_project_dotenv(project_root)
+    apply_project_infra_urls(project_root)
 
     env = os.environ.copy()
     # #1397: the managed verify/test server is inherently single-process. A host
@@ -198,6 +212,8 @@ def launch_interaction_server(
     env["WEB_CONCURRENCY"] = "1"
     if extra_env:
         env.update(extra_env)
+    # Project .env infra always wins for managed serve (even over extra_env).
+    env.update(project_infra_env(project_root))
 
     # start_new_session=True puts the server in its own process group,
     # so SIGTERM reaches uvicorn + any child workers at teardown. Same

@@ -1352,6 +1352,7 @@ def qa_trial(
     from dazzle.agent.executor import PlaywrightExecutor
     from dazzle.agent.missions.trial import build_trial_mission
     from dazzle.agent.observer import PlaywrightObserver
+    from dazzle.cli.dotenv import apply_project_infra_urls, load_project_dotenv
     from dazzle.cli.runtime_impl.ports import read_runtime_test_secret
     from dazzle.cli.utils import load_project_appspec
     from dazzle.qa.trial_report import (
@@ -1363,6 +1364,9 @@ def qa_trial(
     from dazzle.testing.ux.interactions.server_fixture import launch_interaction_server
 
     project_dir = _resolve_project_dir(app)
+    # Project DB always — shell DATABASE_URL from another example must not win.
+    load_project_dotenv(project_dir)
+    apply_project_infra_urls(project_dir)
     trial_path = project_dir / "trial.toml"
 
     if not trial_path.exists():

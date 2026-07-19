@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Fixed
+- **qa trial / managed serve DB pin** — managed interaction servers and
+  `dazzle qa trial` force `DATABASE_URL` / `REDIS_URL` from the project
+  `.env` (`apply_project_infra_urls`) so a shell export from another
+  example (e.g. invoice_ops) cannot seed against the wrong schema
+  (missing `User.role` / false schema-drift aborts).
 - **CI red after #1626/#1630** — mixed-field OR path uses module logger when
   extract is called without logger; validate persona-declared warnings skip
   when app has no personas (framework SystemHealth/admin noise); docs gen
