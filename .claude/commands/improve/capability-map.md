@@ -63,19 +63,19 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1060 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1060 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1032 | USED |
-| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1032 | USED |
+| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1062 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1027 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1037 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1061 | USED |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1036 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1062 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1061 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1037 | USED |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1037 | USED |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1057 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1061 | USED |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1036 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1062 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1060 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
@@ -83,7 +83,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1027 | USED |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1061 | USED |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1031 | USED |
-| `/smells` | HYGIENE | standalone loop | own entrypoint | 1036 | USED |
+| `/smells` | HYGIENE | standalone loop | own entrypoint | 1062 | USED |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1031 | USED |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1060 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1061 | USED |
@@ -91,8 +91,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1057 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1061 | USED |
-| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1030 | USED |
-| MCP `semantics` | HYGIENE | MCP | example-apps | 1030 | USED |
+| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1062 | USED |
+| MCP `semantics` | HYGIENE | MCP | example-apps | 1062 | USED |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1057 | USED |
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1057 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1057 | USED |
@@ -107,6 +107,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1062 (2026-07-19).** **framework-ux HYGIENE dig** — fitness code top30 hotspots;
+> vitality support_tickets 0 islets; qa login designer magic-link OK (design_studio :3948);
+> MCP semantics tenancy shared_schema; test_intelligence summary (KG not init — exercised).
+> budget_consumed 1. Explore **7/100**.
 
 > **Cycle 1061 (2026-07-19).** **test-suite/example-apps HYGIENE dig** — sentinel scan
 > support_tickets (MT/PR/BL findings advisory); coverage **61/61 100%**; sweep examples exit 0
