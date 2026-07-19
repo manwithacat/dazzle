@@ -22,6 +22,7 @@ story ST-002 "Line Manager opens a report career hub":
   trigger: user_click
   entities: [Person, Employment]
   given:
+    - "Manager lands on the my_team desk (reports pulse + employment)"
     - "Manager has list permission on Person for their reports"
   then:
     - "Person hub shows identity, tenure strip, and related employment history"

@@ -33,7 +33,7 @@ persona hr_admin "HR Admin":
 
 persona manager "Line Manager":
   description: "Read own direct reports (current and historical). No salary access."
-  default_workspace: staff_directory
+  default_workspace: my_team
 
 persona finance "Finance":
   description: "Read all salary data + employment history. No manager hierarchy."
@@ -627,6 +627,15 @@ workspace person_detail "Person Detail":
   #     end_field: end_date
   #     label: "{{ role.title }} ({{ department.name }})"
   # ------------------------------------------------
+  career_pulse:
+    source: Employment
+    display: metrics
+    aggregate:
+      employment_rows: count(Employment)
+      salary_rows: count(Salary)
+    tones:
+      employment_rows: accent
+
   employment_history:
     source: Employment
     display: list
@@ -634,6 +643,11 @@ workspace person_detail "Person Detail":
   salary_history:
     source: Salary
     display: list
+
+  reporting_history:
+    source: ManagerLink
+    display: list
+    empty: "No reporting lines on record"
 
 
 # #1626 P0-7: honest name — not a true org *tree* until recursive_tree ships.
@@ -673,6 +687,8 @@ workspace compensation_review "Compensation Review":
     display: metrics
     aggregate:
       active_salaries: count(Salary)
+      people: count(Person)
+      roles: count(Role)
     tones:
       active_salaries: accent
 
@@ -687,6 +703,17 @@ workspace compensation_review "Compensation Review":
   salary_list:
     source: Salary
     display: list
+    empty: "No active salaries"
+
+  role_catalogue:
+    source: Role
+    display: list
+    empty: "No roles defined"
+
+  headcount_context:
+    source: Person
+    display: list
+    empty: "No people on record"
 
 
 workspace time_machine "Time Machine":
@@ -717,3 +744,66 @@ workspace time_machine "Time Machine":
   reporting_lines_snapshot:
     source: ManagerLink
     display: list
+
+
+# Sixth product workspace (WI density D): manager team desk — reports first,
+# not a bare Person warehouse list.
+workspace my_team "My Team":
+  purpose: "Line manager desk — direct reports, roles, and reporting lines"
+  access: persona(manager, hr_admin)
+
+  team_pulse:
+    source: Person
+    display: metrics
+    aggregate:
+      people: count(Person)
+      employment_rows: count(Employment)
+      reporting_lines: count(ManagerLink)
+    tones:
+      people: accent
+
+  reports:
+    source: Person
+    display: list
+    empty: "No people in scope"
+
+  team_employment:
+    source: Employment
+    display: list
+    empty: "No employment rows for your team"
+
+  reporting_lines:
+    source: ManagerLink
+    display: list
+    empty: "No reporting lines yet"
+
+
+# Seventh product workspace (WI density D): HR starters / onboarding desk.
+workspace starters_desk "New Starters":
+  purpose: "HR desk for recent joiners — headcount pulse and onboarding queue"
+  access: persona(hr_admin)
+
+  starter_pulse:
+    source: Person
+    display: metrics
+    aggregate:
+      people: count(Person)
+      employment_rows: count(Employment)
+      open_salaries: count(Salary)
+    tones:
+      people: accent
+
+  recent_people:
+    source: Person
+    display: queue
+    empty: "No people on record"
+
+  employment_queue:
+    source: Employment
+    display: list
+    empty: "No employment rows yet"
+
+  salary_setup:
+    source: Salary
+    display: list
+    empty: "No salary rows yet"
