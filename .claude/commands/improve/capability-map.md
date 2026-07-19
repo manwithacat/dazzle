@@ -41,11 +41,11 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle qa capture` (Tier-2 visual scrape) | CLI | example-apps (visual_tier2) | 977 | USED |
 | `dazzle qa trial` | CLI | trials | 980 | USED |
 | `dazzle qa login` | CLI | (support for qa capture/verify) | 977 | USED |
-| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 973 | USED |
-| `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 981 | USED |
+| `hm gallery interaction probes` (Playwright exclusive/multi-open interaction contracts) | script `hm_gallery_probes.py` + strategy `gallery_probes` | **hm-convergence** | 1006 | USED |
+| `dazzle qa taste-panel` | CLI (metered) + **subscription substitute** `hm_subscription_vision` / visual_smoke | **hm-convergence** + framework-ux | 1006 | USED |
 | `dazzle qa component-vision` (advisory judged read, one HM showcase region) | CLI (metered) / subscription host-Read substitute | **hm-convergence** + framework-ux | 981 | USED |
 | `dazzle qa property-vision` (advisory property page vs family exemplars) | CLI (metered) / subscription host-Read substitute | **hm-convergence** | 981 | USED |
-| **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 973 | USED |
+| **HM hyperpart coherence** (investigate sweep + drain queue) | `hm_pages_vision.py` + `hm_coherence_queue.py` + strategy `hyperpart_coherence` | **hm-convergence** | 1006 | USED |
 | `dazzle deploy plan` (target-agnostic AppSpec→infra inference) | CLI | example-apps (Tier 1) | 985 | USED |
 | MCP `conformance` (summary/cases/gaps) | MCP | example-apps (Tier 1) | 975 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | MCP | example-apps (Tier 1) | 975 | USED |
@@ -59,9 +59,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | `dazzle fitness` CLI (investigate/vitality/clones/code/triage/queue) | CLI | framework-ux | 974 | USED |
 | `dazzle discovery` (coherence/run/report/verify-all-stories) | CLI + MCP | example-apps | 982 | USED |
 | `dazzle composition` (audit/report) | CLI + MCP | framework-ux | 982 | USED |
-| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 973 | USED |
-| `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 973 | USED |
-| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 973 | USED |
+| `dual_lock_queue` / `dual_lock_expand` (HM dual-lock promotion loop) | script + strategy | **hm-convergence** | 1006 | USED |
+| `shadcn_parity` (catalogue gaps → placeholder Hyperparts) | script + strategy | **hm-convergence** | 1006 | USED |
+| **HM zero-floor** (emitter Tailwind utils + residual Dazzle design CSS == 0; was reservoir metric) | script + gate | **hm-convergence** | 1006 | USED |
 | `dazzle pitch` (review/update/enrich/…) | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dazzle sweep` / `nightly` | CLI | test-suite (nightly = mutation backstop) | 978 | USED |
@@ -79,8 +79,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 975 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 975 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 975 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1005 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1005 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1006 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1006 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1005 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1005 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1005 | USED |
@@ -88,7 +88,7 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 998 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 993 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 993 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1005 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1006 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 993 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 979 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 979 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1006 (2026-07-19).** **hm-convergence** STALE-clear (HM cluster@973 lag~33): gallery probes **6/6 PASS**; dual_lock queue **0**; shadcn gaps **0**; coherence queue=0 mean=8.7; zero-floor **GREEN** (tw=0 css=0); `hm_visual_smoke --dazzle-emit` taste substitute. residual=0; wi_fleet **0.245≤floor**. Stamps HM gallery/dual_lock/shadcn/coherence/zero-floor/visual_smoke + CodeQL/inbox/probes **USED@1006**. Explore **65/100**. Product STALE set largely cleared (next lag recompute at sweep ~1013).
 
 > **Cycle 1005 (2026-07-19).** **example-apps** STALE-clear (prove/compliance@969 lag~36; representation/scaffold@970 lag~35; pulse@970): support_tickets `prove story` **18/18**, `prove representation` OK; `compliance gaps` 10 tier-3; `compliance privacy` regenerated; `representation patterns` OK; scaffold CLI present; `pulse radar` **68%**. residual=0; wi_fleet **0.245≤floor**. Stamps prove/compliance/representation/scaffold/pulse + CodeQL/inbox/probes **USED@1005**. Explore **64/100**. Remaining STALE: HM gallery/dual_lock/shadcn/zero-floor/coherence@973 lag~32.
 
