@@ -73,7 +73,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1037 | USED |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1037 | USED |
-| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1026 | USED |
+| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1057 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1033 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1036 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
@@ -89,13 +89,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1031 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1029 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
-| `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1026 | USED |
+| `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1057 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1030 | USED |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1030 | USED |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1030 | USED |
-| `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1026 | USED |
-| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1026 | USED |
-| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1026 | USED |
+| `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1057 | USED |
+| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1057 | USED |
+| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1057 | USED |
 | **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1054 | USED |
 | **GitHub inbox** | DRIVER | script + strategies | **driver (Step 0c3)** | 1054 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
@@ -107,6 +107,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1057 (2026-07-19).** **example-apps HYGIENE STALE dig** (COGNITION STALE cleared recently):
+> support_tickets `prove story` 18+ OK; `prove representation` OK; representation patterns+classify;
+> compliance gaps 10 tier-3; pulse radar 68%. scaffold CLI exercised. No WI D. budget_consumed 1.
+> Explore **3/100**.
 
 > **Cycle 1056 (2026-07-19).** **example-apps COGNITION dig** — domain extract quality on
 > long SPECs: Core Entities headers + expanded deny; fieldtest_hub nouns **41→7**
