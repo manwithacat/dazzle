@@ -46,11 +46,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1056 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1055 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1055 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1055 | USED |
-| MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1039 | USED |
-| MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1039 | USED |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1039 | USED |
-| `qa-trial` skill | COGNITION | skill | trials | 1039 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1059 | USED |
+| MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1059 | USED |
+| MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1059 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1059 | USED |
+| `qa-trial` skill | COGNITION | skill | trials | 1059 | USED |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1054 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1056 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1054 | USED |
@@ -107,6 +107,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1059 (2026-07-19).** **example-apps COGNITION dig** — demo_world + db + qa trial
+> inventory: simple_task serve :3945, reset-and-load 8 fixtures, demo_world residual=0,
+> db status Task×8 User×3; support_tickets trial-inventory + trial-coverage static 19 targets.
+> budget_consumed 1. Explore **4/100**.
 
 > **Cycle 1058 (2026-07-19).** **self-audit** (cadence ≥15 since 1043): window `f23faac93..HEAD`.
 > Sampled 5: domain research, Core Entities filter, STALE policy, cimonitor auditspec, simple_task AGENT_DOMAIN — **5 CLEAN / 0 DISCREPANCY**. budget_consumed 0. Explore **3/100**. Next self-audit ~**1073**.
