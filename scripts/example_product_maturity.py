@@ -14,11 +14,13 @@ or HM purity. A product-mature app has:
 **Warehouse Index (WI)** — continuous 0–1 objective (higher = more warehouse)
 agents minimize when discrete residual is already 0. Components:
 
-* **D** ``warehouse_density`` — list surfaces vs product workspaces
+* **D** ``warehouse_density`` — product list surfaces vs product workspaces
+  (platform ``_admin_*`` / ``*_admin`` shells excluded — same spirit as
+  product-workspace counting)
 * **N** ``nav_list_share`` — persona nav list-link share
 * **L** landing thinness — inverse of landing region richness (cap 6)
 * **J** job thinness — unbound product stories / uncovered personas
-* **G** graph poverty — list surfaces without open-via on multi-entity apps
+* **G** graph poverty — product list surfaces without open-via
 
 ``WI = 0.30·D + 0.25·N + 0.20·L + 0.15·J + 0.10·G``
 
@@ -145,6 +147,28 @@ def _is_platform_workspace(name: str) -> bool:
         "admin",
         "platform",
         "settings",
+    }
+
+
+def _is_platform_surface(name: str) -> bool:
+    """Framework/platform list shells — not product warehouse lists.
+
+    Injected admin surfaces (``_admin_health``, ``auditentry_admin``, …)
+    must not inflate D/G: product open-via coverage is the graph signal.
+    """
+    n = (name or "").lower()
+    if not n:
+        return False
+    if n.startswith("_") or n.startswith("platform_") or n.startswith("admin_"):
+        return True
+    if n.endswith("_admin") or n.endswith("_platform"):
+        return True
+    return n in {
+        "admin",
+        "platform",
+        "settings",
+        "health",
+        "deploys",
     }
 
 
@@ -346,6 +370,9 @@ def score_app(app_dir: Path) -> AppProductMaturity:
     crud_n = 0
     open_via_lists = 0
     for s in surfaces:
+        sname = str(getattr(s, "name", "") or "")
+        if _is_platform_surface(sname):
+            continue  # platform/admin shells — not product D/G numerator
         mode = _mode_str(s)
         if "list" in mode:
             list_n += 1

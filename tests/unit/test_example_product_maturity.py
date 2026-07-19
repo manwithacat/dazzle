@@ -37,6 +37,19 @@ def test_support_tickets_is_structurally_ok(pm) -> None:
     assert row.tier == "ok"
     assert row.warehouse_density <= 0.70
     assert row.nav_list_share <= 0.70
+    # Product lists only (platform _admin_* / *\_admin shells excluded).
+    assert row.list_surfaces == 3
+    assert row.open_via_lists == 3
+    assert row.wi_G == 0.0
+
+
+def test_platform_surface_exclusion(pm) -> None:
+    """Framework admin list shells must not inflate D/G warehouse counts."""
+    assert pm._is_platform_surface("_admin_health")
+    assert pm._is_platform_surface("auditentry_admin")
+    assert pm._is_platform_surface("jobrun_admin")
+    assert not pm._is_platform_surface("ticket_list")
+    assert not pm._is_platform_surface("person_list")
 
 
 def test_invoice_ops_job_desks(pm) -> None:

@@ -1,18 +1,18 @@
-story ST-013 "User creates a new User":
+story ST-013 "Manager invites a new team User":
   status: accepted
-  narrative_only: true
-  persona: customer
+  executed_by: surface.user_create
+  persona: manager
   trigger: form_submitted
   entities: [User]
   given:
-    - "User has permission to create User"
+    - "Manager has permission to create User"
   then:
     - "New User is saved to database"
-    - "User sees confirmation message"
+    - "Manager sees confirmation message"
 
 story ST-014 "User creates a new Support Ticket":
   status: accepted
-  narrative_only: true
+  executed_by: surface.ticket_create
   persona: customer
   trigger: form_submitted
   entities: [Ticket]
@@ -22,32 +22,34 @@ story ST-014 "User creates a new Support Ticket":
     - "New Ticket is saved to database"
     - "User sees confirmation message"
 
-story ST-015 "User changes Ticket from open to in_progress":
+story ST-015 "Agent moves Ticket from open to in_progress":
   status: accepted
-  narrative_only: true
-  persona: customer
+  executed_by: surface.ticket_edit
+  persona: agent
   trigger: status_changed
   entities: [Ticket]
   given:
     - "Ticket.status is 'open'"
+    - "Agent has update permission on Ticket"
   then:
     - "Ticket.status becomes 'in_progress'"
 
-story ST-016 "User changes Ticket from in_progress to resolved":
+story ST-016 "Agent moves Ticket from in_progress to resolved":
   status: accepted
-  narrative_only: true
-  persona: customer
+  executed_by: surface.ticket_edit
+  persona: agent
   trigger: status_changed
   entities: [Ticket]
   given:
     - "Ticket.status is 'in_progress'"
+    - "Resolution is provided"
   then:
     - "Ticket.status becomes 'resolved'"
 
-story ST-017 "User changes Ticket from in_progress to open":
+story ST-017 "Agent reopens Ticket from in_progress to open":
   status: accepted
-  narrative_only: true
-  persona: customer
+  executed_by: surface.ticket_edit
+  persona: agent
   trigger: status_changed
   entities: [Ticket]
   given:
@@ -57,7 +59,7 @@ story ST-017 "User changes Ticket from in_progress to open":
 
 story ST-018 "User creates a new Comment":
   status: accepted
-  narrative_only: true
+  executed_by: surface.comment_create
   persona: customer
   trigger: form_submitted
   entities: [Comment]
