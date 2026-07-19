@@ -1,6 +1,14 @@
 ## [Unreleased]
 
 ### Fixed
+- **#1626 demo fleet stills + desk chrome** — (1) queue rows show domain
+  meta (amount / supplier / …) not title-only cards; (2) child entities
+  (`*Comment`, line items, attachments) no longer compete as workspace
+  header “New …” CTAs; (3) `reset-and-load` prefers `dsl/seeds/demo_data`
+  story seeds over faker `.dazzle/demo_data`, keeps multi-tenant User rows
+  that carry `tenant_id` (auth mirror cannot placeholder refs), and seed
+  upserts on id collision; (4) recapture harness + invoice desk stills
+  above empty-hero floors (`product_quality residual_total=0`).
 - **#1628 MCP multi-session lock** — agent hosts spawn a new stdio process
   per session; exclusive `.dazzle/mcp.lock` made the monorepo a machine-wide
   mutex and the second client only saw opaque handshake failure. Default is

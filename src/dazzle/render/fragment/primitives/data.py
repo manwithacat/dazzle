@@ -792,6 +792,14 @@ class QueueDateColumn:
 
 
 @dataclass(frozen=True, slots=True)
+class QueueMetaColumn:
+    """Domain density line on a queue row (amount, supplier, etc.) — #1626."""
+
+    label: str
+    value: str
+
+
+@dataclass(frozen=True, slots=True)
 class QueueRow:
     """Single row in a `QueueRegion`.
 
@@ -800,6 +808,7 @@ class QueueRow:
       - title is the resolved display label (display_key + _display fallback)
       - badges are the per-row badge columns (rendered next to title)
       - attention_level/message drive the optional attention accent + line
+      - meta_columns render domain density (amount / supplier / …)
       - date_columns render below as `Label: timeago_str` secondaries
       - transitions are evaluated against current_status to decide which buttons render
     """
@@ -808,6 +817,7 @@ class QueueRow:
     title: str
     current_status: str = ""
     badges: tuple[QueueBadgeColumn, ...] = ()
+    meta_columns: tuple[QueueMetaColumn, ...] = ()
     date_columns: tuple[QueueDateColumn, ...] = ()
     attention_level: str = ""
     attention_message: str = ""

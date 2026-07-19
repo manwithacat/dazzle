@@ -78,3 +78,33 @@ def test_inferred_still_new_invoice_without_entity_title() -> None:
         list_surfaces_by_entity={"Invoice": list_s},
     )
     assert actions[0]["label"] == "New Invoice"
+
+
+def test_child_comment_entity_not_workspace_primary_cta() -> None:
+    """#1626 — New Task Comment must not peer with New Task on the desk."""
+    ws = ir.WorkspaceSpec(
+        name="my_work",
+        regions=[
+            ir.WorkspaceRegion(name="open", source="Task"),
+            ir.WorkspaceRegion(name="notes", source="TaskComment"),
+        ],
+    )
+    task_create = ir.SurfaceSpec(
+        name="task_create", mode=ir.SurfaceMode.CREATE, entity_ref="Task", title="New Task"
+    )
+    comment_create = ir.SurfaceSpec(
+        name="task_comment_create",
+        mode=ir.SurfaceMode.CREATE,
+        entity_ref="TaskComment",
+        title="New Task Comment",
+    )
+    actions = _build_workspace_primary_action_candidates(
+        ws,
+        app_prefix="/app",
+        create_surfaces_by_entity={"Task": task_create, "TaskComment": comment_create},
+        list_surfaces_by_entity={},
+        entity_titles={"Task": "Task", "TaskComment": "Task Comment"},
+    )
+    labels = [a["label"] for a in actions]
+    assert labels == ["New Task"]
+    assert not any("Comment" in lbl for lbl in labels)

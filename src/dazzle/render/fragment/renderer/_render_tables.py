@@ -774,7 +774,13 @@ class _RenderTablesMixin:
         rows_html: list[str] = []
         for row in q.rows:
             badges_html = "".join(_render_status_badge_html(b.value) for b in row.badges)
-            date_html = "".join(
+            meta_html = "".join(
+                f'<span class="dz-queue-row-meta">'
+                f"{ctx.escape(m.label)}: {ctx.escape(m.value)}"
+                f"</span>"
+                for m in getattr(row, "meta_columns", ()) or ()
+            )
+            date_html = meta_html + "".join(
                 f'<span class="dz-queue-row-date">'
                 f"{ctx.escape(d.label)}: {ctx.escape(d.timeago_str)}"
                 f"</span>"

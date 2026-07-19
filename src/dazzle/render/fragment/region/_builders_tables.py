@@ -37,6 +37,7 @@ from dazzle.render.fragment import (
     PivotTableRegion,
     QueueBadgeColumn,
     QueueDateColumn,
+    QueueMetaColumn,
     QueueMetric,
     QueueRegion,
     QueueRow,
@@ -58,6 +59,69 @@ from dazzle.render.fragment.region.workspace_card_bodies import (
     _eval_row_condition,
     _render_row_action_button,
 )
+
+# Cap queue meta density lines so rows stay scannable (#1626).
+_QUEUE_META_MAX = 3
+
+
+def _format_queue_meta_value(raw: Any, col: dict[str, Any]) -> str:
+    """Humanise a non-title queue column value for the meta line."""
+    col_type = str(col.get("type") or "").lower()
+    fmt = str(col.get("format") or "").lower()
+    if col_type in ("currency", "money") or "currency" in fmt:
+        try:
+            num = float(raw)
+            code = fmt.split(":", 1)[1].upper() if ":" in fmt else ""
+            return f"{code} {num:,.2f}".strip() if code else f"{num:,.2f}"
+        except (TypeError, ValueError):
+            return str(raw).strip()
+    if col_type in ("number", "decimal", "float", "int"):
+        try:
+            num = float(raw)
+            return f"{int(num):,}" if num == int(num) else f"{num:,.2f}"
+        except (TypeError, ValueError):
+            return str(raw).strip()
+    text = str(raw).strip()
+    return text[:45] + "…" if len(text) > 48 else text
+
+
+def _queue_meta_raw(item: dict[str, Any], key: str) -> Any:
+    """Prefer FK-resolved ``*_display`` then the raw field."""
+    display_attr = f"{key}_display"
+    raw = item.get(display_attr) if display_attr in item else None
+    if raw is not None and str(raw).strip():
+        return raw
+    raw = item.get(key)
+    if raw is not None and str(raw).strip():
+        return raw
+    return None
+
+
+def _queue_row_meta_columns(
+    item: dict[str, Any],
+    columns: Any,
+    *,
+    display_key: str,
+    queue_status_field: str,
+) -> list[QueueMetaColumn]:
+    """Domain density lines for one queue row (amount / supplier / …)."""
+    meta: list[QueueMetaColumn] = []
+    skip_types = frozenset({"badge", "date"})
+    for col in columns or []:
+        if len(meta) >= _QUEUE_META_MAX or not isinstance(col, dict):
+            continue
+        key = str(col.get("key") or "")
+        if not key or key == display_key or key == queue_status_field:
+            continue
+        if str(col.get("type") or "") in skip_types:
+            continue
+        raw = _queue_meta_raw(item, key)
+        if raw is None:
+            continue
+        value_str = _format_queue_meta_value(raw, col)
+        if value_str:
+            meta.append(QueueMetaColumn(label=str(col.get("label") or key), value=value_str))
+    return meta
 
 
 def _outlier_badge(flag: str) -> RawHTML:
@@ -493,6 +557,13 @@ class _BuildersTablesMixin:
                     )
                 )
 
+            meta_columns = _queue_row_meta_columns(
+                item,
+                columns,
+                display_key=display_key,
+                queue_status_field=queue_status_field,
+            )
+
             # Attention.
             attn_raw = item.get("_attention") if hasattr(item, "get") else None
             attn_level = ""
@@ -514,6 +585,7 @@ class _BuildersTablesMixin:
                     title=row_title,
                     current_status=current_status,
                     badges=tuple(badges),
+                    meta_columns=tuple(meta_columns),
                     date_columns=tuple(date_columns),
                     attention_level=attn_level,
                     attention_message=attn_message,

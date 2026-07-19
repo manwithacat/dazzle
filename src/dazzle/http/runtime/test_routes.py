@@ -204,6 +204,28 @@ async def _create_one_fixture(
             _mirror_seeded_tenant_to_org(deps, data)
         return fixture.id, row
     except Exception as e:
+        # Idempotent re-seed: same id after partial reset / concurrent capture
+        # (#1626 fleet recapture). Prefer update over fail when the row exists.
+        msg = str(e).lower()
+        if "already exists" in msg and data.get("id"):
+            try:
+                updated = await repo.update(data["id"], data)
+                row = (
+                    updated.model_dump()
+                    if updated is not None and hasattr(updated, "model_dump")
+                    else data
+                )
+                if _entity_is_tenant_root(deps, entity_name):
+                    _mirror_seeded_tenant_to_org(deps, data)
+                return fixture.id, row
+            except Exception as update_exc:
+                logger.error(
+                    "Failed to upsert %s %s: create=%s update=%s",
+                    entity_name,
+                    data.get("id"),
+                    e,
+                    update_exc,
+                )
         logger.error("Failed to create %s: %s", entity_name, e)
         _rollback_created(deps, created_ids)
         raise HTTPException(

@@ -16,6 +16,7 @@ import asyncio
 import inspect
 import json
 import logging
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -2066,6 +2067,53 @@ def _make_workspace_handler(
     return handler
 
 
+# Child / satellite entities that must not compete as workspace header CTAs
+# (#1626 re-eval: "New Task Comment" as peer primary). Comments, line items,
+# attachments, and similar are created in-context of a parent record.
+_CHILD_ENTITY_CTA_RE = re.compile(
+    r"(Comment|LineItem|Line_Item|Attachment|Note|Message|AuditEntry|"
+    r"AuditEvent|History|Activity|Reply)s?$",
+    re.IGNORECASE,
+)
+
+
+def _is_child_entity_cta(entity_ref: str, entity_title: str = "") -> bool:
+    """True when this entity should not be a workspace-header primary create."""
+    if _CHILD_ENTITY_CTA_RE.search(entity_ref or ""):
+        return True
+    title = (entity_title or "").strip()
+    if title and _CHILD_ENTITY_CTA_RE.search(title.replace(" ", "")):
+        return True
+    # Spaced titles: "Task Comment", "Invoice Line Item"
+    if re.search(
+        r"\b(Comment|Attachment|Note|Message|Line Item|Audit Entry)s?\b",
+        title,
+        re.IGNORECASE,
+    ):
+        return True
+    return False
+
+
+def _entity_title_for_create_cta(
+    entity_ref: str,
+    create_surface: Any,
+    titles: dict[str, str],
+) -> str:
+    """Resolve commercial singular title for a workspace New X CTA."""
+    ent_title = (titles.get(entity_ref) or "").strip()
+    if ent_title and ent_title != entity_ref:
+        return ent_title
+    create_title = (getattr(create_surface, "title", "") or "").strip()
+    lower = create_title.lower()
+    if lower.startswith("create "):
+        return create_title[7:].strip() or entity_ref.replace("_", " ").title()
+    if lower.startswith("new "):
+        return create_title[4:].strip() or entity_ref.replace("_", " ").title()
+    if create_title:
+        return create_title
+    return entity_ref.replace("_", " ").title()
+
+
 def _build_workspace_primary_action_candidates(
     workspace: ir.WorkspaceSpec,
     *,
@@ -2086,16 +2134,8 @@ def _build_workspace_primary_action_candidates(
     title → humanised entity name. **Never** the list-surface title (e.g.
     "Contact List" produced the wrong CTA "New Contact List").
 
-    Args:
-        workspace: WorkspaceSpec IR node.
-        app_prefix: Route prefix (e.g. ``/app``).
-        create_surfaces_by_entity: Map entity_ref → CREATE SurfaceSpec.
-        list_surfaces_by_entity: Map entity_ref → LIST SurfaceSpec (unused
-            for labels; kept for call-site compatibility).
-        entity_titles: Map entity_ref → DSL entity title for CTA labels.
-
-    Returns:
-        List of action dicts: ``{entity, surface, label, route}``.
+    Child entities (comments, line items, …) are omitted so desks keep a
+    single commercial primary (#1626).
     """
     _ = list_surfaces_by_entity  # reserved; labels must not use list surface title
     titles = entity_titles or {}
@@ -2113,27 +2153,15 @@ def _build_workspace_primary_action_candidates(
             create_surface = create_surfaces_by_entity.get(src)
             if not create_surface:
                 continue
-            entity_slug = app_paths.entity_slug(src)
-            # Prefer entity display title ("Contact") — never list surface title
-            # ("Contact List" → wrong CTA "New Contact List"; TR-57 / #1487).
-            ent_title = (titles.get(src) or "").strip()
-            if not ent_title or ent_title == src:
-                create_title = (getattr(create_surface, "title", "") or "").strip()
-                if create_title.lower().startswith("create "):
-                    ent_title = create_title[7:].strip()
-                elif create_title.lower().startswith("new "):
-                    ent_title = create_title[4:].strip()
-                elif create_title:
-                    ent_title = create_title
-                else:
-                    ent_title = src.replace("_", " ").title()
-            label = f"New {ent_title}"
+            ent_title = _entity_title_for_create_cta(src, create_surface, titles)
+            if _is_child_entity_cta(src, ent_title):
+                continue
             actions.append(
                 {
                     "entity": src,
                     "surface": create_surface.name,
-                    "label": label,
-                    "route": app_paths.create_path(app_prefix, entity_slug),
+                    "label": f"New {ent_title}",
+                    "route": app_paths.create_path(app_prefix, app_paths.entity_slug(src)),
                 }
             )
     return actions

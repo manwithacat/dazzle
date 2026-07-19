@@ -138,30 +138,60 @@ def resolve_serve_binding(project_root: Path) -> dict[str, Any]:
     }
 
 
+def _dir_has_seed_files(path: Path) -> bool:
+    """True when *path* holds loadable Entity.jsonl / Entity.csv (not only blueprint)."""
+    if not path.is_dir():
+        return False
+    return any(path.glob("*.jsonl")) or any(path.glob("*.csv"))
+
+
 def find_demo_data_dir(project_root: Path) -> Path | None:
-    """Same precedence as ``dazzle demo load``."""
+    """Resolve seed directory for closed-loop ``reset-and-load``.
+
+    Prefer **authored story seeds** (STABLE assignment UUIDs) over generated
+    faker dumps under ``.dazzle/demo_data/`` (#1626 recapture). Faker CSVs use
+    random User ids that 400 on seed and leave persona homes empty.
+
+    Precedence:
+    1. ``dsl/seeds/demo_data/`` — assignment-aware story spine
+    2. ``demo_data/`` — project-root authored seeds
+    3. ``.dazzle/demo_data/`` — generated (``dazzle demo generate``) last resort
+
+    Directories that only contain ``blueprint.json`` (no entity rows) are
+    skipped so we fall through to generated data when present.
+    """
     for candidate in (
+        project_root / "dsl" / "seeds" / "demo_data",
         project_root / "demo_data",
         project_root / ".dazzle" / "demo_data",
-        project_root / "dsl" / "seeds" / "demo_data",
     ):
-        if candidate.is_dir():
+        if _dir_has_seed_files(candidate):
             return candidate
     return None
 
 
 def _is_stable_persona_user_fixture(entity_name: str, row: dict[str, Any]) -> bool:
-    """True when this row is a domain User at a STABLE principal id (#1630).
+    """True when this domain User seed is redundant with reset's auth mirror.
 
-    ``/__test__/reset`` already mirrors auth users into domain User at those
-    ids; re-seeding them 400s with \"already exists\".
+    ``/__test__/reset`` mirrors auth principals into domain User when the entity
+    is mirrorable (scalar-only required fields). Re-seeding those 400s with
+    \"already exists\" (#1630).
+
+    Multi-tenant apps require ``tenant_id`` (a ref) on User — the mirror cannot
+    placeholder refs, so domain User stays empty after reset. Keep those seed
+    rows so ``submitted_by`` / assignment FKs resolve (#1626 invoice desks).
     """
     if entity_name != "User":
         return False
     row_id = row.get("id")
     if not isinstance(row_id, str) or not row_id:
         return False
-    return row_id in STABLE_PERSONA_USER_IDS.values()
+    if row_id not in STABLE_PERSONA_USER_IDS.values():
+        return False
+    # Tenant-scoped User seeds are load-bearing; do not skip.
+    if row.get("tenant_id"):
+        return False
+    return True
 
 
 def jsonl_dir_to_fixtures(
