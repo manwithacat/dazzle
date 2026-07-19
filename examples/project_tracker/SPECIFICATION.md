@@ -46,6 +46,8 @@ the **Project Board**. Both places stay available to everyone with access.
   and status mix chart.
 - **People** — admin/manager team pulse: roster grid, unassigned queue,
   discussion timeline, and open-work load chart.
+- **Review** — admin/manager review desk: review metrics, review queue,
+  pipeline board, comment trail, and open status chart.
 
 ## How work flows through it
 
@@ -72,4 +74,4 @@ byte-serving route to that boundary, so no new route can stream attachment
 bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:cdc40ff554efd000887f0540b08efafe5c1cd36532a21c4a69610d365f20ea82 -->
+<!-- dazzle-spec-brief: sha256:8c30265ad8cc72c7750c70ed1ffc0093d4560e4117d10b243a6fa126f3aa343a -->

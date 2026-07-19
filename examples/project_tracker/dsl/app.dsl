@@ -43,6 +43,8 @@ nav admin_nav:
     files_desk
     my_tasks
     people_desk
+    review_ops
+
 
 nav manager_nav:
   group "Manage":
@@ -53,6 +55,8 @@ nav manager_nav:
     files_desk
     my_tasks
     people_desk
+    review_ops
+
 
 nav member_nav:
   group "My work":
@@ -591,6 +595,61 @@ workspace people_desk "People":
 
   # WI D: chart family — open work status mix
   load_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks"
+
+
+# Eighth product desk (WI D): 5 lists floor dens ~0.42 with 7 full desks — need 8.
+workspace review_ops "Review":
+  purpose: "Review desk — work waiting on review and recent discussion"
+  access: persona(admin, manager)
+
+  review_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      in_review: count(Task where status = review)
+      open: count(Task where status != done)
+      comments: count(Comment)
+    tones:
+      in_review: warning
+      open: accent
+
+  # WI D: queue family — review backlog first
+  review_queue:
+    source: Task
+    filter: status = review
+    sort: updated_at asc
+    limit: 20
+    display: queue
+    action: task_edit
+    empty: "Nothing awaiting review"
+
+  # WI D: kanban family — review pipeline
+  review_board:
+    source: Task
+    filter: status = review or status = in_progress or status = done
+    display: kanban
+    group_by: status
+    sort: priority desc
+    action: task_detail
+    empty: "No tasks in the review pipeline"
+
+  # WI D: context family — recent comments trail
+  comment_trail:
+    source: Comment
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No comments yet"
+
+  # WI D: chart family — open work status mix
+  status_mix:
     source: Task
     filter: status != done
     display: bar_chart
