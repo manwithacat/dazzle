@@ -318,6 +318,25 @@ workspace support_dashboard "Support Dashboard":
         icon: "alert-triangle"
         state: positive
 
+  # WI D: kanban family — open pipeline board
+  open_board:
+    source: Ticket
+    filter: status != closed
+    display: kanban
+    group_by: status
+    sort: created_at desc
+    action: ticket_detail
+    empty: "No open tickets"
+
+  # WI D: chart family — ticket status mix
+  status_mix:
+    source: Ticket
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No tickets yet"
+
 # WI L: agent default landing — aim for ≥5–6 regions.
 workspace ticket_management "Ticket Management":
   purpose: "Manage individual tickets"
@@ -354,26 +373,31 @@ workspace ticket_management "Ticket Management":
     action: ticket_detail
     empty: "No brand-new open tickets"
 
-  all_tickets:
+  # WI D: kanban family — pipeline board (not list pad)
+  pipeline_board:
     source: Ticket
+    filter: status != closed
+    display: kanban
+    group_by: status
     sort: created_at desc
-    limit: 20
-    display: list
     action: ticket_detail
-    empty: "No tickets in the system"
+    empty: "No open tickets"
 
-  recent_classifications:
+  # WI D: context family — classification trail
+  classification_trail:
     source: TicketClassification
     sort: classified_at desc
-    limit: 12
-    display: list
+    limit: 15
+    display: timeline
     empty: "No classifications yet"
 
-  priority_context:
+  # WI D: chart family — priority assessment mix
+  priority_mix:
     source: PriorityAssessment
-    sort: priority desc
-    limit: 10
-    display: list
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(PriorityAssessment)
     empty: "No priority assessments yet"
 
 # Third product workspace (WI density D): classification-first desk so list
@@ -398,21 +422,33 @@ workspace classification_desk "Classifications":
     display: queue
     empty: "No classifications yet"
 
+  # WI D: grid family for open ticket cards
   open_tickets:
     source: Ticket
     filter: status = open
     sort: created_at desc
     limit: 15
-    display: list
+    display: grid
     action: ticket_detail
     empty: "No open tickets"
 
-  priority_link:
-    source: PriorityAssessment
-    sort: priority desc
-    limit: 12
-    display: list
-    empty: "No priority assessments"
+  # WI D: context family — classification timeline
+  class_trail:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 15
+    display: timeline
+    empty: "No classifications yet"
+
+  # WI D: chart family — open ticket status mix
+  open_status_mix:
+    source: Ticket
+    filter: status != closed
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No open tickets"
 
 # Fourth product workspace (WI D): priority assessment desk.
 workspace priority_desk "Priorities":
@@ -437,21 +473,32 @@ workspace priority_desk "Priorities":
     display: queue
     empty: "No priority assessments yet"
 
+  # WI D: grid family for open work cards
   open_work:
     source: Ticket
     filter: status = open
     sort: created_at desc
     limit: 15
-    display: list
+    display: grid
     action: ticket_detail
     empty: "No open tickets"
 
-  classifications:
-    source: TicketClassification
-    sort: classified_at desc
-    limit: 12
-    display: list
-    empty: "No classifications yet"
+  # WI D: context family — assessment trail
+  assessment_trail:
+    source: PriorityAssessment
+    sort: priority desc
+    limit: 15
+    display: timeline
+    empty: "No priority assessments yet"
+
+  # WI D: chart family — priority distribution
+  priority_mix:
+    source: PriorityAssessment
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(PriorityAssessment)
+    empty: "No priority assessments yet"
 
   severity_hint:
     display: status_list
