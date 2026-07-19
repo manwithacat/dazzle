@@ -66,31 +66,31 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1032 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1027 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1037 | USED |
-| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1030 | USED |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1030 | USED |
+| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | USED |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1061 | USED |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1036 | USED |
-| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1033 | USED |
+| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1061 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1037 | USED |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1037 | USED |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1057 | USED |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1033 | USED |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1061 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1036 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1060 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1027 | USED |
-| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1031 | USED |
+| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1061 | USED |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1031 | USED |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1036 | USED |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1031 | USED |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1060 | USED |
-| `dazzle coverage` | HYGIENE | CLI | example-apps | 1031 | USED |
+| `dazzle coverage` | HYGIENE | CLI | example-apps | 1061 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1060 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1057 | USED |
-| MCP `policy` | HYGIENE | MCP | framework-ux | 1030 | USED |
+| MCP `policy` | HYGIENE | MCP | framework-ux | 1061 | USED |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1030 | USED |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1030 | USED |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1057 | USED |
@@ -107,6 +107,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1061 (2026-07-19).** **test-suite/example-apps HYGIENE dig** — sentinel scan
+> support_tickets (MT/PR/BL findings advisory); coverage **61/61 100%**; sweep examples exit 0
+> (warns only); MCP policy analyze (User/SlaWaiver unprotected; conflicts 0); conformance
+> summary **481** cases. budget_consumed 1. Explore **6/100**.
 
 > **Cycle 1060 (2026-07-19).** **framework-ux/example-apps HYGIENE dig** — support_tickets
 > validate+lint OK (warns only); ux verify contracts **64/0/38** (seed 400 advisory created_by);
