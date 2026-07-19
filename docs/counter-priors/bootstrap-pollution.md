@@ -26,7 +26,7 @@ refs:
   memories: []
   pr_review_agents: []
   kb_patterns: ["first_principles_demo", "demo_identity"]
-  tests: []
+  tests: ["tests/unit/mcp/test_spec_analyze_handlers.py"]
 detectors: []
 ---
 
@@ -57,8 +57,10 @@ Worse than hand-authoring from the brief.
 2. Rank bootstrap **below** validate loop in first-principles demos.
 3. If bootstrap is used: treat output as **draft to discard chrome**, not SSOT;
    require every entity to appear in the brief vocabulary.
-4. Prefer timeout / offline / refuse over a hung analyze-spec (product fix
-   still open for hang; do not wait on bootstrap to ship a demo).
+4. **Offline path (#1631):** `discover_entities` / `dazzle analyze-spec --offline`
+   strips markdown tables and refuses chrome vocabulary (`Optional`, `Field`,
+   `Display`, …). LLM `analyze-spec` uses a default 90s timeout and fails loud
+   on hang — never wait on bootstrap to ship a demo.
 
 ## Why this matters here
 

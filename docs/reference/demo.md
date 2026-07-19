@@ -151,14 +151,34 @@ Do **not** use bootstrap / analyze-spec / discover_entities as the default
 SPEC→DSL path. They invent chrome entities (Optional, Field, Display) and
 off-domain questions. Prefer brief → knowledge concepts → hand-author DSL →
 validate. Treat bootstrap output as untrusted draft (#1629 G4).
+Offline path (#1631): analyze-spec --offline / discover_entities strips
+markdown tables and refuses chrome; LLM analyze-spec times out loud (90s).
 Counter-prior: bootstrap_pollution.
 
 ### Best Practices
 
 - Rank bootstrap below validate loop
 - knowledge counter_prior bootstrap_pollution
+- Prefer dazzle analyze-spec --offline or hand-author
 
 **Related:** [First Principles Demo](demo.md#first-principles-demo), [Demo Identity](demo.md#demo-identity)
+
+---
+
+## Metric Current User Lie
+
+When workspace metrics use count(... = current_user) and sibling lists for
+the same persona have rows, trust **lists and stills over KPI tiles** (F10).
+product_quality reports metric_list residual for this pattern (#1632).
+Counter-prior: metric_current_user_lie.
+
+### Best Practices
+
+- Trust order: list/queue → stills → metrics last
+- knowledge counter_prior metric_current_user_lie
+- product_quality score / dazzle demo quality for metric_list residual
+
+**Related:** [Empty Desk False Green](demo.md#empty-desk-false-green), [Demo Identity](demo.md#demo-identity)
 
 ---
 

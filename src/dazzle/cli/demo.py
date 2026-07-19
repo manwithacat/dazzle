@@ -706,11 +706,12 @@ def quality_command(
         help="Exit 1 when residual_total > 0",
     ),
 ) -> None:
-    """Score felt product/demo quality (persona homes, stills, maturity probes).
+    """Score felt product/demo quality (persona homes, metric/list, stills, maturity).
 
     Structural residual (validate/lint) can be green while persona desks are
-    empty — this bar catches assignment-aware seed residual and empty-hero
-    still floors (#1626). Same payload as MCP product_quality(operation=score).
+    empty — this bar catches assignment-aware seed residual, metric↔list
+    current_user footguns (F10/#1632), and empty-hero still floors (#1626).
+    Same payload as MCP product_quality(operation=score).
     """
     root = project_root.resolve()
     report = score_project(root, app=app, min_home_hits=min_home_hits)

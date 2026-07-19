@@ -49,7 +49,7 @@ _SOURCE_RE = re.compile(r"source:\s*(\w+)")
 _FILTER_RE = re.compile(r"filter:\s*(.+)")
 _CURRENT_USER_RE = re.compile(
     r"(assigned_to|assigned_to_id|created_by|submitted_by|reported_by_id|"
-    r"owner|assigned_tester_id|tester_id)\s*=\s*current_user"
+    r"owner|assigned_tester_id|tester_id|requester)\s*=\s*current_user"
 )
 _CURRENT_CONTEXT_RE = re.compile(r"(assigned_to|created_by|submitted_by)\s*=\s*current_context")
 _STATUS_RE = re.compile(r"status\s*=\s*(\w+)")

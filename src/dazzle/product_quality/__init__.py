@@ -7,6 +7,7 @@ sufficient for commercial demo quality. This package scores:
 * demo fleet bar (nav / seeds / stills floors)
 * journey maturity (bound stories)
 * **persona homes** (assignment-aware seed residual)
+* **metric_list** (metrics with current_user vs sibling list seed hits — F10/#1632)
 * still empty-hero byte floors
 
 MCP: ``product_quality`` tool. CLI: ``dazzle demo quality``.

@@ -14,6 +14,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from dazzle.product_quality.metric_list import MetricListHome, score_metric_list
 from dazzle.product_quality.persona_homes import PersonaHome, score_persona_homes
 from dazzle.product_quality.stills import StillScore, score_stills
 
@@ -49,6 +50,7 @@ class ProductQualityReport:
     probes: list[ProbeSlice] = field(default_factory=list)
     persona_homes: list[dict[str, Any]] = field(default_factory=list)
     stills: list[dict[str, Any]] = field(default_factory=list)
+    metric_list: list[dict[str, Any]] = field(default_factory=list)
     residual_total: int = 0
     next: str | None = None
     next_strategy: str | None = None
@@ -62,6 +64,7 @@ class ProductQualityReport:
             "probes": [asdict(p) for p in self.probes],
             "persona_homes": self.persona_homes,
             "stills": self.stills,
+            "metric_list": self.metric_list,
             "residual_total": self.residual_total,
             "next": self.next,
             "next_strategy": self.next_strategy,
@@ -161,6 +164,34 @@ def _stills_payload(stills: list[StillScore]) -> tuple[list[dict[str, Any]], int
     ], residual
 
 
+def _metric_list_payload(homes: list[MetricListHome]) -> tuple[list[dict[str, Any]], int]:
+    """Serialize metric↔list residual; count residual personas (#1632)."""
+    residual = 0
+    out: list[dict[str, Any]] = []
+    for h in homes:
+        if h.residual:
+            residual += 1
+        out.append(
+            {
+                "persona": h.persona,
+                "default_workspace": h.default_workspace,
+                "residual": h.residual,
+                "reasons": h.residual_reasons,
+                "pairs": [
+                    {
+                        "metric_region": p.metric_region,
+                        "list_region": p.list_region,
+                        "list_seed_hits": p.list_seed_hits,
+                        "residual": p.residual,
+                        "reason": p.reason,
+                    }
+                    for p in h.pairs
+                ],
+            }
+        )
+    return out, residual
+
+
 _SHOWCASE = (
     "simple_task",
     "support_tickets",
@@ -193,8 +224,9 @@ def _recommend(
     probes: list[ProbeSlice],
     persona_residual: int,
     stills_residual: int,
+    metric_list_residual: int = 0,
 ) -> tuple[str | None, str | None, str | None, list[str]]:
-    """Prefer product → persona_homes → demo → stills → journey."""
+    """Prefer product → persona_homes → metric_list → demo → stills → journey."""
     product = _first_probe(probes, "product_maturity")
     if product is not None:
         rec = (
@@ -210,6 +242,14 @@ def _recommend(
             "(assigned_to / created_by / submitted_by)."
         )
         return None, "demo_fleet", "example-apps demo_fleet", [rec]
+
+    if metric_list_residual > 0:
+        rec = (
+            f"Metric/list residual={metric_list_residual} — workspace metrics with "
+            "current_user disagree with sibling lists (F10 / metric_current_user_lie). "
+            "Trust list/queue stills over KPI tiles until aggregate materialization is fixed."
+        )
+        return None, "metric_list", "example-apps demo_fleet", [rec]
 
     demo = _first_probe(probes, "demo_fleet")
     if demo is not None:
@@ -232,7 +272,7 @@ def _recommend(
         return journey.next_app, "journey_dogfood", "example-apps journey_dogfood", [rec]
 
     rec = (
-        "Structural + persona-home + still floors clean for this scope. "
+        "Structural + persona-home + metric/list + still floors clean for this scope. "
         "Machine demo bar is green; human bake-off re-score (#1626) is separate "
         "from residual (stills are local under .dazzle/ — re-run recapture after "
         "seed changes)."
@@ -258,9 +298,10 @@ def _score_targets(
     targets: list[Path],
     *,
     min_home_hits: int,
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     persona_residual = 0
     stills_residual = 0
+    metric_list_residual = 0
     for tdir in targets:
         homes = score_persona_homes(tdir, min_hits=min_home_hits)
         payload, pr = _persona_payload(homes)
@@ -269,13 +310,20 @@ def _score_targets(
             report.persona_homes.append(row)
         persona_residual += pr
 
+        ml_homes = score_metric_list(tdir, min_list_hits=min_home_hits)
+        ml_payload, mlr = _metric_list_payload(ml_homes)
+        for row in ml_payload:
+            row["app"] = tdir.name
+            report.metric_list.append(row)
+        metric_list_residual += mlr
+
         stills = score_stills(tdir, tdir.name)
         sp, sr = _stills_payload(stills)
         for row in sp:
             row["app"] = tdir.name
             report.stills.append(row)
         stills_residual += sr
-    return persona_residual, stills_residual
+    return persona_residual, stills_residual, metric_list_residual
 
 
 def score_project(
@@ -309,12 +357,16 @@ def score_project(
     report.probes.append(_probe_or_error("journey_maturity", lambda: _probe_journey(probe_root)))
 
     targets = _resolve_targets(is_app=is_app, app_dir=app_dir, examples_root=examples_root)
-    persona_residual, stills_residual = _score_targets(report, targets, min_home_hits=min_home_hits)
+    persona_residual, stills_residual, metric_list_residual = _score_targets(
+        report, targets, min_home_hits=min_home_hits
+    )
 
     probe_res = sum(max(p.residual, 0) for p in report.probes)
-    report.residual_total = probe_res + persona_residual + stills_residual
+    report.residual_total = probe_res + persona_residual + stills_residual + metric_list_residual
 
-    nxt, strategy, force, recs = _recommend(report.probes, persona_residual, stills_residual)
+    nxt, strategy, force, recs = _recommend(
+        report.probes, persona_residual, stills_residual, metric_list_residual
+    )
     report.next = nxt or _next_from_felt(report)
     report.next_strategy = strategy
     report.force = force
@@ -323,8 +375,11 @@ def score_project(
 
 
 def _next_from_felt(report: ProductQualityReport) -> str | None:
-    """Prefer residual persona-home app, then residual empty-hero still app."""
+    """Prefer residual persona-home app, metric/list, then residual empty-hero still app."""
     for row in report.persona_homes:
+        if row.get("residual") and row.get("app"):
+            return str(row["app"])
+    for row in report.metric_list:
         if row.get("residual") and row.get("app"):
             return str(row["app"])
     for row in report.stills:
@@ -340,6 +395,11 @@ def score_status_lines(report: ProductQualityReport) -> list[str]:
     lines.append(
         f"persona_homes apps={len({h.get('app') for h in report.persona_homes})} "
         f"residual={ph_res} next={report.next or '-'}"
+    )
+    ml_res = sum(1 for h in report.metric_list if h.get("residual"))
+    lines.append(
+        f"metric_list apps={len({h.get('app') for h in report.metric_list})} "
+        f"residual={ml_res} next={report.next or '-'}"
     )
     st_res = sum(1 for s in report.stills if s.get("residual"))
     lines.append(f"stills residual={st_res} next={report.next or '-'}")

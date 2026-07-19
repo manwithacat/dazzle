@@ -84,6 +84,10 @@ class LLMAPIClient:
     Supports Anthropic Claude and OpenAI GPT models.
     """
 
+    # #1631 — analyze-spec must not hang indefinitely (Run A hang was the
+    # sibling of bootstrap pollution). Loud timeout > infinite wait.
+    DEFAULT_TIMEOUT_S = 90.0
+
     def __init__(
         self,
         provider: LLMProvider = LLMProvider.ANTHROPIC,
@@ -93,6 +97,7 @@ class LLMAPIClient:
         temperature: float = 0.0,
         max_tokens: int = 16000,
         use_prompt_caching: bool = True,
+        timeout: float | None = None,
     ):
         """
         Initialize LLM API client.
@@ -105,11 +110,13 @@ class LLMAPIClient:
             temperature: Temperature for sampling (0.0 = deterministic)
             max_tokens: Maximum tokens in response
             use_prompt_caching: Use prompt caching if supported
+            timeout: HTTP/SDK timeout in seconds (default 90; #1631 fail loud)
         """
         self.provider = provider
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.use_prompt_caching = use_prompt_caching
+        self.timeout = float(timeout) if timeout is not None else self.DEFAULT_TIMEOUT_S
         # Unique identifier for this client instance — correlates LLM
         # invocations with telemetry/proposals. Consumed by the fitness
         # investigator runner (see LlmClient Protocol). Generated once per
@@ -197,7 +204,8 @@ class LLMAPIClient:
             try:
                 from anthropic import Anthropic
 
-                self.client = Anthropic(api_key=self.api_key)
+                # timeout= fails loud rather than hanging analyze-spec (#1631)
+                self.client = Anthropic(api_key=self.api_key, timeout=self.timeout)
             except ImportError:
                 raise ImportError(
                     "Anthropic SDK not installed. Install with: pip install anthropic"
@@ -206,7 +214,7 @@ class LLMAPIClient:
             try:
                 from openai import OpenAI
 
-                self.client = OpenAI(api_key=self.api_key)
+                self.client = OpenAI(api_key=self.api_key, timeout=self.timeout)
             except ImportError:
                 raise ImportError("OpenAI SDK not installed. Install with: pip install openai")
 

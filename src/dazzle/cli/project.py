@@ -16,6 +16,7 @@ For code generation, use:
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -717,6 +718,109 @@ def layout_plan_command(
         raise typer.Exit(code=1)
 
 
+def _resolve_analyze_spec_input(spec_file: str | None) -> tuple[str, str]:
+    """Load spec content + display label for analyze-spec (raises typer.Exit)."""
+    if spec_file:
+        spec_path = Path(spec_file)
+        if not spec_path.exists():
+            typer.echo(f"Specification not found: {spec_file}", err=True)
+            raise typer.Exit(code=1)
+        if spec_path.is_dir():
+            project_root = spec_path.parent if spec_path.name == "spec" else spec_path
+            spec_result = load_spec(project_root, include_sources=True)
+            return spec_result.content, f"{spec_file}/ ({spec_result.file_count} files)"
+        return spec_path.read_text(encoding="utf-8"), spec_file
+
+    spec_result = load_spec(Path.cwd(), include_sources=True)
+    if spec_result.is_empty:
+        typer.echo("No specification found. Create SPEC.md or spec/ directory.", err=True)
+        raise typer.Exit(code=1)
+    if spec_result.source_type == "directory":
+        return spec_result.content, f"spec/ ({spec_result.file_count} files)"
+    return spec_result.content, "SPEC.md"
+
+
+def _run_offline_analyze_spec(spec_content: str) -> None:
+    """Deterministic extract — same path as MCP discover_entities (#1631)."""
+    # Deferred: MCP handlers are optional at CLI import time (#1438 cycle wall).
+    from dazzle.mcp.server.handlers.spec_analyze import handle_spec_analyze
+
+    typer.echo("   Mode: offline (deterministic; no LLM)")
+    try:
+        raw = handle_spec_analyze({"operation": "discover_entities", "spec_text": spec_content})
+        data = json.loads(raw)
+        if "error" in data:
+            typer.echo(f"Error: {data['error']}", err=True)
+            raise typer.Exit(code=1)
+        entities = data.get("entities", [])
+        typer.echo(f"\n🔍 Offline extract: {len(entities)} entity candidates")
+        for ent in entities[:30]:
+            name = ent.get("name", "?")
+            src = ent.get("source", "")
+            typ = ent.get("type", "")
+            typer.echo(f"  • {name}  ({typ}, {src})")
+        if len(entities) > 30:
+            typer.echo(f"  … and {len(entities) - 30} more")
+        typer.echo(f"\n{data.get('hint', '')}")
+        typer.echo("\nNext step: hand-author DSL from the brief + knowledge concepts;")
+        typer.echo("treat this extract as untrusted draft (bootstrap_pollution / #1631).")
+    except typer.Exit:
+        raise
+    except Exception as e:
+        typer.echo(f"Offline extract failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+def _run_llm_analyze_spec(
+    spec_content: str,
+    *,
+    provider: str,
+    timeout: float,
+    interactive: bool,
+) -> None:
+    """LLM analyze-spec path with loud timeout (#1631)."""
+    try:
+        from dazzle.llm import LLMProvider, SpecAnalyzer
+    except ImportError:
+        typer.echo("LLM support not available. Install with: pip install dazzle[llm]", err=True)
+        typer.echo("Or use: dazzle analyze-spec --offline", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"   Provider: {provider}  timeout={timeout}s")
+    try:
+        provider_enum = LLMProvider(provider)
+    except ValueError:
+        typer.echo(f"Invalid provider: {provider}. Use: anthropic, openai, claude_cli", err=True)
+        raise typer.Exit(code=1)
+
+    analyzer = SpecAnalyzer(provider=provider_enum, timeout=timeout)
+    typer.echo("\n🔍 Analyzing specification...")
+    try:
+        analysis = analyzer.analyze(spec_content)
+        results = analysis.model_dump()
+        _print_analysis_summary(results)
+        if interactive:
+            _run_interactive_qa(analyzer, results)
+        typer.echo("\nNext step: hand this analysis to a Dazzle agent in-session")
+        typer.echo("to author the DSL — structural authoring is not delegated to")
+        typer.echo("external API calls (see CLAUDE.md / #1222).")
+        typer.echo("Prefer offline hand-author when bootstrap pollution is a risk (#1631).")
+    except Exception as e:
+        err_name = type(e).__name__
+        typer.echo(f"Error ({err_name}): {e}", err=True)
+        if "timeout" in err_name.lower() or "timeout" in str(e).lower():
+            typer.echo(
+                f"analyze-spec timed out after {timeout}s. "
+                "Retry with a higher --timeout, use --offline for deterministic extract, "
+                "or hand-author from the brief (bootstrap_pollution / #1631).",
+                err=True,
+            )
+        import traceback
+
+        traceback.print_exc()
+        raise typer.Exit(code=1)
+
+
 def analyze_spec_command(
     spec_file: str | None = typer.Argument(
         None,
@@ -724,11 +828,25 @@ def analyze_spec_command(
     ),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactive Q&A mode"),
     provider: str = typer.Option("anthropic", "--provider", "-p", help="LLM provider"),
+    offline: bool = typer.Option(
+        False,
+        "--offline",
+        help="Deterministic extract (no LLM) — same path as MCP discover_entities (#1631)",
+    ),
+    timeout: float = typer.Option(
+        90.0,
+        "--timeout",
+        help="LLM call timeout seconds; fail loud on hang (#1631). Ignored with --offline.",
+    ),
 ) -> None:
     """
-    Analyze a specification file using LLM. Prints structured analysis
+    Analyze a specification file. Prints structured analysis
     (entities, personas, business rules, state machines) for an agent
     in-session to use as context when authoring DSL.
+
+    Default path uses an LLM (with timeout). Prefer ``--offline`` for a
+    deterministic extract that refuses markdown-table chrome entities
+    (#1631). Bootstrap / discover_entities share that offline path.
 
     DSL synthesis is NOT performed here — Dazzle structural authoring
     stays in the agent session (#1222). An in-session Claude Code agent
@@ -741,80 +859,12 @@ def analyze_spec_command(
     - SPEC.md single file (backward compatible)
     - Explicit file path as argument
     """
-
-    # Determine spec content
-    if spec_file:
-        # Explicit file/directory specified
-        spec_path = Path(spec_file)
-        if not spec_path.exists():
-            typer.echo(f"Specification not found: {spec_file}", err=True)
-            raise typer.Exit(code=1)
-
-        if spec_path.is_dir():
-            # Load from directory - treat the dir as the project root with spec/ inside,
-            # or as the spec directory itself if it's named 'spec'
-            if spec_path.name == "spec":
-                project_root = spec_path.parent
-            else:
-                project_root = spec_path
-            spec_result = load_spec(project_root, include_sources=True)
-            spec_content = spec_result.content
-            spec_display = f"{spec_file}/ ({spec_result.file_count} files)"
-        else:
-            spec_content = spec_path.read_text(encoding="utf-8")
-            spec_display = spec_file
-    else:
-        # Auto-detect from current directory
-        spec_result = load_spec(Path.cwd(), include_sources=True)
-        if spec_result.is_empty:
-            typer.echo("No specification found. Create SPEC.md or spec/ directory.", err=True)
-            raise typer.Exit(code=1)
-        spec_content = spec_result.content
-        if spec_result.source_type == "directory":
-            spec_display = f"spec/ ({spec_result.file_count} files)"
-        else:
-            spec_display = "SPEC.md"
-
-    try:
-        from dazzle.llm import LLMProvider, SpecAnalyzer
-
-        typer.echo(f"📄 Analyzing: {spec_display}")
-        typer.echo(f"   Provider: {provider}")
-
-        # Convert provider string to enum
-        try:
-            provider_enum = LLMProvider(provider)
-        except ValueError:
-            typer.echo(
-                f"Invalid provider: {provider}. Use: anthropic, openai, claude_cli", err=True
-            )
-            raise typer.Exit(code=1)
-
-        analyzer = SpecAnalyzer(provider=provider_enum)
-
-        typer.echo("\n🔍 Analyzing specification...")
-        analysis = analyzer.analyze(spec_content)
-
-        results = analysis.model_dump()
-
-        _print_analysis_summary(results)
-
-        if interactive:
-            results = _run_interactive_qa(analyzer, results)
-
-        typer.echo("\nNext step: hand this analysis to a Dazzle agent in-session")
-        typer.echo("to author the DSL — structural authoring is not delegated to")
-        typer.echo("external API calls (see CLAUDE.md / #1222).")
-
-    except ImportError:
-        typer.echo("LLM support not available. Install with: pip install dazzle[llm]", err=True)
-        raise typer.Exit(code=1)
-    except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
-        import traceback
-
-        traceback.print_exc()
-        raise typer.Exit(code=1)
+    spec_content, spec_display = _resolve_analyze_spec_input(spec_file)
+    typer.echo(f"📄 Analyzing: {spec_display}")
+    if offline:
+        _run_offline_analyze_spec(spec_content)
+        return
+    _run_llm_analyze_spec(spec_content, provider=provider, timeout=timeout, interactive=interactive)
 
 
 def example_command(

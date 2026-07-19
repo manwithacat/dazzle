@@ -203,9 +203,18 @@ def _run_cognition_pass(spec_text: str, spec_source: str, work_dir: Path | None 
             "capability_suggestions": patterns_result.get("capability_suggestions", []),
             # #1617 S1 — executable hatch choice for data shape
             "representation_decision": representation_decision,
+            # #1631 — offline extract is draft; prefer hand-author
+            "extract_mode": entities_result.get("extract_mode", "offline_deterministic"),
         },
         "clarification_needed": has_questions,
         "questions": questions,
+        "warnings": [
+            (
+                "bootstrap_pollution (#1631): treat analysis.entities as untrusted draft. "
+                "Prefer brief → knowledge concepts → hand-author DSL → validate. "
+                "Markdown table chrome is stripped; still discard non-domain names."
+            ),
+        ],
         "agent_instructions": _build_instructions(
             has_questions, questions, representation_decision
         ),

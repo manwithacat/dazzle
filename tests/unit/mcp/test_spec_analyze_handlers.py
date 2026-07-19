@@ -479,3 +479,46 @@ class TestArrowChainLifecycles1353:
         data = json.loads(result)
         chains = [lc for lc in data["lifecycles"] if lc.get("source") == "arrow_chain"]
         assert chains and chains[0]["entity"] == "UNKNOWN"
+
+
+class TestChromeEntities1631:
+    """#1631 — refuse markdown table chrome as domain entities."""
+
+    SPEND_SPEC = """
+# Spend Desk
+
+Single-org spend request app with three job desks.
+
+| Field | Type | Optional | Display | Raise |
+|-------|------|----------|---------|-------|
+| amount | money | no | Amount | - |
+| status | enum | no | Status | - |
+
+## Personas
+- Employee submits a SpendRequest
+- Manager approves or rejects
+- Finance pays approved requests
+
+## Pipeline
+Employee sees draft and in-flight lists for their SpendRequest rows.
+"""
+
+    def test_refuses_markdown_table_chrome(self) -> None:
+        result = _discover_entities({"spec_text": self.SPEND_SPEC})
+        data = json.loads(result)
+        names = {e["name"] for e in data.get("entities", [])}
+        chrome = {"Optional", "Field", "Display", "Raise", "Type", "Amount", "Status", "Statu"}
+        assert not (names & chrome), f"chrome leaked into entities: {names & chrome}"
+        assert "SpendRequest" in names or "Employee" in names
+
+    def test_offline_mode_marker(self) -> None:
+        result = _discover_entities({"spec_text": "A Customer places an Order."})
+        data = json.loads(result)
+        assert data.get("extract_mode") == "offline_deterministic"
+
+    def test_strip_markdown_tables_helper(self) -> None:
+        strip_fn = _sa._strip_markdown_tables
+        stripped = strip_fn("Hello\n| Field | Type |\n|-------|------|\n| x | y |\nWorld")
+        assert "Field" not in stripped
+        assert "Hello" in stripped
+        assert "World" in stripped

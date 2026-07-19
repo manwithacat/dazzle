@@ -44,7 +44,7 @@
   "src/dazzle/cli/pipeline.py": 2,
   "src/dazzle/cli/pitch.py": 14,
   "src/dazzle/cli/process_cli.py": 9,
-  "src/dazzle/cli/project.py": 4,
+  "src/dazzle/cli/project.py": 5,
   "src/dazzle/cli/pulse.py": 18,
   "src/dazzle/cli/qa.py": 33,
   "src/dazzle/cli/quality.py": 2,

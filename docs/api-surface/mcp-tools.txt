@@ -1066,8 +1066,8 @@ tool: process
   }
 
 tool: product_quality
-  description_hash: db0a4c5a3507
-  description_len: 459
+  description_hash: f73772761d06
+  description_len: 645
   {
     "properties": {
       "app": {

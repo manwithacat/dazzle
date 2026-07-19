@@ -1,7 +1,8 @@
 """MCP handler for felt product / demo quality (#1626).
 
 Read-only (ADR-0002). Aggregates structural maturity probes, persona-home
-seed residual, and empty-hero still floors into one OBSERVE payload.
+seed residual, metric↔list current_user residual (#1632), and empty-hero
+still floors into one OBSERVE payload.
 """
 
 from __future__ import annotations

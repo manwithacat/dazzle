@@ -25,7 +25,7 @@ refs:
   memories: []
   pr_review_agents: []
   kb_patterns: ["empty_desk_false_green", "workspace_region_filters"]
-  tests: []
+  tests: ["tests/unit/test_product_quality.py"]
 detectors: []
 ---
 
@@ -58,8 +58,11 @@ Static persona_homes residual can still be 0.
 2. On metric 0 + list > 0: assume **aggregate/current_user materialization
    footgun** until disproven (F10, #1629 G5) — not missing seeds.
 3. Prefer list residual / `live_desk` / `qa capture` for demo bar.
-4. Machine residual for metric↔list pairs may land later in product_quality;
-   until then this prior is the agent’s defense.
+4. **Machine residual (#1632):** `product_quality` / `dazzle demo quality`
+   flags `metric_list` residual when a persona home has metrics aggregates
+   with `current_user` **and** a sibling list/queue/kanban has seed hits.
+   OBSERVE that residual; do not treat residual=0 persona_homes alone as
+   “KPIs are honest.”
 
 ## Why this matters here
 

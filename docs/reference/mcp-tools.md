@@ -427,7 +427,7 @@ Process operations: list, inspect, list_runs, get_run, coverage
 
 ### `product_quality`
 
-Felt product/demo quality for commercial showcase apps (#1626). Operations: score — aggregates structural product maturity, demo fleet floors, journey maturity, assignment-aware persona-home seed residual (current_user filters vs STABLE_PERSONA_USER_IDS), and empty-hero still byte floors into one residual_total + next force path. Prefer this over running probe scripts alone when judging whether a sales demo is empty-desk theater. CLI: dazzle demo quality.
+Felt product/demo quality for commercial showcase apps (#1626). Operations: score — aggregates structural product maturity, demo fleet floors, journey maturity, assignment-aware persona-home seed residual (current_user filters vs STABLE_PERSONA_USER_IDS), metric_list residual when metrics aggregates use current_user while sibling list/queue regions have seed hits (F10 / #1632 / metric_current_user_lie; trust lists/stills over KPI tiles), and empty-hero still byte floors into one residual_total + next force path. Prefer this over running probe scripts alone when judging whether a sales demo is empty-desk theater. CLI: dazzle demo quality.
 
 **Operations (1):** `score`
 

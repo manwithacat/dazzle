@@ -49,22 +49,142 @@ def handle_spec_analyze(arguments: dict[str, Any]) -> str:
         return unknown_op_response(operation, "spec_analyze")
 
 
+# Markdown / DSL schema chrome that must never become domain entities (#1631).
+# Header cells in field tables ("| Field | Type | Optional | Display |") and
+# similar scaffolding are capitalised mid-line and would otherwise pollute
+# discover_entities / bootstrap output.
+_CHROME_ENTITY_WORDS = frozenset(
+    {
+        "Optional",
+        "Required",
+        "Raise",
+        "Field",
+        "Fields",
+        "Display",
+        "Type",
+        "Types",
+        "Column",
+        "Columns",
+        "Row",
+        "Rows",
+        "Header",
+        "Value",
+        "Values",
+        "Default",
+        "Format",
+        "Label",
+        "Labels",
+        "True",
+        "False",
+        "Null",
+        "None",
+        "Yes",
+        "No",
+        "Enum",
+        "String",
+        "Integer",
+        "Boolean",
+        "Datetime",
+        "Timestamp",
+        "Uuid",
+        "Ref",
+        "Refs",
+        "Primary",
+        "Foreign",
+        "Key",
+        "Keys",
+        "Index",
+        "Schema",
+        "Table",
+        "Tables",
+        "Entity",
+        "Entities",
+        "Attribute",
+        "Attributes",
+        "Property",
+        "Properties",
+        "Description",
+        "Name",
+        "Id",
+        "Ids",
+        "Mode",
+        "Modes",
+        "Action",
+        "Actions",
+        "Source",
+        "Filter",
+        "Sort",
+        "Limit",
+        "Empty",
+        "Access",
+        "Layout",
+        "Region",
+        "Workspace",
+        "Persona",
+        "Intent",
+        "Purpose",
+        "Aggregate",
+        "Metrics",
+        "Tone",
+        "Tones",
+        "Amount",  # common display-column label, not a domain type
+        "Status",  # state token / column label — not an entity
+        "Statu",  # naive singular of Status
+    }
+)
+
+
+def _strip_markdown_tables(text: str) -> str:
+    """Drop markdown table lines so header/body chrome is not entity-mined (#1631).
+
+    Tables are documentation chrome (field matrices, option grids). Mining
+    capitalised header cells yields ``Optional``, ``Field``, ``Display``, etc.
+    Narrative prose outside tables is preserved.
+    """
+    out: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            out.append(line)
+            continue
+        # Pipe table row: | a | b |  or  a | b | c
+        if stripped.startswith("|") and stripped.count("|") >= 2:
+            continue
+        if (
+            stripped.endswith("|")
+            and stripped.count("|") >= 2
+            and " " not in stripped.split("|")[0]
+        ):
+            continue
+        # Separator: |---|:---:|
+        if re.match(r"^\|?[\s\-:|]+\|[\s\-:|]*\|?$", stripped):
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
 def _discover_entities(arguments: dict[str, Any]) -> str:
     """
     Extract potential entities from narrative spec text.
 
-    Uses pattern matching to identify:
+    Deterministic / offline (no LLM). Uses pattern matching to identify:
     - Nouns that appear as subjects/objects (potential entities)
     - Relationships between nouns (ref fields)
     - User roles (special entity type)
     - Actions (potential state transitions or services)
+
+    Refuses markdown-table chrome entities (#1631 / bootstrap_pollution).
     """
     progress = extract_progress(arguments)
     progress.log_sync("Discovering entities from spec text...")
-    spec_text = arguments.get("spec_text", "")
+    raw_spec = arguments.get("spec_text", "")
 
-    if not spec_text:
+    if not raw_spec:
         return error_response("spec_text is required")
+
+    # #1631: strip pipe tables before noun mining so Field/Optional/Display
+    # header cells never become domain entities.
+    spec_text = _strip_markdown_tables(raw_spec)
 
     # Strip markdown headers to avoid extracting header words as entities
     # But keep the content for analysis
@@ -244,6 +364,8 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
         "Pending",
         "Open",
         "Closed",
+        # #1631 markdown / DSL chrome (also filtered after strip; belt-and-braces)
+        *_CHROME_ENTITY_WORDS,
     }
 
     # Common verbs that form false compound entities
@@ -337,8 +459,10 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
 
     def _is_valid_entity(noun: str) -> bool:
         """Check if a noun is likely a valid entity name."""
-        # Skip if in skip list
-        if noun in skip_words:
+        # Skip if in skip list or known chrome vocabulary (#1631)
+        if noun in skip_words or noun in _CHROME_ENTITY_WORDS:
+            return False
+        if noun.title() in _CHROME_ENTITY_WORDS or noun.capitalize() in _CHROME_ENTITY_WORDS:
             return False
         # Skip if only appears in headers
         if noun in header_words and spec_text.count(noun) <= 2:
@@ -613,7 +737,12 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
             "entities": entities,
             "relationships": relationships,
             "actions": list(actions),
-            "hint": "Review and refine these candidates. Remove false positives, add missing entities.",
+            "extract_mode": "offline_deterministic",
+            "hint": (
+                "Offline extract (#1631). Treat as draft — prefer hand-author from the "
+                "brief + knowledge concepts + validate. Markdown table chrome is stripped; "
+                "still discard any residual non-domain names. Counter-prior: bootstrap_pollution."
+            ),
         },
         indent=2,
     )

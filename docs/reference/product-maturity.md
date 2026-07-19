@@ -135,9 +135,9 @@ python scripts/improve_example_probes.py --status
 # product → demo → journey preference for residual_total / next=
 ```
 
-Agents should also score **felt** demo quality (persona-home seeds + still
-floors) via the single bar — structural residual alone can be green while
-desks are empty:
+Agents should also score **felt** demo quality (persona-home seeds, metric/list
+current_user residual #1632, + still floors) via the single bar — structural
+residual alone can be green while desks are empty or KPIs lie:
 
 ```bash
 dazzle demo quality -p examples/simple_task

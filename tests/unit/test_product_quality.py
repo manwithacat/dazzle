@@ -150,3 +150,66 @@ def test_persona_payload_regions_on_report() -> None:
     for home in report.persona_homes:
         assert "regions" in home
         assert isinstance(home["regions"], list)
+
+
+def test_metric_list_residual_simple_task_member() -> None:
+    """#1632 F10: metrics with current_user + sibling list seed hits → residual."""
+    from dazzle.product_quality.metric_list import score_metric_list
+
+    app = EXAMPLES / "simple_task"
+    if not (app / "dazzle.toml").is_file():
+        pytest.skip("simple_task missing")
+    homes = {h.persona: h for h in score_metric_list(app)}
+    assert "member" in homes
+    member = homes["member"]
+    assert member.residual, "member my_work should flag metric_current_user_lie"
+    assert any("metric_current_user_lie" in r for r in member.residual_reasons)
+
+
+def test_metric_list_on_score_project() -> None:
+    app = EXAMPLES / "simple_task"
+    if not (app / "dazzle.toml").is_file():
+        pytest.skip("simple_task missing")
+    report = score_project(app)
+    assert isinstance(report.metric_list, list)
+    assert any(h.get("residual") for h in report.metric_list)
+    lines = score_status_lines(report)
+    assert any("metric_list" in ln for ln in lines)
+    payload = report.to_dict()
+    assert "metric_list" in payload
+
+
+def test_metric_list_no_false_positive_without_metrics(tmp_path: Path) -> None:
+    """List-only desk without metrics regions is clean."""
+    from dazzle.product_quality.metric_list import score_metric_list
+
+    dsl = tmp_path / "dsl"
+    dsl.mkdir()
+    (dsl / "app.dsl").write_text(
+        "\n".join(
+            [
+                'persona member "Member":',
+                "  default_workspace: desk",
+                "",
+                'workspace desk "Desk":',
+                "  access: persona(member)",
+                "  my_list:",
+                "    source: Task",
+                "    filter: assigned_to = current_user",
+                "    display: list",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    seeds = dsl / "seeds" / "demo_data"
+    seeds.mkdir(parents=True)
+    uid = STABLE_PERSONA_USER_IDS["member"]
+    (seeds / "Task.jsonl").write_text(
+        json.dumps({"id": "1", "assigned_to": uid, "status": "todo"}) + "\n",
+        encoding="utf-8",
+    )
+    homes = score_metric_list(tmp_path)
+    by = {h.persona: h for h in homes}
+    assert "member" in by
+    assert not by["member"].residual
