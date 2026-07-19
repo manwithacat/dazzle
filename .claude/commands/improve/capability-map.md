@@ -160,6 +160,9 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1043 (2026-07-19).** **self-audit** (cadence ≥15 since 1028): window `6dcfeefc2..HEAD`. Sampled: **7bcd4caaa** domain pipeline CLEAN (CLI/MCP+8 domain tests); **0b963f50f** invoice_ops WI D CLEAN (kanban/timeline/grid on tree; WI 0.24≤floor); **e2295baeb** noun filter CLEAN (SPEC→2 nouns, 8 tests); **5fedfc569/2cd55839d** metric_list risk/residual CLEAN (member risk=1 residual=0); **298aad872** #1631/#1632 CLEAN. **5 CLEAN / 0 DISCREPANCY**. residual=0; wi_fleet 0.183≤floor. budget_consumed 0. Explore **96/100**. Next self-audit ~**1058**. Next: property-vision STALE@1017 (metered) or capability-sweep ~1054.
+
 > **Cycle 1042 (2026-07-19).** **example-apps** ordinary explore invoice_ops (WI D): approval_desk kanban+timeline; suppliers grid+queue; team grid+queue+chart. WI **0.26→0.24**, D **0.58→0.55**, wi_fleet **0.185→0.183**, above_floor **0/12**. residual=0. Explore **96/100**.
 
 > **Cycle 1041 (2026-07-19).** **hm-convergence + domain quality:** gallery probes **6/6 PASS**; domain extract first-exercise on simple_task SPEC — tightened noun filter (reject mid-sentence adjectives; 33→2 nouns). residual=0. Explore **95/100**.
