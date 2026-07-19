@@ -43,10 +43,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1054 | USED |
-| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1054 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1039 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1035 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1055 | USED |
+| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1055 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1055 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1055 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1039 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1039 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1039 | USED |
@@ -55,9 +55,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1035 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1054 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1054 | USED |
-| `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1027 | USED |
-| `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1017 | USED |
-| `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1017 | USED |
+| `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1055 | USED |
+| `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | USED |
+| `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1055 | USED |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1027 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1041 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1030 | USED |
@@ -108,9 +108,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 
 ## Cycle notes (newest first)
 
-> **Cycle 1055 (policy).** STALE split into Class COGNITION vs HYGIENE; rule 7 cognition-first
-> under residual=0 + fleet under floor; metered vision never tops dig queue; housekeeping
-> must not cite STALE as the blocker. Explore budget reset → cognition dig this cycle.
+> **Cycle 1055 (2026-07-19).** **example-apps COGNITION dig** after policy + budget reset:
+> `domain extract/gaps/promote` on simple_task (Task+Taskcomment grounded; chrome rejected;
+> ready_to_promote); serve :3942 + `demo reset-and-load` 8 fixtures persona_homes=0;
+> `demo quality` residual_total=0 metric_list **risk=1**; free vision substitute
+> `hm_visual_smoke --dazzle-emit` 11 parts. **Not** WI D (fleet under floor). budget_consumed 1.
+> Explore **1/100**. Stamps domain/demo quality/reset-and-load/product_quality + vision substitutes @1055.
+
+> **Cycle 1055 (policy).** STALE Class COGNITION vs HYGIENE; rule 7 cognition-first; budget reset.
 
 > **Cycle 1054 (2026-07-19) capability-sweep.** Inventory MCP **38**; **0 UNOWNED**.
 > Pre-policy STALE-effective raw count 26 (now report as COGNITION vs HYGIENE digs).
