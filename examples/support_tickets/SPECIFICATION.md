@@ -59,14 +59,14 @@ comments.
 Five workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — summary metrics, a review queue, and a kanban board of open
 statuses. **Manager Ops** is the manager home for team performance and
-escalations — metrics, SLA readiness, focused critical/unassigned queues, and
-a funnel of ticket statuses. The **Agent Dashboard** is a personal dashboard
-for claimed work — assigned and pending items and lifecycle metrics first,
-comment activity last. **My Tickets** is the customer's home: their open/WIP
-counts, an open-cases queue, and full history. The **Agent Console** — shared
-by administrators, managers, and agents — lets you pick an agent and see the
-tickets assigned to them, the comments on those tickets, and comparison charts
-of both.
+escalations — metrics, SLA readiness, critical/unassigned queues, status funnel,
+recent ticket trail, and open pipeline board. The **Agent Dashboard** is a
+personal dashboard for claimed work — assigned and pending items and lifecycle
+metrics first, comment activity last. **My Tickets** is the customer's home:
+open/WIP counts, open-cases queue, history, status chart, trail, and open cards.
+The **Agent Console** — shared by administrators, managers, and agents — lets
+you pick an agent and see their tickets, comments, comparison charts, priority
+queue, comment trail, and open ticket cards.
 
 ## How work flows through it
 
@@ -138,4 +138,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:28e285fbabdb803ccca0cfa6cde1a2dd1df76d6ccad5360f812e03df5596f61c -->
+<!-- dazzle-spec-brief: sha256:7ba38d7a2c4f9539e45105a08b3266d6ea93c4499f5aae41bbbb8b92286e1971 -->

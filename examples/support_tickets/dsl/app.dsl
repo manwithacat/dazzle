@@ -579,6 +579,25 @@ workspace manager_ops "Manager Ops":
       count: count(Ticket)
     empty: "No tickets"
 
+  # WI D: context family — recent ticket trail
+  recent_trail:
+    source: Ticket
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No tickets yet"
+
+  # WI D: kanban family — open pipeline board
+  open_board:
+    source: Ticket
+    filter: status != closed
+    display: kanban
+    group_by: status
+    sort: priority desc
+    action: ticket_edit
+    empty: "No open tickets"
+
 workspace agent_dashboard "Agent Dashboard":
   # Personal agent view (assigned work + activity). Manager team home is
   # manager_ops; agents keep this for "my WIP" after claiming from the queue.
@@ -721,6 +740,36 @@ workspace my_tickets "My Tickets":
         icon: "message-square"
         state: warning
 
+  # WI D: context family — recent updates on my cases
+  my_trail:
+    source: Ticket
+    filter: created_by = current_user
+    sort: updated_at desc
+    limit: 12
+    display: timeline
+    action: ticket_detail
+    empty: "You have not submitted any tickets yet"
+
+  # WI D: chart family — my tickets by status
+  my_status_mix:
+    source: Ticket
+    filter: created_by = current_user
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "You have not submitted any tickets yet"
+
+  # WI D: grid family — open cases as cards
+  open_cards:
+    source: Ticket
+    filter: created_by = current_user and status != closed
+    sort: updated_at desc
+    limit: 12
+    display: grid
+    action: ticket_detail
+    empty: "You have no open tickets"
+
 
 # =============================================================================
 # CONTEXT-SELECTOR SCENARIO (#1304 verification)
@@ -786,6 +835,36 @@ workspace agent_console "Agent Console":
     aggregate:
       count: count(Comment)
     empty: "No comments for this agent"
+
+  # WI D: queue family — high-priority tickets for selected agent
+  agent_priority_queue:
+    source: Ticket
+    filter: assigned_to = current_context and status != closed
+    sort: priority desc, created_at asc
+    limit: 15
+    display: queue
+    action: ticket_edit
+    empty: "No open tickets for this agent"
+
+  # WI D: context family — comment trail for selected agent
+  agent_comment_trail:
+    source: Comment
+    filter: ticket.assigned_to = current_context
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    action: comment_detail
+    empty: "No comments on this agent's tickets"
+
+  # WI D: grid family — open tickets as cards
+  agent_ticket_cards:
+    source: Ticket
+    filter: assigned_to = current_context and status != closed
+    sort: priority desc
+    limit: 12
+    display: grid
+    action: ticket_detail
+    empty: "No open tickets for this agent"
 
 # =============================================================================
 # PERSONAS - User archetypes for testing
