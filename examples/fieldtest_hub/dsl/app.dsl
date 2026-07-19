@@ -58,6 +58,7 @@ nav engineer_nav:
     issue_triage
     firmware_pipeline
     session_ops
+    tester_roster
 
 nav tester_nav:
   group "Field":
@@ -71,6 +72,7 @@ nav manager_nav:
     issue_triage
     firmware_pipeline
     session_ops
+    tester_roster
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1622,6 +1624,61 @@ workspace session_ops "Session Ops":
     aggregate:
       count: count(TestSession)
     empty: "No test sessions"
+
+# Eighth product desk (WI D): 6 lists floor dens ~0.46 with 7 full desks — need 8.
+workspace tester_roster "Tester Roster":
+  purpose: "Field tester capacity — active roster, assignments, and session pulse"
+  access: persona(engineer, manager)
+
+  roster_metrics:
+    source: Tester
+    display: metrics
+    aggregate:
+      testers: count(Tester)
+      active: count(Tester where active = true)
+      devices: count(Device where assigned_tester_id != null)
+      sessions: count(TestSession)
+    tones:
+      active: positive
+      devices: accent
+
+  # WI D: grid family for tester cards
+  active_testers:
+    source: Tester
+    filter: active = true
+    sort: name asc
+    limit: 25
+    display: grid
+    action: tester_detail
+    empty: "No active testers"
+
+  # WI D: queue family — devices still needing an assignee
+  unassigned_devices:
+    source: Device
+    filter: assigned_tester_id = null and status = active
+    sort: name asc
+    limit: 15
+    display: queue
+    action: device_detail
+    empty: "Every active device has a tester"
+
+  # WI D: context family — recent field sessions across the roster
+  session_trail:
+    source: TestSession
+    sort: logged_at desc
+    limit: 15
+    display: timeline
+    action: test_session_detail
+    empty: "No test sessions logged"
+
+  # WI D: chart family — tester skill mix
+  skill_mix:
+    source: Tester
+    display: bar_chart
+    group_by: skill_level
+    aggregate:
+      count: count(Tester)
+    empty: "No testers yet"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts

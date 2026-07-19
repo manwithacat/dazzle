@@ -40,6 +40,8 @@ Every one of these six kinds of record can be browsed, inspected in detail, crea
   board, related open tasks, and release status chart.
 - **Session Ops** — field session pulse for engineer/manager: session metrics,
   recent timeline, active device grid, open-report queue, environment chart.
+- **Tester Roster** — engineer/manager capacity desk: tester metrics, active
+  roster grid, unassigned device queue, session trail, and skill mix chart.
 - **Tester Dashboard** — tester home: personal metrics, assigned devices,
   their issues and tasks, session timeline.
 - **Field Kit** — tester road desk: assigned devices, recent sessions, open
@@ -77,4 +79,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:ff61aa61bf057f24f426ee3e23fbaacf00f9afaf8197f9c61dad5d4d2e02c917 -->
+<!-- dazzle-spec-brief: sha256:7aa8b4af46500709dda9f9c547c70eaea3dc711d3fdbab8e31c292a901ba047a -->
