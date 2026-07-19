@@ -59,9 +59,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1055 | USED |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1056 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1056 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1030 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1029 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1060 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1060 | USED |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1060 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1032 | USED |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1032 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1027 | USED |
@@ -77,17 +77,17 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1033 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1036 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1029 | USED |
-| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1027 | USED |
-| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1027 | USED |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1060 | USED |
+| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
+| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1027 | USED |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1031 | USED |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1031 | USED |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1036 | USED |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1031 | USED |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1029 | USED |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1060 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1031 | USED |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1029 | USED |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1060 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1037 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1057 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1030 | USED |
@@ -107,6 +107,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1060 (2026-07-19).** **framework-ux/example-apps HYGIENE dig** — support_tickets
+> validate+lint OK (warns only); ux verify contracts **64/0/38** (seed 400 advisory created_by);
+> composition **100/100**; rbac matrix OK; fragment-audit exit 0; dual_lock queue **0**;
+> shadcn gaps **0**. budget_consumed 1. Explore **5/100**.
 
 > **Cycle 1059 (2026-07-19).** **example-apps COGNITION dig** — demo_world + db + qa trial
 > inventory: simple_task serve :3945, reset-and-load 8 fixtures, demo_world residual=0,
