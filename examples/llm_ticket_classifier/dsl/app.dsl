@@ -252,6 +252,7 @@ surface classification_detail "Classification Detail":
 
 # Story-driven (docs/guides/story-to-composition.md): supervisor metrics +
 # open queue first; agent ticket_management is a review queue not CRUD list.
+# WI L: denser landing regions (cap 6) on supervisor default.
 workspace support_dashboard "Support Dashboard":
   purpose: "Monitor and classify support tickets"
   access: persona(supervisor, support_agent, admin)
@@ -263,6 +264,7 @@ workspace support_dashboard "Support Dashboard":
       open: count(Ticket where status = open)
       classified: count(TicketClassification)
       in_progress: count(Ticket where status = in_progress)
+      priorities: count(PriorityAssessment)
     tones:
       open: warning
       classified: positive
@@ -277,6 +279,15 @@ workspace support_dashboard "Support Dashboard":
     action: ticket_detail
     empty: "No open tickets"
 
+  in_progress_queue:
+    source: Ticket
+    filter: status = in_progress
+    sort: created_at desc
+    limit: 15
+    display: queue
+    action: ticket_detail
+    empty: "Nothing in progress"
+
   classifications:
     source: TicketClassification
     sort: classified_at desc
@@ -284,6 +295,30 @@ workspace support_dashboard "Support Dashboard":
     display: list
     empty: "No classifications yet"
 
+  priority_strip:
+    source: PriorityAssessment
+    sort: priority desc
+    limit: 12
+    display: list
+    empty: "No priority assessments yet"
+
+  triage_readiness:
+    display: status_list
+    entries:
+      - title: "Open queue"
+        caption: "Clear open tickets before they age out of SLA"
+        icon: "inbox"
+        state: warning
+      - title: "AI classifications"
+        caption: "Review confidence before routing"
+        icon: "sparkles"
+        state: accent
+      - title: "Priority assessments"
+        caption: "High-severity items surface on the priority desk"
+        icon: "alert-triangle"
+        state: positive
+
+# WI L: agent default landing — aim for ≥5–6 regions.
 workspace ticket_management "Ticket Management":
   purpose: "Manage individual tickets"
   access: persona(support_agent, supervisor, admin)
@@ -295,6 +330,7 @@ workspace ticket_management "Ticket Management":
       open: count(Ticket where status = open)
       in_progress: count(Ticket where status = in_progress)
       classified: count(TicketClassification)
+      priorities: count(PriorityAssessment)
     tones:
       open: warning
       in_progress: accent
@@ -304,13 +340,24 @@ workspace ticket_management "Ticket Management":
     source: Ticket
     filter: status != closed
     sort: created_at desc
+    limit: 20
     display: queue
     action: ticket_detail
     empty: "No open tickets in the system"
 
+  open_only:
+    source: Ticket
+    filter: status = open
+    sort: created_at desc
+    limit: 15
+    display: queue
+    action: ticket_detail
+    empty: "No brand-new open tickets"
+
   all_tickets:
     source: Ticket
     sort: created_at desc
+    limit: 20
     display: list
     action: ticket_detail
     empty: "No tickets in the system"
@@ -321,6 +368,13 @@ workspace ticket_management "Ticket Management":
     limit: 12
     display: list
     empty: "No classifications yet"
+
+  priority_context:
+    source: PriorityAssessment
+    sort: priority desc
+    limit: 10
+    display: list
+    empty: "No priority assessments yet"
 
 # Third product workspace (WI density D): classification-first desk so list
 # surfaces no longer dominate vs job shells (AI triage is the product value).
@@ -353,6 +407,64 @@ workspace classification_desk "Classifications":
     action: ticket_detail
     empty: "No open tickets"
 
+  priority_link:
+    source: PriorityAssessment
+    sort: priority desc
+    limit: 12
+    display: list
+    empty: "No priority assessments"
+
+# Fourth product workspace (WI D): priority assessment desk.
+workspace priority_desk "Priorities":
+  purpose: "Priority assessment trail — severity signals next to open work"
+  access: persona(supervisor, support_agent, admin)
+
+  priority_pulse:
+    source: PriorityAssessment
+    display: metrics
+    aggregate:
+      assessments: count(PriorityAssessment)
+      open: count(Ticket where status = open)
+      classified: count(TicketClassification)
+    tones:
+      open: warning
+      assessments: accent
+
+  recent_assessments:
+    source: PriorityAssessment
+    sort: priority desc
+    limit: 25
+    display: queue
+    empty: "No priority assessments yet"
+
+  open_work:
+    source: Ticket
+    filter: status = open
+    sort: created_at desc
+    limit: 15
+    display: list
+    action: ticket_detail
+    empty: "No open tickets"
+
+  classifications:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 12
+    display: list
+    empty: "No classifications yet"
+
+  severity_hint:
+    display: status_list
+    entries:
+      - title: "Severity first"
+        caption: "Pair AI priority with open queue before reassignment"
+        icon: "gauge"
+        state: accent
+      - title: "Classifications"
+        caption: "Category tags live on the Classifications desk"
+        icon: "tags"
+        state: positive
+
 
 # =============================================================================
 # Personas
@@ -364,6 +476,8 @@ persona support_agent "Support Agent":
   proficiency: intermediate
   default_workspace: ticket_management
   default_route: "/tickets"
+  # WI N: job desks first — not auto entity-list soup
+  uses nav agent_nav
 
 persona supervisor "Support Supervisor":
   description: "Monitor ticket flow and AI classification accuracy"
@@ -371,6 +485,22 @@ persona supervisor "Support Supervisor":
   proficiency: expert
   default_workspace: support_dashboard
   default_route: "/dashboard"
+  uses nav supervisor_nav
+
+# Curated sidebars: workspace destinations only (WI N).
+nav agent_nav:
+  group "My work":
+    ticket_management
+    classification_desk
+    priority_desk
+    support_dashboard
+
+nav supervisor_nav:
+  group "Oversight":
+    support_dashboard
+    classification_desk
+    priority_desk
+    ticket_management
 
 
 # =============================================================================

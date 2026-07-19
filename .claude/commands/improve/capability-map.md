@@ -79,16 +79,16 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 | MCP `policy` (analyze/conflicts/coverage/simulate/access_matrix/verify_status) | MCP | framework-ux | 1008 | USED |
 | MCP `test_intelligence` (summary/failures/regression/coverage/context/journey) | MCP | test-suite | 1008 | USED |
 | MCP `semantics` (extract/validate_events/tenancy/compliance/analytics/extract_guards) | MCP | example-apps | 1008 | USED |
-| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1020 | USED |
-| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1020 | USED |
+| **CodeQL / code-scanning** (open-alert poll + remediate; strategy `codeql`) | GitHub code-scanning API + `improve/strategies/codeql.md` | **driver (Step 0c2)** | 1021 | USED |
+| **GitHub inbox** (consumer + owner/pilot bugs + Dependabot/PR processing) | `scripts/improve_github_inbox.py` + strategies `consumer_issues` / `github_prs` | **driver (Step 0c3)** | 1021 | USED |
 | `dazzle representation` + MCP `representation` (#1617 patterns/decide/classify/gin-sql) | CLI + MCP | framework-ux + example-apps | 1005 | USED |
 | `dazzle prove` (story bindings + `prove representation`) | CLI | framework-ux + example-apps | 1005 | USED |
 | `dazzle scaffold` (service/story/process-step skeletons; agent closed loop #1605) | CLI | example-apps | 1005 | USED |
 | `stems` skill | skill | — | — | EXEMPT (epistemic entry; in-session) |
-| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1020 | USED |
+| **example product maturity** (anti-warehouse residual + continuous WI D/N/L/J/G) | `scripts/example_product_maturity.py` + strategy `product_maturity` / feature_creep | **example-apps** | 1021 | USED |
 | **demo fleet bar** (#1626 antagonist: nav/seed/stills floors) | `scripts/demo_fleet_bar.py` + strategy `demo_fleet` | **example-apps** | 1012 | USED |
 | **example journey maturity** (bound stories + open-via + hubs) | `scripts/example_journey_maturity.py` + strategy `journey_dogfood` | **example-apps** | 1016 | USED |
-| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1020 | USED |
+| **unified example probes** (product + demo + journey OBSERVE) | `scripts/improve_example_probes.py` | **example-apps** (driver Step 1 + status) | 1021 | USED |
 | MCP `product_quality` (score — persona homes + stills + maturity) | MCP | **example-apps** | 1012 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | CLI | **example-apps** | 1012 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop /__test__ seed) | CLI | example-apps + agent DX | 1012 | USED |
@@ -153,6 +153,8 @@ new as `UNOWNED`. To re-derive by hand: `dazzle --help`, the MCP table in
 
 
 
+
+> **Cycle 1021 (2026-07-19).** **example-apps** ordinary explore llm_ticket_classifier (L+N+D): densified agent/supervisor landings (6 regions), curated navs, priority_desk (4 product ws). WI **0.30→0.10** (L→0,N→0). wi_fleet **0.186≤floor**. Stamps product_maturity+probes+CodeQL/inbox **USED@1021**. Explore **78/100**. Next wi_next=**support_tickets** (N). self-audit ~1028; sweep ~1034.
 
 > **Cycle 1020 (2026-07-19).** **example-apps** ordinary explore domain_join_co (L+N+D): densified announce (6 regions) + home; curated navs; publish_desk (3 product ws). WI **0.32→0.07** (L→0,N→0). wi_fleet **0.203≤floor**. Stamps product_maturity+probes+CodeQL/inbox **USED@1020**. Explore **77/100**. Next wi_next=**llm_ticket_classifier** (L). self-audit ~1028; sweep ~1034.
 
