@@ -288,6 +288,18 @@ workspace ticket_management "Ticket Management":
   purpose: "Manage individual tickets"
   access: persona(support_agent, supervisor, admin)
 
+  agent_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+      classified: count(TicketClassification)
+    tones:
+      open: warning
+      in_progress: accent
+      classified: positive
+
   ticket_queue:
     source: Ticket
     filter: status != closed
@@ -302,6 +314,44 @@ workspace ticket_management "Ticket Management":
     display: list
     action: ticket_detail
     empty: "No tickets in the system"
+
+  recent_classifications:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 12
+    display: list
+    empty: "No classifications yet"
+
+# Third product workspace (WI density D): classification-first desk so list
+# surfaces no longer dominate vs job shells (AI triage is the product value).
+workspace classification_desk "Classifications":
+  purpose: "Review AI ticket classifications and confidence before hand-off"
+  access: persona(supervisor, support_agent, admin)
+
+  class_pulse:
+    source: TicketClassification
+    display: metrics
+    aggregate:
+      classifications: count(TicketClassification)
+      tickets: count(Ticket)
+    tones:
+      classifications: accent
+
+  latest:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 25
+    display: queue
+    empty: "No classifications yet"
+
+  open_tickets:
+    source: Ticket
+    filter: status = open
+    sort: created_at desc
+    limit: 15
+    display: list
+    action: ticket_detail
+    empty: "No open tickets"
 
 
 # =============================================================================
