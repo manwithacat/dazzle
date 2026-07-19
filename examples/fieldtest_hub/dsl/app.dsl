@@ -57,6 +57,7 @@ nav engineer_nav:
     engineering_dashboard
     issue_triage
     firmware_pipeline
+    session_ops
 
 nav tester_nav:
   group "Field":
@@ -69,6 +70,7 @@ nav manager_nav:
     engineering_dashboard
     issue_triage
     firmware_pipeline
+    session_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1504,6 +1506,15 @@ workspace firmware_pipeline "Firmware Pipeline":
     action: task_detail
     empty: "No open tasks"
 
+  # WI D: chart family — release status mix
+  release_status_mix:
+    source: FirmwareRelease
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(FirmwareRelease)
+    empty: "No firmware releases"
+
 workspace field_kit "Field Kit":
   purpose: "Tester kit — assigned devices and recent sessions on the road"
   access: persona(tester)
@@ -1545,6 +1556,69 @@ workspace field_kit "Field Kit":
     display: queue
     action: task_detail
     empty: "No open tasks"
+
+  # WI D: kanban family for personal open work
+  my_task_flow:
+    source: Task
+    filter: assigned_to_id = current_user and status != completed and status != cancelled
+    display: kanban
+    group_by: status
+    action: task_detail
+    empty: "No open tasks"
+
+# Seventh product desk (WI D): dens floor with 6 lists needs ≥7 job-weighted desks.
+workspace session_ops "Session Ops":
+  purpose: "Field session pulse — recent tests, devices exercised, and open issues"
+  access: persona(engineer, manager)
+
+  session_metrics:
+    source: TestSession
+    display: metrics
+    aggregate:
+      sessions: count(TestSession)
+      open_issues: count(IssueReport where status = open)
+      active_devices: count(Device where status = active)
+    tones:
+      open_issues: warning
+      active_devices: positive
+
+  # WI D: context family — recent field sessions
+  recent_sessions:
+    source: TestSession
+    sort: logged_at desc
+    limit: 20
+    display: timeline
+    action: test_session_detail
+    empty: "No test sessions logged"
+
+  # WI D: grid family — devices exercised in the field
+  active_fleet:
+    source: Device
+    filter: status = active
+    sort: name asc
+    limit: 15
+    display: grid
+    action: device_detail
+    empty: "No active devices"
+
+  # WI D: queue family — open field reports
+  open_reports:
+    source: IssueReport
+    filter: status = open
+    sort: severity desc, reported_at desc
+    limit: 15
+    display: queue
+    action: issue_report_edit
+    empty: "No open reports"
+
+  # WI D: chart family — session environment mix
+  environment_mix:
+    source: TestSession
+    display: bar_chart
+    group_by: environment
+    aggregate:
+      count: count(TestSession)
+    empty: "No test sessions"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts

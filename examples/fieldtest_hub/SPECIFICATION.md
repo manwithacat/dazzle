@@ -36,12 +36,14 @@ Every one of these six kinds of record can be browsed, inspected in detail, crea
   engineering mega-board chrome.
 - **Issue Triage** — shared engineer/manager desk for open and critical field
   reports (severity-first queue and status board).
-- **Firmware Pipeline** — release desk: draft/live metrics, release list and
-  board, related open tasks.
+- **Firmware Pipeline** — release desk: draft/live metrics, release grid and
+  board, related open tasks, and release status chart.
+- **Session Ops** — field session pulse for engineer/manager: session metrics,
+  recent timeline, active device grid, open-report queue, environment chart.
 - **Tester Dashboard** — tester home: personal metrics, assigned devices,
   their issues and tasks, session timeline.
 - **Field Kit** — tester road desk: assigned devices, recent sessions, open
-  tasks.
+  tasks and personal task kanban.
 
 ## How work flows through it
 
@@ -75,4 +77,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:ace6602da690535155389b82e6e44648fe95b789470a0834f35f6dd5a7c43442 -->
+<!-- dazzle-spec-brief: sha256:ff61aa61bf057f24f426ee3e23fbaacf00f9afaf8197f9c61dad5d4d2e02c917 -->
