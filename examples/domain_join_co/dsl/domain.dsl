@@ -38,11 +38,13 @@ nav admin_nav:
     home
     announce
     publish_desk
+    workspace_ops
 
 nav member_nav:
   group "Team":
     announce
     home
+    workspace_ops
 
 # ── Tenant root (resolved by host; members + their role declared here) ─────────
 
@@ -334,3 +336,53 @@ workspace publish_desk "Publish":
     aggregate:
       count: count(Announcement)
     empty: "No posts yet"
+
+# Fourth product desk (WI D): skip invoice_ops desk-cap; densify domain_join_co.
+workspace workspace_ops "Workspace Ops":
+  purpose: "Tenant-root pressure — workspace footprint and post load without warehouse CRUD"
+  access: persona(admin, member)
+
+  tenant_pulse:
+    source: Workspace
+    display: metrics
+    aggregate:
+      workspaces: count(Workspace)
+      posts: count(Announcement)
+    tones:
+      workspaces: accent
+      posts: positive
+
+  # WI D: queue family — workspaces first
+  workspace_queue:
+    source: Workspace
+    sort: name asc
+    limit: 20
+    display: queue
+    empty: "No workspaces yet"
+
+  # WI D: grid family — announcement cards
+  post_cards:
+    source: Announcement
+    sort: title asc
+    limit: 15
+    display: grid
+    action: announcement_detail
+    empty: "No announcements yet"
+
+  # WI D: context family — post trail
+  post_trail:
+    source: Announcement
+    sort: title asc
+    limit: 15
+    display: timeline
+    action: announcement_detail
+    empty: "No announcement activity yet"
+
+  # WI D: chart family — posts by workspace
+  post_mix:
+    source: Announcement
+    display: bar_chart
+    group_by: workspace
+    aggregate:
+      count: count(Announcement)
+    empty: "No posts to chart"
