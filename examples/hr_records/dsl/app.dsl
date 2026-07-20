@@ -60,6 +60,7 @@ nav hr_admin_nav:
   group "Org & pay":
     org_chart
     compensation_review
+    salary_ops
     time_machine
 
 nav manager_nav:
@@ -70,10 +71,12 @@ nav manager_nav:
     org_chart
     reporting_desk
     employment_ops
+    salary_ops
 
 nav finance_nav:
   group "Compensation":
     compensation_review
+    salary_ops
     staff_directory
     person_detail
     employment_ops
@@ -1231,3 +1234,53 @@ workspace employment_ops "Employment Ops":
     aggregate:
       count: count(Department)
     empty: "No departments"
+
+# Tenth product desk (WI D): 5 lists floor dens ~0.36 with 9 full desks — need 10.
+workspace salary_ops "Salary Ops":
+  purpose: "Salary pressure — active compensation rows and change reasons without warehouse CRUD"
+  access: persona(hr_admin, manager, finance)
+
+  salary_pulse:
+    source: Salary
+    display: metrics
+    aggregate:
+      active: count(Salary where effective_to = null)
+      rows: count(Salary)
+      people: count(Person)
+    tones:
+      active: positive
+      rows: accent
+
+  # WI D: queue family — currently effective salaries first
+  active_salary_queue:
+    source: Salary
+    filter: effective_to = null
+    sort: effective_from desc
+    limit: 25
+    display: queue
+    empty: "No active salaries"
+
+  # WI D: grid family — people context for pay ops
+  people_grid:
+    source: Person
+    display: grid
+    limit: 20
+    action: person_detail
+    empty: "No people on record"
+
+  # WI D: context family — recent compensation trail
+  salary_trail:
+    source: Salary
+    sort: effective_from desc
+    limit: 15
+    display: timeline
+    empty: "No salary history yet"
+
+  # WI D: chart family — change-reason mix
+  reason_mix:
+    source: Salary
+    display: bar_chart
+    group_by: reason
+    aggregate:
+      count: count(Salary)
+    empty: "No salary rows to chart"
