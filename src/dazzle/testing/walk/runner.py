@@ -23,6 +23,11 @@ from dazzle.testing.walk.models import (
     SceneWalkSpec,
     WalkActionType,
 )
+from dazzle.testing.walk.policies import (
+    attach_csrf_request_hook,
+    cookies_for_playwright,
+    prime_csrf_cookie,
+)
 from dazzle.testing.walk.results import (
     ActionResult,
     SceneResult,
@@ -79,6 +84,8 @@ class WalkRunner:
                 follow_redirects=True,
                 cookies=self._cookies,
             )
+            # CSRF policy: cookie → X-CSRF-Token on mutations (CyFuture R1–R2)
+            attach_csrf_request_hook(self._client)
         return self
 
     async def __aexit__(self, *args: object) -> None:
@@ -87,24 +94,41 @@ class WalkRunner:
             self._client = None
 
     async def authenticate(self, persona: str) -> None:
-        """Establish session cookies for *persona* (no-op on dry-run)."""
+        """Establish session + CSRF cookies for *persona* (no-op on dry-run)."""
         if self.dry_run:
             return
         if self.project_root is None:
             raise RuntimeError("project_root required for authentication")
+        if self._client is None:
+            raise RuntimeError("HTTP client not open; use async with WalkRunner")
         manager = SessionManager(self.project_root, base_url=self.base_url)
         existing = manager.load_session(persona)
         if existing and existing.session_token:
             valid = await manager.validate_session(persona)
             if valid:
-                self._cookies = {"dazzle_session": existing.session_token}
-                if self._client is not None:
-                    self._client.cookies.set("dazzle_session", existing.session_token)
+                self._apply_session_cookie(existing.session_token)
+                await self._prime_csrf()
                 return
         session = await manager.create_session(persona)
-        self._cookies = {"dazzle_session": session.session_token}
+        self._apply_session_cookie(session.session_token)
+        await self._prime_csrf()
+
+    def _apply_session_cookie(self, token: str) -> None:
+        self._cookies["dazzle_session"] = token
         if self._client is not None:
-            self._client.cookies.set("dazzle_session", session.session_token)
+            self._client.cookies.set("dazzle_session", token)
+
+    async def _prime_csrf(self) -> None:
+        """R1.2: GET /health if dazzle_csrf absent; sync jar into self._cookies."""
+        assert self._client is not None
+        token = await prime_csrf_cookie(self._client, self.base_url)
+        if token:
+            self._cookies["dazzle_csrf"] = token
+        # Mirror any cookies httpx collected back into self._cookies for Playwright
+        for name in ("dazzle_session", "dazzle_csrf"):
+            val = self._client.cookies.get(name)
+            if val:
+                self._cookies[name] = val
 
     async def run(self, walk: SceneWalkSpec) -> WalkRunResult:
         """Run all scenes; stop on first scene failure."""
@@ -364,18 +388,16 @@ class WalkRunner:
                 base_url=self.base_url,
                 storage_state=None,
             )
-            # Inject session cookie
-            if self._cookies:
-                await ctx.add_cookies(
-                    [
-                        {
-                            "name": k,
-                            "value": v,
-                            "url": self.base_url,
-                        }
-                        for k, v in self._cookies.items()
-                    ]
-                )
+            # Session + CSRF cookies from the same jar as httpx (R4.1)
+            jar = (
+                cookies_for_playwright(self._client, self.base_url)
+                if self._client is not None
+                else [
+                    {"name": k, "value": v, "url": self.base_url} for k, v in self._cookies.items()
+                ]
+            )
+            if jar:
+                await ctx.add_cookies(jar)
             page = await ctx.new_page()
             try:
                 target = self.last_url or self.base_url + "/"

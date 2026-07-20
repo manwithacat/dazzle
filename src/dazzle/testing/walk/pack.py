@@ -24,12 +24,20 @@ from dazzle.testing.walk.claims import (
 )
 from dazzle.testing.walk.discovery import discover_walk_paths
 from dazzle.testing.walk.loader import load_walk
+from dazzle.testing.walk.models import SceneWalkSpec, WalkActionType
 from dazzle.testing.walk.results import WalkRunResult
 from dazzle.testing.walk.runner import run_walk_sync
 from dazzle.testing.walk.validate import validate_walk
 
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec
+
+_PLAYWRIGHT_TYPES = frozenset({WalkActionType.PLAYWRIGHT_CLICK, WalkActionType.PLAYWRIGHT_WAIT})
+
+
+def walk_needs_playwright(walk: SceneWalkSpec) -> bool:
+    """True when any scene uses playwright_* (R4.3 auto-enable)."""
+    return any(a.type in _PLAYWRIGHT_TYPES for s in walk.scenes for a in s.actions)
 
 
 def _pack_key(value: str | int | None) -> str | None:
@@ -71,11 +79,14 @@ def pack_dry_run(
     registry: JobClaimRegistry | None = None,
     execute: bool = False,
     base_url: str | None = None,
+    use_playwright: bool | None = None,
 ) -> PackDryRunResult:
     """Dry-run (or live-run) all walks for claims in *pack*.
 
     Args:
         execute: When True, run walks live (needs server). Default dry-run only.
+        use_playwright: Force Playwright on/off. ``None`` = auto when walk
+            contains ``playwright_*`` actions (CyFuture R4.3).
     """
     root = project_root.resolve()
     if registry is None:
@@ -111,6 +122,7 @@ def pack_dry_run(
                 execute=execute,
                 base_url=base_url,
                 registry=registry,
+                use_playwright=use_playwright,
             )
         )
 
@@ -126,6 +138,7 @@ def _run_pack_walk(
     execute: bool,
     base_url: str | None,
     registry: JobClaimRegistry,
+    use_playwright: bool | None = None,
 ) -> WalkRunResult:
     """Load + dry-run/execute one walk for a pack; always returns a WalkRunResult."""
     paths = [p for p in discover_walk_paths(root) if p.stem == walk_id]
@@ -140,11 +153,13 @@ def _run_pack_walk(
             ok=False,
             error="; ".join(i.message for i in v_err),
         )
+    pw = walk_needs_playwright(walk) if use_playwright is None else use_playwright
     return run_walk_sync(
         walk,
         base_url=base_url or registry.base_url_default or "http://127.0.0.1:8000",
         project_root=root,
         dry_run=not execute,
+        use_playwright=pw and execute,
     )
 
 

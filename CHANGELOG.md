@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Added
+- **Walk runner CSRF policy** — after SessionManager auth, prime
+  `dazzle_csrf` via GET `/health` and inject `X-CSRF-Token` on POST/PUT/
+  PATCH/DELETE (including multipart). Matches `test_runner` / CyFuture
+  hybrid; required for Pack A `api_*` mutations under CSRF middleware.
+  Pack dry-run auto-enables Playwright when walks contain `playwright_*`.
 - **#1639 walk runner api_* extensions** — implement `api_find`,
   `api_ensure_status`, `api_assert_field`, `api_post`, `api_upload_file`,
   and best-effort `api_agent_ensure_el_viewed` on SessionManager/httpx.

@@ -54,3 +54,17 @@ dazzle test walk run -m examples/simple_task/dazzle.toml --core-only --dry-run
 
 `api_ensure_status` resets rows to a known state so re-runs stay green.
 Prefer story seeds (#1626) over faker for `api_find` filters.
+
+
+## CSRF (required on live Dazzle apps)
+
+Mutating `api_*` actions need the same browser-parity CSRF as the rest of
+the runtime:
+
+| Cookie | Header |
+|--------|--------|
+| `dazzle_csrf` | `X-CSRF-Token: <same>` |
+
+The walk runner primes the cookie after auth and attaches the header on
+POST/PUT/PATCH/DELETE automatically. Do **not** disable CSRF for walk
+paths in production.

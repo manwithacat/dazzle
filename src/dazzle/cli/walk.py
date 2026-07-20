@@ -411,6 +411,11 @@ def walk_pack_dry_run(
         "--execute",
         help="Live-run walks (default: dry-run / no network)",
     ),
+    playwright: bool | None = typer.Option(
+        None,
+        "--playwright/--no-playwright",
+        help="Force Playwright on/off (default: auto when walk has playwright_*)",
+    ),
     base_url: str | None = typer.Option(None, "--base-url", "-u"),
     seed: bool = typer.Option(
         False,
@@ -425,8 +430,12 @@ def walk_pack_dry_run(
     and dry-runs (or ``--execute``) each bound walk. Residuals are suitable
     for ``dazzle agent seed improve`` (kind=walk_claim).
 
+    With ``--execute``, Playwright is auto-enabled when a walk uses
+    ``playwright_click`` / ``playwright_wait`` (CyFuture Pack A VAT path).
+
     Examples:
         dazzle test walk pack-dry-run -m examples/simple_task/dazzle.toml --pack A
+        dazzle test walk pack-dry-run --pack A --execute -u $URL
         dazzle test walk pack-dry-run --pack A --seed --json
     """
     root = project_root_from_manifest(manifest)
@@ -438,6 +447,7 @@ def walk_pack_dry_run(
             appspec=appspec,
             execute=execute,
             base_url=base_url or _resolve_base_url(root, None),
+            use_playwright=playwright,
         )
     except FileNotFoundError as e:
         typer.echo(str(e), err=True)

@@ -388,3 +388,75 @@ class TestApiActions:
                 assert runner.vars.get("tid") == "t1"
 
         asyncio.run(_go())
+
+
+class TestCsrfPolicy:
+    """CyFuture walk-runner-csrf-requirements R1–R2."""
+
+    def test_mutating_request_gets_csrf_header(self) -> None:
+        import asyncio
+
+        import httpx
+
+        from dazzle.testing.walk.policies import (
+            CSRF_COOKIE,
+            CSRF_HEADER,
+            attach_csrf_request_hook,
+            prime_csrf_cookie,
+        )
+
+        captured: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured.append(request)
+            if request.url.path.endswith("/health"):
+                return httpx.Response(
+                    200,
+                    headers=[(b"set-cookie", f"{CSRF_COOKIE}=tok123; Path=/".encode())],
+                    json={"ok": True},
+                )
+            return httpx.Response(200, json={"status": "ok"})
+
+        transport = httpx.MockTransport(handler)
+
+        async def _go() -> None:
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                attach_csrf_request_hook(client)
+                token = await prime_csrf_cookie(client, "http://test")
+                assert token == "tok123"
+                await client.patch("/vatreturns/1", json={"status": "x"})
+                await client.get("/vatreturns/1")
+
+        asyncio.run(_go())
+        patch_req = next(r for r in captured if r.method == "PATCH")
+        get_req = next(r for r in captured if r.method == "GET" and "vatreturns" in str(r.url))
+        assert patch_req.headers.get(CSRF_HEADER) == "tok123"
+        assert CSRF_HEADER not in get_req.headers or get_req.headers.get(CSRF_HEADER) is None
+
+    def test_multipart_post_includes_header(self) -> None:
+        import asyncio
+
+        import httpx
+
+        from dazzle.testing.walk.policies import CSRF_COOKIE, CSRF_HEADER, attach_csrf_request_hook
+
+        seen: dict[str, str] = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST":
+                seen["csrf"] = request.headers.get(CSRF_HEADER, "")
+            return httpx.Response(200, json={})
+
+        async def _go() -> None:
+            async with httpx.AsyncClient(
+                transport=httpx.MockTransport(handler), base_url="http://test"
+            ) as client:
+                client.cookies.set(CSRF_COOKIE, "upload-tok")
+                attach_csrf_request_hook(client)
+                await client.post(
+                    "/files/upload",
+                    files={"file": ("a.txt", b"hello")},
+                )
+
+        asyncio.run(_go())
+        assert seen.get("csrf") == "upload-tok"
