@@ -74,6 +74,7 @@ nav finance_nav:
     draft_ops
     rejected_ops
     partial_ops
+    paid_ops
 
 nav auditor_nav:
   group "Audit":
@@ -86,6 +87,7 @@ nav auditor_nav:
     line_items_desk
     rejected_ops
     partial_ops
+    paid_ops
 
 nav tenant_admin_nav:
   group "Admin":
@@ -98,6 +100,7 @@ nav tenant_admin_nav:
     draft_ops
     rejected_ops
     partial_ops
+    paid_ops
 
 nav finance_admin_nav:
   group "Oversight":
@@ -115,3 +118,4 @@ nav finance_admin_nav:
     draft_ops
     rejected_ops
     partial_ops
+    paid_ops

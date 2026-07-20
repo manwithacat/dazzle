@@ -1188,3 +1188,60 @@ workspace partial_ops "Partial Pay Ops":
     aggregate:
       count: count(Invoice)
     empty: "No settlement invoices to chart"
+
+# Sixteenth product desk (WI D): 7 lists floor dens ~0.32 with 15 full desks — need 16.
+workspace paid_ops "Paid Ops":
+  purpose: "Paid archive pressure — settled invoices without warehouse CRUD"
+  access: persona(finance, finance_admin, auditor, tenant_admin)
+
+  paid_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      paid: count(Invoice where status = paid)
+      partial: count(Invoice where status = partially_paid)
+      open: count(Invoice where status != paid and status != rejected)
+    tones:
+      paid: positive
+      partial: warning
+      open: accent
+
+  # WI D: queue family — largest paid first
+  paid_queue:
+    source: Invoice
+    filter: status = paid
+    sort: amount desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "No paid invoices yet"
+
+  # WI D: grid family — paid settlement cards
+  paid_grid:
+    source: Invoice
+    filter: status = paid
+    sort: updated_at desc
+    limit: 15
+    display: grid
+    action: invoice_detail
+    empty: "No paid invoices yet"
+
+  # WI D: context family — recent paid trail
+  paid_trail:
+    source: Invoice
+    filter: status = paid
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No paid activity yet"
+
+  # WI D: chart family — paid vs mid-settlement mix
+  status_mix:
+    source: Invoice
+    filter: status = paid or status = partially_paid or status = approved
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No settlement invoices to chart"
