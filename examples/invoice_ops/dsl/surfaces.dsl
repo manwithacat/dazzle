@@ -1415,3 +1415,56 @@ workspace succeeded_ops "Succeeded Ops":
     aggregate:
       count: count(PaymentAttempt)
     empty: "No payment attempts to chart"
+
+# Twentieth product desk (WI D): 7 lists floor dens ~0.27 with 19 full desks — need 20.
+workspace region_ops "Region Ops":
+  purpose: "Regional supplier pressure — vendor footprint by region without warehouse CRUD"
+  access: persona(finance, finance_admin, auditor, tenant_admin)
+
+  region_pulse:
+    source: Supplier
+    display: metrics
+    aggregate:
+      suppliers: count(Supplier)
+      invoices: count(Invoice)
+      bank_accounts: count(SupplierBankAccount)
+    tones:
+      suppliers: accent
+      invoices: warning
+      bank_accounts: positive
+
+  # WI D: queue family — suppliers first
+  supplier_queue:
+    source: Supplier
+    sort: name asc
+    limit: 25
+    display: queue
+    action: supplier_detail
+    empty: "No suppliers yet"
+
+  # WI D: grid family — supplier cards by region context
+  supplier_grid:
+    source: Supplier
+    sort: region asc, name asc
+    limit: 20
+    display: grid
+    action: supplier_detail
+    empty: "No suppliers yet"
+
+  # WI D: context family — recent invoice trail
+  invoice_trail:
+    source: Invoice
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No invoice history"
+
+  # WI D: chart family — supplier region mix
+  region_mix:
+    source: Supplier
+    display: bar_chart
+    group_by: region
+    aggregate:
+      count: count(Supplier)
+    empty: "No suppliers to chart"
