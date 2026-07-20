@@ -1094,6 +1094,63 @@ workspace open_ops "Open Ops":
       count: count(Ticket)
     empty: "No open tickets to chart"
 
+# Tenth product desk (WI D): skip invoice_ops desk-cap; densify support_tickets.
+workspace resolved_ops "Resolved Ops":
+  purpose: "Close-out pressure — resolved tickets awaiting final close without warehouse CRUD"
+  access: persona(agent, manager, admin)
+
+  resolved_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      resolved: count(Ticket where status = resolved)
+      closed: count(Ticket where status = closed)
+      open: count(Ticket where status = open)
+    tones:
+      resolved: positive
+      closed: muted
+      open: warning
+
+  # WI D: queue family — resolved first
+  resolved_queue:
+    source: Ticket
+    filter: status = resolved
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: ticket_edit
+    empty: "No resolved tickets waiting close-out"
+
+  # WI D: grid family — resolved cards
+  resolved_grid:
+    source: Ticket
+    filter: status = resolved
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No resolved tickets waiting close-out"
+
+  # WI D: context family — recent resolve trail
+  resolved_trail:
+    source: Ticket
+    filter: status = resolved or status = closed
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No resolve activity yet"
+
+  # WI D: chart family — priority mix among resolved
+  priority_mix:
+    source: Ticket
+    filter: status = resolved
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Ticket)
+    empty: "No resolved tickets to chart"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
@@ -1137,6 +1194,7 @@ nav admin_nav:
     priority_ops
     progress_ops
     open_ops
+    resolved_ops
 
 nav customer_nav:
   group "My support":
@@ -1151,6 +1209,7 @@ nav agent_nav:
     priority_ops
     progress_ops
     open_ops
+    resolved_ops
 
 nav manager_nav:
   group "Lead":
@@ -1162,6 +1221,7 @@ nav manager_nav:
     priority_ops
     progress_ops
     open_ops
+    resolved_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
