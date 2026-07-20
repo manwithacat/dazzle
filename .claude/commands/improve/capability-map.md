@@ -68,16 +68,16 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1100 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1062 | STALE |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1101 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1061 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1100 | USED |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1100 | USED |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1100 | USED |
-| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1057 | STALE |
+| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1101 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1100 | USED |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1062 | STALE |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1101 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1100 | USED |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1060 | STALE |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1101 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1060 | STALE |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1060 | STALE |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1064 | STALE |
@@ -87,7 +87,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1063 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1099 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1100 | USED |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1060 | STALE |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1101 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1064 | STALE |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1100 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1061 | STALE |
@@ -95,7 +95,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1062 | STALE |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1099 | USED |
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1099 | USED |
-| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1057 | STALE |
+| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1101 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1093 | USED |
 | **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1054 | USED |
 | **GitHub inbox** | DRIVER | script + strategies | **driver (Step 0c3)** | 1054 | USED |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1101 (2026-07-20).** **framework-ux HYGIENE dig** — fitness code top30 +
+> vitality + clones; composition audit simple_task **100/100**; pulse run (quality/security
+> 100%); fragment-audit all regions green; scaffold CLI exercised. Stamps fitness
+> engine/CLI + composition + pulse + fragment-audit + scaffold **USED@1101**.
+> budget_consumed 1. Explore **28/100**.
 
 > **Cycle 1100 (2026-07-20).** **example-apps HYGIENE dig** — coverage 61/61 (100%);
 > sentinel scan simple_task (info/low only); compliance acme compile (auditspec stable);
