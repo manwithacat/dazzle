@@ -96,7 +96,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1057 | STALE |
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1057 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1057 | STALE |
-| `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | — | UNOWNED |
+| `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1093 | USED |
 | **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1054 | USED |
 | **GitHub inbox** | DRIVER | script + strategies | **driver (Step 0c3)** | 1054 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
@@ -108,6 +108,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1093 (2026-07-20).** **framework-ux UNOWNED exercise** — `dazzle.risk` MDF
+> catalogue (14 modes). Unit suite green; live `build_report` over full CATALOGUE with
+> framework-shaped detectors (overall score 25; top residual MDF-12 correlated QA blind
+> spots risk=25, MDF-13 demo cliff=23, MDF-04 escape-hatch collapse=20). UNOWNED→**USED**
+> @1093. budget_consumed 1. Explore **21/100**. Prefer next digs: COGNITION
+> domain/demo_world/product_quality over further WI D desks.
 
 > **Cycle 1092 (2026-07-20) capability-sweep.** Inventory: CLI surface from `dazzle --help`
 > (domain/demo/qa/validate/compliance/… still present); skills (dsl-authoring, qa-trial,
