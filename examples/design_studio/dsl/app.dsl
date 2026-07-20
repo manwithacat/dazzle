@@ -47,6 +47,7 @@ nav designer_nav:
     approved_ops
     published_ops
     draft_ops
+    active_campaigns
 
 nav reviewer_nav:
   group "Review":
@@ -62,6 +63,7 @@ nav reviewer_nav:
     approved_ops
     published_ops
     draft_ops
+    active_campaigns
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -968,6 +970,63 @@ workspace draft_ops "Draft Ops":
     aggregate:
       count: count(Asset)
     empty: "No drafts to chart"
+
+
+# Fifteenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify design_studio.
+workspace active_campaigns "Active Campaigns":
+  purpose: "Live-campaign pressure — active campaigns without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  campaign_pulse:
+    source: Campaign
+    display: metrics
+    aggregate:
+      active: count(Campaign where status = active)
+      planning: count(Campaign where status = planning)
+      completed: count(Campaign where status = completed)
+    tones:
+      active: positive
+      planning: accent
+      completed: muted
+
+  # WI D: queue family — active first
+  active_queue:
+    source: Campaign
+    filter: status = active
+    sort: start_date desc
+    limit: 20
+    display: queue
+    action: campaign_edit
+    empty: "No active campaigns"
+
+  # WI D: grid family — active cards
+  active_grid:
+    source: Campaign
+    filter: status = active
+    sort: name asc
+    limit: 15
+    display: grid
+    action: campaign_edit
+    empty: "No active campaigns"
+
+  # WI D: context family — campaign trail
+  campaign_trail:
+    source: Campaign
+    filter: status = active or status = planning
+    sort: start_date desc
+    limit: 15
+    display: timeline
+    action: campaign_edit
+    empty: "No campaign activity yet"
+
+  # WI D: chart family — campaign status mix
+  status_mix:
+    source: Campaign
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Campaign)
+    empty: "No campaigns to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
