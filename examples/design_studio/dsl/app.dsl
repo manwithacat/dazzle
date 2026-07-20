@@ -50,6 +50,7 @@ nav designer_nav:
     active_campaigns
     planning_ops
     logo_ops
+    completed_ops
 
 nav reviewer_nav:
   group "Review":
@@ -68,6 +69,7 @@ nav reviewer_nav:
     active_campaigns
     planning_ops
     logo_ops
+    completed_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -1147,6 +1149,64 @@ workspace logo_ops "Logo Ops":
     aggregate:
       count: count(Asset)
     empty: "No logos to chart"
+
+
+# Eighteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
+workspace completed_ops "Completed Ops":
+  purpose: "Completed-campaign pressure — finished campaigns without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  completed_pulse:
+    source: Campaign
+    display: metrics
+    aggregate:
+      completed: count(Campaign where status = completed)
+      active: count(Campaign where status = active)
+      planning: count(Campaign where status = planning)
+    tones:
+      completed: positive
+      active: accent
+      planning: muted
+
+  # WI D: queue family — completed first
+  completed_queue:
+    source: Campaign
+    filter: status = completed
+    sort: end_date desc
+    limit: 20
+    display: queue
+    action: campaign_edit
+    empty: "No completed campaigns"
+
+  # WI D: grid family — completed cards
+  completed_grid:
+    source: Campaign
+    filter: status = completed
+    sort: name asc
+    limit: 15
+    display: grid
+    action: campaign_edit
+    empty: "No completed campaigns"
+
+  # WI D: context family — completed trail
+  completed_trail:
+    source: Campaign
+    filter: status = completed
+    sort: end_date desc
+    limit: 15
+    display: timeline
+    action: campaign_edit
+    empty: "No completed campaign activity yet"
+
+  # WI D: chart family — brand mix among completed campaigns
+  brand_mix:
+    source: Campaign
+    filter: status = completed
+    display: bar_chart
+    group_by: brand
+    aggregate:
+      count: count(Campaign)
+    empty: "No completed campaigns to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
