@@ -63,6 +63,7 @@ nav engineer_nav:
     device_fleet
     critical_ops
     prototype_ops
+    recall_ops
 
 nav tester_nav:
   group "Field":
@@ -81,6 +82,7 @@ nav manager_nav:
     device_fleet
     critical_ops
     prototype_ops
+    recall_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1921,6 +1923,63 @@ workspace prototype_ops "Prototype Ops":
     aggregate:
       count: count(Device)
     empty: "No prototypes to chart"
+
+# Thirteenth product desk (WI D): 6 lists floor dens ~0.33 with 12 full desks — need 13.
+workspace recall_ops "Recall Ops":
+  purpose: "Recall pressure — pulled units and related open issues without warehouse CRUD"
+  access: persona(engineer, manager)
+
+  recall_metrics:
+    source: Device
+    display: metrics
+    aggregate:
+      recalled: count(Device where status = recalled)
+      retired: count(Device where status = retired)
+      open_issues: count(IssueReport where status = open)
+    tones:
+      recalled: destructive
+      retired: warning
+      open_issues: accent
+
+  # WI D: queue family — recalled units first
+  recall_queue:
+    source: Device
+    filter: status = recalled
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: device_detail
+    empty: "No recalled devices"
+
+  # WI D: grid family — recalled device cards
+  recall_grid:
+    source: Device
+    filter: status = recalled
+    sort: name asc
+    limit: 15
+    display: grid
+    action: device_detail
+    empty: "No recalled devices"
+
+  # WI D: context family — recent recall trail
+  recall_trail:
+    source: Device
+    filter: status = recalled or status = retired
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: device_detail
+    empty: "No recall or retire activity yet"
+
+  # WI D: chart family — lifecycle status mix among non-active
+  status_mix:
+    source: Device
+    filter: status = recalled or status = retired or status = prototype
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Device)
+    empty: "No non-active devices to chart"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts
