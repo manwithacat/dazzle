@@ -45,6 +45,7 @@ nav designer_nav:
     campaign_ops
     review_pipeline
     approved_ops
+    published_ops
 
 nav reviewer_nav:
   group "Review":
@@ -58,6 +59,7 @@ nav reviewer_nav:
     campaign_ops
     review_pipeline
     approved_ops
+    published_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -849,6 +851,63 @@ workspace approved_ops "Approved Ops":
     aggregate:
       count: count(Asset)
     empty: "No approved assets to chart"
+
+# Thirteenth product desk (WI D): skip invoice_ops desk-cap; densify design_studio.
+workspace published_ops "Published Ops":
+  purpose: "Live-asset pressure — published work in market without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  published_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      published: count(Asset where status = published)
+      approved: count(Asset where status = approved)
+      archived: count(Asset where status = archived)
+    tones:
+      published: positive
+      approved: accent
+      archived: muted
+
+  # WI D: queue family — published first
+  published_queue:
+    source: Asset
+    filter: status = published
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "Nothing published yet"
+
+  # WI D: grid family — published gallery
+  published_gallery:
+    source: Asset
+    filter: status = published
+    sort: name asc
+    limit: 15
+    display: grid
+    action: asset_edit
+    empty: "Nothing published yet"
+
+  # WI D: context family — recent publish trail
+  published_trail:
+    source: Asset
+    filter: status = published
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No publish activity yet"
+
+  # WI D: chart family — asset type mix among published
+  type_mix:
+    source: Asset
+    filter: status = published
+    display: bar_chart
+    group_by: asset_type
+    aggregate:
+      count: count(Asset)
+    empty: "No published assets to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
