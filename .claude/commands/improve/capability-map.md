@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1097 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1097 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1131 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1132 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1095 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1095 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1131 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1132 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1096 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1096 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1096 | USED |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1132 (2026-07-20).** **example-apps ordinary explore** acme_billing WI D —
+> new **project_ops** desk (metrics/queue/grid/timeline/chart) + owner/auditor/member nav;
+> co-ship auditspec dsl_hash **sha256:df7dd34decc08fd6**.
+> dens **0.33→0.31**; wi_next→**invoice_ops**; fleet **0.089**. budget_consumed 1.
+> Explore **14/100**.
 
 > **Cycle 1131 (2026-07-20).** **example-apps ordinary explore** design_studio WI D —
 > new **archive_ops** desk (metrics/queue/grid/timeline/chart) + designer/reviewer nav.

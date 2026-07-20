@@ -761,3 +761,54 @@ workspace org_ops "Org Ops":
     aggregate:
       count: count(Project)
     empty: "No projects to chart"
+
+# Eleventh product desk (WI D): 5 lists floor dens ~0.33 with 10 full desks — need 11.
+workspace project_ops "Project Ops":
+  purpose: "Project pressure — portfolio pulse and invoice load without warehouse CRUD"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor, project_member)
+
+  project_pulse:
+    source: Project
+    display: metrics
+    aggregate:
+      projects: count(Project)
+      invoices: count(Invoice)
+      memberships: count(Membership)
+    tones:
+      projects: accent
+      invoices: warning
+      memberships: positive
+
+  # WI D: queue family — projects first
+  project_queue:
+    source: Project
+    sort: name asc
+    limit: 20
+    display: queue
+    empty: "No projects on file"
+
+  # WI D: grid family — invoice cards for billing context
+  invoice_cards:
+    source: Invoice
+    display: grid
+    sort: amount desc
+    limit: 15
+    empty: "No invoices found"
+
+  # WI D: context family — recent project trail
+  project_trail:
+    source: Project
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No projects yet"
+
+  # WI D: chart family — invoice load by project
+  invoice_load:
+    source: Invoice
+    display: bar_chart
+    group_by: project
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices to chart"
