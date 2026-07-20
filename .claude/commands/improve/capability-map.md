@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1234 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1234 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1224 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1236 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1233 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1233 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1233 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1236 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | USED |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1235 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1235 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1236 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1236 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1236 (2026-07-20).** **example-apps WI D** design_studio planning_ops desk —
+> dens **0.21→0.20** (4 lists / 16 desks). Skip soft-cap sprawl. budget_consumed 1.
+> Explore **10/100**. Next: more dens headroom or quiet fleet.
 
 > **Cycle 1235 (2026-07-20).** **HYGIENE dig** policy/semantics/rbac/test_intelligence STALE —
 > rbac matrix+prove+routes OK (14 obligations, routes complete); policy analyze 6/9 full coverage

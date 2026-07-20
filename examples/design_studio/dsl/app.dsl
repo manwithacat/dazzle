@@ -48,6 +48,7 @@ nav designer_nav:
     published_ops
     draft_ops
     active_campaigns
+    planning_ops
 
 nav reviewer_nav:
   group "Review":
@@ -64,6 +65,7 @@ nav reviewer_nav:
     published_ops
     draft_ops
     active_campaigns
+    planning_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -1027,6 +1029,64 @@ workspace active_campaigns "Active Campaigns":
     aggregate:
       count: count(Campaign)
     empty: "No campaigns to chart"
+
+
+# Sixteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
+workspace planning_ops "Planning Ops":
+  purpose: "Pipeline-campaign pressure — planning campaigns without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  planning_pulse:
+    source: Campaign
+    display: metrics
+    aggregate:
+      planning: count(Campaign where status = planning)
+      active: count(Campaign where status = active)
+      completed: count(Campaign where status = completed)
+    tones:
+      planning: accent
+      active: positive
+      completed: muted
+
+  # WI D: queue family — planning first
+  planning_queue:
+    source: Campaign
+    filter: status = planning
+    sort: start_date asc
+    limit: 20
+    display: queue
+    action: campaign_edit
+    empty: "No campaigns in planning"
+
+  # WI D: grid family — planning cards
+  planning_grid:
+    source: Campaign
+    filter: status = planning
+    sort: name asc
+    limit: 15
+    display: grid
+    action: campaign_edit
+    empty: "No campaigns in planning"
+
+  # WI D: context family — planning trail
+  planning_trail:
+    source: Campaign
+    filter: status = planning
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    action: campaign_edit
+    empty: "No planning activity yet"
+
+  # WI D: chart family — brand mix among planning campaigns
+  brand_mix:
+    source: Campaign
+    filter: status = planning
+    display: bar_chart
+    group_by: brand
+    aggregate:
+      count: count(Campaign)
+    empty: "No planning campaigns to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
