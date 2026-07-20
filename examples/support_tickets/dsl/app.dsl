@@ -1325,6 +1325,64 @@ workspace bug_ops "Bug Ops":
       count: count(Ticket)
     empty: "No bug tickets to chart"
 
+
+# Fourteenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify support_tickets.
+workspace feature_ops "Feature Ops":
+  purpose: "Feature-request pressure — open feature tickets without warehouse CRUD"
+  access: persona(agent, manager, admin)
+
+  feature_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      features: count(Ticket where category = feature and status != closed)
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+    tones:
+      features: accent
+      open: warning
+      in_progress: muted
+
+  # WI D: queue family — open features first
+  feature_queue:
+    source: Ticket
+    filter: category = feature and status != closed
+    sort: priority desc, updated_at desc
+    limit: 20
+    display: queue
+    action: ticket_edit
+    empty: "No open feature tickets"
+
+  # WI D: grid family — feature cards
+  feature_grid:
+    source: Ticket
+    filter: category = feature and status != closed
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No open feature tickets"
+
+  # WI D: context family — recent feature trail
+  feature_trail:
+    source: Ticket
+    filter: category = feature and status != closed
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No feature activity yet"
+
+  # WI D: chart family — priority mix among features
+  priority_mix:
+    source: Ticket
+    filter: category = feature and status != closed
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Ticket)
+    empty: "No feature tickets to chart"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
@@ -1372,6 +1430,7 @@ nav admin_nav:
     critical_ops
     unassigned_ops
     bug_ops
+    feature_ops
 
 nav customer_nav:
   group "My support":
@@ -1390,6 +1449,7 @@ nav agent_nav:
     critical_ops
     unassigned_ops
     bug_ops
+    feature_ops
 
 nav manager_nav:
   group "Lead":
@@ -1405,6 +1465,7 @@ nav manager_nav:
     critical_ops
     unassigned_ops
     bug_ops
+    feature_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
