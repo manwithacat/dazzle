@@ -51,23 +51,23 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1097 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1097 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1146 | USED |
-| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1095 | USED |
-| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1095 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1146 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1147 | USED |
+| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1147 | USED |
+| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1147 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1147 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1096 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1096 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1096 | USED |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1096 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1102 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1099 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1147 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1113 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1114 | USED |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1113 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1100 | USED |
-| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
+| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1147 | USED |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1147 | USED |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1101 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1113 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1100 | USED |
@@ -76,7 +76,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1101 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1100 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1101 | USED |
-| `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1100 | USED |
+| `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1147 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1101 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
@@ -89,7 +89,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1100 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1101 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1113 | USED |
-| `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1100 | USED |
+| `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1147 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1061 | STALE |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1062 | STALE |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1062 | STALE |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1099 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1101 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1093 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1112 | USED |
-| **GitHub inbox** | DRIVER | script + strategies | **driver (Step 0c3)** | 1112 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1147 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1147 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1147 (2026-07-20).** **COGNITION+HYGIENE STALE dig** — invoice_ops WI D at
+> desk-entity soft cap (dens stuck ~0.30 despite 21 desks). Exercised demo_fleet +
+> journey probes (residual=0), unified probes, validate/lint, conformance summary,
+> discovery run, compliance evidence/gaps. Stamped STALE MCP conformance/dsl + lagging
+> demo/journey/discovery/compliance **USED@1147**. No product DSL ship. budget_consumed 1.
+> Explore **29/100**. Next: non-invoice_ops WI D or remaining STALE (policy/test_intelligence/semantics).
 
 > **Cycle 1146 (2026-07-20).** **example-apps ordinary explore** invoice_ops WI D —
 > new **pending_ops** desk (metrics/queue/grid/timeline/chart) + finance/auditor/admin nav.
