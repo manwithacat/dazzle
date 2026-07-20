@@ -244,6 +244,7 @@ nav admin_nav:
     scheduled_ops
     high_ops
     medium_ops
+    low_ops
 
 nav manager_nav:
   group "Lead":
@@ -261,6 +262,7 @@ nav manager_nav:
     scheduled_ops
     high_ops
     medium_ops
+    low_ops
 
 nav member_nav:
   group "My work":
@@ -277,6 +279,7 @@ nav member_nav:
     scheduled_ops
     high_ops
     medium_ops
+    low_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1562,3 +1565,61 @@ workspace medium_ops "Medium Ops":
     aggregate:
       count: count(Task)
     empty: "No medium-priority tasks to chart"
+
+
+# Sixteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify simple_task.
+workspace low_ops "Low Ops":
+  purpose: "Low-priority pressure — open low tasks without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  low_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      low: count(Task where priority = low and status != done)
+      open: count(Task where status != done)
+      done: count(Task where status = done)
+    tones:
+      low: muted
+      open: accent
+      done: positive
+
+  # WI D: queue family — open low-priority first
+  low_queue:
+    source: Task
+    filter: priority = low and status != done
+    sort: due_date asc, updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No open low-priority tasks"
+
+  # WI D: grid family — low-priority cards
+  low_grid:
+    source: Task
+    filter: priority = low and status != done
+    sort: due_date asc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No open low-priority tasks"
+
+  # WI D: context family — recent low-priority trail
+  low_trail:
+    source: Task
+    filter: priority = low and status != done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No low-priority activity yet"
+
+  # WI D: chart family — status mix among low-priority open
+  status_mix:
+    source: Task
+    filter: priority = low and status != done
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No low-priority tasks to chart"
