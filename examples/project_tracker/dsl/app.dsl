@@ -51,6 +51,7 @@ nav admin_nav:
     todo_ops
     milestone_ops
     attach_ops
+    discuss_ops
 
 
 nav manager_nav:
@@ -70,6 +71,7 @@ nav manager_nav:
     todo_ops
     milestone_ops
     attach_ops
+    discuss_ops
 
 
 nav member_nav:
@@ -86,6 +88,7 @@ nav member_nav:
     todo_ops
     milestone_ops
     attach_ops
+    discuss_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -1065,6 +1068,59 @@ workspace attach_ops "Attach Ops":
     filter: status != done
     display: bar_chart
     group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks to chart"
+
+# Sixteenth product desk (WI D): skip invoice_ops desk-cap; densify project_tracker.
+workspace discuss_ops "Discuss Ops":
+  purpose: "Comment pressure — recent discussion without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  discuss_pulse:
+    source: Comment
+    display: metrics
+    aggregate:
+      comments: count(Comment)
+      open_tasks: count(Task where status != done)
+      in_review: count(Task where status = review)
+    tones:
+      comments: accent
+      open_tasks: warning
+      in_review: positive
+
+  # WI D: queue family — recent comments first
+  comment_queue:
+    source: Comment
+    sort: created_at desc
+    limit: 20
+    display: queue
+    empty: "No comments yet"
+
+  # WI D: grid family — review tasks (discussion hotspots)
+  review_grid:
+    source: Task
+    filter: status = review
+    sort: priority desc, updated_at desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "Nothing awaiting review discussion"
+
+  # WI D: context family — recent comment trail
+  comment_trail:
+    source: Comment
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No discussion activity yet"
+
+  # WI D: chart family — open task status mix
+  status_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: status
     aggregate:
       count: count(Task)
     empty: "No open tasks to chart"
