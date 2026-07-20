@@ -54,7 +54,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1246 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1233 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1233 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1246 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1248 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | USED |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1247 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1247 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1248 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1248 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1248 (2026-07-20).** **cimonitor/main repair** SPEC bar + brief baseline —
+> refreshed dazzle-spec-brief footers on **12** examples (densify fingerprint drift);
+> regenerated `spec_brief_simple_task.json`. test_example_spec_bar + brief snapshot **52 pass**.
+> Unblocks Dependabot #1636 after rebase. budget_consumed 0. Explore **20/100**.
 
 > **Cycle 1247 (2026-07-20).** **github-prs** Dependabot #1636 CI red (mkdocs-material) —
 > not merge; red is main debt (SPEC bar stale after densify + combined_server signature).

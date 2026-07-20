@@ -118,4 +118,4 @@ an explicit trigger, prompt contract, and timeout — rather than ad-hoc calls
 buried in code, so what the AI is allowed to touch is reviewable in one place
 (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:79b0cdc16365637e7c2f2cee358cda5946b328fe070e1e12006c95056b186c70 -->
+<!-- dazzle-spec-brief: sha256:7778f58d150af74ad78cbacdaaa57b06f56d2e6b3652db84885e8bd8772da693 -->
