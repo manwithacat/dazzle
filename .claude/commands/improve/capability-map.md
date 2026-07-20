@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1246 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1246 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1247 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1247 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1247 (2026-07-20).** **github-prs** Dependabot #1636 CI red (mkdocs-material) —
+> not merge; red is main debt (SPEC bar stale after densify + combined_server signature).
+> Fixed `test_accepts_expected_params` for enable_auth/auth_config. budget_consumed 0.
+> Explore **20/100**. Next: SPEC bar refresh so Dependabot can rebase green.
 
 > **Cycle 1246 (2026-07-20).** **example-apps WI D** design_studio illustration_ops desk —
 > dens **0.18→0.17**. Skip soft-cap sprawl. budget_consumed 1. Explore **20/100**.
