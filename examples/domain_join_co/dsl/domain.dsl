@@ -39,12 +39,14 @@ nav admin_nav:
     announce
     publish_desk
     workspace_ops
+    board_ops
 
 nav member_nav:
   group "Team":
     announce
     home
     workspace_ops
+    board_ops
 
 # ── Tenant root (resolved by host; members + their role declared here) ─────────
 
@@ -377,6 +379,57 @@ workspace workspace_ops "Workspace Ops":
     display: timeline
     action: announcement_detail
     empty: "No announcement activity yet"
+
+  # WI D: chart family — posts by workspace
+  post_mix:
+    source: Announcement
+    display: bar_chart
+    group_by: workspace
+    aggregate:
+      count: count(Announcement)
+    empty: "No posts to chart"
+
+# Fifth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify domain_join_co.
+workspace board_ops "Board Ops":
+  purpose: "Announcement-board pressure — post load without warehouse CRUD"
+  access: persona(admin, member)
+
+  board_pulse:
+    source: Announcement
+    display: metrics
+    aggregate:
+      posts: count(Announcement)
+      workspaces: count(Workspace)
+    tones:
+      posts: accent
+      workspaces: muted
+
+  # WI D: queue family — posts first
+  post_queue:
+    source: Announcement
+    sort: title asc
+    limit: 20
+    display: queue
+    action: announcement_detail
+    empty: "No posts on the board"
+
+  # WI D: grid family — post cards
+  post_grid:
+    source: Announcement
+    sort: title asc
+    limit: 15
+    display: grid
+    action: announcement_detail
+    empty: "No posts on the board"
+
+  # WI D: context family — post trail
+  post_trail:
+    source: Announcement
+    sort: title asc
+    limit: 15
+    display: timeline
+    action: announcement_detail
+    empty: "No board activity yet"
 
   # WI D: chart family — posts by workspace
   post_mix:
