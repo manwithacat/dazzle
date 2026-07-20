@@ -185,6 +185,7 @@ nav ops_nav:
     active_alerts
     resolved_alerts
     degraded_ops
+    integration_ops
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage
@@ -1088,6 +1089,59 @@ workspace degraded_ops "Degraded Ops":
     aggregate:
       count: count(System)
     empty: "No systems to chart"
+
+
+# Tenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify ops_dashboard.
+workspace integration_ops "Integration Ops":
+  purpose: "Integration-wire pressure — pending/live/revoked connectors without warehouse CRUD"
+  access: persona(ops_engineer, admin)
+
+  integration_pulse:
+    source: Integration
+    display: metrics
+    aggregate:
+      live: count(Integration where status = live)
+      pending: count(Integration where status = pending)
+      revoked: count(Integration where status = revoked)
+    tones:
+      live: positive
+      pending: warning
+      revoked: muted
+
+  # WI D: queue family — pending first
+  pending_queue:
+    source: Integration
+    filter: status = pending or status = live
+    sort: name asc
+    limit: 20
+    display: queue
+    empty: "No pending or live integrations"
+
+  # WI D: grid family — integration cards
+  integration_grid:
+    source: Integration
+    filter: status != off
+    sort: name asc
+    limit: 15
+    display: grid
+    empty: "No active integrations"
+
+  # WI D: context family — integration trail
+  integration_trail:
+    source: Integration
+    sort: name asc
+    limit: 15
+    display: timeline
+    empty: "No integration activity yet"
+
+  # WI D: chart family — status mix
+  status_mix:
+    source: Integration
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Integration)
+    empty: "No integrations to chart"
 
 # =============================================================================
 # Surfaces
