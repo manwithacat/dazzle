@@ -61,6 +61,7 @@ nav hr_admin_nav:
     org_chart
     compensation_review
     salary_ops
+    role_ops
     time_machine
 
 nav manager_nav:
@@ -72,11 +73,13 @@ nav manager_nav:
     reporting_desk
     employment_ops
     salary_ops
+    role_ops
 
 nav finance_nav:
   group "Compensation":
     compensation_review
     salary_ops
+    role_ops
     staff_directory
     person_detail
     employment_ops
@@ -1284,3 +1287,54 @@ workspace salary_ops "Salary Ops":
     aggregate:
       count: count(Salary)
     empty: "No salary rows to chart"
+
+# Eleventh product desk (WI D): 5 lists floor dens ~0.33 with 10 full desks — need 11.
+workspace role_ops "Role Ops":
+  purpose: "Role catalogue pressure — career levels and department spread without warehouse CRUD"
+  access: persona(hr_admin, manager, finance)
+
+  role_pulse:
+    source: Role
+    display: metrics
+    aggregate:
+      roles: count(Role)
+      departments: count(Department)
+      people: count(Person)
+    tones:
+      roles: accent
+      departments: positive
+      people: accent
+
+  # WI D: queue family — roles by title
+  role_queue:
+    source: Role
+    sort: title asc
+    limit: 25
+    display: queue
+    empty: "No roles in the catalogue"
+
+  # WI D: grid family — people context for staffing
+  people_grid:
+    source: Person
+    display: grid
+    limit: 20
+    action: person_detail
+    empty: "No people on record"
+
+  # WI D: context family — active employment trail
+  employment_trail:
+    source: Employment
+    filter: end_date = null
+    sort: start_date desc
+    limit: 15
+    display: timeline
+    empty: "No active employments yet"
+
+  # WI D: chart family — career level mix
+  level_mix:
+    source: Role
+    display: bar_chart
+    group_by: level
+    aggregate:
+      count: count(Role)
+    empty: "No roles to chart"
