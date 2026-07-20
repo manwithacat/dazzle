@@ -227,3 +227,33 @@ class TestJobClaims:
         result = check_registry(reg, project_root=tmp_path, appspec=None, run_walks=False)
         codes = {i.code for i in result.errors}
         assert "walk_required" in codes
+
+
+class TestPackDryRun:
+    def test_pack_a_simple_task(self) -> None:
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.testing.walk.pack import pack_dry_run
+
+        appspec = load_project_appspec(_SIMPLE)
+        result = pack_dry_run(_SIMPLE, "A", appspec=appspec, execute=False)
+        assert result.pack == "A"
+        assert "member-view-own-tasks" in result.guides
+        assert "land_and_see_tasks" in result.walk_ids
+        assert result.ok is True
+        assert result.residuals == []
+        assert all(w.dry_run for w in result.walk_results)
+
+    def test_claims_residuals_empty_when_clean(self) -> None:
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.testing.walk.pack import claims_residuals
+
+        appspec = load_project_appspec(_SIMPLE)
+        gaps = claims_residuals(_SIMPLE, appspec=appspec)
+        assert gaps == []
+
+    def test_unknown_pack_empty(self) -> None:
+        from dazzle.testing.walk.pack import pack_dry_run
+
+        result = pack_dry_run(_SIMPLE, "Z", execute=False)
+        assert result.guides == []
+        assert result.ok is True

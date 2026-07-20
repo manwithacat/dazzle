@@ -12,6 +12,7 @@ from dazzle.cli.utils import load_project_appspec, project_root_from_manifest
 from dazzle.core.manifest import resolve_api_url
 from dazzle.testing.walk.discovery import default_walks_dir, discover_walk_paths
 from dazzle.testing.walk.loader import load_walk
+from dazzle.testing.walk.pack import pack_dry_run
 from dazzle.testing.walk.runner import run_walk_sync
 from dazzle.testing.walk.validate import validate_walk, validate_walks
 
@@ -19,7 +20,7 @@ walk_app = typer.Typer(
     name="walk",
     help=(
         "Scene walks: deterministic story-linked persona job paths (#1638). "
-        "list | validate | run (HTTP core actions; optional --playwright)."
+        "list | validate | run | pack-dry-run."
     ),
     no_args_is_help=True,
 )
@@ -349,3 +350,98 @@ def walk_run(
     if json_output:
         typer.echo(json.dumps({"results": results, "ok": not any_fail}, indent=2))
     raise typer.Exit(code=1 if any_fail else 0)
+
+
+def _emit_pack_json(result: Any, *, seed: bool) -> None:
+    payload: dict[str, Any] = {
+        "pack": result.pack,
+        "ok": result.ok,
+        "guides": result.guides,
+        "walk_ids": result.walk_ids,
+        "residuals": result.residuals,
+        "claim_errors": len([i for i in result.claim_issues if i.level == "error"]),
+        "walk_failures": sum(1 for w in result.walk_results if not w.ok),
+    }
+    if not seed:
+        payload["claim_issues"] = [
+            {
+                "guide_id": i.guide_id,
+                "level": i.level,
+                "code": i.code,
+                "message": i.message,
+            }
+            for i in result.claim_issues
+        ]
+        payload["walk_summaries"] = [w.summary() for w in result.walk_results]
+    typer.echo(json.dumps(payload, indent=2))
+
+
+def _emit_pack_text(result: Any, *, execute: bool) -> None:
+    mode = "execute" if execute else "dry-run"
+    status = "PASS" if result.ok else "FAIL"
+    typer.echo(
+        f"{status} pack={result.pack} [{mode}] "
+        f"guides={len(result.guides)} walks={len(result.walk_ids)} "
+        f"residuals={len(result.residuals)}"
+    )
+    for i in result.claim_issues:
+        typer.echo(i.format(), err=(i.level == "error"))
+    for wr in result.walk_results:
+        typer.echo(f"  {wr.summary()}")
+    if result.residuals:
+        typer.echo(f"\n{len(result.residuals)} residual(s) for agent seed:")
+        for g in result.residuals:
+            typer.echo(f"  - [{g['kind']}] {g['description']}")
+
+
+@walk_app.command("pack-dry-run")
+def walk_pack_dry_run(
+    pack: str = typer.Option(
+        ...,
+        "--pack",
+        "-p",
+        help="Pack letter from job claim registry (e.g. A, B)",
+    ),
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    execute: bool = typer.Option(
+        False,
+        "--execute",
+        help="Live-run walks (default: dry-run / no network)",
+    ),
+    base_url: str | None = typer.Option(None, "--base-url", "-u"),
+    seed: bool = typer.Option(
+        False,
+        "--seed",
+        help="Print residuals as agent seed gaps (JSON); does not write backlog",
+    ),
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Dry-run all scene walks bound to claims in a pack (A/B/C).
+
+    Filters ``fixtures/job_claims.yaml`` by ``pack:``, validates those claims,
+    and dry-runs (or ``--execute``) each bound walk. Residuals are suitable
+    for ``dazzle agent seed improve`` (kind=walk_claim).
+
+    Examples:
+        dazzle test walk pack-dry-run -m examples/simple_task/dazzle.toml --pack A
+        dazzle test walk pack-dry-run --pack A --seed --json
+    """
+    root = project_root_from_manifest(manifest)
+    appspec = _try_appspec(root, enabled=True)
+    try:
+        result = pack_dry_run(
+            root,
+            pack,
+            appspec=appspec,
+            execute=execute,
+            base_url=base_url or _resolve_base_url(root, None),
+        )
+    except FileNotFoundError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(code=1)
+
+    if seed or json_output:
+        _emit_pack_json(result, seed=seed)
+    else:
+        _emit_pack_text(result, execute=execute)
+    raise typer.Exit(code=0 if result.ok else 1)

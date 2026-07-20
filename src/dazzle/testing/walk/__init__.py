@@ -6,7 +6,7 @@ and LLM journeys. Package home: ``dazzle.testing.walk`` (not ``agent``).
 PR1: models, JSON Schema, loader, ``list|validate``.
 PR2: ``run`` (HTTP core actions + optional Playwright).
 PR3: job claim registry + ``dazzle docs claims check``.
-PR4+: pack dry-run, agent seed residuals.
+PR4: pack dry-run + agent seed residuals.
 """
 
 from __future__ import annotations

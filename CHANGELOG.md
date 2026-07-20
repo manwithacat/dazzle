@@ -1,6 +1,9 @@
 ## [Unreleased]
 
 ### Added
+- **#1638 PR4 pack dry-run + agent seed** — `dazzle test walk pack-dry-run
+  --pack A` dry-runs walks for a claim pack; residuals (kind=`walk_claim`)
+  feed `dazzle agent seed improve` when a job_claims registry is present.
 - **#1638 PR3 job claim registry** — `dazzle docs claims check` validates
   lifecycle rows (draft→evergreen) against doc paths + scene walks; `--run`
   executes verified+ walks. Showcase: `examples/simple_task/fixtures/job_claims.yaml`.

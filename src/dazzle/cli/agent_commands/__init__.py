@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from pathlib import Path
 from typing import Any
 
 import typer
+
+from dazzle.testing.walk.pack import claims_residuals
+
+logger = logging.getLogger(__name__)
 
 agent_app = typer.Typer(
     name="agent",
@@ -178,10 +183,11 @@ def _run(cmd: list[str], cwd: Path) -> tuple[int, str, str]:
 
 
 def _seed_improve_backlog(project: Path) -> list[dict[str, Any]]:
-    """Collect gaps for the /improve backlog from lint + validate.
+    """Collect gaps for the /improve backlog from lint + validate + claims.
 
     Each gap is ``{kind, description, status, attempts, notes}``. Runs
     synchronous subprocess calls against the project's ``dazzle`` CLI.
+    Job-claim residuals (#1638) are loaded in-process when a registry exists.
     """
     gaps: list[dict[str, Any]] = []
 
@@ -218,6 +224,13 @@ def _seed_improve_backlog(project: Path) -> list[dict[str, Any]]:
                     "notes": "from `dazzle lint`",
                 }
             )
+
+    # #1638 PR4: walk_claim residuals from job claim registry (if present)
+    try:
+        gaps.extend(claims_residuals(project))
+    except (OSError, ValueError) as e:
+        # Best-effort seed — never block improve seed on claims tooling
+        logger.debug("claims residuals seed skipped: %s", e)
 
     return gaps
 
@@ -276,11 +289,14 @@ def seed_command(
         False, "--dry-run", help="Print the gaps without writing the backlog file"
     ),
 ) -> None:
-    """Seed an agent command's backlog from lint / validate / audit output.
+    """Seed an agent command's backlog from lint / validate / claims / audit.
 
     Replaces the previous manual flow where the outer assistant had to
     parse JSON out of `dazzle validate` and friends (#788). Writes the
     command's configured ``backlog_file`` in place.
+
+    For ``improve``, also seeds ``walk_claim`` residuals from
+    ``dazzle docs claims check`` when ``fixtures/job_claims.yaml`` exists (#1638).
     """
     seeder = _SEEDERS.get(command_name)
     if seeder is None:
