@@ -245,6 +245,7 @@ nav admin_nav:
     high_ops
     medium_ops
     low_ops
+    overdue_ops
 
 nav manager_nav:
   group "Lead":
@@ -263,6 +264,7 @@ nav manager_nav:
     high_ops
     medium_ops
     low_ops
+    overdue_ops
 
 nav member_nav:
   group "My work":
@@ -280,6 +282,7 @@ nav member_nav:
     high_ops
     medium_ops
     low_ops
+    overdue_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1623,3 +1626,61 @@ workspace low_ops "Low Ops":
     aggregate:
       count: count(Task)
     empty: "No low-priority tasks to chart"
+
+
+# Seventeenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify simple_task.
+workspace overdue_ops "Overdue Ops":
+  purpose: "Overdue pressure — past-due open tasks without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  overdue_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      overdue: count(Task where due_date < today and status != done)
+      open: count(Task where status != done)
+      done: count(Task where status = done)
+    tones:
+      overdue: warning
+      open: accent
+      done: muted
+
+  # WI D: queue family — overdue first
+  overdue_queue:
+    source: Task
+    filter: due_date < today and status != done
+    sort: due_date asc, priority desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No overdue tasks"
+
+  # WI D: grid family — overdue cards
+  overdue_grid:
+    source: Task
+    filter: due_date < today and status != done
+    sort: due_date asc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No overdue tasks"
+
+  # WI D: context family — recent overdue trail
+  overdue_trail:
+    source: Task
+    filter: due_date < today and status != done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No overdue activity yet"
+
+  # WI D: chart family — priority mix among overdue
+  priority_mix:
+    source: Task
+    filter: due_date < today and status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No overdue tasks to chart"

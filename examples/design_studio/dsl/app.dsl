@@ -53,6 +53,7 @@ nav designer_nav:
     completed_ops
     photo_ops
     illustration_ops
+    pattern_ops
 
 nav reviewer_nav:
   group "Review":
@@ -74,6 +75,7 @@ nav reviewer_nav:
     completed_ops
     photo_ops
     illustration_ops
+    pattern_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -1327,6 +1329,64 @@ workspace illustration_ops "Illustration Ops":
     aggregate:
       count: count(Asset)
     empty: "No illustrations to chart"
+
+
+# Twenty-first product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
+workspace pattern_ops "Pattern Ops":
+  purpose: "Pattern-asset pressure — pattern type work without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  pattern_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      patterns: count(Asset where asset_type = pattern)
+      draft: count(Asset where asset_type = pattern and status = draft)
+      published: count(Asset where asset_type = pattern and status = published)
+    tones:
+      patterns: accent
+      draft: warning
+      published: positive
+
+  # WI D: queue family — patterns first
+  pattern_queue:
+    source: Asset
+    filter: asset_type = pattern
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "No pattern assets"
+
+  # WI D: grid family — pattern gallery
+  pattern_gallery:
+    source: Asset
+    filter: asset_type = pattern
+    sort: name asc
+    limit: 15
+    display: grid
+    action: asset_edit
+    empty: "No pattern assets"
+
+  # WI D: context family — pattern trail
+  pattern_trail:
+    source: Asset
+    filter: asset_type = pattern
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No pattern activity yet"
+
+  # WI D: chart family — status mix among patterns
+  status_mix:
+    source: Asset
+    filter: asset_type = pattern
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Asset)
+    empty: "No patterns to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
