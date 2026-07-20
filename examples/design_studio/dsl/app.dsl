@@ -43,6 +43,7 @@ nav designer_nav:
     draft_studio
     archive_ops
     campaign_ops
+    review_pipeline
 
 nav reviewer_nav:
   group "Review":
@@ -54,6 +55,7 @@ nav reviewer_nav:
     draft_studio
     archive_ops
     campaign_ops
+    review_pipeline
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -731,6 +733,63 @@ workspace campaign_ops "Campaign Ops":
     aggregate:
       count: count(Campaign)
     empty: "No campaigns to chart"
+
+# Eleventh product desk (WI D): skip invoice_ops desk-cap; densify design_studio.
+workspace review_pipeline "Review Pipeline":
+  purpose: "In-review asset pressure without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  review_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      in_review: count(Asset where status = review)
+      draft: count(Asset where status = draft)
+      approved: count(Asset where status = approved)
+    tones:
+      in_review: warning
+      draft: accent
+      approved: positive
+
+  # WI D: queue family — review backlog first
+  review_queue:
+    source: Asset
+    filter: status = review
+    sort: updated_at asc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "Nothing awaiting review"
+
+  # WI D: grid family — review gallery
+  review_gallery:
+    source: Asset
+    filter: status = review
+    sort: name asc
+    limit: 15
+    display: grid
+    action: asset_edit
+    empty: "Nothing awaiting review"
+
+  # WI D: context family — recent review trail
+  review_trail:
+    source: Asset
+    filter: status = review
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No review activity yet"
+
+  # WI D: chart family — asset type mix among reviews
+  type_mix:
+    source: Asset
+    filter: status = review
+    display: bar_chart
+    group_by: asset_type
+    aggregate:
+      count: count(Asset)
+    empty: "No review assets to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
