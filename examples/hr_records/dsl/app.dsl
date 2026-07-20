@@ -58,6 +58,7 @@ nav hr_admin_nav:
     reporting_desk
     employment_ops
     leavers_ops
+    managers_ops
   group "Org & pay":
     org_chart
     compensation_review
@@ -78,6 +79,7 @@ nav manager_nav:
     role_ops
     leavers_ops
     dept_ops
+    managers_ops
 
 nav finance_nav:
   group "Compensation":
@@ -1439,6 +1441,58 @@ workspace dept_ops "Dept Ops":
     empty: "No active employments yet"
 
   # WI D: chart family — role level mix across the org
+  level_mix:
+    source: Role
+    display: bar_chart
+    group_by: level
+    aggregate:
+      count: count(Role)
+    empty: "No roles to chart"
+
+# Fourteenth product desk (WI D): skip invoice_ops desk-cap; densify hr_records.
+workspace managers_ops "Managers Ops":
+  purpose: "Reporting-line pressure — active manager links and team context without warehouse CRUD"
+  access: persona(hr_admin, manager)
+
+  link_pulse:
+    source: ManagerLink
+    display: metrics
+    aggregate:
+      links: count(ManagerLink where end_date = null)
+      people: count(Person where ended_at = null)
+      roles: count(Role)
+    tones:
+      links: accent
+      people: positive
+      roles: muted
+
+  # WI D: queue family — active reporting lines first
+  link_queue:
+    source: ManagerLink
+    filter: end_date = null
+    sort: start_date desc
+    limit: 25
+    display: queue
+    empty: "No active manager links"
+
+  # WI D: grid family — people context
+  people_grid:
+    source: Person
+    filter: ended_at = null
+    display: grid
+    limit: 20
+    action: person_detail
+    empty: "No active people on record"
+
+  # WI D: context family — recent manager-link trail
+  link_trail:
+    source: ManagerLink
+    sort: start_date desc
+    limit: 15
+    display: timeline
+    empty: "No manager links yet"
+
+  # WI D: chart family — role level mix (team shape)
   level_mix:
     source: Role
     display: bar_chart

@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1158 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1159 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1159 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1161 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1162 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1147 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1147 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1161 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1162 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1159 | USED |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1162 (2026-07-20).** **example-apps ordinary explore** hr_records WI D —
+> skipped invoice_ops desk-cap; new **managers_ops** desk (metrics/queue/grid/timeline/chart)
+> + hr_admin/manager nav. dens **0.28→0.26**; fleet **~0.080**. budget_consumed 1.
+> Explore **5/100**. Next: project_tracker densify (skip invoice soft-cap).
 
 > **Cycle 1161 (2026-07-20).** **example-apps ordinary explore** acme_billing WI D —
 > skipped invoice_ops desk-cap; new **contractor_ops** desk (metrics/queue/grid/timeline/chart)
