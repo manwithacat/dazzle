@@ -783,6 +783,61 @@ workspace confidence_ops "Confidence Ops":
       count: count(TicketClassification)
     empty: "No classifications to chart"
 
+
+# Tenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify llm classifier.
+workspace frustrated_ops "Frustrated Ops":
+  purpose: "Negative-sentiment pressure — frustrated classifications without warehouse CRUD"
+  access: persona(supervisor, support_agent, admin)
+
+  frustrated_pulse:
+    source: TicketClassification
+    display: metrics
+    aggregate:
+      frustrated: count(TicketClassification where sentiment = frustrated)
+      negative: count(TicketClassification where sentiment = negative)
+      total: count(TicketClassification)
+    tones:
+      frustrated: warning
+      negative: accent
+      total: muted
+
+  # WI D: queue family — frustrated first
+  frustrated_queue:
+    source: TicketClassification
+    filter: sentiment = frustrated or sentiment = negative
+    sort: classified_at desc
+    limit: 20
+    display: queue
+    empty: "No negative-sentiment classifications"
+
+  # WI D: grid family — frustrated cards
+  frustrated_grid:
+    source: TicketClassification
+    filter: sentiment = frustrated or sentiment = negative
+    sort: confidence asc
+    limit: 15
+    display: grid
+    empty: "No negative-sentiment classifications"
+
+  # WI D: context family — classification trail
+  frustrated_trail:
+    source: TicketClassification
+    filter: sentiment = frustrated or sentiment = negative
+    sort: classified_at desc
+    limit: 15
+    display: timeline
+    empty: "No negative-sentiment activity yet"
+
+  # WI D: chart family — priority mix among negative
+  priority_mix:
+    source: TicketClassification
+    filter: sentiment = frustrated or sentiment = negative
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(TicketClassification)
+    empty: "No negative classifications to chart"
+
 # =============================================================================
 # Personas
 # =============================================================================
@@ -815,6 +870,7 @@ nav agent_nav:
     open_ops
     resolved_ops
     confidence_ops
+    frustrated_ops
     support_dashboard
 
 nav supervisor_nav:
@@ -827,6 +883,7 @@ nav supervisor_nav:
     open_ops
     resolved_ops
     confidence_ops
+    frustrated_ops
     ticket_management
 
 
