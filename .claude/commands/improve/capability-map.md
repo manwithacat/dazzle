@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1176 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1101 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1093 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1157 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1157 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1185 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1185 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -246,6 +246,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 > PII/financial + GDPR/PCI suggestions); MCP **test_intelligence** summary (0 runs, KG empty —
 > surface exercised). budget_consumed 1. Explore **3/100**. Next: acme/hr WI D densify
 > (skip invoice soft-cap) or more HYGIENE.
+
+> **Cycle 1185 (2026-07-20).** **self-audit 5 CLEAN** — cadence ≥15 since 1156
+> (`7fd6fcd1f`). Window `7fd6fcd1f..b9fe4e9e9` (28 improve commits). Sampled largest:
+> domain extract 1158, capability-sweep 1157, acme contractor_ops 1161, support open_ops 1167,
+> simple_task todo_ops 1181. All claim↔diff hold; domain_brief 14/14; desks present. budget_consumed 0.
+> Explore **0/100** (operator `--reset-budget` 27→0). DRIVER CodeQL+inbox **USED@1185**.
+> Next: capability-sweep due (last@1157 lag≥28) or HYGIENE dual_lock/shadcn or dens under soft-caps
+> (skip invoice_ops/fieldtest desk sprawl).
 
 > **Cycle 1159 (2026-07-20).** **example-apps+hm COGNITION dig** — `demo reset-and-load`
 > on simple_task (serve boot → seed created_count=8, persona_homes/live_desk residual=0);
