@@ -40,6 +40,12 @@ from dazzle.rbac.verification_types import (
     compare_cell,
     compare_flow,
 )
+from dazzle.testing.http_policies import CSRF_COOKIE, CSRF_HEADER
+from dazzle.testing.http_policies import csrf_headers as _http_csrf_headers
+
+# Module-level names for verifier re-exports (must be real attrs, not import aliases).
+_CSRF_COOKIE = CSRF_COOKIE
+_CSRF_HEADER = CSRF_HEADER
 
 if TYPE_CHECKING:
     import httpx
@@ -535,22 +541,17 @@ def _scope_create_overlay(
     return overlay
 
 
-# CSRF cookie name set by the framework's double-submit middleware
-# (`dazzle.http.runtime.csrf.CSRFConfig`).  State-changing requests must
-# echo this cookie value back in the X-CSRF-Token header.
-_CSRF_COOKIE = "dazzle_csrf"
-_CSRF_HEADER = "X-CSRF-Token"
-
-
 def _csrf_headers(client: Any) -> dict[str, str]:
     """Return the X-CSRF-Token header for `client` if it carries the cookie.
 
     The framework's CSRF middleware issues the `dazzle_csrf` cookie on the
     first non-Bearer response; once the verifier client has made any GET
     (e.g. the bootstrap `/auth/login` round-trip) the cookie is in its jar.
+
+    Implementation: :func:`dazzle.testing.http_policies.csrf_headers`
+    (shared with walk runner, test_runner, htmx_client).
     """
-    token = client.cookies.get(_CSRF_COOKIE)
-    return {_CSRF_HEADER: token} if token else {}
+    return _http_csrf_headers(client)
 
 
 def _probe_transport(ctx_transport: Any) -> Any:

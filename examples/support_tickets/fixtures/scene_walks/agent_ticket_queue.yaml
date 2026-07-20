@@ -1,0 +1,20 @@
+# Dogfood walk (#1638 reuse) — agent lands on ticket_queue (ST-019).
+# Core action set only; mirrors simple_task land_and_see_tasks showcase.
+
+persona: agent
+home_workspace: ticket_queue
+
+scenes:
+  - id: land_and_see_queue
+    story: ST-019
+    entry: /app/workspaces/ticket_queue
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Ticket
+          - Queue
+          - Open
+    expects: "Authenticated agent sees open ticket queue workspace cues"

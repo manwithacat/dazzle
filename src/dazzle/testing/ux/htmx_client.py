@@ -32,6 +32,14 @@ from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from typing import Any
 
+from dazzle.testing.http_policies import (
+    CSRF_COOKIE,
+    CSRF_HEADER,
+    MUTATING_METHODS,
+    SESSION_COOKIE,
+    extract_csrf_from_set_cookie,
+)
+
 
 @dataclass
 class HtmxResponse:
@@ -70,9 +78,9 @@ class HtmxClient:
     def _cookies(self) -> dict[str, str]:
         cookies: dict[str, str] = {}
         if self._session_token:
-            cookies["dazzle_session"] = self._session_token
+            cookies[SESSION_COOKIE] = self._session_token
         if self._csrf_token:
-            cookies["dazzle_csrf"] = self._csrf_token
+            cookies[CSRF_COOKIE] = self._csrf_token
         return cookies
 
     def _htmx_headers(
@@ -81,8 +89,8 @@ class HtmxClient:
         headers: dict[str, str] = {"HX-Request": "true", "HX-Target": target}
         if trigger:
             headers["HX-Trigger"] = trigger
-        if method != "GET" and self._csrf_token:
-            headers["X-CSRF-Token"] = self._csrf_token
+        if method.upper() in MUTATING_METHODS and self._csrf_token:
+            headers[CSRF_HEADER] = self._csrf_token
         secret = os.environ.get("DAZZLE_TEST_SECRET", "")
         if secret:
             headers["X-Test-Secret"] = secret
@@ -184,14 +192,10 @@ class HtmxClient:
         token = data.get("session_token", "") or data.get("token", "")
         if not token:
             return False
-        # Get CSRF token
+        # Get CSRF token (shared Set-Cookie parse with walk / test_runner)
         async with httpx.AsyncClient() as client:
             csrf_resp = await client.get(f"{self.base_url}/health", timeout=5)
-        csrf = ""
-        for cookie_header in csrf_resp.headers.get_list("set-cookie"):
-            if "dazzle_csrf=" in cookie_header:
-                csrf = cookie_header.split("dazzle_csrf=")[1].split(";")[0]
-                break
+        csrf = extract_csrf_from_set_cookie(csrf_resp.headers.get_list("set-cookie"))
         self.set_session(token, csrf)
         return True
 

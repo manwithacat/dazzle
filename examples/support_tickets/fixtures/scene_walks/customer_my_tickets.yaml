@@ -1,0 +1,18 @@
+# Dogfood walk — customer lands on my_tickets (ST-025).
+
+persona: customer
+home_workspace: my_tickets
+
+scenes:
+  - id: land_and_see_my_tickets
+    story: ST-025
+    entry: /app/workspaces/my_tickets
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Ticket
+          - My
+    expects: "Authenticated customer sees personal ticket home cues"

@@ -1,0 +1,32 @@
+# Job claim registry dogfood (#1638) — support_tickets second-example showcase
+# Lifecycle: draft → documented → verified → sensible → filmed → evergreen
+# verified+ requires walk binding + fixtures/scene_walks/{walk}.yaml
+
+version: 1
+guides:
+  - id: agent-ticket-queue
+    path: stems/story-driven-jobs.md
+    persona: agent
+    job_id: agent_ticket_queue
+    title: "Support Agent works the open ticket queue"
+    stories: [ST-019]
+    walk: agent_ticket_queue
+    pack: A
+    pack_tier: hard
+    # documented: walk present + validates; promote to verified after live walk green
+    status: documented
+    video: null
+    notes: "Dogfood claim for agent_ticket_queue walk (ST-019)"
+
+  - id: customer-my-tickets
+    path: stems/story-driven-jobs.md
+    persona: customer
+    job_id: customer_my_tickets
+    title: "Customer views their submitted tickets"
+    stories: [ST-025]
+    walk: customer_my_tickets
+    pack: A
+    pack_tier: hard
+    status: documented
+    video: null
+    notes: "Dogfood claim for customer_my_tickets walk (ST-025)"

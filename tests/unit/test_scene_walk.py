@@ -13,7 +13,9 @@ from dazzle.testing.walk.validate import validate_walk, validate_walks
 
 _REPO = Path(__file__).resolve().parents[2]
 _SIMPLE = _REPO / "examples" / "simple_task"
+_SUPPORT = _REPO / "examples" / "support_tickets"
 _SHOWCASE = _SIMPLE / "fixtures" / "scene_walks" / "land_and_see_tasks.yaml"
+_SUPPORT_AGENT_WALK = _SUPPORT / "fixtures" / "scene_walks" / "agent_ticket_queue.yaml"
 
 
 class TestDiscover:
@@ -390,6 +392,132 @@ class TestApiActions:
         asyncio.run(_go())
 
 
+class TestSupportTicketsDogfood:
+    """Second-example walk + claims (reuse of #1638 stack)."""
+
+    def test_discovers_agent_and_customer_walks(self) -> None:
+        stems = {p.stem for p in discover_walk_paths(_SUPPORT)}
+        assert "agent_ticket_queue" in stems
+        assert "customer_my_tickets" in stems
+
+    def test_load_and_validate_agent_queue(self) -> None:
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        appspec = load_project_appspec(_SUPPORT)
+        walk = load_walk(_SUPPORT_AGENT_WALK)
+        assert walk.persona == "agent"
+        assert walk.home_workspace == "ticket_queue"
+        assert walk.story_ids() == ["ST-019"]
+        assert walk.core_only() is True
+        issues = validate_walk(walk, appspec=appspec, require_core_only=True, require_story=True)
+        errors = [i for i in issues if i.level == "error"]
+        assert errors == [], [e.format() for e in errors]
+
+    def test_claims_registry_pack_a(self) -> None:
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.testing.walk.claims import (
+            check_registry,
+            discover_registry_path,
+            load_registry,
+        )
+        from dazzle.testing.walk.pack import pack_dry_run
+
+        path = discover_registry_path(_SUPPORT)
+        assert path is not None
+        reg = load_registry(path)
+        assert {g.id for g in reg.guides} >= {
+            "agent-ticket-queue",
+            "customer-my-tickets",
+        }
+        appspec = load_project_appspec(_SUPPORT)
+        result = check_registry(reg, project_root=_SUPPORT, appspec=appspec, run_walks=False)
+        assert result.ok, [i.format() for i in result.errors]
+        pack = pack_dry_run(_SUPPORT, "A", appspec=appspec, execute=False)
+        assert pack.ok is True
+        assert "agent_ticket_queue" in pack.walk_ids
+        assert "customer_my_tickets" in pack.walk_ids
+
+    def test_dry_run_agent_walk(self) -> None:
+        from dazzle.testing.walk.runner import run_walk_sync
+
+        walk = load_walk(_SUPPORT_AGENT_WALK)
+        result = run_walk_sync(
+            walk,
+            base_url="http://example.test",
+            project_root=_SUPPORT,
+            dry_run=True,
+        )
+        assert result.ok is True
+        assert result.dry_run is True
+
+
+class TestHttpPoliciesShared:
+    """Shared CSRF policy is the SSOT; walk.policies re-exports it."""
+
+    def test_walk_policies_reexport_http_policies(self) -> None:
+        from dazzle.testing import http_policies
+        from dazzle.testing.walk import policies as walk_policies
+
+        assert walk_policies.CSRF_COOKIE is http_policies.CSRF_COOKIE
+        assert walk_policies.CSRF_HEADER is http_policies.CSRF_HEADER
+        assert walk_policies.attach_csrf_request_hook is http_policies.attach_csrf_request_hook
+        assert walk_policies.prime_csrf_cookie is http_policies.prime_csrf_cookie
+
+    def test_csrf_headers_helper(self) -> None:
+        from unittest.mock import MagicMock
+
+        from dazzle.testing.http_policies import CSRF_COOKIE, CSRF_HEADER, csrf_headers
+
+        client = MagicMock()
+        client.cookies.get.return_value = "tok-abc"
+        assert csrf_headers(client) == {CSRF_HEADER: "tok-abc"}
+        client.cookies.get.return_value = None
+        assert csrf_headers(client) == {}
+        client.cookies.get.assert_called_with(CSRF_COOKIE)
+
+    def test_inject_and_extract(self) -> None:
+        from unittest.mock import MagicMock
+
+        from dazzle.testing.http_policies import (
+            CSRF_HEADER,
+            extract_csrf_from_set_cookie,
+            inject_csrf_headers,
+        )
+
+        client = MagicMock()
+        client.cookies.get.return_value = "t1"
+        assert inject_csrf_headers("POST", {}, client)[CSRF_HEADER] == "t1"
+        assert inject_csrf_headers("GET", {}, client) == {}
+        # setdefault does not overwrite
+        assert (
+            inject_csrf_headers("POST", {CSRF_HEADER: "explicit"}, client)[CSRF_HEADER]
+            == "explicit"
+        )
+        raw = [
+            "session=abc; Path=/",
+            "dazzle_csrf=from-set; Path=/; HttpOnly",
+        ]
+        assert extract_csrf_from_set_cookie(raw) == "from-set"
+
+    def test_prime_csrf_cookie_sync(self) -> None:
+        import httpx
+
+        from dazzle.testing.http_policies import CSRF_COOKIE, prime_csrf_cookie_sync
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/health"):
+                return httpx.Response(
+                    200,
+                    headers=[(b"set-cookie", f"{CSRF_COOKIE}=sync-tok; Path=/".encode())],
+                    json={"ok": True},
+                )
+            return httpx.Response(200)
+
+        with httpx.Client(transport=httpx.MockTransport(handler), base_url="http://test") as client:
+            token = prime_csrf_cookie_sync(client, "http://test")
+        assert token == "sync-tok"
+
+
 class TestCsrfPolicy:
     """CyFuture walk-runner-csrf-requirements R1–R2."""
 
@@ -398,7 +526,7 @@ class TestCsrfPolicy:
 
         import httpx
 
-        from dazzle.testing.walk.policies import (
+        from dazzle.testing.http_policies import (
             CSRF_COOKIE,
             CSRF_HEADER,
             attach_csrf_request_hook,
@@ -438,7 +566,11 @@ class TestCsrfPolicy:
 
         import httpx
 
-        from dazzle.testing.walk.policies import CSRF_COOKIE, CSRF_HEADER, attach_csrf_request_hook
+        from dazzle.testing.http_policies import (
+            CSRF_COOKIE,
+            CSRF_HEADER,
+            attach_csrf_request_hook,
+        )
 
         seen: dict[str, str] = {}
 

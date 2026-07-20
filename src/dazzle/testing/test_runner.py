@@ -32,6 +32,11 @@ import httpx
 from dazzle.core.http_client import retrying_request
 from dazzle.testing.cleanup_manager import CleanupManager
 from dazzle.testing.entity_client import EntityClient
+from dazzle.testing.http_policies import (
+    MUTATING_METHODS,
+    inject_csrf_headers,
+    prime_csrf_cookie_sync,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -171,14 +176,11 @@ class DazzleClient:
         surface at test-run time whenever the CSRF cookie was absent
         and we ever reached the except-block branch. ``api_url`` is
         the correct target — `/health` is an API endpoint.
+
+        Shared implementation: :func:`dazzle.testing.http_policies.prime_csrf_cookie_sync`.
         """
-        if self.client.cookies.get("dazzle_csrf"):
-            return
         # Best-effort — server may not be ready yet (#smells-1.1).
-        try:
-            self.client.get(f"{self.api_url}/health")
-        except Exception:
-            logger.debug("CSRF priming health-check failed", exc_info=True)
+        prime_csrf_cookie_sync(self.client, self.api_url)
 
     def _request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         """HTTP request with automatic retry on timeout.
@@ -187,16 +189,12 @@ class DazzleClient:
         when a request times out. Non-timeout errors are raised immediately.
 
         For mutation methods (POST/PUT/DELETE/PATCH), automatically injects
-        the CSRF token from the dazzle_csrf cookie.
+        the CSRF token from the dazzle_csrf cookie
+        (:func:`dazzle.testing.http_policies.inject_csrf_headers`).
         """
-        # Inject CSRF token for mutation requests
-        if method.upper() in ("POST", "PUT", "DELETE", "PATCH"):
+        if method.upper() in MUTATING_METHODS:
             self._ensure_csrf_token()
-            csrf_token = self.client.cookies.get("dazzle_csrf")
-            if csrf_token:
-                headers = dict(kwargs.get("headers") or {})
-                headers.setdefault("X-CSRF-Token", csrf_token)
-                kwargs["headers"] = headers
+            kwargs["headers"] = inject_csrf_headers(method, kwargs.get("headers"), self.client)
 
         return retrying_request(
             self.client,

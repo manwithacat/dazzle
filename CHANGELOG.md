@@ -1,6 +1,15 @@
 ## [Unreleased]
 
 ### Added
+- **Shared testing HTTP policies** — `dazzle.testing.http_policies` is the
+  SSOT for CSRF double-submit (`dazzle_csrf` → `X-CSRF-Token`): prime,
+  inject, request-hook, Set-Cookie parse, Playwright cookie export.
+  Consumers: walk runner (`walk.policies` re-exports), `test_runner`,
+  `ux.htmx_client`, RBAC `verification_harness`.
+- **support_tickets scene walks + job claims** — second-example dogfood of
+  the #1638 stack: `fixtures/scene_walks/agent_ticket_queue.yaml` (ST-019)
+  and `customer_my_tickets.yaml` (ST-025), plus Pack A
+  `fixtures/job_claims.yaml` (documented lifecycle).
 - **Walk `api_upload_file` save_as** — honour JSON response `id` into
   walk vars (same as `api_post`); CyFuture Pack A upload chains.
 - **Walk runner CSRF policy** — after SessionManager auth, prime

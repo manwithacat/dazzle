@@ -200,6 +200,24 @@ def _render_json_body(raw: Any, vars_: dict[str, str]) -> Any:
     return {k: _render(str(v), vars_) if isinstance(v, str) else v for k, v in raw.items()}
 
 
+def _response_json(resp: httpx.Response) -> Any:
+    """Best-effort JSON body; empty dict on non-JSON."""
+    try:
+        return resp.json()
+    except (ValueError, TypeError, UnicodeDecodeError):
+        return {}
+
+
+def _bind_save_as(action: ActionSpec, vars_: dict[str, str], data: Any) -> str | None:
+    """If ``save_as`` set and *data* has an id, bind into *vars_*; return the id."""
+    if not action.save_as or not isinstance(data, dict):
+        return None
+    rid = _row_id(data)
+    if rid is not None:
+        vars_[action.save_as] = rid
+    return rid
+
+
 async def api_post(
     client: httpx.AsyncClient,
     action: ActionSpec,
@@ -218,14 +236,7 @@ async def api_post(
             False,
             f"POST {path} → {resp.status_code}: {resp.text[:200]}",
         )
-    try:
-        data = resp.json()
-    except Exception:
-        data = {}
-    if action.save_as and isinstance(data, dict):
-        rid = _row_id(data)
-        if rid is not None:
-            vars_[action.save_as] = rid
+    _bind_save_as(action, vars_, _response_json(resp))
     return ActionResult(
         "api_post", True, f"POST {path} → {resp.status_code}", {"status": resp.status_code}
     )
@@ -242,14 +253,12 @@ def _resolve_file(raw: str, project_root: Path | None, vars_: dict[str, str]) ->
     return None
 
 
-async def api_upload_file(
-    client: httpx.AsyncClient,
+def _upload_file_args(
     action: ActionSpec,
     vars_: dict[str, str],
-    *,
     project_root: Path | None,
-) -> ActionResult:
-    """Multipart file upload."""
+) -> tuple[str, str, Path, dict[str, Any]] | ActionResult:
+    """Resolve path/file/data for upload, or an error ActionResult."""
     path = _render(action.path_template or action.path or "", vars_)
     if not path:
         return ActionResult("api_upload_file", False, "requires path")
@@ -262,6 +271,21 @@ async def api_upload_file(
     if file_path is None:
         return ActionResult("api_upload_file", False, f"file not found: {file_raw}")
     data_fields = _render_json_body(extra.get("data") or {}, vars_)
+    return path, file_field, file_path, data_fields if isinstance(data_fields, dict) else {}
+
+
+async def api_upload_file(
+    client: httpx.AsyncClient,
+    action: ActionSpec,
+    vars_: dict[str, str],
+    *,
+    project_root: Path | None,
+) -> ActionResult:
+    """Multipart file upload."""
+    resolved = _upload_file_args(action, vars_, project_root)
+    if isinstance(resolved, ActionResult):
+        return resolved
+    path, file_field, file_path, data_fields = resolved
     with file_path.open("rb") as fh:
         resp = await client.post(
             path, data=data_fields or None, files={file_field: (file_path.name, fh)}
@@ -272,15 +296,7 @@ async def api_upload_file(
             False,
             f"POST {path} → {resp.status_code}: {resp.text[:200]}",
         )
-    try:
-        data = resp.json()
-    except Exception:
-        data = {}
-    rid: str | None = None
-    if action.save_as and isinstance(data, dict):
-        rid = _row_id(data)
-        if rid is not None:
-            vars_[action.save_as] = rid
+    rid = _bind_save_as(action, vars_, _response_json(resp))
     msg = f"uploaded {file_path.name} → {resp.status_code}"
     if rid is not None and action.save_as:
         msg += f" save_as={action.save_as}={rid}"
