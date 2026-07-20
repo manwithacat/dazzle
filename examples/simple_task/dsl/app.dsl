@@ -236,6 +236,7 @@ nav admin_nav:
     people_desk
     priority_ops
     review_ops
+    done_ops
 
 nav manager_nav:
   group "Lead":
@@ -245,6 +246,7 @@ nav manager_nav:
     comments_desk
     priority_ops
     review_ops
+    done_ops
 
 nav member_nav:
   group "My work":
@@ -253,6 +255,7 @@ nav member_nav:
     comments_desk
     priority_ops
     review_ops
+    done_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1081,3 +1084,59 @@ workspace review_ops "Review Ops":
     aggregate:
       count: count(Task)
     empty: "No open pipeline tasks to chart"
+
+# Eighth product desk (WI D): 3 lists floor dens ~0.30 with 7 full desks — need 8.
+workspace done_ops "Done Ops":
+  purpose: "Completion pressure — recently finished work without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  done_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      done: count(Task where status = done)
+      open: count(Task where status != done)
+      in_review: count(Task where status = review)
+    tones:
+      done: positive
+      open: accent
+      in_review: warning
+
+  # WI D: queue family — done tasks first
+  done_queue:
+    source: Task
+    filter: status = done
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No completed tasks yet"
+
+  # WI D: grid family — completed cards
+  done_grid:
+    source: Task
+    filter: status = done
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No completed tasks yet"
+
+  # WI D: context family — recent completion trail
+  done_trail:
+    source: Task
+    filter: status = done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No completion activity yet"
+
+  # WI D: chart family — done vs open status mix
+  status_mix:
+    source: Task
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No tasks to chart"
