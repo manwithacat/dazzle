@@ -60,14 +60,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1207 | USED |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1207 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1207 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1176 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1216 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1179 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1184 | USED |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1184 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1207 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1190 | USED |
-| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
+| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1191 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1180 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1190 | USED |
@@ -76,7 +76,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1179 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1191 | USED |
-| `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
+| `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1183 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1189 | USED |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1189 | USED |
@@ -89,7 +89,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1179 | USED |
-| `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
+| `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1209 | USED |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1209 | USED |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1209 | USED |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1208 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1190 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1215 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1215 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1216 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1216 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -246,6 +246,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 > PII/financial + GDPR/PCI suggestions); MCP **test_intelligence** summary (0 runs, KG empty —
 > surface exercised). budget_consumed 1. Explore **3/100**. Next: acme/hr WI D densify
 > (skip invoice soft-cap) or more HYGIENE.
+
+> **Cycle 1216 (2026-07-20).** **HYGIENE dig** validate/discovery/compliance lag31 —
+> validate+lint simple_task advisory-only; discovery run (5 observations) + coherence
+> score **82/100**; compliance gaps 10 tier-3 controls + evidence (36 permit / 38 scope);
+> conformance summary **366 cases**. budget_consumed 1. Explore **30/100**. Next: dens
+> under soft-caps carefully or more HYGIENE.
 
 > **Cycle 1215 (2026-07-20).** **example-apps ordinary explore** domain_join_co WI D —
 > skipped invoice/fieldtest/acme/hr soft-cap; new **tenant_ops** desk (workspace metrics/
