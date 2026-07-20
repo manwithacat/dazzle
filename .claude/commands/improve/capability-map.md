@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1251 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1251 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1252 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1252 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1252 (2026-07-20).** **github-prs** dependabot_merge heat for #1636 + #1634 —
+> both checks green but branch **BEHIND** main; refused squash-merge. \`gh pr update-branch\`
+> on 1636/1634 (+1635/1633). Wait for re-CI next cycle. budget_consumed 0. Explore **22/100**.
 
 > **Cycle 1251 (2026-07-20).** **example-apps WI D** simple_task overdue_ops desk —
 > dens **0.18→0.17**; co-ship SPEC footer + brief baseline. Inbox idle (#1636 Python green,
