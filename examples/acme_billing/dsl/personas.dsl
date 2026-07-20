@@ -51,6 +51,7 @@ nav owner_nav:
     collections_ops
     org_ops
     project_ops
+    user_ops
 
 nav auditor_nav:
   group "Review":
@@ -64,6 +65,7 @@ nav auditor_nav:
     collections_ops
     org_ops
     project_ops
+    user_ops
 
 nav member_nav:
   group "My desk":

@@ -812,3 +812,53 @@ workspace project_ops "Project Ops":
     aggregate:
       count: count(Invoice)
     empty: "No invoices to chart"
+
+# Twelfth product desk (WI D): 5 lists floor dens ~0.31 with 11 full desks — need 12.
+workspace user_ops "User Ops":
+  purpose: "User pressure — org people footprint without warehouse CRUD"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor)
+
+  user_pulse:
+    source: User
+    display: metrics
+    aggregate:
+      users: count(User)
+      memberships: count(Membership)
+      orgs: count(Organization)
+    tones:
+      users: accent
+      memberships: positive
+      orgs: accent
+
+  # WI D: queue family — people first
+  user_queue:
+    source: User
+    sort: name asc
+    limit: 20
+    display: queue
+    empty: "No users on file"
+
+  # WI D: grid family — membership cards
+  membership_cards:
+    source: Membership
+    display: grid
+    limit: 15
+    empty: "No memberships found"
+
+  # WI D: context family — recent user trail
+  user_trail:
+    source: User
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No users yet"
+
+  # WI D: chart family — users by organization
+  org_mix:
+    source: User
+    display: bar_chart
+    group_by: org
+    aggregate:
+      count: count(User)
+    empty: "No users to chart"
