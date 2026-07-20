@@ -453,6 +453,46 @@ def _try_add_header_noun(
     )
 
 
+def _seen_has(name: str, seen: set[str]) -> bool:
+    if name in seen:
+        return True
+    lower = name.lower()
+    return any(s.lower() == lower for s in seen)
+
+
+def _is_plural_of_known(name: str, known: set[str]) -> bool:
+    """True when name is a bare plural of an already-accepted type (Devices→Device)."""
+    if not (name.endswith("s") and len(name) > 4):
+        return False
+    stem = name[:-1]
+    return stem in known or any(s.lower() == stem.lower() for s in known)
+
+
+def _discovered_noun_reject_reason(
+    name: str,
+    source: str,
+    text: str,
+    *,
+    headers: set[str],
+    definitions: set[str],
+    seen: set[str],
+) -> str | None:
+    """Return reject reason, or None when the candidate may be grounded."""
+    if name.lower() in _NOUN_DENY or len(name) < 4:
+        return "deny_or_short"
+    if not name[0].isupper():
+        return "lowercase"
+    if _is_plural_of_known(name, definitions | headers | seen):
+        return "plural_of_known"
+    if not _grounded_in_brief(name, text):
+        return "ungrounded"
+    if not _strong_noun_signal(
+        name, source, text, header_names=headers, definition_names=definitions
+    ):
+        return "weak_signal"
+    return None
+
+
 def _try_add_discovered_noun(
     raw: dict[str, Any],
     text: str,
@@ -465,30 +505,15 @@ def _try_add_discovered_noun(
 ) -> None:
     raw_name = str(raw.get("name") or "").strip()
     name = _canonical_case(raw_name, text) if raw_name else ""
-    if not name or name in seen or name.lower() in {s.lower() for s in seen}:
+    if not name or _seen_has(name, seen):
         return
-    source = str(raw.get("source") or "")
     if raw.get("type") == "user_role":
         return
-    if name.lower() in _NOUN_DENY or len(name) < 4:
-        rejected.append(name)
-        return
-    # discover sometimes emits lowercase process words
-    if not name[0].isupper():
-        rejected.append(name)
-        return
-    # bare plurals of already-known types ("Devices", "Tasks")
-    if name.endswith("s") and len(name) > 4:
-        stem = name[:-1]
-        if stem in definitions or stem in headers or stem in seen:
-            rejected.append(name)
-            return
-    if not _grounded_in_brief(name, text):
-        rejected.append(name)
-        return
-    if not _strong_noun_signal(
-        name, source, text, header_names=headers, definition_names=definitions
-    ):
+    source = str(raw.get("source") or "")
+    reason = _discovered_noun_reject_reason(
+        name, source, text, headers=headers, definitions=definitions, seen=seen
+    )
+    if reason is not None:
         rejected.append(name)
         return
     seen.add(name)
@@ -592,6 +617,58 @@ def _build_personas_desks_spine(
     return personas, desks, spine
 
 
+def _question_text(q: Any) -> str:
+    if isinstance(q, dict):
+        return str(q.get("question") or q.get("text") or "").strip()
+    return str(q).strip()
+
+
+def _is_noise_or_broken_question(text_q: str, brief: str) -> bool:
+    """Filter off-topic and broken generate_questions output."""
+    if _NOISE_Q_RE.search(text_q) and not _NOISE_BRIEF_RE.search(brief):
+        return True
+    if _BROKEN_Q_RE.search(text_q):
+        return True
+    if re.search(r"\bmultiple\s+\w{1,4}s?\b", text_q, re.I) and re.search(
+        r"\b(the|to|create|review|admin)\b", text_q, re.I
+    ):
+        return True
+    return False
+
+
+def _blocking_gap_questions(
+    personas: list[DomainPersona],
+    nouns: list[DomainNoun],
+    desks: list[DomainDesk],
+) -> list[OpenQuestion]:
+    qs: list[OpenQuestion] = []
+    if not personas:
+        qs.append(
+            OpenQuestion(
+                id="q_personas",
+                text="Who are the job personas (roles with desks)?",
+                blocks_promote=True,
+            )
+        )
+    if not nouns:
+        qs.append(
+            OpenQuestion(
+                id="q_nouns",
+                text="What are the core domain nouns named in the brief?",
+                blocks_promote=True,
+            )
+        )
+    if personas and not any(d.owner_field_hint for d in desks):
+        qs.append(
+            OpenQuestion(
+                id="q_owner",
+                text="Which field binds each desk to current_user?",
+                blocks_promote=True,
+            )
+        )
+    return qs
+
+
 def _collect_questions(
     text: str,
     questions_raw: dict[str, Any],
@@ -601,51 +678,11 @@ def _collect_questions(
 ) -> list[OpenQuestion]:
     open_qs: list[OpenQuestion] = []
     for i, q in enumerate(questions_raw.get("questions", [])[:6]):
-        text_q = (
-            str(q.get("question") or q.get("text") or "").strip()
-            if isinstance(q, dict)
-            else str(q).strip()
-        )
-        if not text_q:
-            continue
-        if _NOISE_Q_RE.search(text_q) and not _NOISE_BRIEF_RE.search(text):
-            continue
-        # Drop broken plurals from generate_questions on long generated SPECs
-        if _BROKEN_Q_RE.search(text_q):
-            continue
-        if re.search(r"\bmultiple\s+\w{1,4}s?\b", text_q, re.I) and re.search(
-            r"\b(the|to|create|review|admin)\b", text_q, re.I
-        ):
+        text_q = _question_text(q)
+        if not text_q or _is_noise_or_broken_question(text_q, text):
             continue
         open_qs.append(OpenQuestion(id=f"q{i + 1}", text=text_q, blocks_promote=False))
-
-    if not personas:
-        open_qs.insert(
-            0,
-            OpenQuestion(
-                id="q_personas",
-                text="Who are the job personas (roles with desks)?",
-                blocks_promote=True,
-            ),
-        )
-    if not nouns:
-        open_qs.insert(
-            0,
-            OpenQuestion(
-                id="q_nouns",
-                text="What are the core domain nouns named in the brief?",
-                blocks_promote=True,
-            ),
-        )
-    if personas and not any(d.owner_field_hint for d in desks):
-        open_qs.append(
-            OpenQuestion(
-                id="q_owner",
-                text="Which field binds each desk to current_user?",
-                blocks_promote=True,
-            )
-        )
-    return open_qs
+    return _blocking_gap_questions(personas, nouns, desks) + open_qs
 
 
 def _title_and_summary(text: str, title: str | None) -> tuple[str, str]:

@@ -47,13 +47,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1094 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1094 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1059 | STALE |
-| MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1059 | STALE |
-| MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1059 | STALE |
+| MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
+| MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1059 | STALE |
 | `qa-trial` skill | COGNITION | skill | trials | 1059 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1091 | USED |
-| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1056 | STALE |
-| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1054 | STALE |
+| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1095 | USED |
+| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1095 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1091 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1055 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | STALE |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1095 (2026-07-20).** **preflight + COGNITION dig** — complexity ratchet red
+> after 1094 extract helpers (`_try_add_discovered_noun` 21, `_collect_questions` 16).
+> Refactored into small helpers; preflight green. Also exercised demo_world + resolve_db_url
+> on simple_task, demo_fleet 9/9, journey residual=0. Stamps demo_world/db/demo_fleet/
+> journey **USED@1095**. budget_consumed 1. Explore **23/100**.
 
 > **Cycle 1094 (2026-07-20).** **example-apps COGNITION dig** — domain extract quality
 > for generated SPECIFICATION.md + design_studio AGENT_DOMAIN. Extract: definitional
