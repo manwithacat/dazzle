@@ -41,6 +41,7 @@ nav contact_nav:
     favorites_ops
     company_ops
     independent_ops
+    phone_ops
   group "Directory":
     contacts
     companies
@@ -51,6 +52,7 @@ nav contact_nav:
     favorites_ops
     company_ops
     independent_ops
+    phone_ops
 
 # Entity for contact information with LLM cognition metadata.
 #
@@ -528,6 +530,64 @@ workspace independent_ops "Independent Ops":
     aggregate:
       count: count(Contact)
     empty: "No independent contacts to chart"
+
+
+# Seventh product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify contact_manager.
+workspace phone_ops "Phone Ops":
+  purpose: "Phone-reach pressure — contacts with phone numbers without warehouse CRUD"
+  access: persona(user, admin)
+
+  phone_pulse:
+    source: Contact
+    display: metrics
+    aggregate:
+      with_phone: count(Contact where phone != null)
+      favourites: count(Contact where is_favorite = true)
+      people: count(Contact)
+    tones:
+      with_phone: accent
+      favourites: positive
+      people: muted
+
+  # WI D: queue family — phone contacts first
+  phone_queue:
+    source: Contact
+    filter: phone != null
+    sort: last_name asc, first_name asc
+    limit: 20
+    display: queue
+    action: contact_detail
+    empty: "No contacts with phone numbers"
+
+  # WI D: grid family — phone cards
+  phone_grid:
+    source: Contact
+    filter: phone != null
+    sort: last_name asc
+    limit: 15
+    display: grid
+    action: contact_detail
+    empty: "No contacts with phone numbers"
+
+  # WI D: context family — recent phone-contact trail
+  phone_trail:
+    source: Contact
+    filter: phone != null
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: contact_detail
+    empty: "No phone-contact activity yet"
+
+  # WI D: chart family — company mix among phone contacts
+  company_mix:
+    source: Contact
+    filter: phone != null and company != null
+    display: bar_chart
+    group_by: company
+    aggregate:
+      count: count(Contact)
+    empty: "No phone+company contacts to chart"
 
 # Stage Selection:
 # - list_weight = 0.6 >= 0.3 ✓
