@@ -182,6 +182,7 @@ nav ops_nav:
     alerts_desk
     integrations_desk
     critical_ops
+    active_alerts
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage
@@ -913,6 +914,63 @@ workspace critical_ops "Critical Ops":
     aggregate:
       count: count(System)
     empty: "No systems to chart"
+
+# Seventh product desk (WI D): skip invoice_ops desk-cap; densify ops_dashboard.
+workspace active_alerts "Active Alerts":
+  purpose: "Alert pressure — unacknowledged active incidents without warehouse CRUD"
+  access: persona(ops_engineer, admin)
+
+  alert_pulse:
+    source: Alert
+    display: metrics
+    aggregate:
+      active: count(Alert where status = active)
+      acked: count(Alert where status = acknowledged)
+      resolved: count(Alert where status = resolved)
+    tones:
+      active: destructive
+      acked: warning
+      resolved: positive
+
+  # WI D: queue family — active alerts first
+  active_queue:
+    source: Alert
+    filter: status = active
+    sort: triggered_at asc
+    limit: 20
+    display: queue
+    action: alert_detail
+    empty: "No active alerts"
+
+  # WI D: grid family — active alert cards
+  active_grid:
+    source: Alert
+    filter: status = active
+    sort: severity desc, triggered_at asc
+    limit: 15
+    display: grid
+    action: alert_detail
+    empty: "No active alerts"
+
+  # WI D: context family — recent alert trail
+  alert_trail:
+    source: Alert
+    filter: status = active or status = acknowledged
+    sort: triggered_at desc
+    limit: 15
+    display: timeline
+    action: alert_detail
+    empty: "No open alert activity yet"
+
+  # WI D: chart family — severity mix among active
+  severity_mix:
+    source: Alert
+    filter: status = active
+    display: bar_chart
+    group_by: severity
+    aggregate:
+      count: count(Alert)
+    empty: "No active alerts to chart"
 
 # =============================================================================
 # Surfaces
