@@ -42,6 +42,7 @@ nav designer_nav:
     publish_desk
     draft_studio
     archive_ops
+    campaign_ops
 
 nav reviewer_nav:
   group "Review":
@@ -52,6 +53,7 @@ nav reviewer_nav:
     publish_desk
     draft_studio
     archive_ops
+    campaign_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -676,6 +678,59 @@ workspace archive_ops "Archive Ops":
     aggregate:
       count: count(Asset)
     empty: "No archived assets to chart"
+
+# Tenth product desk (WI D): 4 lists floor dens ~0.31 with 9 full desks — need 10.
+workspace campaign_ops "Campaign Ops":
+  purpose: "Campaign pressure — active and planning work without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  campaign_pulse:
+    source: Campaign
+    display: metrics
+    aggregate:
+      active: count(Campaign where status = active)
+      planning: count(Campaign where status = planning)
+      brands: count(Brand)
+    tones:
+      active: positive
+      planning: warning
+      brands: accent
+
+  # WI D: queue family — active campaigns first
+  active_queue:
+    source: Campaign
+    filter: status = active
+    sort: start_date desc
+    limit: 20
+    display: queue
+    empty: "No active campaigns"
+
+  # WI D: grid family — planning cards
+  planning_grid:
+    source: Campaign
+    filter: status = planning
+    sort: name asc
+    limit: 15
+    display: grid
+    empty: "No campaigns in planning"
+
+  # WI D: context family — recent campaign trail
+  campaign_trail:
+    source: Campaign
+    filter: status = active or status = planning
+    sort: start_date desc
+    limit: 15
+    display: timeline
+    empty: "No campaign activity yet"
+
+  # WI D: chart family — campaign status mix
+  status_mix:
+    source: Campaign
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Campaign)
+    empty: "No campaigns to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
