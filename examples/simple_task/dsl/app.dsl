@@ -237,6 +237,7 @@ nav admin_nav:
     priority_ops
     review_ops
     done_ops
+    progress_ops
 
 nav manager_nav:
   group "Lead":
@@ -247,6 +248,7 @@ nav manager_nav:
     priority_ops
     review_ops
     done_ops
+    progress_ops
 
 nav member_nav:
   group "My work":
@@ -256,6 +258,7 @@ nav member_nav:
     priority_ops
     review_ops
     done_ops
+    progress_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1140,3 +1143,60 @@ workspace done_ops "Done Ops":
     aggregate:
       count: count(Task)
     empty: "No tasks to chart"
+
+# Ninth product desk (WI D): skip invoice_ops desk-cap; densify simple_task.
+workspace progress_ops "Progress Ops":
+  purpose: "In-flight pressure — tasks actively being worked without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  progress_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      in_progress: count(Task where status = in_progress)
+      todo: count(Task where status = todo)
+      review: count(Task where status = review)
+    tones:
+      in_progress: accent
+      todo: warning
+      review: positive
+
+  # WI D: queue family — in-progress first
+  progress_queue:
+    source: Task
+    filter: status = in_progress
+    sort: priority desc, updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "Nothing in progress"
+
+  # WI D: grid family — active work cards
+  progress_grid:
+    source: Task
+    filter: status = in_progress
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "Nothing in progress"
+
+  # WI D: context family — recent active trail
+  progress_trail:
+    source: Task
+    filter: status = in_progress or status = todo
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No active work yet"
+
+  # WI D: chart family — priority mix among in-progress
+  priority_mix:
+    source: Task
+    filter: status = in_progress
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No in-progress tasks to chart"
