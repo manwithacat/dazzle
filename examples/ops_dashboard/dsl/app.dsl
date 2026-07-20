@@ -183,6 +183,7 @@ nav ops_nav:
     integrations_desk
     critical_ops
     active_alerts
+    resolved_alerts
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage
@@ -971,6 +972,64 @@ workspace active_alerts "Active Alerts":
     aggregate:
       count: count(Alert)
     empty: "No active alerts to chart"
+
+
+# Eighth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify ops_dashboard.
+workspace resolved_alerts "Resolved Alerts":
+  purpose: "Close-out pressure — resolved incidents without warehouse CRUD"
+  access: persona(ops_engineer, admin)
+
+  resolved_pulse:
+    source: Alert
+    display: metrics
+    aggregate:
+      resolved: count(Alert where status = resolved)
+      acked: count(Alert where status = acknowledged)
+      active: count(Alert where status = active)
+    tones:
+      resolved: positive
+      acked: warning
+      active: destructive
+
+  # WI D: queue family — resolved first
+  resolved_queue:
+    source: Alert
+    filter: status = resolved
+    sort: triggered_at desc
+    limit: 20
+    display: queue
+    action: alert_detail
+    empty: "No resolved alerts"
+
+  # WI D: grid family — resolved cards
+  resolved_grid:
+    source: Alert
+    filter: status = resolved
+    sort: severity desc, triggered_at desc
+    limit: 15
+    display: grid
+    action: alert_detail
+    empty: "No resolved alerts"
+
+  # WI D: context family — resolve trail
+  resolve_trail:
+    source: Alert
+    filter: status = resolved or status = acknowledged
+    sort: triggered_at desc
+    limit: 15
+    display: timeline
+    action: alert_detail
+    empty: "No close-out activity yet"
+
+  # WI D: chart family — severity mix among resolved
+  severity_mix:
+    source: Alert
+    filter: status = resolved
+    display: bar_chart
+    group_by: severity
+    aggregate:
+      count: count(Alert)
+    empty: "No resolved alerts to chart"
 
 # =============================================================================
 # Surfaces
