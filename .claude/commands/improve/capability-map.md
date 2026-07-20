@@ -61,7 +61,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1159 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1159 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1176 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1113 | STALE |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1179 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1114 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1113 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1159 | USED |
@@ -74,7 +74,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1100 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1100 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1101 | STALE |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1100 | STALE |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1179 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1101 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1101 | STALE |
@@ -88,7 +88,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1160 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1100 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1101 | STALE |
-| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1113 | STALE |
+| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1179 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1160 | USED |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1160 | USED |
@@ -108,6 +108,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1179 (2026-07-20).** **HYGIENE dig** lagging STALE cluster on simple_task —
+> **ux maturity** (L4 adaptive scan), **ux verify --structural** (470 interactions enumerated;
+> --contracts needs live serve — ConnectError expected without serve), **process propose**
+> + diagram task_escalation, **sentinel status/scan/findings** (22 findings: 9 medium).
+> Stamped ux verify + process + sentinel scan **USED@1179**. budget_consumed 1.
+> Explore **22/100**. Next: more HYGIENE (mutate/sweep) or simple densify.
 
 > **Cycle 1178 (2026-07-20).** **example-apps ordinary explore** project_tracker WI D —
 > skipped invoice_ops/fieldtest desk-cap; new **discuss_ops** desk (metrics/queue/grid/timeline/chart)
