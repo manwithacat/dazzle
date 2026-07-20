@@ -65,6 +65,7 @@ nav engineer_nav:
     prototype_ops
     recall_ops
     retired_ops
+    draft_releases
 
 nav tester_nav:
   group "Field":
@@ -85,6 +86,7 @@ nav manager_nav:
     prototype_ops
     recall_ops
     retired_ops
+    draft_releases
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -2039,6 +2041,62 @@ workspace retired_ops "Retired Ops":
     aggregate:
       count: count(Device)
     empty: "No retired devices to chart"
+
+# Fifteenth product desk (WI D): 6 lists floor dens ~0.30 with 14 full desks — need 15.
+workspace draft_releases "Draft Releases":
+  purpose: "Draft firmware pressure — unshipped builds without warehouse CRUD"
+  access: persona(engineer, manager)
+
+  draft_metrics:
+    source: FirmwareRelease
+    display: metrics
+    aggregate:
+      drafts: count(FirmwareRelease where status = draft)
+      released: count(FirmwareRelease where status = released)
+      deprecated: count(FirmwareRelease where status = deprecated)
+    tones:
+      drafts: warning
+      released: positive
+      deprecated: accent
+
+  # WI D: queue family — drafts first
+  draft_queue:
+    source: FirmwareRelease
+    filter: status = draft
+    sort: release_date desc
+    limit: 20
+    display: queue
+    action: firmware_release_edit
+    empty: "No draft firmware releases"
+
+  # WI D: grid family — draft release cards
+  draft_grid:
+    source: FirmwareRelease
+    filter: status = draft
+    sort: version asc
+    limit: 15
+    display: grid
+    action: firmware_release_detail
+    empty: "No draft firmware releases"
+
+  # WI D: context family — recent draft trail
+  draft_trail:
+    source: FirmwareRelease
+    filter: status = draft
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: firmware_release_detail
+    empty: "No draft release activity yet"
+
+  # WI D: chart family — release status mix
+  status_mix:
+    source: FirmwareRelease
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(FirmwareRelease)
+    empty: "No firmware releases to chart"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts
