@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1158 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1159 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1159 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1169 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1170 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1147 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1147 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1169 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1170 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1159 | USED |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1170 (2026-07-20).** **example-apps ordinary explore** hr_records WI D —
+> skipped invoice_ops desk-cap; new **active_staff** desk (metrics/queue/grid/timeline/chart)
+> + hr_admin/manager/finance nav. dens **0.26→0.25**; fleet **~0.076**.
+> budget_consumed 1. Explore **13/100**. Next: project_tracker densify.
 
 > **Cycle 1169 (2026-07-20).** **example-apps ordinary explore** acme_billing WI D —
 > skipped invoice_ops desk-cap; new **org_pulse** desk (metrics/queue/grid/timeline/chart)

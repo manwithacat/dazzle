@@ -59,6 +59,7 @@ nav hr_admin_nav:
     employment_ops
     leavers_ops
     managers_ops
+    active_staff
   group "Org & pay":
     org_chart
     compensation_review
@@ -80,6 +81,7 @@ nav manager_nav:
     leavers_ops
     dept_ops
     managers_ops
+    active_staff
 
 nav finance_nav:
   group "Compensation":
@@ -90,6 +92,7 @@ nav finance_nav:
     staff_directory
     person_detail
     employment_ops
+    active_staff
 
 nav employee_nav:
   group "My record":
@@ -1493,6 +1496,62 @@ workspace managers_ops "Managers Ops":
     empty: "No manager links yet"
 
   # WI D: chart family — role level mix (team shape)
+  level_mix:
+    source: Role
+    display: bar_chart
+    group_by: level
+    aggregate:
+      count: count(Role)
+    empty: "No roles to chart"
+
+# Fifteenth product desk (WI D): skip invoice_ops desk-cap; densify hr_records.
+workspace active_staff "Active Staff":
+  purpose: "Headcount pressure — currently employed people without warehouse CRUD"
+  access: persona(hr_admin, manager, finance)
+
+  headcount_pulse:
+    source: Person
+    display: metrics
+    aggregate:
+      active: count(Person where ended_at = null)
+      leavers: count(Person where ended_at != null)
+      employments: count(Employment where end_date = null)
+    tones:
+      active: positive
+      leavers: warning
+      employments: accent
+
+  # WI D: queue family — active people first
+  active_queue:
+    source: Person
+    filter: ended_at = null
+    sort: started_at desc
+    limit: 25
+    display: queue
+    action: person_detail
+    empty: "No active people on record"
+
+  # WI D: grid family — active people cards
+  active_grid:
+    source: Person
+    filter: ended_at = null
+    sort: legal_name asc
+    limit: 20
+    display: grid
+    action: person_detail
+    empty: "No active people on record"
+
+  # WI D: context family — recent hire trail
+  hire_trail:
+    source: Person
+    filter: ended_at = null
+    sort: started_at desc
+    limit: 15
+    display: timeline
+    action: person_detail
+    empty: "No active hires yet"
+
+  # WI D: chart family — role level mix for org shape
   level_mix:
     source: Role
     display: bar_chart
