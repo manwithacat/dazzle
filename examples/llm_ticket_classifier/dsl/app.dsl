@@ -616,6 +616,63 @@ workspace sentiment_ops "Sentiment Ops":
       count: count(TicketClassification)
     empty: "No classifications to chart"
 
+# Seventh product desk (WI D): skip invoice_ops desk-cap; densify llm_ticket_classifier.
+workspace open_ops "Open Ops":
+  purpose: "Intake pressure — open tickets awaiting AI classification without warehouse CRUD"
+  access: persona(supervisor, support_agent, admin)
+
+  open_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+      classified: count(TicketClassification)
+    tones:
+      open: warning
+      in_progress: accent
+      classified: positive
+
+  # WI D: queue family — open tickets first
+  open_queue:
+    source: Ticket
+    filter: status = open
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: ticket_detail
+    empty: "No open tickets"
+
+  # WI D: grid family — open cards
+  open_grid:
+    source: Ticket
+    filter: status = open
+    sort: created_at desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No open tickets"
+
+  # WI D: context family — recent open trail
+  open_trail:
+    source: Ticket
+    filter: status = open or status = in_progress
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No active ticket activity yet"
+
+  # WI D: chart family — ticket status mix
+  status_mix:
+    source: Ticket
+    filter: status != closed
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No open tickets to chart"
+
 
 # =============================================================================
 # Personas
@@ -646,6 +703,7 @@ nav agent_nav:
     priority_desk
     category_ops
     sentiment_ops
+    open_ops
     support_dashboard
 
 nav supervisor_nav:
@@ -655,6 +713,7 @@ nav supervisor_nav:
     priority_desk
     category_ops
     sentiment_ops
+    open_ops
     ticket_management
 
 
