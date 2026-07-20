@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1208 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1190 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1224 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1224 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1225 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1225 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1225 (2026-07-20).** **self-audit** 5 CLEAN after operator budget reset (38→0).
+> Window `b9fe4e9e9`..`26b7a0dcb` (~40 improve commits). Sampled: domain 1187, hygiene 1191,
+> support bug_ops 1211, project progress_ops 1199, contact notes_ops 1224 — all claim↔diff hold.
+> budget_consumed 0. Explore **0/100**. Next: capability-sweep (~1186 lag≥39) or HYGIENE STALE.
 
 > **Cycle 1184 (2026-07-20).** **HYGIENE dig** **qa capture** STALE — spun simple_task serve,
 > captured **27** above-fold desktop screens (admin/manager/member × WI D desks incl. todo_ops);
