@@ -512,9 +512,24 @@ def _serve_ui_only(ctx: _ServeContext) -> None:
                 typer.echo("\nStopped.")
 
 
+def _arm_qa_mode_env(ctx: _ServeContext) -> None:
+    """Arm DAZZLE_QA_MODE for development serves (combined **and** backend-only).
+
+    ``run_unified_server`` / ``build_app`` only mount ``POST /qa/magic-link`` when
+    ``DAZZLE_QA_MODE=1``. Combined serve already sets this; backend-only used to
+    skip it, so ``dazzle qa trial-coverage --base-url`` and magic-link login
+    returned 404 against agent-oriented API-only demos.
+    """
+    if ctx.enable_dev_mode:
+        os.environ["DAZZLE_QA_MODE"] = "1"
+        os.environ.setdefault("DAZZLE_ENV", "development")
+
+
 def _serve_backend_only(ctx: _ServeContext) -> None:
     """Serve backend API only (no frontend UI)."""
     from dazzle.http.runtime.combined_server import run_backend_only
+
+    _arm_qa_mode_env(ctx)
 
     typer.echo(f"Starting Dazzle backend for '{ctx.appspec.name}'...")
     typer.echo(f"  • {len(ctx.appspec.domain.entities)} entities")
@@ -537,6 +552,8 @@ def _serve_backend_only(ctx: _ServeContext) -> None:
         port=ctx.api_port,
         enable_test_mode=ctx.enable_test_mode,
         enable_dev_mode=ctx.enable_dev_mode,
+        enable_auth=ctx.auth_enabled,
+        auth_config=ctx.mf.auth if ctx.mf and ctx.auth_enabled else None,
         enable_graphql=ctx.graphql,
         host=ctx.host,
         sitespec_data=ctx.sitespec_data,
@@ -686,9 +703,8 @@ def _serve_combined(ctx: _ServeContext) -> None:
     # so a staging server (DAZZLE_ENV=staging, no --production) does NOT mount the
     # QA magic-link endpoint. The old Docker-default path used to shield staging
     # here; now that serve is always-local, this gate carries that protection.
-    if ctx.enable_dev_mode:
-        os.environ["DAZZLE_QA_MODE"] = "1"
-        os.environ.setdefault("DAZZLE_ENV", "development")
+    # Shared with backend-only via _arm_qa_mode_env (magic-link for trial-coverage).
+    _arm_qa_mode_env(ctx)
 
     run_unified_server(
         appspec=appspec,

@@ -49,8 +49,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1096 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1059 | STALE |
-| `qa-trial` skill | COGNITION | skill | trials | 1059 | STALE |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1097 | USED |
+| `qa-trial` skill | COGNITION | skill | trials | 1097 | USED |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1091 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1095 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1095 | USED |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1097 (2026-07-20).** **trials COGNITION dig** — qa trial inventory/coverage +
+> fix `serve --backend-only` so QA magic-link mounts (auth + DAZZLE_QA_MODE + shared
+> `_mount_qa_mode_if_armed`). Live trial-coverage as manager after fix (18 targets probed).
+> Stamps qa trial + skill **USED@1097**. budget_consumed 1. Explore **25/100**.
 
 > **Cycle 1096 (2026-07-20).** **example-apps + hm-convergence COGNITION dig** —
 > simple_task serve :3961 + `demo reset-and-load -y` **created_count=8**,

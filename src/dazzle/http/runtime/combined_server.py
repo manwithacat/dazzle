@@ -92,6 +92,50 @@ def _clickable_url(url: str, label: str | None = None) -> str:
     return f"\x1b]8;;{url}\x1b\\{display}\x1b]8;;\x1b\\"
 
 
+def _mount_qa_mode_if_armed(app: Any, appspec: AppSpec) -> None:
+    """#768 — provision dev personas and mount ``POST /qa/magic-link`` when armed.
+
+    Shared by unified and backend-only serve. Gated on ``DAZZLE_QA_MODE=1`` and a
+    live auth_store; routes mount only when at least one persona is provisioned.
+    """
+    if os.environ.get("DAZZLE_QA_MODE") != "1":
+        return
+    if getattr(app.state, "auth_store", None) is None:
+        return
+
+    from dazzle.cli.runtime_impl.dev_personas import provision_dev_personas
+
+    try:
+        provisioned = provision_dev_personas(appspec, app.state.auth_store)
+    except Exception as err:
+        provisioned = []
+        print(f"[Dazzle] Warning: dev persona provisioning failed: {err}")
+
+    if not provisioned:
+        return
+
+    app.state.qa_personas = provisioned
+    try:
+        from dazzle.http.runtime.qa_routes import create_qa_routes
+
+        app.include_router(create_qa_routes())
+    except Exception as err:
+        print(f"[Dazzle] Warning: failed to mount QA routes: {err}")
+        return
+
+    print()
+    print("WARNING: QA MODE ACTIVE")
+    print("  Dev-only endpoint /qa/magic-link is mounted.")
+    print("  Any request can create a session for any provisioned persona.")
+    print("  This mode is ONLY intended for local QA testing.")
+    print("  Never expose this server to untrusted networks.")
+    print()
+    print(f"Dev Personas ({len(provisioned)})")
+    for p in provisioned:
+        print(f"  {p.display_name:<20} -> {p.email}")
+    print()
+
+
 def _set_factory_env(
     project_root: Path | None,
     enable_dev_mode: bool,
@@ -241,44 +285,7 @@ def run_unified_server(
     )
     builder = DazzleBackendApp(appspec, config=server_config)
     app = builder.build()
-
-    # #768 — QA mode setup: provision dev personas and mount dev-gated routes
-    if (
-        os.environ.get("DAZZLE_QA_MODE") == "1"
-        and getattr(app.state, "auth_store", None) is not None
-    ):
-        from dazzle.cli.runtime_impl.dev_personas import provision_dev_personas
-
-        try:
-            provisioned = provision_dev_personas(appspec, app.state.auth_store)
-        except Exception as err:
-            provisioned = []
-            print(f"[Dazzle] Warning: dev persona provisioning failed: {err}")
-
-        if provisioned:
-            # Stash on app.state for the landing page renderer
-            app.state.qa_personas = provisioned
-
-            # Dynamically mount the dev-gated qa_router
-            try:
-                from dazzle.http.runtime.qa_routes import create_qa_routes
-
-                app.include_router(create_qa_routes())
-            except Exception as err:
-                print(f"[Dazzle] Warning: failed to mount QA routes: {err}")
-
-            # Print startup banner
-            print()
-            print("WARNING: QA MODE ACTIVE")
-            print("  Dev-only endpoint /qa/magic-link is mounted.")
-            print("  Any request can create a session for any provisioned persona.")
-            print("  This mode is ONLY intended for local QA testing.")
-            print("  Never expose this server to untrusted networks.")
-            print()
-            print(f"Dev Personas ({len(provisioned)})")
-            for p in provisioned:
-                print(f"  {p.display_name:<20} -> {p.email}")
-            print()
+    _mount_qa_mode_if_armed(app, appspec)
 
     # Build theme CSS (unique to unified server path)
     theme_css = ""
@@ -431,6 +438,8 @@ def run_backend_only(
     port: int = 8000,
     enable_test_mode: bool = False,
     enable_dev_mode: bool = True,
+    enable_auth: bool = True,
+    auth_config: Any = None,
     enable_graphql: bool = False,
     sitespec_data: dict[str, Any] | None = None,
     project_root: Path | None = None,
@@ -447,6 +456,8 @@ def run_backend_only(
         port: Port to bind to
         enable_test_mode: Enable test endpoints (/__test__/*)
         enable_dev_mode: Enable dev control plane
+        enable_auth: Enable authentication (required for QA magic-link)
+        auth_config: Manifest auth config when enable_auth is True
         enable_graphql: Enable GraphQL endpoint at /graphql
         sitespec_data: SiteSpec data as dict for public site shell
         project_root: Project root directory for content file loading
@@ -477,6 +488,8 @@ def run_backend_only(
         database_url=database_url or None,
         enable_test_mode=enable_test_mode,
         enable_dev_mode=enable_dev_mode,
+        enable_auth=enable_auth,
+        auth_config=auth_config,
         sitespec_data=sitespec_data,
         project_root=project_root,
         storage_defs=storage_defs,
@@ -485,6 +498,9 @@ def run_backend_only(
     )
     app_builder = DazzleBackendApp(appspec, config=config)
     app = app_builder.build()
+    # Same #768 QA mount as unified serve — needed for trial-coverage / magic-link
+    # against ``dazzle serve --backend-only`` (agent demos, CI harnesses).
+    _mount_qa_mode_if_armed(app, appspec)
 
     # Mount GraphQL if enabled
     if enable_graphql:
