@@ -862,3 +862,57 @@ workspace user_ops "User Ops":
     aggregate:
       count: count(User)
     empty: "No users to chart"
+
+# Thirteenth product desk (WI D): skip invoice_ops desk-cap; densify acme next.
+workspace public_billing "Public Billing":
+  purpose: "Non-sensitive invoice pressure for shared member work without warehouse CRUD"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor, project_member)
+
+  public_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      public: count(Invoice where sensitive != true)
+      sensitive: count(Invoice where sensitive = true)
+      projects: count(Project)
+    tones:
+      public: accent
+      sensitive: warning
+      projects: positive
+
+  # WI D: queue family — non-sensitive invoices first
+  public_queue:
+    source: Invoice
+    filter: sensitive != true
+    sort: amount desc
+    limit: 20
+    display: queue
+    empty: "No non-sensitive invoices"
+
+  # WI D: grid family — project portfolio cards
+  project_cards:
+    source: Project
+    display: grid
+    sort: name asc
+    limit: 15
+    empty: "No projects found"
+
+  # WI D: context family — recent public billing trail
+  public_trail:
+    source: Invoice
+    filter: sensitive != true
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No public invoices yet"
+
+  # WI D: chart family — public invoice load by project
+  project_load:
+    source: Invoice
+    filter: sensitive != true
+    display: bar_chart
+    group_by: project
+    aggregate:
+      count: count(Invoice)
+    empty: "No public invoices to chart"
