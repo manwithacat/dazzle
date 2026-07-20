@@ -44,6 +44,7 @@ nav admin_nav:
     my_tasks
     people_desk
     review_ops
+    backlog_ops
 
 
 nav manager_nav:
@@ -56,6 +57,7 @@ nav manager_nav:
     my_tasks
     people_desk
     review_ops
+    backlog_ops
 
 
 nav member_nav:
@@ -65,6 +67,7 @@ nav member_nav:
     discussion_desk
     files_desk
     dashboard
+    backlog_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -657,6 +660,63 @@ workspace review_ops "Review":
     aggregate:
       count: count(Task)
     empty: "No open tasks"
+
+# Ninth product desk (WI D): 5 lists floor dens ~0.38 with 8 full desks — need 9.
+workspace backlog_ops "Backlog Ops":
+  purpose: "Backlog pressure — unstarted work ready to pull into sprint"
+  access: persona(admin, manager, member)
+
+  backlog_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      backlog: count(Task where status = backlog)
+      todo: count(Task where status = todo)
+      in_progress: count(Task where status = in_progress)
+    tones:
+      backlog: accent
+      todo: warning
+      in_progress: positive
+
+  # WI D: queue family — backlog first
+  backlog_queue:
+    source: Task
+    filter: status = backlog
+    sort: priority desc, updated_at asc
+    limit: 20
+    display: queue
+    action: task_edit
+    empty: "Backlog is empty"
+
+  # WI D: grid family — ready-to-start todos
+  todo_grid:
+    source: Task
+    filter: status = todo
+    sort: priority desc
+    limit: 20
+    display: grid
+    action: task_detail
+    empty: "No ready todos"
+
+  # WI D: context family — recent task trail
+  task_trail:
+    source: Task
+    filter: status = backlog or status = todo
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No backlog activity yet"
+
+  # WI D: chart family — unstarted status mix
+  status_mix:
+    source: Task
+    filter: status = backlog or status = todo
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No unstarted tasks"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
