@@ -85,20 +85,20 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1191 | USED |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1191 | USED |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1191 | USED |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1207 | USED |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1209 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1179 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
-| MCP `policy` | HYGIENE | MCP | framework-ux | 1207 | USED |
-| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1160 | STALE |
-| MCP `semantics` | HYGIENE | MCP | example-apps | 1160 | STALE |
+| MCP `policy` | HYGIENE | MCP | framework-ux | 1209 | USED |
+| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1209 | USED |
+| MCP `semantics` | HYGIENE | MCP | example-apps | 1209 | USED |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1208 | USED |
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1208 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1190 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1208 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1208 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1209 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1209 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -246,6 +246,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 > PII/financial + GDPR/PCI suggestions); MCP **test_intelligence** summary (0 runs, KG empty —
 > surface exercised). budget_consumed 1. Explore **3/100**. Next: acme/hr WI D densify
 > (skip invoice soft-cap) or more HYGIENE.
+
+> **Cycle 1209 (2026-07-20).** **HYGIENE dig** policy/semantics/test_intelligence lag47 —
+> policy analyze (6/9 full coverage; platform entities partial), conflicts=0, coverage +
+> access_matrix; semantics extract entities/fields; test_intelligence summary/context after
+> KG init (0 runs, empty history). budget_consumed 1. Explore **23/100**. Next: more HYGIENE
+> or dens under soft-caps carefully (skip invoice/fieldtest/acme/hr).
 
 > **Cycle 1208 (2026-07-20).** **example-apps COGNITION dig** — `demo reset-and-load`
 > on simple_task (serve :3395 → created_count=8, persona_homes_residual=0,
