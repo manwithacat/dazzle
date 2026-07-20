@@ -30,12 +30,15 @@ improving **utility** without grinding isomorphic `*_ops` desks.
 ## When to pick
 
 * Force: `/improve example-apps agent_acceptance_panel`
-* `residual_total=0` and `densify_allowed=0` and felt/demo residual empty
+* `python scripts/trial_verdict_bar.py --next` non-empty (missing/failed last panel)
+  — also selected via `improve_example_probes` as `force=example-apps agent_acceptance_panel`
+* `residual_total=0` and `densify_allowed=0` and felt/demo/story_walk residual empty
 * COGNITION path preferring `qa trial` / product_quality over pure STALE re-touch
 * Backlog `PENDING` with gap type `agent_acceptance`
 * After consolidating orphan ops / scoreboard language, to re-verify utility
 
-Skip when product residual or demo residual is open (fix structure/seeds first).
+Skip when product residual, demo residual, or story_walk residual is open
+(fix structure/seeds/walks first — panel after agents can land).
 
 `budget_consumed: 1` (live trial dig) — or `0` if only authoring/updating
 `trial.toml` without a live run this cycle.

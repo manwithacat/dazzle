@@ -1,6 +1,15 @@
 ## [Unreleased]
 
 ### Added
+- **Story-walk + trial-verdict improve residual** — agent-first QA heat when
+  structural residual is already 0: `scripts/story_walk_bar.py` scores
+  showcase **landing stories** (accepted user_click / desk paths) vs
+  `fixtures/scene_walks` coverage (`--write-stubs` drafts core walks);
+  `scripts/trial_verdict_bar.py` scores last `qa-trial-*.json` recommend /
+  missing panel. Wired into `scripts/improve_example_probes.py` selection
+  order (… → story_walk → trial_verdict) with force strategies
+  `example-apps story_walk` and `example-apps agent_acceptance_panel`.
+  Playbook: `.claude/commands/improve/strategies/story_walk.md`.
 - **Shared testing HTTP policies** — `dazzle.testing.http_policies` is the
   SSOT for CSRF double-submit (`dazzle_csrf` → `X-CSRF-Token`): prime,
   inject, request-hook, Set-Cookie parse, Playwright cookie export.

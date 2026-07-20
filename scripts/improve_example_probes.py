@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Unified example-app probe status for /improve OBSERVE (agent-first loop).
 
-Runs structural maturity probes **plus** the felt product_quality bar
-(persona-home seeds + empty-hero stills). Exit 1 if **any** residual remains.
+Runs structural maturity probes, the felt product_quality bar
+(persona-home seeds + empty-hero stills), **story_walk** residual
+(landing stories ↔ scene walks), and **trial_verdict** residual
+(last qa-trial recommend / missing panel). Exit 1 if **any** residual remains.
 
 ```bash
 python scripts/improve_example_probes.py --status
@@ -12,6 +14,7 @@ python scripts/improve_example_probes.py --strict
 # preferred agent surface:
 #   dazzle demo quality -p examples
 #   MCP product_quality(operation=score)
+#   python scripts/story_walk_bar.py --status
 ```
 """
 
@@ -101,19 +104,40 @@ def _product_quality() -> tuple[list[str], str | None, int, str | None]:
     return lines, report.next, felt, report.force
 
 
+def _story_walk() -> tuple[str, str | None, int]:
+    """Landing stories without scene walks — agent interaction residual."""
+    mod = _load("story_walk_bar", REPO / "scripts" / "story_walk_bar.py")
+    rows = mod.scan()
+    residual = [r for r in rows if r.is_residual]
+    nxt = residual[0].app if residual else None
+    return mod.format_status(rows), nxt, len(residual)
+
+
+def _trial_verdict() -> tuple[str, str | None, int]:
+    """Last qa-trial recommend / missing panel → acceptance residual."""
+    mod = _load("trial_verdict_bar", REPO / "scripts" / "trial_verdict_bar.py")
+    rows = mod.scan()
+    residual = [r for r in rows if r.is_residual]
+    nxt = residual[0].app if residual else None
+    return mod.format_status(rows), nxt, len(residual)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--status", action="store_true", help="One-line suite (default)")
     ap.add_argument(
         "--next",
         action="store_true",
-        help="Print first residual app across probes (probe preference: product, demo, journey, felt)",
+        help=(
+            "Print first residual app (preference: product → demo → journey → "
+            "felt → story_walk → trial_verdict)"
+        ),
     )
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true", help="Exit 1 if any residual")
     args = ap.parse_args(argv)
 
-    # Always collect structural three + felt product_quality.
+    # Structural three + felt product_quality + story walks + trial verdicts.
     results: list[tuple[str, str, str | None, int]] = []
     for name, fn in (
         ("product_maturity", _product),
@@ -136,12 +160,24 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # noqa: BLE001
         results.append(("product_quality", f"product_quality error={type(exc).__name__}", None, -1))
 
-    # Selection: structural product → demo → journey → felt (persona/stills).
+    for name, fn in (
+        ("story_walk", _story_walk),
+        ("trial_verdict", _trial_verdict),
+    ):
+        try:
+            line, nxt, n = fn()
+            results.append((name, line, nxt, n))
+        except Exception as exc:  # noqa: BLE001
+            results.append((name, f"{name} error={type(exc).__name__}", None, -1))
+
+    # Selection order: structure → demo → journey → felt stills → story walks → trials.
     STRATEGY_FOR = {
         "product_maturity": "product_maturity",
         "demo_fleet": "demo_fleet",
         "journey_maturity": "journey_dogfood",
         "product_quality": "demo_fleet",
+        "story_walk": "story_walk",
+        "trial_verdict": "agent_acceptance_panel",
     }
     preferred_next: str | None = None
     preferred_probe: str | None = None
@@ -192,10 +228,15 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
     else:
+        # structural three
         for _name, line, _nxt, _n in results[:3]:
             print(line)
         for line in pq_lines:
             if line not in {r[1] for r in results[:3]}:
+                print(line)
+        # story_walk + trial_verdict status lines
+        for name, line, _nxt, _n in results:
+            if name in {"story_walk", "trial_verdict"}:
                 print(line)
         if wi_line:
             print(wi_line)

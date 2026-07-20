@@ -138,13 +138,14 @@ commercial bake-off.
 | `/improve example-apps product_maturity` | `improve/strategies/product_maturity.md` | `example_product_maturity.py` |
 | `/improve example-apps demo_fleet` | `improve/strategies/demo_fleet.md` | `demo_fleet_bar.py` |
 | `/improve example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` | `example_journey_maturity.py` |
-| `/improve example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` | `dazzle qa trial` + stories |
+| `/improve example-apps story_walk` | `improve/strategies/story_walk.md` | `story_walk_bar.py` (landing stories ↔ walks) |
+| `/improve example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` | `trial_verdict_bar.py` + `dazzle qa trial` |
 
 Every example-apps OBSERVE (and `/improve --status`) starts with the unified suite:
 
 ```bash
 python scripts/improve_example_probes.py --status
-# product → demo → journey preference for residual_total / next=
+# product → demo → journey → felt → story_walk → trial_verdict
 # warehouse_index … densify_allowed=0|1
 ```
 
@@ -161,10 +162,11 @@ dazzle demo quality -p examples --app support_tickets --json
 `scripts/improve_example_probes.py` folds `product_quality` into OBSERVE so
 `residual_total` is not falsely 0 when persona homes or empty-hero stills remain.
 
-Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → felt (product_quality) → agent_acceptance (when densify closed) → Tier 1**.
+Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → felt (product_quality) → story_walk → trial_verdict / agent_acceptance → Tier 1**.
 
 **Hard stop:** if status shows `densify_allowed=0`, do **not** run WI D densify
-explore. Prefer COGNITION STALE, HYGIENE STALE, or `agent_acceptance_panel`.
+explore. Prefer **story_walk** residual, then `agent_acceptance_panel`, then
+COGNITION / HYGIENE STALE — not isomorphic `*_ops` desks.
 
 ## Agent-first customer acceptance
 

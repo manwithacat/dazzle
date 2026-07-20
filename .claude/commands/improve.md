@@ -15,6 +15,8 @@ when residual remains: product → demo → journey):
 | `example-apps product_maturity` | `improve/strategies/product_maturity.md` | `scripts/example_product_maturity.py` |
 | `example-apps demo_fleet` | `improve/strategies/demo_fleet.md` | `scripts/demo_fleet_bar.py` (+ #1626) |
 | `example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` | `scripts/example_journey_maturity.py` |
+| `example-apps story_walk` | `improve/strategies/story_walk.md` | `scripts/story_walk_bar.py` (landing stories ↔ walks) |
+| `example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` | `scripts/trial_verdict_bar.py` + live `qa trial` |
 
 Unified OBSERVE for every example-apps cycle (and for `--status`):
 
@@ -205,8 +207,8 @@ For each lane, compute two numbers from the unified backlog:
 `residual_total` to `actionable_count(example-apps)`. Prefer this lane when
 `residual_total > 0` even if the markdown backlog table is empty — the
 loop is agent-first, not backlog-table-first. Sub-strategy order inside the
-lane: `product_maturity` → `demo_fleet` → `journey_dogfood` (see
-`improve/lanes/example-apps.md`).
+lane: `product_maturity` → `demo_fleet` → `journey_dogfood` → `story_walk`
+→ `agent_acceptance_panel` (see `improve/lanes/example-apps.md`).
 
 Selection priority:
 
@@ -218,7 +220,7 @@ Selection priority:
 6. **TR-signal drain (autonomous-only).** If the trials backlog (`## Lane: trials`) has any **autonomous-actionable** TR row (see below), pick the owning lane for that row and run `improve/strategies/trial_signal_action.md` this cycle (log `picked {lane} for TR-N — {status}/{severity}`). Forceable via `/improve trial-signals`. Preempts pure capability re-stamps when product signal is sitting idle. Does **not** preempt REGRESSION / self-audit / capability-sweep / fresh signal bias.
 7. **Explore phase, cognition-directed (not lag-only STALE).** Consult `improve/capability-map.md`. Recompute lag as `current_cycle − last-exercised` (treat `USED` with lag ≥20 as **STALE-effective**). Read each row's **Class** (`COGNITION` | `HYGIENE` | `DRIVER` | `EXEMPT`).
 
-   **Probe residual still outranks this rule** when `improve_example_probes.py` reports `residual_total > 0` — pick example-apps residual dig first (product → demo → journey → felt).
+   **Probe residual still outranks this rule** when `improve_example_probes.py` reports `residual_total > 0` — pick example-apps residual dig first (product → demo → journey → felt → **story_walk** → **trial_verdict**/acceptance).
 
    **#1637 hard stop on WI densify:** read `densify_allowed=` from product_maturity /
    warehouse_index status. When `densify_allowed=0` (residual=0 **and**

@@ -73,6 +73,7 @@ snapshots are not gaps.
 | `example-apps product_maturity` | `improve/strategies/product_maturity.md` |
 | `example-apps demo_fleet` | `improve/strategies/demo_fleet.md` |
 | `example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` |
+| `example-apps story_walk` | `improve/strategies/story_walk.md` |
 | `example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` |
 
 ## Playbook
@@ -83,9 +84,11 @@ snapshots are not gaps.
 
 ```bash
 python scripts/improve_example_probes.py --status
-# product_maturity apps=… residual=… next=…
-# demo_fleet apps=… residual=… next=…
+# product_maturity … residual=… next=…
+# demo_fleet … residual=… next=…
 # journey_maturity … residual=… next=…
+# story_walk … residual=… next=…          # landing stories ↔ scene walks
+# trial_verdict … residual=… next=…       # last qa-trial recommend / missing panel
 # example_probes residual_total=… next=… force=example-apps <strategy>
 # (force= only when residual_total>0 — use that strategy this cycle)
 ```
@@ -98,14 +101,16 @@ Then selection priority:
 3. **`product_maturity` residual** — `python scripts/example_product_maturity.py --next` non-empty → force strategy `product_maturity` for that app (playbook `improve/strategies/product_maturity.md`). Prefer over demo/journey/Tier-1.
 4. **`demo_fleet` residual (#1626)** — product residual empty and `python scripts/demo_fleet_bar.py --next` non-empty → force strategy `demo_fleet`. If probe residual empty but #1626 still has open P0-5…P0-9 (empty heroes, invoice queues, design_studio visuals), still pick `demo_fleet` and work the highest open P0.
 5. **`journey_maturity` residual** — `python scripts/example_journey_maturity.py --next` non-empty → force `journey_dogfood`.
-6. **Warehouse Index (WI) feature_creep** — all probe residuals empty **and** `densify_allowed=1` (`wi_fleet > wi_floor`; see status `densify_allowed=` / `--warehouse-index`): minimize continuous warehouse-ness on `wi_next` by shipping a **job-backed** product DSL slice that moves `wi_primary` (D/N/L/J/G). Map-only commits do **not** count. **Hard stop (#1637):** when `densify_allowed=0`, skip this step entirely — do **not** add isomorphic `*_ops` filter desks, do not "skip soft-cap" densify, do not grind D under floor.
-7. **Agent acceptance panel** (when residual_total=0 and densify closed, or force path): run `improve/strategies/agent_acceptance_panel.md` — multi-agent UAT against stories / adoption criteria (agent-first substitute for a human QA panel). Prefer over pure STALE re-touch when felt quality is stale.
-8. All probe residuals empty, `densify_allowed=0`, and backlog gaps DONE/BLOCKED → **explore phase** (lane Step 6 / driver Rule 7 COGNITION → HYGIENE)
-9. Else pick next `PENDING` backlog row (priority: critical > warning > info, then app alphabetical)
-10. Mark chosen work `IN_PROGRESS`
+6. **`story_walk` residual** — landing stories without scene walks (`python scripts/story_walk_bar.py --next`) → force `story_walk` (playbook `improve/strategies/story_walk.md`). Prefer over densify / STALE; this is **direct interaction** residual.
+7. **`trial_verdict` residual** — `python scripts/trial_verdict_bar.py --next` non-empty (missing/failed panel) → force `agent_acceptance_panel`.
+8. **Warehouse Index (WI) feature_creep** — all probe residuals empty **and** `densify_allowed=1` (`wi_fleet > wi_floor`; see status `densify_allowed=` / `--warehouse-index`): minimize continuous warehouse-ness on `wi_next` by shipping a **job-backed** product DSL slice that moves `wi_primary` (D/N/L/J/G). Map-only commits do **not** count. **Hard stop (#1637):** when `densify_allowed=0`, skip this step entirely — do **not** add isomorphic `*_ops` filter desks, do not "skip soft-cap" densify, do not grind D under floor.
+9. **Agent acceptance panel** (when residual_total=0 and densify closed, or force path): run `improve/strategies/agent_acceptance_panel.md` — multi-agent UAT against stories / adoption criteria (agent-first substitute for a human QA panel). Prefer over pure STALE re-touch when felt quality is stale.
+10. All probe residuals empty, `densify_allowed=0`, and backlog gaps DONE/BLOCKED → **explore phase** (lane Step 6 / driver Rule 7 COGNITION → HYGIENE)
+11. Else pick next `PENDING` backlog row (priority: critical > warning > info, then app alphabetical)
+12. Mark chosen work `IN_PROGRESS`
 
 If `$ARGUMENTS` provided as `<app>`, filter to that app only.
-If `$ARGUMENTS` is `product_maturity` | `demo_fleet` | `journey_dogfood` (or lane+strategy), run that strategy playbook for one residual app and skip unrelated gap types.
+If `$ARGUMENTS` is `product_maturity` | `demo_fleet` | `journey_dogfood` | `story_walk` | `agent_acceptance_panel` (or lane+strategy), run that strategy playbook for one residual app and skip unrelated gap types.
 
 ### 2. ENHANCE
 
@@ -121,6 +126,8 @@ Apply the fix appropriate to the gap type:
 | `product_maturity` | Full playbook: `improve/strategies/product_maturity.md`. Probe: `scripts/example_product_maturity.py`. Do **not** add entity lists to “pass”. |
 | `demo_fleet` | Full playbook: `improve/strategies/demo_fleet.md`. Probe: `scripts/demo_fleet_bar.py` + #1626. Seeds/stills/honesty; one P0 or one app per cycle. |
 | `journey_maturity` | Full playbook: `improve/strategies/journey_dogfood.md`. Force: `/improve example-apps journey_dogfood`. |
+| `story_walk` | Full playbook: `improve/strategies/story_walk.md`. Probe: `scripts/story_walk_bar.py`. Landing stories ↔ scene walks; stubs + dry-run/live walk. |
+| `agent_acceptance` | Full playbook: `improve/strategies/agent_acceptance_panel.md`. Also from `trial_verdict` residual (`scripts/trial_verdict_bar.py`). |
 | `rhythm_fidelity` | A rhythm scores `< 1.0` (a scene's surface/action/entity can't resolve) — add the missing surface/derive-binding, or fix the cited story's `entities`/`trigger`. **Only non-advisory `evaluate` failures are actionable** (advisory `surface_specialization` + orphan-story gaps are design nudges, not defects). |
 | `story_scope` | `dazzle story scope-fidelity` reports a story with `< full` process coverage (story⇄process axis) — add/point the implementing process. Distinct from `rhythm_fidelity` (story⇄rhythm axis). |
 | `test_design_coverage` | `dazzle test-design coverage-actions` / `runtime-gaps` flags an uncovered persona action — add the test-design coverage row. |
