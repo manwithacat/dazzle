@@ -42,6 +42,7 @@ nav contact_nav:
     company_ops
     independent_ops
     phone_ops
+    title_ops
   group "Directory":
     contacts
     companies
@@ -53,6 +54,7 @@ nav contact_nav:
     company_ops
     independent_ops
     phone_ops
+    title_ops
 
 # Entity for contact information with LLM cognition metadata.
 #
@@ -588,6 +590,64 @@ workspace phone_ops "Phone Ops":
     aggregate:
       count: count(Contact)
     empty: "No phone+company contacts to chart"
+
+
+# Eighth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify contact_manager.
+workspace title_ops "Title Ops":
+  purpose: "Job-title pressure — contacts with titles without warehouse CRUD"
+  access: persona(user, admin)
+
+  title_pulse:
+    source: Contact
+    display: metrics
+    aggregate:
+      titled: count(Contact where job_title != null)
+      favourites: count(Contact where is_favorite = true)
+      people: count(Contact)
+    tones:
+      titled: accent
+      favourites: positive
+      people: muted
+
+  # WI D: queue family — titled contacts first
+  title_queue:
+    source: Contact
+    filter: job_title != null
+    sort: job_title asc, last_name asc
+    limit: 20
+    display: queue
+    action: contact_detail
+    empty: "No contacts with job titles"
+
+  # WI D: grid family — titled cards
+  title_grid:
+    source: Contact
+    filter: job_title != null
+    sort: job_title asc
+    limit: 15
+    display: grid
+    action: contact_detail
+    empty: "No contacts with job titles"
+
+  # WI D: context family — recent titled trail
+  title_trail:
+    source: Contact
+    filter: job_title != null
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: contact_detail
+    empty: "No titled-contact activity yet"
+
+  # WI D: chart family — titles by company
+  company_mix:
+    source: Contact
+    filter: job_title != null and company != null
+    display: bar_chart
+    group_by: company
+    aggregate:
+      count: count(Contact)
+    empty: "No titled company contacts to chart"
 
 # Stage Selection:
 # - list_weight = 0.6 >= 0.3 ✓
