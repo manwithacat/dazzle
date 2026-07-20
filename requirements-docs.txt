@@ -1,5 +1,5 @@
 mkdocs>=1.6.1
-mkdocs-material>=9.7.6
+mkdocs-material>=9.7.7
 pymdown-extensions>=11.0.1
 pygments>=2.20  # 2.20.0's filename=None crash in pymdownx.highlight is fixed by pymdown-extensions>=11.0.1 (pinned above) — see #1203
 -e ./tools/pygments-dazzle  # registers the `dsl` Pygments lexer so dsl code fences highlight
