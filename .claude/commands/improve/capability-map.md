@@ -43,59 +43,60 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1056 | USED |
-| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1055 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1055 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1059 | USED |
-| MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1059 | USED |
-| MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1059 | USED |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1059 | USED |
-| `qa-trial` skill | COGNITION | skill | trials | 1059 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1056 | STALE |
+| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1055 | STALE |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1055 | STALE |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1059 | STALE |
+| MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1059 | STALE |
+| MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1059 | STALE |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1059 | STALE |
+| `qa-trial` skill | COGNITION | skill | trials | 1059 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1091 | USED |
-| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1056 | USED |
-| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1054 | USED |
+| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1056 | STALE |
+| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1054 | STALE |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1091 | USED |
-| `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1055 | USED |
-| `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | USED |
-| `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1055 | USED |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1056 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1064 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1060 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1060 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1063 | USED |
-| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1063 | USED |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1064 | USED |
-| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1064 | USED |
-| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | USED |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1061 | USED |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1062 | USED |
-| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1061 | USED |
-| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1064 | USED |
-| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1064 | USED |
-| `dazzle test-design` | HYGIENE | CLI | example-apps | 1064 | USED |
-| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1057 | USED |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1061 | USED |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1062 | USED |
-| `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1064 | USED |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1060 | USED |
-| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
-| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1060 | USED |
-| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1064 | USED |
-| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1061 | USED |
-| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1063 | USED |
-| `/smells` | HYGIENE | standalone loop | own entrypoint | 1062 | USED |
-| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1063 | USED |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1060 | USED |
-| `dazzle coverage` | HYGIENE | CLI | example-apps | 1061 | USED |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1060 | USED |
-| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1064 | USED |
-| `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1057 | USED |
-| MCP `policy` | HYGIENE | MCP | framework-ux | 1061 | USED |
-| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1062 | USED |
-| MCP `semantics` | HYGIENE | MCP | example-apps | 1062 | USED |
-| `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1057 | USED |
-| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1057 | USED |
-| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1057 | USED |
+| `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1055 | STALE |
+| `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | STALE |
+| `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1055 | STALE |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1056 | STALE |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1064 | STALE |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1060 | STALE |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1060 | STALE |
+| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1063 | STALE |
+| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1063 | STALE |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1064 | STALE |
+| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1064 | STALE |
+| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1062 | STALE |
+| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1061 | STALE |
+| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1064 | STALE |
+| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1064 | STALE |
+| `dazzle test-design` | HYGIENE | CLI | example-apps | 1064 | STALE |
+| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1057 | STALE |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1061 | STALE |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1062 | STALE |
+| `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1064 | STALE |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1060 | STALE |
+| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1060 | STALE |
+| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1060 | STALE |
+| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1064 | STALE |
+| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1061 | STALE |
+| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1063 | STALE |
+| `/smells` | HYGIENE | standalone loop | own entrypoint | 1062 | STALE |
+| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1063 | STALE |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1060 | STALE |
+| `dazzle coverage` | HYGIENE | CLI | example-apps | 1061 | STALE |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1060 | STALE |
+| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1064 | STALE |
+| `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1057 | STALE |
+| MCP `policy` | HYGIENE | MCP | framework-ux | 1061 | STALE |
+| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1062 | STALE |
+| MCP `semantics` | HYGIENE | MCP | example-apps | 1062 | STALE |
+| `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1057 | STALE |
+| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1057 | STALE |
+| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1057 | STALE |
+| `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | — | UNOWNED |
 | **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1054 | USED |
 | **GitHub inbox** | DRIVER | script + strategies | **driver (Step 0c3)** | 1054 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
@@ -107,6 +108,18 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1092 (2026-07-20) capability-sweep.** Inventory: CLI surface from `dazzle --help`
+> (domain/demo/qa/validate/compliance/… still present); skills (dsl-authoring, qa-trial,
+> stems, …); commands (/improve, /fuzz, /xproject, …). **UNOWNED=1**
+> (`dazzle.risk` model-driven scoring package shipped cycle 1070, not yet exercised by a
+> lane). **COGNITION_STALE=14** (domain/demo quality/reset-and-load/qa trial/
+> journey/demo_fleet/hyperpart + metered vision substitutes). **HYGIENE_STALE=37**
+> (validate/prove/coverage/sentinel/MCP cluster lag≥20 after long WI D streak).
+> Recomputed STALE labels at current_cycle=1092. **Not** a product dig.
+> budget_consumed 0. Explore **20/100**. Next sweep ~**1112**. Prefer next digs:
+> COGNITION domain/demo_world/product_quality over further WI D desks.
+
 
 > **Cycle 1069 (2026-07-19).** **example-apps ordinary explore** acme_billing WI D:
 > invoices kanban+chart; team timeline; new orgs_home desk. WI **0.20→0.19** dens
