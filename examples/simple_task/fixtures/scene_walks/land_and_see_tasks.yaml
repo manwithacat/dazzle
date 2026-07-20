@@ -1,0 +1,20 @@
+# PR1 showcase walk (#1638) — core action set only (no api_* extensions).
+# Story: ST-020 Team Member views own tasks
+# Runner lands in PR2; this file is for list/validate + future CI.
+
+persona: member
+home_workspace: my_work
+
+scenes:
+  - id: land_and_see_tasks
+    story: ST-020
+    entry: /app/workspaces/my_work
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Task
+          - My Work
+    expects: "Authenticated member sees personal task home cues"

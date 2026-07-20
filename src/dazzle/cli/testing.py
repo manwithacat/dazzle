@@ -30,6 +30,7 @@ from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_f
 test_app = typer.Typer(
     help=(
         "Testing commands for Dazzle apps. Tier 1: 'dsl-run' (API). "
+        "Tier 1.5: 'walk' (story-linked scene walks, #1638). "
         "Tier 2: 'playwright' (scripted UI). Tier 3: 'agent' (LLM-powered)."
     ),
     no_args_is_help=True,
@@ -1067,6 +1068,11 @@ feedback_app = typer.Typer(
     no_args_is_help=True,
 )
 test_app.add_typer(feedback_app, name="feedback")
+
+# #1638 story-driven scene walks (PR1: list + validate)
+from dazzle.cli.walk import walk_app  # noqa: E402
+
+test_app.add_typer(walk_app, name="walk")
 
 
 @feedback_app.command("record-regression")

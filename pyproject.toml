@@ -427,6 +427,8 @@ dazzle = ["py.typed"]
 # Provider dirs have no __init__.py so packages.find omits them — same class
 # as #1032/#1308/#1572/#1589 (asset exists in-repo, wheel drops it).
 "dazzle.api_kb" = ["**/*.toml"]
+# Scene walk + job claim JSON Schemas (#1638)
+"dazzle.testing.walk" = ["schemas/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/dazzle/http/tests"]

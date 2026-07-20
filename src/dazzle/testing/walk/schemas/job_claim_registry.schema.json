@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dazzle.dev/schemas/job_claim_registry.schema.json",
+  "title": "Job claim registry (docs maturity)",
+  "description": "Maps user-facing job claims (guides) to stories, deterministic walks, human packs, and lifecycle status. Separate from RBAC claim_ledger (#1638 PR3).",
+  "type": "object",
+  "required": ["version", "guides"],
+  "additionalProperties": true,
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "base_url_default": { "type": "string" },
+    "video_dir": { "type": "string" },
+    "trace_dir": { "type": "string" },
+    "guides": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/guide" }
+    },
+    "planned": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "persona": { "type": "string" },
+          "job_id": { "type": "string" },
+          "title": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "guide": {
+      "type": "object",
+      "required": ["id", "path", "persona", "status"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "path": {
+          "type": "string",
+          "description": "Relative path under docs/"
+        },
+        "persona": { "type": "string" },
+        "job_id": { "type": "string" },
+        "title": { "type": "string" },
+        "stories": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "walk": {
+          "type": ["string", "null"],
+          "description": "Scene walk id (fixture basename without .yaml)"
+        },
+        "pack": {
+          "type": ["string", "integer", "null"],
+          "description": "Human pack letter A/B/C"
+        },
+        "pack_tier": {
+          "type": "string",
+          "enum": ["hard", "soft"]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "documented",
+            "verified",
+            "sensible",
+            "filmed",
+            "evergreen"
+          ]
+        },
+        "video": { "type": ["string", "null"] },
+        "notes": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
