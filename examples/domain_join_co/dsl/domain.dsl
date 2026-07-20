@@ -41,6 +41,7 @@ nav admin_nav:
     workspace_ops
     board_ops
     feed_ops
+    tenant_ops
 
 nav member_nav:
   group "Team":
@@ -49,6 +50,7 @@ nav member_nav:
     workspace_ops
     board_ops
     feed_ops
+    tenant_ops
 
 # ── Tenant root (resolved by host; members + their role declared here) ─────────
 
@@ -486,6 +488,55 @@ workspace feed_ops "Feed Ops":
 
   # WI D: chart family — posts by workspace
   feed_mix:
+    source: Announcement
+    display: bar_chart
+    group_by: workspace
+    aggregate:
+      count: count(Announcement)
+    empty: "No posts to chart"
+
+# Seventh product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify domain_join_co.
+workspace tenant_ops "Tenant Ops":
+  purpose: "Tenant-slug pressure — workspace identity without warehouse CRUD"
+  access: persona(admin, member)
+
+  tenant_pulse:
+    source: Workspace
+    display: metrics
+    aggregate:
+      workspaces: count(Workspace)
+      posts: count(Announcement)
+    tones:
+      workspaces: accent
+      posts: positive
+
+  # WI D: queue family — workspaces by slug/name
+  tenant_queue:
+    source: Workspace
+    sort: slug asc
+    limit: 20
+    display: queue
+    empty: "No workspaces yet"
+
+  # WI D: grid family — workspace cards
+  tenant_grid:
+    source: Workspace
+    sort: name asc
+    limit: 15
+    display: grid
+    empty: "No workspaces yet"
+
+  # WI D: context family — post trail as tenant activity
+  tenant_trail:
+    source: Announcement
+    sort: title asc
+    limit: 15
+    display: timeline
+    action: announcement_detail
+    empty: "No tenant activity yet"
+
+  # WI D: chart family — posts by workspace
+  post_mix:
     source: Announcement
     display: bar_chart
     group_by: workspace
