@@ -59,12 +59,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1096 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1096 | USED |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1096 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1064 | STALE |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1102 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1099 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1060 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1063 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1063 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1064 | STALE |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1100 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
@@ -78,9 +78,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1101 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1100 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1101 | USED |
-| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1060 | STALE |
-| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1060 | STALE |
-| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1064 | STALE |
+| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
+| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
+| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1102 | USED |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1061 | STALE |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1063 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1062 | STALE |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1102 (2026-07-20).** **hm-convergence HYGIENE dig** — dual_lock queue depth
+> **0**; shadcn_parity gaps **0**; gallery_probes **6/6 PASS**; zero-floor **GREEN** (0/0);
+> example_hm_surface **HM_OK 12/12**. Stamps dual_lock/shadcn/gallery/zero-floor **USED@1102**.
+> budget_consumed 1. Explore **29/100**.
 
 > **Cycle 1101 (2026-07-20).** **framework-ux HYGIENE dig** — fitness code top30 +
 > vitality + clones; composition audit simple_task **100/100**; pulse run (quality/security
