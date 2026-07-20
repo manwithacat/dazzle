@@ -49,25 +49,26 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1233 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1234 | USED |
-| `qa-trial` skill | COGNITION | skill | trials | 1234 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1254 | USED |
-| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1233 | USED |
-| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1233 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1254 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1258 | USED |
+| `qa-trial` skill | COGNITION | skill | trials | 1258 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1258 | USED |
+| **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1258 | USED |
+| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1258 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1258 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1258 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | USED |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1233 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1233 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1216 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1259 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1227 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | USED |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1233 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | USED |
-| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
-| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
+| MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | USED |
+| MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | USED |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1231 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | USED |
@@ -97,8 +98,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1255 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1255 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1258 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1256 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +109,24 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1259 (2026-07-20).** **HYGIENE** validate/lint STALE cluster (lag≥40) —
+> support_tickets/simple_task/invoice_ops/design_studio/contact_manager validate
+> exit 0. densify_allowed=0 held. Stamped validate/lint/conformance/dsl **USED@1259**.
+> budget_consumed 1. Explore **26/100**.
+
+> **Cycle 1258 (2026-07-20).** **example-apps agent_acceptance_panel** support_tickets —
+> densify_allowed=0 post-#1637. Inventory **19** targets (5 product desks; densify
+> residue gone). trial-coverage static JSON; prove story OK; trial.toml clean of
+> *_ops densify refs. Stamped product maturity / probes / qa trial / acceptance
+> panel **USED@1258**. budget_consumed 1. Explore **25/100**.
+
+> **Cycle 1257 (2026-07-20).** **self-audit** 5 CLEAN (window since @1225) — #1637 hard
+> stop CLEAN; densify Goodhart pattern noted + remediated; no REGRESSION. budget_consumed 0.
+> Explore **24/100**.
+
+> **Cycle 1256 (2026-07-20).** **github-prs** merged CLEAN Dependabot **#1636 #1634 #1633**;
+> pushed fix(#1637) 7dbb3e6e9. densify_allowed=0. budget_consumed 0. Explore **24/100**.
 
 > **Cycle 1255 (2026-07-20).** **github-prs** Dependabot BEHIND again (densify thrash) —
 > #1634/#1633/#1636 checks green but BEHIND; update-branch ×4; **no densify** this cycle so
