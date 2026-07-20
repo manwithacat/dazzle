@@ -64,6 +64,7 @@ nav engineer_nav:
     critical_ops
     prototype_ops
     recall_ops
+    retired_ops
 
 nav tester_nav:
   group "Field":
@@ -83,6 +84,7 @@ nav manager_nav:
     critical_ops
     prototype_ops
     recall_ops
+    retired_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1980,6 +1982,63 @@ workspace recall_ops "Recall Ops":
     aggregate:
       count: count(Device)
     empty: "No non-active devices to chart"
+
+# Fourteenth product desk (WI D): 6 lists floor dens ~0.32 with 13 full desks — need 14.
+workspace retired_ops "Retired Ops":
+  purpose: "End-of-life pressure — retired units and batch mix without warehouse CRUD"
+  access: persona(engineer, manager)
+
+  retired_metrics:
+    source: Device
+    display: metrics
+    aggregate:
+      retired: count(Device where status = retired)
+      recalled: count(Device where status = recalled)
+      active: count(Device where status = active)
+    tones:
+      retired: warning
+      recalled: destructive
+      active: positive
+
+  # WI D: queue family — retired units first
+  retired_queue:
+    source: Device
+    filter: status = retired
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: device_detail
+    empty: "No retired devices"
+
+  # WI D: grid family — retired device cards
+  retired_grid:
+    source: Device
+    filter: status = retired
+    sort: name asc
+    limit: 15
+    display: grid
+    action: device_detail
+    empty: "No retired devices"
+
+  # WI D: context family — recent retire trail
+  retired_trail:
+    source: Device
+    filter: status = retired
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: device_detail
+    empty: "No retire activity yet"
+
+  # WI D: chart family — retired model mix
+  model_mix:
+    source: Device
+    filter: status = retired
+    display: bar_chart
+    group_by: model
+    aggregate:
+      count: count(Device)
+    empty: "No retired devices to chart"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts
