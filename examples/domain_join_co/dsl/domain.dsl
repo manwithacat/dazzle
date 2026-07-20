@@ -40,6 +40,7 @@ nav admin_nav:
     publish_desk
     workspace_ops
     board_ops
+    feed_ops
 
 nav member_nav:
   group "Team":
@@ -47,6 +48,7 @@ nav member_nav:
     home
     workspace_ops
     board_ops
+    feed_ops
 
 # ── Tenant root (resolved by host; members + their role declared here) ─────────
 
@@ -433,6 +435,57 @@ workspace board_ops "Board Ops":
 
   # WI D: chart family — posts by workspace
   post_mix:
+    source: Announcement
+    display: bar_chart
+    group_by: workspace
+    aggregate:
+      count: count(Announcement)
+    empty: "No posts to chart"
+
+# Sixth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify domain_join_co.
+workspace feed_ops "Feed Ops":
+  purpose: "Member-feed pressure — announcement intake without warehouse CRUD"
+  access: persona(admin, member)
+
+  feed_pulse:
+    source: Announcement
+    display: metrics
+    aggregate:
+      posts: count(Announcement)
+      workspaces: count(Workspace)
+    tones:
+      posts: accent
+      workspaces: muted
+
+  # WI D: queue family — feed first
+  feed_queue:
+    source: Announcement
+    sort: title asc
+    limit: 20
+    display: queue
+    action: announcement_detail
+    empty: "Feed is empty"
+
+  # WI D: grid family — feed cards
+  feed_grid:
+    source: Announcement
+    sort: title asc
+    limit: 15
+    display: grid
+    action: announcement_detail
+    empty: "Feed is empty"
+
+  # WI D: context family — feed trail
+  feed_trail:
+    source: Announcement
+    sort: title asc
+    limit: 15
+    display: timeline
+    action: announcement_detail
+    empty: "No feed activity yet"
+
+  # WI D: chart family — posts by workspace
+  feed_mix:
     source: Announcement
     display: bar_chart
     group_by: workspace
