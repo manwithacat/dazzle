@@ -68,3 +68,12 @@ the runtime:
 The walk runner primes the cookie after auth and attaches the header on
 POST/PUT/PATCH/DELETE automatically. Do **not** disable CSRF for walk
 paths in production.
+
+
+## CyFuture Pack A lessons (framework-only)
+
+1. Body / path templates use **`{save_as}`** placeholders (not `@save_as`).
+2. Resolve related rows with `api_find` before `api_post` when the API needs FKs.
+3. Upload field default is **`file`** (`file_field: file`); **`save_as`** is filled from the JSON `id` in the upload response.
+4. Prefer seed/sanitize for known states; use `api_ensure_status` only when re-runs need a reset.
+5. Pack execute auto-enables Playwright when walks contain `playwright_*`.

@@ -460,3 +460,37 @@ class TestCsrfPolicy:
 
         asyncio.run(_go())
         assert seen.get("csrf") == "upload-tok"
+
+
+class TestApiUploadSaveAs:
+    def test_upload_honours_save_as(self, tmp_path: Path) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle.testing.walk.actions_api import api_upload_file
+        from dazzle.testing.walk.models import ActionSpec
+
+        f = tmp_path / "doc.pdf"
+        f.write_bytes(b"%PDF-1.4 fake")
+
+        async def fake_post(path, data=None, files=None):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {"id": "file-99", "name": "doc.pdf"}
+            return resp
+
+        client = MagicMock()
+        client.post = AsyncMock(side_effect=fake_post)
+        vars_: dict[str, str] = {}
+        action = ActionSpec.model_validate(
+            {
+                "type": "api_upload_file",
+                "path": "/files/upload",
+                "file_path": str(f),
+                "file_field": "file",
+                "save_as": "file_id",
+            }
+        )
+        result = asyncio.run(api_upload_file(client, action, vars_, project_root=tmp_path))
+        assert result.ok is True, result.message
+        assert vars_.get("file_id") == "file-99"

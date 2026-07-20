@@ -1,6 +1,8 @@
 ## [Unreleased]
 
 ### Added
+- **Walk `api_upload_file` save_as** — honour JSON response `id` into
+  walk vars (same as `api_post`); CyFuture Pack A upload chains.
 - **Walk runner CSRF policy** — after SessionManager auth, prime
   `dazzle_csrf` via GET `/health` and inject `X-CSRF-Token` on POST/PUT/
   PATCH/DELETE (including multipart). Matches `test_runner` / CyFuture

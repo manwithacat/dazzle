@@ -272,11 +272,23 @@ async def api_upload_file(
             False,
             f"POST {path} → {resp.status_code}: {resp.text[:200]}",
         )
+    try:
+        data = resp.json()
+    except Exception:
+        data = {}
+    rid: str | None = None
+    if action.save_as and isinstance(data, dict):
+        rid = _row_id(data)
+        if rid is not None:
+            vars_[action.save_as] = rid
+    msg = f"uploaded {file_path.name} → {resp.status_code}"
+    if rid is not None and action.save_as:
+        msg += f" save_as={action.save_as}={rid}"
     return ActionResult(
         "api_upload_file",
         True,
-        f"uploaded {file_path.name} → {resp.status_code}",
-        {"path": path},
+        msg,
+        {"path": path, "id": rid, "save_as": action.save_as},
     )
 
 
