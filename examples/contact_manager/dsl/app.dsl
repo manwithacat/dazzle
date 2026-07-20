@@ -38,12 +38,15 @@ nav contact_nav:
   # TR-2 / WI N: job desks first — workspaces only (not auto entity-list soup).
   group "Home":
     home
+    favorites_ops
   group "Directory":
     contacts
+    companies
   # #1324 FR-4: optional Browse group still exposes the contacts desk when
   # the tenant enables `show_browse` (workspace target, not bare Contact list).
   group "Browse" when: tenant_config.show_browse = true:
     contacts
+    favorites_ops
 
 # Entity for contact information with LLM cognition metadata.
 #
@@ -348,6 +351,63 @@ workspace companies "Companies":
     display: timeline
     action: contact_detail
     empty: "No contacts yet"
+
+# Fourth product desk (WI D): skip invoice_ops desk-cap; densify contact_manager.
+workspace favorites_ops "Favorites Ops":
+  purpose: "Starred-contact pressure — keep VIP people close without warehouse CRUD"
+  access: persona(user, admin)
+
+  fav_pulse:
+    source: Contact
+    display: metrics
+    aggregate:
+      favourites: count(Contact where is_favorite = true)
+      people: count(Contact)
+      companies: count(Contact where company != null)
+    tones:
+      favourites: accent
+      people: positive
+      companies: muted
+
+  # WI D: queue family — favourites first
+  fav_queue:
+    source: Contact
+    filter: is_favorite = true
+    sort: last_name asc, first_name asc
+    limit: 20
+    display: queue
+    action: contact_detail
+    empty: "No favourites yet — star a contact from the directory."
+
+  # WI D: grid family — favourite cards
+  fav_grid:
+    source: Contact
+    filter: is_favorite = true
+    sort: last_name asc
+    limit: 15
+    display: grid
+    action: contact_detail
+    empty: "No favourites yet"
+
+  # WI D: context family — recent favourite trail
+  fav_trail:
+    source: Contact
+    filter: is_favorite = true
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: contact_detail
+    empty: "No favourite activity yet"
+
+  # WI D: chart family — company mix among favourites
+  company_mix:
+    source: Contact
+    filter: is_favorite = true and company != null
+    display: bar_chart
+    group_by: company
+    aggregate:
+      count: count(Contact)
+    empty: "No favourite company contacts to chart"
 
 # Stage Selection:
 # - list_weight = 0.6 >= 0.3 ✓
