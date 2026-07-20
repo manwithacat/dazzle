@@ -1359,3 +1359,59 @@ workspace submitted_ops "Submitted Ops":
     aggregate:
       count: count(Invoice)
     empty: "No intake invoices to chart"
+
+# Nineteenth product desk (WI D): 7 lists floor dens ~0.28 with 18 full desks — need 19.
+workspace succeeded_ops "Succeeded Ops":
+  purpose: "Successful payment pressure — cleared rails without warehouse CRUD"
+  access: persona(finance, finance_admin, auditor, tenant_admin)
+
+  success_pulse:
+    source: PaymentAttempt
+    display: metrics
+    aggregate:
+      succeeded: count(PaymentAttempt where status = succeeded)
+      pending: count(PaymentAttempt where status = pending)
+      failed: count(PaymentAttempt where status = failed)
+    tones:
+      succeeded: positive
+      pending: warning
+      failed: destructive
+
+  # WI D: queue family — successful attempts first
+  success_queue:
+    source: PaymentAttempt
+    filter: status = succeeded
+    sort: created_at desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "No successful payment attempts yet"
+
+  # WI D: grid family — success cards
+  success_grid:
+    source: PaymentAttempt
+    filter: status = succeeded
+    sort: created_at desc
+    limit: 15
+    display: grid
+    action: invoice_detail
+    empty: "No successful payment attempts yet"
+
+  # WI D: context family — recent success trail
+  success_trail:
+    source: PaymentAttempt
+    filter: status = succeeded
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No success activity yet"
+
+  # WI D: chart family — attempt outcome mix
+  status_mix:
+    source: PaymentAttempt
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(PaymentAttempt)
+    empty: "No payment attempts to chart"

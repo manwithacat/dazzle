@@ -79,6 +79,7 @@ nav finance_nav:
     paid_ops
     approved_ops
     submitted_ops
+    succeeded_ops
 
 nav auditor_nav:
   group "Audit":
@@ -94,6 +95,7 @@ nav auditor_nav:
     paid_ops
     approved_ops
     submitted_ops
+    succeeded_ops
 
 nav tenant_admin_nav:
   group "Admin":
@@ -109,6 +111,7 @@ nav tenant_admin_nav:
     paid_ops
     approved_ops
     submitted_ops
+    succeeded_ops
 
 nav finance_admin_nav:
   group "Oversight":
@@ -129,3 +132,4 @@ nav finance_admin_nav:
     paid_ops
     approved_ops
     submitted_ops
+    succeeded_ops
