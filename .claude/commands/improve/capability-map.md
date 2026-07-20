@@ -63,21 +63,21 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1176 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1179 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1114 | STALE |
-| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1113 | STALE |
+| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1183 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1159 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1100 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1101 | STALE |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1183 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1180 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1100 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1100 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1100 | STALE |
-| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1101 | STALE |
+| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1179 | USED |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1101 | STALE |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1101 | STALE |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1183 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1102 | STALE |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1102 | STALE |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1102 | STALE |
@@ -87,7 +87,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1160 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1100 | STALE |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1101 | STALE |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1179 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1160 | USED |
@@ -108,6 +108,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1183 (2026-07-20).** **HYGIENE dig** fitness/composition/pulse/fragment-audit/qa login —
+> fitness code hotspots + vitality (0 islets) + queue (5 clusters story_drift);
+> composition audit design_studio + simple_task **100/100**; fragment-audit simple_task
+> regions OK; pulse run/radar health_score 67; qa login CLI (needs live serve).
+> Stamped fitness/composition/pulse/fragment-audit/qa login **USED@1183**. budget_consumed 1.
+> Explore **26/100**. Next: qa capture with serve or dens under soft-caps carefully.
 
 > **Cycle 1182 (2026-07-20).** **example-apps ordinary explore** support_tickets WI D —
 > skipped invoice_ops/fieldtest desk-cap; new **resolved_ops** desk (metrics/queue/grid/timeline/chart)
