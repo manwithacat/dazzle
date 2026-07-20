@@ -109,6 +109,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 
 ## Cycle notes (newest first)
 
+> **Cycle 1103 (2026-07-20).** **self-audit 5 CLEAN** — window 379d949d7..1bc36a3d4
+> (42 improve commits since last *git* self-audit; log-only 0000 entry not a ship).
+> Sampled largest: 1094 domain, 1097 backend-only QA, 1095 complexity, 1098 auditspec,
+> 1082 hr_records. All claim↔diff hold; 29 unit tests green on current tip. budget 0.
+> Explore **29/100**.
+
 > **Cycle 1102 (2026-07-20).** **hm-convergence HYGIENE dig** — dual_lock queue depth
 > **0**; shadcn_parity gaps **0**; gallery_probes **6/6 PASS**; zero-floor **GREEN** (0/0);
 > example_hm_surface **HM_OK 12/12**. Stamps dual_lock/shadcn/gallery/zero-floor **USED@1102**.
