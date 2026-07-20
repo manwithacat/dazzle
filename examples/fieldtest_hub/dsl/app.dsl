@@ -66,6 +66,7 @@ nav engineer_nav:
     recall_ops
     retired_ops
     draft_releases
+    released_ops
 
 nav tester_nav:
   group "Field":
@@ -87,6 +88,7 @@ nav manager_nav:
     recall_ops
     retired_ops
     draft_releases
+    released_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -2088,6 +2090,62 @@ workspace draft_releases "Draft Releases":
     display: timeline
     action: firmware_release_detail
     empty: "No draft release activity yet"
+
+  # WI D: chart family — release status mix
+  status_mix:
+    source: FirmwareRelease
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(FirmwareRelease)
+    empty: "No firmware releases to chart"
+
+# Sixteenth product desk (WI D): skip invoice_ops desk-cap; densify fieldtest_hub.
+workspace released_ops "Released Ops":
+  purpose: "Live firmware pressure — shipped builds without warehouse CRUD"
+  access: persona(engineer, manager)
+
+  released_metrics:
+    source: FirmwareRelease
+    display: metrics
+    aggregate:
+      released: count(FirmwareRelease where status = released)
+      drafts: count(FirmwareRelease where status = draft)
+      deprecated: count(FirmwareRelease where status = deprecated)
+    tones:
+      released: positive
+      drafts: warning
+      deprecated: accent
+
+  # WI D: queue family — released first
+  released_queue:
+    source: FirmwareRelease
+    filter: status = released
+    sort: release_date desc
+    limit: 20
+    display: queue
+    action: firmware_release_detail
+    empty: "No released firmware yet"
+
+  # WI D: grid family — live release cards
+  released_grid:
+    source: FirmwareRelease
+    filter: status = released
+    sort: version asc
+    limit: 15
+    display: grid
+    action: firmware_release_detail
+    empty: "No released firmware yet"
+
+  # WI D: context family — recent ship trail
+  released_trail:
+    source: FirmwareRelease
+    filter: status = released
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: firmware_release_detail
+    empty: "No release activity yet"
 
   # WI D: chart family — release status mix
   status_mix:
