@@ -319,6 +319,7 @@ dazzle test COMMAND [OPTIONS]
 | `run` | Run Playwright tests |
 | `list` | List available test flows |
 | `walk` | Scene walks list/validate/run (#1638; story-linked job paths) |
+| `docs claims` | Job claim registry check (#1638 PR3) |
 | `dsl-generate` | Generate tests from DSL definitions |
 | `dsl-run` | **Tier 1**: Run API-based tests against a server |
 | `tier2-generate` | **Tier 2**: Generate Playwright tests from surfaces |

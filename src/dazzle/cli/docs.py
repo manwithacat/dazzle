@@ -17,6 +17,11 @@ docs_app = typer.Typer(
     no_args_is_help=True,
 )
 
+# #1638 job claim registry (docs maturity SSOT — not RBAC claim_ledger)
+from dazzle.cli.claims import claims_app  # noqa: E402
+
+docs_app.add_typer(claims_app, name="claims")
+
 ALL_TARGETS = ("changelog", "readme", "mkdocs")
 
 DEFAULT_REPO = "manwithacat/dazzle"

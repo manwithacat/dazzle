@@ -1,0 +1,19 @@
+# Job claim registry showcase (#1638 PR3)
+# Lifecycle: draft → documented → verified → sensible → filmed → evergreen
+# verified+ requires walk binding + fixtures/scene_walks/{walk}.yaml
+
+version: 1
+guides:
+  - id: member-view-own-tasks
+    path: stems/story-driven-jobs.md
+    persona: member
+    job_id: member_my_work
+    title: "Team Member views own tasks"
+    stories: [ST-020]
+    walk: land_and_see_tasks
+    pack: A
+    pack_tier: hard
+    # documented: walk present + validates; promote to verified after live walk green
+    status: documented
+    video: null
+    notes: "Showcase claim for land_and_see_tasks walk (ST-020)"

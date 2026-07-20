@@ -5,11 +5,22 @@ and LLM journeys. Package home: ``dazzle.testing.walk`` (not ``agent``).
 
 PR1: models, JSON Schema, loader, ``list|validate``.
 PR2: ``run`` (HTTP core actions + optional Playwright).
-PR3+: claim registry check, pack dry-run, agent seed residuals.
+PR3: job claim registry + ``dazzle docs claims check``.
+PR4+: pack dry-run, agent seed residuals.
 """
 
 from __future__ import annotations
 
+from dazzle.testing.walk.claims import (
+    ClaimGuide,
+    ClaimsCheckResult,
+    ClaimsLoadError,
+    ClaimStatus,
+    JobClaimRegistry,
+    check_registry,
+    discover_registry_path,
+    load_registry,
+)
 from dazzle.testing.walk.discovery import default_walks_dir, discover_walk_paths
 from dazzle.testing.walk.loader import WalkLoadError, load_walk, load_walks
 from dazzle.testing.walk.models import (
@@ -25,6 +36,11 @@ from dazzle.testing.walk.validate import WalkValidationIssue, validate_walk, val
 __all__ = [
     "CORE_ACTION_TYPES",
     "ActionSpec",
+    "ClaimGuide",
+    "ClaimStatus",
+    "ClaimsCheckResult",
+    "ClaimsLoadError",
+    "JobClaimRegistry",
     "SceneSpec",
     "SceneWalkSpec",
     "WalkActionType",
@@ -32,8 +48,11 @@ __all__ = [
     "WalkRunResult",
     "WalkRunner",
     "WalkValidationIssue",
+    "check_registry",
     "default_walks_dir",
+    "discover_registry_path",
     "discover_walk_paths",
+    "load_registry",
     "load_walk",
     "load_walks",
     "run_walk",

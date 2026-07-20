@@ -184,3 +184,46 @@ class TestRunnerDryRun:
                 assert login.ok is True
 
         asyncio.run(_go())
+
+
+class TestJobClaims:
+    def test_load_showcase_registry(self) -> None:
+        from dazzle.testing.walk.claims import discover_registry_path, load_registry
+
+        path = discover_registry_path(_SIMPLE)
+        assert path is not None
+        reg = load_registry(path)
+        assert reg.version == 1
+        assert len(reg.guides) >= 1
+        g = reg.guides[0]
+        assert g.walk == "land_and_see_tasks"
+        assert g.persona == "member"
+
+    def test_check_documented_clean(self) -> None:
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.testing.walk.claims import check_registry, discover_registry_path, load_registry
+
+        appspec = load_project_appspec(_SIMPLE)
+        reg = load_registry(discover_registry_path(_SIMPLE))  # type: ignore[arg-type]
+        result = check_registry(reg, project_root=_SIMPLE, appspec=appspec, run_walks=False)
+        assert result.ok, [i.format() for i in result.errors]
+
+    def test_verified_requires_walk(self, tmp_path: Path) -> None:
+        from dazzle.testing.walk.claims import check_registry, load_registry
+
+        p = tmp_path / "job_claims.yaml"
+        p.write_text(
+            "version: 1\n"
+            "guides:\n"
+            "  - id: bad\n"
+            "    path: no-doc.md\n"
+            "    persona: member\n"
+            "    status: verified\n",
+            encoding="utf-8",
+        )
+        # need dazzle.toml for project? check only uses paths
+        (tmp_path / "dazzle.toml").write_text("[project]\nname = 't'\n", encoding="utf-8")
+        reg = load_registry(p)
+        result = check_registry(reg, project_root=tmp_path, appspec=None, run_walks=False)
+        codes = {i.code for i in result.errors}
+        assert "walk_required" in codes

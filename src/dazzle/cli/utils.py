@@ -218,3 +218,16 @@ def is_directory_empty(directory: Path) -> bool:
         return True
 
     return False
+
+
+def project_root_from_manifest(manifest: str | Path) -> Path:
+    """Resolve project root from a ``dazzle.toml`` path or directory.
+
+    Raises ``typer.Exit(1)`` when no dazzle.toml is found.
+    """
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent if manifest_path.is_file() else manifest_path
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"No dazzle.toml found in {root}", err=True)
+        raise typer.Exit(code=1)
+    return root

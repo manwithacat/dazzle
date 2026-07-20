@@ -8,7 +8,7 @@ from typing import Any
 
 import typer
 
-from dazzle.cli.utils import load_project_appspec
+from dazzle.cli.utils import load_project_appspec, project_root_from_manifest
 from dazzle.core.manifest import resolve_api_url
 from dazzle.testing.walk.discovery import default_walks_dir, discover_walk_paths
 from dazzle.testing.walk.loader import load_walk
@@ -23,15 +23,6 @@ walk_app = typer.Typer(
     ),
     no_args_is_help=True,
 )
-
-
-def _project_root(manifest: str) -> Path:
-    manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent if manifest_path.is_file() else manifest_path
-    if not (root / "dazzle.toml").exists():
-        typer.echo(f"No dazzle.toml found in {root}", err=True)
-        raise typer.Exit(code=1)
-    return root
 
 
 def _resolve_paths(
@@ -119,7 +110,7 @@ def walk_list(
         dazzle test walk list -m examples/simple_task/dazzle.toml
         dazzle test walk list --json
     """
-    root = _project_root(manifest)
+    root = project_root_from_manifest(manifest)
     paths = _resolve_paths(root, walks_dir, walk=None)
     display = Path(walks_dir).resolve() if walks_dir else default_walks_dir(root)
     if json_output:
@@ -168,7 +159,7 @@ def walk_validate(
         dazzle test walk validate --core-only --require-story
         dazzle test walk validate -w land_and_see_tasks
     """
-    root = _project_root(manifest)
+    root = project_root_from_manifest(manifest)
     paths = _resolve_paths(root, walks_dir, walk)
     if not paths:
         typer.echo(
@@ -334,7 +325,7 @@ def walk_run(
         dazzle test walk run -m examples/simple_task/dazzle.toml -u http://127.0.0.1:8765
         dazzle test walk run -w land_and_see_tasks --playwright
     """
-    root = _project_root(manifest)
+    root = project_root_from_manifest(manifest)
     paths = _resolve_paths(root, walks_dir, walk)
     if not paths:
         typer.echo("No walks found", err=True)

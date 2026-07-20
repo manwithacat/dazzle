@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Added
+- **#1638 PR3 job claim registry** — `dazzle docs claims check` validates
+  lifecycle rows (draft→evergreen) against doc paths + scene walks; `--run`
+  executes verified+ walks. Showcase: `examples/simple_task/fixtures/job_claims.yaml`.
+  Separate from RBAC `claim_ledger`.
 - **#1638 PR2 scene walk runner** — `dazzle test walk run` executes core
   actions over HTTP (SessionManager persona auth + httpx navigate/asserts).
   `--dry-run` plans without network; `--playwright` enables click/wait when
