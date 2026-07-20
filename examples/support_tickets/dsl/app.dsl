@@ -866,6 +866,63 @@ workspace agent_console "Agent Console":
     action: ticket_detail
     empty: "No open tickets for this agent"
 
+# Sixth product desk (WI D): 3 lists floor dens ~0.38 with 5 full desks — need 6.
+workspace resolution_ops "Resolution Ops":
+  purpose: "Resolution pressure — recently resolved and closed tickets without warehouse CRUD"
+  access: persona(agent, manager, admin)
+
+  resolution_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      resolved: count(Ticket where status = resolved)
+      closed: count(Ticket where status = closed)
+      open: count(Ticket where status = open or status = in_progress)
+    tones:
+      resolved: positive
+      closed: accent
+      open: warning
+
+  # WI D: queue family — resolved awaiting close
+  resolved_queue:
+    source: Ticket
+    filter: status = resolved
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: ticket_edit
+    empty: "No tickets in resolved state"
+
+  # WI D: grid family — recently closed cards
+  closed_grid:
+    source: Ticket
+    filter: status = closed
+    sort: updated_at desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No closed tickets yet"
+
+  # WI D: context family — resolution trail
+  resolution_trail:
+    source: Ticket
+    filter: status = resolved or status = closed
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No resolved or closed tickets"
+
+  # WI D: chart family — terminal status mix
+  status_mix:
+    source: Ticket
+    filter: status = resolved or status = closed
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No terminal tickets to chart"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
@@ -905,6 +962,7 @@ nav admin_nav:
   group "Ops":
     ticket_queue
     agent_console
+    resolution_ops
 
 nav customer_nav:
   group "My support":
@@ -915,6 +973,7 @@ nav agent_nav:
     ticket_queue
     agent_dashboard
     agent_console
+    resolution_ops
 
 nav manager_nav:
   group "Lead":
@@ -922,6 +981,7 @@ nav manager_nav:
     ticket_queue
     agent_console
     agent_dashboard
+    resolution_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
