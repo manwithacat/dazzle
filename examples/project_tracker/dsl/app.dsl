@@ -47,6 +47,7 @@ nav admin_nav:
     backlog_ops
     priority_ops
     delivery_ops
+    done_ops
 
 
 nav manager_nav:
@@ -62,6 +63,7 @@ nav manager_nav:
     backlog_ops
     priority_ops
     delivery_ops
+    done_ops
 
 
 nav member_nav:
@@ -74,6 +76,7 @@ nav member_nav:
     backlog_ops
     priority_ops
     delivery_ops
+    done_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -837,6 +840,62 @@ workspace delivery_ops "Delivery Ops":
     aggregate:
       count: count(Task)
     empty: "No in-flight tasks to chart"
+
+# Twelfth product desk (WI D): 5 lists floor dens ~0.31 with 11 full desks — need 12.
+workspace done_ops "Done Ops":
+  purpose: "Completion pressure — recently finished work without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  done_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      done: count(Task where status = done)
+      open: count(Task where status != done)
+      in_progress: count(Task where status = in_progress)
+    tones:
+      done: positive
+      open: accent
+      in_progress: warning
+
+  # WI D: queue family — done tasks first
+  done_queue:
+    source: Task
+    filter: status = done
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No completed tasks yet"
+
+  # WI D: grid family — completed cards
+  done_grid:
+    source: Task
+    filter: status = done
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No completed tasks yet"
+
+  # WI D: context family — recent completion trail
+  done_trail:
+    source: Task
+    filter: status = done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No completion activity yet"
+
+  # WI D: chart family — done vs open status mix
+  status_mix:
+    source: Task
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No tasks to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
