@@ -241,6 +241,7 @@ nav admin_nav:
     todo_ops
     urgent_ops
     unassigned_ops
+    scheduled_ops
 
 nav manager_nav:
   group "Lead":
@@ -255,6 +256,7 @@ nav manager_nav:
     todo_ops
     urgent_ops
     unassigned_ops
+    scheduled_ops
 
 nav member_nav:
   group "My work":
@@ -268,6 +270,7 @@ nav member_nav:
     todo_ops
     urgent_ops
     unassigned_ops
+    scheduled_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1380,3 +1383,60 @@ workspace unassigned_ops "Unassigned Ops":
     aggregate:
       count: count(Task)
     empty: "No unassigned tasks to chart"
+
+# Thirteenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify simple_task.
+workspace scheduled_ops "Scheduled Ops":
+  purpose: "Deadline pressure — open tasks with due dates without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  scheduled_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      scheduled: count(Task where due_date != null and status != done)
+      open: count(Task where status != done)
+      done: count(Task where status = done)
+    tones:
+      scheduled: warning
+      open: accent
+      done: muted
+
+  # WI D: queue family — scheduled open first
+  scheduled_queue:
+    source: Task
+    filter: due_date != null and status != done
+    sort: due_date asc, priority desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No open tasks with due dates"
+
+  # WI D: grid family — scheduled cards
+  scheduled_grid:
+    source: Task
+    filter: due_date != null and status != done
+    sort: due_date asc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No open tasks with due dates"
+
+  # WI D: context family — recent scheduled trail
+  scheduled_trail:
+    source: Task
+    filter: due_date != null and status != done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No scheduled activity yet"
+
+  # WI D: chart family — priority mix among scheduled
+  priority_mix:
+    source: Task
+    filter: due_date != null and status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No scheduled tasks to chart"
