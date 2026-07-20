@@ -85,14 +85,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1099 | STALE |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1160 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1100 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1101 | STALE |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1113 | STALE |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1147 | USED |
-| MCP `policy` | HYGIENE | MCP | framework-ux | 1061 | STALE |
-| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1062 | STALE |
-| MCP `semantics` | HYGIENE | MCP | example-apps | 1062 | STALE |
+| MCP `policy` | HYGIENE | MCP | framework-ux | 1160 | USED |
+| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1160 | USED |
+| MCP `semantics` | HYGIENE | MCP | example-apps | 1160 | USED |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1099 | STALE |
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1099 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1101 | STALE |
@@ -108,6 +108,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1160 (2026-07-20).** **HYGIENE dig** highest-lag STALE cluster on acme_billing —
+> MCP **policy** (analyze: 0 entities without rules; 6/9 full coverage; platform CUD gaps only;
+> conflicts=0; coverage 88 allow / 137 default-deny; simulate auditor×Invoice.list=allow);
+> MCP **semantics** (tenancy→Organization multi-tenant signals; extract 9 entities; compliance
+> PII/financial + GDPR/PCI suggestions); MCP **test_intelligence** summary (0 runs, KG empty —
+> surface exercised). budget_consumed 1. Explore **3/100**. Next: acme/hr WI D densify
+> (skip invoice soft-cap) or more HYGIENE.
 
 > **Cycle 1159 (2026-07-20).** **example-apps+hm COGNITION dig** — `demo reset-and-load`
 > on simple_task (serve boot → seed created_count=8, persona_homes/live_desk residual=0);
