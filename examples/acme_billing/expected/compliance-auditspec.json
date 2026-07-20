@@ -2,8 +2,8 @@
   "framework_id": "iso27001",
   "framework_name": "ISO/IEC 27001:2022",
   "framework_version": "2022",
-  "generated_at": "2026-07-20T04:58:20.536806+00:00",
-  "dsl_hash": "sha256:db2d02cd0cdc5650",
+  "generated_at": "2026-07-20T05:58:33.031707+00:00",
+  "dsl_hash": "sha256:fec6be86001674e1",
   "dsl_source": "/Volumes/SSD/Dazzle/examples/acme_billing",
   "controls": [
     {

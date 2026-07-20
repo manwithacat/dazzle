@@ -867,7 +867,7 @@ workspace user_ops "User Ops":
 workspace public_billing "Public Billing":
   purpose: "Non-sensitive invoice pressure for shared member work without warehouse CRUD"
   stage: "simple_list"
-  access: persona(admin, org_owner, auditor, project_member)
+  access: persona(admin, org_owner, auditor, project_member, external_contractor)
 
   public_pulse:
     source: Invoice
@@ -906,6 +906,58 @@ workspace public_billing "Public Billing":
     limit: 15
     display: timeline
     empty: "No public invoices yet"
+
+  # WI D: chart family — public invoice load by project
+  project_load:
+    source: Invoice
+    filter: sensitive != true
+    display: bar_chart
+    group_by: project
+    aggregate:
+      count: count(Invoice)
+    empty: "No public invoices to chart"
+
+# Fourteenth product desk (WI D): skip invoice_ops desk-cap; densify acme contractor lane.
+workspace contractor_ops "Contractor Ops":
+  purpose: "Assigned non-sensitive work for contractors and members without warehouse CRUD"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor, project_member, external_contractor)
+
+  assigned_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      public: count(Invoice where sensitive != true)
+      projects: count(Project)
+      seats: count(Membership)
+    tones:
+      public: accent
+      projects: positive
+      seats: muted
+
+  # WI D: queue family — non-sensitive invoices only (contractor scope)
+  public_queue:
+    source: Invoice
+    filter: sensitive != true
+    sort: amount desc
+    limit: 20
+    display: queue
+    empty: "No non-sensitive invoices"
+
+  # WI D: grid family — assigned project cards
+  project_cards:
+    source: Project
+    display: grid
+    sort: name asc
+    limit: 15
+    empty: "No projects found"
+
+  # WI D: context family — membership assignment trail
+  seat_trail:
+    source: Membership
+    display: timeline
+    limit: 15
+    empty: "No memberships yet"
 
   # WI D: chart family — public invoice load by project
   project_load:

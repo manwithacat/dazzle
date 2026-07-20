@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1158 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1159 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1159 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1159 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1161 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1147 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1147 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1159 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1161 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1159 | USED |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1161 (2026-07-20).** **example-apps ordinary explore** acme_billing WI D —
+> skipped invoice_ops desk-cap; new **contractor_ops** desk (metrics/queue/grid/timeline/chart)
+> + owner/auditor/member/contractor nav; public_billing access includes external_contractor;
+> co-ship auditspec dsl_hash **sha256:fec6be86001674e1**. dens **0.28→0.27**; fleet **0.081**.
+> budget_consumed 1. Explore **4/100**. Next: hr_records densify (skip invoice soft-cap).
 
 > **Cycle 1160 (2026-07-20).** **HYGIENE dig** highest-lag STALE cluster on acme_billing —
 > MCP **policy** (analyze: 0 entities without rules; 6/9 full coverage; platform CUD gaps only;
