@@ -40,6 +40,7 @@ nav designer_nav:
     review_desk
     feedback_desk
     publish_desk
+    draft_studio
 
 nav reviewer_nav:
   group "Review":
@@ -48,6 +49,7 @@ nav reviewer_nav:
     studio_dashboard
     feedback_desk
     publish_desk
+    draft_studio
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -559,6 +561,62 @@ workspace publish_desk "Publish Desk":
     aggregate:
       count: count(Asset)
     empty: "No assets yet"
+
+# Eighth product desk (WI D): 4 lists floor dens ~0.36 with 7 full desks — need 8.
+workspace draft_studio "Draft Studio":
+  purpose: "Draft pressure — work still in draft before review"
+  access: persona(admin, designer, reviewer)
+
+  draft_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      draft: count(Asset where status = draft)
+      in_review: count(Asset where status = review)
+      brands: count(Brand)
+    tones:
+      draft: accent
+      in_review: warning
+
+  # WI D: queue family — drafts needing attention
+  draft_queue:
+    source: Asset
+    filter: status = draft
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "No draft assets"
+
+  # WI D: grid family — draft gallery
+  draft_gallery:
+    source: Asset
+    filter: status = draft
+    sort: name asc
+    limit: 20
+    display: grid
+    action: asset_edit
+    empty: "No draft assets"
+
+  # WI D: context family — recent draft trail
+  draft_trail:
+    source: Asset
+    filter: status = draft
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No draft activity yet"
+
+  # WI D: chart family — asset type mix among drafts
+  type_mix:
+    source: Asset
+    filter: status = draft
+    display: bar_chart
+    group_by: asset_type
+    aggregate:
+      count: count(Asset)
+    empty: "No draft assets to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
