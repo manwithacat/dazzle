@@ -512,6 +512,58 @@ workspace priority_desk "Priorities":
         icon: "tags"
         state: positive
 
+# Fifth product desk (WI D): 2 lists floor dens ~0.33 with 4 full desks — need 5.
+workspace category_ops "Category Ops":
+  purpose: "Category pressure — AI category mix and open work without warehouse CRUD"
+  access: persona(supervisor, support_agent, admin)
+
+  category_pulse:
+    source: TicketClassification
+    display: metrics
+    aggregate:
+      classifications: count(TicketClassification)
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+    tones:
+      open: warning
+      classifications: accent
+      in_progress: positive
+
+  # WI D: queue family — latest classifications first
+  class_queue:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 20
+    display: queue
+    empty: "No classifications yet"
+
+  # WI D: grid family — active ticket cards
+  active_grid:
+    source: Ticket
+    filter: status = open or status = in_progress
+    sort: updated_at desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No active tickets"
+
+  # WI D: context family — classification trail
+  category_trail:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 15
+    display: timeline
+    empty: "No classifications yet"
+
+  # WI D: chart family — category mix
+  category_mix:
+    source: TicketClassification
+    display: bar_chart
+    group_by: category
+    aggregate:
+      count: count(TicketClassification)
+    empty: "No classifications to chart"
+
 
 # =============================================================================
 # Personas
@@ -540,6 +592,7 @@ nav agent_nav:
     ticket_management
     classification_desk
     priority_desk
+    category_ops
     support_dashboard
 
 nav supervisor_nav:
@@ -547,6 +600,7 @@ nav supervisor_nav:
     support_dashboard
     classification_desk
     priority_desk
+    category_ops
     ticket_management
 
 
