@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1097 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1097 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1124 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1125 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1095 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1095 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1124 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1125 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1096 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1096 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1096 | USED |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1125 (2026-07-20).** **example-apps ordinary explore** simple_task WI D —
+> new **review_ops** desk (metrics/queue/grid/timeline/chart) + admin/manager/member nav.
+> dens **0.33→0.30**; wi_next→**project_tracker**; fleet **0.093**. budget_consumed 1.
+> Explore **7/100**. Left dsl_generated_tests dirty alone.
 
 > **Cycle 1124 (2026-07-20).** **example-apps ordinary explore** support_tickets WI D —
 > new **priority_ops** desk (metrics/queue/grid/timeline/chart) + agent/manager/admin nav.

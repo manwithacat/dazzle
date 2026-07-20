@@ -235,6 +235,7 @@ nav admin_nav:
     comments_desk
     people_desk
     priority_ops
+    review_ops
 
 nav manager_nav:
   group "Lead":
@@ -243,6 +244,7 @@ nav manager_nav:
     people_desk
     comments_desk
     priority_ops
+    review_ops
 
 nav member_nav:
   group "My work":
@@ -250,6 +252,7 @@ nav member_nav:
     task_board
     comments_desk
     priority_ops
+    review_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1021,3 +1024,60 @@ workspace priority_ops "Priority Ops":
     aggregate:
       count: count(Task)
     empty: "No open tasks to chart"
+
+# Seventh product desk (WI D): 3 lists floor dens ~0.33 with 6 full desks — need 7.
+workspace review_ops "Review Ops":
+  purpose: "Review pressure — work waiting on review without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  review_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      in_review: count(Task where status = review)
+      in_progress: count(Task where status = in_progress)
+      open: count(Task where status != done)
+    tones:
+      in_review: warning
+      in_progress: accent
+      open: accent
+
+  # WI D: queue family — review backlog first
+  review_queue:
+    source: Task
+    filter: status = review
+    sort: priority desc, updated_at asc
+    limit: 20
+    display: queue
+    action: task_edit
+    empty: "Nothing awaiting review"
+
+  # WI D: grid family — in-progress cards approaching review
+  progress_grid:
+    source: Task
+    filter: status = in_progress
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No in-progress tasks"
+
+  # WI D: context family — recent review trail
+  review_trail:
+    source: Task
+    filter: status = review or status = in_progress
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No review pipeline activity yet"
+
+  # WI D: chart family — pipeline status mix
+  status_mix:
+    source: Task
+    filter: status = review or status = in_progress or status = todo
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No open pipeline tasks to chart"
