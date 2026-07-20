@@ -50,6 +50,7 @@ nav admin_nav:
     done_ops
     todo_ops
     milestone_ops
+    attach_ops
 
 
 nav manager_nav:
@@ -68,6 +69,7 @@ nav manager_nav:
     done_ops
     todo_ops
     milestone_ops
+    attach_ops
 
 
 nav member_nav:
@@ -83,6 +85,7 @@ nav member_nav:
     done_ops
     todo_ops
     milestone_ops
+    attach_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -1012,6 +1015,59 @@ workspace milestone_ops "Milestone Ops":
     aggregate:
       count: count(Milestone)
     empty: "No milestones to chart"
+
+# Fifteenth product desk (WI D): skip invoice_ops desk-cap; densify project_tracker.
+workspace attach_ops "Attach Ops":
+  purpose: "Attachment pressure — files linked to work without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  attach_pulse:
+    source: Attachment
+    display: metrics
+    aggregate:
+      files: count(Attachment)
+      open_tasks: count(Task where status != done)
+      comments: count(Comment)
+    tones:
+      files: accent
+      open_tasks: warning
+      comments: muted
+
+  # WI D: queue family — recent uploads first
+  file_queue:
+    source: Attachment
+    sort: created_at desc
+    limit: 20
+    display: queue
+    empty: "No attachments uploaded yet"
+
+  # WI D: grid family — open task cards needing files context
+  open_grid:
+    source: Task
+    filter: status != done
+    sort: priority desc, due_date asc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No open tasks"
+
+  # WI D: context family — recent attachment trail
+  file_trail:
+    source: Attachment
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No file activity yet"
+
+  # WI D: chart family — open task priority mix (file demand proxy)
+  priority_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
