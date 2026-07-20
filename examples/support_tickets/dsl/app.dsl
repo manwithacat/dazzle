@@ -1209,6 +1209,64 @@ workspace critical_ops "Critical Ops":
       count: count(Ticket)
     empty: "No high-priority tickets to chart"
 
+
+# Twelfth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify support_tickets.
+workspace unassigned_ops "Unassigned Ops":
+  purpose: "Assignment pressure — open tickets without an owner without warehouse CRUD"
+  access: persona(agent, manager, admin)
+
+  unassigned_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      unassigned: count(Ticket where assigned_to = null and status = open)
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+    tones:
+      unassigned: warning
+      open: accent
+      in_progress: muted
+
+  # WI D: queue family — unassigned open first
+  unassigned_queue:
+    source: Ticket
+    filter: assigned_to = null and status = open
+    sort: priority desc, updated_at desc
+    limit: 20
+    display: queue
+    action: ticket_edit
+    empty: "No unassigned open tickets"
+
+  # WI D: grid family — unassigned cards
+  unassigned_grid:
+    source: Ticket
+    filter: assigned_to = null and status = open
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No unassigned open tickets"
+
+  # WI D: context family — recent unassigned trail
+  unassigned_trail:
+    source: Ticket
+    filter: assigned_to = null and status = open
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No unassigned activity yet"
+
+  # WI D: chart family — priority mix among unassigned
+  priority_mix:
+    source: Ticket
+    filter: assigned_to = null and status = open
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Ticket)
+    empty: "No unassigned tickets to chart"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
@@ -1254,6 +1312,7 @@ nav admin_nav:
     open_ops
     resolved_ops
     critical_ops
+    unassigned_ops
 
 nav customer_nav:
   group "My support":
@@ -1270,6 +1329,7 @@ nav agent_nav:
     open_ops
     resolved_ops
     critical_ops
+    unassigned_ops
 
 nav manager_nav:
   group "Lead":
@@ -1283,6 +1343,7 @@ nav manager_nav:
     open_ops
     resolved_ops
     critical_ops
+    unassigned_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
