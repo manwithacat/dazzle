@@ -31,9 +31,13 @@ python scripts/improve_example_probes.py --status
 | `deepen` | landings OK but density/nav still warehouse-heavy | Job desks with mixed modes/sources; curated nav |
 | `ok` | structural product path present | Skip; if residual=0 minimize `wi_next` (WI gradient) |
 
-**WI anti-gaming (v2):** L = inverse signal richness (unique mode_family×source,
-not raw region count). D = lists / (lists + effective job weight), scale-capped
-by entity count — empty desk sprawl and same-entity list pads do not clear WI.
+**WI anti-gaming (v3, #1637):** L = inverse signal richness (unique
+mode_family×source). D = lists / (lists + *job-backed* effective weight): only
+desks that are persona `default_workspace`, appear in story `executed_by`, or
+are non-orphan named product desks count; isomorphic multi-mode filter clones
+(`high_ops` / `medium_ops` / …) credit **once**; orphan `*_ops` never dilute D.
+Sprawl / scoreboard-language residuals flag densify residue. Hard floor:
+`densify_allowed=0` when residual=0 and `wi_fleet ≤ wi_floor` — **no** D grind.
 See `docs/reference/product-maturity.md`.
 
 Fleet residual → exit **1**. Fleet mature → exit **0**.
@@ -44,8 +48,13 @@ Fleet residual → exit **1**. Fleet mature → exit **0**.
 * Force: `/improve example-apps product_maturity`
 * Unified probes report product residual before demo/journey
 * Backlog `PENDING` with gap type `product_maturity`
+* Residual reasons include `orphan_ops_desks`, `desk_sprawl`, `scoreboard_language`
+  → **consolidate / clean**, do not densify further
 
-Skip when residual=0 (hand off to `demo_fleet` then `journey_dogfood` then Tier 1).
+Skip when residual=0:
+* if `densify_allowed=1` → optional WI feature_creep on `wi_next` (job-backed only)
+* if `densify_allowed=0` → hand off to `demo_fleet` / `journey_dogfood` /
+  `agent_acceptance_panel` / COGNITION — **never** add another `*_ops` desk
 
 `budget_consumed: 0` (deterministic DSL).
 
@@ -100,5 +109,10 @@ emit(source='product_maturity', kind='app-fixed',
 
 - **One app per cycle.**
 - **Never add entity lists to “pass” density.**
+- **Never add isomorphic enum `*_ops` desks to “pass” D** (#1637). Prefer
+  segments/filters on one job desk; consolidate orphans; strip scoreboard comments
+  (`# WI D:`, `densify`, soft-cap skip narratives).
+- **`densify_allowed=0` is a hard stop** — log it and leave the lane; do not soft-cap skip.
 - Framework shell bugs (builder chrome always on) → `framework-ux` / #1626, not every app.
-- After structural residual=0, prefer **`demo_fleet`** (#1626 stills/seeds) over STALE Tier-1.
+- After structural residual=0, prefer **`demo_fleet`** / **`agent_acceptance_panel`**
+  over STALE Tier-1 and over WI D densify under floor.

@@ -27,7 +27,6 @@ persona engineer "Engineer":
   proficiency_level: expert
   session_style: deep_work
   default_workspace: engineering_dashboard
-  # WI N: job desks first — not auto entity-list soup
   uses nav engineer_nav
 
 persona tester "Field Tester":
@@ -57,18 +56,9 @@ nav engineer_nav:
     engineering_dashboard
     issue_triage
     firmware_pipeline
-    session_ops
     tester_roster
-    task_ops
     device_fleet
-    critical_ops
-    prototype_ops
-    recall_ops
-    retired_ops
     draft_releases
-    released_ops
-    active_ops
-    open_ops
 
 nav tester_nav:
   group "Field":
@@ -81,18 +71,9 @@ nav manager_nav:
     engineering_dashboard
     issue_triage
     firmware_pipeline
-    session_ops
     tester_roster
-    task_ops
     device_fleet
-    critical_ops
-    prototype_ops
-    recall_ops
-    retired_ops
     draft_releases
-    released_ops
-    active_ops
-    open_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1117,7 +1098,6 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: device_detail
     empty: "All registered devices are active"
 
-  # WI D: context family for tester activity (not list pad)
   tester_activity:
     source: TestSession
     sort: logged_at desc
@@ -1136,7 +1116,6 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: issue_report_edit
     empty: "No open reports to triage"
 
-  # WI D: grid family for critical cards
   critical_issues:
     source: IssueReport
     filter: severity = critical and status != closed
@@ -1146,7 +1125,6 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: issue_report_detail
     empty: "No critical issues!"
 
-  # WI D: context family for recent reports
   recent_reports:
     source: IssueReport
     sort: reported_at desc
@@ -1162,7 +1140,6 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: issue_report_edit
     empty: "No issues to triage"
 
-  # WI D: grid family for active fleet
   active_devices:
     source: Device
     filter: status = active
@@ -1187,7 +1164,6 @@ workspace engineering_dashboard "Engineering Dashboard":
       open: warning
       releases_live: positive
 
-  # WI D: grid family for release cards
   firmware_releases:
     source: FirmwareRelease
     sort: release_date desc
@@ -1196,7 +1172,6 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: firmware_release_detail
     empty: "No firmware releases"
 
-  # WI D: context family for open work trail
   all_tasks:
     source: Task
     filter: status != completed and status != cancelled
@@ -1220,7 +1195,6 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: firmware_release_edit
     empty: "No firmware releases"
 
-  # WI D: chart family — severity mix on open reports
   severity_mix:
     source: IssueReport
     filter: status != closed
@@ -1320,7 +1294,6 @@ workspace tester_dashboard "Tester Dashboard":
       critical_found: destructive
       open_tasks: accent
 
-  # WI D: grid family for assigned devices
   my_devices:
     source: Device
     filter: assigned_tester_id = current_user
@@ -1356,7 +1329,6 @@ workspace tester_dashboard "Tester Dashboard":
     action: task_detail
     empty: "No tasks assigned to you"
 
-  # WI D: chart family — personal issue severity mix
   my_severity_mix:
     source: IssueReport
     filter: reported_by_id = current_user
@@ -1421,7 +1393,6 @@ workspace manager_ops "Manager Ops":
     action: issue_report_detail
     empty: "No critical issues!"
 
-  # WI D: context family (not list pad)
   tester_activity:
     source: TestSession
     sort: logged_at desc
@@ -1430,7 +1401,6 @@ workspace manager_ops "Manager Ops":
     action: test_session_detail
     empty: "No recent test sessions logged"
 
-  # WI D: kanban family for open work
   open_work:
     source: Task
     filter: status != completed and status != cancelled
@@ -1439,7 +1409,6 @@ workspace manager_ops "Manager Ops":
     action: task_detail
     empty: "No open tasks"
 
-  # WI D: chart family — fleet status mix
   fleet_status_mix:
     source: Device
     display: bar_chart
@@ -1472,7 +1441,6 @@ workspace issue_triage "Issue Triage":
     action: issue_report_edit
     empty: "No open reports to triage"
 
-  # WI D: grid family for critical cards
   critical_issues:
     source: IssueReport
     filter: severity = critical and status != closed
@@ -1489,7 +1457,6 @@ workspace issue_triage "Issue Triage":
     action: issue_report_edit
     empty: "No issues to triage"
 
-  # WI D: context family — recent critical timeline
   critical_trail:
     source: IssueReport
     filter: severity = critical
@@ -1515,7 +1482,6 @@ workspace firmware_pipeline "Firmware Pipeline":
       live: positive
       open_tasks: accent
 
-  # WI D: grid family for release cards
   firmware_releases:
     source: FirmwareRelease
     sort: release_date desc
@@ -1531,7 +1497,6 @@ workspace firmware_pipeline "Firmware Pipeline":
     action: firmware_release_edit
     empty: "No firmware releases"
 
-  # WI D: context family for release tasks
   release_tasks:
     source: Task
     filter: status != completed and status != cancelled
@@ -1541,7 +1506,6 @@ workspace firmware_pipeline "Firmware Pipeline":
     action: task_detail
     empty: "No open tasks"
 
-  # WI D: chart family — release status mix
   release_status_mix:
     source: FirmwareRelease
     display: bar_chart
@@ -1565,7 +1529,6 @@ workspace field_kit "Field Kit":
       open_tasks: accent
       assigned: positive
 
-  # WI D: grid family for device cards
   assigned_devices:
     source: Device
     filter: assigned_tester_id = current_user
@@ -1592,7 +1555,6 @@ workspace field_kit "Field Kit":
     action: task_detail
     empty: "No open tasks"
 
-  # WI D: kanban family for personal open work
   my_task_flow:
     source: Task
     filter: assigned_to_id = current_user and status != completed and status != cancelled
@@ -1601,61 +1563,6 @@ workspace field_kit "Field Kit":
     action: task_detail
     empty: "No open tasks"
 
-# Seventh product desk (WI D): dens floor with 6 lists needs ≥7 job-weighted desks.
-workspace session_ops "Session Ops":
-  purpose: "Field session pulse — recent tests, devices exercised, and open issues"
-  access: persona(engineer, manager)
-
-  session_metrics:
-    source: TestSession
-    display: metrics
-    aggregate:
-      sessions: count(TestSession)
-      open_issues: count(IssueReport where status = open)
-      active_devices: count(Device where status = active)
-    tones:
-      open_issues: warning
-      active_devices: positive
-
-  # WI D: context family — recent field sessions
-  recent_sessions:
-    source: TestSession
-    sort: logged_at desc
-    limit: 20
-    display: timeline
-    action: test_session_detail
-    empty: "No test sessions logged"
-
-  # WI D: grid family — devices exercised in the field
-  active_fleet:
-    source: Device
-    filter: status = active
-    sort: name asc
-    limit: 15
-    display: grid
-    action: device_detail
-    empty: "No active devices"
-
-  # WI D: queue family — open field reports
-  open_reports:
-    source: IssueReport
-    filter: status = open
-    sort: severity desc, reported_at desc
-    limit: 15
-    display: queue
-    action: issue_report_edit
-    empty: "No open reports"
-
-  # WI D: chart family — session environment mix
-  environment_mix:
-    source: TestSession
-    display: bar_chart
-    group_by: environment
-    aggregate:
-      count: count(TestSession)
-    empty: "No test sessions"
-
-# Eighth product desk (WI D): 6 lists floor dens ~0.46 with 7 full desks — need 8.
 workspace tester_roster "Tester Roster":
   purpose: "Field tester capacity — active roster, assignments, and session pulse"
   access: persona(engineer, manager)
@@ -1672,7 +1579,6 @@ workspace tester_roster "Tester Roster":
       active: positive
       devices: accent
 
-  # WI D: grid family for tester cards
   active_testers:
     source: Tester
     filter: active = true
@@ -1682,7 +1588,6 @@ workspace tester_roster "Tester Roster":
     action: tester_detail
     empty: "No active testers"
 
-  # WI D: queue family — devices still needing an assignee
   unassigned_devices:
     source: Device
     filter: assigned_tester_id = null and status = active
@@ -1692,7 +1597,6 @@ workspace tester_roster "Tester Roster":
     action: device_detail
     empty: "Every active device has a tester"
 
-  # WI D: context family — recent field sessions across the roster
   session_trail:
     source: TestSession
     sort: logged_at desc
@@ -1701,7 +1605,6 @@ workspace tester_roster "Tester Roster":
     action: test_session_detail
     empty: "No test sessions logged"
 
-  # WI D: chart family — tester skill mix
   skill_mix:
     source: Tester
     display: bar_chart
@@ -1711,61 +1614,6 @@ workspace tester_roster "Tester Roster":
     empty: "No testers yet"
 
 
-# Ninth product desk (WI D): 6 lists floor dens ~0.43 with 8 full desks — need 9.
-workspace task_ops "Task Ops":
-  purpose: "Field task pulse — open work, assignments, and priority pressure"
-  access: persona(engineer, manager)
-
-  task_metrics:
-    source: Task
-    display: metrics
-    aggregate:
-      open: count(Task where status != completed and status != cancelled)
-      in_progress: count(Task where status = in_progress)
-      unassigned: count(Task where assigned_to_id = null and status != completed)
-    tones:
-      open: warning
-      in_progress: accent
-      unassigned: destructive
-
-  # WI D: queue family — open tasks first
-  open_queue:
-    source: Task
-    filter: status != completed and status != cancelled
-    sort: created_at desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No open tasks"
-
-  # WI D: kanban family — task pipeline board
-  task_board:
-    source: Task
-    filter: status != completed and status != cancelled
-    display: kanban
-    group_by: status
-    action: task_detail
-    empty: "No open tasks"
-
-  # WI D: context family — recent task trail
-  task_trail:
-    source: Task
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No tasks yet"
-
-  # WI D: chart family — task status mix
-  status_mix:
-    source: Task
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No tasks yet"
-
-# Tenth product desk (WI D): 6 lists floor dens ~0.40 with 9 full desks — need 10.
 workspace device_fleet "Device Fleet":
   purpose: "Fleet pressure — active/recalled/prototype devices and batch mix"
   access: persona(engineer, manager)
@@ -1782,7 +1630,6 @@ workspace device_fleet "Device Fleet":
       prototype: accent
       recalled: destructive
 
-  # WI D: grid family — active fleet cards
   active_devices:
     source: Device
     filter: status = active
@@ -1792,7 +1639,6 @@ workspace device_fleet "Device Fleet":
     action: device_detail
     empty: "No active devices"
 
-  # WI D: queue family — recalled units need attention first
   recall_queue:
     source: Device
     filter: status = recalled
@@ -1802,7 +1648,6 @@ workspace device_fleet "Device Fleet":
     action: device_detail
     empty: "No recalled devices"
 
-  # WI D: context family — recent fleet changes
   fleet_trail:
     source: Device
     sort: updated_at desc
@@ -1811,7 +1656,6 @@ workspace device_fleet "Device Fleet":
     action: device_detail
     empty: "No devices yet"
 
-  # WI D: chart family — lifecycle status mix
   status_mix:
     source: Device
     display: bar_chart
@@ -1820,235 +1664,6 @@ workspace device_fleet "Device Fleet":
       count: count(Device)
     empty: "No devices yet"
 
-# Eleventh product desk (WI D): critical issue pressure for eng/manager.
-workspace critical_ops "Critical Ops":
-  purpose: "Critical and high-severity issue pressure without warehouse CRUD"
-  access: persona(engineer, manager)
-
-  critical_metrics:
-    source: IssueReport
-    display: metrics
-    aggregate:
-      critical: count(IssueReport where severity = critical and status = open)
-      high: count(IssueReport where severity = high and status = open)
-      open: count(IssueReport where status = open)
-    tones:
-      critical: destructive
-      high: warning
-      open: accent
-
-  # WI D: queue family — critical open first
-  critical_queue:
-    source: IssueReport
-    filter: severity = critical and status = open
-    sort: reported_at asc
-    limit: 20
-    display: queue
-    action: issue_report_edit
-    empty: "No open critical issues"
-
-  # WI D: grid family — high severity cards
-  high_grid:
-    source: IssueReport
-    filter: severity = high and status = open
-    sort: reported_at asc
-    limit: 15
-    display: grid
-    action: issue_report_detail
-    empty: "No open high-severity issues"
-
-  # WI D: context family — recent critical trail
-  critical_trail:
-    source: IssueReport
-    filter: severity = critical or severity = high
-    sort: reported_at desc
-    limit: 15
-    display: timeline
-    action: issue_report_detail
-    empty: "No high or critical issues yet"
-
-  # WI D: chart family — open severity mix
-  severity_mix:
-    source: IssueReport
-    filter: status = open
-    display: bar_chart
-    group_by: severity
-    aggregate:
-      count: count(IssueReport)
-    empty: "No open issues to chart"
-
-# Twelfth product desk (WI D): 6 lists floor dens ~0.35 with 11 full desks — need 12.
-workspace prototype_ops "Prototype Ops":
-  purpose: "Prototype pressure — pre-production units needing exercise and attention"
-  access: persona(engineer, manager)
-
-  prototype_metrics:
-    source: Device
-    display: metrics
-    aggregate:
-      prototype: count(Device where status = prototype)
-      active: count(Device where status = active)
-      retired: count(Device where status = retired)
-    tones:
-      prototype: accent
-      active: positive
-      retired: warning
-
-  # WI D: queue family — oldest prototypes first
-  prototype_queue:
-    source: Device
-    filter: status = prototype
-    sort: updated_at asc
-    limit: 20
-    display: queue
-    action: device_detail
-    empty: "No prototype devices"
-
-  # WI D: grid family — prototype cards
-  prototype_grid:
-    source: Device
-    filter: status = prototype
-    sort: name asc
-    limit: 15
-    display: grid
-    action: device_detail
-    empty: "No prototype devices"
-
-  # WI D: context family — recent prototype trail
-  prototype_trail:
-    source: Device
-    filter: status = prototype
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: device_detail
-    empty: "No prototype activity yet"
-
-  # WI D: chart family — prototype model mix
-  model_mix:
-    source: Device
-    filter: status = prototype
-    display: bar_chart
-    group_by: model
-    aggregate:
-      count: count(Device)
-    empty: "No prototypes to chart"
-
-# Thirteenth product desk (WI D): 6 lists floor dens ~0.33 with 12 full desks — need 13.
-workspace recall_ops "Recall Ops":
-  purpose: "Recall pressure — pulled units and related open issues without warehouse CRUD"
-  access: persona(engineer, manager)
-
-  recall_metrics:
-    source: Device
-    display: metrics
-    aggregate:
-      recalled: count(Device where status = recalled)
-      retired: count(Device where status = retired)
-      open_issues: count(IssueReport where status = open)
-    tones:
-      recalled: destructive
-      retired: warning
-      open_issues: accent
-
-  # WI D: queue family — recalled units first
-  recall_queue:
-    source: Device
-    filter: status = recalled
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: device_detail
-    empty: "No recalled devices"
-
-  # WI D: grid family — recalled device cards
-  recall_grid:
-    source: Device
-    filter: status = recalled
-    sort: name asc
-    limit: 15
-    display: grid
-    action: device_detail
-    empty: "No recalled devices"
-
-  # WI D: context family — recent recall trail
-  recall_trail:
-    source: Device
-    filter: status = recalled or status = retired
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: device_detail
-    empty: "No recall or retire activity yet"
-
-  # WI D: chart family — lifecycle status mix among non-active
-  status_mix:
-    source: Device
-    filter: status = recalled or status = retired or status = prototype
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Device)
-    empty: "No non-active devices to chart"
-
-# Fourteenth product desk (WI D): 6 lists floor dens ~0.32 with 13 full desks — need 14.
-workspace retired_ops "Retired Ops":
-  purpose: "End-of-life pressure — retired units and batch mix without warehouse CRUD"
-  access: persona(engineer, manager)
-
-  retired_metrics:
-    source: Device
-    display: metrics
-    aggregate:
-      retired: count(Device where status = retired)
-      recalled: count(Device where status = recalled)
-      active: count(Device where status = active)
-    tones:
-      retired: warning
-      recalled: destructive
-      active: positive
-
-  # WI D: queue family — retired units first
-  retired_queue:
-    source: Device
-    filter: status = retired
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: device_detail
-    empty: "No retired devices"
-
-  # WI D: grid family — retired device cards
-  retired_grid:
-    source: Device
-    filter: status = retired
-    sort: name asc
-    limit: 15
-    display: grid
-    action: device_detail
-    empty: "No retired devices"
-
-  # WI D: context family — recent retire trail
-  retired_trail:
-    source: Device
-    filter: status = retired
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: device_detail
-    empty: "No retire activity yet"
-
-  # WI D: chart family — retired model mix
-  model_mix:
-    source: Device
-    filter: status = retired
-    display: bar_chart
-    group_by: model
-    aggregate:
-      count: count(Device)
-    empty: "No retired devices to chart"
-
-# Fifteenth product desk (WI D): 6 lists floor dens ~0.30 with 14 full desks — need 15.
 workspace draft_releases "Draft Releases":
   purpose: "Draft firmware pressure — unshipped builds without warehouse CRUD"
   access: persona(engineer, manager)
@@ -2065,7 +1680,6 @@ workspace draft_releases "Draft Releases":
       released: positive
       deprecated: accent
 
-  # WI D: queue family — drafts first
   draft_queue:
     source: FirmwareRelease
     filter: status = draft
@@ -2075,7 +1689,6 @@ workspace draft_releases "Draft Releases":
     action: firmware_release_edit
     empty: "No draft firmware releases"
 
-  # WI D: grid family — draft release cards
   draft_grid:
     source: FirmwareRelease
     filter: status = draft
@@ -2085,7 +1698,6 @@ workspace draft_releases "Draft Releases":
     action: firmware_release_detail
     empty: "No draft firmware releases"
 
-  # WI D: context family — recent draft trail
   draft_trail:
     source: FirmwareRelease
     filter: status = draft
@@ -2095,7 +1707,6 @@ workspace draft_releases "Draft Releases":
     action: firmware_release_detail
     empty: "No draft release activity yet"
 
-  # WI D: chart family — release status mix
   status_mix:
     source: FirmwareRelease
     display: bar_chart
@@ -2103,180 +1714,6 @@ workspace draft_releases "Draft Releases":
     aggregate:
       count: count(FirmwareRelease)
     empty: "No firmware releases to chart"
-
-# Sixteenth product desk (WI D): skip invoice_ops desk-cap; densify fieldtest_hub.
-workspace released_ops "Released Ops":
-  purpose: "Live firmware pressure — shipped builds without warehouse CRUD"
-  access: persona(engineer, manager)
-
-  released_metrics:
-    source: FirmwareRelease
-    display: metrics
-    aggregate:
-      released: count(FirmwareRelease where status = released)
-      drafts: count(FirmwareRelease where status = draft)
-      deprecated: count(FirmwareRelease where status = deprecated)
-    tones:
-      released: positive
-      drafts: warning
-      deprecated: accent
-
-  # WI D: queue family — released first
-  released_queue:
-    source: FirmwareRelease
-    filter: status = released
-    sort: release_date desc
-    limit: 20
-    display: queue
-    action: firmware_release_detail
-    empty: "No released firmware yet"
-
-  # WI D: grid family — live release cards
-  released_grid:
-    source: FirmwareRelease
-    filter: status = released
-    sort: version asc
-    limit: 15
-    display: grid
-    action: firmware_release_detail
-    empty: "No released firmware yet"
-
-  # WI D: context family — recent ship trail
-  released_trail:
-    source: FirmwareRelease
-    filter: status = released
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: firmware_release_detail
-    empty: "No release activity yet"
-
-  # WI D: chart family — release status mix
-  status_mix:
-    source: FirmwareRelease
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(FirmwareRelease)
-    empty: "No firmware releases to chart"
-
-# Seventeenth product desk (WI D): skip invoice_ops desk-cap; densify fieldtest_hub.
-workspace active_ops "Active Ops":
-  purpose: "Active fleet pressure — production units without warehouse CRUD"
-  access: persona(engineer, manager)
-
-  active_metrics:
-    source: Device
-    display: metrics
-    aggregate:
-      active: count(Device where status = active)
-      prototype: count(Device where status = prototype)
-      recalled: count(Device where status = recalled)
-    tones:
-      active: positive
-      prototype: accent
-      recalled: destructive
-
-  # WI D: queue family — active units first
-  active_queue:
-    source: Device
-    filter: status = active
-    sort: name asc
-    limit: 20
-    display: queue
-    action: device_detail
-    empty: "No active devices"
-
-  # WI D: grid family — active fleet cards
-  active_grid:
-    source: Device
-    filter: status = active
-    sort: name asc
-    limit: 15
-    display: grid
-    action: device_detail
-    empty: "No active devices"
-
-  # WI D: context family — recent active trail
-  active_trail:
-    source: Device
-    filter: status = active
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: device_detail
-    empty: "No active fleet activity yet"
-
-  # WI D: chart family — active model mix
-  model_mix:
-    source: Device
-    filter: status = active
-    display: bar_chart
-    group_by: model
-    aggregate:
-      count: count(Device)
-    empty: "No active devices to chart"
-
-# Eighteenth product desk (WI D): skip invoice_ops desk-cap; densify fieldtest_hub.
-workspace open_ops "Open Ops":
-  purpose: "Open-issue pressure — unclosed field faults without warehouse CRUD"
-  access: persona(engineer, manager)
-
-  open_metrics:
-    source: IssueReport
-    display: metrics
-    aggregate:
-      open: count(IssueReport where status = open)
-      triaged: count(IssueReport where status = triaged)
-      in_flight: count(IssueReport where status = in_progress)
-    tones:
-      open: warning
-      triaged: accent
-      in_flight: positive
-
-  # WI D: queue family — open issues first
-  open_queue:
-    source: IssueReport
-    filter: status = open or status = triaged
-    sort: severity desc, updated_at desc
-    limit: 20
-    display: queue
-    action: issue_report_detail
-    empty: "No open issues"
-
-  # WI D: grid family — open issue cards
-  open_grid:
-    source: IssueReport
-    filter: status = open or status = triaged or status = in_progress
-    sort: severity desc
-    limit: 15
-    display: grid
-    action: issue_report_detail
-    empty: "No open issues"
-
-  # WI D: context family — recent open issue trail
-  open_trail:
-    source: IssueReport
-    filter: status != closed and status != verified
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: issue_report_detail
-    empty: "No open issue activity yet"
-
-  # WI D: chart family — open severity mix
-  severity_mix:
-    source: IssueReport
-    filter: status = open or status = triaged or status = in_progress
-    display: bar_chart
-    group_by: severity
-    aggregate:
-      count: count(IssueReport)
-    empty: "No open issues to chart"
-
-# =============================================================================
-# LEDGER — device-repair cost accrual accounts
-# =============================================================================
 
 ledger DeviceCost "Device Cost Account":
   intent: "Accrue repair and replacement expenses against the fleet of field devices"

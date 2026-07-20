@@ -86,11 +86,13 @@ def test_status_line(pm) -> None:
     line = pm.format_status(rows)
     assert line.startswith("product_maturity ")
     assert "residual=" in line
-    assert "residual=0" in line
-    assert "critical=0" in line
+    assert "critical=" in line
     assert "wi_fleet=" in line
     assert "wi_next=" in line
     assert "wi_primary=" in line
+    assert "densify_allowed=" in line
+    assert "orphan_ops=" in line
+    assert "scoreboard_smells=" in line
 
 
 def test_warehouse_index_components_in_unit_interval(pm) -> None:
@@ -200,18 +202,174 @@ def test_mode_family_collapses_list_and_queue(pm) -> None:
     assert pm._mode_family("metrics") == "metrics"
 
 
+def test_desk_is_job_backed_ops_orphan(pm) -> None:
+    """#1637: pure *_ops densify residue is not job-backed unless default/story."""
+    assert (
+        pm._desk_is_job_backed(
+            "high_ops",
+            default_workspaces=set(),
+            executed_workspaces=set(),
+        )
+        is False
+    )
+    assert (
+        pm._desk_is_job_backed(
+            "high_ops",
+            default_workspaces={"high_ops"},
+            executed_workspaces=set(),
+        )
+        is True
+    )
+    assert (
+        pm._desk_is_job_backed(
+            "ticket_queue",
+            default_workspaces=set(),
+            executed_workspaces=set(),
+        )
+        is True
+    )
+    assert (
+        pm._desk_is_job_backed(
+            "manager_ops",
+            default_workspaces=set(),
+            executed_workspaces={"manager_ops"},
+        )
+        is True
+    )
+
+
+def test_isomorphic_desks_credit_once(pm) -> None:
+    """#1637: multi-mode filter clones with same signature credit once in D."""
+
+    class _R:
+        def __init__(self, display: str, source: str | None):
+            self.display = display
+            self.source = source
+
+    class _W:
+        def __init__(self, name: str, regions: list):
+            self.name = name
+            self.regions = regions
+
+    modes = [
+        _R("metrics", "Task"),
+        _R("queue", "Task"),
+        _R("grid", "Task"),
+        _R("timeline", "Task"),
+        _R("bar_chart", "Task"),
+    ]
+    # Three isomorphic enum clones + one real default desk
+    workspaces = [
+        _W("high_ops", modes),
+        _W("medium_ops", modes),
+        _W("low_ops", modes),
+        _W("task_board", modes),
+    ]
+    eff, jb, orphan, iso = pm._effective_job_desks(
+        workspaces,
+        default_workspaces={"task_board"},
+        executed_workspaces=set(),
+        entity_count=3,
+    )
+    assert orphan == 3  # high/medium/low_ops
+    assert jb == 1  # only task_board
+    assert iso == 0  # single member clusters don't count as iso clusters
+    # One rich desk only — not 4× weight
+    assert eff <= 1.0 + 1e-9
+    assert eff > 0.5
+
+
+def test_isomorphic_cluster_of_backed_desks(pm) -> None:
+    """Two job-backed desks with identical signals → one cluster, max weight once."""
+
+    class _R:
+        def __init__(self, display: str, source: str | None):
+            self.display = display
+            self.source = source
+
+    class _W:
+        def __init__(self, name: str, regions: list):
+            self.name = name
+            self.regions = regions
+
+    modes = [_R("metrics", "Task"), _R("queue", "Task")]
+    workspaces = [
+        _W("desk_a", modes),
+        _W("desk_b", modes),
+    ]
+    eff, jb, orphan, iso = pm._effective_job_desks(
+        workspaces,
+        default_workspaces={"desk_a", "desk_b"},
+        executed_workspaces=set(),
+        entity_count=5,
+    )
+    assert jb == 2
+    assert orphan == 0
+    assert iso == 1
+    # max of two identical weights, not sum
+    single = pm._workspace_job_weight(modes)
+    assert abs(eff - single) < 1e-9
+
+
+def test_densify_hard_stop_under_floor(pm) -> None:
+    """#1637: residual=0 and wi_fleet ≤ floor → densify_allowed=0, next_wi=None."""
+    # Synthetic mature fleet under floor
+    rows = []
+    for name, wi in (("a", 0.05), ("b", 0.10), ("c", 0.08)):
+        m = pm.AppProductMaturity(app=name)
+        m.tier = "ok"
+        m.score = 0
+        m.wi = wi
+        m.wi_primary = "D"
+        rows.append(m)
+    assert pm.fleet_wi_mean(rows) < pm.WI_FLOOR
+    assert pm.densify_allowed(rows) is False
+    assert pm.next_wi_app(rows) is None
+    # Fleet mean above floor → densify allowed on highest-WI app
+    for r, wi in zip(rows, (0.40, 0.35, 0.30), strict=True):
+        r.wi = wi
+    assert pm.fleet_wi_mean(rows) > pm.WI_FLOOR
+    assert pm.densify_allowed(rows) is True
+    nxt = pm.next_wi_app(rows)
+    assert nxt is not None
+    assert nxt.app == "a"
+    # Residual open → densify closed (dig residual instead)
+    rows[1].tier = "deepen"
+    rows[1].score = 20
+    assert pm.densify_allowed(rows) is False
+    assert pm.next_wi_app(rows) is None
+
+
+def test_scoreboard_smell_scan(pm, tmp_path) -> None:
+    """Process lint detects WI D / densify language in DSL."""
+    dsl = tmp_path / "dsl"
+    dsl.mkdir()
+    (dsl / "app.dsl").write_text(
+        "# WI D: queue family — high priority\n"
+        "# Seventeenth product desk (WI D): densify simple_task\n"
+        "workspace high_ops:\n  region r: list Ticket\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "dazzle.toml").write_text("[project]\nname='t'\n", encoding="utf-8")
+    n = pm._scan_scoreboard_smells(tmp_path)
+    assert n >= 3
+
+
 def test_warehouse_index_cli(pm, capsys) -> None:
     rc = pm.main(["--warehouse-index"])
     out = capsys.readouterr().out
     assert "wi_fleet=" in out
     assert "wi_next=" in out
+    assert "densify_allowed=" in out
     assert "objective:" in out
     assert rc == 0
 
 
 def test_next_wi_cli(pm, capsys) -> None:
+    """Under floor with residual digs, --next-wi may be empty (densify closed)."""
     rc = pm.main(["--next-wi"])
     out = capsys.readouterr().out.strip()
     assert rc == 0
-    assert out
-    assert (REPO / "examples" / out).is_dir()
+    # Empty is valid when densify_allowed=0; non-empty must be a real app.
+    if out:
+        assert (REPO / "examples" / out).is_dir()

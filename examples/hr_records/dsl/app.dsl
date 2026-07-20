@@ -30,7 +30,6 @@ app hr_records "HR Records"
 persona hr_admin "HR Admin":
   description: "Full CRUD across all entities and history. Thinks in events."
   default_workspace: staff_directory
-  # WI N: job desks first — not auto entity-list soup
   uses nav hr_admin_nav
 
 persona manager "Line Manager":
@@ -56,18 +55,11 @@ nav hr_admin_nav:
     starters_desk
     person_detail
     reporting_desk
-    employment_ops
-    leavers_ops
-    managers_ops
     active_staff
   group "Org & pay":
     org_chart
     compensation_review
-    salary_ops
-    role_ops
-    dept_ops
     time_machine
-    pay_ops
 
 nav manager_nav:
   group "Team":
@@ -76,25 +68,14 @@ nav manager_nav:
     person_detail
     org_chart
     reporting_desk
-    employment_ops
-    salary_ops
-    role_ops
-    leavers_ops
-    dept_ops
-    managers_ops
     active_staff
 
 nav finance_nav:
   group "Compensation":
     compensation_review
-    salary_ops
-    role_ops
-    dept_ops
     staff_directory
     person_detail
-    employment_ops
     active_staff
-    pay_ops
 
 nav employee_nav:
   group "My record":
@@ -511,7 +492,6 @@ surface person_edit "Edit Person":
 surface department_list "Departments":
   uses entity Department
   mode: list
-  # WI G: graph hop into department hub (not a dead warehouse row)
   open: Department via id
   section main:
     field name "Name"
@@ -668,7 +648,6 @@ surface managerlink_edit "End Reporting Line":
 # =============================================================================
 
 
-# WI L: hr_admin default landing — denser regions (cap 6).
 workspace staff_directory "Staff Directory":
   access: persona(hr_admin, manager, finance, employee)
   purpose: "Current employees, filterable by department + level"
@@ -732,7 +711,6 @@ workspace staff_directory "Staff Directory":
         icon: "user-plus"
         state: positive
 
-  # WI D: grid family for people cards
   people_cards:
     source: Person
     display: grid
@@ -740,7 +718,6 @@ workspace staff_directory "Staff Directory":
     action: person_detail
     empty: "No people on record"
 
-  # WI D: chart family — employment rows by department
   dept_mix:
     source: Employment
     display: bar_chart
@@ -750,7 +727,6 @@ workspace staff_directory "Staff Directory":
     empty: "No employment rows"
 
 
-# WI L: employee default landing — denser career desk.
 workspace person_detail "Person Detail":
   access: persona(hr_admin, manager, finance, employee)
   purpose: "Career timeline — employment + salary history side-by-side"
@@ -816,14 +792,12 @@ workspace person_detail "Person Detail":
         icon: "users"
         state: positive
 
-  # WI D: context family — employment trail
   employment_trail:
     source: Employment
     display: timeline
     limit: 15
     empty: "No employment rows"
 
-  # WI D: chart family — salary reason mix
   salary_mix:
     source: Salary
     display: bar_chart
@@ -849,7 +823,6 @@ workspace org_chart "Departments & Roles":
       departments: accent
 
   # TODO(#hr-hierarchy): recursive tree for self-ref Department / ManagerLink.
-  # WI D: grid family for department cards
   departments:
     source: Department
     display: grid
@@ -877,7 +850,6 @@ workspace org_chart "Departments & Roles":
     limit: 20
     empty: "No reporting lines"
 
-  # WI D: chart family — roles by level
   role_level_mix:
     source: Role
     display: bar_chart
@@ -887,7 +859,6 @@ workspace org_chart "Departments & Roles":
     empty: "No roles"
 
 
-# WI L: finance default landing — denser regions (cap 6).
 workspace compensation_review "Compensation Review":
   access: persona(hr_admin, finance)
   purpose: "Salary band analysis — by department, by role level"
@@ -950,7 +921,6 @@ workspace compensation_review "Compensation Review":
         icon: "briefcase"
         state: positive
 
-  # WI D: chart family — salary rows by reason
   reason_mix:
     source: Salary
     display: bar_chart
@@ -959,7 +929,6 @@ workspace compensation_review "Compensation Review":
       count: count(Salary)
     empty: "No active salaries"
 
-  # WI D: grid family for people context
   people_cards:
     source: Person
     display: grid
@@ -1013,7 +982,6 @@ workspace time_machine "Time Machine":
     limit: 20
     empty: "No reporting lines for this as-of"
 
-  # WI D: chart family — employment load in the snapshot
   employment_mix:
     source: Employment
     display: bar_chart
@@ -1023,9 +991,8 @@ workspace time_machine "Time Machine":
     empty: "No employment rows for this as-of"
 
 
-# Sixth product workspace (WI density D): manager team desk — reports first,
+# Sixth product workspace: manager team desk — reports first,
 # not a bare Person warehouse list.
-# WI L: manager default landing — denser regions (cap 6).
 workspace my_team "My Team":
   purpose: "Line manager desk — direct reports, roles, and reporting lines"
   access: persona(manager, hr_admin)
@@ -1079,7 +1046,6 @@ workspace my_team "My Team":
         icon: "git-branch"
         state: positive
 
-  # WI D: grid family for report cards
   report_cards:
     source: Person
     display: grid
@@ -1087,7 +1053,6 @@ workspace my_team "My Team":
     action: person_detail
     empty: "No people in scope"
 
-  # WI D: chart family — role mix on the team
   role_mix_chart:
     source: Role
     display: bar_chart
@@ -1097,7 +1062,7 @@ workspace my_team "My Team":
     empty: "No roles defined"
 
 
-# Seventh product workspace (WI density D): HR starters / onboarding desk.
+# Seventh product workspace: HR starters / onboarding desk.
 workspace starters_desk "New Starters":
   purpose: "HR desk for recent joiners — headcount pulse and onboarding queue"
   access: persona(hr_admin)
@@ -1119,7 +1084,6 @@ workspace starters_desk "New Starters":
     action: person_detail
     empty: "No people on record"
 
-  # WI D: grid family for starter cards
   starter_cards:
     source: Person
     display: grid
@@ -1127,14 +1091,12 @@ workspace starters_desk "New Starters":
     action: person_detail
     empty: "No people on record"
 
-  # WI D: context family — employment trail
   employment_trail:
     source: Employment
     display: timeline
     limit: 15
     empty: "No employment rows yet"
 
-  # WI D: chart family — salary setup by reason
   salary_mix:
     source: Salary
     display: bar_chart
@@ -1143,7 +1105,7 @@ workspace starters_desk "New Starters":
       count: count(Salary)
     empty: "No salary rows yet"
 
-# Eighth product workspace (WI density D): reporting-line desk.
+# Eighth product workspace: reporting-line desk.
 workspace reporting_desk "Reporting":
   purpose: "ManagerLink trail — who reports to whom across the org"
   access: persona(hr_admin, manager)
@@ -1164,7 +1126,6 @@ workspace reporting_desk "Reporting":
     limit: 25
     empty: "No reporting lines yet"
 
-  # WI D: grid family for people context
   people_cards:
     source: Person
     display: grid
@@ -1172,14 +1133,12 @@ workspace reporting_desk "Reporting":
     action: person_detail
     empty: "No people on record"
 
-  # WI D: context family — reporting trail
   link_trail:
     source: ManagerLink
     display: timeline
     limit: 20
     empty: "No reporting lines yet"
 
-  # WI D: chart family — links by department context
   dept_mix:
     source: Department
     display: bar_chart
@@ -1200,313 +1159,6 @@ workspace reporting_desk "Reporting":
         icon: "users"
         state: positive
 
-# Ninth product desk (WI D): 5 lists floor dens ~0.38 with 8 full desks — need 9.
-workspace employment_ops "Employment Ops":
-  purpose: "Employment pressure — active and ending assignments without warehouse CRUD"
-  access: persona(hr_admin, manager, finance)
-
-  employment_pulse:
-    source: Employment
-    display: metrics
-    aggregate:
-      assignments: count(Employment)
-      people: count(Person)
-      open_ended: count(Employment where end_date = null)
-    tones:
-      open_ended: positive
-      assignments: accent
-
-  # WI D: queue family — open-ended (current) assignments first
-  active_queue:
-    source: Employment
-    filter: end_date = null
-    sort: start_date desc
-    limit: 25
-    display: queue
-    empty: "No active employments"
-
-  # WI D: grid family — people context for HR ops
-  people_grid:
-    source: Person
-    display: grid
-    limit: 20
-    action: person_detail
-    empty: "No people on record"
-
-  # WI D: context family — recent assignment trail
-  assignment_trail:
-    source: Employment
-    sort: start_date desc
-    limit: 15
-    display: timeline
-    empty: "No employment history yet"
-
-  # WI D: chart family — department mix of roles via employment
-  dept_mix:
-    source: Department
-    display: bar_chart
-    group_by: name
-    aggregate:
-      count: count(Department)
-    empty: "No departments"
-
-# Tenth product desk (WI D): 5 lists floor dens ~0.36 with 9 full desks — need 10.
-workspace salary_ops "Salary Ops":
-  purpose: "Salary pressure — active compensation rows and change reasons without warehouse CRUD"
-  access: persona(hr_admin, manager, finance)
-
-  salary_pulse:
-    source: Salary
-    display: metrics
-    aggregate:
-      active: count(Salary where effective_to = null)
-      rows: count(Salary)
-      people: count(Person)
-    tones:
-      active: positive
-      rows: accent
-
-  # WI D: queue family — currently effective salaries first
-  active_salary_queue:
-    source: Salary
-    filter: effective_to = null
-    sort: effective_from desc
-    limit: 25
-    display: queue
-    empty: "No active salaries"
-
-  # WI D: grid family — people context for pay ops
-  people_grid:
-    source: Person
-    display: grid
-    limit: 20
-    action: person_detail
-    empty: "No people on record"
-
-  # WI D: context family — recent compensation trail
-  salary_trail:
-    source: Salary
-    sort: effective_from desc
-    limit: 15
-    display: timeline
-    empty: "No salary history yet"
-
-  # WI D: chart family — change-reason mix
-  reason_mix:
-    source: Salary
-    display: bar_chart
-    group_by: reason
-    aggregate:
-      count: count(Salary)
-    empty: "No salary rows to chart"
-
-# Eleventh product desk (WI D): 5 lists floor dens ~0.33 with 10 full desks — need 11.
-workspace role_ops "Role Ops":
-  purpose: "Role catalogue pressure — career levels and department spread without warehouse CRUD"
-  access: persona(hr_admin, manager, finance)
-
-  role_pulse:
-    source: Role
-    display: metrics
-    aggregate:
-      roles: count(Role)
-      departments: count(Department)
-      people: count(Person)
-    tones:
-      roles: accent
-      departments: positive
-      people: accent
-
-  # WI D: queue family — roles by title
-  role_queue:
-    source: Role
-    sort: title asc
-    limit: 25
-    display: queue
-    empty: "No roles in the catalogue"
-
-  # WI D: grid family — people context for staffing
-  people_grid:
-    source: Person
-    display: grid
-    limit: 20
-    action: person_detail
-    empty: "No people on record"
-
-  # WI D: context family — active employment trail
-  employment_trail:
-    source: Employment
-    filter: end_date = null
-    sort: start_date desc
-    limit: 15
-    display: timeline
-    empty: "No active employments yet"
-
-  # WI D: chart family — career level mix
-  level_mix:
-    source: Role
-    display: bar_chart
-    group_by: level
-    aggregate:
-      count: count(Role)
-    empty: "No roles to chart"
-
-# Twelfth product desk (WI D): 5 lists floor dens ~0.31 with 11 full desks — need 12.
-workspace leavers_ops "Leavers Ops":
-  purpose: "Leaver pressure — ended assignments and offboarding trail without warehouse CRUD"
-  access: persona(hr_admin, manager)
-
-  leaver_pulse:
-    source: Employment
-    display: metrics
-    aggregate:
-      ended: count(Employment where end_date != null)
-      active: count(Employment where end_date = null)
-      people: count(Person)
-    tones:
-      ended: warning
-      active: positive
-      people: accent
-
-  # WI D: queue family — ended assignments first
-  ended_queue:
-    source: Employment
-    filter: end_date != null
-    sort: end_date desc
-    limit: 25
-    display: queue
-    empty: "No ended employments"
-
-  # WI D: grid family — people context for offboarding
-  people_grid:
-    source: Person
-    display: grid
-    limit: 20
-    action: person_detail
-    empty: "No people on record"
-
-  # WI D: context family — leaver trail
-  leaver_trail:
-    source: Employment
-    filter: end_date != null
-    sort: end_date desc
-    limit: 15
-    display: timeline
-    empty: "No leaver history yet"
-
-  # WI D: chart family — department mix
-  dept_mix:
-    source: Department
-    display: bar_chart
-    group_by: name
-    aggregate:
-      count: count(Department)
-    empty: "No departments"
-
-# Thirteenth product desk (WI D): skip invoice_ops desk-cap; densify hr_records.
-workspace dept_ops "Dept Ops":
-  purpose: "Department pressure — org units and staffing context without warehouse CRUD"
-  access: persona(hr_admin, manager, finance)
-
-  dept_pulse:
-    source: Department
-    display: metrics
-    aggregate:
-      departments: count(Department)
-      roles: count(Role)
-      people: count(Person)
-    tones:
-      departments: accent
-      roles: positive
-      people: accent
-
-  # WI D: queue family — departments first
-  dept_queue:
-    source: Department
-    sort: name asc
-    limit: 25
-    display: queue
-    empty: "No departments"
-
-  # WI D: grid family — people context
-  people_grid:
-    source: Person
-    display: grid
-    limit: 20
-    action: person_detail
-    empty: "No people on record"
-
-  # WI D: context family — active employment trail
-  employment_trail:
-    source: Employment
-    filter: end_date = null
-    sort: start_date desc
-    limit: 15
-    display: timeline
-    empty: "No active employments yet"
-
-  # WI D: chart family — role level mix across the org
-  level_mix:
-    source: Role
-    display: bar_chart
-    group_by: level
-    aggregate:
-      count: count(Role)
-    empty: "No roles to chart"
-
-# Fourteenth product desk (WI D): skip invoice_ops desk-cap; densify hr_records.
-workspace managers_ops "Managers Ops":
-  purpose: "Reporting-line pressure — active manager links and team context without warehouse CRUD"
-  access: persona(hr_admin, manager)
-
-  link_pulse:
-    source: ManagerLink
-    display: metrics
-    aggregate:
-      links: count(ManagerLink where end_date = null)
-      people: count(Person where ended_at = null)
-      roles: count(Role)
-    tones:
-      links: accent
-      people: positive
-      roles: muted
-
-  # WI D: queue family — active reporting lines first
-  link_queue:
-    source: ManagerLink
-    filter: end_date = null
-    sort: start_date desc
-    limit: 25
-    display: queue
-    empty: "No active manager links"
-
-  # WI D: grid family — people context
-  people_grid:
-    source: Person
-    filter: ended_at = null
-    display: grid
-    limit: 20
-    action: person_detail
-    empty: "No active people on record"
-
-  # WI D: context family — recent manager-link trail
-  link_trail:
-    source: ManagerLink
-    sort: start_date desc
-    limit: 15
-    display: timeline
-    empty: "No manager links yet"
-
-  # WI D: chart family — role level mix (team shape)
-  level_mix:
-    source: Role
-    display: bar_chart
-    group_by: level
-    aggregate:
-      count: count(Role)
-    empty: "No roles to chart"
-
-# Fifteenth product desk (WI D): skip invoice_ops desk-cap; densify hr_records.
 workspace active_staff "Active Staff":
   purpose: "Headcount pressure — currently employed people without warehouse CRUD"
   access: persona(hr_admin, manager, finance)
@@ -1523,7 +1175,6 @@ workspace active_staff "Active Staff":
       leavers: warning
       employments: accent
 
-  # WI D: queue family — active people first
   active_queue:
     source: Person
     filter: ended_at = null
@@ -1533,7 +1184,6 @@ workspace active_staff "Active Staff":
     action: person_detail
     empty: "No active people on record"
 
-  # WI D: grid family — active people cards
   active_grid:
     source: Person
     filter: ended_at = null
@@ -1543,7 +1193,6 @@ workspace active_staff "Active Staff":
     action: person_detail
     empty: "No active people on record"
 
-  # WI D: context family — recent hire trail
   hire_trail:
     source: Person
     filter: ended_at = null
@@ -1553,7 +1202,6 @@ workspace active_staff "Active Staff":
     action: person_detail
     empty: "No active hires yet"
 
-  # WI D: chart family — role level mix for org shape
   level_mix:
     source: Role
     display: bar_chart
@@ -1561,57 +1209,3 @@ workspace active_staff "Active Staff":
     aggregate:
       count: count(Role)
     empty: "No roles to chart"
-
-# Sixteenth product desk (WI D): skip invoice_ops desk-cap; densify hr_records.
-workspace pay_ops "Pay Ops":
-  purpose: "Active compensation pressure — current salaries without warehouse CRUD"
-  access: persona(hr_admin, finance)
-
-  pay_pulse:
-    source: Salary
-    display: metrics
-    aggregate:
-      active: count(Salary where effective_to = null)
-      people: count(Person where ended_at = null)
-      roles: count(Role)
-    tones:
-      active: accent
-      people: positive
-      roles: muted
-
-  # WI D: queue family — active salaries first
-  pay_queue:
-    source: Salary
-    filter: effective_to = null
-    sort: effective_from desc
-    limit: 25
-    display: queue
-    empty: "No active salaries"
-
-  # WI D: grid family — active people context
-  people_grid:
-    source: Person
-    filter: ended_at = null
-    sort: legal_name asc
-    limit: 20
-    display: grid
-    action: person_detail
-    empty: "No active people on record"
-
-  # WI D: context family — recent salary trail
-  pay_trail:
-    source: Salary
-    sort: effective_from desc
-    limit: 15
-    display: timeline
-    empty: "No salary history yet"
-
-  # WI D: chart family — salary reason mix
-  reason_mix:
-    source: Salary
-    filter: effective_to = null
-    display: bar_chart
-    group_by: reason
-    aggregate:
-      count: count(Salary)
-    empty: "No active salaries to chart"

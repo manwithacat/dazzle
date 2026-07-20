@@ -218,7 +218,13 @@ Selection priority:
 6. **TR-signal drain (autonomous-only).** If the trials backlog (`## Lane: trials`) has any **autonomous-actionable** TR row (see below), pick the owning lane for that row and run `improve/strategies/trial_signal_action.md` this cycle (log `picked {lane} for TR-N — {status}/{severity}`). Forceable via `/improve trial-signals`. Preempts pure capability re-stamps when product signal is sitting idle. Does **not** preempt REGRESSION / self-audit / capability-sweep / fresh signal bias.
 7. **Explore phase, cognition-directed (not lag-only STALE).** Consult `improve/capability-map.md`. Recompute lag as `current_cycle − last-exercised` (treat `USED` with lag ≥20 as **STALE-effective**). Read each row's **Class** (`COGNITION` | `HYGIENE` | `DRIVER` | `EXEMPT`).
 
-   **Probe residual still outranks this rule** when `improve_example_probes.py` reports `residual_total > 0` — pick example-apps residual dig first (product → demo → journey).
+   **Probe residual still outranks this rule** when `improve_example_probes.py` reports `residual_total > 0` — pick example-apps residual dig first (product → demo → journey → felt).
+
+   **#1637 hard stop on WI densify:** read `densify_allowed=` from product_maturity /
+   warehouse_index status. When `densify_allowed=0` (residual=0 **and**
+   `wi_fleet ≤ wi_floor`), **do not** pick ordinary explore WI D densify, do not
+   add isomorphic `*_ops` desks, and do not cite soft-cap skip as progress.
+   Prefer COGNITION / HYGIENE / `agent_acceptance_panel` instead.
 
    When residual is clear, pick **one** capability in this order (log `picked {lane} to exercise {capability} — {class}/{reason}`):
    1. Any `UNOWNED` (strongest gap)
@@ -226,16 +232,17 @@ Selection priority:
       prefer (in order) residual/risk signals, counter-priors, `domain` / `demo_world` /
       `product_quality` / `demo quality` / `reset-and-load` / `qa trial` / persona-home
       paths over pure re-touch. Among equal value, highest lag first.
-   3. **When `residual_total=0` and `wi_fleet ≤ wi_floor`:** prefer COGNITION-STALE (2)
-      over ordinary **WI D diversify** (item 7). WI polish is optional once the fleet is
-      under floor — do not burn explore on D-mode desks while agent-cognition STALE remains.
+   3. **When `densify_allowed=0`:** COGNITION-STALE (2) then HYGIENE (4) then
+      `agent_acceptance_panel` — **never** WI D densify. Floor is a hard stop, not theater.
    4. **HYGIENE** STALE / STALE-effective (validate/prove/coverage/sentinel/MCP re-touch) —
       cheap CLI re-exercise; may stamp several related HYGIENE surfaces in one dig if
       they share a lane and a single app, but still one owning lane per cycle.
    5. Any `OWNED-IDLE` with `last-exercised = —` (never first-exercised), preferring
       **in-loop** owners; playbook: `improve/strategies/owned_idle_exercise.md`
    6. Any `OWNED-IDLE` exercised before but lag ≥20 (treat as its Class above)
-   7. Else ordinary explore (WI D/N/L, framework-ux edge cases, …)
+   7. Else ordinary explore — **only if `densify_allowed=1`** may WI D/N/L feature_creep
+      run (job-backed desks only; no isomorphic enum `*_ops` clones). Otherwise
+      framework-ux edge cases / acceptance panel.
 
    **Metered vision policy:** never select `component-vision` / `property-vision` /
    `taste-panel` as “top STALE” on the metered API path. Always exercise the

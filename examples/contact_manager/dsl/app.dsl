@@ -35,15 +35,8 @@ persona user "User":
 # list surface, a workspace to its page. Both targets here are real —
 # Contact has a `mode: list` surface and `contacts` is a declared workspace.
 nav contact_nav:
-  # TR-2 / WI N: job desks first — workspaces only (not auto entity-list soup).
   group "Home":
     home
-    favorites_ops
-    company_ops
-    independent_ops
-    phone_ops
-    title_ops
-    notes_ops
   group "Directory":
     contacts
     companies
@@ -51,12 +44,6 @@ nav contact_nav:
   # the tenant enables `show_browse` (workspace target, not bare Contact list).
   group "Browse" when: tenant_config.show_browse = true:
     contacts
-    favorites_ops
-    company_ops
-    independent_ops
-    phone_ops
-    title_ops
-    notes_ops
 
 # Entity for contact information with LLM cognition metadata.
 #
@@ -230,7 +217,6 @@ workspace home "Home":
     action: contact_detail
     empty: "No favourites yet — star a contact from the directory."
 
-  # WI D/L: grid + timeline families (not dual list pads)
   recent_contacts:
     source: Contact
     sort: last_name asc, first_name asc
@@ -248,7 +234,6 @@ workspace home "Home":
     action: contact_detail
     empty: "No company contacts yet"
 
-  # WI D: chart of company mix on the home landing
   company_mix:
     source: Contact
     filter: company != null
@@ -311,7 +296,6 @@ workspace contacts "Contacts":
     action: contact_edit
     # Weight: 0.5 (base) + 0.2 (detail) = 0.7 (DETAIL_VIEW)
 
-  # WI D: kanban of favourites vs rest for directory triage
   favorite_board:
     source: Contact
     display: kanban
@@ -320,7 +304,7 @@ workspace contacts "Contacts":
     action: contact_detail
     empty: "No contacts yet"
 
-# Third product workspace (WI density D): company-first job desk.
+# Third product workspace: company-first job desk.
 workspace companies "Companies":
   purpose: "Company roll-up — who works where before opening a person"
   access: persona(user, admin)
@@ -361,359 +345,3 @@ workspace companies "Companies":
     display: timeline
     action: contact_detail
     empty: "No contacts yet"
-
-# Fourth product desk (WI D): skip invoice_ops desk-cap; densify contact_manager.
-workspace favorites_ops "Favorites Ops":
-  purpose: "Starred-contact pressure — keep VIP people close without warehouse CRUD"
-  access: persona(user, admin)
-
-  fav_pulse:
-    source: Contact
-    display: metrics
-    aggregate:
-      favourites: count(Contact where is_favorite = true)
-      people: count(Contact)
-      companies: count(Contact where company != null)
-    tones:
-      favourites: accent
-      people: positive
-      companies: muted
-
-  # WI D: queue family — favourites first
-  fav_queue:
-    source: Contact
-    filter: is_favorite = true
-    sort: last_name asc, first_name asc
-    limit: 20
-    display: queue
-    action: contact_detail
-    empty: "No favourites yet — star a contact from the directory."
-
-  # WI D: grid family — favourite cards
-  fav_grid:
-    source: Contact
-    filter: is_favorite = true
-    sort: last_name asc
-    limit: 15
-    display: grid
-    action: contact_detail
-    empty: "No favourites yet"
-
-  # WI D: context family — recent favourite trail
-  fav_trail:
-    source: Contact
-    filter: is_favorite = true
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: contact_detail
-    empty: "No favourite activity yet"
-
-  # WI D: chart family — company mix among favourites
-  company_mix:
-    source: Contact
-    filter: is_favorite = true and company != null
-    display: bar_chart
-    group_by: company
-    aggregate:
-      count: count(Contact)
-    empty: "No favourite company contacts to chart"
-
-
-# Fifth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify contact_manager.
-workspace company_ops "Company Ops":
-  purpose: "Employed-contact pressure — people with company affiliation without warehouse CRUD"
-  access: persona(user, admin)
-
-  company_pulse:
-    source: Contact
-    display: metrics
-    aggregate:
-      with_company: count(Contact where company != null)
-      favourites: count(Contact where is_favorite = true)
-      people: count(Contact)
-    tones:
-      with_company: accent
-      favourites: positive
-      people: muted
-
-  # WI D: queue family — company contacts first
-  company_queue:
-    source: Contact
-    filter: company != null
-    sort: company asc, last_name asc
-    limit: 20
-    display: queue
-    action: contact_detail
-    empty: "No company contacts yet"
-
-  # WI D: grid family — company cards
-  company_grid:
-    source: Contact
-    filter: company != null
-    sort: company asc
-    limit: 15
-    display: grid
-    action: contact_detail
-    empty: "No company contacts yet"
-
-  # WI D: context family — recent company-contact trail
-  company_trail:
-    source: Contact
-    filter: company != null
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: contact_detail
-    empty: "No company-contact activity yet"
-
-  # WI D: chart family — contacts by company
-  company_mix:
-    source: Contact
-    filter: company != null
-    display: bar_chart
-    group_by: company
-    aggregate:
-      count: count(Contact)
-    empty: "No company contacts to chart"
-
-
-# Sixth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify contact_manager.
-workspace independent_ops "Independent Ops":
-  purpose: "Independent-contact pressure — people without company affiliation without warehouse CRUD"
-  access: persona(user, admin)
-
-  independent_pulse:
-    source: Contact
-    display: metrics
-    aggregate:
-      independent: count(Contact where company = null)
-      favourites: count(Contact where is_favorite = true)
-      people: count(Contact)
-    tones:
-      independent: accent
-      favourites: positive
-      people: muted
-
-  # WI D: queue family — independents first
-  independent_queue:
-    source: Contact
-    filter: company = null
-    sort: last_name asc, first_name asc
-    limit: 20
-    display: queue
-    action: contact_detail
-    empty: "No independent contacts yet"
-
-  # WI D: grid family — independent cards
-  independent_grid:
-    source: Contact
-    filter: company = null
-    sort: last_name asc
-    limit: 15
-    display: grid
-    action: contact_detail
-    empty: "No independent contacts yet"
-
-  # WI D: context family — recent independent trail
-  independent_trail:
-    source: Contact
-    filter: company = null
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: contact_detail
-    empty: "No independent-contact activity yet"
-
-  # WI D: chart family — favourite mix among independents
-  favorite_mix:
-    source: Contact
-    filter: company = null
-    display: bar_chart
-    group_by: is_favorite
-    aggregate:
-      count: count(Contact)
-    empty: "No independent contacts to chart"
-
-
-# Seventh product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify contact_manager.
-workspace phone_ops "Phone Ops":
-  purpose: "Phone-reach pressure — contacts with phone numbers without warehouse CRUD"
-  access: persona(user, admin)
-
-  phone_pulse:
-    source: Contact
-    display: metrics
-    aggregate:
-      with_phone: count(Contact where phone != null)
-      favourites: count(Contact where is_favorite = true)
-      people: count(Contact)
-    tones:
-      with_phone: accent
-      favourites: positive
-      people: muted
-
-  # WI D: queue family — phone contacts first
-  phone_queue:
-    source: Contact
-    filter: phone != null
-    sort: last_name asc, first_name asc
-    limit: 20
-    display: queue
-    action: contact_detail
-    empty: "No contacts with phone numbers"
-
-  # WI D: grid family — phone cards
-  phone_grid:
-    source: Contact
-    filter: phone != null
-    sort: last_name asc
-    limit: 15
-    display: grid
-    action: contact_detail
-    empty: "No contacts with phone numbers"
-
-  # WI D: context family — recent phone-contact trail
-  phone_trail:
-    source: Contact
-    filter: phone != null
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: contact_detail
-    empty: "No phone-contact activity yet"
-
-  # WI D: chart family — company mix among phone contacts
-  company_mix:
-    source: Contact
-    filter: phone != null and company != null
-    display: bar_chart
-    group_by: company
-    aggregate:
-      count: count(Contact)
-    empty: "No phone+company contacts to chart"
-
-
-# Eighth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify contact_manager.
-workspace title_ops "Title Ops":
-  purpose: "Job-title pressure — contacts with titles without warehouse CRUD"
-  access: persona(user, admin)
-
-  title_pulse:
-    source: Contact
-    display: metrics
-    aggregate:
-      titled: count(Contact where job_title != null)
-      favourites: count(Contact where is_favorite = true)
-      people: count(Contact)
-    tones:
-      titled: accent
-      favourites: positive
-      people: muted
-
-  # WI D: queue family — titled contacts first
-  title_queue:
-    source: Contact
-    filter: job_title != null
-    sort: job_title asc, last_name asc
-    limit: 20
-    display: queue
-    action: contact_detail
-    empty: "No contacts with job titles"
-
-  # WI D: grid family — titled cards
-  title_grid:
-    source: Contact
-    filter: job_title != null
-    sort: job_title asc
-    limit: 15
-    display: grid
-    action: contact_detail
-    empty: "No contacts with job titles"
-
-  # WI D: context family — recent titled trail
-  title_trail:
-    source: Contact
-    filter: job_title != null
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: contact_detail
-    empty: "No titled-contact activity yet"
-
-  # WI D: chart family — titles by company
-  company_mix:
-    source: Contact
-    filter: job_title != null and company != null
-    display: bar_chart
-    group_by: company
-    aggregate:
-      count: count(Contact)
-    empty: "No titled company contacts to chart"
-
-
-# Ninth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify contact_manager.
-workspace notes_ops "Notes Ops":
-  purpose: "Annotated-contact pressure — people with notes without warehouse CRUD"
-  access: persona(user, admin)
-
-  notes_pulse:
-    source: Contact
-    display: metrics
-    aggregate:
-      with_notes: count(Contact where notes != null)
-      favourites: count(Contact where is_favorite = true)
-      people: count(Contact)
-    tones:
-      with_notes: accent
-      favourites: positive
-      people: muted
-
-  # WI D: queue family — noted contacts first
-  notes_queue:
-    source: Contact
-    filter: notes != null
-    sort: last_name asc, first_name asc
-    limit: 20
-    display: queue
-    action: contact_detail
-    empty: "No contacts with notes"
-
-  # WI D: grid family — noted cards
-  notes_grid:
-    source: Contact
-    filter: notes != null
-    sort: last_name asc
-    limit: 15
-    display: grid
-    action: contact_detail
-    empty: "No contacts with notes"
-
-  # WI D: context family — recent noted trail
-  notes_trail:
-    source: Contact
-    filter: notes != null
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: contact_detail
-    empty: "No notes activity yet"
-
-  # WI D: chart family — company mix among noted contacts
-  company_mix:
-    source: Contact
-    filter: notes != null and company != null
-    display: bar_chart
-    group_by: company
-    aggregate:
-      count: count(Contact)
-    empty: "No noted company contacts to chart"
-
-# Stage Selection:
-# - list_weight = 0.6 >= 0.3 ✓
-# - detail_weight = 0.7 >= 0.3 ✓
-# → DUAL_PANE_FLOW stage selected
-#
-# Layout:
-# Desktop: Side-by-side list and detail panes
-# Mobile: Stacked, detail slides over list on selection

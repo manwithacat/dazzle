@@ -5,7 +5,6 @@ persona requester "Requester":
   goals: "Raise invoices", "Submit for approval"
   proficiency: intermediate
   default_workspace: my_invoices
-  # WI N: job desks first — not auto entity-list soup
   uses nav requester_nav
 
 persona approver "Approver":
@@ -43,45 +42,26 @@ persona finance_admin "Finance Administrator":
   default_workspace: finance_ops
   uses nav finance_admin_nav
 
-# Curated sidebars: workspace destinations only (WI N).
 # Names must match workspace ids (not labels) — validate warns on orphans.
 nav requester_nav:
   group "My work":
     my_invoices
     finance_ops
     line_items_desk
-    draft_ops
-    rejected_ops
-    submitted_ops
 
 nav approver_nav:
   group "Approvals":
     approval_desk
     finance_ops
     suppliers_desk
-    draft_ops
-    rejected_ops
-    submitted_ops
 
 nav finance_nav:
   group "Settle":
     pay_desk
     payments_trail
-    disputed_ops
-    bank_ops
-    settlement_ops
     suppliers_desk
     finance_ops
     line_items_desk
-    draft_ops
-    rejected_ops
-    partial_ops
-    paid_ops
-    approved_ops
-    submitted_ops
-    succeeded_ops
-    region_ops
-    pending_ops
 
 nav auditor_nav:
   group "Audit":
@@ -89,35 +69,14 @@ nav auditor_nav:
     finance_ops
     team_desk
     payments_trail
-    disputed_ops
-    settlement_ops
     line_items_desk
-    rejected_ops
-    partial_ops
-    paid_ops
-    approved_ops
-    submitted_ops
-    succeeded_ops
-    region_ops
-    pending_ops
 
 nav tenant_admin_nav:
   group "Admin":
     finance_ops
     team_desk
     suppliers_desk
-    bank_ops
-    settlement_ops
     audit_review
-    draft_ops
-    rejected_ops
-    partial_ops
-    paid_ops
-    approved_ops
-    submitted_ops
-    succeeded_ops
-    region_ops
-    pending_ops
 
 nav finance_admin_nav:
   group "Oversight":
@@ -126,18 +85,6 @@ nav finance_admin_nav:
     approval_desk
     audit_review
     payments_trail
-    disputed_ops
-    bank_ops
-    settlement_ops
     suppliers_desk
     team_desk
     line_items_desk
-    draft_ops
-    rejected_ops
-    partial_ops
-    paid_ops
-    approved_ops
-    submitted_ops
-    succeeded_ops
-    region_ops
-    pending_ops

@@ -214,7 +214,6 @@ persona manager "Team Manager":
   proficiency: intermediate
   default_workspace: team_overview
   default_route: "/team"
-  # WI N: job desks first — not auto entity-list soup
   uses nav manager_nav
 
 persona member "Team Member":
@@ -225,7 +224,6 @@ persona member "Team Member":
   default_route: "/my-work"
   uses nav member_nav
 
-# Curated sidebars: workspace destinations only (WI N).
 # admin_dashboard is platform-prefix excluded from product D; still a valid nav target.
 nav admin_nav:
   group "Ops":
@@ -234,18 +232,6 @@ nav admin_nav:
     task_board
     comments_desk
     people_desk
-    priority_ops
-    review_ops
-    done_ops
-    progress_ops
-    todo_ops
-    urgent_ops
-    unassigned_ops
-    scheduled_ops
-    high_ops
-    medium_ops
-    low_ops
-    overdue_ops
 
 nav manager_nav:
   group "Lead":
@@ -253,36 +239,12 @@ nav manager_nav:
     task_board
     people_desk
     comments_desk
-    priority_ops
-    review_ops
-    done_ops
-    progress_ops
-    todo_ops
-    urgent_ops
-    unassigned_ops
-    scheduled_ops
-    high_ops
-    medium_ops
-    low_ops
-    overdue_ops
 
 nav member_nav:
   group "My work":
     my_work
     task_board
     comments_desk
-    priority_ops
-    review_ops
-    done_ops
-    progress_ops
-    todo_ops
-    urgent_ops
-    unassigned_ops
-    scheduled_ops
-    high_ops
-    medium_ops
-    low_ops
-    overdue_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -670,7 +632,6 @@ workspace task_board "Task Board":
     action: task_edit
     empty: "No upcoming due dates"
 
-  # WI D: queue family — urgent open work
   urgent_queue:
     source: Task
     filter: priority = urgent and status != done
@@ -680,7 +641,6 @@ workspace task_board "Task Board":
     action: task_edit
     empty: "No urgent tasks"
 
-  # WI D: chart family — status mix
   status_mix:
     source: Task
     display: bar_chart
@@ -689,7 +649,6 @@ workspace task_board "Task Board":
       count: count(Task)
     empty: "No tasks yet"
 
-  # WI D: context family — recent discussion
   recent_comments:
     source: TaskComment
     display: timeline
@@ -748,7 +707,6 @@ workspace admin_dashboard "Admin Dashboard":
     action: task_edit
     empty: "No overdue tasks"
 
-# WI L v2: manager landing — distinct mode×source signals (not four Task queues).
 workspace team_overview "Team Overview":
   access: persona(admin, manager)
   purpose: "Monitor team progress and workload"
@@ -819,7 +777,6 @@ workspace team_overview "Team Overview":
         icon: "columns"
         state: positive
 
-# WI L v2: member landing — diversify signals (metrics/kanban/timeline/comments/context).
 workspace my_work "My Work":
   access: authenticated
   purpose: "Personal task view for assigned work"
@@ -881,7 +838,7 @@ workspace my_work "My Work":
         icon: "layout-grid"
         state: positive
 
-# Fourth product workspace (WI density D): discussion desk so list surfaces
+# Fourth product workspace: discussion desk so list surfaces
 # no longer dominate vs job shells (comments as collaboration, not CRUD dump).
 workspace comments_desk "Discussion":
   purpose: "Recent task discussion across the team"
@@ -903,7 +860,6 @@ workspace comments_desk "Discussion":
     display: queue
     empty: "No comments yet"
 
-  # WI D: context family — discussion trail
   comment_trail:
     source: TaskComment
     sort: created_at desc
@@ -911,7 +867,6 @@ workspace comments_desk "Discussion":
     display: timeline
     empty: "No comments yet"
 
-  # WI D: grid family for active work cards
   active_tasks:
     source: Task
     filter: status = in_progress
@@ -921,7 +876,6 @@ workspace comments_desk "Discussion":
     action: task_detail
     empty: "No tasks in progress"
 
-  # WI D: chart family — open task status mix
   status_mix:
     source: Task
     filter: status != done
@@ -931,7 +885,7 @@ workspace comments_desk "Discussion":
       count: count(Task)
     empty: "No open tasks"
 
-# Fifth product workspace (WI density D): people/roster desk.
+# Fifth product workspace: people/roster desk.
 workspace people_desk "People":
   purpose: "Team roster and capacity — who is active and what is on their plate"
   access: persona(admin, manager)
@@ -947,7 +901,6 @@ workspace people_desk "People":
       active: positive
       open_tasks: accent
 
-  # WI D: grid family for roster cards
   roster:
     source: User
     filter: is_active = true
@@ -966,7 +919,6 @@ workspace people_desk "People":
     action: task_edit
     empty: "Every open task has an owner"
 
-  # WI D: kanban family — in-flight work
   in_flight_board:
     source: Task
     filter: status = in_progress or status = review
@@ -976,7 +928,6 @@ workspace people_desk "People":
     action: task_detail
     empty: "No tasks in progress or review"
 
-  # WI D: chart family — open work by status
   load_mix:
     source: Task
     filter: status != done
@@ -997,690 +948,3 @@ workspace people_desk "People":
         caption: "Kanban flow is on Task Board for visual WIP"
         icon: "columns"
         state: positive
-
-# Sixth product desk (WI D): 3 lists floor dens ~0.38 with 5 full desks — need 6.
-workspace priority_ops "Priority Ops":
-  purpose: "Priority pressure — urgent and high tasks without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  priority_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      urgent: count(Task where priority = urgent and status != done)
-      high: count(Task where priority = high and status != done)
-      open: count(Task where status != done)
-    tones:
-      urgent: destructive
-      high: warning
-      open: accent
-
-  # WI D: queue family — urgent first
-  urgent_queue:
-    source: Task
-    filter: priority = urgent and status != done
-    sort: due_date asc
-    limit: 20
-    display: queue
-    action: task_edit
-    empty: "No urgent open tasks"
-
-  # WI D: grid family — high priority cards
-  high_grid:
-    source: Task
-    filter: priority = high and status != done
-    sort: due_date asc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No high-priority open tasks"
-
-  # WI D: context family — recent open work trail
-  open_trail:
-    source: Task
-    filter: status != done
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No open tasks yet"
-
-  # WI D: chart family — open work by priority
-  priority_mix:
-    source: Task
-    filter: status != done
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Task)
-    empty: "No open tasks to chart"
-
-# Seventh product desk (WI D): 3 lists floor dens ~0.33 with 6 full desks — need 7.
-workspace review_ops "Review Ops":
-  purpose: "Review pressure — work waiting on review without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  review_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      in_review: count(Task where status = review)
-      in_progress: count(Task where status = in_progress)
-      open: count(Task where status != done)
-    tones:
-      in_review: warning
-      in_progress: accent
-      open: accent
-
-  # WI D: queue family — review backlog first
-  review_queue:
-    source: Task
-    filter: status = review
-    sort: priority desc, updated_at asc
-    limit: 20
-    display: queue
-    action: task_edit
-    empty: "Nothing awaiting review"
-
-  # WI D: grid family — in-progress cards approaching review
-  progress_grid:
-    source: Task
-    filter: status = in_progress
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No in-progress tasks"
-
-  # WI D: context family — recent review trail
-  review_trail:
-    source: Task
-    filter: status = review or status = in_progress
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No review pipeline activity yet"
-
-  # WI D: chart family — pipeline status mix
-  status_mix:
-    source: Task
-    filter: status = review or status = in_progress or status = todo
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No open pipeline tasks to chart"
-
-# Eighth product desk (WI D): 3 lists floor dens ~0.30 with 7 full desks — need 8.
-workspace done_ops "Done Ops":
-  purpose: "Completion pressure — recently finished work without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  done_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      done: count(Task where status = done)
-      open: count(Task where status != done)
-      in_review: count(Task where status = review)
-    tones:
-      done: positive
-      open: accent
-      in_review: warning
-
-  # WI D: queue family — done tasks first
-  done_queue:
-    source: Task
-    filter: status = done
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No completed tasks yet"
-
-  # WI D: grid family — completed cards
-  done_grid:
-    source: Task
-    filter: status = done
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No completed tasks yet"
-
-  # WI D: context family — recent completion trail
-  done_trail:
-    source: Task
-    filter: status = done
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No completion activity yet"
-
-  # WI D: chart family — done vs open status mix
-  status_mix:
-    source: Task
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No tasks to chart"
-
-# Ninth product desk (WI D): skip invoice_ops desk-cap; densify simple_task.
-workspace progress_ops "Progress Ops":
-  purpose: "In-flight pressure — tasks actively being worked without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  progress_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      in_progress: count(Task where status = in_progress)
-      todo: count(Task where status = todo)
-      review: count(Task where status = review)
-    tones:
-      in_progress: accent
-      todo: warning
-      review: positive
-
-  # WI D: queue family — in-progress first
-  progress_queue:
-    source: Task
-    filter: status = in_progress
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "Nothing in progress"
-
-  # WI D: grid family — active work cards
-  progress_grid:
-    source: Task
-    filter: status = in_progress
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "Nothing in progress"
-
-  # WI D: context family — recent active trail
-  progress_trail:
-    source: Task
-    filter: status = in_progress or status = todo
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No active work yet"
-
-  # WI D: chart family — priority mix among in-progress
-  priority_mix:
-    source: Task
-    filter: status = in_progress
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Task)
-    empty: "No in-progress tasks to chart"
-
-# Tenth product desk (WI D): skip invoice_ops desk-cap; densify simple_task.
-workspace todo_ops "Todo Ops":
-  purpose: "Ready-to-start pressure — unstarted todos without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  todo_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      todo: count(Task where status = todo)
-      in_progress: count(Task where status = in_progress)
-      open: count(Task where status != done)
-    tones:
-      todo: warning
-      in_progress: accent
-      open: muted
-
-  # WI D: queue family — todos first
-  todo_queue:
-    source: Task
-    filter: status = todo
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No ready todos"
-
-  # WI D: grid family — todo cards
-  todo_grid:
-    source: Task
-    filter: status = todo
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No ready todos"
-
-  # WI D: context family — recent unstarted trail
-  todo_trail:
-    source: Task
-    filter: status = todo
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No todo activity yet"
-
-  # WI D: chart family — priority mix among todos
-  priority_mix:
-    source: Task
-    filter: status = todo
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Task)
-    empty: "No todos to chart"
-
-# Eleventh product desk (WI D): skip invoice/fieldtest desk-cap; densify simple_task.
-workspace urgent_ops "Urgent Ops":
-  purpose: "High-priority pressure — urgent and high tasks without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  urgent_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      urgent: count(Task where priority = urgent)
-      high: count(Task where priority = high)
-      open: count(Task where status != done)
-    tones:
-      urgent: warning
-      high: accent
-      open: muted
-
-  # WI D: queue family — urgent/high first
-  urgent_queue:
-    source: Task
-    filter: priority = urgent or priority = high
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No high-priority work"
-
-  # WI D: grid family — urgent cards
-  urgent_grid:
-    source: Task
-    filter: priority = urgent or priority = high
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No high-priority work"
-
-  # WI D: context family — recent high-priority trail
-  urgent_trail:
-    source: Task
-    filter: priority = urgent or priority = high
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No high-priority activity yet"
-
-  # WI D: chart family — status mix among high-priority
-  status_mix:
-    source: Task
-    filter: priority = urgent or priority = high
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No high-priority tasks to chart"
-
-# Twelfth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify simple_task.
-workspace unassigned_ops "Unassigned Ops":
-  purpose: "Assignment pressure — open tasks without an owner without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  unassigned_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      unassigned: count(Task where assigned_to = null and status != done)
-      open: count(Task where status != done)
-      in_progress: count(Task where status = in_progress)
-    tones:
-      unassigned: warning
-      open: accent
-      in_progress: muted
-
-  # WI D: queue family — unassigned first
-  unassigned_queue:
-    source: Task
-    filter: assigned_to = null and status != done
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No unassigned open tasks"
-
-  # WI D: grid family — unassigned cards
-  unassigned_grid:
-    source: Task
-    filter: assigned_to = null and status != done
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No unassigned open tasks"
-
-  # WI D: context family — recent unassigned trail
-  unassigned_trail:
-    source: Task
-    filter: assigned_to = null and status != done
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No unassigned activity yet"
-
-  # WI D: chart family — priority mix among unassigned
-  priority_mix:
-    source: Task
-    filter: assigned_to = null and status != done
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Task)
-    empty: "No unassigned tasks to chart"
-
-# Thirteenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify simple_task.
-workspace scheduled_ops "Scheduled Ops":
-  purpose: "Deadline pressure — open tasks with due dates without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  scheduled_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      scheduled: count(Task where due_date != null and status != done)
-      open: count(Task where status != done)
-      done: count(Task where status = done)
-    tones:
-      scheduled: warning
-      open: accent
-      done: muted
-
-  # WI D: queue family — scheduled open first
-  scheduled_queue:
-    source: Task
-    filter: due_date != null and status != done
-    sort: due_date asc, priority desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No open tasks with due dates"
-
-  # WI D: grid family — scheduled cards
-  scheduled_grid:
-    source: Task
-    filter: due_date != null and status != done
-    sort: due_date asc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No open tasks with due dates"
-
-  # WI D: context family — recent scheduled trail
-  scheduled_trail:
-    source: Task
-    filter: due_date != null and status != done
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No scheduled activity yet"
-
-  # WI D: chart family — priority mix among scheduled
-  priority_mix:
-    source: Task
-    filter: due_date != null and status != done
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Task)
-    empty: "No scheduled tasks to chart"
-
-
-# Fourteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify simple_task.
-workspace high_ops "High Ops":
-  purpose: "High-priority pressure — open high tasks without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  high_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      high: count(Task where priority = high and status != done)
-      open: count(Task where status != done)
-      done: count(Task where status = done)
-    tones:
-      high: warning
-      open: accent
-      done: muted
-
-  # WI D: queue family — open high-priority first
-  high_queue:
-    source: Task
-    filter: priority = high and status != done
-    sort: due_date asc, updated_at desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No open high-priority tasks"
-
-  # WI D: grid family — high-priority cards
-  high_grid:
-    source: Task
-    filter: priority = high and status != done
-    sort: due_date asc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No open high-priority tasks"
-
-  # WI D: context family — recent high-priority trail
-  high_trail:
-    source: Task
-    filter: priority = high and status != done
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No high-priority activity yet"
-
-  # WI D: chart family — status mix among high-priority open
-  status_mix:
-    source: Task
-    filter: priority = high and status != done
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No high-priority tasks to chart"
-
-
-# Fifteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify simple_task.
-workspace medium_ops "Medium Ops":
-  purpose: "Medium-priority pressure — open medium tasks without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  medium_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      medium: count(Task where priority = medium and status != done)
-      open: count(Task where status != done)
-      done: count(Task where status = done)
-    tones:
-      medium: accent
-      open: warning
-      done: muted
-
-  # WI D: queue family — open medium-priority first
-  medium_queue:
-    source: Task
-    filter: priority = medium and status != done
-    sort: due_date asc, updated_at desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No open medium-priority tasks"
-
-  # WI D: grid family — medium-priority cards
-  medium_grid:
-    source: Task
-    filter: priority = medium and status != done
-    sort: due_date asc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No open medium-priority tasks"
-
-  # WI D: context family — recent medium-priority trail
-  medium_trail:
-    source: Task
-    filter: priority = medium and status != done
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No medium-priority activity yet"
-
-  # WI D: chart family — status mix among medium-priority open
-  status_mix:
-    source: Task
-    filter: priority = medium and status != done
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No medium-priority tasks to chart"
-
-
-# Sixteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify simple_task.
-workspace low_ops "Low Ops":
-  purpose: "Low-priority pressure — open low tasks without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  low_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      low: count(Task where priority = low and status != done)
-      open: count(Task where status != done)
-      done: count(Task where status = done)
-    tones:
-      low: muted
-      open: accent
-      done: positive
-
-  # WI D: queue family — open low-priority first
-  low_queue:
-    source: Task
-    filter: priority = low and status != done
-    sort: due_date asc, updated_at desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No open low-priority tasks"
-
-  # WI D: grid family — low-priority cards
-  low_grid:
-    source: Task
-    filter: priority = low and status != done
-    sort: due_date asc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No open low-priority tasks"
-
-  # WI D: context family — recent low-priority trail
-  low_trail:
-    source: Task
-    filter: priority = low and status != done
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No low-priority activity yet"
-
-  # WI D: chart family — status mix among low-priority open
-  status_mix:
-    source: Task
-    filter: priority = low and status != done
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Task)
-    empty: "No low-priority tasks to chart"
-
-
-# Seventeenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify simple_task.
-workspace overdue_ops "Overdue Ops":
-  purpose: "Overdue pressure — past-due open tasks without warehouse CRUD"
-  access: persona(admin, manager, member)
-
-  overdue_pulse:
-    source: Task
-    display: metrics
-    aggregate:
-      overdue: count(Task where due_date < today and status != done)
-      open: count(Task where status != done)
-      done: count(Task where status = done)
-    tones:
-      overdue: warning
-      open: accent
-      done: muted
-
-  # WI D: queue family — overdue first
-  overdue_queue:
-    source: Task
-    filter: due_date < today and status != done
-    sort: due_date asc, priority desc
-    limit: 20
-    display: queue
-    action: task_detail
-    empty: "No overdue tasks"
-
-  # WI D: grid family — overdue cards
-  overdue_grid:
-    source: Task
-    filter: due_date < today and status != done
-    sort: due_date asc
-    limit: 15
-    display: grid
-    action: task_detail
-    empty: "No overdue tasks"
-
-  # WI D: context family — recent overdue trail
-  overdue_trail:
-    source: Task
-    filter: due_date < today and status != done
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: task_detail
-    empty: "No overdue activity yet"
-
-  # WI D: chart family — priority mix among overdue
-  priority_mix:
-    source: Task
-    filter: due_date < today and status != done
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Task)
-    empty: "No overdue tasks to chart"

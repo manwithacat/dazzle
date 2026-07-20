@@ -12,24 +12,29 @@ or HM purity. A product-mature app has:
   at least one accessible workspace with multiple regions (a job surface)
 
 **Warehouse Index (WI)** — continuous 0–1 objective (higher = more warehouse /
-lower inverse product utility). Agents minimize when discrete residual is 0.
+lower inverse product utility). Agents minimize when discrete residual is 0
+**and** ``wi_fleet > wi_floor`` only.
 
-Components (anti-gaming v2):
+Components (anti-gaming v3 — #1637 Goodhart fix):
 
-* **D** warehouse density — product list surfaces vs *effective job desks*
-  (workspace weight from mode/source diversity; desk-sprawl capped by
-  entity scale so padding empty desks cannot dilute D forever)
+* **D** warehouse density — product list surfaces vs *job-backed effective desks*
+  (only desks that are a persona ``default_workspace``, appear in a product
+  story ``executed_by``, or are non-orphan named product desks). Isomorphic
+  multi-mode filter clones (``high_ops`` / ``medium_ops`` / …) share one
+  signature and credit **once**. Empty / orphan ``*_ops`` desks no longer
+  dilute D.
 * **N** ``nav_list_share`` — persona nav list-link share (compiled shell)
 * **L** landing thinness — inverse of *signal richness* on default workspaces
-  (unique display-mode × source pairs, not raw region count — pads of the
-  same entity list do not score)
+  (unique display-mode × source pairs, not raw region count)
 * **J** job thinness — unbound product stories / uncovered personas
 * **G** graph poverty — product list surfaces without open-via
 
 ``WI = 0.30·D + 0.25·N + 0.25·L + 0.10·J + 0.10·G``
 
-Residual (critical/thin/deepen) remains the *floor* gate; WI is the *gradient*
-for managed scope-creep feature slices after residual clears.
+**Hard floor (#1637):** when residual=0 and ``wi_fleet ≤ wi_floor`` (0.25),
+D-mode densify / feature_creep is **closed** (``densify_allowed=0``). Explore
+must pick COGNITION / HYGIENE / acceptance — not isomorphic filter desks.
+Soft floor is no longer theater.
 
 This is the instance-level counterpart to framework ``ux-maturity``
 (``docs/reference/ux-maturity.md``): that rubric asks whether *primitives*
@@ -104,8 +109,15 @@ _WI_WEIGHTS = {
     "G": 0.10,  # graph poverty
 }
 
-# Soft floor for "true all-clear" feature-creep stop (agents may still deepen).
+# Hard floor for feature-creep stop (#1637). When residual=0 and wi_fleet ≤ this,
+# densify_allowed=0 — no WI D diversify. Not optional polish under floor.
 WI_FLOOR = 0.25
+
+# Sprawl diagnostics: product workspaces per product persona above this is
+# reported (and residual-deepen when extreme). Prefer segments/filters over N desks.
+_SPRAWL_DESKS_PER_PERSONA = 4.0
+# Residual-deepen only when sprawl is extreme (avoid false residual on small fleets).
+_SPRAWL_RESIDUAL_RATIO = 10.0
 
 
 def _mode_family(display: Any) -> str:
@@ -174,6 +186,119 @@ def _workspace_job_weight(regions: list[Any]) -> float:
     return _clamp01(0.55 * richness + 0.45 * mode_part)
 
 
+def _workspace_signal_signature(regions: list[Any]) -> frozenset[tuple[str, str]]:
+    """Mode-family × source set used for isomorphism detect (#1637)."""
+    sig: set[tuple[str, str]] = set()
+    for r in regions:
+        fam = _mode_family(getattr(r, "display", None))
+        src = _region_source_key(r)
+        sig.add((fam, src or f"__{fam}__"))
+    return frozenset(sig)
+
+
+def _executed_by_workspace_names(stories: list[Any]) -> set[str]:
+    """Workspace ids referenced by product story executed_by binds."""
+    names: set[str] = set()
+    for st in stories:
+        persona = str(getattr(st, "persona", "") or "")
+        if persona and not _is_product_persona(persona):
+            continue
+        executed = getattr(st, "executed_by", None)
+        if executed is None:
+            continue
+        # executed_by may be a string "workspace.foo" / "surface.bar" or object
+        raw = str(getattr(executed, "ref", executed) or executed)
+        raw = raw.strip()
+        if not raw:
+            continue
+        # Common shapes: workspace.X, workspaces/X, X
+        if "workspace" in raw.lower():
+            part = raw.split(".")[-1].split("/")[-1].strip()
+            if part:
+                names.add(part)
+        elif not raw.startswith("surface") and not raw.startswith("process"):
+            # bare id — may be workspace
+            names.add(raw)
+    return names
+
+
+def _desk_is_job_backed(
+    ws_name: str,
+    *,
+    default_workspaces: set[str],
+    executed_workspaces: set[str],
+) -> bool:
+    """True when the desk is a real product job path, not a densify orphan (#1637).
+
+    Job-backed:
+    - persona default_workspace, or
+    - product story executed_by workspace bind, or
+    - named product desk that is *not* pure ``*_ops`` densify residue
+      (ticket_queue, manager_ops, agent_console, brand_desk, …)
+    """
+    n = (ws_name or "").strip()
+    if not n:
+        return False
+    if n in default_workspaces or n in executed_workspaces:
+        return True
+    # Pure densify residue: ends with _ops and never default/story-backed.
+    # Intentional product desks that end in _ops only count when they are
+    # defaults/story-backed (handled above). e.g. high_ops / logo_ops orphans.
+    low = n.lower()
+    if low.endswith("_ops"):
+        return False
+    # Non-ops product workspaces (task_board, ticket_queue, brand_desk, …)
+    return True
+
+
+def _effective_job_desks(
+    workspaces: list[Any],
+    *,
+    default_workspaces: set[str],
+    executed_workspaces: set[str],
+    entity_count: int,
+) -> tuple[float, int, int, int]:
+    """Job-backed, isomorphism-collapsed effective desks (#1637).
+
+    Returns:
+      (effective_weight, job_backed_count, orphan_ops_count, isomorphic_clusters)
+    """
+    # signature → list of (weight, job_backed, name)
+    clusters: dict[frozenset[tuple[str, str]], list[tuple[float, bool, str]]] = {}
+    orphan_ops = 0
+    job_backed_n = 0
+    for w in workspaces:
+        name = str(getattr(w, "name", "") or "")
+        if _is_platform_workspace(name):
+            continue
+        regions = list(getattr(w, "regions", None) or [])
+        weight = _workspace_job_weight(regions)
+        backed = _desk_is_job_backed(
+            name,
+            default_workspaces=default_workspaces,
+            executed_workspaces=executed_workspaces,
+        )
+        if not backed:
+            orphan_ops += 1
+            # Orphan ops desks do not credit D denominator at all.
+            continue
+        job_backed_n += 1
+        sig = _workspace_signal_signature(regions)
+        # Empty signature still clusters empties together
+        clusters.setdefault(sig, []).append((weight, backed, name))
+
+    # Per isomorphic signature, credit the max weight once (not N clones).
+    effective = 0.0
+    iso_clusters = 0
+    for _sig, members in clusters.items():
+        if len(members) > 1:
+            iso_clusters += 1
+        effective += max(m[0] for m in members)
+
+    scale_cap = max(_DESK_SCALE_FLOOR, float(entity_count) * _DESK_ENTITY_SCALE)
+    return min(effective, scale_cap), job_backed_n, orphan_ops, iso_clusters
+
+
 @dataclass
 class PersonaLanding:
     persona_id: str
@@ -196,8 +321,14 @@ class AppProductMaturity:
     landing_fail: int = 0
     workspaces: int = 0
     product_workspaces: int = 0
-    # Job-weighted product workspaces (anti desk-sprawl); used in D.
+    # Job-weighted *job-backed* product workspaces (anti desk-sprawl); used in D.
     effective_product_workspaces: float = 0.0
+    # #1637 diagnostics
+    job_backed_desks: int = 0
+    orphan_ops_desks: int = 0
+    isomorphic_clusters: int = 0
+    desks_per_persona: float = 0.0
+    scoreboard_smells: int = 0
     list_surfaces: int = 0
     crud_surfaces: int = 0  # list+create+edit
     warehouse_density: float = 0.0
@@ -289,6 +420,60 @@ def _list_has_open_via(surface: Any) -> bool:
     return False
 
 
+# Process lint (#1637): scoreboard language in product DSL means the measure
+# colonized the medium. Agents must not leave "WI D:" / "densify" comments.
+_SCOREBOARD_PATTERNS = (
+    r"\bWI\s*D\b",
+    r"\bWI\s*N\b",
+    r"\bWI\s*L\b",
+    r"\bwi_primary\b",
+    r"\bwi_fleet\b",
+    r"\bdensify\b",
+    r"\bdesk-cap\b",
+    r"\bdesk.entity soft.?cap\b",
+    r"\bfeature_creep\b",
+)
+
+
+def _scan_scoreboard_smells(app_dir: Path) -> int:
+    """Count scoreboard-language hits in project DSL (process lint #1637)."""
+    import re
+
+    dsl_roots = [app_dir / "dsl", app_dir]
+    files: list[Path] = []
+    for root in dsl_roots:
+        if not root.is_dir():
+            continue
+        files.extend(root.rglob("*.dsl"))
+    # Prefer dsl/ only when present to avoid double-counting.
+    if (app_dir / "dsl").is_dir():
+        files = list((app_dir / "dsl").rglob("*.dsl"))
+    compiled = [re.compile(p, re.IGNORECASE) for p in _SCOREBOARD_PATTERNS]
+    hits = 0
+    for path in files:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for rx in compiled:
+            hits += len(rx.findall(text))
+    return hits
+
+
+def densify_allowed(rows: list[AppProductMaturity]) -> bool:
+    """True only for WI feature_creep: residual clear **and** wi_fleet > floor.
+
+    #1637 hard stop:
+    - residual > 0 → dig residual (``--next``), densify closed
+    - residual=0 and wi_fleet ≤ wi_floor → densify closed (explore /
+      COGNITION / HYGIENE / agent_acceptance_panel)
+    - residual=0 and wi_fleet > wi_floor → densify allowed on ``wi_next``
+    """
+    if any(r.is_residual for r in rows):
+        return False
+    return fleet_wi_mean(rows) > WI_FLOOR
+
+
 def compute_warehouse_index(m: AppProductMaturity) -> AppProductMaturity:
     """Fill continuous WI fields on an already-scored maturity row.
 
@@ -296,7 +481,8 @@ def compute_warehouse_index(m: AppProductMaturity) -> AppProductMaturity:
 
     Inverse-utility intent: higher WI ⇒ more warehouse structure (list-primary
     shells, thin/padded landings, unbound jobs, list-soup nav, no graph hops).
-    Anti-gaming v2: L uses signal richness; D uses effective job desks.
+    Anti-gaming v3 (#1637): L uses signal richness; D uses *job-backed*
+    effective desks with isomorphism collapse (orphan ``*_ops`` do not dilute).
     """
     d = _clamp01(m.warehouse_density)
     n = _clamp01(m.nav_list_share)
@@ -481,21 +667,6 @@ def score_app(app_dir: Path) -> AppProductMaturity:
     entities = list(getattr(domain, "entities", None) or getattr(appspec, "entities", None) or [])
     m.entity_count = len(entities)
 
-    # Effective job desks for D (anti desk-sprawl): weight each product
-    # workspace by mode/source signal diversity, then scale-cap by entities.
-    job_weight_sum = 0.0
-    for w in workspaces:
-        if _is_platform_workspace(w.name):
-            continue
-        regions = list(getattr(w, "regions", None) or [])
-        job_weight_sum += _workspace_job_weight(regions)
-    scale_cap = max(_DESK_SCALE_FLOOR, float(m.entity_count) * _DESK_ENTITY_SCALE)
-    m.effective_product_workspaces = min(job_weight_sum, scale_cap)
-
-    # Density: lists vs effective job desks (not raw workspace count).
-    denom = list_n + max(m.effective_product_workspaces, 0.0)
-    m.warehouse_density = (list_n / denom) if denom else (1.0 if list_n else 0.0)
-
     personas = list(getattr(appspec, "personas", None) or [])
     product_personas = [p for p in personas if _is_product_persona(str(p.id))]
     m.product_personas = len(product_personas)
@@ -515,6 +686,35 @@ def score_app(app_dir: Path) -> AppProductMaturity:
                 product_story_personas.add(persona)
     m.bound_stories = bound
     m.product_stories = product_stories
+
+    # Job-backed effective desks for D (#1637): only default/story-backed
+    # desks and non-orphan named product desks count; isomorphic multi-mode
+    # filter clones credit once; orphan *_ops never dilute density.
+    default_workspaces: set[str] = set()
+    for p in product_personas:
+        dws = getattr(p, "default_workspace", None)
+        if dws and str(dws).strip():
+            default_workspaces.add(str(dws).strip())
+    executed_workspaces = _executed_by_workspace_names(stories)
+    eff, jb_n, orphan_n, iso_n = _effective_job_desks(
+        workspaces,
+        default_workspaces=default_workspaces,
+        executed_workspaces=executed_workspaces,
+        entity_count=m.entity_count,
+    )
+    m.effective_product_workspaces = eff
+    m.job_backed_desks = jb_n
+    m.orphan_ops_desks = orphan_n
+    m.isomorphic_clusters = iso_n
+    if m.product_personas > 0:
+        m.desks_per_persona = m.product_workspaces / float(m.product_personas)
+
+    # Density: lists vs job-backed effective desks (not raw workspace count).
+    denom = list_n + max(m.effective_product_workspaces, 0.0)
+    m.warehouse_density = (list_n / denom) if denom else (1.0 if list_n else 0.0)
+
+    # Process lint: scoreboard language in product DSL (#1637).
+    m.scoreboard_smells = _scan_scoreboard_smells(app_dir)
 
     # --- Compiled nav (entity-list share) ---
     m.nav_list_share, m.nav_personas_scored = _nav_list_share(appspec, product_personas)
@@ -620,6 +820,28 @@ def score_app(app_dir: Path) -> AppProductMaturity:
         score += 50
         reasons.append("crud_lists_without_workspaces")
 
+    # #1637: extreme desk sprawl is residual (cognitive load), not a D win.
+    if m.product_personas > 0 and m.desks_per_persona >= _SPRAWL_RESIDUAL_RATIO:
+        score += 25
+        reasons.append(f"desk_sprawl({m.desks_per_persona:.1f}/persona)")
+    elif m.product_personas > 0 and m.desks_per_persona > _SPRAWL_DESKS_PER_PERSONA:
+        # Soft signal only — prefer segments/filters over N desks (no residual).
+        reasons.append(f"desk_sprawl_warn({m.desks_per_persona:.1f}/persona)")
+
+    # Orphan densify residue: many unbacked *_ops desks.
+    if m.orphan_ops_desks >= 5:
+        score += 20
+        reasons.append(f"orphan_ops_desks({m.orphan_ops_desks})")
+    elif m.orphan_ops_desks >= 2:
+        reasons.append(f"orphan_ops_warn({m.orphan_ops_desks})")
+
+    # Process lint: measure-colonized medium (scoreboard comments in DSL).
+    if m.scoreboard_smells >= 3:
+        score += min(25, 5 + m.scoreboard_smells)
+        reasons.append(f"scoreboard_language({m.scoreboard_smells})")
+    elif m.scoreboard_smells > 0:
+        reasons.append(f"scoreboard_language_warn({m.scoreboard_smells})")
+
     m.score = score
     m.reasons = reasons
 
@@ -669,10 +891,20 @@ def fleet_wi_mean(rows: list[AppProductMaturity]) -> float:
 
 
 def next_wi_app(rows: list[AppProductMaturity]) -> AppProductMaturity | None:
-    """Highest-WI app (managed scope-creep target)."""
+    """Highest-WI app for feature_creep — or None when densify is closed (#1637).
+
+    Hard floor: residual=0 and ``wi_fleet ≤ wi_floor`` → return None so agents
+    cannot keep grinding D with isomorphic ``*_ops`` desks.
+    """
     if not rows:
         return None
-    return max(rows, key=lambda r: (r.wi, r.score, r.app))
+    if not densify_allowed(rows):
+        return None
+    # Prefer apps still above floor; fall back to highest WI if all under floor
+    # but residual remains (densify_allowed True via residual path — rare).
+    above = [r for r in rows if r.wi > WI_FLOOR]
+    pool = above if above else rows
+    return max(pool, key=lambda r: (r.wi, r.score, r.app))
 
 
 def format_table(rows: list[AppProductMaturity]) -> str:
@@ -693,6 +925,7 @@ def format_table(rows: list[AppProductMaturity]) -> str:
     residual = [r for r in rows if r.is_residual]
     wi_mean = fleet_wi_mean(rows)
     wi_next = next_wi_app(rows)
+    dens = 1 if densify_allowed(rows) else 0
     lines.append("")
     lines.append(
         f"residual={len(residual)}/{len(rows)}  "
@@ -703,7 +936,8 @@ def format_table(rows: list[AppProductMaturity]) -> str:
     lines.append(
         f"wi_fleet={wi_mean:.3f}  wi_floor={WI_FLOOR:.2f}  "
         f"wi_next={wi_next.app if wi_next else '-'}  "
-        f"wi_primary={wi_next.wi_primary if wi_next else '-'}"
+        f"wi_primary={wi_next.wi_primary if wi_next else '-'}  "
+        f"densify_allowed={dens}"
     )
     if residual:
         lines.append(f"next={residual[0].app}")
@@ -721,10 +955,10 @@ def format_warehouse_index(rows: list[AppProductMaturity]) -> str:
         "-" * 90,
     ]
     interventions = {
-        "D": "job desks with mixed modes/sources (not empty desk sprawl / list shells)",
+        "D": "job-backed desks only (default/story); merge isomorphic *_ops; not enum clones",
         "N": "persona nav job destinations (not auto entity-list soup)",
         "L": "diversify landing signals (mode×source); pads of same-entity lists do not score",
-        "J": "bind stories executed_by + process/surface paths",
+        "J": "bind stories executed_by + process/surface paths (co-evolve with desks)",
         "G": "open-via on lists + related hubs for multi-entity graphs",
     }
     for r in ordered:
@@ -735,17 +969,31 @@ def format_warehouse_index(rows: list[AppProductMaturity]) -> str:
         )
     wi_mean = fleet_wi_mean(rows)
     wi_next = next_wi_app(rows)
+    dens = 1 if densify_allowed(rows) else 0
     lines.append("")
     lines.append(
         f"wi_fleet={wi_mean:.3f}  wi_floor={WI_FLOOR:.2f}  "
         f"wi_next={wi_next.app if wi_next else '-'}  "
         f"wi_primary={wi_next.wi_primary if wi_next else '-'}  "
-        f"above_floor={sum(1 for r in rows if r.wi > WI_FLOOR)}/{len(rows)}"
+        f"above_floor={sum(1 for r in rows if r.wi > WI_FLOOR)}/{len(rows)}  "
+        f"densify_allowed={dens}"
     )
-    lines.append(
-        "objective: when residual=0, minimize wi_next (product DSL slice that "
-        "moves wi_primary); map-only commits do not count"
-    )
+    residual_n = sum(1 for r in rows if r.is_residual)
+    if residual_n:
+        lines.append(
+            "objective: residual digs first (orphan_ops / scoreboard_language / "
+            "desk_sprawl / landings) — densify closed until residual=0"
+        )
+    elif dens:
+        lines.append(
+            "objective: residual=0 and wi_fleet>floor — minimize wi_next with "
+            "job-backed desks only (not isomorphic *_ops clones)"
+        )
+    else:
+        lines.append(
+            "objective: densify CLOSED (residual=0 and wi_fleet≤floor) — pick "
+            "COGNITION / HYGIENE / agent_acceptance_panel; do not add *_ops desks"
+        )
     return "\n".join(lines)
 
 
@@ -759,11 +1007,15 @@ def format_status(rows: list[AppProductMaturity]) -> str:
     wi_next = next_wi_app(rows)
     wi_n = wi_next.app if wi_next else "-"
     wi_p = wi_next.wi_primary if wi_next else "-"
+    dens = 1 if densify_allowed(rows) else 0
+    orphans = sum(r.orphan_ops_desks for r in rows)
+    smells = sum(r.scoreboard_smells for r in rows)
     return (
         f"product_maturity apps={len(rows)} residual={len(residual)} "
         f"critical={crit} thin={thin} deepen={deepen} next={nxt} "
         f"wi_fleet={wi_mean:.3f} wi_next={wi_n} wi_primary={wi_p} "
-        f"wi_floor={WI_FLOOR:.2f}"
+        f"wi_floor={WI_FLOOR:.2f} densify_allowed={dens} "
+        f"orphan_ops={orphans} scoreboard_smells={smells}"
     )
 
 
@@ -814,6 +1066,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.next_wi:
         nxt = next_wi_app(rows)
         print(nxt.app if nxt else "")
+        # Exit 0 always for id print; empty string means densify closed / no apps.
         return 0
 
     if args.next:

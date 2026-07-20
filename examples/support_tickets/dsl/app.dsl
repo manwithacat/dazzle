@@ -443,7 +443,6 @@ surface comment_edit "Edit Comment":
 #   manager → manager_ops  = metrics + SLA strip + focused queues (ST-027–029)
 #   customer → my_tickets  = my metrics + open queue + history (ST-024–026)
 
-# WI L: agent default landing — denser regions (cap 6).
 workspace ticket_queue "Ticket Queue":
   purpose: "Agent workspace for managing incoming support tickets"
   stage: "scanner_table"
@@ -579,7 +578,6 @@ workspace manager_ops "Manager Ops":
       count: count(Ticket)
     empty: "No tickets"
 
-  # WI D: context family — recent ticket trail
   recent_trail:
     source: Ticket
     sort: updated_at desc
@@ -588,7 +586,6 @@ workspace manager_ops "Manager Ops":
     action: ticket_detail
     empty: "No tickets yet"
 
-  # WI D: kanban family — open pipeline board
   open_board:
     source: Ticket
     filter: status != closed
@@ -671,7 +668,6 @@ workspace agent_dashboard "Agent Dashboard":
     action: comment_detail
     empty: "No activity yet"
 
-# WI L: customer default landing — denser regions (cap 6).
 workspace my_tickets "My Tickets":
   purpose: "Customer view of their submitted tickets"
   stage: "simple_list"
@@ -740,7 +736,6 @@ workspace my_tickets "My Tickets":
         icon: "message-square"
         state: warning
 
-  # WI D: context family — recent updates on my cases
   my_trail:
     source: Ticket
     filter: created_by = current_user
@@ -750,7 +745,6 @@ workspace my_tickets "My Tickets":
     action: ticket_detail
     empty: "You have not submitted any tickets yet"
 
-  # WI D: chart family — my tickets by status
   my_status_mix:
     source: Ticket
     filter: created_by = current_user
@@ -760,7 +754,6 @@ workspace my_tickets "My Tickets":
       count: count(Ticket)
     empty: "You have not submitted any tickets yet"
 
-  # WI D: grid family — open cases as cards
   open_cards:
     source: Ticket
     filter: created_by = current_user and status != closed
@@ -836,7 +829,6 @@ workspace agent_console "Agent Console":
       count: count(Comment)
     empty: "No comments for this agent"
 
-  # WI D: queue family — high-priority tickets for selected agent
   agent_priority_queue:
     source: Ticket
     filter: assigned_to = current_context and status != closed
@@ -846,7 +838,6 @@ workspace agent_console "Agent Console":
     action: ticket_edit
     empty: "No open tickets for this agent"
 
-  # WI D: context family — comment trail for selected agent
   agent_comment_trail:
     source: Comment
     filter: ticket.assigned_to = current_context
@@ -856,7 +847,6 @@ workspace agent_console "Agent Console":
     action: comment_detail
     empty: "No comments on this agent's tickets"
 
-  # WI D: grid family — open tickets as cards
   agent_ticket_cards:
     source: Ticket
     filter: assigned_to = current_context and status != closed
@@ -865,759 +855,6 @@ workspace agent_console "Agent Console":
     display: grid
     action: ticket_detail
     empty: "No open tickets for this agent"
-
-# Sixth product desk (WI D): 3 lists floor dens ~0.38 with 5 full desks — need 6.
-workspace resolution_ops "Resolution Ops":
-  purpose: "Resolution pressure — recently resolved and closed tickets without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  resolution_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      resolved: count(Ticket where status = resolved)
-      closed: count(Ticket where status = closed)
-      open: count(Ticket where status = open or status = in_progress)
-    tones:
-      resolved: positive
-      closed: accent
-      open: warning
-
-  # WI D: queue family — resolved awaiting close
-  resolved_queue:
-    source: Ticket
-    filter: status = resolved
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No tickets in resolved state"
-
-  # WI D: grid family — recently closed cards
-  closed_grid:
-    source: Ticket
-    filter: status = closed
-    sort: updated_at desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No closed tickets yet"
-
-  # WI D: context family — resolution trail
-  resolution_trail:
-    source: Ticket
-    filter: status = resolved or status = closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No resolved or closed tickets"
-
-  # WI D: chart family — terminal status mix
-  status_mix:
-    source: Ticket
-    filter: status = resolved or status = closed
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "No terminal tickets to chart"
-
-# Seventh product desk (WI D): 3 lists floor dens ~0.33 with 6 full desks — need 7.
-workspace priority_ops "Priority Ops":
-  purpose: "High and critical open ticket pressure without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  priority_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      critical: count(Ticket where priority = critical and status != closed)
-      high: count(Ticket where priority = high and status != closed)
-      open: count(Ticket where status != closed)
-    tones:
-      critical: destructive
-      high: warning
-      open: accent
-
-  # WI D: queue family — critical open first
-  critical_queue:
-    source: Ticket
-    filter: priority = critical and status != closed
-    sort: created_at asc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No open critical tickets"
-
-  # WI D: grid family — high-priority cards
-  high_grid:
-    source: Ticket
-    filter: priority = high and status != closed
-    sort: created_at asc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open high-priority tickets"
-
-  # WI D: context family — recent priority trail
-  priority_trail:
-    source: Ticket
-    filter: (priority = high or priority = critical) and status != closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No high or critical open tickets"
-
-  # WI D: chart family — open work by priority
-  priority_mix:
-    source: Ticket
-    filter: status != closed
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Ticket)
-    empty: "No open tickets to chart"
-
-# Eighth product desk (WI D): 3 lists floor dens ~0.30 with 7 full desks — need 8.
-workspace progress_ops "Progress Ops":
-  purpose: "In-progress pressure — work actively being handled without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  progress_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      in_progress: count(Ticket where status = in_progress)
-      open: count(Ticket where status = open)
-      resolved: count(Ticket where status = resolved)
-    tones:
-      in_progress: accent
-      open: warning
-      resolved: positive
-
-  # WI D: queue family — in-progress first
-  progress_queue:
-    source: Ticket
-    filter: status = in_progress
-    sort: priority desc, updated_at asc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No tickets in progress"
-
-  # WI D: grid family — open backlog cards
-  open_grid:
-    source: Ticket
-    filter: status = open
-    sort: priority desc, created_at asc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open tickets waiting claim"
-
-  # WI D: context family — recent progress trail
-  progress_trail:
-    source: Ticket
-    filter: status = in_progress or status = open
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No progress activity yet"
-
-  # WI D: chart family — open pipeline status mix
-  status_mix:
-    source: Ticket
-    filter: status != closed
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "No open tickets to chart"
-
-# Ninth product desk (WI D): skip invoice_ops desk-cap; densify support_tickets.
-workspace open_ops "Open Ops":
-  purpose: "Intake pressure — unclaimed open tickets without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  open_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      open: count(Ticket where status = open)
-      critical: count(Ticket where priority = critical and status = open)
-      high: count(Ticket where priority = high and status = open)
-    tones:
-      open: warning
-      critical: destructive
-      high: accent
-
-  # WI D: queue family — open tickets first
-  open_queue:
-    source: Ticket
-    filter: status = open
-    sort: priority desc, created_at asc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No open tickets waiting claim"
-
-  # WI D: grid family — open cards
-  open_grid:
-    source: Ticket
-    filter: status = open
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open tickets waiting claim"
-
-  # WI D: context family — recent open intake trail
-  open_trail:
-    source: Ticket
-    filter: status = open
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No open intake activity yet"
-
-  # WI D: chart family — priority mix among open
-  priority_mix:
-    source: Ticket
-    filter: status = open
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Ticket)
-    empty: "No open tickets to chart"
-
-# Tenth product desk (WI D): skip invoice_ops desk-cap; densify support_tickets.
-workspace resolved_ops "Resolved Ops":
-  purpose: "Close-out pressure — resolved tickets awaiting final close without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  resolved_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      resolved: count(Ticket where status = resolved)
-      closed: count(Ticket where status = closed)
-      open: count(Ticket where status = open)
-    tones:
-      resolved: positive
-      closed: muted
-      open: warning
-
-  # WI D: queue family — resolved first
-  resolved_queue:
-    source: Ticket
-    filter: status = resolved
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No resolved tickets waiting close-out"
-
-  # WI D: grid family — resolved cards
-  resolved_grid:
-    source: Ticket
-    filter: status = resolved
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No resolved tickets waiting close-out"
-
-  # WI D: context family — recent resolve trail
-  resolved_trail:
-    source: Ticket
-    filter: status = resolved or status = closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No resolve activity yet"
-
-  # WI D: chart family — priority mix among resolved
-  priority_mix:
-    source: Ticket
-    filter: status = resolved
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Ticket)
-    empty: "No resolved tickets to chart"
-
-
-# Eleventh product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify support_tickets.
-workspace critical_ops "Critical Ops":
-  purpose: "Critical/high priority pressure without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  critical_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      critical: count(Ticket where priority = critical)
-      high: count(Ticket where priority = high)
-      open: count(Ticket where status = open or status = in_progress)
-    tones:
-      critical: warning
-      high: accent
-      open: muted
-
-  # WI D: queue family — critical/high first
-  critical_queue:
-    source: Ticket
-    filter: priority = critical or priority = high
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No high-priority tickets"
-
-  # WI D: grid family — critical cards
-  critical_grid:
-    source: Ticket
-    filter: priority = critical or priority = high
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No high-priority tickets"
-
-  # WI D: context family — recent critical trail
-  critical_trail:
-    source: Ticket
-    filter: priority = critical or priority = high
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No high-priority activity yet"
-
-  # WI D: chart family — status mix among high priority
-  status_mix:
-    source: Ticket
-    filter: priority = critical or priority = high
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "No high-priority tickets to chart"
-
-
-# Twelfth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify support_tickets.
-workspace unassigned_ops "Unassigned Ops":
-  purpose: "Assignment pressure — open tickets without an owner without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  unassigned_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      unassigned: count(Ticket where assigned_to = null and status = open)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      unassigned: warning
-      open: accent
-      in_progress: muted
-
-  # WI D: queue family — unassigned open first
-  unassigned_queue:
-    source: Ticket
-    filter: assigned_to = null and status = open
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No unassigned open tickets"
-
-  # WI D: grid family — unassigned cards
-  unassigned_grid:
-    source: Ticket
-    filter: assigned_to = null and status = open
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No unassigned open tickets"
-
-  # WI D: context family — recent unassigned trail
-  unassigned_trail:
-    source: Ticket
-    filter: assigned_to = null and status = open
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No unassigned activity yet"
-
-  # WI D: chart family — priority mix among unassigned
-  priority_mix:
-    source: Ticket
-    filter: assigned_to = null and status = open
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Ticket)
-    empty: "No unassigned tickets to chart"
-
-
-# Thirteenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify support_tickets.
-workspace bug_ops "Bug Ops":
-  purpose: "Bug-category pressure — open defects without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  bug_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      bugs: count(Ticket where category = bug and status != closed)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      bugs: warning
-      open: accent
-      in_progress: muted
-
-  # WI D: queue family — open bugs first
-  bug_queue:
-    source: Ticket
-    filter: category = bug and status != closed
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No open bug tickets"
-
-  # WI D: grid family — bug cards
-  bug_grid:
-    source: Ticket
-    filter: category = bug and status != closed
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open bug tickets"
-
-  # WI D: context family — recent bug trail
-  bug_trail:
-    source: Ticket
-    filter: category = bug and status != closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No bug activity yet"
-
-  # WI D: chart family — priority mix among bugs
-  priority_mix:
-    source: Ticket
-    filter: category = bug and status != closed
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Ticket)
-    empty: "No bug tickets to chart"
-
-
-# Fourteenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify support_tickets.
-workspace feature_ops "Feature Ops":
-  purpose: "Feature-request pressure — open feature tickets without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  feature_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      features: count(Ticket where category = feature and status != closed)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      features: accent
-      open: warning
-      in_progress: muted
-
-  # WI D: queue family — open features first
-  feature_queue:
-    source: Ticket
-    filter: category = feature and status != closed
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No open feature tickets"
-
-  # WI D: grid family — feature cards
-  feature_grid:
-    source: Ticket
-    filter: category = feature and status != closed
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open feature tickets"
-
-  # WI D: context family — recent feature trail
-  feature_trail:
-    source: Ticket
-    filter: category = feature and status != closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No feature activity yet"
-
-  # WI D: chart family — priority mix among features
-  priority_mix:
-    source: Ticket
-    filter: category = feature and status != closed
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Ticket)
-    empty: "No feature tickets to chart"
-
-
-# Fifteenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify support_tickets.
-workspace inquiry_ops "Inquiry Ops":
-  purpose: "Inquiry-category pressure — open questions without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  inquiry_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      inquiries: count(Ticket where category = inquiry and status != closed)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      inquiries: accent
-      open: warning
-      in_progress: muted
-
-  # WI D: queue family — open inquiries first
-  inquiry_queue:
-    source: Ticket
-    filter: category = inquiry and status != closed
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No open inquiry tickets"
-
-  # WI D: grid family — inquiry cards
-  inquiry_grid:
-    source: Ticket
-    filter: category = inquiry and status != closed
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open inquiry tickets"
-
-  # WI D: context family — recent inquiry trail
-  inquiry_trail:
-    source: Ticket
-    filter: category = inquiry and status != closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No inquiry activity yet"
-
-  # WI D: chart family — priority mix among inquiries
-  priority_mix:
-    source: Ticket
-    filter: category = inquiry and status != closed
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Ticket)
-    empty: "No inquiry tickets to chart"
-
-
-# Fifteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify support_tickets.
-workspace other_ops "Other Ops":
-  purpose: "Other-category pressure — open misc tickets without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  other_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      other: count(Ticket where category = other and status != closed)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      other: muted
-      open: warning
-      in_progress: accent
-
-  # WI D: queue family — open other-category first
-  other_queue:
-    source: Ticket
-    filter: category = other and status != closed
-    sort: priority desc, updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No open other-category tickets"
-
-  # WI D: grid family — other cards
-  other_grid:
-    source: Ticket
-    filter: category = other and status != closed
-    sort: priority desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open other-category tickets"
-
-  # WI D: context family — recent other trail
-  other_trail:
-    source: Ticket
-    filter: category = other and status != closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No other-category activity yet"
-
-  # WI D: chart family — priority mix among other
-  priority_mix:
-    source: Ticket
-    filter: category = other and status != closed
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(Ticket)
-    empty: "No other-category tickets to chart"
-
-
-# Sixteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify support_tickets.
-workspace high_ops "High Ops":
-  purpose: "High-priority pressure — open high tickets without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  high_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      high: count(Ticket where priority = high and status != closed)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      high: warning
-      open: accent
-      in_progress: muted
-
-  # WI D: queue family — open high-priority first
-  high_queue:
-    source: Ticket
-    filter: priority = high and status != closed
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No open high-priority tickets"
-
-  # WI D: grid family — high-priority cards
-  high_grid:
-    source: Ticket
-    filter: priority = high and status != closed
-    sort: updated_at desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open high-priority tickets"
-
-  # WI D: context family — recent high-priority trail
-  high_trail:
-    source: Ticket
-    filter: priority = high and status != closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No high-priority activity yet"
-
-  # WI D: chart family — category mix among high-priority
-  category_mix:
-    source: Ticket
-    filter: priority = high and status != closed
-    display: bar_chart
-    group_by: category
-    aggregate:
-      count: count(Ticket)
-    empty: "No high-priority tickets to chart"
-
-
-# Seventeenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify support_tickets.
-workspace medium_ops "Medium Ops":
-  purpose: "Medium-priority pressure — open medium tickets without warehouse CRUD"
-  access: persona(agent, manager, admin)
-
-  medium_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      medium: count(Ticket where priority = medium and status != closed)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      medium: accent
-      open: warning
-      in_progress: muted
-
-  # WI D: queue family — open medium-priority first
-  medium_queue:
-    source: Ticket
-    filter: priority = medium and status != closed
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_edit
-    empty: "No open medium-priority tickets"
-
-  # WI D: grid family — medium-priority cards
-  medium_grid:
-    source: Ticket
-    filter: priority = medium and status != closed
-    sort: updated_at desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open medium-priority tickets"
-
-  # WI D: context family — recent medium-priority trail
-  medium_trail:
-    source: Ticket
-    filter: priority = medium and status != closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No medium-priority activity yet"
-
-  # WI D: chart family — category mix among medium-priority
-  category_mix:
-    source: Ticket
-    filter: priority = medium and status != closed
-    display: bar_chart
-    group_by: category
-    aggregate:
-      count: count(Ticket)
-    empty: "No medium-priority tickets to chart"
-
-# =============================================================================
-# PERSONAS - User archetypes for testing
-# =============================================================================
 
 persona admin "Administrator":
   # Product admin lands on the work queue — not framework platform chrome (#1626).
@@ -1629,7 +866,6 @@ persona customer "Customer":
   goals: "Submit new tickets easily", "Track ticket status and updates", "Receive timely responses from support"
   proficiency: novice
   default_workspace: my_tickets
-  # WI N: job desks first — not auto entity-list soup
   uses nav customer_nav
 
 persona agent "Support Agent":
@@ -1654,19 +890,6 @@ nav admin_nav:
   group "Ops":
     ticket_queue
     agent_console
-    resolution_ops
-    priority_ops
-    progress_ops
-    open_ops
-    resolved_ops
-    critical_ops
-    unassigned_ops
-    bug_ops
-    feature_ops
-    inquiry_ops
-    other_ops
-    high_ops
-    medium_ops
 
 nav customer_nav:
   group "My support":
@@ -1677,19 +900,6 @@ nav agent_nav:
     ticket_queue
     agent_dashboard
     agent_console
-    resolution_ops
-    priority_ops
-    progress_ops
-    open_ops
-    resolved_ops
-    critical_ops
-    unassigned_ops
-    bug_ops
-    feature_ops
-    inquiry_ops
-    other_ops
-    high_ops
-    medium_ops
 
 nav manager_nav:
   group "Lead":
@@ -1697,19 +907,6 @@ nav manager_nav:
     ticket_queue
     agent_console
     agent_dashboard
-    resolution_ops
-    priority_ops
-    progress_ops
-    open_ops
-    resolved_ops
-    critical_ops
-    unassigned_ops
-    bug_ops
-    feature_ops
-    inquiry_ops
-    other_ops
-    high_ops
-    medium_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data

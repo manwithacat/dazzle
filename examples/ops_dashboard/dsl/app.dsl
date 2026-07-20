@@ -10,8 +10,7 @@ module ops_dashboard.core
 app ops_dashboard "Operations Dashboard":
   security_profile: basic
   # v0.61.43 (Phase B Patch 2): app-shell theme via the DSL.
-  # Wins over [ui] theme in dazzle.toml — spec is the source of truth.
-  theme: linear-dark
+  # linear-dark
 
 # =============================================================================
 # Entities with v0.7.0 Business Logic
@@ -170,10 +169,8 @@ persona ops_engineer "Operations Engineer":
   proficiency_level: expert
   session_style: deep_work
   default_workspace: command_center
-  # WI N: job desks first — not auto entity-list soup
   uses nav ops_nav
 
-# Curated sidebar: workspace destinations only (WI N).
 nav ops_nav:
   group "Ops":
     command_center
@@ -181,12 +178,8 @@ nav ops_nav:
     systems_desk
     alerts_desk
     integrations_desk
-    critical_ops
     active_alerts
     resolved_alerts
-    degraded_ops
-    integration_ops
-    data_plane_ops
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage
@@ -710,7 +703,7 @@ workspace incident_review "Incident Review":
       scope: all
       purpose: "Pair-strip review of pending incidents"
 
-# Third product workspace (WI density D): systems portfolio desk.
+# Third product workspace: systems portfolio desk.
 workspace systems_desk "Systems":
   purpose: "Fleet health desk — systems pulse, grid, queue, trail, and status mix"
   access: persona(ops_engineer, admin)
@@ -726,7 +719,6 @@ workspace systems_desk "Systems":
       critical: destructive
       alerts: warning
 
-  # WI D: grid family — fleet cards (not list pad)
   systems_grid:
     source: System
     sort: name asc
@@ -735,7 +727,6 @@ workspace systems_desk "Systems":
     action: system_detail
     empty: "No systems registered"
 
-  # WI D: queue family — degraded/critical first
   pressure_queue:
     source: System
     filter: status = degraded or status = critical
@@ -745,7 +736,6 @@ workspace systems_desk "Systems":
     action: system_detail
     empty: "No degraded or critical systems"
 
-  # WI D: context family — recent checks
   check_trail:
     source: System
     sort: last_check desc
@@ -754,7 +744,6 @@ workspace systems_desk "Systems":
     action: system_detail
     empty: "No systems yet"
 
-  # WI D: chart family — health mix
   status_mix:
     source: System
     display: bar_chart
@@ -763,7 +752,7 @@ workspace systems_desk "Systems":
       count: count(System)
     empty: "No systems yet"
 
-# Fourth product workspace (WI density D): alerts-first on-call desk.
+# Fourth product workspace: alerts-first on-call desk.
 workspace alerts_desk "Alerts":
   purpose: "On-call desk — active and recent alerts without warehouse CRUD"
   access: persona(ops_engineer, admin)
@@ -787,7 +776,6 @@ workspace alerts_desk "Alerts":
     display: queue
     empty: "No active alerts"
 
-  # WI D: grid family — systems with pressure
   systems_grid:
     source: System
     filter: status = degraded or status = critical
@@ -797,7 +785,6 @@ workspace alerts_desk "Alerts":
     action: system_detail
     empty: "No systems under pressure"
 
-  # WI D: context family — recent alert trail
   alert_trail:
     source: Alert
     sort: triggered_at desc
@@ -805,7 +792,6 @@ workspace alerts_desk "Alerts":
     display: timeline
     empty: "No alerts yet"
 
-  # WI D: chart family — severity mix
   severity_mix:
     source: Alert
     display: bar_chart
@@ -814,7 +800,6 @@ workspace alerts_desk "Alerts":
       count: count(Alert)
     empty: "No alerts yet"
 
-# Fifth product desk (WI D): integrations pulse for ops engineers.
 workspace integrations_desk "Integrations":
   purpose: "Integration health — pending/live/revoked connectors and notes trail"
   access: persona(ops_engineer, admin)
@@ -830,7 +815,6 @@ workspace integrations_desk "Integrations":
       live: positive
       pending: warning
 
-  # WI D: queue family — pending opt-ins first
   pending_queue:
     source: Integration
     filter: status = pending
@@ -839,7 +823,6 @@ workspace integrations_desk "Integrations":
     display: queue
     empty: "No pending integrations"
 
-  # WI D: grid family — live connectors
   live_grid:
     source: Integration
     filter: status = live
@@ -848,7 +831,6 @@ workspace integrations_desk "Integrations":
     display: grid
     empty: "No live integrations"
 
-  # WI D: context family — enablement trail
   enable_trail:
     source: Integration
     sort: enabled_at desc
@@ -856,7 +838,6 @@ workspace integrations_desk "Integrations":
     display: timeline
     empty: "No integration activity yet"
 
-  # WI D: chart family — status mix
   status_mix:
     source: Integration
     display: bar_chart
@@ -865,61 +846,6 @@ workspace integrations_desk "Integrations":
       count: count(Integration)
     empty: "No integrations yet"
 
-# Sixth product desk (WI D): skip invoice_ops desk-cap; densify ops_dashboard.
-workspace critical_ops "Critical Ops":
-  purpose: "Critical pressure — critical systems and high-severity alerts without warehouse CRUD"
-  access: persona(ops_engineer, admin)
-
-  critical_pulse:
-    source: System
-    display: metrics
-    aggregate:
-      critical: count(System where status = critical)
-      degraded: count(System where status = degraded)
-      active_alerts: count(Alert where status = active)
-    tones:
-      critical: destructive
-      degraded: warning
-      active_alerts: accent
-
-  # WI D: queue family — critical systems first
-  critical_queue:
-    source: System
-    filter: status = critical or status = degraded
-    sort: status desc, name asc
-    limit: 20
-    display: queue
-    action: system_edit
-    empty: "No critical or degraded systems"
-
-  # WI D: grid family — critical open alerts
-  critical_alerts:
-    source: Alert
-    filter: severity = critical and status = active
-    sort: triggered_at asc
-    limit: 15
-    display: grid
-    empty: "No active critical alerts"
-
-  # WI D: context family — recent alert trail
-  alert_trail:
-    source: Alert
-    filter: severity = critical or severity = high
-    sort: triggered_at desc
-    limit: 15
-    display: timeline
-    empty: "No high or critical alerts yet"
-
-  # WI D: chart family — system health mix
-  status_mix:
-    source: System
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(System)
-    empty: "No systems to chart"
-
-# Seventh product desk (WI D): skip invoice_ops desk-cap; densify ops_dashboard.
 workspace active_alerts "Active Alerts":
   purpose: "Alert pressure — unacknowledged active incidents without warehouse CRUD"
   access: persona(ops_engineer, admin)
@@ -936,7 +862,6 @@ workspace active_alerts "Active Alerts":
       acked: warning
       resolved: positive
 
-  # WI D: queue family — active alerts first
   active_queue:
     source: Alert
     filter: status = active
@@ -946,7 +871,6 @@ workspace active_alerts "Active Alerts":
     action: alert_detail
     empty: "No active alerts"
 
-  # WI D: grid family — active alert cards
   active_grid:
     source: Alert
     filter: status = active
@@ -956,7 +880,6 @@ workspace active_alerts "Active Alerts":
     action: alert_detail
     empty: "No active alerts"
 
-  # WI D: context family — recent alert trail
   alert_trail:
     source: Alert
     filter: status = active or status = acknowledged
@@ -966,7 +889,6 @@ workspace active_alerts "Active Alerts":
     action: alert_detail
     empty: "No open alert activity yet"
 
-  # WI D: chart family — severity mix among active
   severity_mix:
     source: Alert
     filter: status = active
@@ -977,7 +899,6 @@ workspace active_alerts "Active Alerts":
     empty: "No active alerts to chart"
 
 
-# Eighth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify ops_dashboard.
 workspace resolved_alerts "Resolved Alerts":
   purpose: "Close-out pressure — resolved incidents without warehouse CRUD"
   access: persona(ops_engineer, admin)
@@ -994,7 +915,6 @@ workspace resolved_alerts "Resolved Alerts":
       acked: warning
       active: destructive
 
-  # WI D: queue family — resolved first
   resolved_queue:
     source: Alert
     filter: status = resolved
@@ -1004,7 +924,6 @@ workspace resolved_alerts "Resolved Alerts":
     action: alert_detail
     empty: "No resolved alerts"
 
-  # WI D: grid family — resolved cards
   resolved_grid:
     source: Alert
     filter: status = resolved
@@ -1014,7 +933,6 @@ workspace resolved_alerts "Resolved Alerts":
     action: alert_detail
     empty: "No resolved alerts"
 
-  # WI D: context family — resolve trail
   resolve_trail:
     source: Alert
     filter: status = resolved or status = acknowledged
@@ -1024,7 +942,6 @@ workspace resolved_alerts "Resolved Alerts":
     action: alert_detail
     empty: "No close-out activity yet"
 
-  # WI D: chart family — severity mix among resolved
   severity_mix:
     source: Alert
     filter: status = resolved
@@ -1034,177 +951,6 @@ workspace resolved_alerts "Resolved Alerts":
       count: count(Alert)
     empty: "No resolved alerts to chart"
 
-
-# Ninth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify ops_dashboard.
-workspace degraded_ops "Degraded Ops":
-  purpose: "Degraded/offline system pressure without warehouse CRUD"
-  access: persona(ops_engineer, admin)
-
-  degraded_pulse:
-    source: System
-    display: metrics
-    aggregate:
-      degraded: count(System where status = degraded)
-      offline: count(System where status = offline)
-      healthy: count(System where status = healthy)
-    tones:
-      degraded: warning
-      offline: destructive
-      healthy: positive
-
-  # WI D: queue family — degraded/offline first
-  degraded_queue:
-    source: System
-    filter: status = degraded or status = offline
-    sort: status desc, name asc
-    limit: 20
-    display: queue
-    action: system_edit
-    empty: "No degraded or offline systems"
-
-  # WI D: grid family — degraded system cards
-  degraded_grid:
-    source: System
-    filter: status = degraded or status = offline
-    sort: name asc
-    limit: 15
-    display: grid
-    action: system_edit
-    empty: "No degraded or offline systems"
-
-  # WI D: context family — system status trail
-  system_trail:
-    source: System
-    filter: status = degraded or status = offline or status = critical
-    sort: name asc
-    limit: 15
-    display: timeline
-    action: system_edit
-    empty: "No unhealthy systems yet"
-
-  # WI D: chart family — system status mix
-  status_mix:
-    source: System
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(System)
-    empty: "No systems to chart"
-
-
-# Tenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify ops_dashboard.
-workspace integration_ops "Integration Ops":
-  purpose: "Integration-wire pressure — pending/live/revoked connectors without warehouse CRUD"
-  access: persona(ops_engineer, admin)
-
-  integration_pulse:
-    source: Integration
-    display: metrics
-    aggregate:
-      live: count(Integration where status = live)
-      pending: count(Integration where status = pending)
-      revoked: count(Integration where status = revoked)
-    tones:
-      live: positive
-      pending: warning
-      revoked: muted
-
-  # WI D: queue family — pending first
-  pending_queue:
-    source: Integration
-    filter: status = pending or status = live
-    sort: name asc
-    limit: 20
-    display: queue
-    empty: "No pending or live integrations"
-
-  # WI D: grid family — integration cards
-  integration_grid:
-    source: Integration
-    filter: status != off
-    sort: name asc
-    limit: 15
-    display: grid
-    empty: "No active integrations"
-
-  # WI D: context family — integration trail
-  integration_trail:
-    source: Integration
-    sort: name asc
-    limit: 15
-    display: timeline
-    empty: "No integration activity yet"
-
-  # WI D: chart family — status mix
-  status_mix:
-    source: Integration
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Integration)
-    empty: "No integrations to chart"
-
-
-# Eleventh product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify ops_dashboard.
-workspace data_plane_ops "Data Plane Ops":
-  purpose: "Data-plane pressure — database/cache/queue systems without warehouse CRUD"
-  access: persona(ops_engineer, admin)
-
-  data_pulse:
-    source: System
-    display: metrics
-    aggregate:
-      database: count(System where service_type = database)
-      cache: count(System where service_type = cache)
-      queue: count(System where service_type = queue)
-    tones:
-      database: accent
-      cache: positive
-      queue: muted
-
-  # WI D: queue family — data-plane systems first
-  data_queue:
-    source: System
-    filter: service_type = database or service_type = cache or service_type = queue
-    sort: name asc
-    limit: 20
-    display: queue
-    action: system_edit
-    empty: "No data-plane systems"
-
-  # WI D: grid family — data-plane cards
-  data_grid:
-    source: System
-    filter: service_type = database or service_type = cache or service_type = queue
-    sort: status desc, name asc
-    limit: 15
-    display: grid
-    action: system_edit
-    empty: "No data-plane systems"
-
-  # WI D: context family — trail
-  data_trail:
-    source: System
-    filter: service_type = database or service_type = cache or service_type = queue
-    sort: name asc
-    limit: 15
-    display: timeline
-    action: system_edit
-    empty: "No data-plane activity yet"
-
-  # WI D: chart family — status mix among data-plane
-  status_mix:
-    source: System
-    filter: service_type = database or service_type = cache or service_type = queue
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(System)
-    empty: "No data-plane systems to chart"
-
-# =============================================================================
-# Surfaces
-# =============================================================================
 
 surface system_list "Systems":
   uses entity System

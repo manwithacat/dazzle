@@ -52,11 +52,15 @@ def _warehouse_index_line() -> str:
     wi_mean = mod.fleet_wi_mean(rows)
     wi_next = mod.next_wi_app(rows)
     above = sum(1 for r in rows if r.wi > mod.WI_FLOOR)
+    dens = 1 if mod.densify_allowed(rows) else 0
+    orphans = sum(r.orphan_ops_desks for r in rows)
+    smells = sum(r.scoreboard_smells for r in rows)
     return (
         f"warehouse_index apps={len(rows)} wi_fleet={wi_mean:.3f} "
         f"wi_floor={mod.WI_FLOOR:.2f} wi_next={wi_next.app if wi_next else '-'} "
         f"wi_primary={wi_next.wi_primary if wi_next else '-'} "
-        f"above_floor={above}/{len(rows)}"
+        f"above_floor={above}/{len(rows)} densify_allowed={dens} "
+        f"orphan_ops={orphans} scoreboard_smells={smells}"
     )
 
 

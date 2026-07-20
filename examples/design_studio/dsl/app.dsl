@@ -20,7 +20,6 @@ persona designer "Designer":
   role: designer
   description: "Creates and manages design assets"
   default_workspace: studio_dashboard
-  # WI N: job desks first — not auto entity-list soup
   uses nav designer_nav
 
 persona reviewer "Reviewer":
@@ -30,7 +29,6 @@ persona reviewer "Reviewer":
   default_workspace: review_desk
   uses nav reviewer_nav
 
-# Curated sidebars: workspace destinations only (WI N).
 nav designer_nav:
   group "Studio":
     studio_dashboard
@@ -41,20 +39,8 @@ nav designer_nav:
     feedback_desk
     publish_desk
     draft_studio
-    archive_ops
-    campaign_ops
     review_pipeline
-    approved_ops
-    published_ops
-    draft_ops
     active_campaigns
-    planning_ops
-    logo_ops
-    completed_ops
-    photo_ops
-    illustration_ops
-    pattern_ops
-    typography_ops
 
 nav reviewer_nav:
   group "Review":
@@ -64,20 +50,8 @@ nav reviewer_nav:
     feedback_desk
     publish_desk
     draft_studio
-    archive_ops
-    campaign_ops
     review_pipeline
-    approved_ops
-    published_ops
-    draft_ops
     active_campaigns
-    planning_ops
-    logo_ops
-    completed_ops
-    photo_ops
-    illustration_ops
-    pattern_ops
-    typography_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -275,14 +249,12 @@ workspace studio_dashboard "Studio Dashboard":
     source: Asset
     display: grid
     sort: updated_at desc
-  # WI D: context family — recent asset activity
   asset_trail:
     source: Asset
     sort: updated_at desc
     limit: 15
     display: timeline
     empty: "No assets yet"
-  # WI D: chart family — asset status mix
   asset_status_mix:
     source: Asset
     display: bar_chart
@@ -290,7 +262,6 @@ workspace studio_dashboard "Studio Dashboard":
     aggregate:
       count: count(Asset)
     empty: "No assets yet"
-  # WI D: queue family — in-review work
   review_pressure:
     source: Asset
     filter: status = review
@@ -325,7 +296,6 @@ workspace asset_catalog "Asset Catalog":
     display: queue
     action: asset_edit
     empty: "Nothing awaiting review"
-  # WI D: kanban family — full pipeline board
   pipeline_board:
     source: Asset
     filter: status = draft or status = review or status = approved
@@ -334,7 +304,6 @@ workspace asset_catalog "Asset Catalog":
     sort: updated_at asc
     action: asset_edit
     empty: "No assets in the pipeline"
-  # WI D: chart family — status mix
   status_mix:
     source: Asset
     display: bar_chart
@@ -366,14 +335,12 @@ workspace brand_desk "Brand Desk":
     sort: name asc
     display: queue
     empty: "No active campaigns"
-  # WI D: context family — asset trail by brand work
   asset_trail:
     source: Asset
     sort: updated_at desc
     limit: 15
     display: timeline
     empty: "No assets yet"
-  # WI D: chart family — campaign status mix
   campaign_mix:
     source: Campaign
     display: bar_chart
@@ -410,7 +377,6 @@ workspace review_desk "Review Desk":
     display: queue
     empty: "No recent approvals"
 
-  # WI D: timeline of feedback (context family, not list pad)
   recent_feedback:
     source: Feedback
     sort: created_at desc
@@ -418,7 +384,6 @@ workspace review_desk "Review Desk":
     display: timeline
     empty: "No feedback notes yet"
 
-  # WI D: asset pipeline board for reviewers
   review_board:
     source: Asset
     filter: status = draft or status = review or status = approved
@@ -428,7 +393,6 @@ workspace review_desk "Review Desk":
     action: asset_edit
     empty: "No assets in the pipeline"
 
-  # WI D: chart family — review load by status
   review_status_mix:
     source: Asset
     display: bar_chart
@@ -437,7 +401,7 @@ workspace review_desk "Review Desk":
       count: count(Asset)
     empty: "No assets yet"
 
-# Fifth product workspace (WI density D): campaign desk vs bare campaign list.
+# Fifth product workspace: campaign desk vs bare campaign list.
 workspace campaign_desk "Campaigns":
   purpose: "Campaign schedule desk — active briefs and brand context"
   access: persona(admin, designer, reviewer)
@@ -460,7 +424,6 @@ workspace campaign_desk "Campaigns":
     display: queue
     empty: "No active campaigns"
 
-  # WI D: kanban by campaign status (not list pad)
   all_campaigns:
     source: Campaign
     sort: name asc
@@ -475,7 +438,6 @@ workspace campaign_desk "Campaigns":
     display: grid
     empty: "No brands"
 
-  # WI D: chart of campaign load
   campaign_mix:
     source: Campaign
     display: bar_chart
@@ -484,7 +446,7 @@ workspace campaign_desk "Campaigns":
       count: count(Campaign)
     empty: "No campaigns yet"
 
-# Sixth product workspace (WI density D): feedback trail desk.
+# Sixth product workspace: feedback trail desk.
 workspace feedback_desk "Feedback":
   purpose: "Feedback desk — recent notes on assets in review"
   access: persona(admin, designer, reviewer)
@@ -507,7 +469,6 @@ workspace feedback_desk "Feedback":
     display: queue
     empty: "No feedback yet"
 
-  # WI D: grid of assets in review (not list pad)
   assets_in_review:
     source: Asset
     filter: status = review
@@ -517,7 +478,6 @@ workspace feedback_desk "Feedback":
     action: asset_edit
     empty: "Nothing in review"
 
-  # WI D: timeline of notes
   note_timeline:
     source: Feedback
     sort: created_at desc
@@ -525,7 +485,6 @@ workspace feedback_desk "Feedback":
     display: timeline
     empty: "No feedback yet"
 
-  # WI D: chart family — asset status next to feedback trail
   asset_status_mix:
     source: Asset
     display: bar_chart
@@ -534,7 +493,6 @@ workspace feedback_desk "Feedback":
       count: count(Asset)
     empty: "No assets yet"
 
-# Seventh product desk (WI D): 4 lists floor dens ~0.40 with 6 full desks — need 7.
 workspace publish_desk "Publish Desk":
   purpose: "Publish pressure — approved and live assets ready for campaigns"
   access: persona(admin, designer, reviewer)
@@ -551,7 +509,6 @@ workspace publish_desk "Publish Desk":
       published: positive
       active_campaigns: positive
 
-  # WI D: queue family — ready to publish
   approved_queue:
     source: Asset
     filter: status = approved
@@ -561,7 +518,6 @@ workspace publish_desk "Publish Desk":
     action: asset_edit
     empty: "No approved assets waiting to publish"
 
-  # WI D: grid family — live published set
   published_gallery:
     source: Asset
     filter: status = published
@@ -571,7 +527,6 @@ workspace publish_desk "Publish Desk":
     action: asset_edit
     empty: "No published assets yet"
 
-  # WI D: context family — recent publish trail
   publish_trail:
     source: Asset
     filter: status = published or status = approved
@@ -581,7 +536,6 @@ workspace publish_desk "Publish Desk":
     action: asset_edit
     empty: "No publish activity yet"
 
-  # WI D: chart family — lifecycle mix at publish boundary
   status_mix:
     source: Asset
     display: bar_chart
@@ -590,7 +544,6 @@ workspace publish_desk "Publish Desk":
       count: count(Asset)
     empty: "No assets yet"
 
-# Eighth product desk (WI D): 4 lists floor dens ~0.36 with 7 full desks — need 8.
 workspace draft_studio "Draft Studio":
   purpose: "Draft pressure — work still in draft before review"
   access: persona(admin, designer, reviewer)
@@ -606,7 +559,6 @@ workspace draft_studio "Draft Studio":
       draft: accent
       in_review: warning
 
-  # WI D: queue family — drafts needing attention
   draft_queue:
     source: Asset
     filter: status = draft
@@ -616,7 +568,6 @@ workspace draft_studio "Draft Studio":
     action: asset_edit
     empty: "No draft assets"
 
-  # WI D: grid family — draft gallery
   draft_gallery:
     source: Asset
     filter: status = draft
@@ -626,7 +577,6 @@ workspace draft_studio "Draft Studio":
     action: asset_edit
     empty: "No draft assets"
 
-  # WI D: context family — recent draft trail
   draft_trail:
     source: Asset
     filter: status = draft
@@ -636,7 +586,6 @@ workspace draft_studio "Draft Studio":
     action: asset_edit
     empty: "No draft activity yet"
 
-  # WI D: chart family — asset type mix among drafts
   type_mix:
     source: Asset
     filter: status = draft
@@ -646,117 +595,6 @@ workspace draft_studio "Draft Studio":
       count: count(Asset)
     empty: "No draft assets to chart"
 
-# Ninth product desk (WI D): 4 lists floor dens ~0.33 with 8 full desks — need 9.
-workspace archive_ops "Archive Ops":
-  purpose: "Archive pressure — retired assets and type mix without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  archive_pulse:
-    source: Asset
-    display: metrics
-    aggregate:
-      archived: count(Asset where status = archived)
-      published: count(Asset where status = published)
-      brands: count(Brand)
-    tones:
-      archived: warning
-      published: positive
-      brands: accent
-
-  # WI D: queue family — archived assets first
-  archive_queue:
-    source: Asset
-    filter: status = archived
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "No archived assets"
-
-  # WI D: grid family — archive gallery
-  archive_gallery:
-    source: Asset
-    filter: status = archived
-    sort: name asc
-    limit: 20
-    display: grid
-    action: asset_edit
-    empty: "No archived assets"
-
-  # WI D: context family — recent archive trail
-  archive_trail:
-    source: Asset
-    filter: status = archived
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No archive activity yet"
-
-  # WI D: chart family — asset type mix among archives
-  type_mix:
-    source: Asset
-    filter: status = archived
-    display: bar_chart
-    group_by: asset_type
-    aggregate:
-      count: count(Asset)
-    empty: "No archived assets to chart"
-
-# Tenth product desk (WI D): 4 lists floor dens ~0.31 with 9 full desks — need 10.
-workspace campaign_ops "Campaign Ops":
-  purpose: "Campaign pressure — active and planning work without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  campaign_pulse:
-    source: Campaign
-    display: metrics
-    aggregate:
-      active: count(Campaign where status = active)
-      planning: count(Campaign where status = planning)
-      brands: count(Brand)
-    tones:
-      active: positive
-      planning: warning
-      brands: accent
-
-  # WI D: queue family — active campaigns first
-  active_queue:
-    source: Campaign
-    filter: status = active
-    sort: start_date desc
-    limit: 20
-    display: queue
-    empty: "No active campaigns"
-
-  # WI D: grid family — planning cards
-  planning_grid:
-    source: Campaign
-    filter: status = planning
-    sort: name asc
-    limit: 15
-    display: grid
-    empty: "No campaigns in planning"
-
-  # WI D: context family — recent campaign trail
-  campaign_trail:
-    source: Campaign
-    filter: status = active or status = planning
-    sort: start_date desc
-    limit: 15
-    display: timeline
-    empty: "No campaign activity yet"
-
-  # WI D: chart family — campaign status mix
-  status_mix:
-    source: Campaign
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Campaign)
-    empty: "No campaigns to chart"
-
-# Eleventh product desk (WI D): skip invoice_ops desk-cap; densify design_studio.
 workspace review_pipeline "Review Pipeline":
   purpose: "In-review asset pressure without warehouse CRUD"
   access: persona(admin, designer, reviewer)
@@ -773,7 +611,6 @@ workspace review_pipeline "Review Pipeline":
       draft: accent
       approved: positive
 
-  # WI D: queue family — review backlog first
   review_queue:
     source: Asset
     filter: status = review
@@ -783,7 +620,6 @@ workspace review_pipeline "Review Pipeline":
     action: asset_edit
     empty: "Nothing awaiting review"
 
-  # WI D: grid family — review gallery
   review_gallery:
     source: Asset
     filter: status = review
@@ -793,7 +629,6 @@ workspace review_pipeline "Review Pipeline":
     action: asset_edit
     empty: "Nothing awaiting review"
 
-  # WI D: context family — recent review trail
   review_trail:
     source: Asset
     filter: status = review
@@ -803,7 +638,6 @@ workspace review_pipeline "Review Pipeline":
     action: asset_edit
     empty: "No review activity yet"
 
-  # WI D: chart family — asset type mix among reviews
   type_mix:
     source: Asset
     filter: status = review
@@ -813,180 +647,6 @@ workspace review_pipeline "Review Pipeline":
       count: count(Asset)
     empty: "No review assets to chart"
 
-# Twelfth product desk (WI D): skip invoice_ops desk-cap; densify design_studio.
-workspace approved_ops "Approved Ops":
-  purpose: "Ship-ready pressure — approved assets waiting to publish without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  approved_pulse:
-    source: Asset
-    display: metrics
-    aggregate:
-      approved: count(Asset where status = approved)
-      published: count(Asset where status = published)
-      in_review: count(Asset where status = review)
-    tones:
-      approved: positive
-      published: accent
-      in_review: warning
-
-  # WI D: queue family — approved first
-  approved_queue:
-    source: Asset
-    filter: status = approved
-    sort: updated_at asc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "Nothing approved and waiting"
-
-  # WI D: grid family — approved gallery
-  approved_gallery:
-    source: Asset
-    filter: status = approved
-    sort: name asc
-    limit: 15
-    display: grid
-    action: asset_edit
-    empty: "Nothing approved and waiting"
-
-  # WI D: context family — recent approved trail
-  approved_trail:
-    source: Asset
-    filter: status = approved or status = published
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No ship activity yet"
-
-  # WI D: chart family — asset type mix among approved
-  type_mix:
-    source: Asset
-    filter: status = approved
-    display: bar_chart
-    group_by: asset_type
-    aggregate:
-      count: count(Asset)
-    empty: "No approved assets to chart"
-
-# Thirteenth product desk (WI D): skip invoice_ops desk-cap; densify design_studio.
-workspace published_ops "Published Ops":
-  purpose: "Live-asset pressure — published work in market without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  published_pulse:
-    source: Asset
-    display: metrics
-    aggregate:
-      published: count(Asset where status = published)
-      approved: count(Asset where status = approved)
-      archived: count(Asset where status = archived)
-    tones:
-      published: positive
-      approved: accent
-      archived: muted
-
-  # WI D: queue family — published first
-  published_queue:
-    source: Asset
-    filter: status = published
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "Nothing published yet"
-
-  # WI D: grid family — published gallery
-  published_gallery:
-    source: Asset
-    filter: status = published
-    sort: name asc
-    limit: 15
-    display: grid
-    action: asset_edit
-    empty: "Nothing published yet"
-
-  # WI D: context family — recent publish trail
-  published_trail:
-    source: Asset
-    filter: status = published
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No publish activity yet"
-
-  # WI D: chart family — asset type mix among published
-  type_mix:
-    source: Asset
-    filter: status = published
-    display: bar_chart
-    group_by: asset_type
-    aggregate:
-      count: count(Asset)
-    empty: "No published assets to chart"
-
-
-# Fourteenth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify design_studio.
-workspace draft_ops "Draft Ops":
-  purpose: "Draft-asset pressure — unfinished work without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  draft_pulse:
-    source: Asset
-    display: metrics
-    aggregate:
-      draft: count(Asset where status = draft)
-      review: count(Asset where status = review)
-      published: count(Asset where status = published)
-    tones:
-      draft: warning
-      review: accent
-      published: muted
-
-  # WI D: queue family — drafts first
-  draft_queue:
-    source: Asset
-    filter: status = draft
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "No drafts in progress"
-
-  # WI D: grid family — draft gallery
-  draft_gallery:
-    source: Asset
-    filter: status = draft
-    sort: name asc
-    limit: 15
-    display: grid
-    action: asset_edit
-    empty: "No drafts in progress"
-
-  # WI D: context family — recent draft trail
-  draft_trail:
-    source: Asset
-    filter: status = draft
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No draft activity yet"
-
-  # WI D: chart family — asset type mix among drafts
-  type_mix:
-    source: Asset
-    filter: status = draft
-    display: bar_chart
-    group_by: asset_type
-    aggregate:
-      count: count(Asset)
-    empty: "No drafts to chart"
-
-
-# Fifteenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify design_studio.
 workspace active_campaigns "Active Campaigns":
   purpose: "Live-campaign pressure — active campaigns without warehouse CRUD"
   access: persona(admin, designer, reviewer)
@@ -1003,7 +663,6 @@ workspace active_campaigns "Active Campaigns":
       planning: accent
       completed: muted
 
-  # WI D: queue family — active first
   active_queue:
     source: Campaign
     filter: status = active
@@ -1013,7 +672,6 @@ workspace active_campaigns "Active Campaigns":
     action: campaign_edit
     empty: "No active campaigns"
 
-  # WI D: grid family — active cards
   active_grid:
     source: Campaign
     filter: status = active
@@ -1023,7 +681,6 @@ workspace active_campaigns "Active Campaigns":
     action: campaign_edit
     empty: "No active campaigns"
 
-  # WI D: context family — campaign trail
   campaign_trail:
     source: Campaign
     filter: status = active or status = planning
@@ -1033,7 +690,6 @@ workspace active_campaigns "Active Campaigns":
     action: campaign_edit
     empty: "No campaign activity yet"
 
-  # WI D: chart family — campaign status mix
   status_mix:
     source: Campaign
     display: bar_chart
@@ -1042,413 +698,6 @@ workspace active_campaigns "Active Campaigns":
       count: count(Campaign)
     empty: "No campaigns to chart"
 
-
-# Sixteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
-workspace planning_ops "Planning Ops":
-  purpose: "Pipeline-campaign pressure — planning campaigns without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  planning_pulse:
-    source: Campaign
-    display: metrics
-    aggregate:
-      planning: count(Campaign where status = planning)
-      active: count(Campaign where status = active)
-      completed: count(Campaign where status = completed)
-    tones:
-      planning: accent
-      active: positive
-      completed: muted
-
-  # WI D: queue family — planning first
-  planning_queue:
-    source: Campaign
-    filter: status = planning
-    sort: start_date asc
-    limit: 20
-    display: queue
-    action: campaign_edit
-    empty: "No campaigns in planning"
-
-  # WI D: grid family — planning cards
-  planning_grid:
-    source: Campaign
-    filter: status = planning
-    sort: name asc
-    limit: 15
-    display: grid
-    action: campaign_edit
-    empty: "No campaigns in planning"
-
-  # WI D: context family — planning trail
-  planning_trail:
-    source: Campaign
-    filter: status = planning
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    action: campaign_edit
-    empty: "No planning activity yet"
-
-  # WI D: chart family — brand mix among planning campaigns
-  brand_mix:
-    source: Campaign
-    filter: status = planning
-    display: bar_chart
-    group_by: brand
-    aggregate:
-      count: count(Campaign)
-    empty: "No planning campaigns to chart"
-
-
-# Seventeenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
-workspace logo_ops "Logo Ops":
-  purpose: "Logo-asset pressure — logo type work without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  logo_pulse:
-    source: Asset
-    display: metrics
-    aggregate:
-      logos: count(Asset where asset_type = logo)
-      draft: count(Asset where asset_type = logo and status = draft)
-      published: count(Asset where asset_type = logo and status = published)
-    tones:
-      logos: accent
-      draft: warning
-      published: positive
-
-  # WI D: queue family — logos first
-  logo_queue:
-    source: Asset
-    filter: asset_type = logo
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "No logo assets"
-
-  # WI D: grid family — logo gallery
-  logo_gallery:
-    source: Asset
-    filter: asset_type = logo
-    sort: name asc
-    limit: 15
-    display: grid
-    action: asset_edit
-    empty: "No logo assets"
-
-  # WI D: context family — logo trail
-  logo_trail:
-    source: Asset
-    filter: asset_type = logo
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No logo activity yet"
-
-  # WI D: chart family — status mix among logos
-  status_mix:
-    source: Asset
-    filter: asset_type = logo
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Asset)
-    empty: "No logos to chart"
-
-
-# Eighteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
-workspace completed_ops "Completed Ops":
-  purpose: "Completed-campaign pressure — finished campaigns without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  completed_pulse:
-    source: Campaign
-    display: metrics
-    aggregate:
-      completed: count(Campaign where status = completed)
-      active: count(Campaign where status = active)
-      planning: count(Campaign where status = planning)
-    tones:
-      completed: positive
-      active: accent
-      planning: muted
-
-  # WI D: queue family — completed first
-  completed_queue:
-    source: Campaign
-    filter: status = completed
-    sort: end_date desc
-    limit: 20
-    display: queue
-    action: campaign_edit
-    empty: "No completed campaigns"
-
-  # WI D: grid family — completed cards
-  completed_grid:
-    source: Campaign
-    filter: status = completed
-    sort: name asc
-    limit: 15
-    display: grid
-    action: campaign_edit
-    empty: "No completed campaigns"
-
-  # WI D: context family — completed trail
-  completed_trail:
-    source: Campaign
-    filter: status = completed
-    sort: end_date desc
-    limit: 15
-    display: timeline
-    action: campaign_edit
-    empty: "No completed campaign activity yet"
-
-  # WI D: chart family — brand mix among completed campaigns
-  brand_mix:
-    source: Campaign
-    filter: status = completed
-    display: bar_chart
-    group_by: brand
-    aggregate:
-      count: count(Campaign)
-    empty: "No completed campaigns to chart"
-
-
-# Nineteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
-workspace photo_ops "Photo Ops":
-  purpose: "Photo-asset pressure — photo type work without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  photo_pulse:
-    source: Asset
-    display: metrics
-    aggregate:
-      photos: count(Asset where asset_type = photo)
-      draft: count(Asset where asset_type = photo and status = draft)
-      published: count(Asset where asset_type = photo and status = published)
-    tones:
-      photos: accent
-      draft: warning
-      published: positive
-
-  # WI D: queue family — photos first
-  photo_queue:
-    source: Asset
-    filter: asset_type = photo
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "No photo assets"
-
-  # WI D: grid family — photo gallery
-  photo_gallery:
-    source: Asset
-    filter: asset_type = photo
-    sort: name asc
-    limit: 15
-    display: grid
-    action: asset_edit
-    empty: "No photo assets"
-
-  # WI D: context family — photo trail
-  photo_trail:
-    source: Asset
-    filter: asset_type = photo
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No photo activity yet"
-
-  # WI D: chart family — status mix among photos
-  status_mix:
-    source: Asset
-    filter: asset_type = photo
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Asset)
-    empty: "No photos to chart"
-
-
-# Twentieth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
-workspace illustration_ops "Illustration Ops":
-  purpose: "Illustration-asset pressure — illustration type work without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  illustration_pulse:
-    source: Asset
-    display: metrics
-    aggregate:
-      illustrations: count(Asset where asset_type = illustration)
-      draft: count(Asset where asset_type = illustration and status = draft)
-      published: count(Asset where asset_type = illustration and status = published)
-    tones:
-      illustrations: accent
-      draft: warning
-      published: positive
-
-  # WI D: queue family — illustrations first
-  illustration_queue:
-    source: Asset
-    filter: asset_type = illustration
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "No illustration assets"
-
-  # WI D: grid family — illustration gallery
-  illustration_gallery:
-    source: Asset
-    filter: asset_type = illustration
-    sort: name asc
-    limit: 15
-    display: grid
-    action: asset_edit
-    empty: "No illustration assets"
-
-  # WI D: context family — illustration trail
-  illustration_trail:
-    source: Asset
-    filter: asset_type = illustration
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No illustration activity yet"
-
-  # WI D: chart family — status mix among illustrations
-  status_mix:
-    source: Asset
-    filter: asset_type = illustration
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Asset)
-    empty: "No illustrations to chart"
-
-
-# Twenty-first product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
-workspace pattern_ops "Pattern Ops":
-  purpose: "Pattern-asset pressure — pattern type work without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  pattern_pulse:
-    source: Asset
-    display: metrics
-    aggregate:
-      patterns: count(Asset where asset_type = pattern)
-      draft: count(Asset where asset_type = pattern and status = draft)
-      published: count(Asset where asset_type = pattern and status = published)
-    tones:
-      patterns: accent
-      draft: warning
-      published: positive
-
-  # WI D: queue family — patterns first
-  pattern_queue:
-    source: Asset
-    filter: asset_type = pattern
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "No pattern assets"
-
-  # WI D: grid family — pattern gallery
-  pattern_gallery:
-    source: Asset
-    filter: asset_type = pattern
-    sort: name asc
-    limit: 15
-    display: grid
-    action: asset_edit
-    empty: "No pattern assets"
-
-  # WI D: context family — pattern trail
-  pattern_trail:
-    source: Asset
-    filter: asset_type = pattern
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No pattern activity yet"
-
-  # WI D: chart family — status mix among patterns
-  status_mix:
-    source: Asset
-    filter: asset_type = pattern
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Asset)
-    empty: "No patterns to chart"
-
-
-# Twenty-second product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
-workspace typography_ops "Typography Ops":
-  purpose: "Typography-asset pressure — typography type work without warehouse CRUD"
-  access: persona(admin, designer, reviewer)
-
-  typography_pulse:
-    source: Asset
-    display: metrics
-    aggregate:
-      typography: count(Asset where asset_type = typography)
-      draft: count(Asset where asset_type = typography and status = draft)
-      published: count(Asset where asset_type = typography and status = published)
-    tones:
-      typography: accent
-      draft: warning
-      published: positive
-
-  # WI D: queue family — typography first
-  typography_queue:
-    source: Asset
-    filter: asset_type = typography
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: asset_edit
-    empty: "No typography assets"
-
-  # WI D: grid family — typography gallery
-  typography_gallery:
-    source: Asset
-    filter: asset_type = typography
-    sort: name asc
-    limit: 15
-    display: grid
-    action: asset_edit
-    empty: "No typography assets"
-
-  # WI D: context family — typography trail
-  typography_trail:
-    source: Asset
-    filter: asset_type = typography
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: asset_edit
-    empty: "No typography activity yet"
-
-  # WI D: chart family — status mix among typography
-  status_mix:
-    source: Asset
-    filter: asset_type = typography
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Asset)
-    empty: "No typography assets to chart"
-
-# ── Surfaces ─────────────────────────────────────────────────────────
 
 surface brand_list "Brands":
   uses entity Brand

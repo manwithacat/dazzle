@@ -32,27 +32,16 @@ persona member "Team Member":
   default_workspace: announce
   uses nav member_nav
 
-# Curated sidebars: workspace destinations only (WI N).
 nav admin_nav:
   group "Workspace":
     home
     announce
     publish_desk
-    workspace_ops
-    board_ops
-    feed_ops
-    tenant_ops
-    roster_ops
 
 nav member_nav:
   group "Team":
     announce
     home
-    workspace_ops
-    board_ops
-    feed_ops
-    tenant_ops
-    roster_ops
 
 # ── Tenant root (resolved by host; members + their role declared here) ─────────
 
@@ -130,7 +119,6 @@ surface announcement_create "Post Announcement":
 # Story-driven home: metrics + readiness strip before the announcement feed.
 # Join-request approval lives in runtime admin console (not DSL) — see
 # docs/reference/verified-domain-join.md.
-# WI L: denser landing regions (queue/chart/related/strip/activity).
 workspace home "Workspace Home":
   purpose: "Admin desk — join readiness, team pulse, and announcement queue"
   access: persona(admin, member)
@@ -195,7 +183,6 @@ workspace home "Workspace Home":
         icon: "pen"
         state: accent
 
-  # WI D: grid family for announcement cards
   board_cards:
     source: Announcement
     sort: title asc
@@ -204,7 +191,6 @@ workspace home "Workspace Home":
     action: announcement_detail
     empty: "No announcements yet"
 
-  # WI D: chart family — announcement load by workspace
   post_mix:
     source: Announcement
     display: bar_chart
@@ -215,7 +201,6 @@ workspace home "Workspace Home":
 
 # Second product workspace lowers warehouse density (3 lists / 1 ws → deepen).
 # Admin publish desk vs member reading feed (same entity, different job).
-# WI L: member default landing — aim for ≥5 signal-rich mode×source pairs.
 workspace announce "Team Board":
   purpose: "Announcement board — post and browse without warehouse list chrome"
   access: persona(admin, member)
@@ -237,7 +222,6 @@ workspace announce "Team Board":
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
 
-  # WI D: grid family for feed cards (not list pad)
   feed_cards:
     source: Announcement
     sort: title asc
@@ -258,7 +242,6 @@ workspace announce "Team Board":
         icon: "megaphone"
         state: positive
 
-  # WI D: context family — recent posts trail
   post_trail:
     source: Announcement
     sort: title asc
@@ -267,7 +250,6 @@ workspace announce "Team Board":
     action: announcement_detail
     empty: "No announcements yet"
 
-  # WI D: chart family — posts by workspace
   post_mix:
     source: Announcement
     display: bar_chart
@@ -276,7 +258,6 @@ workspace announce "Team Board":
       count: count(Announcement)
     empty: "No announcements yet"
 
-  # WI D: workspace context grid
   workspace_cards:
     source: Workspace
     sort: name asc
@@ -284,7 +265,6 @@ workspace announce "Team Board":
     display: grid
     empty: "No workspace context"
 
-# Third product workspace (WI D): admin publish desk vs read-only board.
 workspace publish_desk "Publish":
   purpose: "Admin publish desk — draft queue and live board pulse before posting"
   access: persona(admin)
@@ -306,7 +286,6 @@ workspace publish_desk "Publish":
     action: announcement_detail
     empty: "No posts yet — create one to brief the team"
 
-  # WI D: grid family for live board cards
   live_cards:
     source: Announcement
     sort: title asc
@@ -327,7 +306,6 @@ workspace publish_desk "Publish":
         icon: "shield"
         state: accent
 
-  # WI D: context family — publish trail
   publish_trail:
     source: Announcement
     sort: title asc
@@ -336,7 +314,6 @@ workspace publish_desk "Publish":
     action: announcement_detail
     empty: "No posts yet"
 
-  # WI D: chart family — posts by workspace
   post_mix:
     source: Announcement
     display: bar_chart
@@ -344,253 +321,3 @@ workspace publish_desk "Publish":
     aggregate:
       count: count(Announcement)
     empty: "No posts yet"
-
-# Fourth product desk (WI D): skip invoice_ops desk-cap; densify domain_join_co.
-workspace workspace_ops "Workspace Ops":
-  purpose: "Tenant-root pressure — workspace footprint and post load without warehouse CRUD"
-  access: persona(admin, member)
-
-  tenant_pulse:
-    source: Workspace
-    display: metrics
-    aggregate:
-      workspaces: count(Workspace)
-      posts: count(Announcement)
-    tones:
-      workspaces: accent
-      posts: positive
-
-  # WI D: queue family — workspaces first
-  workspace_queue:
-    source: Workspace
-    sort: name asc
-    limit: 20
-    display: queue
-    empty: "No workspaces yet"
-
-  # WI D: grid family — announcement cards
-  post_cards:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    display: grid
-    action: announcement_detail
-    empty: "No announcements yet"
-
-  # WI D: context family — post trail
-  post_trail:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    display: timeline
-    action: announcement_detail
-    empty: "No announcement activity yet"
-
-  # WI D: chart family — posts by workspace
-  post_mix:
-    source: Announcement
-    display: bar_chart
-    group_by: workspace
-    aggregate:
-      count: count(Announcement)
-    empty: "No posts to chart"
-
-# Fifth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify domain_join_co.
-workspace board_ops "Board Ops":
-  purpose: "Announcement-board pressure — post load without warehouse CRUD"
-  access: persona(admin, member)
-
-  board_pulse:
-    source: Announcement
-    display: metrics
-    aggregate:
-      posts: count(Announcement)
-      workspaces: count(Workspace)
-    tones:
-      posts: accent
-      workspaces: muted
-
-  # WI D: queue family — posts first
-  post_queue:
-    source: Announcement
-    sort: title asc
-    limit: 20
-    display: queue
-    action: announcement_detail
-    empty: "No posts on the board"
-
-  # WI D: grid family — post cards
-  post_grid:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    display: grid
-    action: announcement_detail
-    empty: "No posts on the board"
-
-  # WI D: context family — post trail
-  post_trail:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    display: timeline
-    action: announcement_detail
-    empty: "No board activity yet"
-
-  # WI D: chart family — posts by workspace
-  post_mix:
-    source: Announcement
-    display: bar_chart
-    group_by: workspace
-    aggregate:
-      count: count(Announcement)
-    empty: "No posts to chart"
-
-# Sixth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify domain_join_co.
-workspace feed_ops "Feed Ops":
-  purpose: "Member-feed pressure — announcement intake without warehouse CRUD"
-  access: persona(admin, member)
-
-  feed_pulse:
-    source: Announcement
-    display: metrics
-    aggregate:
-      posts: count(Announcement)
-      workspaces: count(Workspace)
-    tones:
-      posts: accent
-      workspaces: muted
-
-  # WI D: queue family — feed first
-  feed_queue:
-    source: Announcement
-    sort: title asc
-    limit: 20
-    display: queue
-    action: announcement_detail
-    empty: "Feed is empty"
-
-  # WI D: grid family — feed cards
-  feed_grid:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    display: grid
-    action: announcement_detail
-    empty: "Feed is empty"
-
-  # WI D: context family — feed trail
-  feed_trail:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    display: timeline
-    action: announcement_detail
-    empty: "No feed activity yet"
-
-  # WI D: chart family — posts by workspace
-  feed_mix:
-    source: Announcement
-    display: bar_chart
-    group_by: workspace
-    aggregate:
-      count: count(Announcement)
-    empty: "No posts to chart"
-
-# Seventh product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify domain_join_co.
-workspace tenant_ops "Tenant Ops":
-  purpose: "Tenant-slug pressure — workspace identity without warehouse CRUD"
-  access: persona(admin, member)
-
-  tenant_pulse:
-    source: Workspace
-    display: metrics
-    aggregate:
-      workspaces: count(Workspace)
-      posts: count(Announcement)
-    tones:
-      workspaces: accent
-      posts: positive
-
-  # WI D: queue family — workspaces by slug/name
-  tenant_queue:
-    source: Workspace
-    sort: slug asc
-    limit: 20
-    display: queue
-    empty: "No workspaces yet"
-
-  # WI D: grid family — workspace cards
-  tenant_grid:
-    source: Workspace
-    sort: name asc
-    limit: 15
-    display: grid
-    empty: "No workspaces yet"
-
-  # WI D: context family — post trail as tenant activity
-  tenant_trail:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    display: timeline
-    action: announcement_detail
-    empty: "No tenant activity yet"
-
-  # WI D: chart family — posts by workspace
-  post_mix:
-    source: Announcement
-    display: bar_chart
-    group_by: workspace
-    aggregate:
-      count: count(Announcement)
-    empty: "No posts to chart"
-
-# Eighth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify domain_join_co.
-workspace roster_ops "Roster Ops":
-  purpose: "Membership-role pressure — workspace roster footprint without warehouse CRUD"
-  access: persona(admin, member)
-
-  roster_pulse:
-    source: Workspace
-    display: metrics
-    aggregate:
-      workspaces: count(Workspace)
-      posts: count(Announcement)
-    tones:
-      workspaces: accent
-      posts: muted
-
-  # WI D: queue family — workspaces by name
-  roster_queue:
-    source: Workspace
-    sort: name asc
-    limit: 20
-    display: queue
-    empty: "No workspaces yet"
-
-  # WI D: grid family — workspace cards
-  roster_grid:
-    source: Workspace
-    sort: slug asc
-    limit: 15
-    display: grid
-    empty: "No workspaces yet"
-
-  # WI D: context family — announcement trail as roster pulse
-  roster_trail:
-    source: Announcement
-    sort: title asc
-    limit: 15
-    display: timeline
-    action: announcement_detail
-    empty: "No roster activity yet"
-
-  # WI D: chart family — posts by workspace
-  post_mix:
-    source: Announcement
-    display: bar_chart
-    group_by: workspace
-    aggregate:
-      count: count(Announcement)
-    empty: "No posts to chart"

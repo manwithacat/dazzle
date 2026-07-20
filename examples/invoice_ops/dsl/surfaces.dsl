@@ -351,7 +351,6 @@ workspace finance_ops "Finance Operations":
     action: invoice_detail
     empty: "No disputes open"
 
-  # WI D: kanban family — full pipeline board (not another queue pad)
   ops_board:
     source: Invoice
     filter: status != draft
@@ -361,7 +360,6 @@ workspace finance_ops "Finance Operations":
     action: invoice_detail
     empty: "No invoices in the pipeline"
 
-  # WI D: context family — recent paid settlements
   recent_paid:
     source: Invoice
     filter: status = paid
@@ -410,7 +408,6 @@ workspace my_invoices "My Invoices":
     action: invoice_detail
     empty: "Nothing waiting on approval"
 
-  # WI D: pipeline board (kanban family) for requester status overview
   my_status_board:
     source: Invoice
     filter: status = draft or status = submitted or status = approved or status = paid
@@ -420,7 +417,6 @@ workspace my_invoices "My Invoices":
     action: invoice_detail
     empty: "No invoices yet"
 
-  # WI D: grid family for supplier context (not list pad)
   suppliers_nearby:
     source: Supplier
     sort: name asc
@@ -429,7 +425,6 @@ workspace my_invoices "My Invoices":
     action: supplier_detail
     empty: "No suppliers yet"
 
-  # WI D: context family — recent invoice trail
   my_trail:
     source: Invoice
     sort: updated_at desc
@@ -438,7 +433,6 @@ workspace my_invoices "My Invoices":
     action: invoice_detail
     empty: "No invoices yet"
 
-  # WI D: chart family — personal pipeline status mix
   my_status_mix:
     source: Invoice
     display: bar_chart
@@ -472,7 +466,6 @@ workspace approval_desk "Approval Desk":
     action: invoice_detail
     empty: "Nothing awaiting approval"
 
-  # WI D: kanban family (not listish) — pipeline view of invoice status
   approval_board:
     source: Invoice
     filter: status = submitted or status = approved or status = rejected
@@ -482,7 +475,6 @@ workspace approval_desk "Approval Desk":
     action: invoice_detail
     empty: "No invoices in the approval pipeline"
 
-  # WI D: context family — recent decisions as a timeline, not another list pad
   recently_decided:
     source: Invoice
     filter: status = approved or status = rejected
@@ -492,7 +484,6 @@ workspace approval_desk "Approval Desk":
     action: invoice_detail
     empty: "No recent decisions"
 
-  # WI D: supplier context grid (extra source + grid family)
   suppliers_nearby:
     source: Supplier
     sort: name asc
@@ -535,7 +526,6 @@ workspace pay_desk "Pay Desk":
     action: invoice_detail
     empty: "No disputes open"
 
-  # WI D: kanban family — settle pipeline by status (not another queue pad)
   settle_board:
     source: Invoice
     filter: status = approved or status = disputed or status = paid
@@ -553,7 +543,6 @@ workspace pay_desk "Pay Desk":
       count: count(PaymentAttempt)
     empty: "No payment attempts"
 
-  # WI D: context family — recent dispute timeline
   dispute_trail:
     source: Invoice
     filter: status = disputed
@@ -578,7 +567,6 @@ workspace audit_review "Audit Review":
       disputed: destructive
       paid: positive
 
-  # WI D: grid family for payment attempt cards (not list pad)
   payment_attempts:
     source: PaymentAttempt
     display: grid
@@ -586,7 +574,6 @@ workspace audit_review "Audit Review":
     limit: 20
     empty: "No payment attempts to review"
 
-  # WI D: timeline of settled invoices (context family)
   settled_invoices:
     source: Invoice
     filter: status = paid
@@ -596,7 +583,6 @@ workspace audit_review "Audit Review":
     action: invoice_detail
     empty: "No paid invoices yet"
 
-  # WI D: chart family — dispute vs paid mix
   audit_mix:
     source: Invoice
     display: bar_chart
@@ -605,7 +591,6 @@ workspace audit_review "Audit Review":
       count: count(Invoice)
     empty: "No invoices to chart"
 
-  # WI D: queue family — disputed invoices needing review
   disputed_queue:
     source: Invoice
     filter: status = disputed
@@ -615,7 +600,6 @@ workspace audit_review "Audit Review":
     action: invoice_detail
     empty: "No disputes open"
 
-  # WI D: kanban family — paid/disputed trail board
   audit_board:
     source: Invoice
     filter: status = paid or status = disputed or status = rejected
@@ -625,7 +609,7 @@ workspace audit_review "Audit Review":
     action: invoice_detail
     empty: "No invoices in the audit trail"
 
-# Sixth product workspace (WI density D): supplier / vendor desk so list shells
+# Sixth product workspace: supplier / vendor desk so list shells
 # no longer dominate vs job workspaces (vendors + bank refs, not bare CRUD).
 workspace suppliers_desk "Suppliers":
   purpose: "Vendor desk — supplier roster, bank refs, and recent invoices"
@@ -641,7 +625,6 @@ workspace suppliers_desk "Suppliers":
     tones:
       suppliers: accent
 
-  # WI D: grid family for vendor cards (not list pad)
   roster:
     source: Supplier
     display: grid
@@ -664,7 +647,6 @@ workspace suppliers_desk "Suppliers":
     action: invoice_detail
     empty: "No invoices yet"
 
-  # WI D: context family — invoice trail by vendor activity
   invoice_trail:
     source: Invoice
     sort: updated_at desc
@@ -673,7 +655,6 @@ workspace suppliers_desk "Suppliers":
     action: invoice_detail
     empty: "No invoice history"
 
-  # WI D: chart family — invoice status mix next to vendor roster
   invoice_status_mix:
     source: Invoice
     display: bar_chart
@@ -683,7 +664,7 @@ workspace suppliers_desk "Suppliers":
     empty: "No invoices to chart"
 
 
-# Seventh product workspace (WI density D): tenant admin people desk.
+# Seventh product workspace: tenant admin people desk.
 workspace team_desk "Team":
   purpose: "Tenant admin desk — people and tenant context"
   access: persona(tenant_admin, finance_admin, auditor)
@@ -698,7 +679,6 @@ workspace team_desk "Team":
     tones:
       people: accent
 
-  # WI D: diversify mode families on team desk (grid + queue + chart)
   people:
     source: User
     display: grid
@@ -723,7 +703,6 @@ workspace team_desk "Team":
       count: count(Tenant)
     empty: "No tenants"
 
-  # WI D: context family — people activity via invoice trail
   invoice_trail:
     source: Invoice
     sort: updated_at desc
@@ -732,7 +711,6 @@ workspace team_desk "Team":
     action: invoice_detail
     empty: "No invoices yet"
 
-  # WI D: queue family — open invoices for admin context
   open_invoices:
     source: Invoice
     filter: status = submitted or status = approved
@@ -742,7 +720,7 @@ workspace team_desk "Team":
     action: invoice_detail
     empty: "Nothing awaiting action"
 
-# Eighth product workspace (WI density D): payment trail desk.
+# Eighth product workspace: payment trail desk.
 workspace payments_trail "Payments":
   purpose: "Payment attempt trail — health metrics and recent attempts"
   access: persona(finance, finance_admin, auditor)
@@ -765,7 +743,6 @@ workspace payments_trail "Payments":
     display: queue
     empty: "No payment attempts yet"
 
-  # WI D: timeline of settlements (context family)
   settled:
     source: Invoice
     filter: status = paid
@@ -784,7 +761,6 @@ workspace payments_trail "Payments":
     action: invoice_detail
     empty: "Nothing ready to pay"
 
-  # WI D: kanban family — settle pipeline on the payment trail desk
   settle_board:
     source: Invoice
     filter: status = approved or status = disputed or status = paid
@@ -794,7 +770,6 @@ workspace payments_trail "Payments":
     action: invoice_detail
     empty: "No invoices in settle pipeline"
 
-  # WI D: chart family — payment attempt health mix
   attempt_health:
     source: PaymentAttempt
     display: bar_chart
@@ -803,7 +778,7 @@ workspace payments_trail "Payments":
       count: count(PaymentAttempt)
     empty: "No payment attempts"
 
-# Ninth product workspace (WI density D): line-item composition desk vs bare list.
+# Ninth product workspace: line-item composition desk vs bare list.
 workspace line_items_desk "Line Items":
   purpose: "Line-item composition desk — what is on open invoices without warehouse CRUD"
   access: persona(requester, finance, finance_admin, auditor)
@@ -819,7 +794,6 @@ workspace line_items_desk "Line Items":
       open_invoices: accent
       lines: positive
 
-  # WI D: grid family for line cards
   recent_lines:
     source: LineItem
     sort: id desc
@@ -827,7 +801,6 @@ workspace line_items_desk "Line Items":
     display: grid
     empty: "No line items yet"
 
-  # WI D: queue family — invoices that still need lines / review
   draft_invoices:
     source: Invoice
     filter: status = draft or status = submitted
@@ -837,7 +810,6 @@ workspace line_items_desk "Line Items":
     action: invoice_detail
     empty: "No draft or submitted invoices"
 
-  # WI D: context family — recent invoice trail
   invoice_trail:
     source: Invoice
     sort: updated_at desc
@@ -846,7 +818,6 @@ workspace line_items_desk "Line Items":
     action: invoice_detail
     empty: "No invoices yet"
 
-  # WI D: chart family — invoice status mix next to lines
   invoice_status_mix:
     source: Invoice
     display: bar_chart
@@ -854,673 +825,3 @@ workspace line_items_desk "Line Items":
     aggregate:
       count: count(Invoice)
     empty: "No invoices to chart"
-
-# Tenth product desk (WI D): 7 lists floor dens ~0.44 with 9 full desks — need 10.
-workspace disputed_ops "Disputes":
-  purpose: "Dispute resolution desk — open disputes, payment attempts, and settlement trail"
-  access: persona(finance, finance_admin, auditor)
-
-  dispute_pulse:
-    source: Invoice
-    display: metrics
-    aggregate:
-      disputed: count(Invoice where status = disputed)
-      approved: count(Invoice where status = approved)
-      paid: count(Invoice where status = paid)
-      attempts: count(PaymentAttempt)
-    tones:
-      disputed: destructive
-      paid: positive
-      approved: accent
-
-  # WI D: queue family — disputed invoices first
-  disputed_queue:
-    source: Invoice
-    filter: status = disputed
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "No open disputes"
-
-  # WI D: kanban family — dispute / settle pipeline
-  dispute_board:
-    source: Invoice
-    filter: status = disputed or status = approved or status = paid
-    display: kanban
-    group_by: status
-    sort: amount desc
-    action: invoice_detail
-    empty: "No invoices in dispute pipeline"
-
-  # WI D: context family — payment attempt trail
-  attempt_trail:
-    source: PaymentAttempt
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    empty: "No payment attempts yet"
-
-  # WI D: chart family — dispute vs paid mix
-  status_mix:
-    source: Invoice
-    filter: status = disputed or status = paid or status = rejected
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices to chart"
-
-# Eleventh product desk (WI D): 7 lists floor dens ~0.41 with 10 full desks — need 11.
-workspace bank_ops "Bank Accounts":
-  purpose: "Supplier bank-ref desk — payment rails without warehouse CRUD"
-  access: persona(finance, finance_admin, tenant_admin)
-
-  bank_pulse:
-    source: SupplierBankAccount
-    display: metrics
-    aggregate:
-      bank_accounts: count(SupplierBankAccount)
-      suppliers: count(Supplier)
-      ready_to_pay: count(Invoice where status = approved)
-    tones:
-      bank_accounts: accent
-      ready_to_pay: positive
-
-  # WI D: grid family for bank-ref cards
-  bank_cards:
-    source: SupplierBankAccount
-    display: grid
-    limit: 25
-    empty: "No bank accounts on file"
-
-  # WI D: queue family — approved invoices ready for rails
-  ready_to_pay:
-    source: Invoice
-    filter: status = approved
-    sort: amount desc
-    limit: 15
-    display: queue
-    action: invoice_detail
-    empty: "Nothing ready to pay"
-
-  # WI D: context family — supplier trail
-  supplier_trail:
-    source: Supplier
-    sort: name asc
-    limit: 15
-    display: timeline
-    action: supplier_detail
-    empty: "No suppliers yet"
-
-  # WI D: chart family — open invoice status mix
-  invoice_status_mix:
-    source: Invoice
-    filter: status = approved or status = paid or status = disputed
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices to chart"
-
-# Twelfth product desk (WI D): 8 lists floor dens ~0.42 with 11 full desks — need 12.
-workspace settlement_ops "Settlement Ops":
-  purpose: "Payment-attempt pressure — pending/failed rails without warehouse CRUD"
-  access: persona(finance, finance_admin, auditor, tenant_admin)
-
-  settle_pulse:
-    source: PaymentAttempt
-    display: metrics
-    aggregate:
-      pending: count(PaymentAttempt where status = pending)
-      failed: count(PaymentAttempt where status = failed)
-      succeeded: count(PaymentAttempt where status = succeeded)
-    tones:
-      pending: warning
-      failed: destructive
-      succeeded: positive
-
-  # WI D: queue family — failed attempts need attention first
-  failed_queue:
-    source: PaymentAttempt
-    filter: status = failed
-    sort: created_at desc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "No failed payment attempts"
-
-  # WI D: grid family — in-flight pending
-  pending_grid:
-    source: PaymentAttempt
-    filter: status = pending
-    sort: created_at desc
-    limit: 20
-    display: grid
-    action: invoice_detail
-    empty: "No pending payment attempts"
-
-  # WI D: context family — recent attempt trail
-  attempt_trail:
-    source: PaymentAttempt
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No payment attempts yet"
-
-  # WI D: chart family — attempt outcome mix
-  status_mix:
-    source: PaymentAttempt
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(PaymentAttempt)
-    empty: "No payment attempts to chart"
-
-# Thirteenth product desk (WI D): draft invoice pressure for requesters/finance.
-workspace draft_ops "Draft Ops":
-  purpose: "Draft and submitted invoice pressure without warehouse CRUD"
-  access: persona(requester, finance, finance_admin, tenant_admin, approver)
-
-  draft_pulse:
-    source: Invoice
-    display: metrics
-    aggregate:
-      draft: count(Invoice where status = draft)
-      submitted: count(Invoice where status = submitted)
-      open: count(Invoice where status = draft or status = submitted)
-    tones:
-      draft: accent
-      submitted: warning
-      open: accent
-
-  # WI D: queue family — drafts needing completion
-  draft_queue:
-    source: Invoice
-    filter: status = draft
-    sort: amount desc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "No draft invoices"
-
-  # WI D: grid family — submitted awaiting approval
-  submitted_grid:
-    source: Invoice
-    filter: status = submitted
-    sort: amount desc
-    limit: 15
-    display: grid
-    action: invoice_detail
-    empty: "Nothing submitted awaiting approval"
-
-  # WI D: context family — recent pre-approval trail
-  intake_trail:
-    source: Invoice
-    filter: status = draft or status = submitted
-    sort: amount desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No draft or submitted invoices"
-
-  # WI D: chart family — pre-approval status mix
-  status_mix:
-    source: Invoice
-    filter: status = draft or status = submitted
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No pre-approval invoices to chart"
-
-# Fourteenth product desk (WI D): 7 lists floor dens ~0.35 with 13 full desks — need 14.
-workspace rejected_ops "Rejected Ops":
-  purpose: "Rejected invoice pressure — rework queue without warehouse CRUD"
-  access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
-
-  rejected_pulse:
-    source: Invoice
-    display: metrics
-    aggregate:
-      rejected: count(Invoice where status = rejected)
-      draft: count(Invoice where status = draft)
-      submitted: count(Invoice where status = submitted)
-    tones:
-      rejected: destructive
-      draft: accent
-      submitted: warning
-
-  # WI D: queue family — rejected invoices first
-  rejected_queue:
-    source: Invoice
-    filter: status = rejected
-    sort: amount desc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "No rejected invoices"
-
-  # WI D: grid family — rejected cards for rework
-  rejected_grid:
-    source: Invoice
-    filter: status = rejected
-    sort: amount desc
-    limit: 15
-    display: grid
-    action: invoice_detail
-    empty: "No rejected invoices"
-
-  # WI D: context family — recent rejection trail
-  rejection_trail:
-    source: Invoice
-    filter: status = rejected
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No rejections yet"
-
-  # WI D: chart family — rejected vs pre-approval mix
-  status_mix:
-    source: Invoice
-    filter: status = rejected or status = draft or status = submitted
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No rework-related invoices to chart"
-
-# Fifteenth product desk (WI D): 7 lists floor dens ~0.33 with 14 full desks — need 15.
-workspace partial_ops "Partial Pay Ops":
-  purpose: "Partial-payment pressure — invoices mid-settlement without warehouse CRUD"
-  access: persona(finance, finance_admin, auditor, tenant_admin)
-
-  partial_pulse:
-    source: Invoice
-    display: metrics
-    aggregate:
-      partial: count(Invoice where status = partially_paid)
-      approved: count(Invoice where status = approved)
-      paid: count(Invoice where status = paid)
-    tones:
-      partial: warning
-      approved: accent
-      paid: positive
-
-  # WI D: queue family — partial payments first
-  partial_queue:
-    source: Invoice
-    filter: status = partially_paid
-    sort: amount desc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "No partially paid invoices"
-
-  # WI D: grid family — approved ready to complete
-  approved_grid:
-    source: Invoice
-    filter: status = approved
-    sort: amount desc
-    limit: 15
-    display: grid
-    action: invoice_detail
-    empty: "No approved invoices awaiting pay"
-
-  # WI D: context family — settlement trail
-  settlement_trail:
-    source: Invoice
-    filter: status = partially_paid or status = approved or status = paid
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No settlement activity yet"
-
-  # WI D: chart family — settlement status mix
-  status_mix:
-    source: Invoice
-    filter: status = partially_paid or status = approved or status = paid
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No settlement invoices to chart"
-
-# Sixteenth product desk (WI D): 7 lists floor dens ~0.32 with 15 full desks — need 16.
-workspace paid_ops "Paid Ops":
-  purpose: "Paid archive pressure — settled invoices without warehouse CRUD"
-  access: persona(finance, finance_admin, auditor, tenant_admin)
-
-  paid_pulse:
-    source: Invoice
-    display: metrics
-    aggregate:
-      paid: count(Invoice where status = paid)
-      partial: count(Invoice where status = partially_paid)
-      open: count(Invoice where status != paid and status != rejected)
-    tones:
-      paid: positive
-      partial: warning
-      open: accent
-
-  # WI D: queue family — largest paid first
-  paid_queue:
-    source: Invoice
-    filter: status = paid
-    sort: amount desc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "No paid invoices yet"
-
-  # WI D: grid family — paid settlement cards
-  paid_grid:
-    source: Invoice
-    filter: status = paid
-    sort: updated_at desc
-    limit: 15
-    display: grid
-    action: invoice_detail
-    empty: "No paid invoices yet"
-
-  # WI D: context family — recent paid trail
-  paid_trail:
-    source: Invoice
-    filter: status = paid
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No paid activity yet"
-
-  # WI D: chart family — paid vs mid-settlement mix
-  status_mix:
-    source: Invoice
-    filter: status = paid or status = partially_paid or status = approved
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No settlement invoices to chart"
-
-# Seventeenth product desk (WI D): 7 lists floor dens ~0.30 with 16 full desks — need 17.
-workspace approved_ops "Approved Ops":
-  purpose: "Approved pressure — invoices ready to pay without warehouse CRUD"
-  access: persona(finance, finance_admin, auditor, tenant_admin)
-
-  approved_pulse:
-    source: Invoice
-    display: metrics
-    aggregate:
-      approved: count(Invoice where status = approved)
-      partial: count(Invoice where status = partially_paid)
-      paid: count(Invoice where status = paid)
-    tones:
-      approved: accent
-      partial: warning
-      paid: positive
-
-  # WI D: queue family — largest approved first
-  approved_queue:
-    source: Invoice
-    filter: status = approved
-    sort: amount desc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "No approved invoices awaiting pay"
-
-  # WI D: grid family — approved settlement cards
-  approved_grid:
-    source: Invoice
-    filter: status = approved
-    sort: updated_at desc
-    limit: 15
-    display: grid
-    action: invoice_detail
-    empty: "No approved invoices awaiting pay"
-
-  # WI D: context family — recent approval trail
-  approved_trail:
-    source: Invoice
-    filter: status = approved
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No approved activity yet"
-
-  # WI D: chart family — post-approval status mix
-  status_mix:
-    source: Invoice
-    filter: status = approved or status = partially_paid or status = paid
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No post-approval invoices to chart"
-
-# Eighteenth product desk (WI D): 7 lists floor dens ~0.30 with 17 full desks — need 18.
-workspace submitted_ops "Submitted Ops":
-  purpose: "Submitted pressure — invoices awaiting approval without warehouse CRUD"
-  access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
-
-  submitted_pulse:
-    source: Invoice
-    display: metrics
-    aggregate:
-      submitted: count(Invoice where status = submitted)
-      draft: count(Invoice where status = draft)
-      approved: count(Invoice where status = approved)
-    tones:
-      submitted: warning
-      draft: accent
-      approved: positive
-
-  # WI D: queue family — submitted first
-  submitted_queue:
-    source: Invoice
-    filter: status = submitted
-    sort: amount desc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "Nothing submitted awaiting approval"
-
-  # WI D: grid family — submitted cards
-  submitted_grid:
-    source: Invoice
-    filter: status = submitted
-    sort: updated_at desc
-    limit: 15
-    display: grid
-    action: invoice_detail
-    empty: "Nothing submitted awaiting approval"
-
-  # WI D: context family — recent submission trail
-  submitted_trail:
-    source: Invoice
-    filter: status = submitted
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No submission activity yet"
-
-  # WI D: chart family — pre-pay intake mix
-  status_mix:
-    source: Invoice
-    filter: status = submitted or status = draft or status = approved
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Invoice)
-    empty: "No intake invoices to chart"
-
-# Nineteenth product desk (WI D): 7 lists floor dens ~0.28 with 18 full desks — need 19.
-workspace succeeded_ops "Succeeded Ops":
-  purpose: "Successful payment pressure — cleared rails without warehouse CRUD"
-  access: persona(finance, finance_admin, auditor, tenant_admin)
-
-  success_pulse:
-    source: PaymentAttempt
-    display: metrics
-    aggregate:
-      succeeded: count(PaymentAttempt where status = succeeded)
-      pending: count(PaymentAttempt where status = pending)
-      failed: count(PaymentAttempt where status = failed)
-    tones:
-      succeeded: positive
-      pending: warning
-      failed: destructive
-
-  # WI D: queue family — successful attempts first
-  success_queue:
-    source: PaymentAttempt
-    filter: status = succeeded
-    sort: created_at desc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "No successful payment attempts yet"
-
-  # WI D: grid family — success cards
-  success_grid:
-    source: PaymentAttempt
-    filter: status = succeeded
-    sort: created_at desc
-    limit: 15
-    display: grid
-    action: invoice_detail
-    empty: "No successful payment attempts yet"
-
-  # WI D: context family — recent success trail
-  success_trail:
-    source: PaymentAttempt
-    filter: status = succeeded
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No success activity yet"
-
-  # WI D: chart family — attempt outcome mix
-  status_mix:
-    source: PaymentAttempt
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(PaymentAttempt)
-    empty: "No payment attempts to chart"
-
-# Twentieth product desk (WI D): 7 lists floor dens ~0.27 with 19 full desks — need 20.
-workspace region_ops "Region Ops":
-  purpose: "Regional supplier pressure — vendor footprint by region without warehouse CRUD"
-  access: persona(finance, finance_admin, auditor, tenant_admin)
-
-  region_pulse:
-    source: Supplier
-    display: metrics
-    aggregate:
-      suppliers: count(Supplier)
-      invoices: count(Invoice)
-      bank_accounts: count(SupplierBankAccount)
-    tones:
-      suppliers: accent
-      invoices: warning
-      bank_accounts: positive
-
-  # WI D: queue family — suppliers first
-  supplier_queue:
-    source: Supplier
-    sort: name asc
-    limit: 25
-    display: queue
-    action: supplier_detail
-    empty: "No suppliers yet"
-
-  # WI D: grid family — supplier cards by region context
-  supplier_grid:
-    source: Supplier
-    sort: region asc, name asc
-    limit: 20
-    display: grid
-    action: supplier_detail
-    empty: "No suppliers yet"
-
-  # WI D: context family — recent invoice trail
-  invoice_trail:
-    source: Invoice
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No invoice history"
-
-  # WI D: chart family — supplier region mix
-  region_mix:
-    source: Supplier
-    display: bar_chart
-    group_by: region
-    aggregate:
-      count: count(Supplier)
-    empty: "No suppliers to chart"
-
-# Twenty-first product desk (WI D): 7 lists floor dens ~0.26 with 20 full desks — need 21.
-workspace pending_ops "Pending Ops":
-  purpose: "Pending payment pressure — in-flight rails without warehouse CRUD"
-  access: persona(finance, finance_admin, auditor, tenant_admin)
-
-  pending_pulse:
-    source: PaymentAttempt
-    display: metrics
-    aggregate:
-      pending: count(PaymentAttempt where status = pending)
-      failed: count(PaymentAttempt where status = failed)
-      succeeded: count(PaymentAttempt where status = succeeded)
-    tones:
-      pending: warning
-      failed: destructive
-      succeeded: positive
-
-  # WI D: queue family — pending first
-  pending_queue:
-    source: PaymentAttempt
-    filter: status = pending
-    sort: created_at asc
-    limit: 20
-    display: queue
-    action: invoice_detail
-    empty: "No pending payment attempts"
-
-  # WI D: grid family — pending cards
-  pending_grid:
-    source: PaymentAttempt
-    filter: status = pending
-    sort: created_at desc
-    limit: 15
-    display: grid
-    action: invoice_detail
-    empty: "No pending payment attempts"
-
-  # WI D: context family — recent pending trail
-  pending_trail:
-    source: PaymentAttempt
-    filter: status = pending
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    action: invoice_detail
-    empty: "No pending activity yet"
-
-  # WI D: chart family — attempt outcome mix
-  status_mix:
-    source: PaymentAttempt
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(PaymentAttempt)
-    empty: "No payment attempts to chart"

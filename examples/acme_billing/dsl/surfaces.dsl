@@ -311,7 +311,6 @@ workspace billing "Acme Billing":
     display: queue
     empty: "No invoices found"
 
-  # WI D: grid + chart families (not three list pads)
   organizations:
     source: Organization
     display: grid
@@ -362,13 +361,11 @@ workspace my_work "My Work":
     limit: 15
     empty: "No invoices in your scope"
 
-  # WI D: timeline context for team membership
   team_context:
     source: Membership
     display: timeline
     empty: "No memberships in your scope"
 
-  # WI D: chart family — invoice load in my scope
   my_invoice_mix:
     source: Invoice
     display: bar_chart
@@ -407,7 +404,6 @@ workspace projects_home "Projects":
     limit: 10
     empty: "No invoices yet"
 
-  # WI D: chart family for project invoice load
   invoice_by_project:
     source: Invoice
     display: bar_chart
@@ -416,19 +412,17 @@ workspace projects_home "Projects":
       count: count(Invoice)
     empty: "No invoices yet"
 
-  # WI D: context family — project activity trail
   project_trail:
     source: Project
     display: timeline
     sort: name asc
     empty: "No projects found"
 
-# Third product workspace (WI density D): invoice-first job desk so entity
+# Third product workspace: invoice-first job desk so entity
 # lists no longer dominate product shell count vs workspaces.
 workspace invoices_home "Invoices":
   purpose: "Invoice desk — cash context and open bills before org/project drill-down"
   stage: "simple_list"
-  # WI N: project_member needs a second job desk (not only my_work + lists)
   access: persona(admin, org_owner, auditor, project_member)
 
   invoice_pulse:
@@ -441,7 +435,6 @@ workspace invoices_home "Invoices":
     tones:
       invoices: accent
 
-  # WI D: kanban family for invoice status board
   open_bills:
     source: Invoice
     display: kanban
@@ -449,7 +442,6 @@ workspace invoices_home "Invoices":
     sort: created_at desc
     empty: "No open invoices"
 
-  # WI D: timeline of open bills (context family)
   bill_timeline:
     source: Invoice
     display: timeline
@@ -463,7 +455,6 @@ workspace invoices_home "Invoices":
     sort: name asc
     empty: "No projects found"
 
-  # WI D: chart family — invoices by status
   invoice_status_mix:
     source: Invoice
     display: bar_chart
@@ -472,7 +463,7 @@ workspace invoices_home "Invoices":
       count: count(Invoice)
     empty: "No invoices yet"
 
-# Fourth product workspace (WI density D): team membership desk separate from
+# Fourth product workspace: team membership desk separate from
 # org portfolio / projects / invoices — lowers list:workspace ratio.
 workspace team_home "Team":
   purpose: "Team desk — who has access to which projects"
@@ -489,7 +480,6 @@ workspace team_home "Team":
     tones:
       memberships: accent
 
-  # WI D: timeline of membership changes (context family)
   roster:
     source: Membership
     display: timeline
@@ -501,7 +491,6 @@ workspace team_home "Team":
     sort: name asc
     empty: "No users found"
 
-  # WI D: chart of membership load
   membership_chart:
     source: Membership
     display: bar_chart
@@ -510,14 +499,13 @@ workspace team_home "Team":
       count: count(Membership)
     empty: "No memberships yet"
 
-  # WI D: queue family — open memberships needing attention
   membership_queue:
     source: Membership
     display: queue
     limit: 20
     empty: "No memberships yet"
 
-# Fifth job desk (WI density D): organization portfolio separate from billing shell
+# Fifth job desk: organization portfolio separate from billing shell
 workspace orgs_home "Organizations":
   purpose: "Org portfolio — tenants before project/invoice drill-down"
   stage: "simple_list"
@@ -553,7 +541,6 @@ workspace orgs_home "Organizations":
       count: count(Invoice)
     empty: "No invoices yet"
 
-  # WI D: queue family — open invoices from the org portfolio
   open_bills:
     source: Invoice
     display: queue
@@ -561,56 +548,6 @@ workspace orgs_home "Organizations":
     limit: 15
     empty: "No invoices yet"
 
-# Seventh product desk (WI D): 5 lists floor dens ~0.45 with 6 full desks — need 7.
-workspace membership_ops "Membership Ops":
-  purpose: "Access membership desk — who is on which project, without warehouse CRUD"
-  stage: "simple_list"
-  access: persona(admin, org_owner, auditor)
-
-  membership_pulse:
-    source: Membership
-    display: metrics
-    aggregate:
-      memberships: count(Membership)
-      people: count(User)
-      projects: count(Project)
-    tones:
-      memberships: accent
-      people: positive
-
-  # WI D: grid family for membership cards
-  roster:
-    source: Membership
-    display: grid
-    limit: 25
-    empty: "No memberships yet"
-
-  # WI D: queue family — project access work
-  project_queue:
-    source: Project
-    display: queue
-    sort: name asc
-    limit: 20
-    empty: "No projects found"
-
-  # WI D: context family — people trail via users
-  people_trail:
-    source: User
-    display: timeline
-    sort: name asc
-    limit: 15
-    empty: "No users found"
-
-  # WI D: chart family — memberships by role
-  role_mix:
-    source: Membership
-    display: bar_chart
-    group_by: role
-    aggregate:
-      count: count(Membership)
-    empty: "No memberships yet"
-
-# Eighth product desk (WI D): 5 lists floor dens ~0.42 with 7 full desks — need 8.
 workspace sensitive_review "Sensitive Review":
   purpose: "Sensitivity desk — flag and review sensitive invoices without warehouse CRUD"
   stage: "simple_list"
@@ -627,7 +564,6 @@ workspace sensitive_review "Sensitive Review":
       sensitive: warning
       open: accent
 
-  # WI D: queue family — sensitive invoices first
   sensitive_queue:
     source: Invoice
     filter: sensitive = true
@@ -636,7 +572,6 @@ workspace sensitive_review "Sensitive Review":
     display: queue
     empty: "No sensitive invoices flagged"
 
-  # WI D: grid family for project context
   project_cards:
     source: Project
     display: grid
@@ -644,7 +579,6 @@ workspace sensitive_review "Sensitive Review":
     limit: 15
     empty: "No projects found"
 
-  # WI D: context family — recent invoice trail
   invoice_trail:
     source: Invoice
     sort: created_at desc
@@ -652,7 +586,6 @@ workspace sensitive_review "Sensitive Review":
     display: timeline
     empty: "No invoices yet"
 
-  # WI D: chart family — sensitive vs open mix via project load
   project_invoice_load:
     source: Invoice
     display: bar_chart
@@ -661,209 +594,6 @@ workspace sensitive_review "Sensitive Review":
       count: count(Invoice)
     empty: "No invoices yet"
 
-# Ninth product desk (WI D): 5 lists floor dens ~0.38 with 8 full desks — need 9.
-workspace collections_ops "Collections":
-  purpose: "Collections pressure — largest invoices and project load without warehouse CRUD"
-  stage: "simple_list"
-  access: persona(admin, org_owner, auditor, project_member)
-
-  collections_pulse:
-    source: Invoice
-    display: metrics
-    aggregate:
-      invoices: count(Invoice)
-      projects: count(Project)
-      sensitive: count(Invoice where sensitive = true)
-    tones:
-      invoices: accent
-      sensitive: warning
-
-  # WI D: queue family — largest invoices first
-  amount_queue:
-    source: Invoice
-    sort: amount desc
-    limit: 20
-    display: queue
-    empty: "No invoices on file"
-
-  # WI D: grid family — project portfolio context
-  project_cards:
-    source: Project
-    display: grid
-    sort: name asc
-    limit: 15
-    empty: "No projects found"
-
-  # WI D: context family — recent billing trail
-  billing_trail:
-    source: Invoice
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    empty: "No invoices yet"
-
-  # WI D: chart family — invoice load by project
-  project_load:
-    source: Invoice
-    display: bar_chart
-    group_by: project
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices yet"
-
-# Tenth product desk (WI D): 5 lists floor dens ~0.36 with 9 full desks — need 10.
-workspace org_ops "Org Ops":
-  purpose: "Organization pressure — tenant footprint and project spread without warehouse CRUD"
-  stage: "simple_list"
-  access: persona(admin, org_owner, auditor, project_member)
-
-  org_pulse:
-    source: Organization
-    display: metrics
-    aggregate:
-      orgs: count(Organization)
-      projects: count(Project)
-      invoices: count(Invoice)
-    tones:
-      orgs: accent
-      projects: positive
-      invoices: warning
-
-  # WI D: queue family — organizations first
-  org_queue:
-    source: Organization
-    sort: name asc
-    limit: 20
-    display: queue
-    empty: "No organizations on file"
-
-  # WI D: grid family — project portfolio cards
-  project_cards:
-    source: Project
-    display: grid
-    sort: name asc
-    limit: 15
-    empty: "No projects found"
-
-  # WI D: context family — recent project trail
-  project_trail:
-    source: Project
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    empty: "No projects yet"
-
-  # WI D: chart family — project load by organization
-  org_load:
-    source: Project
-    display: bar_chart
-    group_by: org
-    aggregate:
-      count: count(Project)
-    empty: "No projects to chart"
-
-# Eleventh product desk (WI D): 5 lists floor dens ~0.33 with 10 full desks — need 11.
-workspace project_ops "Project Ops":
-  purpose: "Project pressure — portfolio pulse and invoice load without warehouse CRUD"
-  stage: "simple_list"
-  access: persona(admin, org_owner, auditor, project_member)
-
-  project_pulse:
-    source: Project
-    display: metrics
-    aggregate:
-      projects: count(Project)
-      invoices: count(Invoice)
-      memberships: count(Membership)
-    tones:
-      projects: accent
-      invoices: warning
-      memberships: positive
-
-  # WI D: queue family — projects first
-  project_queue:
-    source: Project
-    sort: name asc
-    limit: 20
-    display: queue
-    empty: "No projects on file"
-
-  # WI D: grid family — invoice cards for billing context
-  invoice_cards:
-    source: Invoice
-    display: grid
-    sort: amount desc
-    limit: 15
-    empty: "No invoices found"
-
-  # WI D: context family — recent project trail
-  project_trail:
-    source: Project
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    empty: "No projects yet"
-
-  # WI D: chart family — invoice load by project
-  invoice_load:
-    source: Invoice
-    display: bar_chart
-    group_by: project
-    aggregate:
-      count: count(Invoice)
-    empty: "No invoices to chart"
-
-# Twelfth product desk (WI D): 5 lists floor dens ~0.31 with 11 full desks — need 12.
-workspace user_ops "User Ops":
-  purpose: "User pressure — org people footprint without warehouse CRUD"
-  stage: "simple_list"
-  access: persona(admin, org_owner, auditor)
-
-  user_pulse:
-    source: User
-    display: metrics
-    aggregate:
-      users: count(User)
-      memberships: count(Membership)
-      orgs: count(Organization)
-    tones:
-      users: accent
-      memberships: positive
-      orgs: accent
-
-  # WI D: queue family — people first
-  user_queue:
-    source: User
-    sort: name asc
-    limit: 20
-    display: queue
-    empty: "No users on file"
-
-  # WI D: grid family — membership cards
-  membership_cards:
-    source: Membership
-    display: grid
-    limit: 15
-    empty: "No memberships found"
-
-  # WI D: context family — recent user trail
-  user_trail:
-    source: User
-    sort: created_at desc
-    limit: 15
-    display: timeline
-    empty: "No users yet"
-
-  # WI D: chart family — users by organization
-  org_mix:
-    source: User
-    display: bar_chart
-    group_by: org
-    aggregate:
-      count: count(User)
-    empty: "No users to chart"
-
-# Thirteenth product desk (WI D): skip invoice_ops desk-cap; densify acme next.
 workspace public_billing "Public Billing":
   purpose: "Non-sensitive invoice pressure for shared member work without warehouse CRUD"
   stage: "simple_list"
@@ -881,7 +611,6 @@ workspace public_billing "Public Billing":
       sensitive: warning
       projects: positive
 
-  # WI D: queue family — non-sensitive invoices first
   public_queue:
     source: Invoice
     filter: sensitive != true
@@ -890,7 +619,6 @@ workspace public_billing "Public Billing":
     display: queue
     empty: "No non-sensitive invoices"
 
-  # WI D: grid family — project portfolio cards
   project_cards:
     source: Project
     display: grid
@@ -898,7 +626,6 @@ workspace public_billing "Public Billing":
     limit: 15
     empty: "No projects found"
 
-  # WI D: context family — recent public billing trail
   public_trail:
     source: Invoice
     filter: sensitive != true
@@ -907,7 +634,6 @@ workspace public_billing "Public Billing":
     display: timeline
     empty: "No public invoices yet"
 
-  # WI D: chart family — public invoice load by project
   project_load:
     source: Invoice
     filter: sensitive != true
@@ -917,59 +643,6 @@ workspace public_billing "Public Billing":
       count: count(Invoice)
     empty: "No public invoices to chart"
 
-# Fourteenth product desk (WI D): skip invoice_ops desk-cap; densify acme contractor lane.
-workspace contractor_ops "Contractor Ops":
-  purpose: "Assigned non-sensitive work for contractors and members without warehouse CRUD"
-  stage: "simple_list"
-  access: persona(admin, org_owner, auditor, project_member, external_contractor)
-
-  assigned_pulse:
-    source: Invoice
-    display: metrics
-    aggregate:
-      public: count(Invoice where sensitive != true)
-      projects: count(Project)
-      seats: count(Membership)
-    tones:
-      public: accent
-      projects: positive
-      seats: muted
-
-  # WI D: queue family — non-sensitive invoices only (contractor scope)
-  public_queue:
-    source: Invoice
-    filter: sensitive != true
-    sort: amount desc
-    limit: 20
-    display: queue
-    empty: "No non-sensitive invoices"
-
-  # WI D: grid family — assigned project cards
-  project_cards:
-    source: Project
-    display: grid
-    sort: name asc
-    limit: 15
-    empty: "No projects found"
-
-  # WI D: context family — membership assignment trail
-  seat_trail:
-    source: Membership
-    display: timeline
-    limit: 15
-    empty: "No memberships yet"
-
-  # WI D: chart family — public invoice load by project
-  project_load:
-    source: Invoice
-    filter: sensitive != true
-    display: bar_chart
-    group_by: project
-    aggregate:
-      count: count(Invoice)
-    empty: "No public invoices to chart"
-
-# Fifteenth product desk (WI D): skip invoice_ops desk-cap; densify acme org footprint.
 workspace org_pulse "Org Pulse":
   purpose: "Tenant footprint pressure — orgs, people, and project spread without warehouse CRUD"
   stage: "simple_list"
@@ -987,7 +660,6 @@ workspace org_pulse "Org Pulse":
       people: positive
       projects: muted
 
-  # WI D: queue family — organizations first
   org_queue:
     source: Organization
     sort: name asc
@@ -995,7 +667,6 @@ workspace org_pulse "Org Pulse":
     display: queue
     empty: "No organizations"
 
-  # WI D: grid family — project cards
   project_cards:
     source: Project
     display: grid
@@ -1003,7 +674,6 @@ workspace org_pulse "Org Pulse":
     limit: 15
     empty: "No projects found"
 
-  # WI D: context family — people trail
   people_trail:
     source: User
     display: timeline
@@ -1011,7 +681,6 @@ workspace org_pulse "Org Pulse":
     limit: 15
     empty: "No users found"
 
-  # WI D: chart family — projects by org
   project_mix:
     source: Project
     display: bar_chart

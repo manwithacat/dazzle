@@ -11,7 +11,6 @@ persona org_owner "Organization Owner":
   goals: "Manage projects", "Review invoices"
   proficiency: expert
   default_workspace: billing
-  # WI N: job desks first — not auto entity-list soup
   uses nav owner_nav
 
 persona auditor "Auditor":
@@ -46,14 +45,8 @@ nav owner_nav:
     invoices_home
     team_home
     orgs_home
-    membership_ops
     sensitive_review
-    collections_ops
-    org_ops
-    project_ops
-    user_ops
     public_billing
-    contractor_ops
     org_pulse
 
 nav auditor_nav:
@@ -63,14 +56,8 @@ nav auditor_nav:
     projects_home
     team_home
     orgs_home
-    membership_ops
     sensitive_review
-    collections_ops
-    org_ops
-    project_ops
-    user_ops
     public_billing
-    contractor_ops
     org_pulse
 
 nav member_nav:
@@ -78,15 +65,10 @@ nav member_nav:
     my_work
     projects_home
     invoices_home
-    collections_ops
-    org_ops
-    project_ops
     public_billing
-    contractor_ops
 
 nav contractor_nav:
   group "Assigned":
     my_work
     projects_home
-    contractor_ops
     public_billing

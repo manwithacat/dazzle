@@ -1,8 +1,8 @@
 # Product maturity (instance-level, anti-warehouse)
 
-**Status:** fleet probe + improve gate (2026-07). Fleet residual **0/12** after
-job-desk lift (invoice_ops, fieldtest_hub, design_studio, domain_join_co,
-project_tracker, acme_billing, support_tickets, …).
+**Status:** fleet probe + improve gate (2026-07). v3 anti-gaming + hard densify
+stop (#1637). Fleet residual **0/12**, `densify_allowed=0` under `wi_floor`,
+orphan densify `*_ops` residue consolidated.
 **Probe:** `python scripts/example_product_maturity.py`
 **Companion:** framework [UX maturity](ux-maturity.md) (primitives / defaults).
 
@@ -71,20 +71,31 @@ python scripts/example_product_maturity.py --warehouse-index \
   --paths ../cyfuture ../pennydreadful ../AegisMark
 ```
 
-| Component | Weight | What it measures | Anti-gaming (v2) |
-|-----------|--------|------------------|------------------|
-| **D** | 0.30 | list shells vs job desks | Denominator is *effective* job weight (mode×source diversity per workspace), scale-capped by entity count — empty desk sprawl does not fully dilute density |
+| Component | Weight | What it measures | Anti-gaming (v3, #1637) |
+|-----------|--------|------------------|------------------------|
+| **D** | 0.30 | list shells vs **job-backed** desks | Denominator is effective job weight on desks that are persona `default_workspace`, story `executed_by`, or non-orphan named product desks. Isomorphic multi-mode filter clones (`high_ops` / `medium_ops` / …) credit **once**. Orphan `*_ops` densify residue does **not** dilute D. Scale-capped by entity count. |
 | **N** | 0.25 | nav list-link share | Compiled `build_persona_nav`; credits accessible product workspaces |
 | **L** | 0.25 | landing thinness | **Signal richness**: unique `(mode_family, source)` pairs (cap 5). Six list regions of one entity ≈ one signal |
-| **J** | 0.10 | unbound stories / uncovered personas | — |
+| **J** | 0.10 | unbound stories / uncovered personas | Co-evolve story binds with desks; orphan desks do not improve J |
 | **G** | 0.10 | lists without open-via | Platform admin lists excluded |
 
-`WI = 0.30D + 0.25N + 0.25L + 0.10J + 0.10G`. Soft floor `wi_floor=0.25`.
-Mode families collapse `list`/`queue` so parallel listish pads do not stack.
+`WI = 0.30D + 0.25N + 0.25L + 0.10J + 0.10G`. **Hard floor** `wi_floor=0.25`
+(#1637): when residual=0 and `wi_fleet ≤ wi_floor`, status reports
+`densify_allowed=0` and `--next-wi` is empty. Explore must not grind D with
+isomorphic enum ops desks. Mode families collapse `list`/`queue` so parallel
+listish pads do not stack.
+
+**Additional residual / process signals (v3):**
+
+| Signal | When | Action |
+|--------|------|--------|
+| `desk_sprawl` | product workspaces / product personas ≥ 10 | Consolidate desks; prefer filters/segments |
+| `orphan_ops_desks` | ≥5 unbacked `*_ops` workspaces | Delete or bind to default/story; stop densify |
+| `scoreboard_language` | ≥3 hits of `WI D` / `densify` / soft-cap skip prose in DSL | Strip scoreboard comments — the measure must not colonize the medium |
 
 **Interpretation:** high WI ⇒ list-primary shells, thin/padded landings, soup
 nav, unbound jobs, no graph hops. Low WI is **necessary** for product shape,
-not sufficient for utility (see antagonist demo bar / trials below).
+not sufficient for utility (see antagonist demo bar / agent acceptance below).
 
 ## What this does *not* score (yet)
 
@@ -127,12 +138,14 @@ commercial bake-off.
 | `/improve example-apps product_maturity` | `improve/strategies/product_maturity.md` | `example_product_maturity.py` |
 | `/improve example-apps demo_fleet` | `improve/strategies/demo_fleet.md` | `demo_fleet_bar.py` |
 | `/improve example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` | `example_journey_maturity.py` |
+| `/improve example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` | `dazzle qa trial` + stories |
 
 Every example-apps OBSERVE (and `/improve --status`) starts with the unified suite:
 
 ```bash
 python scripts/improve_example_probes.py --status
 # product → demo → journey preference for residual_total / next=
+# warehouse_index … densify_allowed=0|1
 ```
 
 Agents should also score **felt** demo quality (persona-home seeds, metric/list
@@ -148,7 +161,33 @@ dazzle demo quality -p examples --app support_tickets --json
 `scripts/improve_example_probes.py` folds `product_quality` into OBSERVE so
 `residual_total` is not falsely 0 when persona homes or empty-hero stills remain.
 
-Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → felt (product_quality) → Tier 1**.
+Selection order inside the lane: **product_maturity → demo_fleet → journey_dogfood → felt (product_quality) → agent_acceptance (when densify closed) → Tier 1**.
+
+**Hard stop:** if status shows `densify_allowed=0`, do **not** run WI D densify
+explore. Prefer COGNITION STALE, HYGIENE STALE, or `agent_acceptance_panel`.
+
+## Agent-first customer acceptance
+
+Human orgs accept products with a **panel of QA testers** who already know the
+user stories. Agent-first loops still need that function — without making
+humans the quality definition (humans stay **L4** on the agent QA ladder).
+
+| Human panel | Agent-first substitute |
+|-------------|------------------------|
+| Prior knowledge of requirements | Authored stories + stems + `trial.toml` `adoption_criteria` |
+| Independent of implementers | Separate dig / strategy (`agent_acceptance_panel`), not the densify commit |
+| Multiple perspectives | ≥2 personas or panel seats (story steward + pilot buyer [+ coverage]) |
+| Accept / reject | `submit_verdict` + criteria_scores + friction ownership |
+| Backlog feed | JSON `auto_seed` → improve PENDING (product only) |
+
+**When residual=0 and densify is closed**, acceptance is the right continuous
+improvement surface — not another `typography_ops` desk. Full playbook:
+`improve/strategies/agent_acceptance_panel.md`. Ladder doctrine:
+`docs/recipes/agent-qa-ladder.md`.
+
+Do **not** treat low WI as customer acceptance. Low WI means “not a warehouse
+of lists (or of orphan ops desks).” Acceptance means “a careful multi-role
+pilot would run a two-week trial.”
 
 ### Antagonist residual classes (after structural green)
 

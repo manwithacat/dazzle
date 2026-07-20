@@ -1,6 +1,9 @@
 ## [Unreleased]
 
 ### Added
+- **Agent acceptance panel** — improve strategy
+  `agent_acceptance_panel` + docs for agent-first customer acceptance
+  (multi-seat QA trial against stories / adoption_criteria; human stays L4).
 - **Warehouse Index (WI)** — continuous anti-warehouse score on
   `example_product_maturity.py` (`D/N/L/J/G` → `wi` / `wi_fleet` /
   `wi_next` / `wi_primary`). Status and `improve_example_probes` emit
@@ -8,6 +11,13 @@
   scope-creep feature slices (`--warehouse-index`, `--next-wi`).
 
 ### Fixed
+- **#1637 product maturity Goodhart** — WI densify hard-stop when
+  residual=0 and `wi_fleet ≤ wi_floor` (`densify_allowed=0`, empty
+  `--next-wi`); D scores only *job-backed* desks (default/story; orphan
+  `*_ops` do not dilute) with isomorphism collapse; sprawl /
+  scoreboard-language process lint; removed 105 densify-residue ops
+  desks and scoreboard comments from the example fleet.
+
 - **MCP `db.status` platform table noise** — platform-domain entities
   (SystemHealth, SystemMetric, …) inject into every AppSpec but often
   lack tables until ops surfaces materialise them. Missing platform

@@ -252,7 +252,6 @@ surface classification_detail "Classification Detail":
 
 # Story-driven (docs/guides/story-to-composition.md): supervisor metrics +
 # open queue first; agent ticket_management is a review queue not CRUD list.
-# WI L: denser landing regions (cap 6) on supervisor default.
 workspace support_dashboard "Support Dashboard":
   purpose: "Monitor and classify support tickets"
   access: persona(supervisor, support_agent, admin)
@@ -318,7 +317,6 @@ workspace support_dashboard "Support Dashboard":
         icon: "alert-triangle"
         state: positive
 
-  # WI D: kanban family — open pipeline board
   open_board:
     source: Ticket
     filter: status != closed
@@ -328,7 +326,6 @@ workspace support_dashboard "Support Dashboard":
     action: ticket_detail
     empty: "No open tickets"
 
-  # WI D: chart family — ticket status mix
   status_mix:
     source: Ticket
     display: bar_chart
@@ -337,7 +334,6 @@ workspace support_dashboard "Support Dashboard":
       count: count(Ticket)
     empty: "No tickets yet"
 
-# WI L: agent default landing — aim for ≥5–6 regions.
 workspace ticket_management "Ticket Management":
   purpose: "Manage individual tickets"
   access: persona(support_agent, supervisor, admin)
@@ -373,7 +369,6 @@ workspace ticket_management "Ticket Management":
     action: ticket_detail
     empty: "No brand-new open tickets"
 
-  # WI D: kanban family — pipeline board (not list pad)
   pipeline_board:
     source: Ticket
     filter: status != closed
@@ -383,7 +378,6 @@ workspace ticket_management "Ticket Management":
     action: ticket_detail
     empty: "No open tickets"
 
-  # WI D: context family — classification trail
   classification_trail:
     source: TicketClassification
     sort: classified_at desc
@@ -391,7 +385,6 @@ workspace ticket_management "Ticket Management":
     display: timeline
     empty: "No classifications yet"
 
-  # WI D: chart family — priority assessment mix
   priority_mix:
     source: PriorityAssessment
     display: bar_chart
@@ -400,7 +393,7 @@ workspace ticket_management "Ticket Management":
       count: count(PriorityAssessment)
     empty: "No priority assessments yet"
 
-# Third product workspace (WI density D): classification-first desk so list
+# Third product workspace: classification-first desk so list
 # surfaces no longer dominate vs job shells (AI triage is the product value).
 workspace classification_desk "Classifications":
   purpose: "Review AI ticket classifications and confidence before hand-off"
@@ -422,7 +415,6 @@ workspace classification_desk "Classifications":
     display: queue
     empty: "No classifications yet"
 
-  # WI D: grid family for open ticket cards
   open_tickets:
     source: Ticket
     filter: status = open
@@ -432,7 +424,6 @@ workspace classification_desk "Classifications":
     action: ticket_detail
     empty: "No open tickets"
 
-  # WI D: context family — classification timeline
   class_trail:
     source: TicketClassification
     sort: classified_at desc
@@ -440,7 +431,6 @@ workspace classification_desk "Classifications":
     display: timeline
     empty: "No classifications yet"
 
-  # WI D: chart family — open ticket status mix
   open_status_mix:
     source: Ticket
     filter: status != closed
@@ -450,7 +440,6 @@ workspace classification_desk "Classifications":
       count: count(Ticket)
     empty: "No open tickets"
 
-# Fourth product workspace (WI D): priority assessment desk.
 workspace priority_desk "Priorities":
   purpose: "Priority assessment trail — severity signals next to open work"
   access: persona(supervisor, support_agent, admin)
@@ -473,7 +462,6 @@ workspace priority_desk "Priorities":
     display: queue
     empty: "No priority assessments yet"
 
-  # WI D: grid family for open work cards
   open_work:
     source: Ticket
     filter: status = open
@@ -483,7 +471,6 @@ workspace priority_desk "Priorities":
     action: ticket_detail
     empty: "No open tickets"
 
-  # WI D: context family — assessment trail
   assessment_trail:
     source: PriorityAssessment
     sort: priority desc
@@ -491,7 +478,6 @@ workspace priority_desk "Priorities":
     display: timeline
     empty: "No priority assessments yet"
 
-  # WI D: chart family — priority distribution
   priority_mix:
     source: PriorityAssessment
     display: bar_chart
@@ -512,508 +498,12 @@ workspace priority_desk "Priorities":
         icon: "tags"
         state: positive
 
-# Fifth product desk (WI D): 2 lists floor dens ~0.33 with 4 full desks — need 5.
-workspace category_ops "Category Ops":
-  purpose: "Category pressure — AI category mix and open work without warehouse CRUD"
-  access: persona(supervisor, support_agent, admin)
-
-  category_pulse:
-    source: TicketClassification
-    display: metrics
-    aggregate:
-      classifications: count(TicketClassification)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      open: warning
-      classifications: accent
-      in_progress: positive
-
-  # WI D: queue family — latest classifications first
-  class_queue:
-    source: TicketClassification
-    sort: classified_at desc
-    limit: 20
-    display: queue
-    empty: "No classifications yet"
-
-  # WI D: grid family — active ticket cards
-  active_grid:
-    source: Ticket
-    filter: status = open or status = in_progress
-    sort: updated_at desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No active tickets"
-
-  # WI D: context family — classification trail
-  category_trail:
-    source: TicketClassification
-    sort: classified_at desc
-    limit: 15
-    display: timeline
-    empty: "No classifications yet"
-
-  # WI D: chart family — category mix
-  category_mix:
-    source: TicketClassification
-    display: bar_chart
-    group_by: category
-    aggregate:
-      count: count(TicketClassification)
-    empty: "No classifications to chart"
-
-# Sixth product desk (WI D): skip invoice_ops desk-cap; densify llm_ticket_classifier.
-workspace sentiment_ops "Sentiment Ops":
-  purpose: "Sentiment pressure — frustrated and negative classifications without warehouse CRUD"
-  access: persona(supervisor, support_agent, admin)
-
-  sentiment_pulse:
-    source: TicketClassification
-    display: metrics
-    aggregate:
-      classifications: count(TicketClassification)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      open: warning
-      classifications: accent
-      in_progress: positive
-
-  # WI D: queue family — latest classifications first
-  class_queue:
-    source: TicketClassification
-    sort: classified_at desc
-    limit: 20
-    display: queue
-    empty: "No classifications yet"
-
-  # WI D: grid family — open ticket cards
-  open_grid:
-    source: Ticket
-    filter: status = open or status = in_progress
-    sort: updated_at desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No active tickets"
-
-  # WI D: context family — classification trail
-  sentiment_trail:
-    source: TicketClassification
-    sort: classified_at desc
-    limit: 15
-    display: timeline
-    empty: "No classifications yet"
-
-  # WI D: chart family — sentiment mix
-  sentiment_mix:
-    source: TicketClassification
-    display: bar_chart
-    group_by: sentiment
-    aggregate:
-      count: count(TicketClassification)
-    empty: "No classifications to chart"
-
-# Seventh product desk (WI D): skip invoice_ops desk-cap; densify llm_ticket_classifier.
-workspace open_ops "Open Ops":
-  purpose: "Intake pressure — open tickets awaiting AI classification without warehouse CRUD"
-  access: persona(supervisor, support_agent, admin)
-
-  open_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-      classified: count(TicketClassification)
-    tones:
-      open: warning
-      in_progress: accent
-      classified: positive
-
-  # WI D: queue family — open tickets first
-  open_queue:
-    source: Ticket
-    filter: status = open
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_detail
-    empty: "No open tickets"
-
-  # WI D: grid family — open cards
-  open_grid:
-    source: Ticket
-    filter: status = open
-    sort: created_at desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No open tickets"
-
-  # WI D: context family — recent open trail
-  open_trail:
-    source: Ticket
-    filter: status = open or status = in_progress
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No active ticket activity yet"
-
-  # WI D: chart family — ticket status mix
-  status_mix:
-    source: Ticket
-    filter: status != closed
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "No open tickets to chart"
-
-
-
-# Eighth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify llm classifier.
-workspace resolved_ops "Resolved Ops":
-  purpose: "Close-out pressure — resolved tickets without warehouse CRUD"
-  access: persona(supervisor, support_agent, admin)
-
-  resolved_pulse:
-    source: Ticket
-    display: metrics
-    aggregate:
-      resolved: count(Ticket where status = resolved)
-      closed: count(Ticket where status = closed)
-      open: count(Ticket where status = open)
-    tones:
-      resolved: positive
-      closed: muted
-      open: warning
-
-  # WI D: queue family — resolved first
-  resolved_queue:
-    source: Ticket
-    filter: status = resolved
-    sort: updated_at desc
-    limit: 20
-    display: queue
-    action: ticket_detail
-    empty: "No resolved tickets"
-
-  # WI D: grid family — resolved cards
-  resolved_grid:
-    source: Ticket
-    filter: status = resolved
-    sort: updated_at desc
-    limit: 15
-    display: grid
-    action: ticket_detail
-    empty: "No resolved tickets"
-
-  # WI D: context family — resolve trail
-  resolved_trail:
-    source: Ticket
-    filter: status = resolved or status = closed
-    sort: updated_at desc
-    limit: 15
-    display: timeline
-    action: ticket_detail
-    empty: "No resolve activity yet"
-
-  # WI D: chart family — status mix among closed-out
-  status_mix:
-    source: Ticket
-    filter: status = resolved or status = closed
-    display: bar_chart
-    group_by: status
-    aggregate:
-      count: count(Ticket)
-    empty: "No resolved tickets to chart"
-
-
-# Ninth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify llm classifier.
-workspace confidence_ops "Confidence Ops":
-  purpose: "AI confidence pressure — low-confidence classifications without warehouse CRUD"
-  access: persona(supervisor, support_agent, admin)
-
-  conf_pulse:
-    source: TicketClassification
-    display: metrics
-    aggregate:
-      classifications: count(TicketClassification)
-      open: count(Ticket where status = open)
-      in_progress: count(Ticket where status = in_progress)
-    tones:
-      classifications: accent
-      open: warning
-      in_progress: muted
-
-  # WI D: queue family — classifications first
-  class_queue:
-    source: TicketClassification
-    sort: confidence asc
-    limit: 20
-    display: queue
-    empty: "No classifications yet"
-
-  # WI D: grid family — classification cards
-  class_grid:
-    source: TicketClassification
-    sort: confidence asc
-    limit: 15
-    display: grid
-    empty: "No classifications yet"
-
-  # WI D: context family — classification trail
-  class_trail:
-    source: TicketClassification
-    sort: classified_at desc
-    limit: 15
-    display: timeline
-    empty: "No classification activity yet"
-
-  # WI D: chart family — category mix among classifications
-  category_mix:
-    source: TicketClassification
-    display: bar_chart
-    group_by: category
-    aggregate:
-      count: count(TicketClassification)
-    empty: "No classifications to chart"
-
-
-# Tenth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify llm classifier.
-workspace frustrated_ops "Frustrated Ops":
-  purpose: "Negative-sentiment pressure — frustrated classifications without warehouse CRUD"
-  access: persona(supervisor, support_agent, admin)
-
-  frustrated_pulse:
-    source: TicketClassification
-    display: metrics
-    aggregate:
-      frustrated: count(TicketClassification where sentiment = frustrated)
-      negative: count(TicketClassification where sentiment = negative)
-      total: count(TicketClassification)
-    tones:
-      frustrated: warning
-      negative: accent
-      total: muted
-
-  # WI D: queue family — frustrated first
-  frustrated_queue:
-    source: TicketClassification
-    filter: sentiment = frustrated or sentiment = negative
-    sort: classified_at desc
-    limit: 20
-    display: queue
-    empty: "No negative-sentiment classifications"
-
-  # WI D: grid family — frustrated cards
-  frustrated_grid:
-    source: TicketClassification
-    filter: sentiment = frustrated or sentiment = negative
-    sort: confidence asc
-    limit: 15
-    display: grid
-    empty: "No negative-sentiment classifications"
-
-  # WI D: context family — classification trail
-  frustrated_trail:
-    source: TicketClassification
-    filter: sentiment = frustrated or sentiment = negative
-    sort: classified_at desc
-    limit: 15
-    display: timeline
-    empty: "No negative-sentiment activity yet"
-
-  # WI D: chart family — priority mix among negative
-  priority_mix:
-    source: TicketClassification
-    filter: sentiment = frustrated or sentiment = negative
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(TicketClassification)
-    empty: "No negative classifications to chart"
-
-
-# Eleventh product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify llm classifier.
-workspace billing_ops "Billing Ops":
-  purpose: "Billing-classification pressure without warehouse CRUD"
-  access: persona(supervisor, support_agent, admin)
-
-  billing_pulse:
-    source: TicketClassification
-    display: metrics
-    aggregate:
-      billing: count(TicketClassification where category = billing)
-      technical: count(TicketClassification where category = technical)
-      total: count(TicketClassification)
-    tones:
-      billing: warning
-      technical: accent
-      total: muted
-
-  # WI D: queue family — billing first
-  billing_queue:
-    source: TicketClassification
-    filter: category = billing
-    sort: classified_at desc
-    limit: 20
-    display: queue
-    empty: "No billing classifications"
-
-  # WI D: grid family — billing cards
-  billing_grid:
-    source: TicketClassification
-    filter: category = billing
-    sort: confidence asc
-    limit: 15
-    display: grid
-    empty: "No billing classifications"
-
-  # WI D: context family — billing trail
-  billing_trail:
-    source: TicketClassification
-    filter: category = billing
-    sort: classified_at desc
-    limit: 15
-    display: timeline
-    empty: "No billing activity yet"
-
-  # WI D: chart family — priority mix among billing
-  priority_mix:
-    source: TicketClassification
-    filter: category = billing
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(TicketClassification)
-    empty: "No billing classifications to chart"
-
-
-# Twelfth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify llm classifier.
-workspace technical_ops "Technical Ops":
-  purpose: "Technical-classification pressure without warehouse CRUD"
-  access: persona(supervisor, support_agent, admin)
-
-  technical_pulse:
-    source: TicketClassification
-    display: metrics
-    aggregate:
-      technical: count(TicketClassification where category = technical)
-      billing: count(TicketClassification where category = billing)
-      total: count(TicketClassification)
-    tones:
-      technical: accent
-      billing: warning
-      total: muted
-
-  # WI D: queue family — technical first
-  technical_queue:
-    source: TicketClassification
-    filter: category = technical
-    sort: classified_at desc
-    limit: 20
-    display: queue
-    empty: "No technical classifications"
-
-  # WI D: grid family — technical cards
-  technical_grid:
-    source: TicketClassification
-    filter: category = technical
-    sort: confidence asc
-    limit: 15
-    display: grid
-    empty: "No technical classifications"
-
-  # WI D: context family — technical trail
-  technical_trail:
-    source: TicketClassification
-    filter: category = technical
-    sort: classified_at desc
-    limit: 15
-    display: timeline
-    empty: "No technical activity yet"
-
-  # WI D: chart family — priority mix among technical
-  priority_mix:
-    source: TicketClassification
-    filter: category = technical
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(TicketClassification)
-    empty: "No technical classifications to chart"
-
-
-# Thirteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify llm classifier.
-workspace account_ops "Account Ops":
-  purpose: "Account-classification pressure without warehouse CRUD"
-  access: persona(supervisor, support_agent, admin)
-
-  account_pulse:
-    source: TicketClassification
-    display: metrics
-    aggregate:
-      account: count(TicketClassification where category = account)
-      technical: count(TicketClassification where category = technical)
-      total: count(TicketClassification)
-    tones:
-      account: accent
-      technical: warning
-      total: muted
-
-  # WI D: queue family — account first
-  account_queue:
-    source: TicketClassification
-    filter: category = account
-    sort: classified_at desc
-    limit: 20
-    display: queue
-    empty: "No account classifications"
-
-  # WI D: grid family — account cards
-  account_grid:
-    source: TicketClassification
-    filter: category = account
-    sort: confidence asc
-    limit: 15
-    display: grid
-    empty: "No account classifications"
-
-  # WI D: context family — account trail
-  account_trail:
-    source: TicketClassification
-    filter: category = account
-    sort: classified_at desc
-    limit: 15
-    display: timeline
-    empty: "No account activity yet"
-
-  # WI D: chart family — priority mix among account
-  priority_mix:
-    source: TicketClassification
-    filter: category = account
-    display: bar_chart
-    group_by: priority
-    aggregate:
-      count: count(TicketClassification)
-    empty: "No account classifications to chart"
-
-# =============================================================================
-# Personas
-# =============================================================================
-
 persona support_agent "Support Agent":
   description: "Handle support tickets and view AI classifications"
   goals: "View and manage tickets", "Review AI classifications", "Update ticket status"
   proficiency: intermediate
   default_workspace: ticket_management
   default_route: "/tickets"
-  # WI N: job desks first — not auto entity-list soup
   uses nav agent_nav
 
 persona supervisor "Support Supervisor":
@@ -1024,21 +514,11 @@ persona supervisor "Support Supervisor":
   default_route: "/dashboard"
   uses nav supervisor_nav
 
-# Curated sidebars: workspace destinations only (WI N).
 nav agent_nav:
   group "My work":
     ticket_management
     classification_desk
     priority_desk
-    category_ops
-    sentiment_ops
-    open_ops
-    resolved_ops
-    confidence_ops
-    frustrated_ops
-    billing_ops
-    technical_ops
-    account_ops
     support_dashboard
 
 nav supervisor_nav:
@@ -1046,15 +526,6 @@ nav supervisor_nav:
     support_dashboard
     classification_desk
     priority_desk
-    category_ops
-    sentiment_ops
-    open_ops
-    resolved_ops
-    confidence_ops
-    frustrated_ops
-    billing_ops
-    technical_ops
-    account_ops
     ticket_management
 
 
