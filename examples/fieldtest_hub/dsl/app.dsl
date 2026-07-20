@@ -68,6 +68,7 @@ nav engineer_nav:
     draft_releases
     released_ops
     active_ops
+    open_ops
 
 nav tester_nav:
   group "Field":
@@ -91,6 +92,7 @@ nav manager_nav:
     draft_releases
     released_ops
     active_ops
+    open_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -2214,6 +2216,63 @@ workspace active_ops "Active Ops":
     aggregate:
       count: count(Device)
     empty: "No active devices to chart"
+
+# Eighteenth product desk (WI D): skip invoice_ops desk-cap; densify fieldtest_hub.
+workspace open_ops "Open Ops":
+  purpose: "Open-issue pressure — unclosed field faults without warehouse CRUD"
+  access: persona(engineer, manager)
+
+  open_metrics:
+    source: IssueReport
+    display: metrics
+    aggregate:
+      open: count(IssueReport where status = open)
+      triaged: count(IssueReport where status = triaged)
+      in_flight: count(IssueReport where status = in_progress)
+    tones:
+      open: warning
+      triaged: accent
+      in_flight: positive
+
+  # WI D: queue family — open issues first
+  open_queue:
+    source: IssueReport
+    filter: status = open or status = triaged
+    sort: severity desc, updated_at desc
+    limit: 20
+    display: queue
+    action: issue_report_detail
+    empty: "No open issues"
+
+  # WI D: grid family — open issue cards
+  open_grid:
+    source: IssueReport
+    filter: status = open or status = triaged or status = in_progress
+    sort: severity desc
+    limit: 15
+    display: grid
+    action: issue_report_detail
+    empty: "No open issues"
+
+  # WI D: context family — recent open issue trail
+  open_trail:
+    source: IssueReport
+    filter: status != closed and status != verified
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: issue_report_detail
+    empty: "No open issue activity yet"
+
+  # WI D: chart family — open severity mix
+  severity_mix:
+    source: IssueReport
+    filter: status = open or status = triaged or status = in_progress
+    display: bar_chart
+    group_by: severity
+    aggregate:
+      count: count(IssueReport)
+    empty: "No open issues to chart"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts
