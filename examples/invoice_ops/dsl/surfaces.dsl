@@ -1245,3 +1245,60 @@ workspace paid_ops "Paid Ops":
     aggregate:
       count: count(Invoice)
     empty: "No settlement invoices to chart"
+
+# Seventeenth product desk (WI D): 7 lists floor dens ~0.30 with 16 full desks — need 17.
+workspace approved_ops "Approved Ops":
+  purpose: "Approved pressure — invoices ready to pay without warehouse CRUD"
+  access: persona(finance, finance_admin, auditor, tenant_admin)
+
+  approved_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      approved: count(Invoice where status = approved)
+      partial: count(Invoice where status = partially_paid)
+      paid: count(Invoice where status = paid)
+    tones:
+      approved: accent
+      partial: warning
+      paid: positive
+
+  # WI D: queue family — largest approved first
+  approved_queue:
+    source: Invoice
+    filter: status = approved
+    sort: amount desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "No approved invoices awaiting pay"
+
+  # WI D: grid family — approved settlement cards
+  approved_grid:
+    source: Invoice
+    filter: status = approved
+    sort: updated_at desc
+    limit: 15
+    display: grid
+    action: invoice_detail
+    empty: "No approved invoices awaiting pay"
+
+  # WI D: context family — recent approval trail
+  approved_trail:
+    source: Invoice
+    filter: status = approved
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No approved activity yet"
+
+  # WI D: chart family — post-approval status mix
+  status_mix:
+    source: Invoice
+    filter: status = approved or status = partially_paid or status = paid
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No post-approval invoices to chart"
