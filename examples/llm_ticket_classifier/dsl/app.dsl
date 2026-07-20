@@ -732,6 +732,57 @@ workspace resolved_ops "Resolved Ops":
       count: count(Ticket)
     empty: "No resolved tickets to chart"
 
+
+# Ninth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify llm classifier.
+workspace confidence_ops "Confidence Ops":
+  purpose: "AI confidence pressure — low-confidence classifications without warehouse CRUD"
+  access: persona(supervisor, support_agent, admin)
+
+  conf_pulse:
+    source: TicketClassification
+    display: metrics
+    aggregate:
+      classifications: count(TicketClassification)
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+    tones:
+      classifications: accent
+      open: warning
+      in_progress: muted
+
+  # WI D: queue family — classifications first
+  class_queue:
+    source: TicketClassification
+    sort: confidence asc
+    limit: 20
+    display: queue
+    empty: "No classifications yet"
+
+  # WI D: grid family — classification cards
+  class_grid:
+    source: TicketClassification
+    sort: confidence asc
+    limit: 15
+    display: grid
+    empty: "No classifications yet"
+
+  # WI D: context family — classification trail
+  class_trail:
+    source: TicketClassification
+    sort: classified_at desc
+    limit: 15
+    display: timeline
+    empty: "No classification activity yet"
+
+  # WI D: chart family — category mix among classifications
+  category_mix:
+    source: TicketClassification
+    display: bar_chart
+    group_by: category
+    aggregate:
+      count: count(TicketClassification)
+    empty: "No classifications to chart"
+
 # =============================================================================
 # Personas
 # =============================================================================
@@ -763,6 +814,7 @@ nav agent_nav:
     sentiment_ops
     open_ops
     resolved_ops
+    confidence_ops
     support_dashboard
 
 nav supervisor_nav:
@@ -774,6 +826,7 @@ nav supervisor_nav:
     sentiment_ops
     open_ops
     resolved_ops
+    confidence_ops
     ticket_management
 
 
