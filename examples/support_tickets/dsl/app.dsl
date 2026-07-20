@@ -1151,6 +1151,64 @@ workspace resolved_ops "Resolved Ops":
       count: count(Ticket)
     empty: "No resolved tickets to chart"
 
+
+# Eleventh product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify support_tickets.
+workspace critical_ops "Critical Ops":
+  purpose: "Critical/high priority pressure without warehouse CRUD"
+  access: persona(agent, manager, admin)
+
+  critical_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      critical: count(Ticket where priority = critical)
+      high: count(Ticket where priority = high)
+      open: count(Ticket where status = open or status = in_progress)
+    tones:
+      critical: warning
+      high: accent
+      open: muted
+
+  # WI D: queue family — critical/high first
+  critical_queue:
+    source: Ticket
+    filter: priority = critical or priority = high
+    sort: priority desc, updated_at desc
+    limit: 20
+    display: queue
+    action: ticket_edit
+    empty: "No high-priority tickets"
+
+  # WI D: grid family — critical cards
+  critical_grid:
+    source: Ticket
+    filter: priority = critical or priority = high
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No high-priority tickets"
+
+  # WI D: context family — recent critical trail
+  critical_trail:
+    source: Ticket
+    filter: priority = critical or priority = high
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No high-priority activity yet"
+
+  # WI D: chart family — status mix among high priority
+  status_mix:
+    source: Ticket
+    filter: priority = critical or priority = high
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No high-priority tickets to chart"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
@@ -1195,6 +1253,7 @@ nav admin_nav:
     progress_ops
     open_ops
     resolved_ops
+    critical_ops
 
 nav customer_nav:
   group "My support":
@@ -1210,6 +1269,7 @@ nav agent_nav:
     progress_ops
     open_ops
     resolved_ops
+    critical_ops
 
 nav manager_nav:
   group "Lead":
@@ -1222,6 +1282,7 @@ nav manager_nav:
     progress_ops
     open_ops
     resolved_ops
+    critical_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
