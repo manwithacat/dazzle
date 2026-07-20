@@ -54,6 +54,7 @@ nav designer_nav:
     photo_ops
     illustration_ops
     pattern_ops
+    typography_ops
 
 nav reviewer_nav:
   group "Review":
@@ -76,6 +77,7 @@ nav reviewer_nav:
     photo_ops
     illustration_ops
     pattern_ops
+    typography_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -1387,6 +1389,64 @@ workspace pattern_ops "Pattern Ops":
     aggregate:
       count: count(Asset)
     empty: "No patterns to chart"
+
+
+# Twenty-second product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
+workspace typography_ops "Typography Ops":
+  purpose: "Typography-asset pressure — typography type work without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  typography_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      typography: count(Asset where asset_type = typography)
+      draft: count(Asset where asset_type = typography and status = draft)
+      published: count(Asset where asset_type = typography and status = published)
+    tones:
+      typography: accent
+      draft: warning
+      published: positive
+
+  # WI D: queue family — typography first
+  typography_queue:
+    source: Asset
+    filter: asset_type = typography
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "No typography assets"
+
+  # WI D: grid family — typography gallery
+  typography_gallery:
+    source: Asset
+    filter: asset_type = typography
+    sort: name asc
+    limit: 15
+    display: grid
+    action: asset_edit
+    empty: "No typography assets"
+
+  # WI D: context family — typography trail
+  typography_trail:
+    source: Asset
+    filter: asset_type = typography
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No typography activity yet"
+
+  # WI D: chart family — status mix among typography
+  status_mix:
+    source: Asset
+    filter: asset_type = typography
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Asset)
+    empty: "No typography assets to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
