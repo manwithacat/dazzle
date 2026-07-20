@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1234 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1234 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1251 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1254 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1233 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1233 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1251 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1254 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | USED |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1251 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1251 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1254 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1254 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,18 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1254 (2026-07-20).** **example-apps WI D** design_studio typography_ops desk —
+> dens **0.21→0.19**; SPEC footer co-ship. Dependabot py3.12 pending. budget_consumed 1.
+> Explore **24/100**.
+
+> **Cycle 1253 (2026-07-20).** **example-apps WI D** support_tickets medium_ops desk —
+> dens **0.15→0.14**; SPEC footer co-ship. Dependabot re-CI pending after update-branch.
+> budget_consumed 1. Explore **23/100**.
+
+> **Cycle 1252 (2026-07-20).** **github-prs** dependabot_merge heat for #1636 + #1634 —
+> both checks green but branch **BEHIND** main; refused squash-merge. \`gh pr update-branch\`
+> on 1636/1634 (+1635/1633). Wait for re-CI next cycle. budget_consumed 0. Explore **22/100**.
 
 > **Cycle 1251 (2026-07-20).** **example-apps WI D** simple_task overdue_ops desk —
 > dens **0.18→0.17**; co-ship SPEC footer + brief baseline. Inbox idle (#1636 Python green,
