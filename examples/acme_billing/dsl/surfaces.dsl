@@ -710,3 +710,54 @@ workspace collections_ops "Collections":
     aggregate:
       count: count(Invoice)
     empty: "No invoices yet"
+
+# Tenth product desk (WI D): 5 lists floor dens ~0.36 with 9 full desks — need 10.
+workspace org_ops "Org Ops":
+  purpose: "Organization pressure — tenant footprint and project spread without warehouse CRUD"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor, project_member)
+
+  org_pulse:
+    source: Organization
+    display: metrics
+    aggregate:
+      orgs: count(Organization)
+      projects: count(Project)
+      invoices: count(Invoice)
+    tones:
+      orgs: accent
+      projects: positive
+      invoices: warning
+
+  # WI D: queue family — organizations first
+  org_queue:
+    source: Organization
+    sort: name asc
+    limit: 20
+    display: queue
+    empty: "No organizations on file"
+
+  # WI D: grid family — project portfolio cards
+  project_cards:
+    source: Project
+    display: grid
+    sort: name asc
+    limit: 15
+    empty: "No projects found"
+
+  # WI D: context family — recent project trail
+  project_trail:
+    source: Project
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No projects yet"
+
+  # WI D: chart family — project load by organization
+  org_load:
+    source: Project
+    display: bar_chart
+    group_by: org
+    aggregate:
+      count: count(Project)
+    empty: "No projects to chart"

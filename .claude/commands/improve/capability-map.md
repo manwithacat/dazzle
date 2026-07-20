@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1097 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1097 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1120 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1121 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1095 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1095 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1120 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1121 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1096 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1096 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1096 | USED |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1121 (2026-07-20).** **example-apps ordinary explore** acme_billing WI D —
+> new **org_ops** desk (metrics/queue/grid/timeline/chart) + owner/auditor/member nav;
+> co-ship auditspec dsl_hash **sha256:4e7ab8eeda5bfeaf**.
+> dens **0.36→0.33**; wi_next→**fieldtest_hub**; fleet **0.096**. budget_consumed 1.
+> Explore **3/100**.
 
 > **Cycle 1120 (2026-07-20).** **example-apps ordinary explore** hr_records WI D —
 > new **salary_ops** desk (metrics/queue/grid/timeline/chart) + hr_admin/manager/finance nav.
