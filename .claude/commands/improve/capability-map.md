@@ -46,7 +46,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1094 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1094 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1094 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1059 | STALE |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1096 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1095 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1059 | STALE |
@@ -55,10 +55,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1095 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1095 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1091 | USED |
-| `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1055 | STALE |
-| `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1055 | STALE |
-| `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1055 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1056 | STALE |
+| `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1096 | USED |
+| `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1096 | USED |
+| `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1096 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1096 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1064 | STALE |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1060 | STALE |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1060 | STALE |
@@ -108,6 +108,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1096 (2026-07-20).** **example-apps + hm-convergence COGNITION dig** —
+> simple_task serve :3961 + `demo reset-and-load -y` **created_count=8**,
+> persona_homes_residual=0, live_desk_residual=0. HM coherence queue=0 mean=8.7.
+> Free vision substitute `hm_visual_smoke --dazzle-emit` (11 parts + full_page.png).
+> Stamps reset-and-load + hyperpart + vision triad **USED@1096**. budget_consumed 1.
+> Explore **24/100**.
 
 > **Cycle 1095 (2026-07-20).** **preflight + COGNITION dig** — complexity ratchet red
 > after 1094 extract helpers (`_try_add_discovered_noun` 21, `_collect_questions` 16).
