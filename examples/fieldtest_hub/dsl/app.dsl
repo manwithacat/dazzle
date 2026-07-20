@@ -60,6 +60,7 @@ nav engineer_nav:
     session_ops
     tester_roster
     task_ops
+    device_fleet
 
 nav tester_nav:
   group "Field":
@@ -75,6 +76,7 @@ nav manager_nav:
     session_ops
     tester_roster
     task_ops
+    device_fleet
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1736,6 +1738,61 @@ workspace task_ops "Task Ops":
     aggregate:
       count: count(Task)
     empty: "No tasks yet"
+
+# Tenth product desk (WI D): 6 lists floor dens ~0.40 with 9 full desks — need 10.
+workspace device_fleet "Device Fleet":
+  purpose: "Fleet pressure — active/recalled/prototype devices and batch mix"
+  access: persona(engineer, manager)
+
+  fleet_metrics:
+    source: Device
+    display: metrics
+    aggregate:
+      active: count(Device where status = active)
+      prototype: count(Device where status = prototype)
+      recalled: count(Device where status = recalled)
+    tones:
+      active: positive
+      prototype: accent
+      recalled: destructive
+
+  # WI D: grid family — active fleet cards
+  active_devices:
+    source: Device
+    filter: status = active
+    sort: name asc
+    limit: 20
+    display: grid
+    action: device_detail
+    empty: "No active devices"
+
+  # WI D: queue family — recalled units need attention first
+  recall_queue:
+    source: Device
+    filter: status = recalled
+    sort: updated_at desc
+    limit: 15
+    display: queue
+    action: device_detail
+    empty: "No recalled devices"
+
+  # WI D: context family — recent fleet changes
+  fleet_trail:
+    source: Device
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: device_detail
+    empty: "No devices yet"
+
+  # WI D: chart family — lifecycle status mix
+  status_mix:
+    source: Device
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Device)
+    empty: "No devices yet"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts
