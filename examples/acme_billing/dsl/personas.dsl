@@ -48,6 +48,7 @@ nav owner_nav:
     orgs_home
     membership_ops
     sensitive_review
+    collections_ops
 
 nav auditor_nav:
   group "Review":
@@ -58,12 +59,14 @@ nav auditor_nav:
     orgs_home
     membership_ops
     sensitive_review
+    collections_ops
 
 nav member_nav:
   group "My desk":
     my_work
     projects_home
     invoices_home
+    collections_ops
 
 nav contractor_nav:
   group "Assigned":

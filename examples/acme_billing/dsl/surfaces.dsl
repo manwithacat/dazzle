@@ -660,3 +660,53 @@ workspace sensitive_review "Sensitive Review":
     aggregate:
       count: count(Invoice)
     empty: "No invoices yet"
+
+# Ninth product desk (WI D): 5 lists floor dens ~0.38 with 8 full desks — need 9.
+workspace collections_ops "Collections":
+  purpose: "Collections pressure — largest invoices and project load without warehouse CRUD"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor, project_member)
+
+  collections_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      invoices: count(Invoice)
+      projects: count(Project)
+      sensitive: count(Invoice where sensitive = true)
+    tones:
+      invoices: accent
+      sensitive: warning
+
+  # WI D: queue family — largest invoices first
+  amount_queue:
+    source: Invoice
+    sort: amount desc
+    limit: 20
+    display: queue
+    empty: "No invoices on file"
+
+  # WI D: grid family — project portfolio context
+  project_cards:
+    source: Project
+    display: grid
+    sort: name asc
+    limit: 15
+    empty: "No projects found"
+
+  # WI D: context family — recent billing trail
+  billing_trail:
+    source: Invoice
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No invoices yet"
+
+  # WI D: chart family — invoice load by project
+  project_load:
+    source: Invoice
+    display: bar_chart
+    group_by: project
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices yet"
