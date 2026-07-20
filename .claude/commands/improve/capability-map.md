@@ -49,8 +49,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1233 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1208 | USED |
-| `qa-trial` skill | COGNITION | skill | trials | 1208 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1234 | USED |
+| `qa-trial` skill | COGNITION | skill | trials | 1234 | USED |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1224 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1233 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1233 | USED |
@@ -93,12 +93,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1209 | USED |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1209 | USED |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1209 | USED |
-| `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1208 | USED |
-| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1208 | USED |
+| `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1234 | USED |
+| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1233 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1233 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1234 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1234 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1234 (2026-07-20).** **COGNITION dig** qa trial inventory + coverage (lag≥25) —
+> simple_task trial-inventory **26** targets (incl. WI D desks); trial-coverage manager live
+> **20 reached / 6 rbac_denied / 26/26**; support_tickets inventory includes feature/inquiry_ops;
+> prove story OK + representation pass. Stamped qa trial + prove/representation **USED@1234**.
+> budget_consumed 1. Explore **8/100**. Next: dens headroom or HYGIENE policy/rbac cluster.
 
 > **Cycle 1233 (2026-07-20).** **COGNITION dig** Rule 7 lag≥20 domain/demo over dens —
 > simple_task domain extract personas=4 nouns=2 ready_to_promote; demo quality residual=0
