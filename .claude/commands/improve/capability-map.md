@@ -69,7 +69,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1101 | STALE |
-| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1113 | STALE |
+| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1180 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1100 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1100 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1100 | STALE |
@@ -81,7 +81,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1102 | STALE |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1102 | STALE |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1102 | STALE |
-| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1113 | STALE |
+| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1180 | USED |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1180 (2026-07-20).** **HYGIENE dig** remaining STALE — **dazzle sweep examples**
+> (validate+lint+coverage; framework display_modes 38/38, dsl_constructs 23/23; app WARNs
+> only, no hard fail) + **sentinel mutate** on domain_brief/extract.py vs test_domain_brief
+> (exit 0; mutants exercised). Stamped sweep/nightly + sentinel mutate **USED@1180**.
+> budget_consumed 1. Explore **23/100**. Next: more HYGIENE or simple densify.
 
 > **Cycle 1179 (2026-07-20).** **HYGIENE dig** lagging STALE cluster on simple_task —
 > **ux maturity** (L4 adaptive scan), **ux verify --structural** (470 interactions enumerated;
