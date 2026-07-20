@@ -78,9 +78,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1183 | USED |
-| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1102 | STALE |
-| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1102 | STALE |
-| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1102 | STALE |
+| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1189 | USED |
+| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1189 | USED |
+| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1189 | USED |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1180 | USED |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1176 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1101 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1093 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1188 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1188 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1189 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1189 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -246,6 +246,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 > PII/financial + GDPR/PCI suggestions); MCP **test_intelligence** summary (0 runs, KG empty —
 > surface exercised). budget_consumed 1. Explore **3/100**. Next: acme/hr WI D densify
 > (skip invoice soft-cap) or more HYGIENE.
+
+> **Cycle 1189 (2026-07-20).** **hm-convergence HYGIENE dig** — dual_lock queue
+> depth **0** (drained); shadcn parity **gap=0** (parity 37 / partial 26 / n/a 1);
+> HM zero-floor **GREEN**; coverage 41 schema+DOM + 99 DOM-only dual-locks.
+> Regenerated DUAL_LOCK_QUEUE + SHADCN_PARITY. budget_consumed 1. Explore **3/100**.
+> Next: HYGIENE risk/deploy/rhythm lag86+ or dens under soft-caps (skip invoice/fieldtest).
 
 > **Cycle 1188 (2026-07-20).** **example-apps COGNITION dig** — `demo reset-and-load`
 > on simple_task (serve :3393 → created_count=8, persona_homes_residual=0,
