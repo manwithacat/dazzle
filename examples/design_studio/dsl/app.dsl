@@ -46,6 +46,7 @@ nav designer_nav:
     review_pipeline
     approved_ops
     published_ops
+    draft_ops
 
 nav reviewer_nav:
   group "Review":
@@ -60,6 +61,7 @@ nav reviewer_nav:
     review_pipeline
     approved_ops
     published_ops
+    draft_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -908,6 +910,64 @@ workspace published_ops "Published Ops":
     aggregate:
       count: count(Asset)
     empty: "No published assets to chart"
+
+
+# Fourteenth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify design_studio.
+workspace draft_ops "Draft Ops":
+  purpose: "Draft-asset pressure — unfinished work without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  draft_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      draft: count(Asset where status = draft)
+      review: count(Asset where status = review)
+      published: count(Asset where status = published)
+    tones:
+      draft: warning
+      review: accent
+      published: muted
+
+  # WI D: queue family — drafts first
+  draft_queue:
+    source: Asset
+    filter: status = draft
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "No drafts in progress"
+
+  # WI D: grid family — draft gallery
+  draft_gallery:
+    source: Asset
+    filter: status = draft
+    sort: name asc
+    limit: 15
+    display: grid
+    action: asset_edit
+    empty: "No drafts in progress"
+
+  # WI D: context family — recent draft trail
+  draft_trail:
+    source: Asset
+    filter: status = draft
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No draft activity yet"
+
+  # WI D: chart family — asset type mix among drafts
+  type_mix:
+    source: Asset
+    filter: status = draft
+    display: bar_chart
+    group_by: asset_type
+    aggregate:
+      count: count(Asset)
+    empty: "No drafts to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
