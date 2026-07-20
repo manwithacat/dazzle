@@ -1131,3 +1131,60 @@ workspace rejected_ops "Rejected Ops":
     aggregate:
       count: count(Invoice)
     empty: "No rework-related invoices to chart"
+
+# Fifteenth product desk (WI D): 7 lists floor dens ~0.33 with 14 full desks — need 15.
+workspace partial_ops "Partial Pay Ops":
+  purpose: "Partial-payment pressure — invoices mid-settlement without warehouse CRUD"
+  access: persona(finance, finance_admin, auditor, tenant_admin)
+
+  partial_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      partial: count(Invoice where status = partially_paid)
+      approved: count(Invoice where status = approved)
+      paid: count(Invoice where status = paid)
+    tones:
+      partial: warning
+      approved: accent
+      paid: positive
+
+  # WI D: queue family — partial payments first
+  partial_queue:
+    source: Invoice
+    filter: status = partially_paid
+    sort: amount desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "No partially paid invoices"
+
+  # WI D: grid family — approved ready to complete
+  approved_grid:
+    source: Invoice
+    filter: status = approved
+    sort: amount desc
+    limit: 15
+    display: grid
+    action: invoice_detail
+    empty: "No approved invoices awaiting pay"
+
+  # WI D: context family — settlement trail
+  settlement_trail:
+    source: Invoice
+    filter: status = partially_paid or status = approved or status = paid
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No settlement activity yet"
+
+  # WI D: chart family — settlement status mix
+  status_mix:
+    source: Invoice
+    filter: status = partially_paid or status = approved or status = paid
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No settlement invoices to chart"
