@@ -67,6 +67,7 @@ nav engineer_nav:
     retired_ops
     draft_releases
     released_ops
+    active_ops
 
 nav tester_nav:
   group "Field":
@@ -89,6 +90,7 @@ nav manager_nav:
     retired_ops
     draft_releases
     released_ops
+    active_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -2155,6 +2157,63 @@ workspace released_ops "Released Ops":
     aggregate:
       count: count(FirmwareRelease)
     empty: "No firmware releases to chart"
+
+# Seventeenth product desk (WI D): skip invoice_ops desk-cap; densify fieldtest_hub.
+workspace active_ops "Active Ops":
+  purpose: "Active fleet pressure — production units without warehouse CRUD"
+  access: persona(engineer, manager)
+
+  active_metrics:
+    source: Device
+    display: metrics
+    aggregate:
+      active: count(Device where status = active)
+      prototype: count(Device where status = prototype)
+      recalled: count(Device where status = recalled)
+    tones:
+      active: positive
+      prototype: accent
+      recalled: destructive
+
+  # WI D: queue family — active units first
+  active_queue:
+    source: Device
+    filter: status = active
+    sort: name asc
+    limit: 20
+    display: queue
+    action: device_detail
+    empty: "No active devices"
+
+  # WI D: grid family — active fleet cards
+  active_grid:
+    source: Device
+    filter: status = active
+    sort: name asc
+    limit: 15
+    display: grid
+    action: device_detail
+    empty: "No active devices"
+
+  # WI D: context family — recent active trail
+  active_trail:
+    source: Device
+    filter: status = active
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: device_detail
+    empty: "No active fleet activity yet"
+
+  # WI D: chart family — active model mix
+  model_mix:
+    source: Device
+    filter: status = active
+    display: bar_chart
+    group_by: model
+    aggregate:
+      count: count(Device)
+    empty: "No active devices to chart"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts
