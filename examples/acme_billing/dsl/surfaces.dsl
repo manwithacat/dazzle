@@ -609,3 +609,54 @@ workspace membership_ops "Membership Ops":
     aggregate:
       count: count(Membership)
     empty: "No memberships yet"
+
+# Eighth product desk (WI D): 5 lists floor dens ~0.42 with 7 full desks — need 8.
+workspace sensitive_review "Sensitive Review":
+  purpose: "Sensitivity desk — flag and review sensitive invoices without warehouse CRUD"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor)
+
+  sensitivity_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      sensitive: count(Invoice where sensitive = true)
+      open: count(Invoice)
+      projects: count(Project)
+    tones:
+      sensitive: warning
+      open: accent
+
+  # WI D: queue family — sensitive invoices first
+  sensitive_queue:
+    source: Invoice
+    filter: sensitive = true
+    sort: created_at desc
+    limit: 20
+    display: queue
+    empty: "No sensitive invoices flagged"
+
+  # WI D: grid family for project context
+  project_cards:
+    source: Project
+    display: grid
+    sort: name asc
+    limit: 15
+    empty: "No projects found"
+
+  # WI D: context family — recent invoice trail
+  invoice_trail:
+    source: Invoice
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    empty: "No invoices yet"
+
+  # WI D: chart family — sensitive vs open mix via project load
+  project_invoice_load:
+    source: Invoice
+    display: bar_chart
+    group_by: project
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices yet"

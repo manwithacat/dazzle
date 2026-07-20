@@ -47,6 +47,7 @@ nav owner_nav:
     team_home
     orgs_home
     membership_ops
+    sensitive_review
 
 nav auditor_nav:
   group "Review":
@@ -56,6 +57,7 @@ nav auditor_nav:
     team_home
     orgs_home
     membership_ops
+    sensitive_review
 
 nav member_nav:
   group "My desk":

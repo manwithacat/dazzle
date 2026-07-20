@@ -90,6 +90,8 @@ warehouse:
   and open bills queue.
 - **Membership Ops** — access desk: membership metrics, roster grid, project
   queue, people trail, and role mix chart.
+- **Sensitive Review** — owner/auditor sensitivity desk: sensitive metrics,
+  sensitive queue, project cards, invoice trail, and project load chart.
 
 ## How work flows through it
 
@@ -137,4 +139,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:4e16ece1f323321d7ed84df2bd4feedfdd0b59216eea38cad4dfc6c98382d48c -->
+<!-- dazzle-spec-brief: sha256:811af0436f979f64cde4225eeb93acc16f323393eba505886b8b8dfbd0f887fb -->
