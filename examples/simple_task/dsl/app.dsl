@@ -240,6 +240,7 @@ nav admin_nav:
     progress_ops
     todo_ops
     urgent_ops
+    unassigned_ops
 
 nav manager_nav:
   group "Lead":
@@ -253,6 +254,7 @@ nav manager_nav:
     progress_ops
     todo_ops
     urgent_ops
+    unassigned_ops
 
 nav member_nav:
   group "My work":
@@ -265,6 +267,7 @@ nav member_nav:
     progress_ops
     todo_ops
     urgent_ops
+    unassigned_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1320,3 +1323,60 @@ workspace urgent_ops "Urgent Ops":
     aggregate:
       count: count(Task)
     empty: "No high-priority tasks to chart"
+
+# Twelfth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify simple_task.
+workspace unassigned_ops "Unassigned Ops":
+  purpose: "Assignment pressure — open tasks without an owner without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  unassigned_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      unassigned: count(Task where assigned_to = null and status != done)
+      open: count(Task where status != done)
+      in_progress: count(Task where status = in_progress)
+    tones:
+      unassigned: warning
+      open: accent
+      in_progress: muted
+
+  # WI D: queue family — unassigned first
+  unassigned_queue:
+    source: Task
+    filter: assigned_to = null and status != done
+    sort: priority desc, updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No unassigned open tasks"
+
+  # WI D: grid family — unassigned cards
+  unassigned_grid:
+    source: Task
+    filter: assigned_to = null and status != done
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No unassigned open tasks"
+
+  # WI D: context family — recent unassigned trail
+  unassigned_trail:
+    source: Task
+    filter: assigned_to = null and status != done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No unassigned activity yet"
+
+  # WI D: chart family — priority mix among unassigned
+  priority_mix:
+    source: Task
+    filter: assigned_to = null and status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No unassigned tasks to chart"
