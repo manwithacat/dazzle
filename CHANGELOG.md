@@ -1,13 +1,17 @@
 ## [Unreleased]
 
 ### Added
+- **#1638 PR2 scene walk runner** — `dazzle test walk run` executes core
+  actions over HTTP (SessionManager persona auth + httpx navigate/asserts).
+  `--dry-run` plans without network; `--playwright` enables click/wait when
+  Playwright is installed. Extension `api_*` actions fail closed until later.
 - **#1638 PR1 scene walks (story-driven job QA)** — `dazzle.testing.walk`
   models + JSON Schemas (`scene_walk`, `job_claim_registry`), loader,
   discovery under `fixtures/scene_walks/`, and CLI
   `dazzle test walk list|validate` (AppSpec persona/story cross-check;
   `--core-only` for showcase). Showcase fixture:
   `examples/simple_task/fixtures/scene_walks/land_and_see_tasks.yaml`
-  (ST-020, core actions only). Runner / claims check / pack dry-run = later PRs.
+  (ST-020, core actions only). Claims check / pack dry-run = later PRs.
 - **Vertex AI + OpenAI-compatible LLM endpoints for `llm_intent` tasking.**
   `provider: google` now runs through Google Vertex / Gemini
   (`google-genai`, Application Default Credentials — same shape as the

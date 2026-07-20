@@ -9,14 +9,17 @@ from typing import Any
 import typer
 
 from dazzle.cli.utils import load_project_appspec
+from dazzle.core.manifest import resolve_api_url
 from dazzle.testing.walk.discovery import default_walks_dir, discover_walk_paths
-from dazzle.testing.walk.validate import validate_walks
+from dazzle.testing.walk.loader import load_walk
+from dazzle.testing.walk.runner import run_walk_sync
+from dazzle.testing.walk.validate import validate_walk, validate_walks
 
 walk_app = typer.Typer(
     name="walk",
     help=(
         "Scene walks: deterministic story-linked persona job paths (#1638). "
-        "PR1: list + validate. PR2: run."
+        "list | validate | run (HTTP core actions; optional --playwright)."
     ),
     no_args_is_help=True,
 )
@@ -213,3 +216,145 @@ def walk_validate(
             typer.echo(i.format(), err=(i.level == "error"))
 
     raise typer.Exit(code=1 if errors else 0)
+
+
+def _resolve_base_url(root: Path, base_url: str | None) -> str:
+    if base_url:
+        return base_url.rstrip("/")
+    try:
+        return resolve_api_url().rstrip("/")
+    except Exception:
+        return "http://127.0.0.1:8000"
+
+
+def _print_run_result(run_result: Any) -> None:
+    typer.echo(run_result.summary())
+    for scene in run_result.scenes:
+        mark = "ok" if scene.ok else "FAIL"
+        typer.echo(f"  scene {scene.scene_id}: {mark}")
+        for ar in scene.actions:
+            am = "  +" if ar.ok else "  -"
+            typer.echo(f"    {am} {ar.type}: {ar.message}")
+
+
+def _run_result_dict(run_result: Any) -> dict[str, Any]:
+    return {
+        "walk_id": run_result.walk_id,
+        "persona": run_result.persona,
+        "ok": run_result.ok,
+        "dry_run": run_result.dry_run,
+        "base_url": run_result.base_url,
+        "error": run_result.error,
+        "scenes": [
+            {
+                "id": s.scene_id,
+                "ok": s.ok,
+                "story": s.story,
+                "actions": [{"type": a.type, "ok": a.ok, "message": a.message} for a in s.actions],
+            }
+            for s in run_result.scenes
+        ],
+    }
+
+
+def _run_one_walk(
+    path: Path,
+    *,
+    root: Path,
+    url: str,
+    dry_run: bool,
+    playwright: bool,
+    core_only: bool,
+    timeout: float,
+    quiet: bool,
+) -> dict[str, Any]:
+    w = load_walk(path)
+    errors = [i for i in validate_walk(w, require_core_only=core_only) if i.level == "error"]
+    if errors:
+        msg = "; ".join(i.message for i in errors)
+        if not quiet:
+            typer.echo(f"FAIL {w.walk_id}: preflight — {msg}", err=True)
+        return {"walk_id": w.walk_id, "ok": False, "error": msg, "dry_run": dry_run}
+
+    run_result = run_walk_sync(
+        w,
+        base_url=url,
+        project_root=root,
+        dry_run=dry_run,
+        use_playwright=playwright,
+        timeout_s=timeout,
+    )
+    if not quiet:
+        _print_run_result(run_result)
+    return _run_result_dict(run_result)
+
+
+@walk_app.command("run")
+def walk_run(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    walks_dir: str | None = typer.Option(None, "--walks-dir"),
+    walk: str | None = typer.Option(
+        None,
+        "--walk",
+        "-w",
+        help="Run a single walk id (stem) or path (default: all walks)",
+    ),
+    base_url: str | None = typer.Option(
+        None,
+        "--base-url",
+        "-u",
+        help="App base URL (default: resolve_api_url / localhost:8000)",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Plan only — no network (validates load + lists steps)",
+    ),
+    playwright: bool = typer.Option(
+        False,
+        "--playwright",
+        help="Enable playwright_click / playwright_wait (requires playwright)",
+    ),
+    core_only: bool = typer.Option(
+        True,
+        "--core-only/--allow-extension",
+        help="Refuse walks with extension api_* actions (default: refuse)",
+    ),
+    json_output: bool = typer.Option(False, "--json"),
+    timeout: float = typer.Option(30.0, "--timeout", help="HTTP timeout seconds"),
+) -> None:
+    """Run scene walks against a live app (HTTP-first core actions).
+
+    Auth uses SessionManager (``/__test__/authenticate`` in test mode, or
+    login fallback). Start the app with ``dazzle serve --test-mode`` (or
+    equivalent) so persona sessions can be created.
+
+    Examples:
+        dazzle test walk run -m examples/simple_task/dazzle.toml --dry-run
+        dazzle test walk run -m examples/simple_task/dazzle.toml -u http://127.0.0.1:8765
+        dazzle test walk run -w land_and_see_tasks --playwright
+    """
+    root = _project_root(manifest)
+    paths = _resolve_paths(root, walks_dir, walk)
+    if not paths:
+        typer.echo("No walks found", err=True)
+        raise typer.Exit(code=1)
+
+    url = _resolve_base_url(root, base_url)
+    results = [
+        _run_one_walk(
+            p,
+            root=root,
+            url=url,
+            dry_run=dry_run,
+            playwright=playwright,
+            core_only=core_only,
+            timeout=timeout,
+            quiet=json_output,
+        )
+        for p in paths
+    ]
+    any_fail = any(not r.get("ok") for r in results)
+    if json_output:
+        typer.echo(json.dumps({"results": results, "ok": not any_fail}, indent=2))
+    raise typer.Exit(code=1 if any_fail else 0)

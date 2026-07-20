@@ -102,3 +102,85 @@ class TestValidate:
 class TestCoreSet:
     def test_core_subset_of_enum(self) -> None:
         assert CORE_ACTION_TYPES <= set(WalkActionType)
+
+
+class TestRunnerDryRun:
+    def test_dry_run_showcase(self) -> None:
+        from dazzle.testing.walk.runner import run_walk_sync
+
+        walk = load_walk(_SHOWCASE)
+        result = run_walk_sync(
+            walk,
+            base_url="http://example.test",
+            project_root=_SIMPLE,
+            dry_run=True,
+        )
+        assert result.ok is True
+        assert result.dry_run is True
+        assert len(result.scenes) == 1
+        assert all(a.ok for a in result.scenes[0].actions)
+        assert "PASS" in result.summary()
+
+    def test_extension_action_fails_live(self, tmp_path: Path) -> None:
+        from dazzle.testing.walk.runner import run_walk_sync
+
+        p = tmp_path / "ext.yaml"
+        p.write_text(
+            "persona: member\nscenes:\n  - id: s\n    actions:\n      - type: api_find\n",
+            encoding="utf-8",
+        )
+        walk = load_walk(p)
+        # dry-run still ok (skips)
+        dry = run_walk_sync(walk, base_url="http://x", dry_run=True)
+        assert dry.ok is True
+        # live without auth will fail at auth — use dry for extension detail:
+        # inject a fake runner state by running action path via dry=False
+        # after mocking auth is heavy; check ActionResult via WalkRunner dry=False
+        # with authenticate patched.
+        import asyncio
+        from unittest.mock import AsyncMock
+
+        from dazzle.testing.walk.runner import WalkRunner
+
+        async def _go() -> None:
+            async with WalkRunner(
+                base_url="http://example.test",
+                project_root=_SIMPLE,
+                dry_run=False,
+            ) as runner:
+                runner.authenticate = AsyncMock()  # type: ignore[method-assign]
+                res = await runner.run(walk)
+                assert res.ok is False
+                assert any(a.type == "api_find" and not a.ok for s in res.scenes for a in s.actions)
+
+        asyncio.run(_go())
+
+    def test_assert_any_text_on_body(self) -> None:
+        import asyncio
+
+        from dazzle.testing.walk.models import ActionSpec, SceneSpec, WalkActionType
+        from dazzle.testing.walk.runner import WalkRunner
+
+        async def _go() -> None:
+            async with WalkRunner(base_url="http://example.test", dry_run=False) as runner:
+                runner.last_body = "Hello Task Board My Work"
+                runner.last_status = 200
+                runner.last_url = "http://example.test/app/workspaces/my_work"
+                scene = SceneSpec(id="s", actions=[ActionSpec(type=WalkActionType.NAVIGATE)])
+                ok = await runner._act_assert_any_text(
+                    ActionSpec(type=WalkActionType.ASSERT_ANY_TEXT, texts=["Task", "Nope"]),
+                    scene,
+                )
+                assert ok.ok is True
+                bad = await runner._act_assert_any_text(
+                    ActionSpec(type=WalkActionType.ASSERT_ANY_TEXT, texts=["Nope"]),
+                    scene,
+                )
+                assert bad.ok is False
+                login = await runner._act_assert_not_login(
+                    ActionSpec(type=WalkActionType.ASSERT_NOT_LOGIN),
+                    scene,
+                )
+                assert login.ok is True
+
+        asyncio.run(_go())

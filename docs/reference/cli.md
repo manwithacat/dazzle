@@ -318,7 +318,7 @@ dazzle test COMMAND [OPTIONS]
 | `generate` | Generate E2E test spec from AppSpec |
 | `run` | Run Playwright tests |
 | `list` | List available test flows |
-| `walk` | Scene walks list/validate (#1638; story-linked job paths) |
+| `walk` | Scene walks list/validate/run (#1638; story-linked job paths) |
 | `dsl-generate` | Generate tests from DSL definitions |
 | `dsl-run` | **Tier 1**: Run API-based tests against a server |
 | `tier2-generate` | **Tier 2**: Generate Playwright tests from surfaces |
