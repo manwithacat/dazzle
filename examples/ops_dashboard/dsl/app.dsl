@@ -186,6 +186,7 @@ nav ops_nav:
     resolved_alerts
     degraded_ops
     integration_ops
+    data_plane_ops
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage
@@ -1142,6 +1143,64 @@ workspace integration_ops "Integration Ops":
     aggregate:
       count: count(Integration)
     empty: "No integrations to chart"
+
+
+# Eleventh product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify ops_dashboard.
+workspace data_plane_ops "Data Plane Ops":
+  purpose: "Data-plane pressure — database/cache/queue systems without warehouse CRUD"
+  access: persona(ops_engineer, admin)
+
+  data_pulse:
+    source: System
+    display: metrics
+    aggregate:
+      database: count(System where service_type = database)
+      cache: count(System where service_type = cache)
+      queue: count(System where service_type = queue)
+    tones:
+      database: accent
+      cache: positive
+      queue: muted
+
+  # WI D: queue family — data-plane systems first
+  data_queue:
+    source: System
+    filter: service_type = database or service_type = cache or service_type = queue
+    sort: name asc
+    limit: 20
+    display: queue
+    action: system_edit
+    empty: "No data-plane systems"
+
+  # WI D: grid family — data-plane cards
+  data_grid:
+    source: System
+    filter: service_type = database or service_type = cache or service_type = queue
+    sort: status desc, name asc
+    limit: 15
+    display: grid
+    action: system_edit
+    empty: "No data-plane systems"
+
+  # WI D: context family — trail
+  data_trail:
+    source: System
+    filter: service_type = database or service_type = cache or service_type = queue
+    sort: name asc
+    limit: 15
+    display: timeline
+    action: system_edit
+    empty: "No data-plane activity yet"
+
+  # WI D: chart family — status mix among data-plane
+  status_mix:
+    source: System
+    filter: service_type = database or service_type = cache or service_type = queue
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(System)
+    empty: "No data-plane systems to chart"
 
 # =============================================================================
 # Surfaces
