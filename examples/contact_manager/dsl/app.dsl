@@ -40,6 +40,7 @@ nav contact_nav:
     home
     favorites_ops
     company_ops
+    independent_ops
   group "Directory":
     contacts
     companies
@@ -49,6 +50,7 @@ nav contact_nav:
     contacts
     favorites_ops
     company_ops
+    independent_ops
 
 # Entity for contact information with LLM cognition metadata.
 #
@@ -468,6 +470,64 @@ workspace company_ops "Company Ops":
     aggregate:
       count: count(Contact)
     empty: "No company contacts to chart"
+
+
+# Sixth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify contact_manager.
+workspace independent_ops "Independent Ops":
+  purpose: "Independent-contact pressure — people without company affiliation without warehouse CRUD"
+  access: persona(user, admin)
+
+  independent_pulse:
+    source: Contact
+    display: metrics
+    aggregate:
+      independent: count(Contact where company = null)
+      favourites: count(Contact where is_favorite = true)
+      people: count(Contact)
+    tones:
+      independent: accent
+      favourites: positive
+      people: muted
+
+  # WI D: queue family — independents first
+  independent_queue:
+    source: Contact
+    filter: company = null
+    sort: last_name asc, first_name asc
+    limit: 20
+    display: queue
+    action: contact_detail
+    empty: "No independent contacts yet"
+
+  # WI D: grid family — independent cards
+  independent_grid:
+    source: Contact
+    filter: company = null
+    sort: last_name asc
+    limit: 15
+    display: grid
+    action: contact_detail
+    empty: "No independent contacts yet"
+
+  # WI D: context family — recent independent trail
+  independent_trail:
+    source: Contact
+    filter: company = null
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: contact_detail
+    empty: "No independent-contact activity yet"
+
+  # WI D: chart family — favourite mix among independents
+  favorite_mix:
+    source: Contact
+    filter: company = null
+    display: bar_chart
+    group_by: is_favorite
+    aggregate:
+      count: count(Contact)
+    empty: "No independent contacts to chart"
 
 # Stage Selection:
 # - list_weight = 0.6 >= 0.3 ✓
