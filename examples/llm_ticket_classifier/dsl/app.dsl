@@ -674,6 +674,64 @@ workspace open_ops "Open Ops":
     empty: "No open tickets to chart"
 
 
+
+# Eighth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify llm classifier.
+workspace resolved_ops "Resolved Ops":
+  purpose: "Close-out pressure — resolved tickets without warehouse CRUD"
+  access: persona(supervisor, support_agent, admin)
+
+  resolved_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      resolved: count(Ticket where status = resolved)
+      closed: count(Ticket where status = closed)
+      open: count(Ticket where status = open)
+    tones:
+      resolved: positive
+      closed: muted
+      open: warning
+
+  # WI D: queue family — resolved first
+  resolved_queue:
+    source: Ticket
+    filter: status = resolved
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: ticket_detail
+    empty: "No resolved tickets"
+
+  # WI D: grid family — resolved cards
+  resolved_grid:
+    source: Ticket
+    filter: status = resolved
+    sort: updated_at desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No resolved tickets"
+
+  # WI D: context family — resolve trail
+  resolved_trail:
+    source: Ticket
+    filter: status = resolved or status = closed
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No resolve activity yet"
+
+  # WI D: chart family — status mix among closed-out
+  status_mix:
+    source: Ticket
+    filter: status = resolved or status = closed
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No resolved tickets to chart"
+
 # =============================================================================
 # Personas
 # =============================================================================
@@ -704,6 +762,7 @@ nav agent_nav:
     category_ops
     sentiment_ops
     open_ops
+    resolved_ops
     support_dashboard
 
 nav supervisor_nav:
@@ -714,6 +773,7 @@ nav supervisor_nav:
     category_ops
     sentiment_ops
     open_ops
+    resolved_ops
     ticket_management
 
 
