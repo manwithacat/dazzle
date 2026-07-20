@@ -39,6 +39,7 @@ nav contact_nav:
   group "Home":
     home
     favorites_ops
+    company_ops
   group "Directory":
     contacts
     companies
@@ -47,6 +48,7 @@ nav contact_nav:
   group "Browse" when: tenant_config.show_browse = true:
     contacts
     favorites_ops
+    company_ops
 
 # Entity for contact information with LLM cognition metadata.
 #
@@ -408,6 +410,64 @@ workspace favorites_ops "Favorites Ops":
     aggregate:
       count: count(Contact)
     empty: "No favourite company contacts to chart"
+
+
+# Fifth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify contact_manager.
+workspace company_ops "Company Ops":
+  purpose: "Employed-contact pressure — people with company affiliation without warehouse CRUD"
+  access: persona(user, admin)
+
+  company_pulse:
+    source: Contact
+    display: metrics
+    aggregate:
+      with_company: count(Contact where company != null)
+      favourites: count(Contact where is_favorite = true)
+      people: count(Contact)
+    tones:
+      with_company: accent
+      favourites: positive
+      people: muted
+
+  # WI D: queue family — company contacts first
+  company_queue:
+    source: Contact
+    filter: company != null
+    sort: company asc, last_name asc
+    limit: 20
+    display: queue
+    action: contact_detail
+    empty: "No company contacts yet"
+
+  # WI D: grid family — company cards
+  company_grid:
+    source: Contact
+    filter: company != null
+    sort: company asc
+    limit: 15
+    display: grid
+    action: contact_detail
+    empty: "No company contacts yet"
+
+  # WI D: context family — recent company-contact trail
+  company_trail:
+    source: Contact
+    filter: company != null
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: contact_detail
+    empty: "No company-contact activity yet"
+
+  # WI D: chart family — contacts by company
+  company_mix:
+    source: Contact
+    filter: company != null
+    display: bar_chart
+    group_by: company
+    aggregate:
+      count: count(Contact)
+    empty: "No company contacts to chart"
 
 # Stage Selection:
 # - list_weight = 0.6 >= 0.3 ✓
