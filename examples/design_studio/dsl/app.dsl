@@ -39,6 +39,7 @@ nav designer_nav:
     campaign_desk
     review_desk
     feedback_desk
+    publish_desk
 
 nav reviewer_nav:
   group "Review":
@@ -46,6 +47,7 @@ nav reviewer_nav:
     asset_catalog
     studio_dashboard
     feedback_desk
+    publish_desk
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -495,6 +497,62 @@ workspace feedback_desk "Feedback":
 
   # WI D: chart family — asset status next to feedback trail
   asset_status_mix:
+    source: Asset
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Asset)
+    empty: "No assets yet"
+
+# Seventh product desk (WI D): 4 lists floor dens ~0.40 with 6 full desks — need 7.
+workspace publish_desk "Publish Desk":
+  purpose: "Publish pressure — approved and live assets ready for campaigns"
+  access: persona(admin, designer, reviewer)
+
+  publish_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      approved: count(Asset where status = approved)
+      published: count(Asset where status = published)
+      active_campaigns: count(Campaign where status = active)
+    tones:
+      approved: accent
+      published: positive
+      active_campaigns: positive
+
+  # WI D: queue family — ready to publish
+  approved_queue:
+    source: Asset
+    filter: status = approved
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "No approved assets waiting to publish"
+
+  # WI D: grid family — live published set
+  published_gallery:
+    source: Asset
+    filter: status = published
+    sort: name asc
+    limit: 20
+    display: grid
+    action: asset_edit
+    empty: "No published assets yet"
+
+  # WI D: context family — recent publish trail
+  publish_trail:
+    source: Asset
+    filter: status = published or status = approved
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No publish activity yet"
+
+  # WI D: chart family — lifecycle mix at publish boundary
+  status_mix:
     source: Asset
     display: bar_chart
     group_by: status
