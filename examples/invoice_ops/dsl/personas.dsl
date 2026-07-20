@@ -50,12 +50,14 @@ nav requester_nav:
     my_invoices
     finance_ops
     line_items_desk
+    draft_ops
 
 nav approver_nav:
   group "Approvals":
     approval_desk
     finance_ops
     suppliers_desk
+    draft_ops
 
 nav finance_nav:
   group "Settle":
@@ -67,6 +69,7 @@ nav finance_nav:
     suppliers_desk
     finance_ops
     line_items_desk
+    draft_ops
 
 nav auditor_nav:
   group "Audit":
@@ -86,6 +89,7 @@ nav tenant_admin_nav:
     bank_ops
     settlement_ops
     audit_review
+    draft_ops
 
 nav finance_admin_nav:
   group "Oversight":
@@ -100,3 +104,4 @@ nav finance_admin_nav:
     suppliers_desk
     team_desk
     line_items_desk
+    draft_ops

@@ -1017,3 +1017,60 @@ workspace settlement_ops "Settlement Ops":
     aggregate:
       count: count(PaymentAttempt)
     empty: "No payment attempts to chart"
+
+# Thirteenth product desk (WI D): draft invoice pressure for requesters/finance.
+workspace draft_ops "Draft Ops":
+  purpose: "Draft and submitted invoice pressure without warehouse CRUD"
+  access: persona(requester, finance, finance_admin, tenant_admin, approver)
+
+  draft_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      draft: count(Invoice where status = draft)
+      submitted: count(Invoice where status = submitted)
+      open: count(Invoice where status = draft or status = submitted)
+    tones:
+      draft: accent
+      submitted: warning
+      open: accent
+
+  # WI D: queue family — drafts needing completion
+  draft_queue:
+    source: Invoice
+    filter: status = draft
+    sort: amount desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "No draft invoices"
+
+  # WI D: grid family — submitted awaiting approval
+  submitted_grid:
+    source: Invoice
+    filter: status = submitted
+    sort: amount desc
+    limit: 15
+    display: grid
+    action: invoice_detail
+    empty: "Nothing submitted awaiting approval"
+
+  # WI D: context family — recent pre-approval trail
+  intake_trail:
+    source: Invoice
+    filter: status = draft or status = submitted
+    sort: amount desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No draft or submitted invoices"
+
+  # WI D: chart family — pre-approval status mix
+  status_mix:
+    source: Invoice
+    filter: status = draft or status = submitted
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No pre-approval invoices to chart"
