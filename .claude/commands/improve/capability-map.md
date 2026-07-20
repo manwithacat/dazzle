@@ -109,6 +109,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 
 ## Cycle notes (newest first)
 
+> **Cycle 1156 (2026-07-20).** **self-audit 5 CLEAN** — cadence ≥15 since 1103
+> (`45106aefb`). Window `45106aefb..1d759a5eb` (52 improve commits). Sampled largest:
+> ops densify 1106, acme public_billing 1148, fieldtest critical_ops 1116, capability
+> stamps 1147, fieldtest active_ops 1155. All claim↔diff hold; acme auditspec drift
+> 2/2 green; desks present in DSL. budget_consumed 0. Explore **0/100** (operator
+> `--reset-budget`). Next: capability-sweep due or acme/hr WI D densify (skip invoice).
+
 > **Cycle 1155 (2026-07-20).** **example-apps ordinary explore** fieldtest_hub WI D —
 > skipped invoice_ops desk-cap; new **active_ops** desk + engineer/manager nav.
 > dens ~0.29 (desk-entity soft cap); fleet **0.081**. budget_consumed 1. Explore **37/100**.
