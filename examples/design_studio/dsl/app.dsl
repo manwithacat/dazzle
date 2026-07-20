@@ -51,6 +51,7 @@ nav designer_nav:
     planning_ops
     logo_ops
     completed_ops
+    photo_ops
 
 nav reviewer_nav:
   group "Review":
@@ -70,6 +71,7 @@ nav reviewer_nav:
     planning_ops
     logo_ops
     completed_ops
+    photo_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -1207,6 +1209,64 @@ workspace completed_ops "Completed Ops":
     aggregate:
       count: count(Campaign)
     empty: "No completed campaigns to chart"
+
+
+# Nineteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
+workspace photo_ops "Photo Ops":
+  purpose: "Photo-asset pressure — photo type work without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  photo_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      photos: count(Asset where asset_type = photo)
+      draft: count(Asset where asset_type = photo and status = draft)
+      published: count(Asset where asset_type = photo and status = published)
+    tones:
+      photos: accent
+      draft: warning
+      published: positive
+
+  # WI D: queue family — photos first
+  photo_queue:
+    source: Asset
+    filter: asset_type = photo
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "No photo assets"
+
+  # WI D: grid family — photo gallery
+  photo_gallery:
+    source: Asset
+    filter: asset_type = photo
+    sort: name asc
+    limit: 15
+    display: grid
+    action: asset_edit
+    empty: "No photo assets"
+
+  # WI D: context family — photo trail
+  photo_trail:
+    source: Asset
+    filter: asset_type = photo
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No photo activity yet"
+
+  # WI D: chart family — status mix among photos
+  status_mix:
+    source: Asset
+    filter: asset_type = photo
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Asset)
+    empty: "No photos to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
