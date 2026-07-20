@@ -57,7 +57,7 @@
       "owner_field_hint": "assigned_to"
     },
     {
-      "name": "Taskcomment",
+      "name": "TaskComment",
       "status": "grounded",
       "evidence": "appears in founder brief (source=article_noun)",
       "lifecycle_hint": [
@@ -133,11 +133,6 @@
       "blocks_promote": false
     },
     {
-      "id": "q2",
-      "text": "Can a task have multiple assignmentss, or just one?",
-      "blocks_promote": false
-    },
-    {
       "id": "q3",
       "text": "Can a task have multiple tracks, or just one?",
       "blocks_promote": false
@@ -165,40 +160,40 @@
   ],
   "rejected_chrome": [
     "Administrator",
-    "Completed",
-    "Control",
     "Create",
-    "Declared",
     "Demo",
-    "Development",
-    "Discrete",
-    "Implementation",
-    "Intention",
     "Level",
-    "Lifecycle",
     "List",
     "Machine",
     "Mix",
     "Need",
-    "Organization",
     "Pre",
     "Progre",
     "Require",
-    "Review",
-    "Right",
     "Scenario",
     "Several",
     "Signal",
-    "Specific",
-    "State",
     "Surface",
     "Team",
     "Test",
-    "Transition",
-    "Urgent",
     "Variant",
     "Variou",
-    "Work",
-    "Workload"
+    "completed",
+    "control",
+    "declared",
+    "development",
+    "discrete",
+    "implementation",
+    "intention",
+    "lifecycle",
+    "organization",
+    "review",
+    "right",
+    "specific",
+    "state",
+    "transition",
+    "urgent",
+    "work",
+    "workload"
   ]
 }

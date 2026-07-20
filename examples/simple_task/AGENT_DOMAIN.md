@@ -20,11 +20,11 @@
 ## Nouns (domain types)
 
 - **Task** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — appears in founder brief (source=capitalized_noun)
-- **Taskcomment** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — appears in founder brief (source=article_noun)
+- **TaskComment** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Completed`, `Control`, `Create`, `Declared`, `Demo`, `Development`, `Discrete`, `Implementation`, `Intention`, `Level`, `Lifecycle`, `List`, `Machine`, `Mix`, `Need`, `Organization`, `Pre`, `Progre`, `Require`, `Review`, `Right`, `Scenario`, `Several`, `Signal`, `Specific`, `State`, `Surface`, `Team`, `Test`, `Transition`, `Urgent`, `Variant`, `Variou`, `Work`, `Workload`
+`Administrator`, `Create`, `Demo`, `Level`, `List`, `Machine`, `Mix`, `Need`, `Pre`, `Progre`, `Require`, `Scenario`, `Several`, `Signal`, `Surface`, `Team`, `Test`, `Variant`, `Variou`, `completed`, `control`, `declared`, `development`, `discrete`, `implementation`, `intention`, `lifecycle`, `organization`, `review`, `right`, `specific`, `state`, `transition`, `urgent`, `work`, `workload`
 
 ## Desks
 
@@ -43,7 +43,6 @@
 ## Open questions
 
 - `q1`: Can a task have multiple teams, or just one?
-- `q2`: Can a task have multiple assignmentss, or just one?
 - `q3`: Can a task have multiple tracks, or just one?
 - `q4`: Can a member have multiple 7s, or just one?
 - `q5`: Can a indicator have multiple overdues, or just one?
@@ -117,7 +116,7 @@
       "owner_field_hint": "assigned_to"
     },
     {
-      "name": "Taskcomment",
+      "name": "TaskComment",
       "status": "grounded",
       "evidence": "appears in founder brief (source=article_noun)",
       "lifecycle_hint": [
@@ -193,11 +192,6 @@
       "blocks_promote": false
     },
     {
-      "id": "q2",
-      "text": "Can a task have multiple assignmentss, or just one?",
-      "blocks_promote": false
-    },
-    {
       "id": "q3",
       "text": "Can a task have multiple tracks, or just one?",
       "blocks_promote": false
@@ -225,41 +219,41 @@
   ],
   "rejected_chrome": [
     "Administrator",
-    "Completed",
-    "Control",
     "Create",
-    "Declared",
     "Demo",
-    "Development",
-    "Discrete",
-    "Implementation",
-    "Intention",
     "Level",
-    "Lifecycle",
     "List",
     "Machine",
     "Mix",
     "Need",
-    "Organization",
     "Pre",
     "Progre",
     "Require",
-    "Review",
-    "Right",
     "Scenario",
     "Several",
     "Signal",
-    "Specific",
-    "State",
     "Surface",
     "Team",
     "Test",
-    "Transition",
-    "Urgent",
     "Variant",
     "Variou",
-    "Work",
-    "Workload"
+    "completed",
+    "control",
+    "declared",
+    "development",
+    "discrete",
+    "implementation",
+    "intention",
+    "lifecycle",
+    "organization",
+    "review",
+    "right",
+    "specific",
+    "state",
+    "transition",
+    "urgent",
+    "work",
+    "workload"
   ]
 }
 ```
