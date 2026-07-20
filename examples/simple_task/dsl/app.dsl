@@ -238,6 +238,7 @@ nav admin_nav:
     review_ops
     done_ops
     progress_ops
+    todo_ops
 
 nav manager_nav:
   group "Lead":
@@ -249,6 +250,7 @@ nav manager_nav:
     review_ops
     done_ops
     progress_ops
+    todo_ops
 
 nav member_nav:
   group "My work":
@@ -259,6 +261,7 @@ nav member_nav:
     review_ops
     done_ops
     progress_ops
+    todo_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1200,3 +1203,60 @@ workspace progress_ops "Progress Ops":
     aggregate:
       count: count(Task)
     empty: "No in-progress tasks to chart"
+
+# Tenth product desk (WI D): skip invoice_ops desk-cap; densify simple_task.
+workspace todo_ops "Todo Ops":
+  purpose: "Ready-to-start pressure — unstarted todos without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  todo_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      todo: count(Task where status = todo)
+      in_progress: count(Task where status = in_progress)
+      open: count(Task where status != done)
+    tones:
+      todo: warning
+      in_progress: accent
+      open: muted
+
+  # WI D: queue family — todos first
+  todo_queue:
+    source: Task
+    filter: status = todo
+    sort: priority desc, updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No ready todos"
+
+  # WI D: grid family — todo cards
+  todo_grid:
+    source: Task
+    filter: status = todo
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No ready todos"
+
+  # WI D: context family — recent unstarted trail
+  todo_trail:
+    source: Task
+    filter: status = todo
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No todo activity yet"
+
+  # WI D: chart family — priority mix among todos
+  priority_mix:
+    source: Task
+    filter: status = todo
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No todos to chart"

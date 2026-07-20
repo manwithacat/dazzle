@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1158 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1159 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1159 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1178 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1181 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1176 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1176 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1178 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1181 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1159 | USED |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1181 (2026-07-20).** **example-apps ordinary explore** simple_task WI D —
+> skipped invoice_ops/fieldtest desk-cap; new **todo_ops** desk (metrics/queue/grid/timeline/chart)
+> + admin/manager/member nav. dens **0.25→0.23**; fleet **~0.072**.
+> budget_consumed 1. Explore **24/100**. Next: support densify or remaining HYGIENE.
 
 > **Cycle 1180 (2026-07-20).** **HYGIENE dig** remaining STALE — **dazzle sweep examples**
 > (validate+lint+coverage; framework display_modes 38/38, dsl_constructs 23/23; app WARNs
