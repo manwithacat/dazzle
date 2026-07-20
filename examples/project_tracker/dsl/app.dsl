@@ -46,6 +46,7 @@ nav admin_nav:
     review_ops
     backlog_ops
     priority_ops
+    delivery_ops
 
 
 nav manager_nav:
@@ -60,6 +61,7 @@ nav manager_nav:
     review_ops
     backlog_ops
     priority_ops
+    delivery_ops
 
 
 nav member_nav:
@@ -71,6 +73,7 @@ nav member_nav:
     dashboard
     backlog_ops
     priority_ops
+    delivery_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -777,6 +780,63 @@ workspace priority_ops "Priority Ops":
     aggregate:
       count: count(Task)
     empty: "No open tasks to chart"
+
+# Eleventh product desk (WI D): 5 lists floor dens ~0.33 with 10 full desks — need 11.
+workspace delivery_ops "Delivery Ops":
+  purpose: "Delivery pressure — work in flight that needs finish or handoff"
+  access: persona(admin, manager, member)
+
+  delivery_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      in_progress: count(Task where status = in_progress)
+      review: count(Task where status = review)
+      open: count(Task where status != done)
+    tones:
+      in_progress: accent
+      review: warning
+      open: accent
+
+  # WI D: queue family — in-progress first
+  delivery_queue:
+    source: Task
+    filter: status = in_progress
+    sort: priority desc, due_date asc
+    limit: 20
+    display: queue
+    action: task_edit
+    empty: "No tasks in progress"
+
+  # WI D: grid family — review handoff cards
+  review_grid:
+    source: Task
+    filter: status = review
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "Nothing awaiting review handoff"
+
+  # WI D: context family — recent delivery trail
+  delivery_trail:
+    source: Task
+    filter: status = in_progress or status = review
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No delivery activity yet"
+
+  # WI D: chart family — in-flight status mix
+  status_mix:
+    source: Task
+    filter: status = in_progress or status = review
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No in-flight tasks to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
