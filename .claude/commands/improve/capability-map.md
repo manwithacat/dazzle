@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1158 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1159 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1159 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1168 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1169 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1147 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1147 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1168 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1169 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1159 | USED |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1169 (2026-07-20).** **example-apps ordinary explore** acme_billing WI D —
+> skipped invoice_ops desk-cap; new **org_pulse** desk (metrics/queue/grid/timeline/chart)
+> + owner/auditor nav; co-ship auditspec dsl_hash **sha256:e4cc67b76f214d82**.
+> dens ~**0.27** (desk-entity soft cap effective=13.5/15); fleet **~0.076**.
+> budget_consumed 1. Explore **12/100**. Next: fieldtest soft-cap or hr densify.
 
 > **Cycle 1168 (2026-07-20).** **example-apps ordinary explore** contact_manager WI D —
 > skipped invoice_ops/acme soft-cap; new **favorites_ops** desk (metrics/queue/grid/timeline/chart)

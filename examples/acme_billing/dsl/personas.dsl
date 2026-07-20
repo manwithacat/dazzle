@@ -54,6 +54,7 @@ nav owner_nav:
     user_ops
     public_billing
     contractor_ops
+    org_pulse
 
 nav auditor_nav:
   group "Review":
@@ -70,6 +71,7 @@ nav auditor_nav:
     user_ops
     public_billing
     contractor_ops
+    org_pulse
 
 nav member_nav:
   group "My desk":

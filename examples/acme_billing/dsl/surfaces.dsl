@@ -968,3 +968,54 @@ workspace contractor_ops "Contractor Ops":
     aggregate:
       count: count(Invoice)
     empty: "No public invoices to chart"
+
+# Fifteenth product desk (WI D): skip invoice_ops desk-cap; densify acme org footprint.
+workspace org_pulse "Org Pulse":
+  purpose: "Tenant footprint pressure — orgs, people, and project spread without warehouse CRUD"
+  stage: "simple_list"
+  access: persona(admin, org_owner, auditor)
+
+  pulse_metrics:
+    source: Organization
+    display: metrics
+    aggregate:
+      orgs: count(Organization)
+      people: count(User)
+      projects: count(Project)
+    tones:
+      orgs: accent
+      people: positive
+      projects: muted
+
+  # WI D: queue family — organizations first
+  org_queue:
+    source: Organization
+    sort: name asc
+    limit: 20
+    display: queue
+    empty: "No organizations"
+
+  # WI D: grid family — project cards
+  project_cards:
+    source: Project
+    display: grid
+    sort: name asc
+    limit: 15
+    empty: "No projects found"
+
+  # WI D: context family — people trail
+  people_trail:
+    source: User
+    display: timeline
+    sort: name asc
+    limit: 15
+    empty: "No users found"
+
+  # WI D: chart family — projects by org
+  project_mix:
+    source: Project
+    display: bar_chart
+    group_by: org
+    aggregate:
+      count: count(Project)
+    empty: "No projects to chart"
