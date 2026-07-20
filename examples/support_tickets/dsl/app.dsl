@@ -1557,6 +1557,64 @@ workspace high_ops "High Ops":
       count: count(Ticket)
     empty: "No high-priority tickets to chart"
 
+
+# Seventeenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify support_tickets.
+workspace medium_ops "Medium Ops":
+  purpose: "Medium-priority pressure — open medium tickets without warehouse CRUD"
+  access: persona(agent, manager, admin)
+
+  medium_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      medium: count(Ticket where priority = medium and status != closed)
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+    tones:
+      medium: accent
+      open: warning
+      in_progress: muted
+
+  # WI D: queue family — open medium-priority first
+  medium_queue:
+    source: Ticket
+    filter: priority = medium and status != closed
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: ticket_edit
+    empty: "No open medium-priority tickets"
+
+  # WI D: grid family — medium-priority cards
+  medium_grid:
+    source: Ticket
+    filter: priority = medium and status != closed
+    sort: updated_at desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No open medium-priority tickets"
+
+  # WI D: context family — recent medium-priority trail
+  medium_trail:
+    source: Ticket
+    filter: priority = medium and status != closed
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No medium-priority activity yet"
+
+  # WI D: chart family — category mix among medium-priority
+  category_mix:
+    source: Ticket
+    filter: priority = medium and status != closed
+    display: bar_chart
+    group_by: category
+    aggregate:
+      count: count(Ticket)
+    empty: "No medium-priority tickets to chart"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
@@ -1608,6 +1666,7 @@ nav admin_nav:
     inquiry_ops
     other_ops
     high_ops
+    medium_ops
 
 nav customer_nav:
   group "My support":
@@ -1630,6 +1689,7 @@ nav agent_nav:
     inquiry_ops
     other_ops
     high_ops
+    medium_ops
 
 nav manager_nav:
   group "Lead":
@@ -1649,6 +1709,7 @@ nav manager_nav:
     inquiry_ops
     other_ops
     high_ops
+    medium_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
