@@ -1074,3 +1074,60 @@ workspace draft_ops "Draft Ops":
     aggregate:
       count: count(Invoice)
     empty: "No pre-approval invoices to chart"
+
+# Fourteenth product desk (WI D): 7 lists floor dens ~0.35 with 13 full desks — need 14.
+workspace rejected_ops "Rejected Ops":
+  purpose: "Rejected invoice pressure — rework queue without warehouse CRUD"
+  access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
+
+  rejected_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      rejected: count(Invoice where status = rejected)
+      draft: count(Invoice where status = draft)
+      submitted: count(Invoice where status = submitted)
+    tones:
+      rejected: destructive
+      draft: accent
+      submitted: warning
+
+  # WI D: queue family — rejected invoices first
+  rejected_queue:
+    source: Invoice
+    filter: status = rejected
+    sort: amount desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "No rejected invoices"
+
+  # WI D: grid family — rejected cards for rework
+  rejected_grid:
+    source: Invoice
+    filter: status = rejected
+    sort: amount desc
+    limit: 15
+    display: grid
+    action: invoice_detail
+    empty: "No rejected invoices"
+
+  # WI D: context family — recent rejection trail
+  rejection_trail:
+    source: Invoice
+    filter: status = rejected
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No rejections yet"
+
+  # WI D: chart family — rejected vs pre-approval mix
+  status_mix:
+    source: Invoice
+    filter: status = rejected or status = draft or status = submitted
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No rework-related invoices to chart"
