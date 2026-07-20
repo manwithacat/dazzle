@@ -70,19 +70,7 @@
         "Admin Dashboard",
         "Team Overview",
         "Discussion",
-        "People",
-        "Priority Ops",
-        "Review Ops",
-        "Done Ops",
-        "Progress Ops",
-        "Todo Ops",
-        "Urgent Ops",
-        "Unassigned Ops",
-        "Scheduled Ops",
-        "High Ops",
-        "Medium Ops",
-        "Low Ops",
-        "Overdue Ops"
+        "People"
       ]
     },
     {
@@ -98,19 +86,7 @@
         "Task Board",
         "Team Overview",
         "Discussion",
-        "People",
-        "Priority Ops",
-        "Review Ops",
-        "Done Ops",
-        "Progress Ops",
-        "Todo Ops",
-        "Urgent Ops",
-        "Unassigned Ops",
-        "Scheduled Ops",
-        "High Ops",
-        "Medium Ops",
-        "Low Ops",
-        "Overdue Ops"
+        "People"
       ]
     },
     {
@@ -125,19 +101,7 @@
       "workspaces": [
         "Task Board",
         "My Work",
-        "Discussion",
-        "Priority Ops",
-        "Review Ops",
-        "Done Ops",
-        "Progress Ops",
-        "Todo Ops",
-        "Urgent Ops",
-        "Unassigned Ops",
-        "Scheduled Ops",
-        "High Ops",
-        "Medium Ops",
-        "Low Ops",
-        "Overdue Ops"
+        "Discussion"
       ]
     }
   ],
@@ -491,222 +455,6 @@
         "grid of User",
         "queue of Task",
         "kanban of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "priority_ops",
-      "title": "Priority Ops",
-      "kind": "workspace",
-      "purpose": "Priority pressure — urgent and high tasks without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "review_ops",
-      "title": "Review Ops",
-      "kind": "workspace",
-      "purpose": "Review pressure — work waiting on review without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "done_ops",
-      "title": "Done Ops",
-      "kind": "workspace",
-      "purpose": "Completion pressure — recently finished work without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "progress_ops",
-      "title": "Progress Ops",
-      "kind": "workspace",
-      "purpose": "In-flight pressure — tasks actively being worked without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "todo_ops",
-      "title": "Todo Ops",
-      "kind": "workspace",
-      "purpose": "Ready-to-start pressure — unstarted todos without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "urgent_ops",
-      "title": "Urgent Ops",
-      "kind": "workspace",
-      "purpose": "High-priority pressure — urgent and high tasks without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "unassigned_ops",
-      "title": "Unassigned Ops",
-      "kind": "workspace",
-      "purpose": "Assignment pressure — open tasks without an owner without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "scheduled_ops",
-      "title": "Scheduled Ops",
-      "kind": "workspace",
-      "purpose": "Deadline pressure — open tasks with due dates without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "high_ops",
-      "title": "High Ops",
-      "kind": "workspace",
-      "purpose": "High-priority pressure — open high tasks without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "medium_ops",
-      "title": "Medium Ops",
-      "kind": "workspace",
-      "purpose": "Medium-priority pressure — open medium tasks without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "low_ops",
-      "title": "Low Ops",
-      "kind": "workspace",
-      "purpose": "Low-priority pressure — open low tasks without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
-        "bar_chart of Task"
-      ]
-    },
-    {
-      "name": "overdue_ops",
-      "title": "Overdue Ops",
-      "kind": "workspace",
-      "purpose": "Overdue pressure — past-due open tasks without warehouse CRUD",
-      "personas": [
-        "admin",
-        "manager",
-        "member"
-      ],
-      "contents": [
-        "metrics of Task",
-        "queue of Task",
-        "grid of Task",
-        "timeline of Task",
         "bar_chart of Task"
       ]
     }

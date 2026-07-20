@@ -342,3 +342,72 @@ class TestListHelpers:
         assert len(models) == 1
         assert models[0]["name"] == "test_model"
         assert models[0]["provider"] == "anthropic"
+
+
+class TestBuildClientEndpoints:
+    """LLMIntentExecutor maps IR endpoint fields onto LLMAPIClient."""
+
+    def test_google_maps_to_vertex_provider(self, monkeypatch):
+        from dazzle.core.ir.llm import LLMModelSpec, LLMProvider
+        from dazzle.http.runtime.llm_executor import LLMIntentExecutor
+        from dazzle.llm.api_client import LLMProvider as ClientProvider
+
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        import sys
+        import types
+
+        fake_pkg = types.ModuleType("google")
+        fake_genai = types.ModuleType("google.genai")
+        fake_genai.Client = lambda **kw: object()  # type: ignore[attr-defined,misc]
+        fake_pkg.genai = fake_genai  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "google", fake_pkg)
+        monkeypatch.setitem(sys.modules, "google.genai", fake_genai)
+
+        model = LLMModelSpec(
+            name="g",
+            provider=LLMProvider.GOOGLE,
+            model_id="gemini-2.5-flash",
+            project="proj-1",
+            location="global",
+        )
+        client = LLMIntentExecutor._build_client(model)
+        assert client.provider == ClientProvider.GOOGLE
+        assert client.project == "proj-1"
+        assert client.location == "global"
+        assert client.model == "gemini-2.5-flash"
+
+    def test_openai_base_url_passed_through(self, monkeypatch):
+        from dazzle.core.ir.llm import LLMModelSpec, LLMProvider
+        from dazzle.http.runtime.llm_executor import LLMIntentExecutor
+
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+        model = LLMModelSpec(
+            name="o",
+            provider=LLMProvider.OPENAI,
+            model_id="gpt-4o-mini",
+            base_url="https://proxy.example/v1",
+        )
+        client = LLMIntentExecutor._build_client(model)
+        assert client.base_url == "https://proxy.example/v1"
+        assert client.model == "gpt-4o-mini"
+
+    def test_local_with_base_url_uses_openai_client(self, monkeypatch):
+        from dazzle.core.ir.llm import LLMModelSpec, LLMProvider
+        from dazzle.http.runtime.llm_executor import LLMIntentExecutor
+        from dazzle.llm.api_client import LLMProvider as ClientProvider
+
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.setattr(
+            "dazzle.llm.api_client.pick_available_subscription_driver",
+            lambda: None,
+        )
+        model = LLMModelSpec(
+            name="l",
+            provider=LLMProvider.LOCAL,
+            model_id="mistral",
+            base_url="http://127.0.0.1:8000/v1",
+        )
+        client = LLMIntentExecutor._build_client(model)
+        assert client.provider == ClientProvider.OPENAI
+        assert client.base_url == "http://127.0.0.1:8000/v1"
+        assert client.api_key == "local"

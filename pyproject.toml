@@ -120,6 +120,7 @@ dependencies = [
 llm = [
     "anthropic>=0.21.0",
     "openai>=1.0.0",
+    "google-genai>=1.0.0",  # Vertex AI / Gemini (provider: google)
 ]
 mcp = [
     "mcp>=1.28.1",

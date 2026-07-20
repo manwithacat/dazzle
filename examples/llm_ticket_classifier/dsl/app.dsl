@@ -39,6 +39,22 @@ llm_model gpt4o_mini "GPT-4o Mini":
   tier: fast
   max_tokens: 2048
 
+# Vertex AI / Gemini (GCP ADC — same contract as Badger Vertex smoke).
+# Requires: gcloud ADC, aiplatform API, roles/aiplatform.user, google-genai.
+# llm_model gemini_flash "Gemini Flash (Vertex)":
+#   provider: google
+#   model_id: gemini-2.5-flash
+#   project: my-gcp-project
+#   location: global
+#   tier: fast
+#   max_tokens: 2048
+
+# OpenAI-compatible local server (Ollama / vLLM / LiteLLM proxy).
+# llm_model ollama_local "Local Ollama":
+#   provider: openai
+#   model_id: llama3.2
+#   base_url: "http://localhost:11434/v1"
+
 
 # =============================================================================
 # LLM Configuration

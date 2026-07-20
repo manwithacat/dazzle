@@ -121,8 +121,8 @@ async def verify_google_token(id_token: str, client_id: str) -> SocialProfile:
         )
 
     try:
-        # Verify the token
-        idinfo = google_id_token.verify_oauth2_token(
+        # Verify the token (google-auth stubs omit verify_oauth2_token typing)
+        idinfo = google_id_token.verify_oauth2_token(  # type: ignore[no-untyped-call]
             id_token,
             requests.Request(),
             client_id,

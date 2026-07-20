@@ -1,8 +1,10 @@
 """
-API client for LLM providers (Anthropic, OpenAI).
+API client for LLM providers (Anthropic, OpenAI, Vertex / Gemini).
 
 Handles authentication, request formatting, and response parsing.
-Supports fallback to Claude CLI for users with Claude subscriptions.
+Supports fallback to Claude CLI for users with Claude subscriptions,
+OpenAI-compatible base URLs (Ollama, Azure OpenAI, proxies), and
+Google Vertex AI via ADC (``google-genai``, same shape as Badger).
 """
 
 from __future__ import annotations
@@ -33,6 +35,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Vertex defaults — mirror Badger's env contract so the same ADC setup works.
+_DEFAULT_VERTEX_LOCATION = "global"
+_DEFAULT_VERTEX_MODEL = "gemini-2.5-flash"
+
 
 def _strip_code_fence(s: str) -> str:
     """Strip an optional markdown code fence from an LLM response (#1219).
@@ -55,10 +61,11 @@ def _strip_code_fence(s: str) -> str:
 
 
 class LLMProvider(StrEnum):
-    """Supported LLM providers."""
+    """Supported LLM providers (client runtime ids)."""
 
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    GOOGLE = "google"  # Vertex AI Gemini via google-genai + ADC
     CLAUDE_CLI = "claude_cli"  # Claude Code CLI (subscription)
     GROK_CLI = "grok_cli"  # Grok Build CLI (subscription)
 
@@ -98,12 +105,15 @@ class LLMAPIClient:
         max_tokens: int = 16000,
         use_prompt_caching: bool = True,
         timeout: float | None = None,
+        base_url: str | None = None,
+        project: str | None = None,
+        location: str | None = None,
     ):
         """
         Initialize LLM API client.
 
         Args:
-            provider: LLM provider (anthropic or openai)
+            provider: LLM provider (anthropic, openai, google, …)
             model: Model name (defaults based on provider)
             api_key: API key (if not provided, read from env)
             api_key_env: Environment variable name for API key
@@ -111,12 +121,18 @@ class LLMAPIClient:
             max_tokens: Maximum tokens in response
             use_prompt_caching: Use prompt caching if supported
             timeout: HTTP/SDK timeout in seconds (default 90; #1631 fail loud)
+            base_url: OpenAI-compatible API base (openai provider only)
+            project: GCP project for Vertex (google provider)
+            location: Vertex Gen AI location (google provider)
         """
         self.provider = provider
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.use_prompt_caching = use_prompt_caching
         self.timeout = float(timeout) if timeout is not None else self.DEFAULT_TIMEOUT_S
+        self.base_url = (base_url or "").strip() or None
+        self.project = (project or "").strip() or None
+        self.location = (location or "").strip() or None
         # Unique identifier for this client instance — correlates LLM
         # invocations with telemetry/proposals. Consumed by the fitness
         # investigator runner (see LlmClient Protocol). Generated once per
@@ -128,6 +144,8 @@ class LLMAPIClient:
         self._use_cli_fallback = False
         # Concrete subscription driver when using CLI fallback (claude-cli / grok-cli).
         self._cli_driver: str | None = None
+        # Vertex holds a google-genai Client; not Anthropic/OpenAI SDK.
+        self._vertex_client: Any | None = None
         self._resolve_credentials(provider, api_key, api_key_env)
 
         # Subscription billing is a development convenience, never a
@@ -146,6 +164,64 @@ class LLMAPIClient:
         api_key_env: str | None,
     ) -> None:
         """Populate api_key / CLI fallback from args, env, or subscription CLI."""
+        if provider == LLMProvider.GOOGLE:
+            self._resolve_google_credentials(api_key, api_key_env)
+            return
+
+        self._resolve_key_or_cli(provider, api_key, api_key_env)
+        if self.api_key or self._use_cli_fallback:
+            return
+
+        # OpenAI-compatible local servers (Ollama, etc.) often ignore the key
+        # but the SDK requires a non-empty string.
+        if provider == LLMProvider.OPENAI and self.base_url:
+            self.api_key = "local"
+            return
+
+        self._fallback_to_subscription_cli(api_key_env)
+
+    def _resolve_google_credentials(
+        self,
+        api_key: str | None,
+        api_key_env: str | None,
+    ) -> None:
+        """Vertex uses ADC (IAM); optional GOOGLE_API_KEY for AI Studio only."""
+        if api_key:
+            self.api_key = api_key
+        elif api_key_env:
+            self.api_key = os.environ.get(api_key_env)
+        else:
+            self.api_key = os.environ.get("GOOGLE_API_KEY")
+
+        if not self.project:
+            self.project = (
+                os.environ.get("VERTEX_PROJECT") or os.environ.get("GOOGLE_CLOUD_PROJECT") or None
+            )
+        if not self.location:
+            self.location = (
+                os.environ.get("VERTEX_LOCATION")
+                or os.environ.get("GOOGLE_CLOUD_LOCATION")
+                or _DEFAULT_VERTEX_LOCATION
+            )
+        if self.project or self.api_key:
+            return
+        raise ValueError(
+            "Vertex / Google provider needs a GCP project (ADC) or API key.\n"
+            "Options:\n"
+            "  1. Set project on llm_model (project: my-gcp-project)\n"
+            "  2. export GOOGLE_CLOUD_PROJECT=… (or VERTEX_PROJECT)\n"
+            "  3. gcloud auth application-default login\n"
+            "  4. (dev only) GOOGLE_API_KEY for Gemini Developer API\n"
+            "See docs/reference/llm-drivers.md (Vertex section)."
+        )
+
+    def _resolve_key_or_cli(
+        self,
+        provider: LLMProvider,
+        api_key: str | None,
+        api_key_env: str | None,
+    ) -> None:
+        """Resolve metered API keys or explicit subscription-CLI providers."""
         if api_key:
             self.api_key = api_key
         elif api_key_env:
@@ -161,8 +237,8 @@ class LLMAPIClient:
             self._use_cli_fallback = True
             self._cli_driver = DRIVER_GROK_CLI
 
-        if self.api_key or self._use_cli_fallback:
-            return
+    def _fallback_to_subscription_cli(self, api_key_env: str | None) -> None:
+        """When no key is set, use a local subscription CLI or fail loudly."""
         picked = pick_available_subscription_driver()
         if picked is not None:
             logger.info(
@@ -176,11 +252,12 @@ class LLMAPIClient:
             )
             return
         raise ValueError(
-            f"API key not found for {provider}.\n"
-            f"Options:\n"
+            "API key not found for LLM client.\n"
+            "Options:\n"
             f"  1. Set {api_key_env or 'ANTHROPIC_API_KEY'} environment variable\n"
-            f"  2. Install Claude Code CLI (claude.com/claude-code) or Grok Build "
-            f"CLI (`grok login`) for subscription-based local cognition\n"
+            "  2. Install Claude Code CLI (claude.com/claude-code) or Grok Build "
+            "CLI (`grok login`) for subscription-based local cognition\n"
+            "  3. For OpenAI-compatible local servers: set base_url on llm_model\n"
         )
 
     def _default_model(self, model: str | None, provider: LLMProvider) -> str:
@@ -188,6 +265,8 @@ class LLMAPIClient:
             return model
         if provider == LLMProvider.OPENAI:
             return "gpt-4-turbo"
+        if provider == LLMProvider.GOOGLE:
+            return os.environ.get("VERTEX_MODEL") or _DEFAULT_VERTEX_MODEL
         if self._cli_driver == DRIVER_GROK_CLI or provider == LLMProvider.GROK_CLI:
             return DEFAULT_GROK_JUDGMENT_MODEL
         # Anthropic API and Claude CLI both speak Claude model IDs.
@@ -214,9 +293,51 @@ class LLMAPIClient:
             try:
                 from openai import OpenAI
 
-                self.client = OpenAI(api_key=self.api_key, timeout=self.timeout)
+                kwargs: dict[str, Any] = {
+                    "api_key": self.api_key,
+                    "timeout": self.timeout,
+                }
+                if self.base_url:
+                    kwargs["base_url"] = self.base_url
+                self.client = OpenAI(**kwargs)
             except ImportError:
                 raise ImportError("OpenAI SDK not installed. Install with: pip install openai")
+        elif self.provider == LLMProvider.GOOGLE:
+            self._init_vertex_client()
+
+    def _init_vertex_client(self) -> None:
+        """Build a google-genai Client for Vertex (ADC) or AI Studio (api key).
+
+        Shape borrowed from Badger ``scripts/vertex_smoke.py``:
+        ``genai.Client(vertexai=True, project=…, location=…)``.
+        """
+        try:
+            from google import genai
+        except ImportError as exc:
+            raise ImportError(
+                "google-genai is required for provider: google (Vertex AI). "
+                "Install with: pip install 'dazzle-dsl[llm]'  (or google-genai)"
+            ) from exc
+
+        if self.project:
+            # Enterprise / Vertex path — IAM via Application Default Credentials.
+            self._vertex_client = genai.Client(
+                vertexai=True,
+                project=self.project,
+                location=self.location or _DEFAULT_VERTEX_LOCATION,
+            )
+            logger.debug(
+                "Vertex client project=%s location=%s model=%s",
+                self.project,
+                self.location or _DEFAULT_VERTEX_LOCATION,
+                self.model,
+            )
+        elif self.api_key:
+            # Gemini Developer API (AI Studio) — personal experiments only.
+            self._vertex_client = genai.Client(api_key=self.api_key)
+            logger.debug("Gemini Developer API client (api_key) model=%s", self.model)
+        else:
+            raise ValueError("Vertex client needs project=… (ADC) or GOOGLE_API_KEY (AI Studio)")
 
     def complete(self, system_prompt: str, user_prompt: str) -> str:
         """General-purpose LLM completion.
@@ -230,13 +351,23 @@ class LLMAPIClient:
         """
         return self.complete_with_usage(system_prompt, user_prompt).text
 
-    def complete_with_usage(self, system_prompt: str, user_prompt: str) -> Completion:
+    def complete_with_usage(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        force_json: bool = False,
+    ) -> Completion:
         """Completion plus provider-reported token usage (#1528).
 
-        The metered providers (Anthropic / OpenAI) report an input/output
-        split; the Claude CLI subscription path reports only a total, so
-        both counts come back 0 there (subscription calls have no metered
-        cost to compute anyway).
+        The metered providers (Anthropic / OpenAI / Vertex) report an
+        input/output split when the SDK surfaces usage; the Claude CLI
+        subscription path reports only a total, so both counts come back
+        0 there (subscription calls have no metered cost to compute).
+
+        ``force_json`` is for analyze-spec only — general ``llm_intent``
+        tasking must not require ``response_format=json_object`` (many
+        OpenAI-compatible servers reject it).
         """
         if self._use_cli_fallback:
             text, _tokens = call_subscription_cli(
@@ -246,10 +377,11 @@ class LLMAPIClient:
                 model=self.model,
             )
             return Completion(text, 0, 0)
-        elif self.provider == LLMProvider.ANTHROPIC:
+        if self.provider == LLMProvider.ANTHROPIC:
             return self._call_anthropic(system_prompt, user_prompt)
-        else:
-            return self._call_openai(system_prompt, user_prompt)
+        if self.provider == LLMProvider.GOOGLE:
+            return self._call_vertex(system_prompt, user_prompt)
+        return self._call_openai(system_prompt, user_prompt, force_json=force_json)
 
     def analyze_spec(
         self, spec_content: str, spec_path: str, system_prompt: str | None = None
@@ -278,7 +410,7 @@ class LLMAPIClient:
             + (f" ({self.model})" if not self._use_cli_fallback else " (CLI)")
         )
 
-        # Call LLM
+        # Call LLM (force JSON for OpenAI-compatible analyze path only)
         if self._use_cli_fallback:
             response_text, _tokens = call_subscription_cli(
                 self._cli_driver or DRIVER_CLAUDE_CLI,
@@ -288,8 +420,10 @@ class LLMAPIClient:
             )
         elif self.provider == LLMProvider.ANTHROPIC:
             response_text = self._call_anthropic(system_prompt, user_prompt).text
+        elif self.provider == LLMProvider.GOOGLE:
+            response_text = self._call_vertex(system_prompt, user_prompt).text
         else:
-            response_text = self._call_openai(system_prompt, user_prompt).text
+            response_text = self._call_openai(system_prompt, user_prompt, force_json=True).text
 
         # Parse JSON response — strip optional markdown code fences first
         # (#1219). Claude's instruction-following defaults to fenced output
@@ -463,23 +597,40 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
             logger.error("Anthropic API call failed: %s", e)
             raise
 
-    def _call_openai(self, system_prompt: str, user_prompt: str) -> Completion:
-        """Call OpenAI GPT API."""
-        logger.debug("Calling OpenAI API with model %s", self.model)
+    def _call_openai(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        *,
+        force_json: bool = False,
+    ) -> Completion:
+        """Call OpenAI or any OpenAI-compatible chat completions API."""
+        logger.debug(
+            "Calling OpenAI-compatible API model=%s base_url=%s force_json=%s",
+            self.model,
+            self.base_url or "(default)",
+            force_json,
+        )
         assert self.client is not None, "Client not initialized"
         client = cast("OpenAI", self.client)
 
         try:
-            response = client.chat.completions.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-                response_format={"type": "json_object"},  # Ensure JSON response
-                messages=[
+            kwargs: dict[str, Any] = {
+                "model": self.model,
+                "max_tokens": self.max_tokens,
+                "temperature": self.temperature,
+                "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-            )
+            }
+            # analyze-spec only. General llm_intent tasking and many
+            # OpenAI-compatible servers (Ollama, vLLM) reject or ignore
+            # response_format=json_object.
+            if force_json:
+                kwargs["response_format"] = {"type": "json_object"}
+
+            response = client.chat.completions.create(**kwargs)
 
             content = response.choices[0].message.content
             assert content is not None, "OpenAI returned empty response"
@@ -491,7 +642,64 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
             )
 
         except Exception as e:
-            logger.error("OpenAI API call failed: %s", e)
+            logger.error("OpenAI-compatible API call failed: %s", e)
+            raise
+
+    def _call_vertex(self, system_prompt: str, user_prompt: str) -> Completion:
+        """Call Vertex AI / Gemini via google-genai (Badger-compatible shape)."""
+        logger.debug(
+            "Calling Vertex/Gemini model=%s project=%s location=%s",
+            self.model,
+            self.project,
+            self.location,
+        )
+        if self._vertex_client is None:
+            raise RuntimeError("Vertex client not initialized")
+
+        try:
+            from google.genai import types
+        except ImportError:
+            types = None  # type: ignore[assignment]
+
+        try:
+            config: dict[str, Any] = {
+                "temperature": self.temperature,
+                "max_output_tokens": self.max_tokens,
+                "system_instruction": system_prompt,
+            }
+            if types is not None:
+                gen_config = types.GenerateContentConfig(**config)
+            else:
+                gen_config = config
+
+            response = self._vertex_client.models.generate_content(
+                model=self.model,
+                contents=user_prompt,
+                config=gen_config,
+            )
+            text = (getattr(response, "text", None) or "").strip()
+            if not text:
+                raise ValueError("Vertex/Gemini returned empty response")
+
+            # Usage metadata shape varies by SDK version; be defensive.
+            tokens_in = 0
+            tokens_out = 0
+            usage = getattr(response, "usage_metadata", None)
+            if usage is not None:
+                tokens_in = int(
+                    getattr(usage, "prompt_token_count", 0)
+                    or getattr(usage, "input_tokens", 0)
+                    or 0
+                )
+                tokens_out = int(
+                    getattr(usage, "candidates_token_count", 0)
+                    or getattr(usage, "output_tokens", 0)
+                    or 0
+                )
+            return Completion(text, tokens_in, tokens_out)
+
+        except Exception as e:
+            logger.error("Vertex/Gemini API call failed: %s", e)
             raise
 
     def estimate_cost(self, spec_size_kb: float) -> float:

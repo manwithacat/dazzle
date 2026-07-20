@@ -36,11 +36,13 @@ logger = logging.getLogger(__name__)
 _PROVIDER_MAP: dict[IRProvider, ClientProvider] = {
     IRProvider.ANTHROPIC: ClientProvider.ANTHROPIC,
     IRProvider.OPENAI: ClientProvider.OPENAI,
-    IRProvider.GOOGLE: ClientProvider.OPENAI,  # OpenAI-compatible endpoint
+    IRProvider.GOOGLE: ClientProvider.GOOGLE,  # Vertex AI (google-genai + ADC)
+    # local without base_url → subscription CLI; with base_url the builder
+    # remaps to OPENAI + base_url (Ollama / vLLM / proxies).
     IRProvider.LOCAL: ClientProvider.CLAUDE_CLI,
 }
 
-# IR provider → default env var for API key
+# IR provider → default env var for API key (Vertex prefers ADC; key optional)
 _API_KEY_ENV: dict[IRProvider, str] = {
     IRProvider.ANTHROPIC: "ANTHROPIC_API_KEY",
     IRProvider.OPENAI: "OPENAI_API_KEY",
@@ -123,14 +125,30 @@ class LLMIntentExecutor:
 
     @staticmethod
     def _build_client(model: LLMModelSpec) -> LLMAPIClient:
-        """Build an ``LLMAPIClient`` from an IR model spec."""
+        """Build an ``LLMAPIClient`` from an IR model spec.
+
+        Endpoint fields (``base_url``, ``project``, ``location``) flow from
+        the DSL ``llm_model`` so app authors can target Vertex, OpenAI, or
+        any OpenAI-compatible server without code changes.
+        """
         provider = _PROVIDER_MAP.get(model.provider, ClientProvider.ANTHROPIC)
-        api_key_env = _API_KEY_ENV.get(model.provider)
+        api_key_env = model.api_key_env or _API_KEY_ENV.get(model.provider)
+        base_url = model.base_url
+
+        # ``provider: local`` + ``base_url:`` → OpenAI-compatible local server
+        # (Ollama, vLLM, LiteLLM, …). Without base_url, keep CLI fallback.
+        if model.provider == IRProvider.LOCAL and base_url:
+            provider = ClientProvider.OPENAI
+            api_key_env = model.api_key_env  # may be None → dummy "local" key
+
         return LLMAPIClient(
             provider=provider,
             model=model.model_id,
             api_key_env=api_key_env,
             max_tokens=model.max_tokens,
+            base_url=base_url,
+            project=model.project,
+            location=model.location,
         )
 
     # ------------------------------------------------------------------

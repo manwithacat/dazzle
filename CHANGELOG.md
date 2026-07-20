@@ -1,6 +1,21 @@
 ## [Unreleased]
 
 ### Added
+- **Vertex AI + OpenAI-compatible LLM endpoints for `llm_intent` tasking.**
+  `provider: google` now runs through Google Vertex / Gemini
+  (`google-genai`, Application Default Credentials — same shape as the
+  Badger Vertex smoke path), not a stub OpenAI remap. New optional
+  `llm_model` fields: `base_url` (OpenAI-compatible servers — Ollama,
+  Azure OpenAI, proxies), `project` / `location` (Vertex GCP),
+  `api_key_env` (override credential env). `provider: local` +
+  `base_url:` maps to the OpenAI client against that base. Optional
+  dep: `google-genai` on the `llm` extra. General completions no longer
+  force `response_format=json_object` (analyze-spec still does).
+
+### Changed
+- **Example SPEC footers + simple_task brief golden + acme_billing
+  compliance auditspec** — refreshed after densify desk purge / maturity
+  v3 so ship-surface freshness gates match live DSL fingerprints.
 - **Agent acceptance panel** — improve strategy
   `agent_acceptance_panel` + docs for agent-first customer acceptance
   (multi-seat QA trial against stories / adoption_criteria; human stays L4).

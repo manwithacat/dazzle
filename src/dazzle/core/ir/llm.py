@@ -125,12 +125,23 @@ class LLMModelSpec(BaseModel):
     Attributes:
         name: Unique identifier for this model config
         title: Human-readable title
-        provider: LLM provider (anthropic, openai, etc.)
+        provider: LLM provider (anthropic, openai, google, local)
         model_id: Provider-specific model identifier
         tier: Performance/cost tier classification
         max_tokens: Maximum tokens for completion
         cost_per_1k_input: Cost per 1000 input tokens (optional)
         cost_per_1k_output: Cost per 1000 output tokens (optional)
+        base_url: OpenAI-compatible API base URL (openai/local only).
+            Examples: ``https://api.openai.com/v1``,
+            ``http://localhost:11434/v1``, Azure OpenAI resource URL.
+        project: GCP project id for Vertex AI (``provider: google``).
+            Falls back to ``VERTEX_PROJECT`` / ``GOOGLE_CLOUD_PROJECT``.
+        location: Vertex / Gen AI location (``provider: google``).
+            Falls back to ``VERTEX_LOCATION`` / ``GOOGLE_CLOUD_LOCATION``
+            (default ``global``).
+        api_key_env: Optional env var name for the API key (openai /
+            anthropic / openai-compatible). Vertex uses ADC by default
+            and ignores this unless set for AI Studio key mode.
     """
 
     name: str
@@ -141,6 +152,10 @@ class LLMModelSpec(BaseModel):
     max_tokens: int = Field(default=4096, gt=0, le=200000)
     cost_per_1k_input: Decimal | None = Field(default=None, ge=Decimal("0"))
     cost_per_1k_output: Decimal | None = Field(default=None, ge=Decimal("0"))
+    base_url: str | None = None
+    project: str | None = None
+    location: str | None = None
+    api_key_env: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -151,6 +166,15 @@ class LLMModelSpec(BaseModel):
         if not v.strip():
             raise ValueError("model_id cannot be empty")
         return v
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_base_url(cls, v: str | None) -> str | None:
+        """Strip empty base_url to None."""
+        if v is None:
+            return None
+        stripped = v.strip()
+        return stripped or None
 
 
 # =============================================================================

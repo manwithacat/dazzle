@@ -63,6 +63,7 @@ class LLMParserMixin:
             first_class_keywords=_LLM_MODEL_KEYWORDS,
             state=state,
             on_unknown=_on_unknown_llm_model,
+            ident_keywords=_LLM_MODEL_IDENT_KEYWORDS,
         )
         self.expect(TokenType.DEDENT)
         return _build_llm_model(self, name, title, state)
@@ -728,6 +729,10 @@ class _LLMModelState:
     max_tokens: int = 4096
     cost_per_1k_input: Decimal | None = None
     cost_per_1k_output: Decimal | None = None
+    base_url: str | None = None
+    project: str | None = None
+    location: str | None = None
+    api_key_env: str | None = None
 
 
 # ---------- Keyword parsers ---------- #
@@ -802,6 +807,45 @@ def _lm_kw_cost_per_1k_output(parser: Any, state: _LLMModelState) -> None:
     parser.skip_newlines()
 
 
+def _lm_ident_string_field(parser: Any, *, allow_hyphenated: bool = False) -> str:
+    """``field: "value"`` or bare identifier — return the string value.
+
+    When ``allow_hyphenated`` is True (GCP project / location ids), bare
+    values may include hyphens like ``badger-payroll`` or ``europe-west2``.
+    """
+    parser.advance()
+    parser.expect(TokenType.COLON)
+    if parser.match(TokenType.STRING):
+        value = str(parser.current_token().value)
+        parser.advance()
+    elif allow_hyphenated:
+        value = str(parser._parse_model_id_value())
+    else:
+        value = str(parser.expect_identifier_or_keyword().value)
+    parser.skip_newlines()
+    return value
+
+
+def _lm_kw_base_url(parser: Any, state: _LLMModelState) -> None:
+    """``base_url: "https://…"`` — OpenAI-compatible endpoint (prefer quoted)."""
+    state.base_url = _lm_ident_string_field(parser)
+
+
+def _lm_kw_project(parser: Any, state: _LLMModelState) -> None:
+    """``project: badger-payroll`` — Vertex GCP project id (hyphens ok)."""
+    state.project = _lm_ident_string_field(parser, allow_hyphenated=True)
+
+
+def _lm_kw_location(parser: Any, state: _LLMModelState) -> None:
+    """``location: global | europe-west2`` — Vertex Gen AI location."""
+    state.location = _lm_ident_string_field(parser, allow_hyphenated=True)
+
+
+def _lm_kw_api_key_env(parser: Any, state: _LLMModelState) -> None:
+    """``api_key_env: OPENAI_API_KEY`` — override credential env var name."""
+    state.api_key_env = _lm_ident_string_field(parser)
+
+
 # ---------- Dispatch table + on_unknown + builder ---------- #
 
 
@@ -812,6 +856,15 @@ _LLM_MODEL_KEYWORDS: dict[TokenType, KeywordParser[_LLMModelState]] = {
     TokenType.MAX_TOKENS: _lm_kw_max_tokens,
     TokenType.COST_PER_1K_INPUT: _lm_kw_cost_per_1k_input,
     TokenType.COST_PER_1K_OUTPUT: _lm_kw_cost_per_1k_output,
+}
+
+
+# Ident-keyed so common words (project, location) are not global lexer keywords.
+_LLM_MODEL_IDENT_KEYWORDS: dict[str, KeywordParser[_LLMModelState]] = {
+    "base_url": _lm_kw_base_url,
+    "project": _lm_kw_project,
+    "location": _lm_kw_location,
+    "api_key_env": _lm_kw_api_key_env,
 }
 
 
@@ -851,6 +904,10 @@ def _build_llm_model(
         max_tokens=state.max_tokens,
         cost_per_1k_input=state.cost_per_1k_input,
         cost_per_1k_output=state.cost_per_1k_output,
+        base_url=state.base_url,
+        project=state.project,
+        location=state.location,
+        api_key_env=state.api_key_env,
     )
 
 

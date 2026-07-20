@@ -1576,9 +1576,13 @@ ir_class: LLMModelSpec
     - name: str
     - provider: LLMProvider
   optional:
+    - api_key_env: str | None = None
+    - base_url: str | None = None
     - cost_per_1k_input: Decimal | None = None
     - cost_per_1k_output: Decimal | None = None
+    - location: str | None = None
     - max_tokens: int = 4096
+    - project: str | None = None
     - tier: ModelTier = <ModelTier.BALANCED: 'balanced'>
     - title: str | None = None
 

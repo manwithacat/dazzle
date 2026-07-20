@@ -110,6 +110,85 @@ Separate from these drivers: `dazzle.qa.subscription_vision` and
 HTTP APIs used by `dazzle qa taste-panel`. Prefer that path for day-to-day
 taste scoring; see `docs/reference/taste.md`.
 
+## App `llm_intent` providers (runtime tasking)
+
+Separate from the **dev cognition drivers** above (`claude-cli` /
+`grok-cli` / `anthropic-api`), each app declares models for
+`llm_intent` jobs. Those hit `LLMAPIClient` via `LLMIntentExecutor`
+and record governed `AIJob` rows (ADR-0043).
+
+### `provider: anthropic` / `provider: openai`
+
+Standard metered APIs. Keys: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
+(or `api_key_env:` on the model).
+
+### OpenAI-compatible endpoints (`base_url`)
+
+Any server that speaks the OpenAI chat completions API:
+
+```dsl
+llm_model local_llama "Local Llama":
+  provider: openai          # or: local
+  model_id: llama3.2
+  base_url: "http://localhost:11434/v1"
+  # api_key_env: MY_PROXY_KEY   # optional; dummy key used if unset + base_url
+```
+
+Also works with Azure OpenAI resource URLs, LiteLLM proxies, vLLM, etc.
+Install: `pip install 'dazzle-dsl[llm]'` (pulls `openai`).
+
+### `provider: google` — Vertex AI / Gemini (GCP)
+
+Uses the **Google Gen AI SDK** (`google-genai`) in Vertex mode with
+**Application Default Credentials** — same contract as the Badger
+mail-ops Vertex smoke path. Prefer this for production GCP deploys
+(IAM, same bill as Cloud Run, PII stays in-org). No third-party API key.
+
+```dsl
+llm_model gemini_flash "Gemini Flash (Vertex)":
+  provider: google
+  model_id: gemini-2.5-flash
+  project: my-gcp-project      # or VERTEX_PROJECT / GOOGLE_CLOUD_PROJECT
+  location: global            # or VERTEX_LOCATION / GOOGLE_CLOUD_LOCATION
+  tier: fast
+  max_tokens: 4096
+```
+
+Local / Cloud Run enablement:
+
+```bash
+gcloud auth application-default login   # local ADC
+gcloud services enable aiplatform.googleapis.com --project=my-gcp-project
+# Grant roles/aiplatform.user to your user (local) or runtime SA (Cloud Run)
+
+export GOOGLE_CLOUD_PROJECT=my-gcp-project
+export GOOGLE_CLOUD_LOCATION=global
+# optional pin: VERTEX_MODEL=gemini-2.5-flash
+```
+
+Install: `pip install 'dazzle-dsl[llm]'` (pulls `google-genai`).
+
+Optional `GOOGLE_API_KEY` still selects the Gemini **Developer API**
+(AI Studio) when no `project` is set — fine for personal experiments,
+not the production Vertex path.
+
+Cost on `AIJob` is `NULL` until a model is priced in `costing.py` (or
+you set `cost_per_1k_*` on the `llm_model` for display-only rates —
+executor still uses the costing module for live usage).
+
+### Example intent
+
+```dsl
+llm_intent classify_ticket "Classify Support Ticket":
+  model: gemini_flash
+  prompt: "Classify into billing|technical|other:\n\n$description"
+  trigger:
+    on_entity: Ticket
+    on_event: created
+    input_map:
+      description: entity.description
+```
+
 ## For agents working on this codebase
 
 - Driver resolution and CLI shell-outs live in
@@ -117,7 +196,9 @@ taste scoring; see `docs/reference/taste.md`.
   for cognition.
 - `call_subscription_cli(driver, …)` dispatches to the concrete CLI.
 - `LLMAPIClient` falls back to the first available subscription CLI when
-  no API key is set.
+  no API key is set (Anthropic path). Vertex never falls back to CLI.
+- App tasking: `LLMIntentExecutor._build_client` maps IR `llm_model` →
+  `LLMAPIClient` (including `base_url` / Vertex `project`+`location`).
 - When adding a new LLM-calling feature, route it through
   `resolve_llm_driver` + `call_subscription_cli` / `LLMAPIClient`; never
   construct `anthropic.Anthropic()` directly in feature code.

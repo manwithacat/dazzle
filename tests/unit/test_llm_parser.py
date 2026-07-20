@@ -196,3 +196,58 @@ class TestProcessLLMStep:
         _, _, _, _, _, fragment = parse_dsl(PROCESS_LLM_STEP_DSL, Path("test.dsl"))
         step = fragment.processes[0].steps[0]
         assert step.llm_input_map == {"title": "trigger.entity.title"}
+
+
+# ---------------------------------------------------------------------------
+# Endpoint fields: base_url / project / location / api_key_env
+# ---------------------------------------------------------------------------
+
+ENDPOINT_DSL = """\
+module test_endpoints
+app test "Test"
+
+llm_model vertex_flash "Gemini Flash":
+  provider: google
+  model_id: gemini-2.5-flash
+  project: badger-payroll
+  location: europe-west2
+  tier: fast
+  max_tokens: 2048
+
+llm_model ollama_local "Local Ollama":
+  provider: openai
+  model_id: llama3.2
+  base_url: "http://localhost:11434/v1"
+  api_key_env: OLLAMA_KEY
+
+llm_model local_vllm "vLLM":
+  provider: local
+  model_id: mistral
+  base_url: "http://127.0.0.1:8000/v1"
+"""
+
+
+class TestLLMModelEndpointFields:
+    def test_vertex_project_location(self):
+        _, _, _, _, _, fragment = parse_dsl(ENDPOINT_DSL, Path("test.dsl"))
+        models = {m.name: m for m in fragment.llm_models}
+        v = models["vertex_flash"]
+        assert v.provider.value == "google"
+        assert v.model_id == "gemini-2.5-flash"
+        assert v.project == "badger-payroll"
+        assert v.location == "europe-west2"
+
+    def test_openai_base_url_and_api_key_env(self):
+        _, _, _, _, _, fragment = parse_dsl(ENDPOINT_DSL, Path("test.dsl"))
+        models = {m.name: m for m in fragment.llm_models}
+        o = models["ollama_local"]
+        assert o.provider.value == "openai"
+        assert o.base_url == "http://localhost:11434/v1"
+        assert o.api_key_env == "OLLAMA_KEY"
+
+    def test_local_provider_with_base_url(self):
+        _, _, _, _, _, fragment = parse_dsl(ENDPOINT_DSL, Path("test.dsl"))
+        models = {m.name: m for m in fragment.llm_models}
+        loc = models["local_vllm"]
+        assert loc.provider.value == "local"
+        assert loc.base_url == "http://127.0.0.1:8000/v1"
