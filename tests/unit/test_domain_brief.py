@@ -117,6 +117,31 @@ access matrix is available. A mature relational database stores data.
         assert "assetss" not in q.text
 
 
+def test_extract_an_article_and_product_title_not_fused() -> None:
+    """'An Invoice is …' → Invoice; 'Acme Billing is …' is product title, not AcmeBilling."""
+    brief = """
+# Acme Billing — System Specification
+
+Acme Billing is a multi-organization billing system.
+
+**Organizations.** An Organization is the root of the tenancy model.
+**Invoices.** An Invoice is a billing record always raised against a Project.
+A Project always belongs to an Organization. A User is a person's record.
+
+## Who uses it
+
+- **Auditor** — reviews invoices
+- **Admin** — platform administrator
+"""
+    d = extract_from_text(brief, source_path="SPECIFICATION.md")
+    names = {n.name for n in d.nouns}
+    assert "Organization" in names
+    assert "Invoice" in names
+    # "User" is persona-chrome deny; Project may arrive via discover on longer SPECs
+    junk = {"AnInvoice", "AnOrganization", "AcmeBilling", "Acme", "Billing"}
+    assert not (names & junk), names
+
+
 def test_save_load_roundtrip(tmp_path: Path) -> None:
     d = extract_from_text(SPEND)
     paths = save_domain(tmp_path, d)

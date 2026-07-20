@@ -171,7 +171,8 @@ _NOUN_DENY = frozenset(
         "transition",
         "implementation",
         "development",
-        "organization",
+        # "organization" is a real multi-tenant domain noun (acme_billing);
+        # do not deny — rely on weak_signal for mid-sentence noise.
         "intention",
         "declared",
         "various",
@@ -259,6 +260,8 @@ _NOUN_DENY = frozenset(
         "design",  # adjective fragment; prefer DesignAsset / full compound
         "designstudio",  # product title, not a domain type
         "fieldtesthub",
+        "acmebilling",  # product title "Acme Billing is a …"
+        "acme",  # brand token alone
         "dazzle",
         "javascript",
         "hub",
@@ -319,11 +322,12 @@ _ENTITY_HEADER_RE = re.compile(
     r"^#{3,4}\s+\*{0,2}([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)*)\*{0,2}\s*$",
     re.M,
 )
-# "A Brand is …" / "A Design Asset is …" / "A Task has …" definitional sentences
+# "A Brand is …" / "An Invoice is …" / "A Design Asset is …" / "A Task has …"
 _DEFINITION_NOUN_RE = re.compile(
-    r"\bA\s+([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)?)\s+(?:is|also|has)\b"
+    r"\b(?:A|An)\s+([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)?)\s+(?:is|also|has)\b"
 )
-# Multi-word without leading A: "Design Feedback is always tied…"
+# Multi-word without leading article: "Design Feedback is always tied…"
+# (must not capture "An Invoice" / "Acme Billing" product titles — filtered below)
 _MULTIWORD_DEF_RE = re.compile(r"\b([A-Z][A-Za-z0-9]+\s+[A-Z][A-Za-z0-9]+)\s+(?:is|also)\b")
 # Broken generate_questions output ("multiple thes", "assetss", "managess")
 _BROKEN_Q_RE = re.compile(
@@ -350,14 +354,11 @@ def _header_entities(text: str) -> set[str]:
 
 
 def _definition_entities(text: str) -> set[str]:
-    """Nouns introduced as ``A Brand is …`` / ``A Design Asset is …``."""
+    """Nouns introduced as ``A Brand is …`` / ``An Invoice is …`` / ``A Design Asset is …``."""
     out: set[str] = set()
-    for m in list(_DEFINITION_NOUN_RE.finditer(text)) + list(_MULTIWORD_DEF_RE.finditer(text)):
-        label = m.group(1).strip()
-        # Skip product-title noise: "Design Studio is a creative-operations system"
-        # (second token is product genre, not a domain type)
-        parts = label.split()
-        if len(parts) == 2 and parts[1].lower() in {
+    # Product-genre second tokens: "Design Studio is …", "Acme Billing is …"
+    _PRODUCT_GENRE = frozenset(
+        {
             "studio",
             "hub",
             "app",
@@ -365,7 +366,25 @@ def _definition_entities(text: str) -> set[str]:
             "platform",
             "system",
             "service",
-        }:
+            "billing",
+            "tracker",
+            "records",
+            "dashboard",
+            "classifier",
+            "ops",
+            "manager",
+            "portal",
+            "console",
+        }
+    )
+    for m in list(_DEFINITION_NOUN_RE.finditer(text)) + list(_MULTIWORD_DEF_RE.finditer(text)):
+        label = m.group(1).strip()
+        parts = label.split()
+        # Multiword false-positives: "An Invoice is" matched without article group
+        if parts and parts[0].lower() in {"a", "an", "the"}:
+            continue
+        # Skip product-title noise (second token is product genre, not a domain type)
+        if len(parts) == 2 and parts[1].lower() in _PRODUCT_GENRE:
             continue
         compact = re.sub(r"\s+", "", label)
         out.add(compact)
@@ -400,8 +419,8 @@ def _strong_noun_signal(
         return True
     if re.search(rf"\b(entity|record|type|model)\s+{re.escape(name)}\b", text, re.I):
         return True
-    # Definitional sentence: "A Brand is the organising anchor…" / "A Task has …"
-    if re.search(rf"\bA\s+{re.escape(name)}\s+(?:is|also|has)\b", text):
+    # Definitional sentence: "A Brand is …" / "An Invoice is …" / "A Task has …"
+    if re.search(rf"\b(?:A|An)\s+{re.escape(name)}\s+(?:is|also|has)\b", text):
         return True
     hits = len(re.findall(rf"\b{re.escape(name)}\b", text, re.I))
     # article_noun used to accept hits>=1 and flooded generated SPECs with adjectives.
