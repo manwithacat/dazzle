@@ -63,6 +63,7 @@ nav finance_nav:
     payments_trail
     disputed_ops
     bank_ops
+    settlement_ops
     suppliers_desk
     finance_ops
     line_items_desk
@@ -74,6 +75,7 @@ nav auditor_nav:
     team_desk
     payments_trail
     disputed_ops
+    settlement_ops
     line_items_desk
 
 nav tenant_admin_nav:
@@ -82,6 +84,7 @@ nav tenant_admin_nav:
     team_desk
     suppliers_desk
     bank_ops
+    settlement_ops
     audit_review
 
 nav finance_admin_nav:
@@ -93,6 +96,7 @@ nav finance_admin_nav:
     payments_trail
     disputed_ops
     bank_ops
+    settlement_ops
     suppliers_desk
     team_desk
     line_items_desk

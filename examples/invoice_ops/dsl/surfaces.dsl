@@ -962,3 +962,58 @@ workspace bank_ops "Bank Accounts":
     aggregate:
       count: count(Invoice)
     empty: "No invoices to chart"
+
+# Twelfth product desk (WI D): 8 lists floor dens ~0.42 with 11 full desks — need 12.
+workspace settlement_ops "Settlement Ops":
+  purpose: "Payment-attempt pressure — pending/failed rails without warehouse CRUD"
+  access: persona(finance, finance_admin, auditor, tenant_admin)
+
+  settle_pulse:
+    source: PaymentAttempt
+    display: metrics
+    aggregate:
+      pending: count(PaymentAttempt where status = pending)
+      failed: count(PaymentAttempt where status = failed)
+      succeeded: count(PaymentAttempt where status = succeeded)
+    tones:
+      pending: warning
+      failed: destructive
+      succeeded: positive
+
+  # WI D: queue family — failed attempts need attention first
+  failed_queue:
+    source: PaymentAttempt
+    filter: status = failed
+    sort: created_at desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "No failed payment attempts"
+
+  # WI D: grid family — in-flight pending
+  pending_grid:
+    source: PaymentAttempt
+    filter: status = pending
+    sort: created_at desc
+    limit: 20
+    display: grid
+    action: invoice_detail
+    empty: "No pending payment attempts"
+
+  # WI D: context family — recent attempt trail
+  attempt_trail:
+    source: PaymentAttempt
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No payment attempts yet"
+
+  # WI D: chart family — attempt outcome mix
+  status_mix:
+    source: PaymentAttempt
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(PaymentAttempt)
+    empty: "No payment attempts to chart"
