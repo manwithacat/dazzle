@@ -85,20 +85,20 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | USED |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | USED |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | USED |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1209 | USED |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1235 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1228 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1227 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | USED |
-| MCP `policy` | HYGIENE | MCP | framework-ux | 1209 | USED |
-| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1209 | USED |
-| MCP `semantics` | HYGIENE | MCP | example-apps | 1209 | USED |
+| MCP `policy` | HYGIENE | MCP | framework-ux | 1235 | USED |
+| MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1235 | USED |
+| MCP `semantics` | HYGIENE | MCP | example-apps | 1235 | USED |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1234 | USED |
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1234 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1234 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1235 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1235 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1235 (2026-07-20).** **HYGIENE dig** policy/semantics/rbac/test_intelligence STALE —
+> rbac matrix+prove+routes OK (14 obligations, routes complete); policy analyze 6/9 full coverage
+> conflicts=0; semantics extract+tenancy single_tenant; test_intelligence summary (KG not init —
+> exercised). Stamped rbac/policy/semantics/test_intelligence **USED@1235**. budget_consumed 1.
+> Explore **9/100**. Next: dens headroom (HYGIENE STALE largely cleared).
 
 > **Cycle 1234 (2026-07-20).** **COGNITION dig** qa trial inventory + coverage (lag≥25) —
 > simple_task trial-inventory **26** targets (incl. WI D desks); trial-coverage manager live
