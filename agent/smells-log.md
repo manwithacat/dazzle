@@ -85,3 +85,10 @@
 - Decay: ratchet clean, import contracts 6 kept / 0 broken; top target handlers_consolidated.py
 - Commit: e20027608 (pre-stamp HEAD); cycle 484 improve stamp follows
 - Mode: improve OWNED-IDLE first-exercise (no Workflow fan-out)
+
+## Smells Run — 2026-07-20 (cycle 1191)
+- Regressions: 4/4 checks passed
+- New patterns: 0 elevated
+- Top concern: none (TRACK standing debt only)
+- Decay: ratchet clean, import contracts kept, allow-list stable; top target handlers_consolidated.py
+- Commit: 0cf2de998

@@ -68,23 +68,23 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1190 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1183 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1191 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1180 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1190 | USED |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1179 | USED |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1183 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1191 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1183 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1189 | USED |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1189 | USED |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1189 | USED |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1180 | USED |
-| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
-| `/smells` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
-| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
+| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1191 | USED |
+| `/smells` | HYGIENE | standalone loop | own entrypoint | 1191 | USED |
+| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1191 | USED |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1160 | STALE |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1183 | USED |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1176 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1190 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1190 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1190 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1191 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1191 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -246,6 +246,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 > PII/financial + GDPR/PCI suggestions); MCP **test_intelligence** summary (0 runs, KG empty —
 > surface exercised). budget_consumed 1. Explore **3/100**. Next: acme/hr WI D densify
 > (skip invoice soft-cap) or more HYGIENE.
+
+> **Cycle 1191 (2026-07-20).** **HYGIENE dig** fuzz/smells/xproject lag72+ —
+> fuzz: scout 12 examples + fixtures; simple_task boot 8s clean (no error signatures);
+> support_tickets lint advisory-only. smells: ratchet 6/6, import contracts 6 kept,
+> fitness top hotspot handlers_consolidated. xproject: scout AegisMark/cyfuture/
+> pennydreadful/clearmarket; validate advisory on AegisMark+cyfuture; pennydreadful
+> parse error (story missing actor). budget_consumed 1. Explore **5/100**. Next: dens
+> under soft-caps carefully (skip invoice/fieldtest) or remaining HYGIENE.
 
 > **Cycle 1190 (2026-07-20).** **example-apps HYGIENE dig** — lag86+ cluster on
 > simple_task: `deploy plan` (Postgres + env); `coverage` **61/61 100%**; `rhythm`
