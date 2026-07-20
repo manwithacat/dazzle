@@ -51,10 +51,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1158 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1159 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1159 | USED |
-| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1182 | USED |
+| **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1184 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1176 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1176 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1182 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1184 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1159 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1159 | USED |
@@ -62,8 +62,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1159 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1176 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1179 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1114 | STALE |
-| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1183 | USED |
+| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1184 | USED |
+| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1184 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1159 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1100 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
@@ -108,6 +108,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1184 (2026-07-20).** **HYGIENE dig** **qa capture** STALE — spun simple_task serve,
+> captured **27** above-fold desktop screens (admin/manager/member × WI D desks incl. todo_ops);
+> **qa login admin** magic-link OK. Stamped qa capture + login **USED@1184**. budget_consumed 1.
+> Explore **27/100**. Next: remaining dens carefully or dual_lock/shadcn HYGIENE.
 
 > **Cycle 1183 (2026-07-20).** **HYGIENE dig** fitness/composition/pulse/fragment-audit/qa login —
 > fitness code hotspots + vitality (0 islets) + queue (5 clusters story_drift);
