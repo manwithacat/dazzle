@@ -243,6 +243,7 @@ nav admin_nav:
     unassigned_ops
     scheduled_ops
     high_ops
+    medium_ops
 
 nav manager_nav:
   group "Lead":
@@ -259,6 +260,7 @@ nav manager_nav:
     unassigned_ops
     scheduled_ops
     high_ops
+    medium_ops
 
 nav member_nav:
   group "My work":
@@ -274,6 +276,7 @@ nav member_nav:
     unassigned_ops
     scheduled_ops
     high_ops
+    medium_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1501,3 +1504,61 @@ workspace high_ops "High Ops":
     aggregate:
       count: count(Task)
     empty: "No high-priority tasks to chart"
+
+
+# Fifteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify simple_task.
+workspace medium_ops "Medium Ops":
+  purpose: "Medium-priority pressure — open medium tasks without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  medium_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      medium: count(Task where priority = medium and status != done)
+      open: count(Task where status != done)
+      done: count(Task where status = done)
+    tones:
+      medium: accent
+      open: warning
+      done: muted
+
+  # WI D: queue family — open medium-priority first
+  medium_queue:
+    source: Task
+    filter: priority = medium and status != done
+    sort: due_date asc, updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No open medium-priority tasks"
+
+  # WI D: grid family — medium-priority cards
+  medium_grid:
+    source: Task
+    filter: priority = medium and status != done
+    sort: due_date asc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No open medium-priority tasks"
+
+  # WI D: context family — recent medium-priority trail
+  medium_trail:
+    source: Task
+    filter: priority = medium and status != done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No medium-priority activity yet"
+
+  # WI D: chart family — status mix among medium-priority open
+  status_mix:
+    source: Task
+    filter: priority = medium and status != done
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No medium-priority tasks to chart"
