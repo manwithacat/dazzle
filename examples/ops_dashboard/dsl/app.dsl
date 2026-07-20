@@ -180,6 +180,7 @@ nav ops_nav:
     incident_review
     systems_desk
     alerts_desk
+    integrations_desk
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage
@@ -705,7 +706,7 @@ workspace incident_review "Incident Review":
 
 # Third product workspace (WI density D): systems portfolio desk.
 workspace systems_desk "Systems":
-  purpose: "Fleet health desk — systems pulse and attention queue"
+  purpose: "Fleet health desk — systems pulse, grid, queue, trail, and status mix"
   access: persona(ops_engineer, admin)
 
   fleet_pulse:
@@ -719,20 +720,42 @@ workspace systems_desk "Systems":
       critical: destructive
       alerts: warning
 
-  systems:
+  # WI D: grid family — fleet cards (not list pad)
+  systems_grid:
     source: System
     sort: name asc
-    display: list
+    limit: 20
+    display: grid
     action: system_detail
     empty: "No systems registered"
 
-  active_alerts:
-    source: Alert
-    filter: status = active
-    sort: severity desc, triggered_at desc
+  # WI D: queue family — degraded/critical first
+  pressure_queue:
+    source: System
+    filter: status = degraded or status = critical
+    sort: status desc, last_check desc
     limit: 15
     display: queue
-    empty: "No active alerts"
+    action: system_detail
+    empty: "No degraded or critical systems"
+
+  # WI D: context family — recent checks
+  check_trail:
+    source: System
+    sort: last_check desc
+    limit: 15
+    display: timeline
+    action: system_detail
+    empty: "No systems yet"
+
+  # WI D: chart family — health mix
+  status_mix:
+    source: System
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(System)
+    empty: "No systems yet"
 
 # Fourth product workspace (WI density D): alerts-first on-call desk.
 workspace alerts_desk "Alerts":
@@ -758,21 +781,83 @@ workspace alerts_desk "Alerts":
     display: queue
     empty: "No active alerts"
 
-  recent_resolved:
-    source: Alert
-    filter: status = resolved
-    sort: triggered_at desc
-    limit: 15
-    display: list
-    empty: "No resolved alerts yet"
-
-  systems_context:
+  # WI D: grid family — systems with pressure
+  systems_grid:
     source: System
+    filter: status = degraded or status = critical
     sort: name asc
     limit: 15
-    display: list
+    display: grid
     action: system_detail
-    empty: "No systems"
+    empty: "No systems under pressure"
+
+  # WI D: context family — recent alert trail
+  alert_trail:
+    source: Alert
+    sort: triggered_at desc
+    limit: 15
+    display: timeline
+    empty: "No alerts yet"
+
+  # WI D: chart family — severity mix
+  severity_mix:
+    source: Alert
+    display: bar_chart
+    group_by: severity
+    aggregate:
+      count: count(Alert)
+    empty: "No alerts yet"
+
+# Fifth product desk (WI D): integrations pulse for ops engineers.
+workspace integrations_desk "Integrations":
+  purpose: "Integration health — pending/live/revoked connectors and notes trail"
+  access: persona(ops_engineer, admin)
+
+  integration_pulse:
+    source: Integration
+    display: metrics
+    aggregate:
+      total: count(Integration)
+      live: count(Integration where status = live)
+      pending: count(Integration where status = pending)
+    tones:
+      live: positive
+      pending: warning
+
+  # WI D: queue family — pending opt-ins first
+  pending_queue:
+    source: Integration
+    filter: status = pending
+    sort: name asc
+    limit: 15
+    display: queue
+    empty: "No pending integrations"
+
+  # WI D: grid family — live connectors
+  live_grid:
+    source: Integration
+    filter: status = live
+    sort: name asc
+    limit: 20
+    display: grid
+    empty: "No live integrations"
+
+  # WI D: context family — enablement trail
+  enable_trail:
+    source: Integration
+    sort: enabled_at desc
+    limit: 15
+    display: timeline
+    empty: "No integration activity yet"
+
+  # WI D: chart family — status mix
+  status_mix:
+    source: Integration
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Integration)
+    empty: "No integrations yet"
 
 # =============================================================================
 # Surfaces
