@@ -41,6 +41,7 @@ nav designer_nav:
     feedback_desk
     publish_desk
     draft_studio
+    archive_ops
 
 nav reviewer_nav:
   group "Review":
@@ -50,6 +51,7 @@ nav reviewer_nav:
     feedback_desk
     publish_desk
     draft_studio
+    archive_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -617,6 +619,63 @@ workspace draft_studio "Draft Studio":
     aggregate:
       count: count(Asset)
     empty: "No draft assets to chart"
+
+# Ninth product desk (WI D): 4 lists floor dens ~0.33 with 8 full desks — need 9.
+workspace archive_ops "Archive Ops":
+  purpose: "Archive pressure — retired assets and type mix without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  archive_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      archived: count(Asset where status = archived)
+      published: count(Asset where status = published)
+      brands: count(Brand)
+    tones:
+      archived: warning
+      published: positive
+      brands: accent
+
+  # WI D: queue family — archived assets first
+  archive_queue:
+    source: Asset
+    filter: status = archived
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "No archived assets"
+
+  # WI D: grid family — archive gallery
+  archive_gallery:
+    source: Asset
+    filter: status = archived
+    sort: name asc
+    limit: 20
+    display: grid
+    action: asset_edit
+    empty: "No archived assets"
+
+  # WI D: context family — recent archive trail
+  archive_trail:
+    source: Asset
+    filter: status = archived
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No archive activity yet"
+
+  # WI D: chart family — asset type mix among archives
+  type_mix:
+    source: Asset
+    filter: status = archived
+    display: bar_chart
+    group_by: asset_type
+    aggregate:
+      count: count(Asset)
+    empty: "No archived assets to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
