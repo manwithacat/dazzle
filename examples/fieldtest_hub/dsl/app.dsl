@@ -61,6 +61,7 @@ nav engineer_nav:
     tester_roster
     task_ops
     device_fleet
+    critical_ops
 
 nav tester_nav:
   group "Field":
@@ -77,6 +78,7 @@ nav manager_nav:
     tester_roster
     task_ops
     device_fleet
+    critical_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1333,17 +1335,27 @@ workspace tester_dashboard "Tester Dashboard":
 
   my_tasks:
     source: Task
-    filter: assigned_to_id = current_user
+    filter: assigned_to_id = current_user and status != completed
     sort: created_at desc
     limit: 10
     display: queue
     action: task_detail
     empty: "No tasks assigned to you"
 
+  # WI D: chart family — personal issue severity mix
+  my_severity_mix:
+    source: IssueReport
+    filter: reported_by_id = current_user
+    display: bar_chart
+    group_by: severity
+    aggregate:
+      count: count(IssueReport)
+    empty: "No issues reported yet"
+
   ux:
     as tester:
       purpose: "Your field testing activity"
-      focus: my_stats, my_devices, my_tasks, my_issues
+      focus: my_stats, my_devices, my_tasks, my_issues, my_severity_mix
 
 # ── Job workspaces (product maturity: anti-warehouse + nav list share) ───────
 # Extra product desks lower list/(list+ws) density and credit multi-workspace
@@ -1793,6 +1805,63 @@ workspace device_fleet "Device Fleet":
     aggregate:
       count: count(Device)
     empty: "No devices yet"
+
+# Eleventh product desk (WI D): critical issue pressure for eng/manager.
+workspace critical_ops "Critical Ops":
+  purpose: "Critical and high-severity issue pressure without warehouse CRUD"
+  access: persona(engineer, manager)
+
+  critical_metrics:
+    source: IssueReport
+    display: metrics
+    aggregate:
+      critical: count(IssueReport where severity = critical and status = open)
+      high: count(IssueReport where severity = high and status = open)
+      open: count(IssueReport where status = open)
+    tones:
+      critical: destructive
+      high: warning
+      open: accent
+
+  # WI D: queue family — critical open first
+  critical_queue:
+    source: IssueReport
+    filter: severity = critical and status = open
+    sort: reported_at asc
+    limit: 20
+    display: queue
+    action: issue_report_edit
+    empty: "No open critical issues"
+
+  # WI D: grid family — high severity cards
+  high_grid:
+    source: IssueReport
+    filter: severity = high and status = open
+    sort: reported_at asc
+    limit: 15
+    display: grid
+    action: issue_report_detail
+    empty: "No open high-severity issues"
+
+  # WI D: context family — recent critical trail
+  critical_trail:
+    source: IssueReport
+    filter: severity = critical or severity = high
+    sort: reported_at desc
+    limit: 15
+    display: timeline
+    action: issue_report_detail
+    empty: "No high or critical issues yet"
+
+  # WI D: chart family — open severity mix
+  severity_mix:
+    source: IssueReport
+    filter: status = open
+    display: bar_chart
+    group_by: severity
+    aggregate:
+      count: count(IssueReport)
+    empty: "No open issues to chart"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts
