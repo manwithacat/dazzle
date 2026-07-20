@@ -65,14 +65,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1184 | USED |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1184 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1187 | USED |
-| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1100 | STALE |
+| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1190 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1176 | USED |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1183 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1180 | USED |
-| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1100 | STALE |
-| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1100 | STALE |
-| `dazzle test-design` | HYGIENE | CLI | example-apps | 1100 | STALE |
+| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1190 | USED |
+| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1190 | USED |
+| `dazzle test-design` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1179 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1183 | USED |
@@ -86,7 +86,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1114 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1160 | STALE |
-| `dazzle coverage` | HYGIENE | CLI | example-apps | 1100 | STALE |
+| `dazzle coverage` | HYGIENE | CLI | example-apps | 1190 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1183 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1179 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1176 | USED |
@@ -95,10 +95,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1160 | STALE |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1176 | USED |
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1176 | USED |
-| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1101 | STALE |
-| `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1093 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1189 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1189 | USED |
+| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1190 | USED |
+| `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1190 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1190 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1190 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -246,6 +246,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 > PII/financial + GDPR/PCI suggestions); MCP **test_intelligence** summary (0 runs, KG empty —
 > surface exercised). budget_consumed 1. Explore **3/100**. Next: acme/hr WI D densify
 > (skip invoice soft-cap) or more HYGIENE.
+
+> **Cycle 1190 (2026-07-20).** **example-apps HYGIENE dig** — lag86+ cluster on
+> simple_task: `deploy plan` (Postgres + env); `coverage` **61/61 100%**; `rhythm`
+> gaps (admin/manager/member unscored) + lifecycle maturity new_domain; `story list`
+> 16 stories; `test-design` runtime-gaps + coverage-actions; `scaffold process-step`
+> task_auto_assignment/find_candidate checklist; `dazzle.risk` build_report MDF-01..14
+> overall risk=0 (default exposure). budget_consumed 1. Explore **4/100**. Next: more
+> HYGIENE (fuzz/smells/xproject lag72) or dens under soft-caps (skip invoice/fieldtest).
 
 > **Cycle 1189 (2026-07-20).** **hm-convergence HYGIENE dig** — dual_lock queue
 > depth **0** (drained); shadcn parity **gap=0** (parity 37 / partial 26 / n/a 1);
