@@ -67,6 +67,7 @@ nav hr_admin_nav:
     role_ops
     dept_ops
     time_machine
+    pay_ops
 
 nav manager_nav:
   group "Team":
@@ -93,6 +94,7 @@ nav finance_nav:
     person_detail
     employment_ops
     active_staff
+    pay_ops
 
 nav employee_nav:
   group "My record":
@@ -1559,3 +1561,57 @@ workspace active_staff "Active Staff":
     aggregate:
       count: count(Role)
     empty: "No roles to chart"
+
+# Sixteenth product desk (WI D): skip invoice_ops desk-cap; densify hr_records.
+workspace pay_ops "Pay Ops":
+  purpose: "Active compensation pressure — current salaries without warehouse CRUD"
+  access: persona(hr_admin, finance)
+
+  pay_pulse:
+    source: Salary
+    display: metrics
+    aggregate:
+      active: count(Salary where effective_to = null)
+      people: count(Person where ended_at = null)
+      roles: count(Role)
+    tones:
+      active: accent
+      people: positive
+      roles: muted
+
+  # WI D: queue family — active salaries first
+  pay_queue:
+    source: Salary
+    filter: effective_to = null
+    sort: effective_from desc
+    limit: 25
+    display: queue
+    empty: "No active salaries"
+
+  # WI D: grid family — active people context
+  people_grid:
+    source: Person
+    filter: ended_at = null
+    sort: legal_name asc
+    limit: 20
+    display: grid
+    action: person_detail
+    empty: "No active people on record"
+
+  # WI D: context family — recent salary trail
+  pay_trail:
+    source: Salary
+    sort: effective_from desc
+    limit: 15
+    display: timeline
+    empty: "No salary history yet"
+
+  # WI D: chart family — salary reason mix
+  reason_mix:
+    source: Salary
+    filter: effective_to = null
+    display: bar_chart
+    group_by: reason
+    aggregate:
+      count: count(Salary)
+    empty: "No active salaries to chart"
