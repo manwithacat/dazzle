@@ -948,6 +948,61 @@ workspace technical_ops "Technical Ops":
       count: count(TicketClassification)
     empty: "No technical classifications to chart"
 
+
+# Thirteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify llm classifier.
+workspace account_ops "Account Ops":
+  purpose: "Account-classification pressure without warehouse CRUD"
+  access: persona(supervisor, support_agent, admin)
+
+  account_pulse:
+    source: TicketClassification
+    display: metrics
+    aggregate:
+      account: count(TicketClassification where category = account)
+      technical: count(TicketClassification where category = technical)
+      total: count(TicketClassification)
+    tones:
+      account: accent
+      technical: warning
+      total: muted
+
+  # WI D: queue family — account first
+  account_queue:
+    source: TicketClassification
+    filter: category = account
+    sort: classified_at desc
+    limit: 20
+    display: queue
+    empty: "No account classifications"
+
+  # WI D: grid family — account cards
+  account_grid:
+    source: TicketClassification
+    filter: category = account
+    sort: confidence asc
+    limit: 15
+    display: grid
+    empty: "No account classifications"
+
+  # WI D: context family — account trail
+  account_trail:
+    source: TicketClassification
+    filter: category = account
+    sort: classified_at desc
+    limit: 15
+    display: timeline
+    empty: "No account activity yet"
+
+  # WI D: chart family — priority mix among account
+  priority_mix:
+    source: TicketClassification
+    filter: category = account
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(TicketClassification)
+    empty: "No account classifications to chart"
+
 # =============================================================================
 # Personas
 # =============================================================================
@@ -983,6 +1038,7 @@ nav agent_nav:
     frustrated_ops
     billing_ops
     technical_ops
+    account_ops
     support_dashboard
 
 nav supervisor_nav:
@@ -998,6 +1054,7 @@ nav supervisor_nav:
     frustrated_ops
     billing_ops
     technical_ops
+    account_ops
     ticket_management
 
 
