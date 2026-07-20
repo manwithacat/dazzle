@@ -43,6 +43,7 @@ nav contact_nav:
     independent_ops
     phone_ops
     title_ops
+    notes_ops
   group "Directory":
     contacts
     companies
@@ -55,6 +56,7 @@ nav contact_nav:
     independent_ops
     phone_ops
     title_ops
+    notes_ops
 
 # Entity for contact information with LLM cognition metadata.
 #
@@ -648,6 +650,64 @@ workspace title_ops "Title Ops":
     aggregate:
       count: count(Contact)
     empty: "No titled company contacts to chart"
+
+
+# Ninth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify contact_manager.
+workspace notes_ops "Notes Ops":
+  purpose: "Annotated-contact pressure — people with notes without warehouse CRUD"
+  access: persona(user, admin)
+
+  notes_pulse:
+    source: Contact
+    display: metrics
+    aggregate:
+      with_notes: count(Contact where notes != null)
+      favourites: count(Contact where is_favorite = true)
+      people: count(Contact)
+    tones:
+      with_notes: accent
+      favourites: positive
+      people: muted
+
+  # WI D: queue family — noted contacts first
+  notes_queue:
+    source: Contact
+    filter: notes != null
+    sort: last_name asc, first_name asc
+    limit: 20
+    display: queue
+    action: contact_detail
+    empty: "No contacts with notes"
+
+  # WI D: grid family — noted cards
+  notes_grid:
+    source: Contact
+    filter: notes != null
+    sort: last_name asc
+    limit: 15
+    display: grid
+    action: contact_detail
+    empty: "No contacts with notes"
+
+  # WI D: context family — recent noted trail
+  notes_trail:
+    source: Contact
+    filter: notes != null
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: contact_detail
+    empty: "No notes activity yet"
+
+  # WI D: chart family — company mix among noted contacts
+  company_mix:
+    source: Contact
+    filter: notes != null and company != null
+    display: bar_chart
+    group_by: company
+    aggregate:
+      count: count(Contact)
+    empty: "No noted company contacts to chart"
 
 # Stage Selection:
 # - list_weight = 0.6 >= 0.3 ✓
