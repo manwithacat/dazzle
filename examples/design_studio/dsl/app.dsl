@@ -52,6 +52,7 @@ nav designer_nav:
     logo_ops
     completed_ops
     photo_ops
+    illustration_ops
 
 nav reviewer_nav:
   group "Review":
@@ -72,6 +73,7 @@ nav reviewer_nav:
     logo_ops
     completed_ops
     photo_ops
+    illustration_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -1267,6 +1269,64 @@ workspace photo_ops "Photo Ops":
     aggregate:
       count: count(Asset)
     empty: "No photos to chart"
+
+
+# Twentieth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify design_studio.
+workspace illustration_ops "Illustration Ops":
+  purpose: "Illustration-asset pressure — illustration type work without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  illustration_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      illustrations: count(Asset where asset_type = illustration)
+      draft: count(Asset where asset_type = illustration and status = draft)
+      published: count(Asset where asset_type = illustration and status = published)
+    tones:
+      illustrations: accent
+      draft: warning
+      published: positive
+
+  # WI D: queue family — illustrations first
+  illustration_queue:
+    source: Asset
+    filter: asset_type = illustration
+    sort: updated_at desc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "No illustration assets"
+
+  # WI D: grid family — illustration gallery
+  illustration_gallery:
+    source: Asset
+    filter: asset_type = illustration
+    sort: name asc
+    limit: 15
+    display: grid
+    action: asset_edit
+    empty: "No illustration assets"
+
+  # WI D: context family — illustration trail
+  illustration_trail:
+    source: Asset
+    filter: asset_type = illustration
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No illustration activity yet"
+
+  # WI D: chart family — status mix among illustrations
+  status_mix:
+    source: Asset
+    filter: asset_type = illustration
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Asset)
+    empty: "No illustrations to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
