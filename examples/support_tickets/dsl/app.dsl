@@ -923,6 +923,63 @@ workspace resolution_ops "Resolution Ops":
       count: count(Ticket)
     empty: "No terminal tickets to chart"
 
+# Seventh product desk (WI D): 3 lists floor dens ~0.33 with 6 full desks — need 7.
+workspace priority_ops "Priority Ops":
+  purpose: "High and critical open ticket pressure without warehouse CRUD"
+  access: persona(agent, manager, admin)
+
+  priority_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      critical: count(Ticket where priority = critical and status != closed)
+      high: count(Ticket where priority = high and status != closed)
+      open: count(Ticket where status != closed)
+    tones:
+      critical: destructive
+      high: warning
+      open: accent
+
+  # WI D: queue family — critical open first
+  critical_queue:
+    source: Ticket
+    filter: priority = critical and status != closed
+    sort: created_at asc
+    limit: 20
+    display: queue
+    action: ticket_edit
+    empty: "No open critical tickets"
+
+  # WI D: grid family — high-priority cards
+  high_grid:
+    source: Ticket
+    filter: priority = high and status != closed
+    sort: created_at asc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No open high-priority tickets"
+
+  # WI D: context family — recent priority trail
+  priority_trail:
+    source: Ticket
+    filter: (priority = high or priority = critical) and status != closed
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No high or critical open tickets"
+
+  # WI D: chart family — open work by priority
+  priority_mix:
+    source: Ticket
+    filter: status != closed
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Ticket)
+    empty: "No open tickets to chart"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
@@ -963,6 +1020,7 @@ nav admin_nav:
     ticket_queue
     agent_console
     resolution_ops
+    priority_ops
 
 nav customer_nav:
   group "My support":
@@ -974,6 +1032,7 @@ nav agent_nav:
     agent_dashboard
     agent_console
     resolution_ops
+    priority_ops
 
 nav manager_nav:
   group "Lead":
@@ -982,6 +1041,7 @@ nav manager_nav:
     agent_console
     agent_dashboard
     resolution_ops
+    priority_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
