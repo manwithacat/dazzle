@@ -242,6 +242,7 @@ nav admin_nav:
     urgent_ops
     unassigned_ops
     scheduled_ops
+    high_ops
 
 nav manager_nav:
   group "Lead":
@@ -257,6 +258,7 @@ nav manager_nav:
     urgent_ops
     unassigned_ops
     scheduled_ops
+    high_ops
 
 nav member_nav:
   group "My work":
@@ -271,6 +273,7 @@ nav member_nav:
     urgent_ops
     unassigned_ops
     scheduled_ops
+    high_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1440,3 +1443,61 @@ workspace scheduled_ops "Scheduled Ops":
     aggregate:
       count: count(Task)
     empty: "No scheduled tasks to chart"
+
+
+# Fourteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify simple_task.
+workspace high_ops "High Ops":
+  purpose: "High-priority pressure — open high tasks without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  high_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      high: count(Task where priority = high and status != done)
+      open: count(Task where status != done)
+      done: count(Task where status = done)
+    tones:
+      high: warning
+      open: accent
+      done: muted
+
+  # WI D: queue family — open high-priority first
+  high_queue:
+    source: Task
+    filter: priority = high and status != done
+    sort: due_date asc, updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No open high-priority tasks"
+
+  # WI D: grid family — high-priority cards
+  high_grid:
+    source: Task
+    filter: priority = high and status != done
+    sort: due_date asc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No open high-priority tasks"
+
+  # WI D: context family — recent high-priority trail
+  high_trail:
+    source: Task
+    filter: priority = high and status != done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No high-priority activity yet"
+
+  # WI D: chart family — status mix among high-priority open
+  status_mix:
+    source: Task
+    filter: priority = high and status != done
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No high-priority tasks to chart"
