@@ -893,6 +893,61 @@ workspace billing_ops "Billing Ops":
       count: count(TicketClassification)
     empty: "No billing classifications to chart"
 
+
+# Twelfth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify llm classifier.
+workspace technical_ops "Technical Ops":
+  purpose: "Technical-classification pressure without warehouse CRUD"
+  access: persona(supervisor, support_agent, admin)
+
+  technical_pulse:
+    source: TicketClassification
+    display: metrics
+    aggregate:
+      technical: count(TicketClassification where category = technical)
+      billing: count(TicketClassification where category = billing)
+      total: count(TicketClassification)
+    tones:
+      technical: accent
+      billing: warning
+      total: muted
+
+  # WI D: queue family — technical first
+  technical_queue:
+    source: TicketClassification
+    filter: category = technical
+    sort: classified_at desc
+    limit: 20
+    display: queue
+    empty: "No technical classifications"
+
+  # WI D: grid family — technical cards
+  technical_grid:
+    source: TicketClassification
+    filter: category = technical
+    sort: confidence asc
+    limit: 15
+    display: grid
+    empty: "No technical classifications"
+
+  # WI D: context family — technical trail
+  technical_trail:
+    source: TicketClassification
+    filter: category = technical
+    sort: classified_at desc
+    limit: 15
+    display: timeline
+    empty: "No technical activity yet"
+
+  # WI D: chart family — priority mix among technical
+  priority_mix:
+    source: TicketClassification
+    filter: category = technical
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(TicketClassification)
+    empty: "No technical classifications to chart"
+
 # =============================================================================
 # Personas
 # =============================================================================
@@ -927,6 +982,7 @@ nav agent_nav:
     confidence_ops
     frustrated_ops
     billing_ops
+    technical_ops
     support_dashboard
 
 nav supervisor_nav:
@@ -941,6 +997,7 @@ nav supervisor_nav:
     confidence_ops
     frustrated_ops
     billing_ops
+    technical_ops
     ticket_management
 
 
