@@ -1441,6 +1441,64 @@ workspace inquiry_ops "Inquiry Ops":
       count: count(Ticket)
     empty: "No inquiry tickets to chart"
 
+
+# Fifteenth product desk (WI D): skip invoice/fieldtest/acme/hr/ops soft-cap; densify support_tickets.
+workspace other_ops "Other Ops":
+  purpose: "Other-category pressure — open misc tickets without warehouse CRUD"
+  access: persona(agent, manager, admin)
+
+  other_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      other: count(Ticket where category = other and status != closed)
+      open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+    tones:
+      other: muted
+      open: warning
+      in_progress: accent
+
+  # WI D: queue family — open other-category first
+  other_queue:
+    source: Ticket
+    filter: category = other and status != closed
+    sort: priority desc, updated_at desc
+    limit: 20
+    display: queue
+    action: ticket_edit
+    empty: "No open other-category tickets"
+
+  # WI D: grid family — other cards
+  other_grid:
+    source: Ticket
+    filter: category = other and status != closed
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No open other-category tickets"
+
+  # WI D: context family — recent other trail
+  other_trail:
+    source: Ticket
+    filter: category = other and status != closed
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No other-category activity yet"
+
+  # WI D: chart family — priority mix among other
+  priority_mix:
+    source: Ticket
+    filter: category = other and status != closed
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Ticket)
+    empty: "No other-category tickets to chart"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
@@ -1490,6 +1548,7 @@ nav admin_nav:
     bug_ops
     feature_ops
     inquiry_ops
+    other_ops
 
 nav customer_nav:
   group "My support":
@@ -1510,6 +1569,7 @@ nav agent_nav:
     bug_ops
     feature_ops
     inquiry_ops
+    other_ops
 
 nav manager_nav:
   group "Lead":
@@ -1527,6 +1587,7 @@ nav manager_nav:
     bug_ops
     feature_ops
     inquiry_ops
+    other_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
