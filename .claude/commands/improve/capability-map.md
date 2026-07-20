@@ -62,20 +62,20 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1207 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1216 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1227 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1184 | STALE |
-| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1184 | STALE |
+| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | USED |
+| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1207 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1191 | STALE |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1231 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1230 | USED |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1228 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1227 | USED |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1191 | STALE |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1231 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1228 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1229 | USED |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1208 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1230 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1230 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1231 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1231 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1231 (2026-07-20).** **HYGIENE dig** qa capture/login + fitness STALE —
+> simple_task serve :3943; `qa login admin` magic-link OK; `qa capture` admin above-fold
+> **13** screens (incl. WI D desks); `fitness code` top30 hotspots; `fitness vitality` repo
+> report OK. Stamped qa capture/login + fitness **USED@1231**. budget_consumed 1.
+> Explore **5/100**. Next: fuzz/smells/xproject or dens headroom.
 
 > **Cycle 1230 (2026-07-20).** **HYGIENE dig** deploy/rhythm/story/test-design/coverage/scaffold/risk
 > STALE on simple_task — deploy plan Postgres OK; rhythm gaps+lifecycle; story list **16**;
