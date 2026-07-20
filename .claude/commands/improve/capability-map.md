@@ -62,7 +62,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1102 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1099 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1113 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1063 | STALE |
+| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1114 | USED |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1113 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1100 | USED |
@@ -82,9 +82,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1102 | USED |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1113 | USED |
-| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1063 | STALE |
-| `/smells` | HYGIENE | standalone loop | own entrypoint | 1062 | STALE |
-| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1063 | STALE |
+| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1114 | USED |
+| `/smells` | HYGIENE | standalone loop | own entrypoint | 1114 | USED |
+| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1114 | USED |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1099 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1100 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1101 | USED |
@@ -108,6 +108,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1114 (2026-07-20).** **HYGIENE dig** remaining STALE cluster — boot-fuzz
+> simple_task/design_studio/fieldtest_hub (startup complete, no duplicate/FTS signatures);
+> smells via fitness code + complexity ratchet green; xproject scout (AegisMark renderers
+> advisory; cyfuture #1597 projection warnings); qa capture CLI exercised.
+> Stamps fuzz/smells/xproject/qa capture **USED@1114**. HYGIENE STALE largely cleared.
+> budget_consumed 1. Explore **39/100**.
 
 > **Cycle 1113 (2026-07-20).** **example-apps/test-suite HYGIENE dig** — process propose +
 > diagram; sentinel mutate domain_brief/models (29% kill); sweep examples (coverage 100%);
