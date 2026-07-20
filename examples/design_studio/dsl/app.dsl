@@ -44,6 +44,7 @@ nav designer_nav:
     archive_ops
     campaign_ops
     review_pipeline
+    approved_ops
 
 nav reviewer_nav:
   group "Review":
@@ -56,6 +57,7 @@ nav reviewer_nav:
     archive_ops
     campaign_ops
     review_pipeline
+    approved_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -790,6 +792,63 @@ workspace review_pipeline "Review Pipeline":
     aggregate:
       count: count(Asset)
     empty: "No review assets to chart"
+
+# Twelfth product desk (WI D): skip invoice_ops desk-cap; densify design_studio.
+workspace approved_ops "Approved Ops":
+  purpose: "Ship-ready pressure — approved assets waiting to publish without warehouse CRUD"
+  access: persona(admin, designer, reviewer)
+
+  approved_pulse:
+    source: Asset
+    display: metrics
+    aggregate:
+      approved: count(Asset where status = approved)
+      published: count(Asset where status = published)
+      in_review: count(Asset where status = review)
+    tones:
+      approved: positive
+      published: accent
+      in_review: warning
+
+  # WI D: queue family — approved first
+  approved_queue:
+    source: Asset
+    filter: status = approved
+    sort: updated_at asc
+    limit: 20
+    display: queue
+    action: asset_edit
+    empty: "Nothing approved and waiting"
+
+  # WI D: grid family — approved gallery
+  approved_gallery:
+    source: Asset
+    filter: status = approved
+    sort: name asc
+    limit: 15
+    display: grid
+    action: asset_edit
+    empty: "Nothing approved and waiting"
+
+  # WI D: context family — recent approved trail
+  approved_trail:
+    source: Asset
+    filter: status = approved or status = published
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: asset_edit
+    empty: "No ship activity yet"
+
+  # WI D: chart family — asset type mix among approved
+  type_mix:
+    source: Asset
+    filter: status = approved
+    display: bar_chart
+    group_by: asset_type
+    aggregate:
+      count: count(Asset)
+    empty: "No approved assets to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
