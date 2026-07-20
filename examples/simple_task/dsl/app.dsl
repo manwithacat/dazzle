@@ -234,6 +234,7 @@ nav admin_nav:
     task_board
     comments_desk
     people_desk
+    priority_ops
 
 nav manager_nav:
   group "Lead":
@@ -241,12 +242,14 @@ nav manager_nav:
     task_board
     people_desk
     comments_desk
+    priority_ops
 
 nav member_nav:
   group "My work":
     my_work
     task_board
     comments_desk
+    priority_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -961,3 +964,60 @@ workspace people_desk "People":
         caption: "Kanban flow is on Task Board for visual WIP"
         icon: "columns"
         state: positive
+
+# Sixth product desk (WI D): 3 lists floor dens ~0.38 with 5 full desks — need 6.
+workspace priority_ops "Priority Ops":
+  purpose: "Priority pressure — urgent and high tasks without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  priority_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      urgent: count(Task where priority = urgent and status != done)
+      high: count(Task where priority = high and status != done)
+      open: count(Task where status != done)
+    tones:
+      urgent: destructive
+      high: warning
+      open: accent
+
+  # WI D: queue family — urgent first
+  urgent_queue:
+    source: Task
+    filter: priority = urgent and status != done
+    sort: due_date asc
+    limit: 20
+    display: queue
+    action: task_edit
+    empty: "No urgent open tasks"
+
+  # WI D: grid family — high priority cards
+  high_grid:
+    source: Task
+    filter: priority = high and status != done
+    sort: due_date asc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No high-priority open tasks"
+
+  # WI D: context family — recent open work trail
+  open_trail:
+    source: Task
+    filter: status != done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No open tasks yet"
+
+  # WI D: chart family — open work by priority
+  priority_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks to chart"
