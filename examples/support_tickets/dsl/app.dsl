@@ -980,6 +980,63 @@ workspace priority_ops "Priority Ops":
       count: count(Ticket)
     empty: "No open tickets to chart"
 
+# Eighth product desk (WI D): 3 lists floor dens ~0.30 with 7 full desks — need 8.
+workspace progress_ops "Progress Ops":
+  purpose: "In-progress pressure — work actively being handled without warehouse CRUD"
+  access: persona(agent, manager, admin)
+
+  progress_pulse:
+    source: Ticket
+    display: metrics
+    aggregate:
+      in_progress: count(Ticket where status = in_progress)
+      open: count(Ticket where status = open)
+      resolved: count(Ticket where status = resolved)
+    tones:
+      in_progress: accent
+      open: warning
+      resolved: positive
+
+  # WI D: queue family — in-progress first
+  progress_queue:
+    source: Ticket
+    filter: status = in_progress
+    sort: priority desc, updated_at asc
+    limit: 20
+    display: queue
+    action: ticket_edit
+    empty: "No tickets in progress"
+
+  # WI D: grid family — open backlog cards
+  open_grid:
+    source: Ticket
+    filter: status = open
+    sort: priority desc, created_at asc
+    limit: 15
+    display: grid
+    action: ticket_detail
+    empty: "No open tickets waiting claim"
+
+  # WI D: context family — recent progress trail
+  progress_trail:
+    source: Ticket
+    filter: status = in_progress or status = open
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: ticket_detail
+    empty: "No progress activity yet"
+
+  # WI D: chart family — open pipeline status mix
+  status_mix:
+    source: Ticket
+    filter: status != closed
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Ticket)
+    empty: "No open tickets to chart"
+
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
@@ -1021,6 +1078,7 @@ nav admin_nav:
     agent_console
     resolution_ops
     priority_ops
+    progress_ops
 
 nav customer_nav:
   group "My support":
@@ -1033,6 +1091,7 @@ nav agent_nav:
     agent_console
     resolution_ops
     priority_ops
+    progress_ops
 
 nav manager_nav:
   group "Lead":
@@ -1042,6 +1101,7 @@ nav manager_nav:
     agent_dashboard
     resolution_ops
     priority_ops
+    progress_ops
 
 # =============================================================================
 # SCENARIOS - Testing contexts with demo data
