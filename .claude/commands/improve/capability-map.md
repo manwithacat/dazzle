@@ -61,44 +61,44 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1207 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1207 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1216 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1179 | USED |
-| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1184 | USED |
-| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1184 | USED |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1179 | STALE |
+| `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1184 | STALE |
+| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1184 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1207 | USED |
-| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1190 | USED |
+| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1190 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1191 | USED |
-| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1180 | USED |
-| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1190 | USED |
-| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1190 | USED |
-| `dazzle test-design` | HYGIENE | CLI | example-apps | 1190 | USED |
-| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1183 | USED |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1179 | USED |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1191 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1191 | STALE |
+| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1180 | STALE |
+| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1190 | STALE |
+| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1190 | STALE |
+| `dazzle test-design` | HYGIENE | CLI | example-apps | 1190 | STALE |
+| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1183 | STALE |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1179 | STALE |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1191 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | USED |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1183 | USED |
-| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1189 | USED |
-| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1189 | USED |
-| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1189 | USED |
-| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1180 | USED |
-| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1191 | USED |
-| `/smells` | HYGIENE | standalone loop | own entrypoint | 1191 | USED |
-| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1191 | USED |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1183 | STALE |
+| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1189 | STALE |
+| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1189 | STALE |
+| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1189 | STALE |
+| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1180 | STALE |
+| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
+| `/smells` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
+| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1209 | USED |
-| `dazzle coverage` | HYGIENE | CLI | example-apps | 1190 | USED |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1183 | USED |
-| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1179 | USED |
+| `dazzle coverage` | HYGIENE | CLI | example-apps | 1190 | STALE |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1183 | STALE |
+| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1179 | STALE |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1209 | USED |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1209 | USED |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1209 | USED |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1208 | USED |
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1208 | USED |
-| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1190 | USED |
-| `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1190 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1225 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1225 | USED |
+| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1190 | STALE |
+| `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1190 | STALE |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1226 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1226 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,15 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1226 (2026-07-20).** **capability-sweep** Class STALE recompute after self-audit@1225.
+> Inventory CLI + skills/commands + map registry **51** rows; MCP surface present. **UNOWNED=0**.
+> **COGNITION_STALE=0** (nearest lag 17–19: domain/demo_world/vision/hyperpart @1207–1208).
+> **HYGIENE_STALE=25** flipped USED→STALE lag≥20: ux-verify/sentinel/process@1179 (lag47);
+> mutate/sweep@1180; pulse/composition/fragment@1183; qa capture/login@1184;
+> dual_lock/shadcn/zero-floor@1189; deploy/rhythm/story/test-design/coverage/scaffold/risk@1190;
+> fitness/fuzz/smells/xproject@1191. DRIVER CodeQL+inbox **USED@1226**. budget_consumed 0.
+> Explore **0/100**. Next: HYGIENE STALE dig (ux-verify/sentinel/process cluster) or dens headroom.
 
 > **Cycle 1225 (2026-07-20).** **self-audit** 5 CLEAN after operator budget reset (38→0).
 > Window `b9fe4e9e9`..`26b7a0dcb` (~40 improve commits). Sampled: domain 1187, hygiene 1191,
