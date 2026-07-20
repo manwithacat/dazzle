@@ -82,9 +82,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1229 | USED |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1229 | USED |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1229 | USED |
-| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
-| `/smells` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
-| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
+| `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | USED |
+| `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | USED |
+| `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | USED |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1209 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1228 | USED |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1208 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1231 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1231 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1232 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1232 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1232 (2026-07-20).** **HYGIENE dig** fuzz/smells/xproject STALE —
+> light fuzz boot scrape simple_task :3944 **GET / /login /cookies → 200** no error
+> signatures; smells ratchet **6 pass** + lint-imports **6 kept/0 broken**; xproject sibling
+> scout (pennydreadful parse note; cyfuture/AegisMark advisory). Stamped fuzz/smells/
+> xproject **USED@1232**. budget_consumed 1. Explore **6/100**. Next: dens headroom or COGNITION approaching lag20.
 
 > **Cycle 1231 (2026-07-20).** **HYGIENE dig** qa capture/login + fitness STALE —
 > simple_task serve :3943; `qa login admin` magic-link OK; `qa capture` admin above-fold
