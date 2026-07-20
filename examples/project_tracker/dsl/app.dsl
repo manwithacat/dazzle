@@ -52,6 +52,7 @@ nav admin_nav:
     milestone_ops
     attach_ops
     discuss_ops
+    progress_ops
 
 
 nav manager_nav:
@@ -72,6 +73,7 @@ nav manager_nav:
     milestone_ops
     attach_ops
     discuss_ops
+    progress_ops
 
 
 nav member_nav:
@@ -89,6 +91,7 @@ nav member_nav:
     milestone_ops
     attach_ops
     discuss_ops
+    progress_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -1124,6 +1127,64 @@ workspace discuss_ops "Discuss Ops":
     aggregate:
       count: count(Task)
     empty: "No open tasks to chart"
+
+
+# Seventeenth product desk (WI D): skip invoice/fieldtest/acme soft-cap; densify project_tracker.
+workspace progress_ops "Progress Ops":
+  purpose: "In-flight pressure — tasks in progress without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  progress_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      in_progress: count(Task where status = in_progress)
+      review: count(Task where status = review)
+      open: count(Task where status != done)
+    tones:
+      in_progress: accent
+      review: warning
+      open: muted
+
+  # WI D: queue family — in-progress first
+  progress_queue:
+    source: Task
+    filter: status = in_progress
+    sort: priority desc, updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "Nothing in progress"
+
+  # WI D: grid family — in-progress cards
+  progress_grid:
+    source: Task
+    filter: status = in_progress
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "Nothing in progress"
+
+  # WI D: context family — recent progress trail
+  progress_trail:
+    source: Task
+    filter: status = in_progress or status = review
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No in-flight activity yet"
+
+  # WI D: chart family — priority mix among in-progress
+  priority_mix:
+    source: Task
+    filter: status = in_progress
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No in-progress tasks to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
