@@ -57,6 +57,7 @@ nav hr_admin_nav:
     person_detail
     reporting_desk
     employment_ops
+    leavers_ops
   group "Org & pay":
     org_chart
     compensation_review
@@ -74,6 +75,7 @@ nav manager_nav:
     employment_ops
     salary_ops
     role_ops
+    leavers_ops
 
 nav finance_nav:
   group "Compensation":
@@ -1338,3 +1340,55 @@ workspace role_ops "Role Ops":
     aggregate:
       count: count(Role)
     empty: "No roles to chart"
+
+# Twelfth product desk (WI D): 5 lists floor dens ~0.31 with 11 full desks — need 12.
+workspace leavers_ops "Leavers Ops":
+  purpose: "Leaver pressure — ended assignments and offboarding trail without warehouse CRUD"
+  access: persona(hr_admin, manager)
+
+  leaver_pulse:
+    source: Employment
+    display: metrics
+    aggregate:
+      ended: count(Employment where end_date != null)
+      active: count(Employment where end_date = null)
+      people: count(Person)
+    tones:
+      ended: warning
+      active: positive
+      people: accent
+
+  # WI D: queue family — ended assignments first
+  ended_queue:
+    source: Employment
+    filter: end_date != null
+    sort: end_date desc
+    limit: 25
+    display: queue
+    empty: "No ended employments"
+
+  # WI D: grid family — people context for offboarding
+  people_grid:
+    source: Person
+    display: grid
+    limit: 20
+    action: person_detail
+    empty: "No people on record"
+
+  # WI D: context family — leaver trail
+  leaver_trail:
+    source: Employment
+    filter: end_date != null
+    sort: end_date desc
+    limit: 15
+    display: timeline
+    empty: "No leaver history yet"
+
+  # WI D: chart family — department mix
+  dept_mix:
+    source: Department
+    display: bar_chart
+    group_by: name
+    aggregate:
+      count: count(Department)
+    empty: "No departments"
