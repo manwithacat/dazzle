@@ -61,15 +61,15 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1096 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1102 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1099 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1060 | STALE |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1113 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1063 | STALE |
-| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1063 | STALE |
+| `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1113 | USED |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1100 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1061 | STALE |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1101 | USED |
-| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1061 | STALE |
+| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1113 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1100 | USED |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1100 | USED |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1100 | USED |
@@ -81,14 +81,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1102 | USED |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1102 | USED |
-| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1061 | STALE |
+| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1113 | USED |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1063 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1062 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1063 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1099 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1100 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1101 | USED |
-| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1064 | STALE |
+| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1113 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1100 | USED |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1061 | STALE |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1062 | STALE |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1113 (2026-07-20).** **example-apps/test-suite HYGIENE dig** — process propose +
+> diagram; sentinel mutate domain_brief/models (29% kill); sweep examples (coverage 100%);
+> ux verify --structural (338 interactions); qa login magic-link on simple_task :3971.
+> Stamps process/sentinel mutate/sweep/qa login/ux verify **USED@1113**. budget_consumed 1.
+> Explore **38/100**. Remaining HYGIENE: smells, fuzz, xproject, qa capture.
 
 > **Cycle 1112 (2026-07-20) capability-sweep.** Inventory: CLI surface from `dazzle --help`
 > (domain/demo/qa/validate/compliance/fitness/… still present); skills (dsl-authoring,
