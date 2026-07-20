@@ -65,14 +65,14 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1184 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1184 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1207 | USED |
-| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1190 | STALE |
+| `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | USED |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1191 | STALE |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | USED |
-| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1190 | STALE |
-| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1190 | STALE |
-| `dazzle test-design` | HYGIENE | CLI | example-apps | 1190 | STALE |
+| `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | USED |
+| `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1230 | USED |
+| `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1228 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1227 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1191 | STALE |
@@ -86,7 +86,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1209 | USED |
-| `dazzle coverage` | HYGIENE | CLI | example-apps | 1190 | STALE |
+| `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1228 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1227 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | USED |
@@ -95,10 +95,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1209 | USED |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1208 | USED |
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1208 | USED |
-| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1190 | STALE |
-| `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1190 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1229 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1229 | USED |
+| `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
+| `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1230 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1230 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1230 (2026-07-20).** **HYGIENE dig** deploy/rhythm/story/test-design/coverage/scaffold/risk
+> STALE on simple_task — deploy plan Postgres OK; rhythm gaps+lifecycle; story list **16**;
+> coverage **61/61 100%**; test-design runtime-gaps+coverage-actions; scaffold process-step
+> task_escalation/level_1_notify; risk build_report MDF-01..14 overall **0**. Stamped all
+> **USED@1230**. budget_consumed 1. Explore **4/100**. Next: qa capture/login or dens headroom.
 
 > **Cycle 1229 (2026-07-20).** **HYGIENE dig** dual_lock/shadcn/zero-floor + sweep/mutate STALE —
 > dual_lock queue **0**; shadcn gaps **0**; zero-floor **GREEN** (0/0); `sweep examples` exit 0
