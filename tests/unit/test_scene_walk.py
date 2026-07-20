@@ -121,8 +121,12 @@ class TestRunnerDryRun:
         assert all(a.ok for a in result.scenes[0].actions)
         assert "PASS" in result.summary()
 
-    def test_extension_action_fails_live(self, tmp_path: Path) -> None:
-        from dazzle.testing.walk.runner import run_walk_sync
+    def test_api_find_missing_path_fails(self, tmp_path: Path) -> None:
+        """api_find without path: fails closed (extension is implemented, args required)."""
+        import asyncio
+        from unittest.mock import AsyncMock
+
+        from dazzle.testing.walk.runner import WalkRunner, run_walk_sync
 
         p = tmp_path / "ext.yaml"
         p.write_text(
@@ -130,17 +134,8 @@ class TestRunnerDryRun:
             encoding="utf-8",
         )
         walk = load_walk(p)
-        # dry-run still ok (skips)
         dry = run_walk_sync(walk, base_url="http://x", dry_run=True)
         assert dry.ok is True
-        # live without auth will fail at auth — use dry for extension detail:
-        # inject a fake runner state by running action path via dry=False
-        # after mocking auth is heavy; check ActionResult via WalkRunner dry=False
-        # with authenticate patched.
-        import asyncio
-        from unittest.mock import AsyncMock
-
-        from dazzle.testing.walk.runner import WalkRunner
 
         async def _go() -> None:
             async with WalkRunner(
@@ -151,7 +146,11 @@ class TestRunnerDryRun:
                 runner.authenticate = AsyncMock()  # type: ignore[method-assign]
                 res = await runner.run(walk)
                 assert res.ok is False
-                assert any(a.type == "api_find" and not a.ok for s in res.scenes for a in s.actions)
+                assert any(
+                    a.type == "api_find" and not a.ok and "path" in a.message.lower()
+                    for s in res.scenes
+                    for a in s.actions
+                )
 
         asyncio.run(_go())
 
@@ -257,3 +256,135 @@ class TestPackDryRun:
         result = pack_dry_run(_SIMPLE, "Z", execute=False)
         assert result.guides == []
         assert result.ok is True
+
+
+class TestApiActions:
+    """#1639 extension api_* handlers with mocked httpx."""
+
+    def test_api_find_save_as(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle.testing.walk.actions_api import api_find
+        from dazzle.testing.walk.models import ActionSpec, WalkActionType
+
+        rows = [
+            {"id": "a1", "period_key": "26A1", "company_name": "Other Co", "status": "open"},
+            {
+                "id": "b2",
+                "period_key": "26A1",
+                "company_name": "Demo · Briar",
+                "status": "awaiting_client_approval",
+            },
+        ]
+
+        async def fake_get(path, params=None):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {"items": rows}
+            return resp
+
+        client = MagicMock()
+        client.get = AsyncMock(side_effect=fake_get)
+        vars_: dict[str, str] = {}
+        action = ActionSpec(
+            type=WalkActionType.API_FIND,
+            path="/vatreturns",
+            where={"period_key": "26A1"},
+            company_name_contains="Demo · Briar",
+            prefer_status="awaiting_client_approval",
+            save_as="vat_id",
+        )
+        result = asyncio.run(api_find(client, action, vars_))
+        assert result.ok is True
+        assert vars_["vat_id"] == "b2"
+
+    def test_api_assert_field(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle.testing.walk.actions_api import api_assert_field
+        from dazzle.testing.walk.models import ActionSpec, WalkActionType
+
+        async def fake_get(path):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {"id": "b2", "status": "client_approved"}
+            return resp
+
+        client = MagicMock()
+        client.get = AsyncMock(side_effect=fake_get)
+        action = ActionSpec(
+            type=WalkActionType.API_ASSERT_FIELD,
+            path_template="/vatreturns/{vat_id}",
+            field="status",
+            equals="client_approved",
+        )
+        result = asyncio.run(api_assert_field(client, action, {"vat_id": "b2"}))
+        assert result.ok is True
+
+    def test_api_ensure_status_already(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle.testing.walk.actions_api import api_ensure_status
+        from dazzle.testing.walk.models import ActionSpec, WalkActionType
+
+        async def fake_get(path):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {"status": "awaiting_client_approval"}
+            return resp
+
+        client = MagicMock()
+        client.get = AsyncMock(side_effect=fake_get)
+        action = ActionSpec(
+            type=WalkActionType.API_ENSURE_STATUS,
+            path_template="/vatreturns/{vat_id}",
+            status="awaiting_client_approval",
+        )
+        result = asyncio.run(api_ensure_status(client, action, {"vat_id": "x"}))
+        assert result.ok is True
+        assert "already" in result.message
+
+    def test_extension_action_runs_in_runner(self, tmp_path: Path) -> None:
+        """Dry-run no longer fails on api_find; live dispatches (mocked auth)."""
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle.testing.walk.loader import load_walk
+        from dazzle.testing.walk.runner import WalkRunner
+
+        p = tmp_path / "ext.yaml"
+        p.write_text(
+            "persona: member\n"
+            "scenes:\n"
+            "  - id: s\n"
+            "    actions:\n"
+            "      - type: api_find\n"
+            "        path: /tasks\n"
+            "        save_as: tid\n",
+            encoding="utf-8",
+        )
+        walk = load_walk(p)
+
+        async def fake_get(path, params=None):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = [{"id": "t1", "title": "x"}]
+            return resp
+
+        async def _go() -> None:
+            async with WalkRunner(
+                base_url="http://example.test",
+                project_root=_SIMPLE,
+                dry_run=False,
+            ) as runner:
+                runner.authenticate = AsyncMock()  # type: ignore[method-assign]
+                assert runner._client is not None
+                runner._client.get = AsyncMock(side_effect=fake_get)  # type: ignore[method-assign]
+                res = await runner.run(walk)
+                assert res.ok is True
+                assert runner.vars.get("tid") == "t1"
+
+        asyncio.run(_go())

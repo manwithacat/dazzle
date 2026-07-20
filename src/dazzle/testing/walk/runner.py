@@ -1,25 +1,21 @@
-"""Execute scene walks against a live app (#1638 PR2).
+"""Execute scene walks against a live app (#1638 PR2 / #1639).
 
 HTTP-first core actions (navigate, assert_*) via httpx + SessionManager
-auth (``/__test__/authenticate`` or login). Optional Playwright for
-``playwright_click`` / ``playwright_wait`` when the extra is installed.
-
-Extension ``api_*`` actions are not implemented here — fail with a clear
-code so pilot YAML can migrate gradually.
+auth. Extension ``api_*`` actions (#1639) for list/find, status setup,
+field assert, post, and upload. Optional Playwright for click/wait.
 """
 
 from __future__ import annotations
 
 import asyncio
 import re
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import httpx
 
 from dazzle.testing.session_manager import SessionManager
+from dazzle.testing.walk.actions_api import dispatch_api_action
 from dazzle.testing.walk.models import (
     CORE_ACTION_TYPES,
     ActionSpec,
@@ -27,60 +23,28 @@ from dazzle.testing.walk.models import (
     SceneWalkSpec,
     WalkActionType,
 )
+from dazzle.testing.walk.results import (
+    ActionResult,
+    SceneResult,
+    WalkRunResult,
+)
+from dazzle.testing.walk.results import (
+    render_template as _render,
+)
 
 LOGIN_PATHS = frozenset({"/login", "/auth/login", "/auth/signin"})
 
-
-@dataclass
-class ActionResult:
-    """Outcome of one walk action."""
-
-    type: str
-    ok: bool
-    message: str = ""
-    detail: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class SceneResult:
-    """Outcome of one scene."""
-
-    scene_id: str
-    ok: bool
-    story: str | None = None
-    actions: list[ActionResult] = field(default_factory=list)
-    error: str | None = None
-
-
-@dataclass
-class WalkRunResult:
-    """Outcome of a full walk run."""
-
-    walk_id: str
-    persona: str
-    ok: bool
-    dry_run: bool = False
-    base_url: str = ""
-    scenes: list[SceneResult] = field(default_factory=list)
-    error: str | None = None
-
-    def summary(self) -> str:
-        mode = "dry-run" if self.dry_run else "run"
-        status = "PASS" if self.ok else "FAIL"
-        n_ok = sum(1 for s in self.scenes if s.ok)
-        return (
-            f"{status} [{mode}] walk={self.walk_id} persona={self.persona} "
-            f"scenes={n_ok}/{len(self.scenes)}" + (f" error={self.error}" if self.error else "")
-        )
-
-
-def _render(template: str | None, vars_: dict[str, str]) -> str:
-    if not template:
-        return ""
-    out = template
-    for key, val in vars_.items():
-        out = out.replace("{" + key + "}", val)
-    return out
+# Supported extension (HTTP) action types — #1639
+API_ACTION_TYPES = frozenset(
+    {
+        WalkActionType.API_FIND,
+        WalkActionType.API_ENSURE_STATUS,
+        WalkActionType.API_ASSERT_FIELD,
+        WalkActionType.API_POST,
+        WalkActionType.API_UPLOAD_FILE,
+        WalkActionType.API_AGENT_ENSURE_EL_VIEWED,
+    }
+)
 
 
 class WalkRunner:
@@ -188,18 +152,23 @@ class WalkRunner:
                 type=action.type.value,
                 ok=True,
                 message="dry-run skip",
-                detail={"core": action.type in CORE_ACTION_TYPES},
+                detail={
+                    "core": action.type in CORE_ACTION_TYPES,
+                    "api": action.type in API_ACTION_TYPES,
+                },
             )
 
-        if action.type not in CORE_ACTION_TYPES:
-            return ActionResult(
-                type=action.type.value,
-                ok=False,
-                message=(
-                    f"extension action {action.type.value!r} not implemented in runner "
-                    "(PR2 core set only; api_* land later)"
-                ),
-            )
+        if action.type in API_ACTION_TYPES:
+            assert self._client is not None
+            try:
+                return await dispatch_api_action(
+                    self._client,
+                    action,
+                    self.vars,
+                    project_root=self.project_root,
+                )
+            except Exception as e:
+                return ActionResult(action.type.value, False, f"{type(e).__name__}: {e}")
 
         handlers = {
             WalkActionType.NAVIGATE: self._act_navigate,
@@ -216,7 +185,11 @@ class WalkRunner:
         }
         handler = handlers.get(action.type)
         if handler is None:
-            return ActionResult(action.type.value, False, "no handler")
+            return ActionResult(
+                action.type.value,
+                False,
+                f"unknown action {action.type.value!r}",
+            )
         try:
             return await handler(action, scene)
         except Exception as e:

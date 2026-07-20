@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dazzle.dev/schemas/scene_walk.schema.json",
   "title": "Dazzle scene walk",
-  "description": "Deterministic persona walk: story-linked scenes with HTTP/Playwright actions. L2 between mechanical route smoke and LLM journey explore (#1638).",
+  "description": "Deterministic persona walk: story-linked scenes with HTTP/Playwright actions. L2 between mechanical route smoke and LLM journey explore (#1638). api_* verbs are supported extension actions (#1639), not pilot-only refuse."
   "type": "object",
   "required": ["persona", "scenes"],
   "additionalProperties": true,

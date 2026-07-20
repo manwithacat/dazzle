@@ -7,6 +7,7 @@ PR1: models, JSON Schema, loader, ``list|validate``.
 PR2: ``run`` (HTTP core actions + optional Playwright).
 PR3: job claim registry + ``dazzle docs claims check``.
 PR4: pack dry-run + agent seed residuals.
+#1639: api_* extension actions on the runner.
 """
 
 from __future__ import annotations
@@ -30,17 +31,20 @@ from dazzle.testing.walk.models import (
     SceneWalkSpec,
     WalkActionType,
 )
-from dazzle.testing.walk.runner import WalkRunner, WalkRunResult, run_walk, run_walk_sync
+from dazzle.testing.walk.results import ActionResult, SceneResult, WalkRunResult
+from dazzle.testing.walk.runner import WalkRunner, run_walk, run_walk_sync
 from dazzle.testing.walk.validate import WalkValidationIssue, validate_walk, validate_walks
 
 __all__ = [
     "CORE_ACTION_TYPES",
+    "ActionResult",
     "ActionSpec",
     "ClaimGuide",
     "ClaimStatus",
     "ClaimsCheckResult",
     "ClaimsLoadError",
     "JobClaimRegistry",
+    "SceneResult",
     "SceneSpec",
     "SceneWalkSpec",
     "WalkActionType",

@@ -16,7 +16,7 @@ class WalkActionType(StrEnum):
     """Action verbs for deterministic scene walks.
 
     **Core (PR1 / showcase):** navigate, assert_*, playwright_click, playwright_wait.
-    **Extension (pilot / PR2+):** api_* helpers — valid in schema; runner maps later.
+    **Extension (#1639):** api_* HTTP helpers — supported by the runner.
     """
 
     # Core

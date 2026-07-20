@@ -1,6 +1,11 @@
 ## [Unreleased]
 
 ### Added
+- **#1639 walk runner api_* extensions** — implement `api_find`,
+  `api_ensure_status`, `api_assert_field`, `api_post`, `api_upload_file`,
+  and best-effort `api_agent_ensure_el_viewed` on SessionManager/httpx.
+  `dazzle test walk run` allows extensions by default; `--core-only` for
+  showcase. CyFuture Pack A setup→UI→assert walks can drop the hybrid runner.
 - **#1638 PR4 pack dry-run + agent seed** — `dazzle test walk pack-dry-run
   --pack A` dry-runs walks for a claim pack; residuals (kind=`walk_claim`)
   feed `dazzle agent seed improve` when a job_claims registry is present.

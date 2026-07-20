@@ -24,7 +24,8 @@ from dazzle.testing.walk.claims import (
 )
 from dazzle.testing.walk.discovery import discover_walk_paths
 from dazzle.testing.walk.loader import load_walk
-from dazzle.testing.walk.runner import WalkRunResult, run_walk_sync
+from dazzle.testing.walk.results import WalkRunResult
+from dazzle.testing.walk.runner import run_walk_sync
 from dazzle.testing.walk.validate import validate_walk
 
 if TYPE_CHECKING:

@@ -308,23 +308,26 @@ def walk_run(
         help="Enable playwright_click / playwright_wait (requires playwright)",
     ),
     core_only: bool = typer.Option(
-        True,
+        False,
         "--core-only/--allow-extension",
-        help="Refuse walks with extension api_* actions (default: refuse)",
+        help="Refuse walks with extension api_* actions (default: allow; #1639)",
     ),
     json_output: bool = typer.Option(False, "--json"),
     timeout: float = typer.Option(30.0, "--timeout", help="HTTP timeout seconds"),
 ) -> None:
-    """Run scene walks against a live app (HTTP-first core actions).
+    """Run scene walks against a live app (HTTP core + api_* extensions).
 
     Auth uses SessionManager (``/__test__/authenticate`` in test mode, or
     login fallback). Start the app with ``dazzle serve --test-mode`` (or
     equivalent) so persona sessions can be created.
 
+    ``api_*`` setup/assert verbs are supported (#1639). Use ``--core-only``
+    for showcase apps that must not use extensions.
+
     Examples:
-        dazzle test walk run -m examples/simple_task/dazzle.toml --dry-run
+        dazzle test walk run -m examples/simple_task/dazzle.toml --dry-run --core-only
         dazzle test walk run -m examples/simple_task/dazzle.toml -u http://127.0.0.1:8765
-        dazzle test walk run -w land_and_see_tasks --playwright
+        dazzle test walk run -w vat_approve_customer -u $URL --playwright
     """
     root = project_root_from_manifest(manifest)
     paths = _resolve_paths(root, walks_dir, walk)
