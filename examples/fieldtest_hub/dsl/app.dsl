@@ -62,6 +62,7 @@ nav engineer_nav:
     task_ops
     device_fleet
     critical_ops
+    prototype_ops
 
 nav tester_nav:
   group "Field":
@@ -79,6 +80,7 @@ nav manager_nav:
     task_ops
     device_fleet
     critical_ops
+    prototype_ops
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -1862,6 +1864,63 @@ workspace critical_ops "Critical Ops":
     aggregate:
       count: count(IssueReport)
     empty: "No open issues to chart"
+
+# Twelfth product desk (WI D): 6 lists floor dens ~0.35 with 11 full desks — need 12.
+workspace prototype_ops "Prototype Ops":
+  purpose: "Prototype pressure — pre-production units needing exercise and attention"
+  access: persona(engineer, manager)
+
+  prototype_metrics:
+    source: Device
+    display: metrics
+    aggregate:
+      prototype: count(Device where status = prototype)
+      active: count(Device where status = active)
+      retired: count(Device where status = retired)
+    tones:
+      prototype: accent
+      active: positive
+      retired: warning
+
+  # WI D: queue family — oldest prototypes first
+  prototype_queue:
+    source: Device
+    filter: status = prototype
+    sort: updated_at asc
+    limit: 20
+    display: queue
+    action: device_detail
+    empty: "No prototype devices"
+
+  # WI D: grid family — prototype cards
+  prototype_grid:
+    source: Device
+    filter: status = prototype
+    sort: name asc
+    limit: 15
+    display: grid
+    action: device_detail
+    empty: "No prototype devices"
+
+  # WI D: context family — recent prototype trail
+  prototype_trail:
+    source: Device
+    filter: status = prototype
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: device_detail
+    empty: "No prototype activity yet"
+
+  # WI D: chart family — prototype model mix
+  model_mix:
+    source: Device
+    filter: status = prototype
+    display: bar_chart
+    group_by: model
+    aggregate:
+      count: count(Device)
+    empty: "No prototypes to chart"
 
 # =============================================================================
 # LEDGER — device-repair cost accrual accounts
