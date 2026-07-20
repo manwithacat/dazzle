@@ -1302,3 +1302,60 @@ workspace approved_ops "Approved Ops":
     aggregate:
       count: count(Invoice)
     empty: "No post-approval invoices to chart"
+
+# Eighteenth product desk (WI D): 7 lists floor dens ~0.30 with 17 full desks — need 18.
+workspace submitted_ops "Submitted Ops":
+  purpose: "Submitted pressure — invoices awaiting approval without warehouse CRUD"
+  access: persona(requester, approver, finance, finance_admin, auditor, tenant_admin)
+
+  submitted_pulse:
+    source: Invoice
+    display: metrics
+    aggregate:
+      submitted: count(Invoice where status = submitted)
+      draft: count(Invoice where status = draft)
+      approved: count(Invoice where status = approved)
+    tones:
+      submitted: warning
+      draft: accent
+      approved: positive
+
+  # WI D: queue family — submitted first
+  submitted_queue:
+    source: Invoice
+    filter: status = submitted
+    sort: amount desc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "Nothing submitted awaiting approval"
+
+  # WI D: grid family — submitted cards
+  submitted_grid:
+    source: Invoice
+    filter: status = submitted
+    sort: updated_at desc
+    limit: 15
+    display: grid
+    action: invoice_detail
+    empty: "Nothing submitted awaiting approval"
+
+  # WI D: context family — recent submission trail
+  submitted_trail:
+    source: Invoice
+    filter: status = submitted
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No submission activity yet"
+
+  # WI D: chart family — pre-pay intake mix
+  status_mix:
+    source: Invoice
+    filter: status = submitted or status = draft or status = approved
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No intake invoices to chart"

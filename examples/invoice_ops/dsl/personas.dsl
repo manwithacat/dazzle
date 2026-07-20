@@ -52,6 +52,7 @@ nav requester_nav:
     line_items_desk
     draft_ops
     rejected_ops
+    submitted_ops
 
 nav approver_nav:
   group "Approvals":
@@ -60,6 +61,7 @@ nav approver_nav:
     suppliers_desk
     draft_ops
     rejected_ops
+    submitted_ops
 
 nav finance_nav:
   group "Settle":
@@ -76,6 +78,7 @@ nav finance_nav:
     partial_ops
     paid_ops
     approved_ops
+    submitted_ops
 
 nav auditor_nav:
   group "Audit":
@@ -90,6 +93,7 @@ nav auditor_nav:
     partial_ops
     paid_ops
     approved_ops
+    submitted_ops
 
 nav tenant_admin_nav:
   group "Admin":
@@ -104,6 +108,7 @@ nav tenant_admin_nav:
     partial_ops
     paid_ops
     approved_ops
+    submitted_ops
 
 nav finance_admin_nav:
   group "Oversight":
@@ -123,3 +128,4 @@ nav finance_admin_nav:
     partial_ops
     paid_ops
     approved_ops
+    submitted_ops
