@@ -45,6 +45,7 @@ nav admin_nav:
     people_desk
     review_ops
     backlog_ops
+    priority_ops
 
 
 nav manager_nav:
@@ -58,6 +59,7 @@ nav manager_nav:
     people_desk
     review_ops
     backlog_ops
+    priority_ops
 
 
 nav member_nav:
@@ -68,6 +70,7 @@ nav member_nav:
     files_desk
     dashboard
     backlog_ops
+    priority_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -717,6 +720,63 @@ workspace backlog_ops "Backlog Ops":
     aggregate:
       count: count(Task)
     empty: "No unstarted tasks"
+
+# Tenth product desk (WI D): 5 lists floor dens ~0.36 with 9 full desks — need 10.
+workspace priority_ops "Priority Ops":
+  purpose: "Priority pressure — high and critical open work that needs pull-forward"
+  access: persona(admin, manager, member)
+
+  priority_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      critical: count(Task where priority = critical and status != done)
+      high: count(Task where priority = high and status != done)
+      open: count(Task where status != done)
+    tones:
+      critical: destructive
+      high: warning
+      open: accent
+
+  # WI D: queue family — critical first among open work
+  critical_queue:
+    source: Task
+    filter: priority = critical and status != done
+    sort: due_date asc, updated_at asc
+    limit: 20
+    display: queue
+    action: task_edit
+    empty: "No critical open tasks"
+
+  # WI D: grid family — high-priority open board
+  high_grid:
+    source: Task
+    filter: priority = high and status != done
+    sort: due_date asc, priority desc
+    limit: 20
+    display: grid
+    action: task_detail
+    empty: "No high-priority open tasks"
+
+  # WI D: context family — recent priority trail
+  priority_trail:
+    source: Task
+    filter: (priority = high or priority = critical) and status != done
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No priority activity yet"
+
+  # WI D: chart family — priority mix among open work
+  priority_mix:
+    source: Task
+    filter: status != done
+    display: bar_chart
+    group_by: priority
+    aggregate:
+      count: count(Task)
+    empty: "No open tasks to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
