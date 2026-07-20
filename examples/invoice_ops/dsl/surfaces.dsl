@@ -910,3 +910,55 @@ workspace disputed_ops "Disputes":
     aggregate:
       count: count(Invoice)
     empty: "No invoices to chart"
+
+# Eleventh product desk (WI D): 7 lists floor dens ~0.41 with 10 full desks — need 11.
+workspace bank_ops "Bank Accounts":
+  purpose: "Supplier bank-ref desk — payment rails without warehouse CRUD"
+  access: persona(finance, finance_admin, tenant_admin)
+
+  bank_pulse:
+    source: SupplierBankAccount
+    display: metrics
+    aggregate:
+      bank_accounts: count(SupplierBankAccount)
+      suppliers: count(Supplier)
+      ready_to_pay: count(Invoice where status = approved)
+    tones:
+      bank_accounts: accent
+      ready_to_pay: positive
+
+  # WI D: grid family for bank-ref cards
+  bank_cards:
+    source: SupplierBankAccount
+    display: grid
+    limit: 25
+    empty: "No bank accounts on file"
+
+  # WI D: queue family — approved invoices ready for rails
+  ready_to_pay:
+    source: Invoice
+    filter: status = approved
+    sort: amount desc
+    limit: 15
+    display: queue
+    action: invoice_detail
+    empty: "Nothing ready to pay"
+
+  # WI D: context family — supplier trail
+  supplier_trail:
+    source: Supplier
+    sort: name asc
+    limit: 15
+    display: timeline
+    action: supplier_detail
+    empty: "No suppliers yet"
+
+  # WI D: chart family — open invoice status mix
+  invoice_status_mix:
+    source: Invoice
+    filter: status = approved or status = paid or status = disputed
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Invoice)
+    empty: "No invoices to chart"

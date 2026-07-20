@@ -85,6 +85,8 @@ Work is organised into **role-shaped desks**, not one shared invoice warehouse:
   invoice queue, invoice trail, and status mix chart.
 - **Disputes** — finance/auditor dispute desk: dispute metrics, disputed queue,
   settle pipeline board, payment-attempt trail, and status mix chart.
+- **Bank Accounts** — supplier bank-ref desk: bank metrics, bank cards, ready-to-pay
+  queue, supplier trail, and invoice status chart.
 
 Each queue row opens the invoice hub, so triage and action stay on the job
 surface rather than a flat entity list.
@@ -157,4 +159,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:7627e91d2779f3a076d74d75cb2b5a9bce016523b27b87c470af3314c2200b87 -->
+<!-- dazzle-spec-brief: sha256:1c8f29d859fb93248e1dd2e043a8e248b63457ca45483b6fc2c579f199843047 -->
