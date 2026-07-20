@@ -81,7 +81,8 @@
         "Scheduled Ops",
         "High Ops",
         "Medium Ops",
-        "Low Ops"
+        "Low Ops",
+        "Overdue Ops"
       ]
     },
     {
@@ -108,7 +109,8 @@
         "Scheduled Ops",
         "High Ops",
         "Medium Ops",
-        "Low Ops"
+        "Low Ops",
+        "Overdue Ops"
       ]
     },
     {
@@ -134,7 +136,8 @@
         "Scheduled Ops",
         "High Ops",
         "Medium Ops",
-        "Low Ops"
+        "Low Ops",
+        "Overdue Ops"
       ]
     }
   ],
@@ -676,6 +679,24 @@
       "title": "Low Ops",
       "kind": "workspace",
       "purpose": "Low-priority pressure — open low tasks without warehouse CRUD",
+      "personas": [
+        "admin",
+        "manager",
+        "member"
+      ],
+      "contents": [
+        "metrics of Task",
+        "queue of Task",
+        "grid of Task",
+        "timeline of Task",
+        "bar_chart of Task"
+      ]
+    },
+    {
+      "name": "overdue_ops",
+      "title": "Overdue Ops",
+      "kind": "workspace",
+      "purpose": "Overdue pressure — past-due open tasks without warehouse CRUD",
       "personas": [
         "admin",
         "manager",
