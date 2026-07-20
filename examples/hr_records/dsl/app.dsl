@@ -63,6 +63,7 @@ nav hr_admin_nav:
     compensation_review
     salary_ops
     role_ops
+    dept_ops
     time_machine
 
 nav manager_nav:
@@ -76,12 +77,14 @@ nav manager_nav:
     salary_ops
     role_ops
     leavers_ops
+    dept_ops
 
 nav finance_nav:
   group "Compensation":
     compensation_review
     salary_ops
     role_ops
+    dept_ops
     staff_directory
     person_detail
     employment_ops
@@ -1392,3 +1395,54 @@ workspace leavers_ops "Leavers Ops":
     aggregate:
       count: count(Department)
     empty: "No departments"
+
+# Thirteenth product desk (WI D): skip invoice_ops desk-cap; densify hr_records.
+workspace dept_ops "Dept Ops":
+  purpose: "Department pressure — org units and staffing context without warehouse CRUD"
+  access: persona(hr_admin, manager, finance)
+
+  dept_pulse:
+    source: Department
+    display: metrics
+    aggregate:
+      departments: count(Department)
+      roles: count(Role)
+      people: count(Person)
+    tones:
+      departments: accent
+      roles: positive
+      people: accent
+
+  # WI D: queue family — departments first
+  dept_queue:
+    source: Department
+    sort: name asc
+    limit: 25
+    display: queue
+    empty: "No departments"
+
+  # WI D: grid family — people context
+  people_grid:
+    source: Person
+    display: grid
+    limit: 20
+    action: person_detail
+    empty: "No people on record"
+
+  # WI D: context family — active employment trail
+  employment_trail:
+    source: Employment
+    filter: end_date = null
+    sort: start_date desc
+    limit: 15
+    display: timeline
+    empty: "No active employments yet"
+
+  # WI D: chart family — role level mix across the org
+  level_mix:
+    source: Role
+    display: bar_chart
+    group_by: level
+    aggregate:
+      count: count(Role)
+    empty: "No roles to chart"
