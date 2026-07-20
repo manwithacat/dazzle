@@ -49,6 +49,7 @@ nav admin_nav:
     delivery_ops
     done_ops
     todo_ops
+    milestone_ops
 
 
 nav manager_nav:
@@ -66,6 +67,7 @@ nav manager_nav:
     delivery_ops
     done_ops
     todo_ops
+    milestone_ops
 
 
 nav member_nav:
@@ -80,6 +82,7 @@ nav member_nav:
     delivery_ops
     done_ops
     todo_ops
+    milestone_ops
 
 # ── Entities ─────────────────────────────────────────────────────────
 
@@ -956,6 +959,59 @@ workspace todo_ops "Todo Ops":
     aggregate:
       count: count(Task)
     empty: "No unstarted tasks to chart"
+
+# Fourteenth product desk (WI D): skip invoice_ops desk-cap; densify project_tracker.
+workspace milestone_ops "Milestone Ops":
+  purpose: "Plan-and-ship pressure — active milestones and related work without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  milestone_pulse:
+    source: Milestone
+    display: metrics
+    aggregate:
+      active: count(Milestone where status = active)
+      planning: count(Milestone where status = planning)
+      open_tasks: count(Task where status != done)
+    tones:
+      active: accent
+      planning: warning
+      open_tasks: muted
+
+  # WI D: queue family — active milestones first
+  active_queue:
+    source: Milestone
+    filter: status = active or status = planning
+    sort: end_date asc
+    limit: 20
+    display: queue
+    empty: "No open milestones"
+
+  # WI D: grid family — open task cards in delivery context
+  open_grid:
+    source: Task
+    filter: status != done
+    sort: priority desc, due_date asc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No open tasks"
+
+  # WI D: context family — recent milestone trail
+  milestone_trail:
+    source: Milestone
+    sort: end_date asc
+    limit: 15
+    display: timeline
+    empty: "No milestones yet"
+
+  # WI D: chart family — milestone status mix
+  status_mix:
+    source: Milestone
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Milestone)
+    empty: "No milestones to chart"
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 
