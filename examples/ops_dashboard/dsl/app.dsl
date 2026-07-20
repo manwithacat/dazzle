@@ -184,6 +184,7 @@ nav ops_nav:
     critical_ops
     active_alerts
     resolved_alerts
+    degraded_ops
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage
@@ -1030,6 +1031,63 @@ workspace resolved_alerts "Resolved Alerts":
     aggregate:
       count: count(Alert)
     empty: "No resolved alerts to chart"
+
+
+# Ninth product desk (WI D): skip invoice/fieldtest/acme/hr soft-cap; densify ops_dashboard.
+workspace degraded_ops "Degraded Ops":
+  purpose: "Degraded/offline system pressure without warehouse CRUD"
+  access: persona(ops_engineer, admin)
+
+  degraded_pulse:
+    source: System
+    display: metrics
+    aggregate:
+      degraded: count(System where status = degraded)
+      offline: count(System where status = offline)
+      healthy: count(System where status = healthy)
+    tones:
+      degraded: warning
+      offline: destructive
+      healthy: positive
+
+  # WI D: queue family — degraded/offline first
+  degraded_queue:
+    source: System
+    filter: status = degraded or status = offline
+    sort: status desc, name asc
+    limit: 20
+    display: queue
+    action: system_edit
+    empty: "No degraded or offline systems"
+
+  # WI D: grid family — degraded system cards
+  degraded_grid:
+    source: System
+    filter: status = degraded or status = offline
+    sort: name asc
+    limit: 15
+    display: grid
+    action: system_edit
+    empty: "No degraded or offline systems"
+
+  # WI D: context family — system status trail
+  system_trail:
+    source: System
+    filter: status = degraded or status = offline or status = critical
+    sort: name asc
+    limit: 15
+    display: timeline
+    action: system_edit
+    empty: "No unhealthy systems yet"
+
+  # WI D: chart family — system status mix
+  status_mix:
+    source: System
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(System)
+    empty: "No systems to chart"
 
 # =============================================================================
 # Surfaces
