@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1099 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1101 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1093 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1054 | USED |
-| **GitHub inbox** | DRIVER | script + strategies | **driver (Step 0c3)** | 1054 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1112 | USED |
+| **GitHub inbox** | DRIVER | script + strategies | **driver (Step 0c3)** | 1112 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,16 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1112 (2026-07-20) capability-sweep.** Inventory: CLI surface from `dazzle --help`
+> (domain/demo/qa/validate/compliance/fitness/… still present); skills (dsl-authoring,
+> qa-trial, stems, …); commands (/improve, /fuzz, /xproject, /smells). **UNOWNED=0**.
+> **COGNITION_STALE=0** (domain/demo/qa trial/journey/vision substitutes all lag<20 after
+> 1093–1111 digs). **HYGIENE_STALE=9** (ux verify, sentinel mutate, sweep, smells, qa
+> capture/login, fuzz, xproject, process — lag≥48). DRIVER CodeQL+inbox re-stamped USED@1112.
+> Recomputed STALE labels at current_cycle=1112. **Not** a product dig.
+> budget_consumed 0. Explore **37/100**. Next sweep ~**1132**. Prefer next digs: HYGIENE
+> ux-verify/process/sentinel cluster or ordinary WI D simple_task.
 
 > **Cycle 1111 (2026-07-20).** **example-apps ordinary explore** support_tickets WI D —
 > new **resolution_ops** desk (metrics/queue/grid/timeline/chart) + agent/manager/admin nav.
