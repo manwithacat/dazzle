@@ -1468,3 +1468,59 @@ workspace region_ops "Region Ops":
     aggregate:
       count: count(Supplier)
     empty: "No suppliers to chart"
+
+# Twenty-first product desk (WI D): 7 lists floor dens ~0.26 with 20 full desks — need 21.
+workspace pending_ops "Pending Ops":
+  purpose: "Pending payment pressure — in-flight rails without warehouse CRUD"
+  access: persona(finance, finance_admin, auditor, tenant_admin)
+
+  pending_pulse:
+    source: PaymentAttempt
+    display: metrics
+    aggregate:
+      pending: count(PaymentAttempt where status = pending)
+      failed: count(PaymentAttempt where status = failed)
+      succeeded: count(PaymentAttempt where status = succeeded)
+    tones:
+      pending: warning
+      failed: destructive
+      succeeded: positive
+
+  # WI D: queue family — pending first
+  pending_queue:
+    source: PaymentAttempt
+    filter: status = pending
+    sort: created_at asc
+    limit: 20
+    display: queue
+    action: invoice_detail
+    empty: "No pending payment attempts"
+
+  # WI D: grid family — pending cards
+  pending_grid:
+    source: PaymentAttempt
+    filter: status = pending
+    sort: created_at desc
+    limit: 15
+    display: grid
+    action: invoice_detail
+    empty: "No pending payment attempts"
+
+  # WI D: context family — recent pending trail
+  pending_trail:
+    source: PaymentAttempt
+    filter: status = pending
+    sort: created_at desc
+    limit: 15
+    display: timeline
+    action: invoice_detail
+    empty: "No pending activity yet"
+
+  # WI D: chart family — attempt outcome mix
+  status_mix:
+    source: PaymentAttempt
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(PaymentAttempt)
+    empty: "No payment attempts to chart"
