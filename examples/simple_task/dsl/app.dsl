@@ -239,6 +239,7 @@ nav admin_nav:
     done_ops
     progress_ops
     todo_ops
+    urgent_ops
 
 nav manager_nav:
   group "Lead":
@@ -251,6 +252,7 @@ nav manager_nav:
     done_ops
     progress_ops
     todo_ops
+    urgent_ops
 
 nav member_nav:
   group "My work":
@@ -262,6 +264,7 @@ nav member_nav:
     done_ops
     progress_ops
     todo_ops
+    urgent_ops
 
 # =============================================================================
 # Scenarios - demo states for dev mode
@@ -1260,3 +1263,60 @@ workspace todo_ops "Todo Ops":
     aggregate:
       count: count(Task)
     empty: "No todos to chart"
+
+# Eleventh product desk (WI D): skip invoice/fieldtest desk-cap; densify simple_task.
+workspace urgent_ops "Urgent Ops":
+  purpose: "High-priority pressure — urgent and high tasks without warehouse CRUD"
+  access: persona(admin, manager, member)
+
+  urgent_pulse:
+    source: Task
+    display: metrics
+    aggregate:
+      urgent: count(Task where priority = urgent)
+      high: count(Task where priority = high)
+      open: count(Task where status != done)
+    tones:
+      urgent: warning
+      high: accent
+      open: muted
+
+  # WI D: queue family — urgent/high first
+  urgent_queue:
+    source: Task
+    filter: priority = urgent or priority = high
+    sort: priority desc, updated_at desc
+    limit: 20
+    display: queue
+    action: task_detail
+    empty: "No high-priority work"
+
+  # WI D: grid family — urgent cards
+  urgent_grid:
+    source: Task
+    filter: priority = urgent or priority = high
+    sort: priority desc
+    limit: 15
+    display: grid
+    action: task_detail
+    empty: "No high-priority work"
+
+  # WI D: context family — recent high-priority trail
+  urgent_trail:
+    source: Task
+    filter: priority = urgent or priority = high
+    sort: updated_at desc
+    limit: 15
+    display: timeline
+    action: task_detail
+    empty: "No high-priority activity yet"
+
+  # WI D: chart family — status mix among high-priority
+  status_mix:
+    source: Task
+    filter: priority = urgent or priority = high
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(Task)
+    empty: "No high-priority tasks to chart"
