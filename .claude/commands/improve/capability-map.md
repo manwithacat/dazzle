@@ -69,7 +69,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1216 | USED |
 | fitness **engine** | HYGIENE | Python API | framework-ux | 1191 | STALE |
-| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1180 | STALE |
+| `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | USED |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1190 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1190 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1190 | STALE |
@@ -78,10 +78,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1191 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | USED |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1228 | USED |
-| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1189 | STALE |
-| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1189 | STALE |
-| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1189 | STALE |
-| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1180 | STALE |
+| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1229 | USED |
+| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1229 | USED |
+| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1229 | USED |
+| `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1229 | USED |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1191 | STALE |
@@ -97,8 +97,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1208 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1190 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1190 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1228 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1228 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1229 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1229 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1229 (2026-07-20).** **HYGIENE dig** dual_lock/shadcn/zero-floor + sweep/mutate STALE —
+> dual_lock queue **0**; shadcn gaps **0**; zero-floor **GREEN** (0/0); `sweep examples` exit 0
+> (warns only); sentinel mutate `domain_brief/extract.py` exit 0. Stamped dual_lock/shadcn/
+> zero-floor/sweep/mutate **USED@1229**. budget_consumed 1. Explore **3/100**.
+> Next: deploy/rhythm/story/coverage or dens headroom.
 
 > **Cycle 1228 (2026-07-20).** **HYGIENE dig** pulse/composition/fragment-audit STALE on simple_task —
 > pulse run/radar **health_score 67**; composition audit **100/100**; fragment-audit all regions OK
