@@ -181,6 +181,7 @@ nav ops_nav:
     systems_desk
     alerts_desk
     integrations_desk
+    critical_ops
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage
@@ -858,6 +859,60 @@ workspace integrations_desk "Integrations":
     aggregate:
       count: count(Integration)
     empty: "No integrations yet"
+
+# Sixth product desk (WI D): skip invoice_ops desk-cap; densify ops_dashboard.
+workspace critical_ops "Critical Ops":
+  purpose: "Critical pressure — critical systems and high-severity alerts without warehouse CRUD"
+  access: persona(ops_engineer, admin)
+
+  critical_pulse:
+    source: System
+    display: metrics
+    aggregate:
+      critical: count(System where status = critical)
+      degraded: count(System where status = degraded)
+      active_alerts: count(Alert where status = active)
+    tones:
+      critical: destructive
+      degraded: warning
+      active_alerts: accent
+
+  # WI D: queue family — critical systems first
+  critical_queue:
+    source: System
+    filter: status = critical or status = degraded
+    sort: status desc, name asc
+    limit: 20
+    display: queue
+    action: system_edit
+    empty: "No critical or degraded systems"
+
+  # WI D: grid family — critical open alerts
+  critical_alerts:
+    source: Alert
+    filter: severity = critical and status = active
+    sort: triggered_at asc
+    limit: 15
+    display: grid
+    empty: "No active critical alerts"
+
+  # WI D: context family — recent alert trail
+  alert_trail:
+    source: Alert
+    filter: severity = critical or severity = high
+    sort: triggered_at desc
+    limit: 15
+    display: timeline
+    empty: "No high or critical alerts yet"
+
+  # WI D: chart family — system health mix
+  status_mix:
+    source: System
+    display: bar_chart
+    group_by: status
+    aggregate:
+      count: count(System)
+    empty: "No systems to chart"
 
 # =============================================================================
 # Surfaces
