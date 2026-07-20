@@ -56,6 +56,7 @@ nav hr_admin_nav:
     starters_desk
     person_detail
     reporting_desk
+    employment_ops
   group "Org & pay":
     org_chart
     compensation_review
@@ -68,12 +69,14 @@ nav manager_nav:
     person_detail
     org_chart
     reporting_desk
+    employment_ops
 
 nav finance_nav:
   group "Compensation":
     compensation_review
     staff_directory
     person_detail
+    employment_ops
 
 nav employee_nav:
   group "My record":
@@ -1178,3 +1181,53 @@ workspace reporting_desk "Reporting":
         caption: "Line managers start from My Team for report-first work"
         icon: "users"
         state: positive
+
+# Ninth product desk (WI D): 5 lists floor dens ~0.38 with 8 full desks — need 9.
+workspace employment_ops "Employment Ops":
+  purpose: "Employment pressure — active and ending assignments without warehouse CRUD"
+  access: persona(hr_admin, manager, finance)
+
+  employment_pulse:
+    source: Employment
+    display: metrics
+    aggregate:
+      assignments: count(Employment)
+      people: count(Person)
+      open_ended: count(Employment where end_date = null)
+    tones:
+      open_ended: positive
+      assignments: accent
+
+  # WI D: queue family — open-ended (current) assignments first
+  active_queue:
+    source: Employment
+    filter: end_date = null
+    sort: start_date desc
+    limit: 25
+    display: queue
+    empty: "No active employments"
+
+  # WI D: grid family — people context for HR ops
+  people_grid:
+    source: Person
+    display: grid
+    limit: 20
+    action: person_detail
+    empty: "No people on record"
+
+  # WI D: context family — recent assignment trail
+  assignment_trail:
+    source: Employment
+    sort: start_date desc
+    limit: 15
+    display: timeline
+    empty: "No employment history yet"
+
+  # WI D: chart family — department mix of roles via employment
+  dept_mix:
+    source: Department
+    display: bar_chart
+    group_by: name
+    aggregate:
+      count: count(Department)
+    empty: "No departments"
