@@ -78,6 +78,45 @@ A Task has a status lifecycle draft to done.
     assert "taskcomment" in names or "TaskComment" in {n.name for n in d.nouns}
 
 
+def test_extract_definitional_sentences_not_spec_chrome() -> None:
+    """Generated SPECIFICATION.md: keep Brand/Asset/Campaign; drop Matrix/Skeptic."""
+    brief = """
+# Design Studio — System Specification
+
+Design Studio manages brands and design work.
+
+## What it does
+
+**Brands.** A Brand is the organising anchor of the studio's work.
+**Design assets.** A Design Asset is a piece of creative work that always belongs
+to a Brand. Each asset moves through draft, review, approved, published.
+**Campaigns.** A Campaign also belongs to a Brand.
+**Feedback.** Design Feedback is always tied to the Design Asset it concerns.
+
+A skeptic does not have to take this on trust. There is no heavy single-page
+JavaScript application. The technical foundation is PostgreSQL. An auditable
+access matrix is available. A mature relational database stores data.
+
+## Who uses it
+
+- **Admin** — full access
+- **Designer** — creates assets
+- **Reviewer** — reviews assets
+"""
+    d = extract_from_text(brief, source_path="SPECIFICATION.md")
+    names = {n.name for n in d.nouns}
+    assert "Brand" in names
+    assert "Asset" in names or "DesignAsset" in names
+    assert "Campaign" in names
+    assert "Feedback" in names or "DesignFeedback" in names
+    junk = {"Skeptic", "Matrix", "JavaScript", "Technical", "Auditable", "Mature", "Studio"}
+    assert not (names & junk), names
+    # broken generate_questions style should not block via open_qs content
+    for q in d.open_questions:
+        assert "thes" not in q.text
+        assert "assetss" not in q.text
+
+
 def test_save_load_roundtrip(tmp_path: Path) -> None:
     d = extract_from_text(SPEND)
     paths = save_domain(tmp_path, d)

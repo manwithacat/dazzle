@@ -43,9 +43,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1056 | STALE |
-| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1055 | STALE |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1055 | STALE |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1094 | USED |
+| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1094 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1094 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1059 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1059 | STALE |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1059 | STALE |
@@ -108,6 +108,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1094 (2026-07-20).** **example-apps COGNITION dig** — domain extract quality
+> for generated SPECIFICATION.md + design_studio AGENT_DOMAIN. Extract: definitional
+> sentences, tighter article_noun, product-title skip, broken-question filter.
+> design_studio nouns 30→4 (Brand/DesignAsset/Campaign/DesignFeedback); ready_to_promote.
+> demo quality residual_total=0. budget_consumed 1. Explore **22/100**.
 
 > **Cycle 1093 (2026-07-20).** **framework-ux UNOWNED exercise** — `dazzle.risk` MDF
 > catalogue (14 modes). Unit suite green; live `build_report` over full CATALOGUE with

@@ -253,6 +253,63 @@ _NOUN_DENY = frozenset(
         "admin",
         "user",
         "member",
+        # generated SPECIFICATION.md chrome / process nouns (design_studio-class)
+        "studio",
+        "desk",
+        "design",  # adjective fragment; prefer DesignAsset / full compound
+        "designstudio",  # product title, not a domain type
+        "fieldtesthub",
+        "dazzle",
+        "javascript",
+        "hub",
+        "cost",
+        "repair",
+        "roster",
+        "budget",
+        "programme",
+        "operations",
+        "sessions",
+        "tasks",
+        "devices",
+        "issues",
+        "tigerbeetle",
+        "firmware",  # prefer FirmwareRelease compound
+        # prefer TestSession
+        "issue",  # prefer IssueReport
+        "framework",
+        "matrix",
+        "skeptic",
+        "auditable",
+        "creative",
+        "explicit",
+        "live",
+        "formal",
+        "technical",
+        "static",
+        "current",
+        "visibility",
+        "product",
+        "data",
+        "people",
+        "command",
+        "record",
+        "byte",
+        "mature",
+        "campaigns",  # plural of Campaign
+        "designer",  # persona
+        "reviewer",  # persona
+        "beyond",
+        "catalog",
+        "metric",
+        "guarantee",
+        "foundation",
+        "architecture",
+        "compliance",
+        "posture",
+        "executive",
+        "summary",
+        "system",
+        "specification",
     }
 )
 
@@ -261,6 +318,18 @@ _CORE_ENTITY_SECTION_RE = re.compile(r"(?is)##\s*core\s+entities\b(.*?)(?=\n##\s
 _ENTITY_HEADER_RE = re.compile(
     r"^#{3,4}\s+\*{0,2}([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)*)\*{0,2}\s*$",
     re.M,
+)
+# "A Brand is …" / "A Design Asset is …" / "A Task has …" definitional sentences
+_DEFINITION_NOUN_RE = re.compile(
+    r"\bA\s+([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)?)\s+(?:is|also|has)\b"
+)
+# Multi-word without leading A: "Design Feedback is always tied…"
+_MULTIWORD_DEF_RE = re.compile(r"\b([A-Z][A-Za-z0-9]+\s+[A-Z][A-Za-z0-9]+)\s+(?:is|also)\b")
+# Broken generate_questions output ("multiple thes", "assetss", "managess")
+_BROKEN_Q_RE = re.compile(
+    r"\b(thes|tos|ss,|assetss|managess|approvess|designerss|multiple\s+\w{1,3}s,)\b"
+    r"|multiple\s+\w+ss\b",
+    re.I,
 )
 
 
@@ -280,30 +349,71 @@ def _header_entities(text: str) -> set[str]:
     return out
 
 
+def _definition_entities(text: str) -> set[str]:
+    """Nouns introduced as ``A Brand is …`` / ``A Design Asset is …``."""
+    out: set[str] = set()
+    for m in list(_DEFINITION_NOUN_RE.finditer(text)) + list(_MULTIWORD_DEF_RE.finditer(text)):
+        label = m.group(1).strip()
+        # Skip product-title noise: "Design Studio is a creative-operations system"
+        # (second token is product genre, not a domain type)
+        parts = label.split()
+        if len(parts) == 2 and parts[1].lower() in {
+            "studio",
+            "hub",
+            "app",
+            "desk",
+            "platform",
+            "system",
+            "service",
+        }:
+            continue
+        compact = re.sub(r"\s+", "", label)
+        out.add(compact)
+        if " " not in label:
+            out.add(label)
+        # Multi-word: keep full compact only. Do **not** add the last token alone
+        # ("Firmware Release" → Release) — that floods chrome fragments.
+    return out
+
+
+def _canonical_case(name: str, text: str) -> str:
+    """Recover brief casing (TaskComment) when discover lowercases mid-humps."""
+    m = re.search(rf"\b({re.escape(name)})\b", text, re.I)
+    return m.group(1) if m else name
+
+
 def _strong_noun_signal(
     name: str,
     source: str,
     text: str,
     *,
     header_names: set[str],
+    definition_names: set[str] | None = None,
 ) -> bool:
     """Prefer deliberate domain types over mid-sentence capital adjectives."""
+    defs = definition_names or set()
     if re.search(r"[a-z][A-Z]", name):  # CamelCase multi-hump
         return True
     if name in header_names or name.replace(" ", "") in header_names:
         return True
+    if name in defs or name.replace(" ", "") in defs:
+        return True
     if re.search(rf"\b(entity|record|type|model)\s+{re.escape(name)}\b", text, re.I):
         return True
+    # Definitional sentence: "A Brand is the organising anchor…" / "A Task has …"
+    if re.search(rf"\bA\s+{re.escape(name)}\s+(?:is|also|has)\b", text):
+        return True
     hits = len(re.findall(rf"\b{re.escape(name)}\b", text, re.I))
-    # article_noun ("The TaskComment…") — accept non-deny compounds
-    if source == "article_noun" and hits >= 1:
-        return True
-    if source == "comma_list" and hits >= 1:
-        return True
+    # article_noun used to accept hits>=1 and flooded generated SPECs with adjectives.
+    # CamelCase multi-hump already returned True above after _canonical_case.
+    if source == "article_noun":
+        return hits >= 5
+    if source == "comma_list":
+        return hits >= 3
     # bare Capitalized — need repetition (status adjectives often appear once/twice)
     if source == "capitalized_noun" and hits >= 3:
         return True
-    if hits >= 4:
+    if hits >= 5:
         return True
     return False
 
@@ -314,22 +424,31 @@ def _try_add_header_noun(
     life_by_entity: dict[str, list[str]],
     seen: set[str],
     nouns: list[DomainNoun],
+    *,
+    evidence: str = "entity section header in founder brief",
 ) -> None:
-    if " " in name or name.lower() in _NOUN_DENY or len(name) < 3 or name in seen:
+    # Allow multi-word headers/definitions as CamelCase compact form only
+    compact = re.sub(r"\s+", "", name)
+    candidate = compact if " " in name else name
+    if candidate.lower() in _NOUN_DENY or len(candidate) < 3 or candidate in seen:
         return
-    spaced = re.sub(r"([a-z])([A-Z])", r"\1 \2", name)
-    if not _grounded_in_brief(name, text) and not any(
+    spaced = re.sub(r"([a-z])([A-Z])", r"\1 \2", candidate)
+    if not _grounded_in_brief(candidate, text) and not any(
         _grounded_in_brief(tok, text) for tok in spaced.split()
     ):
-        return
-    seen.add(name)
+        # multi-word definition: ground on full phrase tokens
+        if " " in name and all(_grounded_in_brief(tok, text) for tok in name.split()):
+            pass
+        else:
+            return
+    seen.add(candidate)
     nouns.append(
         DomainNoun(
-            name=name,
+            name=candidate,
             status="grounded",
-            evidence="entity section header in founder brief",
-            lifecycle_hint=life_by_entity.get(name, []),
-            owner_field_hint=_owner_for_noun(name, text),
+            evidence=evidence,
+            lifecycle_hint=life_by_entity.get(candidate, []) or life_by_entity.get(name, []),
+            owner_field_hint=_owner_for_noun(candidate, text),
         )
     )
 
@@ -339,12 +458,14 @@ def _try_add_discovered_noun(
     text: str,
     life_by_entity: dict[str, list[str]],
     headers: set[str],
+    definitions: set[str],
     seen: set[str],
     nouns: list[DomainNoun],
     rejected: list[str],
 ) -> None:
-    name = str(raw.get("name") or "").strip()
-    if not name or name in seen:
+    raw_name = str(raw.get("name") or "").strip()
+    name = _canonical_case(raw_name, text) if raw_name else ""
+    if not name or name in seen or name.lower() in {s.lower() for s in seen}:
         return
     source = str(raw.get("source") or "")
     if raw.get("type") == "user_role":
@@ -352,10 +473,22 @@ def _try_add_discovered_noun(
     if name.lower() in _NOUN_DENY or len(name) < 4:
         rejected.append(name)
         return
+    # discover sometimes emits lowercase process words
+    if not name[0].isupper():
+        rejected.append(name)
+        return
+    # bare plurals of already-known types ("Devices", "Tasks")
+    if name.endswith("s") and len(name) > 4:
+        stem = name[:-1]
+        if stem in definitions or stem in headers or stem in seen:
+            rejected.append(name)
+            return
     if not _grounded_in_brief(name, text):
         rejected.append(name)
         return
-    if not _strong_noun_signal(name, source, text, header_names=headers):
+    if not _strong_noun_signal(
+        name, source, text, header_names=headers, definition_names=definitions
+    ):
         rejected.append(name)
         return
     seen.add(name)
@@ -364,7 +497,7 @@ def _try_add_discovered_noun(
             name=name,
             status="grounded",
             evidence=f"appears in founder brief (source={source or '?'})",
-            lifecycle_hint=life_by_entity.get(name, []),
+            lifecycle_hint=life_by_entity.get(name, []) or life_by_entity.get(raw_name, []),
             owner_field_hint=_owner_for_noun(name, text),
         )
     )
@@ -379,11 +512,23 @@ def _extract_nouns(
     nouns: list[DomainNoun] = []
     seen: set[str] = set()
     headers = _header_entities(text)
+    definitions = _definition_entities(text)
     for h in sorted(headers):
         _try_add_header_noun(h, text, life_by_entity, seen, nouns)
+    for d in sorted(definitions):
+        _try_add_header_noun(
+            d,
+            text,
+            life_by_entity,
+            seen,
+            nouns,
+            evidence="definitional sentence in founder brief (A X is …)",
+        )
     for e in entities_raw.get("entities", []):
         if isinstance(e, dict):
-            _try_add_discovered_noun(e, text, life_by_entity, headers, seen, nouns, rejected)
+            _try_add_discovered_noun(
+                e, text, life_by_entity, headers, definitions, seen, nouns, rejected
+            )
     return nouns, rejected
 
 
@@ -464,6 +609,13 @@ def _collect_questions(
         if not text_q:
             continue
         if _NOISE_Q_RE.search(text_q) and not _NOISE_BRIEF_RE.search(text):
+            continue
+        # Drop broken plurals from generate_questions on long generated SPECs
+        if _BROKEN_Q_RE.search(text_q):
+            continue
+        if re.search(r"\bmultiple\s+\w{1,4}s?\b", text_q, re.I) and re.search(
+            r"\b(the|to|create|review|admin)\b", text_q, re.I
+        ):
             continue
         open_qs.append(OpenQuestion(id=f"q{i + 1}", text=text_q, blocks_promote=False))
 
@@ -554,7 +706,15 @@ def extract_from_path(path: Path) -> AgentDomain:
 
 
 def find_founder_brief(project_root: Path) -> Path | None:
-    for name in ("SPEC.md", "spec.md", "idea.md", "requirements.md", "README.md"):
+    # Prefer founder-authored briefs; SPECIFICATION.md is generated but richer than README
+    for name in (
+        "SPEC.md",
+        "spec.md",
+        "idea.md",
+        "requirements.md",
+        "SPECIFICATION.md",
+        "README.md",
+    ):
         p = project_root / name
         if p.is_file() and len(p.read_text(encoding="utf-8").strip()) > 40:
             return p
