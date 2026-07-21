@@ -168,6 +168,13 @@ Selection order inside the lane: **product_maturity → demo_fleet → journey_d
 explore. Prefer **story_walk** residual, then `agent_acceptance_panel`, then
 COGNITION / HYGIENE STALE — not isomorphic `*_ops` desks.
 
+**Maps vs sensors (dig contracts):** stories, stems, SPEC, claims, and stills are
+efficient **maps** (context). Only some are **outcome residual** sensors today.
+Design for dig contracts (must cite maps + fire CLI/MCP actuators), divergence
+pairs, and epistemic “unproven” residual—without premature “SPEC truth” or full
+still-quality bars—lives in
+[`docs/superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md`](../superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md).
+
 ## Agent-first customer acceptance
 
 Human orgs accept products with a **panel of QA testers** who already know the
