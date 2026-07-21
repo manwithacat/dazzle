@@ -54,10 +54,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1258 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1272 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1273 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1258 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1272 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1272 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1273 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1273 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | USED |
@@ -111,6 +111,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1273 (2026-07-21).** **example-apps story_walk LIVE** hr_records —
+> served :3040; all 5 walks live PASS; mark-live; deepen→ok; residual_total 14→13.
+> Note: no demo_data dir for reset-and-load. densify_allowed=0. **USED@1273**. budget 1. Explore **30/100**.
 
 > **Cycle 1272 (2026-07-21).** **example-apps story_walk LIVE** invoice_ops —
 > served :3030 + reset-and-load 33 fixtures; all 6 walks live PASS; mark-live;
