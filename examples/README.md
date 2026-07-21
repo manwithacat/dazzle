@@ -11,6 +11,21 @@ dazzle serve
 
 Open http://localhost:3000 to see the running app.
 
+### Eval hub (multi-host local fleet)
+
+Persistent catalogue under **`dazzle.local`** with per-app hosts
+(`simple_task.dazzle.local`, …):
+
+```bash
+# monorepo root
+.venv/bin/python scripts/example_hub/server.py --showcase-only
+# → http://dazzle.local:9080/  (after DNS)
+# → http://127.0.0.1:9080/    (no DNS)
+```
+
+See `scripts/example_hub/README.md` and
+`docs/superpowers/specs/2026-07-21-example-eval-hub-design.md`.
+
 ### Stems
 
 Every example carries a **`stems/`** directory: domain epistemic stems plus a

@@ -1,6 +1,10 @@
 ## [Unreleased]
 
 ### Added
+- **Example eval hub (local multi-host harness)** — `scripts/example_hub/`:
+  catalogue at `dazzle.local:9080`, per-app hosts `{app}.dazzle.local:9080`,
+  on-demand `dazzle serve` + reverse proxy. DNS helper + design
+  `docs/superpowers/specs/2026-07-21-example-eval-hub-design.md`.
 - **Improve dig contracts & process sensors** — implement design
   `docs/superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md`:
   dig receipts (`scripts/improve_dig_receipt.py`), story_walk **divergence**
