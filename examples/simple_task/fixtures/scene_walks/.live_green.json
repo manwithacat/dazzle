@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "walks": {
+    "land_and_see_tasks": {
+      "live_ok_at": "2026-07-21T07:52:43+00:00"
+    },
+    "manager_st_015": {
+      "live_ok_at": "2026-07-21T07:52:43+00:00"
+    },
+    "manager_st_016": {
+      "live_ok_at": "2026-07-21T07:52:43+00:00"
+    },
+    "manager_st_018": {
+      "live_ok_at": "2026-07-21T07:52:43+00:00"
+    },
+    "manager_st_021": {
+      "live_ok_at": "2026-07-21T07:52:43+00:00"
+    }
+  }
+}
