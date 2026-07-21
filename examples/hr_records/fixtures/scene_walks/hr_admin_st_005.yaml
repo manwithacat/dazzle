@@ -1,0 +1,22 @@
+# Story walk ST-005 — HR Admin walks employment history back to the person hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-005 then:
+
+persona: hr_admin
+home_workspace: staff_directory
+
+scenes:
+  - id: land_st_005
+    story: ST-005
+    entry: /app/workspaces/staff_directory
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Employment
+          - Staff
+          - Person
+          - Department
+          - Role
+    expects: "Authenticated HR Admin sees employment context leading to person hub"

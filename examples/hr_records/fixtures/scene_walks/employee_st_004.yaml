@@ -1,0 +1,22 @@
+# Story walk ST-004 — Employee reviews own career timeline hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-004 then:
+
+persona: employee
+home_workspace: person_detail
+
+scenes:
+  - id: land_st_004
+    story: ST-004
+    entry: /app/workspaces/person_detail
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Career
+          - Employment
+          - Salary
+          - Person
+          - History
+    expects: "Authenticated employee sees own career timeline hub cues"

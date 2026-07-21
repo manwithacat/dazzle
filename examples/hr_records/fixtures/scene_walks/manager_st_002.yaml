@@ -1,0 +1,22 @@
+# Story walk ST-002 — Line Manager opens a report career hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-002 then:
+
+persona: manager
+home_workspace: my_team
+
+scenes:
+  - id: land_st_002
+    story: ST-002
+    entry: /app/workspaces/my_team
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Team
+          - Report
+          - Employment
+          - Role
+          - People
+    expects: "Authenticated manager sees team pulse and report career hub cues"

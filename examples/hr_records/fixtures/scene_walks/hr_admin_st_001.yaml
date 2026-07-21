@@ -1,0 +1,22 @@
+# Story walk ST-001 — HR Admin browses staff directory and opens a person hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-001 then:
+
+persona: hr_admin
+home_workspace: staff_directory
+
+scenes:
+  - id: land_st_001
+    story: ST-001
+    entry: /app/workspaces/staff_directory
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Staff
+          - Directory
+          - Headcount
+          - Person
+          - Employment
+    expects: "Authenticated HR Admin sees headcount metrics and staff directory cues"

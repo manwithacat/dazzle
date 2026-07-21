@@ -1,0 +1,22 @@
+# Story walk ST-003 — Finance reviews compensation then hops to person context
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-003 then:
+
+persona: finance
+home_workspace: compensation_review
+
+scenes:
+  - id: land_st_003
+    story: ST-003
+    entry: /app/workspaces/compensation_review
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Compensation
+          - Salary
+          - Role
+          - Department
+          - Person
+    expects: "Authenticated finance sees compensation metrics and active salary cues"
