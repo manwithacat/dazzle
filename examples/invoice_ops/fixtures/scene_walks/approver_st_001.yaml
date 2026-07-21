@@ -1,0 +1,22 @@
+# Story walk ST-001 — Approver works the awaiting-approval queue
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-001 then:
+
+persona: approver
+home_workspace: approval_desk
+
+scenes:
+  - id: land_st_001
+    story: ST-001
+    entry: /app/workspaces/approval_desk
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Approval
+          - Invoice
+          - Submitted
+          - Awaiting
+          - Amount
+    expects: "Authenticated approver sees awaiting-approval queue and load metrics"

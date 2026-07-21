@@ -1,0 +1,22 @@
+# Story walk ST-005 — Requester reviews own invoices and line items via hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-005 then:
+
+persona: requester
+home_workspace: my_invoices
+
+scenes:
+  - id: land_st_005
+    story: ST-005
+    entry: /app/workspaces/my_invoices
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Invoice
+          - Draft
+          - Line
+          - Submit
+          - Supplier
+    expects: "Authenticated requester sees own invoices and line-item hub cues"

@@ -1,0 +1,22 @@
+# Story walk ST-003 — Finance settles invoices from the ready-to-pay queue
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-003 then:
+
+persona: finance
+home_workspace: pay_desk
+
+scenes:
+  - id: land_st_003
+    story: ST-003
+    entry: /app/workspaces/pay_desk
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Pay
+          - Invoice
+          - Approved
+          - Payment
+          - Ready
+    expects: "Authenticated finance sees ready-to-pay queue and payment cues"

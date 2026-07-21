@@ -1,0 +1,22 @@
+# Story walk ST-006 — Auditor traces payment attempts back to the invoice hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-006 then:
+
+persona: auditor
+home_workspace: audit_review
+
+scenes:
+  - id: land_st_006
+    story: ST-006
+    entry: /app/workspaces/audit_review
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Payment
+          - Invoice
+          - Audit
+          - Attempt
+          - Trail
+    expects: "Authenticated auditor sees payment trail and invoice hub path cues"

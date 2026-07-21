@@ -1,0 +1,22 @@
+# Story walk ST-002 — Approver opens invoice hub before approve or reject
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-002 then:
+
+persona: approver
+home_workspace: approval_desk
+
+scenes:
+  - id: land_st_002
+    story: ST-002
+    entry: /app/workspaces/approval_desk
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Invoice
+          - Approval
+          - Supplier
+          - Status
+          - Reject
+    expects: "Authenticated approver sees invoice hub path cues from approval desk"
