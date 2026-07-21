@@ -1,0 +1,22 @@
+# Story walk ST-003 — Member opens a task hub with discussion and files
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-003 then:
+
+persona: member
+home_workspace: my_tasks
+
+scenes:
+  - id: land_st_003
+    story: ST-003
+    entry: /app/workspaces/my_tasks
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Task
+          - Discussion
+          - File
+          - Status
+          - Owner
+    expects: "Authenticated member sees path cues to task hub with discussion/files"

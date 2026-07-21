@@ -1,0 +1,22 @@
+# Story walk ST-004 — Manager reviews project portfolio
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-004 then:
+
+persona: manager
+home_workspace: dashboard
+
+scenes:
+  - id: land_st_004
+    story: ST-004
+    entry: /app/workspaces/dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Project
+          - Portfolio
+          - Task
+          - Milestone
+          - Dashboard
+    expects: "Authenticated manager sees portfolio metrics and project list cues"

@@ -43,19 +43,30 @@ class TestStoryWalkBar:
         assert "ST-020" in row.covered_ids or row.walk_count >= 1
 
     def test_zero_walks_is_critical_residual(self, story_bar) -> None:
-        """Apps with landings but no walks score critical (not a pinned app tier).
+        """Scoring rule: landings + 0 walks → critical; fleet may already have walks.
 
-        Cycle 1260 added contact_manager walks → that app moved to deepen
-        (live_unproven). Pinning tier==critical on a maturing showcase app
-        reds main after every successful story_walk dig.
+        Cycle 1260–1267 story_walk digs cleared pure no_walks on showcase apps.
+        Pinning ``assert zero`` reds main after the last zero-walk dig (1267
+        project_tracker). Prefer: if zero-walk rows exist they are critical;
+        else residual heat remains via missing_walk / live_unproven.
         """
         rows = story_bar.scan()
         zero = [r for r in rows if r.landing_stories > 0 and r.walk_count == 0]
-        assert zero, "showcase should still have no-walk residual apps"
-        for row in zero:
-            assert row.is_residual
-            assert row.tier == "critical"
-            assert any(i == "no_walks" or i.startswith("missing_walk:") for i in row.issues)
+        if zero:
+            for row in zero:
+                assert row.is_residual
+                assert row.tier == "critical"
+                assert any(i == "no_walks" or i.startswith("missing_walk:") for i in row.issues)
+            return
+        # Fleet fully has ≥1 walk per landing app — residual still non-empty.
+        assert all(r.walk_count >= 1 for r in rows if r.landing_stories > 0)
+        residual = [r for r in rows if r.is_residual]
+        assert residual, "showcase should still have story_walk residual"
+        assert any(
+            i == "no_walks" or i.startswith("missing_walk:") or i.startswith("live_unproven:")
+            for r in residual
+            for i in r.issues
+        )
 
     def test_contact_manager_walks_cover_landings(self, story_bar) -> None:
         """contact_manager dig (cycle 1260): covered landings; residual may be epistemic."""

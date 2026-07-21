@@ -1,0 +1,22 @@
+# Story walk ST-001 — Member browses projects and opens a project hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-001 then:
+
+persona: member
+home_workspace: my_tasks
+
+scenes:
+  - id: land_st_001
+    story: ST-001
+    entry: /app/workspaces/my_tasks
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Project
+          - Task
+          - Milestone
+          - Board
+          - Assigned
+    expects: "Authenticated member sees project/task home cues before hub open"

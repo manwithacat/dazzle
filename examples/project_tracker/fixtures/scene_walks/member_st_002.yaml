@@ -1,0 +1,22 @@
+# Story walk ST-002 — Member works the task board with project context hops
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-002 then:
+
+persona: member
+home_workspace: my_tasks
+
+scenes:
+  - id: land_st_002
+    story: ST-002
+    entry: /app/workspaces/my_tasks
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Task
+          - Board
+          - Project
+          - Assigned
+          - Status
+    expects: "Authenticated member sees task board and project context hop cues"
