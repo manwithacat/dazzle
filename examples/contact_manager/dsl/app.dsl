@@ -57,7 +57,10 @@ entity Contact "Contact":
   domain: crm
   patterns: profile, searchable
 
-  display_field: email
+  # Panel 1279: email-as-title made favourites unreadable for call lookup;
+  # lead with last_name so cards scan like a practice directory (first+phone
+  # remain on the card body via surface fields).
+  display_field: last_name
   id: uuid pk
   first_name: str(100) required pii(category=identity)
   last_name: str(100) required pii(category=identity)
