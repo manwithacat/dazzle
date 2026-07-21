@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "walks": {
+    "designer_st_001": {
+      "live_ok_at": "2026-07-21T06:09:45+00:00"
+    },
+    "designer_st_002": {
+      "live_ok_at": "2026-07-21T06:09:45+00:00"
+    },
+    "designer_st_005": {
+      "live_ok_at": "2026-07-21T06:09:45+00:00"
+    },
+    "designer_st_006": {
+      "live_ok_at": "2026-07-21T06:09:45+00:00"
+    },
+    "reviewer_st_003": {
+      "live_ok_at": "2026-07-21T06:09:45+00:00"
+    },
+    "reviewer_st_004": {
+      "live_ok_at": "2026-07-21T06:09:45+00:00"
+    }
+  }
+}

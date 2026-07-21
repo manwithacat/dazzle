@@ -54,10 +54,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1258 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1269 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1270 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1258 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1269 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1269 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1270 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1270 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | USED |
@@ -111,6 +111,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1270 (2026-07-21).** **example-apps story_walk LIVE** design_studio —
+> served+seeded on :3010; all 6 walks live PASS; mark-live + receipt walk_live_run=0;
+> residual deepen→ok; fleet residual_total 17→16. densify_allowed=0.
+> Stamped story_walk / test walk / probes **USED@1270**. budget_consumed 1. Explore **27/100**.
 
 > **Cycle 1269 (2026-07-21).** **example-apps story_walk** support_tickets dig contracts —
 > covered ST-021/027/030 (+ existing ST-019/025); 5/5 landings; thin→deepen; cleared
