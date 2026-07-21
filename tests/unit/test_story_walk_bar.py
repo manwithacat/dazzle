@@ -43,12 +43,12 @@ class TestStoryWalkBar:
         assert "ST-020" in row.covered_ids or row.walk_count >= 1
 
     def test_zero_walks_is_critical_residual(self, story_bar) -> None:
-        """Scoring rule: landings + 0 walks → critical; fleet may already have walks.
+        """Scoring rule: landings + 0 walks → critical; fleet may already be green.
 
-        Cycle 1260–1267 story_walk digs cleared pure no_walks on showcase apps.
-        Pinning ``assert zero`` reds main after the last zero-walk dig (1267
-        project_tracker). Prefer: if zero-walk rows exist they are critical;
-        else residual heat remains via missing_walk / live_unproven.
+        Cycle 1260–1267 cleared pure no_walks; cycle 1270–1278 live-proved all
+        showcase landings (mark-live). Prefer: if zero-walk rows exist they are
+        critical; if residual remains it is missing_walk / live_unproven; if
+        residual is empty the fleet is fully live-green (ok).
         """
         rows = story_bar.scan()
         zero = [r for r in rows if r.landing_stories > 0 and r.walk_count == 0]
@@ -58,15 +58,18 @@ class TestStoryWalkBar:
                 assert row.tier == "critical"
                 assert any(i == "no_walks" or i.startswith("missing_walk:") for i in row.issues)
             return
-        # Fleet fully has ≥1 walk per landing app — residual still non-empty.
+        # Fleet fully has ≥1 walk per landing app.
         assert all(r.walk_count >= 1 for r in rows if r.landing_stories > 0)
         residual = [r for r in rows if r.is_residual]
-        assert residual, "showcase should still have story_walk residual"
-        assert any(
-            i == "no_walks" or i.startswith("missing_walk:") or i.startswith("live_unproven:")
-            for r in residual
-            for i in r.issues
-        )
+        if residual:
+            assert any(
+                i == "no_walks" or i.startswith("missing_walk:") or i.startswith("live_unproven:")
+                for r in residual
+                for i in r.issues
+            )
+        else:
+            # Cycle 1278: all showcase landings live-green → residual=0 is ok.
+            assert all(r.tier == "ok" for r in rows if r.landing_stories > 0)
 
     def test_contact_manager_walks_cover_landings(self, story_bar) -> None:
         """contact_manager dig (cycle 1260): covered landings; residual may be epistemic."""
@@ -77,11 +80,16 @@ class TestStoryWalkBar:
         assert "no_walks" not in row.issues
 
     def test_scan_fleet_has_residual(self, story_bar) -> None:
+        """Fleet scan is non-empty; residual may be empty after live-prove drain."""
         rows = story_bar.scan()
         assert len(rows) >= 5
         residual = [r for r in rows if r.is_residual]
-        assert residual, "showcase should still have story_walk residual"
-        assert residual[0].score >= residual[-1].score or residual[0].is_residual
+        if residual:
+            assert residual[0].score >= residual[-1].score or residual[0].is_residual
+        else:
+            # All showcase apps live-green (cycle 1278 project_tracker close-out).
+            assert all(not r.is_residual for r in rows)
+            assert story_bar.format_status(rows).startswith("story_walk apps=")
 
     def test_write_stub_creates_yaml(self, story_bar, tmp_path: Path, monkeypatch) -> None:
         # Use real support_tickets landings but write into tmp by patching EXAMPLES
