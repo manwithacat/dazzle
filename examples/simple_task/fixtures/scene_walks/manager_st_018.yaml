@@ -1,0 +1,22 @@
+# Story walk ST-018 — Team Manager reviews tasks awaiting review
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-018 then:
+
+persona: manager
+home_workspace: team_overview
+
+scenes:
+  - id: land_st_018
+    story: ST-018
+    entry: /app/workspaces/team_overview
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Review
+          - Task
+          - Queue
+          - Team
+          - Done
+    expects: "Authenticated manager sees needs-review queue cues on team overview"

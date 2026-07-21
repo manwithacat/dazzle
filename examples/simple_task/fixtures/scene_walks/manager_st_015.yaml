@@ -1,0 +1,22 @@
+# Story walk ST-015 — Team Manager views all tasks for team
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-015 then:
+
+persona: manager
+home_workspace: team_overview
+
+scenes:
+  - id: land_st_015
+    story: ST-015
+    entry: /app/workspaces/team_overview
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Task
+          - Team
+          - Priority
+          - Status
+          - Assignee
+    expects: "Authenticated manager sees team task list and sortable load cues"

@@ -1,0 +1,22 @@
+# Story walk ST-016 — Team Manager views unassigned tasks
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-016 then:
+
+persona: manager
+home_workspace: team_overview
+
+scenes:
+  - id: land_st_016
+    story: ST-016
+    entry: /app/workspaces/team_overview
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Unassigned
+          - Task
+          - Queue
+          - Team
+          - Assign
+    expects: "Authenticated manager sees unassigned task queue cues on team overview"
