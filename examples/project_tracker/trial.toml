@@ -1,0 +1,34 @@
+# Qualitative trial — project_tracker showcase harness.
+
+[[scenario]]
+name = "manager_board"
+login_persona = "manager"
+time_budget_seconds = 450
+max_steps = 30
+
+user_identity = """
+You are Ken, engineering manager running a single active project board.
+You want to see work across columns and assign unowned tasks.
+"""
+
+business_context = """
+One product project, ~15 tasks across backlog/todo/in progress/review.
+Empty boards kill trust in a demo.
+"""
+
+tasks = [
+    "Land on Project Board. Are kanban columns populated?",
+    "Can you see task titles that sound like real work?",
+    "Find unassigned or blocked work if any.",
+    "Decide if this is a credible project tracker skeleton for a pilot.",
+]
+
+adoption_criteria = [
+    "Board shows work in more than one column",
+    "Task titles are story-grade, not empty placeholders",
+    "Would keep watching a sales demo of this board",
+]
+
+stop_when = """
+Stop when adoption_criteria can be scored. Call submit_verdict.
+"""

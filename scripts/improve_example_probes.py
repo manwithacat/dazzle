@@ -122,6 +122,15 @@ def _trial_verdict() -> tuple[str, str | None, int]:
     return mod.format_status(rows), nxt, len(residual)
 
 
+def _process_dig() -> tuple[str, str | None, int, str | None]:
+    """Incomplete dig contracts (process residual)."""
+    mod = _load("improve_dig_receipt", REPO / "scripts" / "improve_dig_receipt.py")
+    rows = mod.process_residual_apps()
+    nxt = rows[0]["app"] if rows else None
+    strategy = rows[0]["strategy"] if rows else None
+    return mod.format_process_status(), nxt, len(rows), strategy
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--status", action="store_true", help="One-line suite (default)")
@@ -130,14 +139,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help=(
             "Print first residual app (preference: product → demo → journey → "
-            "felt → story_walk → trial_verdict)"
+            "felt → story_walk → trial_verdict → process_dig)"
         ),
     )
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--strict", action="store_true", help="Exit 1 if any residual")
     args = ap.parse_args(argv)
 
-    # Structural three + felt product_quality + story walks + trial verdicts.
+    # Structural three + felt + story walks + trial + process dig contracts.
     results: list[tuple[str, str, str | None, int]] = []
     for name, fn in (
         ("product_maturity", _product),
@@ -170,7 +179,14 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:  # noqa: BLE001
             results.append((name, f"{name} error={type(exc).__name__}", None, -1))
 
-    # Selection order: structure → demo → journey → felt stills → story walks → trials.
+    process_strategy: str | None = None
+    try:
+        p_line, p_nxt, p_n, process_strategy = _process_dig()
+        results.append(("process_dig", p_line, p_nxt, p_n))
+    except Exception as exc:  # noqa: BLE001
+        results.append(("process_dig", f"process_dig error={type(exc).__name__}", None, -1))
+
+    # Selection: structure → demo → journey → felt → story_walk → trial → process.
     STRATEGY_FOR = {
         "product_maturity": "product_maturity",
         "demo_fleet": "demo_fleet",
@@ -178,6 +194,7 @@ def main(argv: list[str] | None = None) -> int:
         "product_quality": "demo_fleet",
         "story_walk": "story_walk",
         "trial_verdict": "agent_acceptance_panel",
+        "process_dig": "story_walk",  # default; overridden by receipt strategy
     }
     preferred_next: str | None = None
     preferred_probe: str | None = None
@@ -186,7 +203,10 @@ def main(argv: list[str] | None = None) -> int:
         if n and n > 0 and nxt:
             preferred_next = nxt
             preferred_probe = name
-            preferred_strategy = STRATEGY_FOR.get(name, name)
+            if name == "process_dig" and process_strategy:
+                preferred_strategy = process_strategy
+            else:
+                preferred_strategy = STRATEGY_FOR.get(name, name)
             break
     if preferred_strategy is None and pq_force:
         # force like "example-apps demo_fleet"
@@ -234,9 +254,9 @@ def main(argv: list[str] | None = None) -> int:
         for line in pq_lines:
             if line not in {r[1] for r in results[:3]}:
                 print(line)
-        # story_walk + trial_verdict status lines
+        # story_walk + trial_verdict + process_dig status lines
         for name, line, _nxt, _n in results:
-            if name in {"story_walk", "trial_verdict"}:
+            if name in {"story_walk", "trial_verdict", "process_dig"}:
                 print(line)
         if wi_line:
             print(wi_line)

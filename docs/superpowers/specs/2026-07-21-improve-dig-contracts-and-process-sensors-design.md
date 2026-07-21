@@ -1,6 +1,6 @@
 # Improve dig contracts & process sensors
 
-**Status:** Draft design (pre-implementation)
+**Status:** Implemented (PR1–PR5, 2026-07-21)
 **Date:** 2026-07-21
 **Tracking:** #1626 (demo bake-off), story-walk / trial-verdict residual (shipped), agent QA ladder (#1625)
 **Related shipped:** `scripts/story_walk_bar.py`, `scripts/trial_verdict_bar.py`, `scripts/improve_example_probes.py`, `improve/strategies/story_walk.md`, `agent_acceptance_panel.md`

@@ -6,7 +6,8 @@ When ``trial.toml`` exists, look for the newest ``qa-trial-*.json`` under
 
 * last report ``recommend`` ∈ {no, conditional}, or
 * any adoption criterion scored ``fail``, or
-* showcase app has trial.toml but **no** report (never panelled)
+* showcase app has trial.toml but **no** report (never panelled), or
+* showcase app **missing** trial.toml (``no_trial`` policy — panel harness required)
 
 Does not re-run trials — only scores artifacts so /improve can force
 ``agent_acceptance_panel`` digs.
@@ -91,7 +92,8 @@ def _parse_report(path: Path) -> tuple[str | None, list[str]]:
     return (str(recommend).lower() if recommend else None), fails
 
 
-def score_app(app: str) -> AppTrialVerdict:
+def score_app(app: str, *, require_trial_toml: bool = True) -> AppTrialVerdict:
+    """Score one app. Showcase apps residual without trial.toml when *require_trial_toml*."""
     row = AppTrialVerdict(app=app)
     root = EXAMPLES / app
     if not root.is_dir():
@@ -99,7 +101,10 @@ def score_app(app: str) -> AppTrialVerdict:
     trial = root / "trial.toml"
     row.has_trial_toml = trial.is_file()
     if not row.has_trial_toml:
-        return row  # no trial harness → no residual here
+        if require_trial_toml and app in SHOWCASE:
+            row.issues.append("no_trial")
+            row.score = 35
+        return row
 
     reports = _find_reports(root)
     if not reports:

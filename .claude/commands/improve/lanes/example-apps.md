@@ -101,13 +101,14 @@ Then selection priority:
 3. **`product_maturity` residual** — `python scripts/example_product_maturity.py --next` non-empty → force strategy `product_maturity` for that app (playbook `improve/strategies/product_maturity.md`). Prefer over demo/journey/Tier-1.
 4. **`demo_fleet` residual (#1626)** — product residual empty and `python scripts/demo_fleet_bar.py --next` non-empty → force strategy `demo_fleet`. If probe residual empty but #1626 still has open P0-5…P0-9 (empty heroes, invoice queues, design_studio visuals), still pick `demo_fleet` and work the highest open P0.
 5. **`journey_maturity` residual** — `python scripts/example_journey_maturity.py --next` non-empty → force `journey_dogfood`.
-6. **`story_walk` residual** — landing stories without scene walks (`python scripts/story_walk_bar.py --next`) → force `story_walk` (playbook `improve/strategies/story_walk.md`). Prefer over densify / STALE; this is **direct interaction** residual.
-7. **`trial_verdict` residual** — `python scripts/trial_verdict_bar.py --next` non-empty (missing/failed panel) → force `agent_acceptance_panel`.
-8. **Warehouse Index (WI) feature_creep** — all probe residuals empty **and** `densify_allowed=1` (`wi_fleet > wi_floor`; see status `densify_allowed=` / `--warehouse-index`): minimize continuous warehouse-ness on `wi_next` by shipping a **job-backed** product DSL slice that moves `wi_primary` (D/N/L/J/G). Map-only commits do **not** count. **Hard stop (#1637):** when `densify_allowed=0`, skip this step entirely — do **not** add isomorphic `*_ops` filter desks, do not "skip soft-cap" densify, do not grind D under floor.
-9. **Agent acceptance panel** (when residual_total=0 and densify closed, or force path): run `improve/strategies/agent_acceptance_panel.md` — multi-agent UAT against stories / adoption criteria (agent-first substitute for a human QA panel). Prefer over pure STALE re-touch when felt quality is stale.
-10. All probe residuals empty, `densify_allowed=0`, and backlog gaps DONE/BLOCKED → **explore phase** (lane Step 6 / driver Rule 7 COGNITION → HYGIENE)
-11. Else pick next `PENDING` backlog row (priority: critical > warning > info, then app alphabetical)
-12. Mark chosen work `IN_PROGRESS`
+6. **`story_walk` residual** — landing stories without scene walks (`python scripts/story_walk_bar.py --next`) → force `story_walk` (playbook `improve/strategies/story_walk.md`). Prefer over densify / STALE; this is **direct interaction** residual. Dig **contract** required (maps + dry-run + receipt).
+7. **`trial_verdict` residual** — `python scripts/trial_verdict_bar.py --next` non-empty (missing/failed panel / `no_trial`) → force `agent_acceptance_panel`.
+8. **`process_dig` residual** — incomplete dig contract (`python scripts/improve_dig_receipt.py process-status`) → re-run the same strategy until receipt PASS.
+9. **Warehouse Index (WI) feature_creep** — all probe residuals empty **and** `densify_allowed=1` (`wi_fleet > wi_floor`; see status `densify_allowed=` / `--warehouse-index`): minimize continuous warehouse-ness on `wi_next` by shipping a **job-backed** product DSL slice that moves `wi_primary` (D/N/L/J/G). Map-only commits do **not** count. **Hard stop (#1637):** when `densify_allowed=0`, skip this step entirely — do **not** add isomorphic `*_ops` filter desks, do not "skip soft-cap" densify, do not grind D under floor.
+10. **Agent acceptance panel** (when residual_total=0 and densify closed, or force path): run `improve/strategies/agent_acceptance_panel.md` — multi-agent UAT against stories / adoption criteria (agent-first substitute for a human QA panel). Prefer over pure STALE re-touch when felt quality is stale.
+11. All probe residuals empty, `densify_allowed=0`, and backlog gaps DONE/BLOCKED → **explore phase** (lane Step 6 / driver Rule 7 COGNITION → HYGIENE)
+12. Else pick next `PENDING` backlog row (priority: critical > warning > info, then app alphabetical)
+13. Mark chosen work `IN_PROGRESS`
 
 If `$ARGUMENTS` provided as `<app>`, filter to that app only.
 If `$ARGUMENTS` is `product_maturity` | `demo_fleet` | `journey_dogfood` | `story_walk` | `agent_acceptance_panel` (or lane+strategy), run that strategy playbook for one residual app and skip unrelated gap types.

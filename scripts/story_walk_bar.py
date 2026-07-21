@@ -45,10 +45,33 @@ SHOWCASE = (
 # At least this many landing stories should have a walk (or all if fewer).
 MIN_COVERED_LANDINGS = 2
 
+# assert_any_text tokens that do not count as domain cues
+_GENERIC_CUE_TOKENS = frozenset(
+    {
+        "home",
+        "app",
+        "page",
+        "ok",
+        "yes",
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "their",
+        "new",
+        "view",
+        "list",
+        "item",
+        "items",
+    }
+)
+
 _WS_IN_GIVEN = re.compile(
     r"\bon the\s+[`']?([a-z][a-z0-9_]*)[`']?\s+workspace\b",
     re.IGNORECASE,
 )
+_ENTRY_WS = re.compile(r"/app/workspaces/([a-z][a-z0-9_]*)", re.IGNORECASE)
 
 
 @dataclass
@@ -175,13 +198,16 @@ def collect_landing_stories(app_dir: Path) -> list[LandingStory]:
     return out
 
 
-def _walk_story_coverage(app_dir: Path) -> tuple[set[str], int, list[str]]:
-    """Return (story_ids covered by walks, walk_count, load issues)."""
+def _load_walks(
+    app_dir: Path,
+) -> tuple[list[object], set[str], int, list[str]]:
+    """Return (walks, covered story ids, walk_count, load issues)."""
     from dazzle.testing.walk.discovery import discover_walk_paths
     from dazzle.testing.walk.loader import WalkLoadError, load_walk
 
     covered: set[str] = set()
     issues: list[str] = []
+    walks: list[object] = []
     paths = discover_walk_paths(app_dir)
     for path in paths:
         try:
@@ -192,9 +218,115 @@ def _walk_story_coverage(app_dir: Path) -> tuple[set[str], int, list[str]]:
         except Exception as exc:  # noqa: BLE001
             issues.append(f"walk_load_failed:{path.stem}:{type(exc).__name__}")
             continue
+        walks.append(walk)
         for sid in walk.story_ids():
             covered.add(sid)
-    return covered, len(paths), issues
+    return walks, covered, len(paths), issues
+
+
+def _walk_story_coverage(app_dir: Path) -> tuple[set[str], int, list[str]]:
+    """Return (story_ids covered by walks, walk_count, load issues)."""
+    _walks, covered, count, issues = _load_walks(app_dir)
+    return covered, count, issues
+
+
+def _entry_workspace(entry: str | None, home_workspace: str | None) -> str | None:
+    if home_workspace:
+        return home_workspace
+    if not entry:
+        return None
+    m = _ENTRY_WS.search(entry)
+    return m.group(1) if m else None
+
+
+def _scene_texts(scene: object) -> list[str]:
+    texts: list[str] = []
+    for action in getattr(scene, "actions", None) or []:
+        raw = getattr(action, "texts", None) or []
+        if isinstance(raw, list):
+            texts.extend(str(t) for t in raw)
+        # also allow model_extra
+        extra = getattr(action, "model_extra", None) or {}
+        if isinstance(extra, dict) and extra.get("texts"):
+            texts.extend(str(t) for t in extra["texts"])
+    return texts
+
+
+def _divergence_issues(
+    landings: list[LandingStory],
+    walks: list[object],
+    known_story_ids: set[str],
+) -> list[str]:
+    """Pair consistency: walk ↔ story (not aesthetic quality)."""
+    issues: list[str] = []
+    by_id = {L.story_id: L for L in landings}
+    for walk in walks:
+        walk_id = getattr(walk, "walk_id", None) or "walk"
+        w_persona = str(getattr(walk, "persona", "") or "")
+        w_home = getattr(walk, "home_workspace", None)
+        for scene in getattr(walk, "scenes", None) or []:
+            sid = getattr(scene, "story", None)
+            if not sid:
+                continue
+            sid = str(sid)
+            if known_story_ids and sid not in known_story_ids:
+                issues.append(f"diverge:unknown_story:{sid}")
+                continue
+            landing = by_id.get(sid)
+            if landing is None:
+                continue
+            if landing.persona and w_persona and landing.persona != w_persona:
+                issues.append(f"diverge:persona:{sid}:{w_persona}!={landing.persona}")
+            entry = getattr(scene, "entry", None) or ""
+            got_ws = _entry_workspace(str(entry) if entry else None, w_home)
+            exp_ws = landing.home_workspace
+            if exp_ws and got_ws and exp_ws != got_ws:
+                issues.append(f"diverge:entry_ws:{sid}:expected={exp_ws}:got={got_ws}")
+            texts = _scene_texts(scene)
+            if not texts:
+                issues.append(f"diverge:weak_cues:{walk_id}:{sid}:empty")
+            else:
+                meaningful = [
+                    t for t in texts if t.strip() and t.strip().lower() not in _GENERIC_CUE_TOKENS
+                ]
+                if not meaningful:
+                    issues.append(f"diverge:weak_cues:{walk_id}:{sid}:generic")
+    # de-dupe preserve order
+    seen: set[str] = set()
+    out: list[str] = []
+    for i in issues:
+        if i not in seen:
+            seen.add(i)
+            out.append(i)
+    return out[:12]
+
+
+def _live_unproven_issues(app_dir: Path, walks: list[object]) -> list[str]:
+    """Epistemic: walk exists but never live-green."""
+    import importlib.util
+    import sys
+
+    path = REPO / "scripts" / "improve_dig_receipt.py"
+    spec = importlib.util.spec_from_file_location("improve_dig_receipt", path)
+    if not spec or not spec.loader:
+        return []
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["improve_dig_receipt"] = mod
+    try:
+        spec.loader.exec_module(mod)
+    except Exception:  # noqa: BLE001
+        return []
+    is_walk_live_green = mod.is_walk_live_green
+
+    issues: list[str] = []
+    for walk in walks:
+        wid = getattr(walk, "walk_id", None) or getattr(walk, "source_path", None)
+        if not wid:
+            continue
+        wid = Path(str(wid)).stem if "/" in str(wid) or str(wid).endswith(".yaml") else str(wid)
+        if not is_walk_live_green(app_dir, wid):
+            issues.append(f"live_unproven:{wid}")
+    return issues[:6]
 
 
 def score_app(app: str, *, app_dir: Path | None = None) -> AppStoryWalkBar:
@@ -208,7 +340,7 @@ def score_app(app: str, *, app_dir: Path | None = None) -> AppStoryWalkBar:
 
     landings = collect_landing_stories(root)
     row.landing_stories = len(landings)
-    covered_set, walk_count, load_issues = _walk_story_coverage(root)
+    walks, covered_set, walk_count, load_issues = _load_walks(root)
     row.walk_count = walk_count
     row.issues.extend(load_issues)
 
@@ -216,6 +348,19 @@ def score_app(app: str, *, app_dir: Path | None = None) -> AppStoryWalkBar:
     row.covered_ids = [s for s in landing_ids if s in covered_set]
     row.missing_ids = [s for s in landing_ids if s not in covered_set]
     row.covered = len(row.covered_ids)
+
+    # known story ids for orphan check
+    known_ids: set[str] = set()
+    try:
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        appspec = load_project_appspec(root)
+        for st in getattr(appspec, "stories", None) or []:
+            sid = getattr(st, "story_id", None)
+            if sid:
+                known_ids.add(str(sid))
+    except Exception:  # noqa: BLE001
+        known_ids = set(landing_ids)
 
     score = 0
     reasons: list[str] = []
@@ -246,22 +391,31 @@ def score_app(app: str, *, app_dir: Path | None = None) -> AppStoryWalkBar:
     # Persona coverage: each persona with a landing should appear in some walk
     personas_needed = {L.persona for L in landings if L.persona}
     personas_with_walk: set[str] = set()
-    if walk_count:
-        from dazzle.testing.walk.discovery import discover_walk_paths
-        from dazzle.testing.walk.loader import load_walk
-
-        for path in discover_walk_paths(root):
-            try:
-                w = load_walk(path)
-            except Exception:  # noqa: BLE001
-                continue
-            personas_with_walk.add(w.persona)
+    for w in walks:
+        personas_with_walk.add(str(getattr(w, "persona", "") or ""))
     missing_personas = sorted(personas_needed - personas_with_walk)
     if missing_personas and row.walk_count > 0:
         score += 20
         reasons.append(f"persona_no_walk:{','.join(missing_personas[:4])}")
         for p in missing_personas[:3]:
             row.issues.append(f"persona_no_walk:{p}")
+
+    # Divergence (pair consistency)
+    div = _divergence_issues(landings, walks, known_ids)
+    for issue in div:
+        row.issues.append(issue)
+        if issue.startswith("diverge:entry_ws") or issue.startswith("diverge:persona"):
+            score += 12
+        elif issue.startswith("diverge:unknown_story"):
+            score += 15
+        else:
+            score += 8  # weak_cues deepen
+
+    # Epistemic live_unproven (deepen) — only when walks exist
+    if walks:
+        for issue in _live_unproven_issues(root, walks):
+            row.issues.append(issue)
+            score += 5
 
     row.score = score
     if score >= 80 or "no_walks" in reasons:
@@ -273,8 +427,18 @@ def score_app(app: str, *, app_dir: Path | None = None) -> AppStoryWalkBar:
     else:
         row.tier = "ok"
         # clear missing_walk issues if we met min cover and no other issues
-        if row.covered >= need and not load_issues and not missing_personas:
+        if row.covered >= need and not load_issues and not missing_personas and not div:
+            # Drop coverage-only missing_walk noise; keep diverge/live_unproven
             row.issues = [i for i in row.issues if not i.startswith("missing_walk:")]
+    # Epistemic / diverge alone still residual (deepen)
+    if any(i.startswith("live_unproven:") for i in row.issues):
+        if row.tier == "ok":
+            row.tier = "deepen"
+        row.score = max(row.score, 5)
+    if any(i.startswith("diverge:") for i in row.issues):
+        if row.tier == "ok":
+            row.tier = "deepen"
+        row.score = max(row.score, 8)
     return row
 
 

@@ -1,6 +1,14 @@
 ## [Unreleased]
 
 ### Added
+- **Improve dig contracts & process sensors** — implement design
+  `docs/superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md`:
+  dig receipts (`scripts/improve_dig_receipt.py`), story_walk **divergence**
+  (entry/persona/weak_cues) + **live_unproven** epistemic residual,
+  showcase **no_trial** policy + trial.toml for invoice_ops / project_tracker /
+  hr_records, process residual in `improve_example_probes`, playbook contracts
+  + self-audit contract checks. Residual chooses *where*; contracts force map
+  citation + actuators without premature full-still / SPEC-truth bars.
 - **Story-walk + trial-verdict improve residual** — agent-first QA heat when
   structural residual is already 0: `scripts/story_walk_bar.py` scores
   showcase **landing stories** (accepted user_click / desk paths) vs

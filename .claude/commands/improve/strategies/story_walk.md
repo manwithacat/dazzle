@@ -3,55 +3,99 @@
 **Lane:** example-apps
 **Force path:** `/improve example-apps story_walk`
 **Probe:** `python scripts/story_walk_bar.py`
+**Design:** `docs/superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md`
 **Related:** #1638 scene walks, #1626 demo bar, `agent_acceptance_panel`
 
 Agent-first dig: **landing stories must have deterministic scene walks** so
 agents interact with the built app (HTTP navigate/assert), not only DSL
 structure. A story is not done when `executed_by` is set — residual until a
-walk covers it (and dry-run / live run is green).
+walk covers it (dry-run green; live preferred).
+
+## Dig contract (PASS requirements)
+
+**PASS without the contract is invalid** (self-audit + `process_dig` residual).
+
+| # | Step | Required | Evidence |
+|---|------|----------|----------|
+| S1 | Residual landing story ids | MUST | `contract: stories=ST-…` |
+| S2 | Cite a **map** (stem **or** SPEC/SPECIFICATION **or** story then:) | MUST | `contract: maps_cited=path` |
+| S3 | Author/edit walk YAML for ≥1 missing landing | MUST | path under `fixtures/scene_walks/` |
+| S4 | Walk load + validate | MUST | exit 0 |
+| S5 | Walk dry-run | MUST | exit 0 |
+| S6 | Live walk (seeded server) | SHOULD | exit 0 **or** `contract: live_run=skipped reason=…` |
+| S7 | Job claim row | MAY | `fixtures/job_claims.yaml` |
+| S8 | Re-score probe | MUST | residual ↓ or app clear |
+| S9 | Dig receipt | MUST | see below |
+
+### Required log lines
+
+```text
+contract: stories=ST-004,ST-005
+contract: maps_cited=examples/contact_manager/stems/story-driven-jobs.md
+contract: walk_validate=0 walk_dry_run=0
+contract: live_run=skipped reason=no_db
+```
+
+### Dig receipt (MUST)
+
+```bash
+python scripts/improve_dig_receipt.py write \
+  --app "$APP" --strategy story_walk --cycle N \
+  --stories ST-004,ST-005 \
+  --maps examples/$APP/stems/story-driven-jobs.md \
+  --walks fixtures/scene_walks/user_st_004.yaml \
+  --walk-validate 0 --walk-dry-run 0 \
+  --live-skip no_db \
+  --outcome PASS \
+  --epistemic live_unproven
+```
+
+After **live** green:
+
+```bash
+python scripts/improve_dig_receipt.py mark-live --app "$APP" --walk <walk_id>
+# and write receipt with --walk-live-run 0 (no --live-skip)
+```
+
+**FAIL:** clearing residual by deleting stories or inventing densify desks.
+**BLOCKED:** tools prevent S4–S5 — receipt `--outcome BLOCKED` with notes.
 
 ## Machine probe
 
 ```bash
 python scripts/story_walk_bar.py                 # table
-python scripts/story_walk_bar.py --status        # cycle log line
-python scripts/story_walk_bar.py --next          # residual app
+python scripts/story_walk_bar.py --status
+python scripts/story_walk_bar.py --next
 python scripts/story_walk_bar.py --app NAME --json
-python scripts/story_walk_bar.py --strict
-python scripts/story_walk_bar.py --write-stubs   # draft YAML for missing landings
-# unified OBSERVE:
+python scripts/story_walk_bar.py --write-stubs
 python scripts/improve_example_probes.py --status
-# force=example-apps story_walk when story_walk residual > 0
 ```
 
-**Landing story** = accepted, not `narrative_only`, with persona, and either
-`trigger: user_click` or `executed_by` on a list/queue/desk/dashboard/board surface.
+**Landing story** = accepted, not `narrative_only`, persona, and `user_click`
+or desk/list/queue/dashboard/board `executed_by`.
 
-**Residual when:**
+**Residual issues:**
 
 | Issue | Meaning |
 |-------|---------|
-| `no_walks` | Landings exist, zero scene walk files |
-| `missing_walk:ST-…` | Landing story id not referenced by any walk scene |
-| `persona_no_walk:…` | Persona has landings but no walk uses that persona |
-| `walk_load_failed:…` | YAML/schema load error |
+| `no_walks` / `missing_walk:ST-…` | Coverage |
+| `persona_no_walk:…` | Persona without any walk |
+| `walk_load_failed:…` | YAML/schema |
+| `diverge:entry_ws:…` | Walk entry/home ≠ story/persona workspace |
+| `diverge:persona:…` | Walk persona ≠ story persona |
+| `diverge:weak_cues:…` | Empty/generic assert_any_text |
+| `diverge:unknown_story:…` | Walk cites missing story id |
+| `live_unproven:…` | Walk exists, never live-green (deepen) |
 
-Bar: cover at least `min(2, landing_count)` landing stories (more = deepen).
+Bar: cover at least `min(2, landing_count)` landings.
 
 ## When to pick
 
-* `improve_example_probes` reports `story_walk residual>0` / `force=example-apps story_walk`
-* Force path above
+* `force=example-apps story_walk` / story_walk residual > 0
+* `process_dig` residual for story_walk incomplete contract
 * Backlog gap type `story_walk`
-* After product + demo + journey residual are empty (or in parallel if story_walk is preferred next)
 
-Skip when:
-
-* story_walk residual=0 for fleet (hand off to `agent_acceptance_panel` / trial_verdict)
-* CI / CodeQL preemption
-
-`budget_consumed: 0` for stub authoring + dry-run
-`budget_consumed: 1` if live `dazzle test walk run` against a server this cycle
+`budget_consumed: 0` dry-run dig · `1` if live walk/serve
 
 ## Playbook (one app per cycle)
 
@@ -63,57 +107,50 @@ APP=$(python scripts/story_walk_bar.py --next)
 python scripts/story_walk_bar.py --app "$APP" --json
 ```
 
-Create/update backlog row: `| N | $APP | story_walk | missing landings | IN_PROGRESS | 0 | |`
+### 2. ENHANCE (maps + walks)
 
-### 2. ENHANCE
-
-1. **Stub missing walks** (if none / gaps):
-
-   ```bash
-   python scripts/story_walk_bar.py --app "$APP" --write-stubs
-   ```
-
-2. **Edit stubs** for real cues:
-   - `entry:` = persona default workspace or story `given:` workspace
-   - `assert_any_text.texts` from story title / then: domain words
-   - Keep **core-only** actions for showcase (navigate, assert_*)
-
-3. **Validate**:
-
-   ```bash
-   dazzle test walk validate --project examples/$APP
-   # or load via unit path:
-   python -c "from pathlib import Path; from dazzle.testing.walk import discover_walk_paths, load_walk, validate_walk; from dazzle.core.appspec_loader import load_project_appspec; r=Path('examples/$APP'); a=load_project_appspec(r);
-[print(load_walk(p).walk_id, validate_walk(load_walk(p), appspec=a)) for p in discover_walk_paths(r)]"
-   ```
-
-4. **Dry-run**:
-
-   ```bash
-   dazzle test walk run --project examples/$APP --dry-run
-   ```
-
-5. Optional **job_claims.yaml** row (`status: documented`) binding the walk.
-
-6. **Live** (when Postgres/server available): seed + `dazzle test walk run --project examples/$APP` without dry-run; fix seeds/UX if asserts fail.
-
-### 3. BUILD / GATE
+1. Read residual story ids; open stem or SPEC once (S2).
+2. `python scripts/story_walk_bar.py --app "$APP" --write-stubs` if needed.
+3. Edit stubs: real workspace entry, domain `assert_any_text` from story title/then.
+4. Validate + dry-run:
 
 ```bash
-python scripts/story_walk_bar.py --app "$APP" --strict   # exit 0 when app clear
+# validate via load path or dazzle test walk if available
+python - <<'PY'
+from pathlib import Path
+from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.testing.walk import discover_walk_paths, load_walk, validate_walk
+r = Path("examples/$APP")
+a = load_project_appspec(r)
+for p in discover_walk_paths(r):
+    w = load_walk(p)
+    print(w.walk_id, validate_walk(w, appspec=a))
+PY
+# dry-run:
+python -c "from dazzle.testing.walk.runner import run_walk_sync; from dazzle.testing.walk.loader import load_walk; from dazzle.testing.walk.discovery import discover_walk_paths; from pathlib import Path
+r=Path('examples/$APP')
+for p in discover_walk_paths(r):
+  w=load_walk(p); print(run_walk_sync(w, base_url='http://example.test', project_root=r, dry_run=True).summary())"
+```
+
+5. Live if DB available; else `live_run=skipped` + epistemic live_unproven.
+6. Write dig receipt (S9).
+
+### 3. GATE
+
+```bash
+python scripts/story_walk_bar.py --app "$APP"
 python scripts/improve_example_probes.py --status
 ```
 
 ### 4. SHIP
 
-Commit walks + claims under `examples/$APP/fixtures/`. Log:
-`story_walk: $APP covered N/M landings; walks=…`
+Commit walks (+ optional claims). Log contract lines + residual delta.
 
-Do **not** densify desks in this strategy. Prefer walk + seed + shallow UX fix
-on the story path.
+**Do not densify** desks. Prefer walk + seed + shallow UX on the story path.
 
 ## Hand-off
 
-* Structural story bind missing → `journey_dogfood`
-* Walk green but still empty hero / seeds → `demo_fleet`
-* Walk green, want buyer judgment → `agent_acceptance_panel`
+* Bind stories → `journey_dogfood`
+* Empty stills/seeds → `demo_fleet`
+* Buyer judgment → `agent_acceptance_panel`

@@ -53,6 +53,24 @@ Its brief is to **refute**, not summarise:
 Verdict per commit: `CLEAN` | `DISCREPANCY` (with evidence: file:line, failing
 command output, missing test).
 
+### 3b. Dig contract check (story_walk / agent_acceptance)
+
+When a sampled cycle log says `lane: example-apps` with strategy `story_walk`
+or `agent_acceptance_panel` (or `force=example-apps story_walk` / acceptance):
+
+1. Grep the cycle entry for `contract:` lines (`stories=`, `maps_cited=`,
+   `walk_validate=` / `trial_ran=` / `live_run=`).
+2. Prefer a dig receipt under `.dazzle/improve-digs/` matching app+strategy
+   (`python scripts/improve_dig_receipt.py check --app … --strategy …`).
+3. **DISCREPANCY** if the log claims PASS / residual reduced for that strategy
+   but contract lines are missing **and** no receipt with `outcome=PASS` and
+   `contract_ok`.
+4. **DISCREPANCY** if receipt exists with `outcome=contract_incomplete` but the
+   log claimed a clean PASS.
+
+This enforces dig contracts without re-judging UX taste (design
+`2026-07-21-improve-dig-contracts-and-process-sensors-design.md`).
+
 ### 4. Apply findings
 
 - **Shipped-broken** (claimed fix doesn't work / test fails) → mark the affected

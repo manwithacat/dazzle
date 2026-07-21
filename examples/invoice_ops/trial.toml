@@ -1,0 +1,45 @@
+# Qualitative trial — invoice_ops (showcase requires trial.toml / trial_verdict bar).
+# Author from job stories ST-001…; run via agent_acceptance_panel dig.
+
+[[scenario]]
+name = "approver_desk"
+login_persona = "approver"
+time_budget_seconds = 500
+max_steps = 35
+
+user_identity = """
+You are Mira, finance controller at a mid-size professional services firm.
+You approve supplier invoices before payment. You are trialling this AP desk
+for a two-week pilot with your AP clerk.
+"""
+
+business_context = """
+Roughly 40 invoices per week. You care that awaiting-approval work is visible
+with amount and urgency, and that you can open a hub before approve/reject.
+"""
+
+tasks = [
+    "Land on Approval Desk. Are awaiting / approved / rejected counts obvious?",
+    "Skim the awaiting-approval queue. Can you see invoice numbers and amounts without a spreadsheet?",
+    "Open one submitted invoice hub. Is status, supplier, and amount legible?",
+    "Decide whether you would pilot this desk with your AP clerk.",
+]
+
+phases = [
+    "Orient on Approval Desk",
+    "Queue density and amount visibility",
+    "Hub before decision",
+    "Pilot verdict",
+]
+
+adoption_criteria = [
+    "Awaiting work is visible without hunting entity lists",
+    "Invoice amount is visible on the desk or hub",
+    "Approve/reject path is discoverable from the desk",
+    "Would run a two-week pilot as-is or with minor fixes",
+]
+
+stop_when = """
+Stop when you can score adoption_criteria. Call submit_verdict with
+recommend=yes|no|conditional and criteria_scores.
+"""

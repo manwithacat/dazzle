@@ -41,7 +41,38 @@ Skip when product residual, demo residual, or story_walk residual is open
 (fix structure/seeds/walks first — panel after agents can land).
 
 `budget_consumed: 1` (live trial dig) — or `0` if only authoring/updating
-`trial.toml` without a live run this cycle.
+`trial.toml` without a live run this cycle (must still write dig receipt with
+`trial_skip_reason`).
+
+## Dig contract (PASS requirements)
+
+Design: `docs/superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md`
+
+| # | Step | Required | Evidence |
+|---|------|----------|----------|
+| A1 | `trial.toml` exists or authored this cycle | MUST | file |
+| A2 | Cite maps: ≥1 story id + adoption_criteria | MUST | `contract: maps_cited=…` `contract: stories=…` |
+| A3 | Run ≥1 panel seat **or** explicit skip | MUST | trial report JSON **or** `trial_skip_reason` |
+| A4 | Verdict parseable by `trial_verdict_bar` when trial ran | MUST | `qa-trial-*.json` with recommend |
+| A5 | Dig receipt | MUST | `improve_dig_receipt.py write --strategy agent_acceptance_panel` |
+
+```bash
+# After a real trial (report under dev_docs/ or .dazzle/):
+python scripts/improve_dig_receipt.py write \
+  --app "$APP" --strategy agent_acceptance_panel --cycle N \
+  --stories ST-001 --maps examples/$APP/dsl/stories.dsl \
+  --trial-ran --trial-report dev_docs/qa-trial-….json \
+  --outcome PASS
+
+# Authoring-only cycle (toml only — next cycle runs panel):
+python scripts/improve_dig_receipt.py write \
+  --app "$APP" --strategy agent_acceptance_panel --cycle N \
+  --maps examples/$APP/trial.toml \
+  --trial-skip-reason authoring_only --outcome PASS
+```
+
+**FAIL:** claim panel PASS without report and without skip reason.
+**Log lines:** `contract: stories=…` `contract: maps_cited=…` `contract: trial_ran=1|skip`
 
 ## Panel composition (minimum)
 

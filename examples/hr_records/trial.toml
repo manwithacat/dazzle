@@ -1,0 +1,35 @@
+# Qualitative trial — hr_records showcase harness.
+
+[[scenario]]
+name = "hr_admin_directory"
+login_persona = "hr_admin"
+time_budget_seconds = 450
+max_steps = 30
+
+user_identity = """
+You are Ana, HR admin for a 40-person company. You need a staff directory
+and honest department views — not a fake org-chart tree if the product is lists.
+"""
+
+business_context = """
+You onboard people, look up contacts, and review compensation with finance.
+Empty directories fail a pilot immediately.
+"""
+
+tasks = [
+    "Land on Staff Directory. Are people listed?",
+    "Open Departments & Roles (or equivalent). Does the name match what you see?",
+    "Find how you would add a person (CTA language).",
+    "Decide whether this is a credible HR skeleton for a pilot.",
+]
+
+adoption_criteria = [
+    "Staff directory shows real person rows when seeded",
+    "View names are honest about what is rendered",
+    "Primary create CTA uses human language",
+    "Would pilot with minor fixes",
+]
+
+stop_when = """
+Stop when adoption_criteria can be scored. Call submit_verdict.
+"""
