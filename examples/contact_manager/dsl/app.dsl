@@ -250,14 +250,16 @@ workspace home "Home":
     source: Contact
     display: search_box
     title: "Find a contact"
+    empty: "Results appear below as you type (name, company, or email). The directory list stays full until you open a hit."
 
   ux:
     as user:
       purpose: "See a friendly overview before diving into the full list"
-      focus: directory_stats, favourite_contacts, recent_contacts
+      # Surface search early so pilots discover FTS (panel 1279 missed results panel)
+      focus: directory_stats, find_contact, favourite_contacts, recent_contacts
     as admin:
       purpose: "Directory overview"
-      focus: directory_stats, favourite_contacts, recent_contacts
+      focus: directory_stats, find_contact, favourite_contacts, recent_contacts
 
 # Workspace with list + detail pattern
 workspace contacts "Contacts":
@@ -267,11 +269,13 @@ workspace contacts "Contacts":
   access: persona(user, admin)
   stage: "dual_pane_flow"
 
-  # Search signal — htmx-driven box that hits /api/fts/Contact.
+  # Search signal — htmx-driven box that hits /_dazzle/fts/Contact (results
+  # panel under the input — not a filter on contact_list).
   contact_search:
     source: Contact
     display: search_box
     title: "Find a contact"
+    empty: "Results appear below as you type. The A–Z list is not filtered — open a hit from the results panel."
 
   # Favourites strip above the A–Z list (ST-007).
   favourites_queue:

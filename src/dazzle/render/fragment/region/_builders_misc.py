@@ -175,7 +175,10 @@ class _BuildersMiscMixin:
         source_entity = str(ctx.get("source_entity") or "")
         name = str(ctx.get("name") or getattr(region, "name", "") or "searchbox")
         placeholder = str(ctx.get("placeholder") or "Search…")
-        coaching = str(ctx.get("coaching_message") or "Type to search")
+        # Prefer explicit coaching_message; else region empty: copy (DSL empty
+        # on search_box is pilot coaching — cycle 1280 contact_manager).
+        empty_msg = getattr(region, "empty_message", None) or ctx.get("empty_message")
+        coaching = str(ctx.get("coaching_message") or empty_msg or "Type to search")
         label = str(ctx.get("label") or title or placeholder)
 
         if source_entity:

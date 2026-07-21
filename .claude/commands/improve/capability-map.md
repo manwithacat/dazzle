@@ -49,13 +49,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1233 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1279 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1280 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1258 | USED |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1258 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1279 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1279 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1280 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1280 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1278 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1278 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | USED |
@@ -111,6 +111,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1280 (2026-07-21).** **example-apps agent_acceptance_panel** contact_manager
+> product fix #303: FTS HTML labels first+last (not UUID); search_box empty coaching;
+> home focus find_contact. residual still 8 (recommend:no until re-panel).
+> densify_allowed=0. **USED@1280**. budget 1. Explore **37/100**.
+
 
 > **Cycle 1279 (2026-07-21).** **example-apps agent_acceptance_panel** contact_manager —
 > authored adoption_criteria; live grok-cli trial small_firm_owner recommend=**no**;

@@ -168,13 +168,28 @@ def _render_results_html(entity: str, q: str, result: dict[str, Any]) -> HTMLRes
         id_str = str(_id)
         id_attr = html.escape(id_str, quote=True)
 
+        # Prefer human labels over raw ids. Contact-style rows often have
+        # first_name/last_name/email but no title/name — showing UUIDs made
+        # FTS look broken to pilots (cycle 1279 agent_acceptance_panel).
         label_value: Any = None
-        if snippet_fields:
+        if snippet_fields and isinstance(item, dict):
             first_field = snippet_fields[0]
-            if isinstance(item, dict):
-                label_value = item.get(first_field)
+            label_value = item.get(first_field)
         if not label_value and isinstance(item, dict):
-            label_value = item.get("title") or item.get("name")
+            label_value = item.get("title") or item.get("name") or item.get("label")
+        if not label_value and isinstance(item, dict):
+            fn = item.get("first_name")
+            ln = item.get("last_name")
+            if fn or ln:
+                label_value = " ".join(str(p) for p in (fn, ln) if p)
+        if not label_value and isinstance(item, dict):
+            label_value = (
+                item.get("email")
+                or item.get("last_name")
+                or item.get("first_name")
+                or item.get("subject")
+                or item.get("message")
+            )
         if not label_value:
             label_value = id_str
         label_html = html.escape(str(label_value), quote=True)
