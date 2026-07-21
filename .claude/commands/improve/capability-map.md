@@ -54,10 +54,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1258 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1268 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1269 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1258 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1268 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1268 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1269 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1269 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | USED |
@@ -111,6 +111,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1269 (2026-07-21).** **example-apps story_walk** support_tickets dig contracts —
+> covered ST-021/027/030 (+ existing ST-019/025); 5/5 landings; thin→deepen; cleared
+> persona_no_walk admin/manager. No thin/critical story_walk left (9 deepen only).
+> Receipt `.dazzle/improve-digs/*-support_tickets-story_walk.json`. densify_allowed=0.
+> Stamped story_walk / test walk / probes **USED@1269**. budget_consumed 0. Explore **26/100**.
 
 > **Cycle 1268 (2026-07-21).** **example-apps story_walk** simple_task dig contracts —
 > covered remaining ST-015/016/018/021 (manager) + existing ST-020; validate+dry-run green;

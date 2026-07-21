@@ -1,0 +1,22 @@
+# Story walk ST-021 — Support Agent views full ticket detail with comment history
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-021 then:
+
+persona: agent
+home_workspace: ticket_queue
+
+scenes:
+  - id: land_st_021
+    story: ST-021
+    entry: /app/workspaces/ticket_queue
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Ticket
+          - Status
+          - Comment
+          - Discussion
+          - Queue
+    expects: "Authenticated agent sees path cues to ticket hub with discussion"

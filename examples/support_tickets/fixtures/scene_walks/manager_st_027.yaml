@@ -1,0 +1,22 @@
+# Story walk ST-027 — Support Manager reviews team performance
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-027 then:
+
+persona: manager
+home_workspace: manager_ops
+
+scenes:
+  - id: land_st_027
+    story: ST-027
+    entry: /app/workspaces/manager_ops
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - SLA
+          - Critical
+          - Unassigned
+          - Ticket
+          - Queue
+    expects: "Authenticated manager sees SLA strip and critical/unassigned queue cues"

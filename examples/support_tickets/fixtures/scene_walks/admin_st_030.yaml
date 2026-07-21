@@ -1,0 +1,22 @@
+# Story walk ST-030 — Administrator triages the full ticket queue
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-030 then:
+
+persona: admin
+home_workspace: ticket_queue
+
+scenes:
+  - id: land_st_030
+    story: ST-030
+    entry: /app/workspaces/ticket_queue
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Ticket
+          - Queue
+          - Status
+          - Open
+          - Critical
+    expects: "Authenticated admin sees full ticket queue triage cues"
