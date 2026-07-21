@@ -42,11 +42,28 @@ class TestStoryWalkBar:
         row = story_bar.score_app("simple_task")
         assert "ST-020" in row.covered_ids or row.walk_count >= 1
 
-    def test_contact_manager_no_walks_is_residual(self, story_bar) -> None:
+    def test_zero_walks_is_critical_residual(self, story_bar) -> None:
+        """Apps with landings but no walks score critical (not a pinned app tier).
+
+        Cycle 1260 added contact_manager walks → that app moved to deepen
+        (live_unproven). Pinning tier==critical on a maturing showcase app
+        reds main after every successful story_walk dig.
+        """
+        rows = story_bar.scan()
+        zero = [r for r in rows if r.landing_stories > 0 and r.walk_count == 0]
+        assert zero, "showcase should still have no-walk residual apps"
+        for row in zero:
+            assert row.is_residual
+            assert row.tier == "critical"
+            assert any(i == "no_walks" or i.startswith("missing_walk:") for i in row.issues)
+
+    def test_contact_manager_walks_cover_landings(self, story_bar) -> None:
+        """contact_manager dig (cycle 1260): covered landings; residual may be epistemic."""
         row = story_bar.score_app("contact_manager")
-        assert row.is_residual
-        assert row.tier == "critical"
-        assert any(i == "no_walks" or i.startswith("missing_walk:") for i in row.issues)
+        assert row.walk_count >= 1
+        assert row.covered >= min(2, row.landing_stories) or row.landing_stories == 0
+        # May still residual via live_unproven / deepen — not critical no_walks
+        assert "no_walks" not in row.issues
 
     def test_scan_fleet_has_residual(self, story_bar) -> None:
         rows = story_bar.scan()

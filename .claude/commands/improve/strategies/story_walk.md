@@ -141,6 +141,9 @@ for p in discover_walk_paths(r):
 ```bash
 python scripts/story_walk_bar.py --app "$APP"
 python scripts/improve_example_probes.py --status
+# Close-the-loop (cycle 1261 CI red): fleet-pinned residual tiers break when
+# walks land — always re-run the unit probe before push.
+uv run pytest tests/unit/test_story_walk_bar.py -q
 ```
 
 ### 4. SHIP
