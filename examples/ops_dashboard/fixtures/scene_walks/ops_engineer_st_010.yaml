@@ -1,0 +1,22 @@
+# Story walk ST-010 — Operations Engineer reviews alert history against system health
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-010 then:
+
+persona: ops_engineer
+home_workspace: command_center
+
+scenes:
+  - id: land_st_010
+    story: ST-010
+    entry: /app/workspaces/command_center
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Alert
+          - Health
+          - System
+          - History
+          - Status
+    expects: "Authenticated ops engineer sees alert history and system health correlation cues"

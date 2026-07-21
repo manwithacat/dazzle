@@ -1,0 +1,22 @@
+# Story walk ST-006 — Operations Engineer monitors health from the command center
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-006 then:
+
+persona: ops_engineer
+home_workspace: command_center
+
+scenes:
+  - id: land_st_006
+    story: ST-006
+    entry: /app/workspaces/command_center
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Command
+          - Health
+          - System
+          - Critical
+          - Status
+    expects: "Authenticated ops engineer sees health summary and system status cues"

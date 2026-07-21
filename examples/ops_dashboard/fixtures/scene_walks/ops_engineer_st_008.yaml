@@ -1,0 +1,22 @@
+# Story walk ST-008 — Operations Engineer triages alerts by severity then opens system context
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-008 then:
+
+persona: ops_engineer
+home_workspace: command_center
+
+scenes:
+  - id: land_st_008
+    story: ST-008
+    entry: /app/workspaces/command_center
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Severity
+          - Alert
+          - Critical
+          - System
+          - Triage
+    expects: "Authenticated ops engineer sees severity triage and system context cues"

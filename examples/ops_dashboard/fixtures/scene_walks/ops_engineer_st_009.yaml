@@ -1,0 +1,22 @@
+# Story walk ST-009 — Operations Engineer drills into a degraded system hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-009 then:
+
+persona: ops_engineer
+home_workspace: command_center
+
+scenes:
+  - id: land_st_009
+    story: ST-009
+    entry: /app/workspaces/command_center
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - System
+          - Degraded
+          - Health
+          - Alert
+          - Critical
+    expects: "Authenticated ops engineer sees path cues to degraded system hub"

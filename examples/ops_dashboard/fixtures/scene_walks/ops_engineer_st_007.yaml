@@ -1,0 +1,22 @@
+# Story walk ST-007 — Operations Engineer acknowledges an alert from the ack queue
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-007 then:
+
+persona: ops_engineer
+home_workspace: command_center
+
+scenes:
+  - id: land_st_007
+    story: ST-007
+    entry: /app/workspaces/command_center
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Alert
+          - Ack
+          - Active
+          - Queue
+          - Severity
+    expects: "Authenticated ops engineer sees acknowledgement queue and active alert cues"

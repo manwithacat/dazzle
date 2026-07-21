@@ -54,10 +54,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1258 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1265 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1266 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1258 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1265 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1265 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1266 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1266 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | USED |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | USED |
@@ -111,6 +111,12 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1266 (2026-07-21).** **example-apps story_walk** ops_dashboard dig contracts —
+> covered ST-006..010 with domain assert cues; walk validate+dry-run green;
+> live skipped (no_seeded_server) → epistemic live_unproven; residual critical→deepen for app.
+> Receipt `.dazzle/improve-digs/*-ops_dashboard-story_walk.json`. densify_allowed=0.
+> Stamped story_walk / test walk / probes **USED@1266**. budget_consumed 0. Explore **26/100**.
 
 > **Cycle 1265 (2026-07-21).** **example-apps story_walk** invoice_ops dig contracts —
 > covered ST-001..006 with domain assert cues; walk validate+dry-run green;
