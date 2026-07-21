@@ -1,0 +1,21 @@
+# Story walk ST-001 — designer portfolio on studio_dashboard, path to brand hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-001 then:
+
+persona: designer
+home_workspace: studio_dashboard
+
+scenes:
+  - id: land_st_001
+    story: ST-001
+    entry: /app/workspaces/studio_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Brand
+          - Asset
+          - Studio
+          - portfolio
+    expects: "Authenticated designer sees studio portfolio metrics and brand cues"

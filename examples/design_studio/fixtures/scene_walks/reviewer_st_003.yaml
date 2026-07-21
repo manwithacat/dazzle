@@ -1,0 +1,21 @@
+# Story walk ST-003 — reviewer review queue on asset catalog
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-003 then:
+
+persona: reviewer
+home_workspace: asset_catalog
+
+scenes:
+  - id: land_st_003
+    story: ST-003
+    entry: /app/workspaces/asset_catalog
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Asset
+          - Review
+          - Catalog
+          - approved
+    expects: "Authenticated reviewer sees asset catalog review-queue cues"

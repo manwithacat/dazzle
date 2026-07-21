@@ -1,0 +1,22 @@
+# Story walk ST-006 — designer feedback trail back to asset hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-006 then:
+# Land-and-see on studio_dashboard; feedback_desk available for live deepen.
+
+persona: designer
+home_workspace: studio_dashboard
+
+scenes:
+  - id: land_st_006
+    story: ST-006
+    entry: /app/workspaces/studio_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Asset
+          - Feedback
+          - Brand
+          - Studio
+    expects: "Authenticated designer sees portfolio cues before tracing feedback to asset hub"

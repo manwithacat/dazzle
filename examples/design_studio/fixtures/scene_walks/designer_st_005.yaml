@@ -1,0 +1,21 @@
+# Story walk ST-005 — designer asset list path to brand context (land studio_dashboard)
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-005 then:
+
+persona: designer
+home_workspace: studio_dashboard
+
+scenes:
+  - id: land_st_005
+    story: ST-005
+    entry: /app/workspaces/studio_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Asset
+          - Brand
+          - Studio
+          - Campaign
+    expects: "Authenticated designer sees asset/brand portfolio cues for brand-context hop"

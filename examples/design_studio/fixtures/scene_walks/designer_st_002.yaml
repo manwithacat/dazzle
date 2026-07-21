@@ -1,0 +1,22 @@
+# Story walk ST-002 — designer path toward brand hub (assets + campaigns)
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-002 then:
+# Land-and-see on studio_dashboard first; live dig can deepen into brand detail URL.
+
+persona: designer
+home_workspace: studio_dashboard
+
+scenes:
+  - id: land_st_002
+    story: ST-002
+    entry: /app/workspaces/studio_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Brand
+          - Asset
+          - Campaign
+          - Studio
+    expects: "Authenticated designer sees brand/asset/campaign portfolio cues before hub hop"

@@ -1,0 +1,22 @@
+# Story walk ST-004 — reviewer asset hub with feedback trail (land on review_desk)
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-004 then:
+# Persona default review_desk; live dig can deepen into asset detail URL.
+
+persona: reviewer
+home_workspace: review_desk
+
+scenes:
+  - id: land_st_004
+    story: ST-004
+    entry: /app/workspaces/review_desk
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Asset
+          - Feedback
+          - Review
+          - approved
+    expects: "Authenticated reviewer sees review desk asset/feedback trail cues"
