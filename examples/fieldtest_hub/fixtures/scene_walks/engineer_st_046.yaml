@@ -1,0 +1,22 @@
+# Story walk ST-046 — Engineer opens issue context then hops toward device
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-046 then:
+
+persona: engineer
+home_workspace: engineering_dashboard
+
+scenes:
+  - id: land_st_046
+    story: ST-046
+    entry: /app/workspaces/engineering_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Issue
+          - Device
+          - Report
+          - Severity
+          - Triage
+    expects: "Authenticated engineer sees issue list path that hops to device context"

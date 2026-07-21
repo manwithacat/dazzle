@@ -1,0 +1,22 @@
+# Story walk ST-040 — Manager reviews fleet workload on engineering_dashboard
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-040 then:
+
+persona: manager
+home_workspace: engineering_dashboard
+
+scenes:
+  - id: land_st_040
+    story: ST-040
+    entry: /app/workspaces/engineering_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Device
+          - Task
+          - Fleet
+          - Attention
+          - Issue
+    expects: "Authenticated manager sees fleet metrics and open work queue cues"

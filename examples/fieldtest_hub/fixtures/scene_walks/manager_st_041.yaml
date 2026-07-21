@@ -1,0 +1,22 @@
+# Story walk ST-041 — Manager tracks firmware release progress
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-041 then:
+
+persona: manager
+home_workspace: engineering_dashboard
+
+scenes:
+  - id: land_st_041
+    story: ST-041
+    entry: /app/workspaces/engineering_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Firmware
+          - Release
+          - Draft
+          - Device
+          - Issue
+    expects: "Authenticated manager sees release metrics and firmware release cues"

@@ -1,0 +1,22 @@
+# Story walk ST-047 — Manager opens tester hub path from manager_ops
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-047 then:
+
+persona: manager
+home_workspace: manager_ops
+
+scenes:
+  - id: land_st_047
+    story: ST-047
+    entry: /app/workspaces/manager_ops
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Device
+          - Tester
+          - Task
+          - Fleet
+          - Quality
+    expects: "Authenticated manager sees fleet quality path into tester hub assignments"

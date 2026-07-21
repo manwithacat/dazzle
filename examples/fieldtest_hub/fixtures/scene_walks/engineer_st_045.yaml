@@ -1,0 +1,22 @@
+# Story walk ST-045 — Engineer opens device hub path from engineering_dashboard
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-045 then:
+
+persona: engineer
+home_workspace: engineering_dashboard
+
+scenes:
+  - id: land_st_045
+    story: ST-045
+    entry: /app/workspaces/engineering_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Device
+          - Issue
+          - Session
+          - Fleet
+          - Report
+    expects: "Authenticated engineer sees device fleet path into hub with issues and sessions"

@@ -1,0 +1,22 @@
+# Story walk ST-044 — Field Tester views assigned devices on tester_dashboard
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-044 then:
+
+persona: tester
+home_workspace: tester_dashboard
+
+scenes:
+  - id: land_st_044
+    story: ST-044
+    entry: /app/workspaces/tester_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Device
+          - Issue
+          - Task
+          - Session
+          - Assigned
+    expects: "Authenticated tester sees personal device assignment and issue cues"

@@ -1,0 +1,22 @@
+# Story walk ST-037 — Engineer triages open issue reports on engineering_dashboard
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-037 then:
+
+persona: engineer
+home_workspace: engineering_dashboard
+
+scenes:
+  - id: land_st_037
+    story: ST-037
+    entry: /app/workspaces/engineering_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Issue
+          - Device
+          - Triage
+          - Severity
+          - Report
+    expects: "Authenticated engineer sees triage queue and open issue report cues"
