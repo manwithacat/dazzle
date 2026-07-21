@@ -41,6 +41,9 @@ def _base(**kwargs):
         "ci": "unavailable",
         # Isolate from live .dazzle/improve-github-inbox.json on the machine
         "github_heat": "",
+        # Isolate from live example probe residual (story_walk heat on disk)
+        "example_residual": 0,
+        "example_force": None,
     }
     d.update(kwargs)
     return d
@@ -99,7 +102,7 @@ def test_decide_ci_green_idle_when_only_noisy_actionable_cleared(sched):
             current_cycle=647,
         )
     )
-    assert d["interval"] == "15m"
+    assert d["interval"] == "30m"
     assert d["fire_immediately"] is False
     assert "inbox_reprobe" in d["reason"] or "only_blocked" in d["reason"]
 
@@ -130,7 +133,7 @@ def test_decide_regression_hot_immediate(sched):
 
 def test_decide_fail_backoff(sched):
     d = sched.decide(**_base(result="FAIL", explore_used=0))
-    assert d["interval"] == "10m"
+    assert d["interval"] == "15m"
     assert d["fire_immediately"] is False
 
 
@@ -143,12 +146,13 @@ def test_decide_ci_waiting_after_deploy(sched):
             counts={"urgent": 0, "actionable": 1, "blocked": 0, "settled": 0},
         )
     )
-    assert d["interval"] == "3m"
+    assert d["interval"] == "15m"
     assert d["fire_immediately"] is False
     assert "ci_waiting" in d["reason"]
 
 
-def test_decide_ci_green_opportunistic_immediate(sched):
+def test_decide_ci_green_post_deploy_settles(sched):
+    """After a push, wait for full CI room before the next ship cycle."""
     d = sched.decide(
         **_base(
             deployed=True,
@@ -157,9 +161,24 @@ def test_decide_ci_green_opportunistic_immediate(sched):
             counts={"urgent": 0, "actionable": 3, "blocked": 0, "settled": 0},
         )
     )
-    assert d["interval"] == "2m"
-    assert d["fire_immediately"] is True
-    assert "ci_green" in d["reason"]
+    assert d["interval"] == "45m"
+    assert d["fire_immediately"] is False
+    assert "post_deploy" in d["reason"] or "ci_green" in d["reason"]
+
+
+def test_decide_ci_green_product_residual_spaced(sched):
+    d = sched.decide(
+        **_base(
+            deployed=False,
+            ci="green",
+            example_residual=9,
+            example_force="story_walk",
+            explore_used=100,
+        )
+    )
+    assert d["interval"] == "20m"
+    assert d["fire_immediately"] is False
+    assert "example_residual" in d["reason"] or "product" in d["reason"]
 
 
 def test_decide_ci_red_repair_soon(sched):
@@ -180,7 +199,7 @@ def test_decide_explore_cap_inbox_reprobe(sched):
     """Quiet product state still re-polls GitHub regularly (not a multi-hour wait)."""
     d = sched.decide(**_base(ci="unavailable"))
     assert d["action"] == "schedule"
-    assert d["interval"] == "15m"
+    assert d["interval"] == "30m"
     assert "inbox_reprobe" in d["reason"]
 
 
@@ -192,7 +211,7 @@ def test_decide_self_audit_due_work_interval(sched):
             ci="unavailable",
         )
     )
-    assert d["interval"] == "5m"
+    assert d["interval"] == "20m"
     assert "self_audit_due" in d["reason"]
 
 
@@ -204,7 +223,7 @@ def test_decide_work_remaining_no_ci(sched):
             ci="unavailable",
         )
     )
-    assert d["interval"] == "5m"
+    assert d["interval"] == "20m"
     assert "work_remaining" in d["reason"]
 
 

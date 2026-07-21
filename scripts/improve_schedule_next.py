@@ -44,13 +44,16 @@ SELF_AUDIT_EVERY = 15
 CAPABILITY_SWEEP_EVERY = 20
 
 # Opportunistic intervals (Grok scheduler min is 60s).
-INTERVAL_HOT = "2m"  # CI green + work, REGRESSION, CI red repair, open bugs
-INTERVAL_CI_POLL = "3m"  # waiting for main CI after deploy
-INTERVAL_WORK = "5m"  # backlog / explore / cadence, no CI urgency
-INTERVAL_FAIL = "10m"
+# Prefer spacing that lets full main CI finish between ship cycles (~20–40m
+# typical for Dazzle tier1/Actions) so the chain does not thrash badge yellow.
+INTERVAL_HOT = "2m"  # REGRESSION, CI red repair, open bugs, Dependabot only
+INTERVAL_CI_POLL = "15m"  # waiting for main CI after deploy (full suite, not 3m thrash)
+INTERVAL_POST_DEPLOY = "45m"  # green after push: next dig after CI has room to complete
+INTERVAL_WORK = "20m"  # product residual / explore when not ship-urgent
+INTERVAL_FAIL = "15m"
 # Quiet product state still re-probes GitHub inbox regularly so newly filed
 # issues are not left waiting an arbitrary multi-hour gap.
-INTERVAL_INBOX_POLL = "15m"
+INTERVAL_INBOX_POLL = "30m"
 INTERVAL_SLOW = "2h"  # reserved; prefer INTERVAL_INBOX_POLL when chain continues
 
 # Driver Step 1 "actionable" statuses + TR rows that still justify a hot chain.
@@ -86,14 +89,21 @@ PROMPT = (
     "Dazzle self-chained cycle. Run **one** improve cycle end-to-end per "
     "`.claude/commands/improve.md` (lock → preflight → CI/CodeQL → signals → "
     "lane pick → playbook → log → unlock). Prefer `make` / `uv run` (uv-only "
-    "toolchain; primary Python from `.python-version`). At REPORT end, run:\n"
+    "toolchain; primary Python from `.python-version`).\n\n"
+    "OBSERVE first: `uv run python scripts/improve_example_probes.py --status`. "
+    "When residual_total>0, honor force= (story_walk / agent_acceptance_panel / "
+    "demo_fleet / …). Dig contracts required for story_walk and acceptance "
+    "(map citation + actuators + dig receipt — see "
+    "`docs/superpowers/specs/2026-07-21-improve-dig-contracts-and-process-sensors-design.md`). "
+    "Do not densify when densify_allowed=0.\n\n"
+    "At REPORT end, run:\n"
     "  uv run python scripts/improve_schedule_next.py --result PASS|FAIL "
     "[--deployed 1] [--ci auto|green|red|in_progress|unavailable] [--stop]\n"
     "then call `scheduler_create` with the JSON's `scheduler_create` fields when "
-    "`action=schedule` (use interval + fire_immediately + durable=true + "
-    "recurring=false from the JSON). Keep a single pending /improve one-shot; "
-    "do not create recurring:true for the main chain. Prefer opportunistic "
-    "CI-aware intervals over fixed 15–20m waits."
+    "`action=schedule` (interval + fire_immediately + durable=true + "
+    "recurring=false). Keep a **single** pending /improve one-shot. "
+    "Post-deploy intervals leave room for complete main CI (~45m) before the "
+    "next ship cycle; do not thrash 2m after every push."
 )
 
 _CYCLE_RE = re.compile(
@@ -296,6 +306,35 @@ def _github_inbox_heat() -> str | None:
     return None
 
 
+def probe_example_residual() -> tuple[int, str | None, str | None]:
+    """Return (residual_total, next_app, force_strategy) from example probes."""
+    try:
+        raw = subprocess.check_output(
+            [sys.executable, str(ROOT / "scripts" / "improve_example_probes.py"), "--json"],
+            cwd=ROOT,
+            text=True,
+            timeout=120,
+            stderr=subprocess.DEVNULL,
+        )
+        data = json.loads(raw or "{}")
+        probes = data.get("probes") or []
+        total = 0
+        for p in probes:
+            try:
+                n = int(p.get("residual") or 0)
+            except (TypeError, ValueError):
+                n = 0
+            if n > 0:
+                total += n
+        nxt = data.get("next")
+        force = data.get("force") or data.get("next_strategy")
+        if isinstance(force, str) and force.startswith("example-apps "):
+            force = force.split(None, 1)[-1]
+        return total, (str(nxt) if nxt else None), (str(force) if force else None)
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError, ValueError, TypeError):
+        return 0, None, None
+
+
 def _has_work(
     *,
     counts: dict[str, int],
@@ -304,8 +343,10 @@ def _has_work(
     last_self_audit: int | None,
     last_capability_sweep: int | None,
     github_heat: str | None = None,
+    example_residual: int = 0,
+    example_force: str | None = None,
 ) -> tuple[bool, str]:
-    """Whether the next cycle has product/governance work worth a hot chain."""
+    """Whether the next cycle has product/governance work worth a chain fire."""
     if github_heat in (
         "dependabot_merge",
         "consumer_bug",
@@ -315,6 +356,11 @@ def _has_work(
         return True, f"github_inbox={github_heat}"
     if int(counts.get("urgent", 0)) > 0:
         return True, "regression"
+    if example_residual > 0:
+        why = f"example_residual={example_residual}"
+        if example_force:
+            why += f" force={example_force}"
+        return True, why
     if int(counts.get("actionable", 0)) > 0:
         return True, f"actionable={counts.get('actionable')}"
     if explore_used < EXPLORE_CAP:
@@ -342,11 +388,14 @@ def decide(
     force_stop: bool,
     ci: str = "unavailable",
     github_heat: str | None = None,
+    example_residual: int | None = None,
+    example_force: str | None = None,
 ) -> dict:
     """Return schedule decision (action, interval, fire_immediately, reason).
 
     ``ci`` ∈ {green, red, in_progress, unavailable}.
     ``github_heat`` optional override (tests); default reads inbox state file.
+    ``example_residual`` optional (tests); default probes ``improve_example_probes``.
     """
     ci = (ci or "unavailable").lower()
 
@@ -412,6 +461,11 @@ def decide(
             fire_immediately=True,
         )
 
+    if example_residual is None:
+        ex_res, _ex_next, ex_force = probe_example_residual()
+    else:
+        ex_res = int(example_residual)
+        ex_force = example_force
     has_work, work_why = _has_work(
         counts=counts,
         explore_used=max(0, min(explore_used, EXPLORE_CAP)),
@@ -419,6 +473,8 @@ def decide(
         last_self_audit=last_self_audit,
         last_capability_sweep=last_capability_sweep,
         github_heat=github_heat,
+        example_residual=ex_res,
+        example_force=ex_force,
     )
 
     # --- CI-opportunistic path (post-deploy or always when status is known) ---
@@ -429,22 +485,29 @@ def decide(
                 f"ci_waiting in_progress work={work_why}",
             )
         if ci == "red":
-            # Next cycle is CI repair — don't sit for 20m.
+            # Next cycle is CI repair — don't sit long.
             return _sched(
                 INTERVAL_HOT,
                 f"ci_red repair_soon work={work_why}",
                 fire_immediately=True,
             )
-        if ci == "green" and has_work:
-            # Badge green → start product work ASAP (especially after push).
+        if ci == "green" and has_work and deployed:
+            # After a push: leave room for complete main CI before next dig ships.
             return _sched(
-                INTERVAL_HOT,
-                f"ci_green opportunistic work={work_why}" + (" deployed" if deployed else ""),
-                fire_immediately=True,
+                INTERVAL_POST_DEPLOY,
+                f"ci_green post_deploy settle work={work_why}",
+                fire_immediately=False,
+            )
+        if ci == "green" and has_work:
+            # Badge green, product residual — spaced product dig (not 2m thrash).
+            return _sched(
+                INTERVAL_WORK,
+                f"ci_green product work={work_why}",
+                fire_immediately=False,
             )
         if deployed and ci == "unavailable" and has_work:
             return _sched(
-                INTERVAL_WORK,
+                INTERVAL_POST_DEPLOY,
                 f"post_deploy_ci_unknown work={work_why}",
             )
         if deployed and not has_work and ci == "green":
@@ -452,7 +515,7 @@ def decide(
 
     # --- Work heat without CI urgency ---
     if has_work:
-        if work_why.startswith("actionable"):
+        if work_why.startswith("actionable") or work_why.startswith("example_residual"):
             return _sched(INTERVAL_WORK, f"work_remaining {work_why}")
         if work_why.startswith("explore"):
             return _sched(

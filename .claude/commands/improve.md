@@ -403,18 +403,18 @@ Not a fixed ticker. Heat + **main CI badge** choose the delay:
 
 | Situation | Interval | `fire_immediately` |
 |-----------|----------|--------------------|
-| REGRESSION rows | `2m` | yes |
-| CI **green** + work remains (esp. after `--deployed 1`) | `2m` | **yes** |
+| REGRESSION / Dependabot / open bugs | `2m` | yes |
 | CI **red** (repair soon) | `2m` | yes |
-| CI **in_progress** after deploy | `3m` poll | no |
-| Actionable / explore budget / self-audit or sweep due | `5m` | no |
-| Cycle failed | `10m` | no |
-| Explore at cap + no actionable + cadences not due | `2h` | no |
+| CI **in_progress** after deploy | `15m` poll | no |
+| CI **green** after **`--deployed 1`** + work | `45m` | no (full CI settle) |
+| CI **green** + product residual / work | `20m` | no |
+| Cycle failed | `15m` | no |
+| Explore at cap + idle | `30m` inbox poll | no |
 | Human/framework escalate (`--stop`) | — | — |
 
-**Intent:** after a push, re-arm a short **CI poll** while the badge is yellow; when
-CI turns green, the next one-shot should fire ASAP so product explore is not
-blocked by a 20m settle timer.
+**Intent:** leave room for **complete main CI** between ship cycles. After a push,
+wait ~45m (not 2m thrash). Product residual digs use ~20m spacing. Only
+REGRESSION / red CI / inbox bugs stay hot.
 #### Overlap hygiene
 
 - Prefer **one** pending `/improve` one-shot at a time.
