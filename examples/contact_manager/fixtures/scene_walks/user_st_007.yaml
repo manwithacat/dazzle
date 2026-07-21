@@ -1,0 +1,21 @@
+# Story walk ST-007 — favourites queue on Home (pin path land-and-see)
+# Maps: stems/story-driven-jobs.md; story then: favourite appears in queues
+
+persona: user
+home_workspace: home
+
+scenes:
+  - id: land_st_007
+    story: ST-007
+    entry: /app/workspaces/home
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Favourite
+          - Favorite
+          - Contact
+          - star
+    expects: "Authenticated user sees favourites queue affordances on Home"

@@ -1,0 +1,22 @@
+# Story walk ST-006 — path into contact hub (starts from Home directory sample)
+# Maps: stems/story-driven-jobs.md; story then: identity, employment, notes/timeline
+# Land-and-see on Home first (persona default); live dig can deepen into detail URL.
+
+persona: user
+home_workspace: home
+
+scenes:
+  - id: land_st_006
+    story: ST-006
+    entry: /app/workspaces/home
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Contact
+          - Company
+          - Favourite
+          - Find a contact
+    expects: "Authenticated user sees Home directory sample cues before opening a contact hub"

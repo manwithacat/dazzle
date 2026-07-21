@@ -1,0 +1,21 @@
+# Story walk ST-005 — dual-pane Contacts directory with favourites strip
+# Maps: stems/story-driven-jobs.md, stems/dual-pane-contacts.md, ST-005 then:
+
+persona: user
+home_workspace: contacts
+
+scenes:
+  - id: land_st_005
+    story: ST-005
+    entry: /app/workspaces/contacts
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Contacts
+          - Favourite
+          - Find a contact
+          - Favorite
+    expects: "Authenticated user sees dual-pane Contacts favourites strip and search cues"
