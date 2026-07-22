@@ -2265,8 +2265,12 @@ async def _workspace_handler(
             auth_ctx = await _resolve_auth_context(deps.get_auth_context, request)
             if auth_ctx and auth_ctx.is_authenticated:
                 is_authenticated = True
-                user_email = auth_ctx.user.email if auth_ctx.user else ""
-                user_name = auth_ctx.user.username if auth_ctx.user else ""
+                # username/email may be None on sparse User models — never pass
+                # None into RenderContext (Pydantic str fields → 422 white screen).
+                user_email = (auth_ctx.user.email or "") if auth_ctx.user else ""
+                user_name = (
+                    (auth_ctx.user.username or auth_ctx.user.email or "") if auth_ctx.user else ""
+                )
                 user_roles = list(getattr(auth_ctx.user, "roles", None) or [])
                 user_preferences = auth_ctx.preferences or {}
                 # Filter nav by persona access.

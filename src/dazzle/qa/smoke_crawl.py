@@ -35,7 +35,22 @@ logger = logging.getLogger(__name__)
 
 # Playwright settle failures (timeouts / closed targets) — keep narrow so the
 # broad-exception swallow ratchet does not grow (see fitness/swallows.py).
-_SETTLE_EXC = (TimeoutError, OSError, RuntimeError)
+# Note: playwright.sync_api.TimeoutError is NOT a subclass of builtins.TimeoutError
+# (MRO: playwright._impl._errors.TimeoutError → Error → Exception).
+try:
+    from playwright.sync_api import Error as PlaywrightError
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+except ImportError:  # pragma: no cover — playwright optional at import time
+    PlaywrightError = RuntimeError  # type: ignore[misc,assignment]
+    PlaywrightTimeoutError = TimeoutError  # type: ignore[misc,assignment]
+
+_SETTLE_EXC = (
+    TimeoutError,
+    PlaywrightTimeoutError,
+    PlaywrightError,
+    OSError,
+    RuntimeError,
+)
 
 # Main content shorter than this (after whitespace collapse) is "empty main".
 EMPTY_MAIN_THRESHOLD = 48

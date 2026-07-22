@@ -89,7 +89,8 @@ class DigState:
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+    # src/dazzle/qa/smoke_dig.py → parents[3] = monorepo root (not parents[2]=src/)
+    return Path(__file__).resolve().parents[3]
 
 
 def state_path(root: Path | None = None) -> Path:
