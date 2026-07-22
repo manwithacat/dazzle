@@ -1657,7 +1657,17 @@ def qa_trial(
                         f"budget {mission_inner.token_budget:,} tokens"
                     )
                     t = await agent_inner.run(mission_inner)
-                    await browser.close()
+                    # Playwright driver can die mid-run (EPIPE/EINVAL under
+                    # session-watch chrome pressure). Never lose the report —
+                    # forensic md/json is written after this returns.
+                    try:
+                        await browser.close()
+                    except Exception as close_exc:
+                        typer.echo(
+                            f"[harness] browser.close failed ({close_exc!r}); "
+                            "continuing to write trial report",
+                            err=True,
+                        )
                     return t, mission_inner
 
             transcript, _mission = asyncio.run(_run_trial())
