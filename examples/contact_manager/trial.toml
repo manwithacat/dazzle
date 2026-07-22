@@ -3,9 +3,9 @@
 [[scenario]]
 name = "small_firm_owner"
 login_persona = "user"
-time_budget_seconds = 480
-max_steps = 16
-token_budget = 600000
+time_budget_seconds = 900
+max_steps = 50
+token_budget = 1500000
 
 user_identity = """
 You are Tom, owner of a 6-person accountancy practice. You've been

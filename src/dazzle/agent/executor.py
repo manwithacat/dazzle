@@ -112,6 +112,19 @@ class PlaywrightExecutor:
             elif action.type == ActionType.TYPE:
                 locator = self._resolve_locator(action.target or "")
                 await locator.fill(action.value or "", timeout=5000)
+                # HTMX search_box / filter inputs use delay:250ms (or longer).
+                # fill() dispatches input but without a settle wait the agent
+                # snapshots "NO state change" before results swap — false
+                # search-broken friction in qa trial (contact_manager panel).
+                try:
+                    await self._page.wait_for_timeout(400)
+                    await self._page.wait_for_load_state("networkidle", timeout=5000)
+                except Exception:
+                    logger.debug(
+                        "networkidle timeout after type into %s",
+                        action.target,
+                        exc_info=True,
+                    )
                 base = ActionResult(message=f"Typed '{action.value}' into {action.target}")
 
             elif action.type == ActionType.SELECT:

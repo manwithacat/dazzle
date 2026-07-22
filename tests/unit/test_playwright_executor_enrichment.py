@@ -185,3 +185,25 @@ class TestStateCapture:
         action = AgentAction(type=ActionType.CLICK, target="button.x")
         result = await executor.execute(action)
         assert result.console_errors_during_action == ["TypeError in handler"]
+
+    async def test_type_waits_for_htmx_settle(self) -> None:
+        """TYPE settles HTMX delay:250ms search_box before state_changed snapshot."""
+        page = _make_mock_page(url="http://localhost/app", content="<html>before</html>")
+        locator = MagicMock()
+        locator.fill = AsyncMock()
+        page.locator = MagicMock(return_value=locator)
+        page.wait_for_timeout = AsyncMock()
+        page.wait_for_load_state = AsyncMock()
+        # After fill+settle, DOM reflects FTS results panel
+        page.content = AsyncMock(side_effect=["<html>before</html>", "<html>after results</html>"])
+        executor = PlaywrightExecutor(page=page)
+        action = AgentAction(
+            type=ActionType.TYPE,
+            target="#dz-search-results-contact_search-input",
+            value="Adams",
+        )
+        result = await executor.execute(action)
+        assert result.error is None
+        page.wait_for_timeout.assert_awaited()
+        page.wait_for_load_state.assert_awaited()
+        assert result.state_changed is True

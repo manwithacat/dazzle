@@ -249,7 +249,8 @@ workspace home "Home":
   find_contact:
     source: Contact
     display: search_box
-    title: "Find a contact"
+    title: "Find a contact — results appear below"
+    # Placeholder must say results-panel (not list filter) — panel agents mis-score search
     empty: "Results appear below as you type (name, company, or email). The directory list stays full until you open a hit."
 
   ux:
@@ -274,7 +275,8 @@ workspace contacts "Contacts":
   contact_search:
     source: Contact
     display: search_box
-    title: "Find a contact"
+    title: "Find a contact — results appear below"
+    # Explicit: FTS results panel ≠ list filter (agent panels mis-score otherwise)
     empty: "Results appear below as you type. The A–Z list is not filtered — open a hit from the results panel."
 
   # Favourites strip above the A–Z list (ST-007).

@@ -1064,7 +1064,6 @@
     'event_model': None,
     'experiences': list([
     ]),
-    'feedback_widget': None,
     'fixtures': list([
     ]),
     'fk_graph': dict({
@@ -1589,6 +1588,7 @@
             'component',
             'status',
           ]),
+          'measure': None,
           'persona_variants': list([
           ]),
           'purpose': None,
@@ -1707,6 +1707,7 @@
           'filter': list([
             'status',
           ]),
+          'measure': None,
           'persona_variants': list([
           ]),
           'purpose': None,
