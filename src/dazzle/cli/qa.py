@@ -29,11 +29,18 @@ from dazzle.qa.signing_seed import (
     write_mock_inbox,
 )
 from dazzle.qa.signing_verifier import SigningOutcome, verify_signing_outcome
+from dazzle.qa.smoke_dig import dig_cycle
 from dazzle.qa.taste_panel import (
     assemble_pool,
     build_report,
     normalize_pool_frames,
     run_panel,
+)
+from dazzle.qa.trial_cli import (
+    run_smoke_crawl,
+    run_trial_coverage,
+    run_trial_hypotheses,
+    run_trial_inventory,
 )
 from dazzle.signing.tokens import mint_token
 
@@ -1792,8 +1799,6 @@ def qa_trial_inventory(
     as_json: bool = typer.Option(True, "--json/--table", help="JSON (default) or text table"),
 ) -> None:
     """List mechanical coverage inventory (list/create surfaces + workspaces)."""
-    from dazzle.qa.trial_cli import run_trial_inventory
-
     run_trial_inventory(_resolve_project_dir(app), as_json=as_json)
 
 
@@ -1807,8 +1812,6 @@ def qa_trial_coverage(
     output: Path | None = typer.Option(None, "--output", "-o", help="Write JSON report path"),
 ) -> None:
     """Mechanical coverage walk: inventory + optional live HTTP probe."""
-    from dazzle.qa.trial_cli import run_trial_coverage
-
     run_trial_coverage(_resolve_project_dir(app), persona=persona, base_url=base_url, output=output)
 
 
@@ -1817,8 +1820,6 @@ def qa_trial_hypotheses(
     app: str | None = typer.Option(None, "--app", "-a", help="Example app name (defaults to cwd)"),
 ) -> None:
     """Show domain-theory hypotheses files if present (T4 hook)."""
-    from dazzle.qa.trial_cli import run_trial_hypotheses
-
     run_trial_hypotheses(_resolve_project_dir(app))
 
 
@@ -1860,8 +1861,6 @@ def qa_smoke_crawl(
     ``qa trial`` (qualitative pilot, not bug-density smoke). See
     ``docs/recipes/agent-qa-ladder.md`` (L2.5 smoke crawl).
     """
-    from dazzle.qa.trial_cli import run_smoke_crawl
-
     run_smoke_crawl(
         _resolve_project_dir(app),
         persona=persona,
@@ -1892,8 +1891,6 @@ def qa_smoke_dig(
     ),
 ) -> None:
     """Fleet L2.5 dig: random-seed showcase rotation for gross bugs (404 / empty main)."""
-    from dazzle.qa.smoke_dig import dig_cycle
-
     results = dig_cycle(
         app=app,
         all_apps=all_apps or not once,

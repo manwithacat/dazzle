@@ -23,11 +23,19 @@ from __future__ import annotations
 
 import logging
 import re
+from contextlib import suppress
 from dataclasses import asdict, dataclass, field
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
+from dazzle.qa.trial_friction import is_auto_seed_eligible, normalize_friction_entry
+from dazzle.qa.trial_inventory import matrix_expected_deny
+
 logger = logging.getLogger(__name__)
+
+# Playwright settle failures (timeouts / closed targets) — keep narrow so the
+# broad-exception swallow ratchet does not grow (see fitness/swallows.py).
+_SETTLE_EXC = (TimeoutError, OSError, RuntimeError)
 
 # Main content shorter than this (after whitespace collapse) is "empty main".
 EMPTY_MAIN_THRESHOLD = 48
@@ -328,8 +336,6 @@ def build_smoke_report(
     hits: list[SmokeHit],
     max_clicks: int,
 ) -> dict[str, Any]:
-    from dazzle.qa.trial_friction import is_auto_seed_eligible, normalize_friction_entry
-
     frictions: list[dict[str, Any]] = []
     for h in hits:
         row = hit_to_friction(h)
@@ -454,8 +460,6 @@ def run_smoke_crawl(
 
     import httpx
 
-    from dazzle.qa.trial_inventory import matrix_expected_deny
-
     base = base_url.rstrip("/")
     hits: list[SmokeHit] = []
 
@@ -490,10 +494,8 @@ def run_smoke_crawl(
 
         # Authenticate
         page.goto(urljoin(base + "/", magic_path.lstrip("/")), wait_until="domcontentloaded")
-        try:
+        with suppress(*_SETTLE_EXC):
             page.wait_for_load_state("networkidle", timeout=timeout_ms)
-        except Exception:
-            logger.debug("networkidle after magic-link timed out", exc_info=True)
 
         visited: set[str] = set()
 
@@ -501,13 +503,10 @@ def run_smoke_crawl(
         try:
             landing_url = page.url or ""
             landing_path = urlparse(landing_url).path or "/app"
-        except Exception:
-            logger.debug("urlparse failed for landing path", exc_info=True)
+        except (ValueError, TypeError, AttributeError):
             landing_path = "/app"
-        try:
+        with suppress(*_SETTLE_EXC):
             page.wait_for_timeout(200)
-        except Exception:
-            pass
         # Re-snap landing without re-nav if already there.
         landing_hit = None
 
@@ -526,7 +525,7 @@ def run_smoke_crawl(
                 )
                 if resp is not None:
                     status = resp.status
-            except Exception as exc:
+            except _SETTLE_EXC as exc:
                 return SmokeHit(
                     url=url_path,
                     name=name,
@@ -546,19 +545,15 @@ def run_smoke_crawl(
                     detail=str(exc),
                 )
 
-            try:
+            with suppress(*_SETTLE_EXC):
                 page.wait_for_load_state("networkidle", timeout=min(timeout_ms, 8000))
-            except Exception:
-                logger.debug("networkidle after goto %s timed out", url_path, exc_info=True)
             # HTMX region settle beat
-            try:
+            with suppress(*_SETTLE_EXC):
                 page.wait_for_timeout(200)
-            except Exception:
-                pass
 
             try:
                 snap = page.evaluate(_MAIN_EVAL_JS)
-            except Exception as exc:
+            except _SETTLE_EXC as exc:
                 snap = {
                     "title": "",
                     "main_text": "",
@@ -659,39 +654,38 @@ def run_smoke_crawl(
             if seed not in visited:
                 hits.append(_probe(seed, name="app", kind="app_home", phase="bfs"))
                 visited.add(seed)
-            try:
+            with suppress(*_SETTLE_EXC):
                 page.goto(urljoin(base + "/", "app"), wait_until="domcontentloaded")
                 page.wait_for_timeout(200)
-            except Exception:
-                logger.debug("BFS seed navigation failed", exc_info=True)
 
             clicks = 0
             queue: list[tuple[str, str]] = []
             try:
                 raw_links = page.evaluate(_COLLECT_LINKS_JS)
-            except Exception:
+            except _SETTLE_EXC:
                 raw_links = []
             for item in raw_links or []:
                 href = str((item or {}).get("href") or "")
                 text = str((item or {}).get("text") or href)
-                path = _same_origin_app_path(base, href)
-                if path and path not in visited:
-                    queue.append((path, text or path))
+                # Use app_path (not path) so mypy does not collide with str path above.
+                app_path = _same_origin_app_path(base, href)
+                if app_path and app_path not in visited:
+                    queue.append((app_path, text or app_path))
 
             while queue and clicks < max_clicks:
-                path, text = queue.pop(0)
-                if path in visited:
+                bfs_path, text = queue.pop(0)
+                if bfs_path in visited:
                     continue
-                visited.add(path)
+                visited.add(bfs_path)
                 clicks += 1
-                hit = _probe(path, name=text[:60], kind="click", phase="bfs")
+                hit = _probe(bfs_path, name=text[:60], kind="click", phase="bfs")
                 hits.append(hit)
                 if not hit.ok:
                     continue
                 # Expand from current page
                 try:
                     raw_links = page.evaluate(_COLLECT_LINKS_JS)
-                except Exception:
+                except _SETTLE_EXC:
                     raw_links = []
                 for item in raw_links or []:
                     href = str((item or {}).get("href") or "")

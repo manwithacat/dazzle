@@ -27,6 +27,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -169,12 +170,12 @@ def port_for_app(app: str, root: Path | None = None) -> int:
     root = root or repo_root()
     try:
         sys.path.insert(0, str(root / "scripts" / "example_hub"))
-        from registry import discover_apps  # type: ignore
+        from registry import discover_apps
 
         for a in discover_apps(root=root, showcase_only=False):
             if a.name == app:
                 return int(a.port)
-    except Exception:
+    except (ImportError, OSError, AttributeError, TypeError, ValueError):
         logger.debug("registry port lookup failed for %s", app, exc_info=True)
     if app in SHOWCASE:
         return DEFAULT_BACKEND_BASE + SHOWCASE.index(app)
@@ -237,12 +238,10 @@ def ensure_running(
 
 def urlparse_port(base_url: str) -> int | None:
     try:
-        from urllib.parse import urlparse
-
         p = urlparse(base_url)
         if p.port:
             return int(p.port)
-    except Exception:
+    except (ValueError, TypeError):
         return None
     return None
 

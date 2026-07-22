@@ -12,11 +12,20 @@ from typing import Any
 
 import typer
 
+from dazzle.cli.utils import load_project_appspec
+from dazzle.qa.smoke_crawl import build_smoke_report
+from dazzle.qa.smoke_crawl import run_smoke_crawl as _crawl
+from dazzle.qa.trial_inventory import (
+    CoverageHit,
+    build_coverage_inventory,
+    classify_http_status,
+    coverage_report_to_json,
+    inventory_to_json,
+    matrix_expected_deny,
+)
+
 
 def run_trial_inventory(project_dir: Path, *, as_json: bool) -> None:
-    from dazzle.cli.utils import load_project_appspec
-    from dazzle.qa.trial_inventory import build_coverage_inventory, inventory_to_json
-
     appspec = load_project_appspec(project_dir)
     targets = build_coverage_inventory(appspec)
     if as_json:
@@ -33,13 +42,6 @@ def run_trial_coverage(
     base_url: str | None,
     output: Path | None,
 ) -> None:
-    from dazzle.cli.utils import load_project_appspec
-    from dazzle.qa.trial_inventory import (
-        build_coverage_inventory,
-        coverage_report_to_json,
-        inventory_to_json,
-    )
-
     appspec = load_project_appspec(project_dir)
     targets = build_coverage_inventory(appspec)
     app_name = project_dir.name
@@ -83,12 +85,6 @@ def _live_probe(
     appspec: Any = None,
 ) -> list[Any]:
     import httpx
-
-    from dazzle.qa.trial_inventory import (
-        CoverageHit,
-        classify_http_status,
-        matrix_expected_deny,
-    )
 
     try:
         ml = httpx.post(
@@ -192,11 +188,6 @@ def run_smoke_crawl(
 
     Requires a running app with ``DAZZLE_QA_MODE=1`` and Playwright Chromium.
     """
-    from dazzle.cli.utils import load_project_appspec
-    from dazzle.qa.smoke_crawl import build_smoke_report
-    from dazzle.qa.smoke_crawl import run_smoke_crawl as _crawl
-    from dazzle.qa.trial_inventory import build_coverage_inventory
-
     if not persona:
         typer.echo("--persona is required for smoke-crawl", err=True)
         raise typer.Exit(code=2)

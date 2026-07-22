@@ -121,7 +121,7 @@
       "PlaywrightExecutor.__init__": 1,
       "PlaywrightExecutor._on_console": 3,
       "PlaywrightExecutor._resolve_locator": 4,
-      "PlaywrightExecutor.execute": 29,
+      "PlaywrightExecutor.execute": 30,
       "_dom_hash": 1
     },
     "mi_rank": "A"
@@ -636,7 +636,7 @@
   "dazzle/cli/agent_commands/__init__.py": {
     "functions": {
       "_run": 2,
-      "_seed_improve_backlog": 11,
+      "_seed_improve_backlog": 12,
       "_seed_polish_backlog": 4,
       "_write_backlog_markdown": 2,
       "closed_loop_context": 3,
@@ -739,6 +739,12 @@
       "disable": 2,
       "enable": 6,
       "list_capabilities": 8
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/cli/claims.py": {
+    "functions": {
+      "claims_check": 13
     },
     "mi_rank": "A"
   },
@@ -926,6 +932,17 @@
   "dazzle/cli/doctor.py": {
     "functions": {
       "doctor_command": 28
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/cli/domain_cli.py": {
+    "functions": {
+      "_root": 2,
+      "extract_cmd": 8,
+      "gaps_cmd": 5,
+      "promote_cmd": 8,
+      "research_cmd": 15,
+      "show_cmd": 3
     },
     "mi_rank": "A"
   },
@@ -1290,6 +1307,8 @@
       "qa_component_vision": 3,
       "qa_login": 3,
       "qa_property_vision": 3,
+      "qa_smoke_crawl": 1,
+      "qa_smoke_dig": 6,
       "qa_taste_panel": 9,
       "qa_trial": 55,
       "qa_trial_coverage": 1,
@@ -1439,6 +1458,7 @@
       "_ServeContext": 2,
       "_ServeContext.__init__": 1,
       "_allocate_ports_and_runtime": 9,
+      "_arm_qa_mode_env": 2,
       "_configure_dev_mode": 3,
       "_configure_production_mode": 9,
       "_echo_runtime_summary": 25,
@@ -1446,8 +1466,8 @@
       "_load_manifest_and_dotenv": 6,
       "_print_infra_banner": 1,
       "_redis_extra_available": 1,
-      "_serve_backend_only": 5,
-      "_serve_combined": 32,
+      "_serve_backend_only": 7,
+      "_serve_combined": 31,
       "_serve_ui_only": 3,
       "_start_vendor_mocks": 4,
       "_validate_and_finalize_infra": 6,
@@ -1810,6 +1830,7 @@
       "print_version_info": 13,
       "print_vscode_diagnostics": 5,
       "print_vscode_parse_error": 6,
+      "project_root_from_manifest": 3,
       "version_callback": 2
     },
     "mi_rank": "A"
@@ -1850,6 +1871,25 @@
       "vocab_init": 6,
       "vocab_list": 19,
       "vocab_show": 12
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/cli/walk.py": {
+    "functions": {
+      "_emit_pack_json": 8,
+      "_emit_pack_text": 7,
+      "_list_json": 7,
+      "_list_text": 7,
+      "_print_run_result": 5,
+      "_resolve_base_url": 3,
+      "_resolve_paths": 7,
+      "_run_one_walk": 7,
+      "_run_result_dict": 3,
+      "_try_appspec": 3,
+      "walk_list": 3,
+      "walk_pack_dry_run": 6,
+      "walk_run": 6,
+      "walk_validate": 11
     },
     "mi_rank": "A"
   },
@@ -3402,10 +3442,15 @@
       "_li_kw_timeout": 1,
       "_li_kw_trigger": 1,
       "_li_kw_vision": 1,
+      "_lm_ident_string_field": 3,
+      "_lm_kw_api_key_env": 1,
+      "_lm_kw_base_url": 1,
       "_lm_kw_cost_per_1k_input": 1,
       "_lm_kw_cost_per_1k_output": 1,
+      "_lm_kw_location": 1,
       "_lm_kw_max_tokens": 1,
       "_lm_kw_model_id": 2,
+      "_lm_kw_project": 1,
       "_lm_kw_provider": 2,
       "_lm_kw_tier": 2,
       "_on_unknown_llm_config": 1,
@@ -5100,7 +5145,8 @@
       "ArtifactStore": 1,
       "LLMConfigSpec": 1,
       "LLMIntentSpec": 1,
-      "LLMModelSpec": 3,
+      "LLMModelSpec": 4,
+      "LLMModelSpec.validate_base_url": 3,
       "LLMModelSpec.validate_model_id": 2,
       "LLMProvider": 1,
       "LLMTriggerEvent": 1,
@@ -7076,7 +7122,7 @@
       "LoadResult": 1,
       "find_seed_files": 3,
       "read_seed_file": 5,
-      "topological_sort_entities": 9,
+      "topological_sort_entities": 10,
       "validate_seed_data": 28
     },
     "mi_rank": "A"
@@ -7207,6 +7253,107 @@
       "_build_pdf_stylesheet": 1,
       "render_document_html": 2,
       "render_document_pdf": 5
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/domain_brief/__init__.py": {
+    "functions": {},
+    "mi_rank": "A"
+  },
+  "dazzle/domain_brief/extract.py": {
+    "functions": {
+      "_blocking_gap_questions": 6,
+      "_build_personas_desks_spine": 9,
+      "_canonical_case": 2,
+      "_collect_questions": 4,
+      "_definition_entities": 7,
+      "_desk_name": 1,
+      "_discovered_noun_reject_reason": 7,
+      "_extract_nouns": 5,
+      "_grounded_in_brief": 2,
+      "_header_entities": 5,
+      "_is_noise_or_broken_question": 6,
+      "_is_plural_of_known": 5,
+      "_life_by_entity": 9,
+      "_owner_for_noun": 5,
+      "_question_text": 4,
+      "_run_offline_analyses": 4,
+      "_seen_has": 3,
+      "_sha256": 1,
+      "_slug": 2,
+      "_stable_for": 2,
+      "_strong_noun_signal": 14,
+      "_title_and_summary": 11,
+      "_try_add_discovered_noun": 10,
+      "_try_add_header_noun": 12,
+      "extract_from_path": 1,
+      "extract_from_text": 3,
+      "find_founder_brief": 4
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/domain_brief/gaps.py": {
+    "functions": {
+      "DomainGap": 1,
+      "GapsReport": 3,
+      "GapsReport.to_dict": 2,
+      "_persona_gaps": 8,
+      "score_gaps": 13
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/domain_brief/models.py": {
+    "functions": {
+      "AgentDomain": 5,
+      "AgentDomain.from_dict": 6,
+      "AgentDomain.to_dict": 1,
+      "DemoSpineRow": 1,
+      "DomainDesk": 1,
+      "DomainNoun": 1,
+      "DomainPersona": 1,
+      "OpenQuestion": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/domain_brief/promote.py": {
+    "functions": {
+      "promote_checklist": 5
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/domain_brief/research.py": {
+    "functions": {
+      "_apply_answer": 6,
+      "_apply_clear": 5,
+      "_apply_hypothesis": 4,
+      "_apply_note": 3,
+      "_apply_noun": 12,
+      "_apply_owner": 9,
+      "_apply_persona": 13,
+      "_apply_spine": 7,
+      "_brief_text": 12,
+      "_grounded": 3,
+      "_is_chrome": 1,
+      "_name_match": 2,
+      "_noun_is_chrome": 4,
+      "_persona_refusal": 6,
+      "_prune_answered_questions": 8,
+      "apply_research": 1,
+      "research_and_save": 4
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/domain_brief/store.py": {
+    "functions": {
+      "_section_desks": 4,
+      "_section_nouns": 6,
+      "_section_personas": 7,
+      "_section_questions": 4,
+      "_section_spine": 4,
+      "default_paths": 1,
+      "load_domain": 4,
+      "render_markdown": 9,
+      "save_domain": 1
     },
     "mi_rank": "A"
   },
@@ -10905,10 +11052,11 @@
     "functions": {
       "UnifiedServerConfig": 1,
       "_clickable_url": 4,
+      "_mount_qa_mode_if_armed": 7,
       "_set_factory_env": 4,
       "_supports_hyperlinks": 4,
       "run_backend_only": 17,
-      "run_unified_server": 48
+      "run_unified_server": 42
     },
     "mi_rank": "A"
   },
@@ -11309,7 +11457,7 @@
     "functions": {
       "_compile_scope": 11,
       "_find_cedar_spec": 4,
-      "_render_results_html": 21,
+      "_render_results_html": 34,
       "_resolve_user_id": 4,
       "create_fts_routes": 4
     },
@@ -11399,7 +11547,8 @@
   "dazzle/http/runtime/handlers/list_handlers.py": {
     "functions": {
       "_detail_url_candidates": 4,
-      "_list_handler_body": 89,
+      "_list_handler_body": 93,
+      "_principal_can_op": 15,
       "build_data_table": 13,
       "create_list_handler": 3,
       "list_state_transitions": 5
@@ -11700,9 +11849,9 @@
   "dazzle/http/runtime/llm_executor.py": {
     "functions": {
       "ExecutionResult": 1,
-      "LLMIntentExecutor": 5,
+      "LLMIntentExecutor": 6,
       "LLMIntentExecutor.__init__": 3,
-      "LLMIntentExecutor._build_client": 1,
+      "LLMIntentExecutor._build_client": 4,
       "LLMIntentExecutor._record_job": 7,
       "LLMIntentExecutor._render_prompt": 1,
       "LLMIntentExecutor._resolve_model": 6,
@@ -14867,18 +15016,23 @@
   "dazzle/llm/api_client.py": {
     "functions": {
       "Completion": 1,
-      "LLMAPIClient": 5,
-      "LLMAPIClient.__init__": 4,
+      "LLMAPIClient": 7,
+      "LLMAPIClient.__init__": 10,
       "LLMAPIClient._build_system_prompt": 1,
       "LLMAPIClient._build_user_prompt": 1,
       "LLMAPIClient._call_anthropic": 6,
-      "LLMAPIClient._call_openai": 6,
-      "LLMAPIClient._default_model": 5,
-      "LLMAPIClient._init_client": 6,
-      "LLMAPIClient._resolve_credentials": 12,
-      "LLMAPIClient.analyze_spec": 7,
+      "LLMAPIClient._call_openai": 8,
+      "LLMAPIClient._call_vertex": 12,
+      "LLMAPIClient._default_model": 7,
+      "LLMAPIClient._fallback_to_subscription_cli": 4,
+      "LLMAPIClient._init_client": 8,
+      "LLMAPIClient._init_vertex_client": 6,
+      "LLMAPIClient._resolve_credentials": 6,
+      "LLMAPIClient._resolve_google_credentials": 11,
+      "LLMAPIClient._resolve_key_or_cli": 7,
+      "LLMAPIClient.analyze_spec": 8,
       "LLMAPIClient.complete": 1,
-      "LLMAPIClient.complete_with_usage": 4,
+      "LLMAPIClient.complete_with_usage": 5,
       "LLMAPIClient.estimate_cost": 3,
       "LLMProvider": 1,
       "_strip_code_fence": 4
@@ -15593,11 +15747,13 @@
   "dazzle/mcp/server/handlers/bootstrap.py": {
     "functions": {
       "_build_instructions": 3,
+      "_domain_first_generation_steps": 1,
+      "_dsl_generation_rules": 1,
       "_find_spec": 8,
       "_is_template_readme": 3,
       "_representation_decision_for_spec": 3,
       "_representation_instruction_bits": 4,
-      "_run_cognition_pass": 8,
+      "_run_cognition_pass": 12,
       "handle_bootstrap": 4
     },
     "mi_rank": "A"
@@ -15742,6 +15898,16 @@
       "discovery_status_impl": 4,
       "discovery_verify_all_stories_impl": 7,
       "verify_all_stories_handler": 2
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/mcp/server/handlers/domain.py": {
+    "functions": {
+      "domain_extract_handler": 7,
+      "domain_gaps_handler": 3,
+      "domain_promote_handler": 3,
+      "domain_research_handler": 2,
+      "domain_show_handler": 3
     },
     "mi_rank": "A"
   },
@@ -16561,6 +16727,7 @@
       "_tool_db": 1,
       "_tool_demo_data": 1,
       "_tool_discovery": 1,
+      "_tool_domain": 1,
       "_tool_dsl": 1,
       "_tool_e2e": 1,
       "_tool_feedback": 1,
@@ -16784,6 +16951,7 @@
       "_infer_filter_type": 20,
       "_list_detail_url_candidates": 5,
       "_list_detail_url_template": 5,
+      "_resolve_content_measure": 5,
       "_resolve_field_source": 10,
       "_widget_kind_to_form_type": 1,
       "compile_appspec_to_templates": 102,
@@ -17606,9 +17774,11 @@
       "ProbeSlice": 1,
       "ProductQualityReport": 3,
       "ProductQualityReport.to_dict": 2,
+      "_app_span": 2,
+      "_count_flag": 3,
       "_first_probe": 4,
       "_load_script": 3,
-      "_metric_list_payload": 4,
+      "_metric_list_payload": 5,
       "_next_from_felt": 10,
       "_persona_payload": 4,
       "_probe_demo": 12,
@@ -17621,21 +17791,26 @@
       "_score_targets": 5,
       "_stills_payload": 4,
       "score_project": 9,
-      "score_status_lines": 15
+      "score_status_lines": 4
     },
     "mi_rank": "A"
   },
   "dazzle/product_quality/metric_list.py": {
     "functions": {
-      "MetricListHome": 4,
+      "MetricListHome": 3,
       "MetricListHome.residual": 2,
       "MetricListHome.residual_reasons": 3,
+      "MetricListHome.risk": 2,
+      "MetricListHome.risk_reasons": 3,
       "MetricListPair": 1,
       "_is_list_like": 5,
       "_list_seed_hits": 11,
-      "_metrics_use_current_user": 4,
+      "_metric_seed_hits": 15,
+      "_metrics_use_current_user": 2,
+      "_pair_reason": 2,
       "_parse_regions_rich": 14,
-      "score_metric_list": 15
+      "_score_persona_metric_list": 13,
+      "score_metric_list": 3
     },
     "mi_rank": "A"
   },
@@ -17780,6 +17955,55 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/qa/smoke_crawl.py": {
+    "functions": {
+      "SmokeHit": 2,
+      "SmokeHit.to_json": 1,
+      "SmokeIssue": 1,
+      "_collapse_ws": 2,
+      "_dedupe_issues": 3,
+      "_same_origin_app_path": 8,
+      "_worst_ownership": 4,
+      "build_smoke_report": 10,
+      "evaluate_page_oracles": 24,
+      "evaluate_structure_oracles": 4,
+      "hit_to_friction": 14,
+      "run_smoke_crawl": 56
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/qa/smoke_dig.py": {
+    "functions": {
+      "DigAppResult": 2,
+      "DigAppResult.to_json": 1,
+      "DigState": 5,
+      "DigState.from_json": 7,
+      "DigState.to_json": 1,
+      "_auto_seed_count": 6,
+      "_dazzle_bin": 3,
+      "_newest_report": 2,
+      "_run_dazzle": 2,
+      "base_url_for_app": 1,
+      "dig_cycle": 9,
+      "dig_one": 17,
+      "ensure_running": 4,
+      "hub_start_app": 2,
+      "load_state": 3,
+      "new_state": 3,
+      "persona_for_app": 5,
+      "port_for_app": 7,
+      "port_open": 2,
+      "repo_root": 1,
+      "resolve_order": 11,
+      "save_state": 1,
+      "showcase_apps": 4,
+      "shuffle_order": 1,
+      "state_path": 2,
+      "urlparse_port": 3,
+      "wait_health": 4
+    },
+    "mi_rank": "A"
+  },
   "dazzle/qa/subscription_vision.py": {
     "functions": {
       "HyperpartCoherence": 1,
@@ -17824,6 +18048,7 @@
     "functions": {
       "_default_coverage_path": 2,
       "_live_probe": 10,
+      "run_smoke_crawl": 12,
       "run_trial_coverage": 4,
       "run_trial_hypotheses": 7,
       "run_trial_inventory": 3
@@ -18099,7 +18324,7 @@
       "_VerifierContext": 1,
       "_build_asgi_app": 2,
       "_create_capable_role": 3,
-      "_csrf_headers": 2,
+      "_csrf_headers": 1,
       "_is_role_gate_403": 1,
       "_minimal_body_for_entity": 28,
       "_minimal_flow_inputs": 16,
@@ -18902,7 +19127,7 @@
       "_BuildersMiscMixin._build_confirm_action_panel": 27,
       "_BuildersMiscMixin._build_detail": 13,
       "_BuildersMiscMixin._build_grid": 27,
-      "_BuildersMiscMixin._build_search_box": 9,
+      "_BuildersMiscMixin._build_search_box": 11,
       "_BuildersMiscMixin._build_tree": 8,
       "_pick_label": 7
     },
@@ -19213,7 +19438,8 @@
   },
   "dazzle/render/fragment/state_affordance.py": {
     "functions": {
-      "gated_row_transitions": 7
+      "gated_row_transitions": 7,
+      "transition_action_label": 1
     },
     "mi_rank": "A"
   },
@@ -20402,6 +20628,19 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/testing/http_policies.py": {
+    "functions": {
+      "attach_csrf_request_hook": 3,
+      "cookies_for_playwright": 3,
+      "csrf_headers": 2,
+      "csrf_token_from_client": 2,
+      "extract_csrf_from_set_cookie": 3,
+      "inject_csrf_headers": 4,
+      "prime_csrf_cookie": 4,
+      "prime_csrf_cookie_sync": 4
+    },
+    "mi_rank": "A"
+  },
   "dazzle/testing/mutation/__init__.py": {
     "functions": {},
     "mi_rank": "A"
@@ -20595,9 +20834,9 @@
       "DazzleClient": 5,
       "DazzleClient.__init__": 2,
       "DazzleClient._auth_headers": 2,
-      "DazzleClient._ensure_csrf_token": 3,
+      "DazzleClient._ensure_csrf_token": 1,
       "DazzleClient._login_with_credentials": 17,
-      "DazzleClient._request": 4,
+      "DazzleClient._request": 2,
       "DazzleClient.authenticate": 7,
       "DazzleClient.check_ui_loads": 5,
       "DazzleClient.close": 1,
@@ -20864,7 +21103,7 @@
       "HtmxClient": 5,
       "HtmxClient._cookies": 3,
       "HtmxClient._htmx_headers": 5,
-      "HtmxClient.authenticate": 7,
+      "HtmxClient.authenticate": 5,
       "HtmxClient.get": 1,
       "HtmxClient.get_full_page": 1,
       "HtmxClient.get_workspace_composite": 11,
@@ -21254,6 +21493,165 @@
       "ViewportSuggestion": 1,
       "suggest_fix": 7,
       "suggest_fixes_for_report": 4
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/__init__.py": {
+    "functions": {},
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/actions_api.py": {
+    "functions": {
+      "_bind_save_as": 4,
+      "_company_blob": 2,
+      "_fetch_list_pages": 6,
+      "_field_get": 4,
+      "_json_rows": 9,
+      "_prefer_key": 3,
+      "_render_json_body": 5,
+      "_resolve_file": 4,
+      "_response_json": 2,
+      "_row_id": 3,
+      "_row_matches": 6,
+      "_upload_file_args": 13,
+      "api_agent_ensure_el_viewed": 7,
+      "api_assert_field": 10,
+      "api_ensure_status": 11,
+      "api_find": 10,
+      "api_post": 8,
+      "api_upload_file": 6,
+      "dispatch_api_action": 2
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/claims.py": {
+    "functions": {
+      "ClaimGuide": 1,
+      "ClaimIssue": 2,
+      "ClaimIssue.format": 1,
+      "ClaimStatus": 1,
+      "ClaimsCheckResult": 3,
+      "ClaimsCheckResult.__post_init__": 2,
+      "ClaimsCheckResult.errors": 3,
+      "ClaimsCheckResult.ok": 1,
+      "ClaimsCheckResult.warnings": 3,
+      "ClaimsLoadError": 2,
+      "ClaimsLoadError.__init__": 1,
+      "JobClaimRegistry": 1,
+      "_appspec_ids": 7,
+      "_check_doc_path": 4,
+      "_check_one_guide": 7,
+      "_check_persona_stories": 6,
+      "_check_walk_alignment": 8,
+      "_load_guide_walk": 7,
+      "_maybe_run_walk": 5,
+      "_walk_file": 4,
+      "check_registry": 5,
+      "discover_registry_path": 6,
+      "load_registry": 6
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/discovery.py": {
+    "functions": {
+      "default_walks_dir": 1,
+      "discover_walk_paths": 5
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/loader.py": {
+    "functions": {
+      "WalkLoadError": 2,
+      "WalkLoadError.__init__": 1,
+      "_require_yaml": 2,
+      "load_walk": 7,
+      "load_walks": 2
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/models.py": {
+    "functions": {
+      "ActionSpec": 2,
+      "ActionSpec.is_core": 1,
+      "SceneSpec": 1,
+      "SceneWalkSpec": 4,
+      "SceneWalkSpec.core_only": 3,
+      "SceneWalkSpec.story_ids": 3,
+      "WalkActionType": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/pack.py": {
+    "functions": {
+      "PackDryRunResult": 5,
+      "PackDryRunResult.ok": 4,
+      "_pack_key": 2,
+      "_run_pack_walk": 12,
+      "claims_check_result_as_gaps": 2,
+      "claims_residuals": 3,
+      "guides_for_pack": 3,
+      "pack_dry_run": 11,
+      "residuals_from_pack": 6,
+      "walk_needs_playwright": 3
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/policies.py": {
+    "functions": {},
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/results.py": {
+    "functions": {
+      "ActionResult": 1,
+      "SceneResult": 1,
+      "WalkRunResult": 7,
+      "WalkRunResult.summary": 6,
+      "render_template": 3
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/runner.py": {
+    "functions": {
+      "WalkRunner": 5,
+      "WalkRunner.__aenter__": 2,
+      "WalkRunner.__aexit__": 2,
+      "WalkRunner.__init__": 1,
+      "WalkRunner._act_assert_any_text": 7,
+      "WalkRunner._act_assert_has_content": 5,
+      "WalkRunner._act_assert_http_ok": 3,
+      "WalkRunner._act_assert_http_ok_or_empty": 4,
+      "WalkRunner._act_assert_http_ok_or_forbidden": 3,
+      "WalkRunner._act_assert_no_error_banner": 5,
+      "WalkRunner._act_assert_no_server_error": 3,
+      "WalkRunner._act_assert_not_login": 4,
+      "WalkRunner._act_navigate": 1,
+      "WalkRunner._act_playwright_click": 2,
+      "WalkRunner._act_playwright_wait": 3,
+      "WalkRunner._apply_session_cookie": 2,
+      "WalkRunner._entry_for": 7,
+      "WalkRunner._get": 2,
+      "WalkRunner._playwright_click": 12,
+      "WalkRunner._prime_csrf": 5,
+      "WalkRunner._run_action": 7,
+      "WalkRunner._run_scene": 4,
+      "WalkRunner.authenticate": 7,
+      "WalkRunner.run": 7,
+      "run_walk": 1,
+      "run_walk_sync": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/validate.py": {
+    "functions": {
+      "WalkValidationIssue": 3,
+      "WalkValidationIssue.format": 2,
+      "_appspec_ids": 9,
+      "_check_actions": 6,
+      "_check_appspec": 9,
+      "_check_stories": 5,
+      "_issue": 1,
+      "validate_walk": 4,
+      "validate_walks": 3
     },
     "mi_rank": "A"
   },
