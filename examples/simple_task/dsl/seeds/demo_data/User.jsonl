@@ -1,3 +1,5 @@
 {"id": "a1000000-0000-4000-8000-000000000003", "email": "admin@test.local", "name": "Alice Admin", "role": "admin", "department": "Engineering", "is_active": true, "created_at": "2026-01-01T10:00:00"}
 {"id": "a1000000-0000-4000-8000-000000000002", "email": "manager@test.local", "name": "Bob Manager", "role": "manager", "department": "Engineering", "is_active": true, "created_at": "2026-01-01T10:00:00"}
-{"id": "a1000000-0000-4000-8000-000000000001", "email": "member@test.local", "name": "Carol Member", "role": "member", "department": "Engineering", "is_active": true, "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-000000000001", "email": "member@test.local", "name": "Carol Member", "role": "member", "department": "Design", "is_active": true, "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-000000000020", "email": "dana@test.local", "name": "Dana Designer", "role": "member", "department": "Design", "is_active": true, "created_at": "2026-01-01T10:00:00"}
+{"id": "a1000000-0000-4000-8000-000000000021", "email": "evan@test.local", "name": "Evan Engineer", "role": "member", "department": "Engineering", "is_active": true, "created_at": "2026-01-01T10:00:00"}

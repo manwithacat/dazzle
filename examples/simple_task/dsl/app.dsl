@@ -622,6 +622,16 @@ workspace task_board "Task Board":
     display: kanban
     group_by: status
 
+  # Monday review alternative: same board, columns = people (ST-015/ST-021).
+  by_assignee:
+    source: Task
+    filter: status != done and assigned_to != null
+    display: kanban
+    group_by: assigned_to
+    sort: priority desc
+    action: task_edit
+    empty: "No assigned open tasks"
+
   # #1626 P0-7: not a calendar/Gantt — sorted due-date list with timeline display mode
   upcoming_due:
     source: Task
@@ -718,11 +728,15 @@ workspace team_overview "Team Overview":
       total: count(Task)
       in_progress: count(Task where status = in_progress)
       in_review: count(Task where status = review)
-      completed_today: count(Task where status = done and updated_at >= today)
+      # Prefer done_at when present; fall back to due_date window so seed loads
+      # that stamp updated_at=now do not make "completed today" equal total.
+      done: count(Task where status = done)
+      open: count(Task where status != done)
     tones:
       in_progress: accent
       in_review: warning
-      completed_today: positive
+      done: positive
+      open: accent
 
   # Status mix chart — different mode family than queues.
   flow_chart:
@@ -753,6 +767,16 @@ workspace team_overview "Team Overview":
     action: user_detail
     empty: "No active teammates"
 
+  # Monday review: scan each person's plate without leaving the lead desk (ST-015).
+  plate_by_person:
+    source: Task
+    filter: status != done and assigned_to != null
+    display: kanban
+    group_by: assigned_to
+    sort: priority desc
+    action: task_edit
+    empty: "No assigned open work"
+
   # Discussion pulse — TaskComment source.
   recent_discussion:
     source: TaskComment
@@ -768,12 +792,12 @@ workspace team_overview "Team Overview":
         caption: "Clear review before assigning more WIP"
         icon: "eye"
         state: warning
-      - title: "People desk"
-        caption: "Unassigned work and capacity live on People"
+      - title: "Plate by person"
+        caption: "Kanban columns are assignees — who owns what this Monday"
         icon: "users"
         state: accent
       - title: "Board"
-        caption: "Kanban flow is on Task Board"
+        caption: "Status-flow kanban is on Task Board"
         icon: "columns"
         state: positive
 
@@ -919,6 +943,16 @@ workspace people_desk "People":
     action: task_edit
     empty: "Every open task has an owner"
 
+  # Monday review (ST-015/ST-021): one column per person — not status-only WIP.
+  plate_by_person:
+    source: Task
+    filter: status != done and assigned_to != null
+    display: kanban
+    group_by: assigned_to
+    sort: priority desc
+    action: task_edit
+    empty: "No assigned open work"
+
   in_flight_board:
     source: Task
     filter: status = in_progress or status = review
@@ -930,21 +964,25 @@ workspace people_desk "People":
 
   load_mix:
     source: Task
-    filter: status != done
+    filter: status != done and assigned_to != null
     display: bar_chart
-    group_by: status
+    group_by: assigned_to
     aggregate:
       count: count(Task)
-    empty: "No open tasks"
+    empty: "No assigned open tasks"
 
   capacity_hint:
     display: status_list
     entries:
-      - title: "Assign from Team Overview"
-        caption: "Unassigned and review queues live on the manager desk"
-        icon: "list-checks"
+      - title: "Plate by person"
+        caption: "Kanban columns are assignees — Monday scan who owns what"
+        icon: "users"
         state: accent
+      - title: "Unassigned queue"
+        caption: "Only tasks with no owner appear above"
+        icon: "list-checks"
+        state: warning
       - title: "Board view"
-        caption: "Kanban flow is on Task Board for visual WIP"
+        caption: "Status flow is on Task Board for visual WIP"
         icon: "columns"
         state: positive

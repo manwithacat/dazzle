@@ -31,8 +31,17 @@ tasks = [
     "Pick an existing task and try to mark it done or change its status. How many clicks? Is the current state of each task immediately obvious in the list?",
 ]
 
+# ST-015 (manager task list), ST-016 (unassigned), ST-017 (assign), ST-021 (assignee hub)
+adoption_criteria = [
+    "At a glance: active tasks visible without hunting a generic empty home",
+    "Monday review: can filter/sort or scan work by assignee",
+    "Can create a task with title + assignee + due date in a natural form flow",
+    "Status is obvious in the list and can be advanced without a maze of clicks",
+    "Would pilot this for two weeks as a Notion replacement for a 5-person studio",
+]
+
 stop_when = """
-Stop when you've formed an opinion on whether the team would adopt
-this. Call `submit_verdict` with a one-paragraph verdict as Maya —
-would you switch from Notion, and why or why not?
+Stop when you can score adoption_criteria. Call `submit_verdict` with
+recommend=yes|no|conditional and criteria_scores as Maya — would the team
+switch from Notion for Monday review, and why or why not?
 """
