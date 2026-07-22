@@ -119,7 +119,10 @@ class PlaywrightExecutor:
                 try:
                     await self._page.wait_for_timeout(400)
                     await self._page.wait_for_load_state("networkidle", timeout=5000)
-                except Exception:
+                except (TimeoutError, OSError, RuntimeError):
+                    # Narrow types keep the swallow ratchet green; Playwright
+                    # timeouts + transport errors are expected when SSE/HTMX
+                    # keep the network busy after fill() already succeeded.
                     logger.debug(
                         "networkidle timeout after type into %s",
                         action.target,
