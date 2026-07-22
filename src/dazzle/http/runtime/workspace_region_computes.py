@@ -376,10 +376,14 @@ def compute_queue(
             to_state = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
             if to_state not in seen:
                 seen.add(to_state)
+                from dazzle.render.fragment.state_affordance import (
+                    transition_action_label,
+                )
+
                 transitions.append(
                     {
                         "to_state": to_state,
-                        "label": to_state.replace("_", " ").title(),
+                        "label": transition_action_label(to_state),
                     }
                 )
         # #1626 re-eval: queue rows must not show the full state-machine

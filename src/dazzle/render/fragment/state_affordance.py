@@ -5,6 +5,18 @@ Shared by the detail-view filter and the list-row render. Pure, no I/O."""
 from dazzle.render.context import TransitionContext
 
 
+def transition_action_label(to_state: str) -> str:
+    """Label a transition button as an *action*, not the live status.
+
+    Bare state titles (``Active``) read as current status next to status
+    chips on detail headers and list rows — agent acceptance panels flag
+    this as a pilot blocker (fieldtest_hub cycle 1286). Prefix with
+    ``Set to`` so the affordance is clearly a change intent.
+    """
+    title = str(to_state).replace("_", " ").title()
+    return f"Set to {title}"
+
+
 def gated_row_transitions(
     transitions: list[TransitionContext], current_state: str
 ) -> list[TransitionContext]:

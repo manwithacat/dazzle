@@ -72,6 +72,50 @@ def _detail_url_candidates(table_dict: dict[str, Any]) -> tuple[str, ...]:
     return tuple(raw)
 
 
+def _principal_can_op(
+    cedar_access_spec: "EntityAccessSpec | None",
+    operation: AccessOperationKind,
+    auth_context: Any,
+    *,
+    entity_name: str = "",
+) -> bool:
+    """Role-level mutation gate for list row chrome (delete/update affordances).
+
+    Mirrors ``page_routes._user_can_mutate``: pure role rules without field
+    conditions can suppress chrome for denied personas (incl. anonymous).
+    No rules / field-conditioned rules → allow chrome (record-level still
+    enforces on the write path).
+    """
+    if cedar_access_spec is None:
+        return True
+    from dazzle.core.access import AccessRuntimeContext
+    from dazzle.render.access_evaluator import evaluate_permission
+
+    _op_rules = [r for r in cedar_access_spec.permissions if r.operation == operation]
+    _has_scopes = bool(getattr(cedar_access_spec, "scopes", None))
+    _has_field = False if _has_scopes else any(_is_field_condition(r.condition) for r in _op_rules)
+    if not _op_rules or _has_field:
+        return True
+
+    _user = None
+    if auth_context is not None and getattr(auth_context, "is_authenticated", False):
+        _user = getattr(auth_context, "user", None)
+    _raw_roles = list(getattr(_user, "roles", [])) if _user else []
+    _runtime_ctx = AccessRuntimeContext(
+        user_id=str(_user.id) if _user else None,
+        roles=[r.removeprefix("role_") for r in _raw_roles],
+        is_superuser=getattr(_user, "is_superuser", False) if _user else False,
+    )
+    decision = evaluate_permission(
+        cedar_access_spec,
+        operation,
+        None,
+        _runtime_ctx,
+        entity_name=entity_name or "",
+    )
+    return bool(decision.allowed)
+
+
 def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) -> DataTable:
     """Map an http/ HTMX-refresh ``table_dict`` (+ its row items) into the typed
     render/ ``DataTable`` primitive (#1505 P2).
@@ -87,6 +131,8 @@ def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) ->
         inline_editable=tuple(table_dict.get("inline_editable") or ()),
         drill=bool(table_dict.get("detail_url_template") or cands),
         peek=str(table_dict.get("peek_mode") or "off"),
+        delete=bool(table_dict.get("can_delete", True)),
+        update=bool(table_dict.get("can_update", True)),
     )
     return DataTable(
         columns=tuple(table_dict.get("columns") or ()),
@@ -123,11 +169,15 @@ def list_state_transitions(
         key = (t.from_state, t.to_state)
         if key not in seen:
             seen.add(key)
+            from dazzle.render.fragment.state_affordance import (
+                transition_action_label,
+            )
+
             out.append(
                 TransitionContext(
                     from_state=t.from_state,
                     to_state=t.to_state,
-                    label=t.to_state.replace("_", " ").title(),
+                    label=transition_action_label(t.to_state),
                     api_url=f"{endpoint}/{{id}}",
                 )
             )
@@ -659,6 +709,23 @@ async def _list_handler_body(
             _st_transitions, _st_field, _st_endpoint = list_state_transitions(
                 _entity_spec, getattr(request.state, "htmx_entity_name", "Item")
             )
+            _entity_label = getattr(request.state, "htmx_entity_name", "Item")
+            _can_delete = _principal_can_op(
+                cedar_access_spec,
+                AccessOperationKind.DELETE,
+                auth_context,
+                entity_name=entity_name or _entity_label,
+            )
+            _can_update = _principal_can_op(
+                cedar_access_spec,
+                AccessOperationKind.UPDATE,
+                auth_context,
+                entity_name=entity_name or _entity_label,
+            )
+            # No update → no SM chips / edit; no delete → no trash. Bulk chrome
+            # is already gated separately via htmx_bulk_actions.
+            if not _can_update:
+                _st_transitions = ()
             table_dict = {
                 "rows": items,
                 "columns": request.state.htmx_columns
@@ -668,7 +735,7 @@ async def _list_handler_body(
                 "detail_url_candidates": list(_resolved_cands or []),
                 "detail_url_fallback_template": _resolved_fallback,
                 "peek_mode": _resolved_peek,
-                "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
+                "entity_name": _entity_label,
                 "api_endpoint": str(request.url.path),
                 "table_id": table_id,
                 # #1558 3c: per-row state-gated transition affordances.
@@ -676,7 +743,11 @@ async def _list_handler_body(
                 "status_field": _st_field,
                 "transition_endpoint": _st_endpoint,
                 "bulk_actions": getattr(request.state, "htmx_bulk_actions", False),
-                "inline_editable": getattr(request.state, "htmx_inline_editable", []),
+                "inline_editable": (
+                    getattr(request.state, "htmx_inline_editable", []) if _can_update else []
+                ),
+                "can_delete": _can_delete,
+                "can_update": _can_update,
                 "sort_field": sort or "",
                 "sort_dir": dir,
                 "filter_values": filters,

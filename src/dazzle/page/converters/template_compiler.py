@@ -876,6 +876,24 @@ def _list_detail_url_candidates(
     return []
 
 
+def _resolve_content_measure(ux: ir.UXSpec | None, *, default: str) -> str:
+    """Map surface ``ux.measure`` → PageContext content_measure.
+
+    DSL values: ``app`` | ``product`` | ``wide`` | ``full``.
+    ``full`` clears the shell max-width (true full-bleed). Unknown/None →
+    ``default`` (mode-based: list→app, form/detail→product).
+    """
+    raw = getattr(ux, "measure", None) if ux is not None else None
+    if not raw:
+        return default
+    value = str(raw).strip().lower()
+    if value in ("full", "fluid", "bleed"):
+        return ""  # no data-dz-measure → unconstrained shell
+    if value in ("app", "product", "wide"):
+        return value
+    return default
+
+
 def _extract_surface_purpose(ux: ir.UXSpec | None) -> tuple[str, dict[str, str]]:
     """Extract surface-level purpose + per-persona overrides.
 
@@ -1015,6 +1033,8 @@ def _compile_list_surface(
         # v0.67.79: PageContext.template field is no longer read by any
         # renderer (table rendering moved to table_renderer.py).
         template="",
+        # Lists/grids default app; author may override via ``ux: measure:``.
+        content_measure=_resolve_content_measure(ux, default="app"),
         table=TableContext(
             entity_name=entity_name,
             title=surface.title or f"{entity_name}s",
@@ -1130,14 +1150,15 @@ def _compile_form_surface(
             # renderer (form rendering moved to the typed substrate, ADR-0049
             # Phase 3b — the legacy form_renderer is deleted). Empty for clarity.
             template="",
+            content_measure=_resolve_content_measure(ux, default="product"),
             form=FormContext(
                 entity_name=entity_name,
                 title=surface.title or f"Create {entity_name}",
                 fields=fields,
                 action_url=api_endpoint,
                 method="post",
-                mode="create",
                 cancel_url=app_paths.list_path(app_prefix, entity_slug),
+                mode="create",
                 sections=sections,
                 persona_hide=persona_hide,
                 persona_read_only=persona_read_only,
@@ -1155,6 +1176,7 @@ def _compile_form_surface(
             # renderer (form rendering moved to the typed substrate, ADR-0049
             # Phase 3b — the legacy form_renderer is deleted). Empty for clarity.
             template="",
+            content_measure=_resolve_content_measure(ux, default="product"),
             form=FormContext(
                 entity_name=entity_name,
                 title=surface.title or f"Edit {entity_name}",
@@ -1233,11 +1255,15 @@ def _compile_view_surface(
             key = (t.from_state, t.to_state)
             if key not in seen:
                 seen.add(key)
+                from dazzle.render.fragment.state_affordance import (
+                    transition_action_label,
+                )
+
                 transitions.append(
                     TransitionContext(
                         from_state=t.from_state,
                         to_state=t.to_state,
-                        label=t.to_state.replace("_", " ").title(),
+                        label=transition_action_label(t.to_state),
                         api_url=f"{api_endpoint}/{{id}}",
                     )
                 )
@@ -1436,6 +1462,7 @@ def _compile_view_surface(
         page_purpose=page_purpose,
         persona_purposes=persona_purposes,
         template="",
+        content_measure=_resolve_content_measure(surface.ux, default="product"),
         detail=DetailContext(
             entity_name=entity_name,
             title=surface.title or f"{entity_name} Details",
