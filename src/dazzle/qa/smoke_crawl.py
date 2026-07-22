@@ -25,7 +25,7 @@ import logging
 import re
 from contextlib import suppress
 from dataclasses import asdict, dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse
 
 from dazzle.qa.trial_friction import is_auto_seed_eligible, normalize_friction_entry
@@ -37,16 +37,20 @@ logger = logging.getLogger(__name__)
 # broad-exception swallow ratchet does not grow (see fitness/swallows.py).
 # Note: playwright.sync_api.TimeoutError is NOT a subclass of builtins.TimeoutError
 # (MRO: playwright._impl._errors.TimeoutError → Error → Exception).
-_PlaywrightError: type[BaseException]
-_PlaywrightTimeoutError: type[BaseException]
-try:
+# TYPE_CHECKING split avoids mypy no-redef / unused-ignore / assignment thrash
+# when playwright is present in CI type-check but optional at runtime.
+if TYPE_CHECKING:
     from playwright.sync_api import Error as _PlaywrightError
     from playwright.sync_api import TimeoutError as _PlaywrightTimeoutError
-except ImportError:  # pragma: no cover — playwright optional at import time
-    _PlaywrightError = RuntimeError
-    _PlaywrightTimeoutError = TimeoutError
+else:  # pragma: no cover — runtime bind; playwright optional
+    try:
+        from playwright.sync_api import Error as _PlaywrightError
+        from playwright.sync_api import TimeoutError as _PlaywrightTimeoutError
+    except ImportError:
+        _PlaywrightError = RuntimeError
+        _PlaywrightTimeoutError = TimeoutError
 
-_SETTLE_EXC = (
+_SETTLE_EXC: tuple[type[BaseException], ...] = (
     TimeoutError,
     _PlaywrightTimeoutError,
     _PlaywrightError,
