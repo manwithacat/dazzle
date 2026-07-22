@@ -17,10 +17,23 @@ from typing import Any
 
 import httpx
 
+from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.manifest import resolve_api_url
 from dazzle.core.strings import to_api_plural
 
 logger = logging.getLogger(__name__)
+
+# Reverse relations must not impose seed order (see topological_sort_entities).
+_REVERSE_FK_KINDS = frozenset(
+    {
+        FieldTypeKind.LATEST_ONE,
+        FieldTypeKind.HAS_MANY,
+        FieldTypeKind.HAS_ONE,
+        FieldTypeKind.EMBEDS,
+        FieldTypeKind.DESCENDANTS_OF,
+        FieldTypeKind.ANCESTORS_OF,
+    }
+)
 
 
 @dataclass
@@ -99,19 +112,6 @@ def topological_sort_entities(entities: list[Any]) -> list[str]:
     # (latest_one / has_many / has_one) point at children that *reference
     # this* entity — treating them as deps creates a cycle and falls back
     # to alphabetical order (Employment before Person → 400s on seed).
-    from dazzle.core.ir.fields import FieldTypeKind
-
-    _REVERSE_FK_KINDS = frozenset(
-        {
-            FieldTypeKind.LATEST_ONE,
-            FieldTypeKind.HAS_MANY,
-            FieldTypeKind.HAS_ONE,
-            FieldTypeKind.EMBEDS,
-            FieldTypeKind.DESCENDANTS_OF,
-            FieldTypeKind.ANCESTORS_OF,
-        }
-    )
-
     for entity in entities:
         deps: set[str] = set()
         for f in entity.fields:
