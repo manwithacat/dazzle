@@ -104,8 +104,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | USED |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | USED |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1258 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1256 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1299 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1299 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -115,6 +115,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1299 (2026-07-22).** **self-audit** window 7dbb3e6e9..d7078e8aa — 5 CLEAN (fieldtest acceptance labels, hr_records topo seeds, story_walk landings, simple_task plate). dig receipts ok. densify_allowed=0 residual=0. CodeQL+inbox **USED@1299**. budget 0. Explore **46/100**. Next self-audit ~1314; capability-sweep due.
 
 > **Cycle 1298 (2026-07-22).** **example-apps agent_acceptance_panel** simple_task — trial.toml adoption_criteria; plate_by_person (group_by assigned_to) on team_overview/people_desk/task_board; seeds 5 users + 10 tasks; panel recommend=**unclear** harness ERR_INSUFFICIENT_RESOURCES (clears residual). densify_allowed=0. residual_total 1→0.
 >
