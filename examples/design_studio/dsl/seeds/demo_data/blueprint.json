@@ -336,8 +336,8 @@
       },
       {
         "name": "Feedback",
-        "row_count_default": 8,
-        "notes": "Required reviewer FK was missing from blueprint \u2192 null reviewer 400s on managed seed reset",
+        "row_count_default": 6,
+        "notes": "Story-spine Feedback.jsonl pins reviewer to STABLE reviewer (a1000000-\u2026-00c). Do not faker foreign_key User \u2014 random UUIDs 400 after auth mirror skips domain User seeds (#1630).",
         "tenant_scoped": false,
         "field_patterns": [
           {
@@ -354,9 +354,12 @@
           },
           {
             "field_name": "reviewer",
-            "strategy": "foreign_key",
+            "strategy": "static_list",
             "params": {
-              "target_entity": "User"
+              "values": [
+                "a1000000-0000-4000-8000-00000000000c"
+              ],
+              "sampling": "cycle"
             }
           },
           {

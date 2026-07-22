@@ -1,13 +1,14 @@
-# Qualitative trial scenarios for design_studio (journey dogfood v0.105.3).
+# Qualitative trial scenarios for design_studio (journey dogfood + agent acceptance).
 # Agent-first: brand/asset hubs, open-via hops, review queue — not warehouse lists.
+# Stories: ST-001..ST-006 in dsl/stories.dsl
 # Consumed by: dazzle qa trial --app design_studio --fresh-db --llm-driver grok-cli
 
 [[scenario]]
 name = "designer_portfolio"
 login_persona = "designer"
-time_budget_seconds = 500
-max_steps = 25
-token_budget = 500000
+time_budget_seconds = 600
+max_steps = 40
+token_budget = 1200000
 starting_url = "/app/workspaces/studio_dashboard"
 
 user_identity = """
@@ -35,20 +36,29 @@ tasks = [
     "As a designer, can you start a new asset or find how review status is visible without becoming a warehouse admin?",
 ]
 
+adoption_criteria = [
+    "Studio dashboard shows portfolio pressure (brands, assets, in-review) without menu archaeology",
+    "Brand open is a hub (identity/palette + related assets/campaigns), not a flat field dump",
+    "Asset row opens a useful hub with production/review context and a hop to parent brand",
+    "Designer can start work (new asset or find review status) without becoming warehouse admin",
+    "Would run a two-week pilot replacing Drive+Slack brand context with this tool as-is or with minor fixes",
+]
+
 stop_when = """
-Stop when you've formed a rounded opinion on whether Priya's studio would
-adopt this over Drive+Slack for brand/asset context. Don't exhaust every
-screen — honest friction beats full coverage. Call submit_verdict with a
-one-paragraph verdict.
+Stop when you can score the adoption criteria and form a pilot decision
+(yes / conditional / no). Prefer depth on the criteria over feature tourism.
+Call submit_verdict with recommend=yes|no|conditional|unclear, criteria_scores
+for each criterion (pass|partial|fail|untested), and a clear
+pilot_blockers_summary if any — from Priya's perspective.
 """
 
 
 [[scenario]]
 name = "reviewer_queue"
 login_persona = "reviewer"
-time_budget_seconds = 500
-max_steps = 25
-token_budget = 500000
+time_budget_seconds = 600
+max_steps = 40
+token_budget = 1200000
 # reviewer default_workspace is review_desk — land on /app so shell
 # resolves persona home (direct workspace URL timed out in trial)
 
@@ -73,7 +83,18 @@ tasks = [
     "From feedback list (if you find it), can you hop back to the asset — or are you stuck in a warehouse trail?",
 ]
 
+adoption_criteria = [
+    "Review desk / catalog makes in-review pressure obvious without admin lists",
+    "Asset open is a hub with status/quality and related feedback, not a spreadsheet row",
+    "Reviewer can leave feedback or update status from asset context without a form maze",
+    "Feedback list can hop back to the asset (no dead-end warehouse trail)",
+    "Would run Monday reviews here for a two-week pilot as-is or with minor fixes",
+]
+
 stop_when = """
-Stop when you can say whether Marcus would run Monday reviews here.
-Call submit_verdict with a one-paragraph verdict.
+Stop when you can score the adoption criteria and form a pilot decision
+(yes / conditional / no). Prefer depth on the criteria over feature tourism.
+Call submit_verdict with recommend=yes|no|conditional|unclear, criteria_scores
+for each criterion (pass|partial|fail|untested), and a clear
+pilot_blockers_summary if any — from Marcus's perspective.
 """
