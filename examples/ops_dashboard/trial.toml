@@ -3,8 +3,10 @@
 [[scenario]]
 name = "oncall_engineer"
 login_persona = "ops_engineer"
-time_budget_seconds = 450
-max_steps = 35
+# Gen-2 careful pilot budgets (hub evaluation).
+time_budget_seconds = 720
+max_steps = 55
+token_budget = 800000
 
 user_identity = """
 You are Dan, an SRE at a 20-person infrastructure team. You're on call
@@ -31,11 +33,17 @@ tasks = [
     "See if there's a list of all monitored systems with health status. Can you spot a degraded one at a glance?",
 ]
 
+adoption_criteria = [
+    "Critical / unacknowledged work is visible at a glance without hunting entity lists",
+    "Acknowledge path is discoverable in few steps under on-call pressure",
+    "System health (degraded/critical) is scannable from the home desk",
+    "Would trust this for a two-week on-call pilot as-is or with minor fixes",
+]
+
 stop_when = """
-Stop once you've formed an honest opinion on whether you'd trust this
-in a real incident. Call `submit_verdict` with a one-paragraph verdict
-as Dan — would it survive first contact with a 3am page, or would you
-fall back to your existing tools?
+Stop when you can score adoption_criteria. Call submit_verdict with
+recommend=yes|no|conditional and criteria_scores as Dan — would it survive
+first contact with a 3am page, or would you fall back to existing tools?
 """
 
 # v0.60.0 — trend spike detection scenario. Exercises the time-series
