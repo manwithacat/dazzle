@@ -94,6 +94,25 @@ class TestTopologicalSort:
         result = topological_sort_entities(entities)
         assert result == ["A"]
 
+    def test_latest_one_reverse_link_does_not_cycle(self):
+        """latest_one / has_many must not reverse seed order (hr_records Person)."""
+        from dazzle.core.ir.fields import FieldTypeKind
+
+        person = _make_entity("Person")
+        # Reverse temporal link: Person.current_employment → Employment
+        rev = MagicMock()
+        rev.name = "current_employment"
+        rev.required = False
+        rev.type = MagicMock()
+        rev.type.ref_entity = "Employment"
+        rev.type.kind = FieldTypeKind.LATEST_ONE
+        rev.type.enum_values = None
+        person.fields.append(rev)
+        employment = _make_entity("Employment", [("person", "Person")])
+        # Owning FK should keep Person before Employment
+        result = topological_sort_entities([employment, person])
+        assert result.index("Person") < result.index("Employment")
+
 
 # ---------------------------------------------------------------------------
 # Seed File Reading

@@ -95,13 +95,37 @@ def topological_sort_entities(entities: list[Any]) -> list[str]:
     graph: dict[str, set[str]] = {}
     entity_names = {e.name for e in entities}
 
+    # Only *owning* FKs impose seed order. Reverse temporal links
+    # (latest_one / has_many / has_one) point at children that *reference
+    # this* entity — treating them as deps creates a cycle and falls back
+    # to alphabetical order (Employment before Person → 400s on seed).
+    from dazzle.core.ir.fields import FieldTypeKind
+
+    _REVERSE_FK_KINDS = frozenset(
+        {
+            FieldTypeKind.LATEST_ONE,
+            FieldTypeKind.HAS_MANY,
+            FieldTypeKind.HAS_ONE,
+            FieldTypeKind.EMBEDS,
+            FieldTypeKind.DESCENDANTS_OF,
+            FieldTypeKind.ANCESTORS_OF,
+        }
+    )
+
     for entity in entities:
         deps: set[str] = set()
         for f in entity.fields:
-            if f.type and f.type.ref_entity and f.type.ref_entity in entity_names:
-                # Skip self-references
-                if f.type.ref_entity != entity.name:
-                    deps.add(f.type.ref_entity)
+            if not f.type or not f.type.ref_entity:
+                continue
+            if f.type.ref_entity not in entity_names:
+                continue
+            if f.type.ref_entity == entity.name:
+                continue  # self-ref (e.g. Department.parent)
+            kind = f.type.kind
+            # Explicit reverse kinds only — None/mocks still count as owning FKs.
+            if kind in _REVERSE_FK_KINDS:
+                continue
+            deps.add(f.type.ref_entity)
         graph[entity.name] = deps
 
     sorter = TopologicalSorter(graph)

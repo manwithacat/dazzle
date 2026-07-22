@@ -89,6 +89,43 @@
               ],
               "sampling": "cycle"
             }
+          },
+          {
+            "field_name": "level",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "ic1",
+                "ic2",
+                "ic3",
+                "ic4",
+                "ic5",
+                "ic6",
+                "m1",
+                "m2",
+                "m3",
+                "m4"
+              ],
+              "weights": [
+                0.12,
+                0.15,
+                0.15,
+                0.12,
+                0.08,
+                0.05,
+                0.12,
+                0.1,
+                0.07,
+                0.04
+              ]
+            }
+          },
+          {
+            "field_name": "department",
+            "strategy": "foreign_key",
+            "params": {
+              "target_entity": "Department"
+            }
           }
         ]
       },
@@ -125,6 +162,25 @@
               "domains": [
                 "northwind.test"
               ]
+            }
+          },
+          {
+            "field_name": "started_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -2000,
+              "max_offset_days": -60
+            }
+          },
+          {
+            "field_name": "ended_at",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                null
+              ],
+              "sampling": "cycle"
             }
           }
         ]
@@ -185,7 +241,7 @@
       {
         "name": "Salary",
         "row_count_default": 12,
-        "notes": "Salary needs amount + effective_from + reason (required)",
+        "notes": "Salary: amount as money-compatible number; effective_from required",
         "tenant_scoped": false,
         "field_patterns": [
           {
@@ -201,21 +257,12 @@
             }
           },
           {
-            "field_name": "amount_minor",
-            "strategy": "numeric_range",
+            "field_name": "amount",
+            "strategy": "currency_amount",
             "params": {
-              "min": 3500000,
-              "max": 12000000
-            }
-          },
-          {
-            "field_name": "amount_currency",
-            "strategy": "static_list",
-            "params": {
-              "values": [
-                "GBP"
-              ],
-              "sampling": "cycle"
+              "min": 35000,
+              "max": 120000,
+              "currency": "GBP"
             }
           },
           {
@@ -282,6 +329,25 @@
             "strategy": "foreign_key",
             "params": {
               "target_entity": "Person"
+            }
+          },
+          {
+            "field_name": "start_date",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -900,
+              "max_offset_days": -30
+            }
+          },
+          {
+            "field_name": "end_date",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                null
+              ],
+              "sampling": "cycle"
             }
           }
         ]
