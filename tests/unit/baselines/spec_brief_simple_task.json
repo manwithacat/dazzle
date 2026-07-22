@@ -372,6 +372,7 @@
       "contents": [
         "metrics of Task",
         "kanban of Task",
+        "kanban of Task",
         "timeline of Task",
         "queue of Task",
         "bar_chart of Task",
@@ -407,6 +408,7 @@
         "bar_chart of Task",
         "queue of Task",
         "list of User",
+        "kanban of Task",
         "list of TaskComment"
       ]
     },
@@ -454,6 +456,7 @@
         "metrics of User",
         "grid of User",
         "queue of Task",
+        "kanban of Task",
         "kanban of Task",
         "bar_chart of Task"
       ]
