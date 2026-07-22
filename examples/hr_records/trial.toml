@@ -1,35 +1,47 @@
-# Qualitative trial — hr_records showcase harness.
+# Qualitative trial — hr_records agent acceptance (stories ST-001..ST-005).
+# Consumed by: dazzle qa trial --app hr_records --fresh-db --llm-driver grok-cli
 
 [[scenario]]
 name = "hr_admin_directory"
 login_persona = "hr_admin"
-time_budget_seconds = 450
-max_steps = 30
+time_budget_seconds = 600
+max_steps = 35
+token_budget = 1200000
 
 user_identity = """
 You are Ana, HR admin for a 40-person company. You need a staff directory
 and honest department views — not a fake org-chart tree if the product is lists.
+You are logged in as the hr_admin account for a two-week pilot decision.
 """
 
 business_context = """
 You onboard people, look up contacts, and review compensation with finance.
-Empty directories fail a pilot immediately.
+Empty directories fail a pilot immediately. You care about: (1) seeing people
+without hunting, (2) opening a person hub that shows employment context,
+(3) finding departments/roles without warehouse admin chrome, (4) a clear
+path to add someone. If those fail, you keep the spreadsheet.
 """
 
 tasks = [
-    "Land on Staff Directory. Are people listed?",
+    "Land on Staff Directory (or the HR home). Are people listed with useful names?",
+    "Open a person row. Is it a career/person hub (employment, history) or a flat field dump?",
     "Open Departments & Roles (or equivalent). Does the name match what you see?",
-    "Find how you would add a person (CTA language).",
-    "Decide whether this is a credible HR skeleton for a pilot.",
+    "Find how you would add a person (CTA language) without becoming a warehouse admin.",
+    "Decide whether this is a credible HR skeleton for a two-week pilot.",
 ]
 
 adoption_criteria = [
-    "Staff directory shows real person rows when seeded",
-    "View names are honest about what is rendered",
-    "Primary create CTA uses human language",
-    "Would pilot with minor fixes",
+    "Staff directory shows real person rows when seeded (not empty pilot-breaker)",
+    "Person open is a usable hub (employment/context), not a flat field dump",
+    "View names are honest about what is rendered (no fake org-chart claims)",
+    "Primary create / add-person CTA uses human language and is discoverable",
+    "Would run a two-week pilot as-is or with minor fixes",
 ]
 
 stop_when = """
-Stop when adoption_criteria can be scored. Call submit_verdict.
+Stop when you can score the adoption criteria and form a pilot decision
+(yes / conditional / no). Prefer depth on the criteria over feature tourism.
+Call submit_verdict with recommend=yes|no|conditional|unclear, criteria_scores
+for each criterion (pass|partial|fail|untested), and a clear
+pilot_blockers_summary if any — from Ana's perspective.
 """

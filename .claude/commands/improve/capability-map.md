@@ -49,13 +49,13 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1233 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1233 | USED |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1286 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1291 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1258 | USED |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1258 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1282 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1286 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1291 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `hyperpart-opportunities` + `qa_smoke_bar.py` | **example-apps** + trials | 1281 | USED |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1281 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1281 | USED |

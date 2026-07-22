@@ -2,7 +2,7 @@
   "version": "1.0",
   "blueprint": {
     "project_id": "hr_records",
-    "domain_description": "HR records for Northwind — people, departments, employment and salary history",
+    "domain_description": "HR records for Northwind \u2014 people, departments, employment and salary history",
     "seed": 42,
     "tenants": [
       {
@@ -132,7 +132,7 @@
       {
         "name": "Employment",
         "row_count_default": 12,
-        "notes": "Employment records",
+        "notes": "Employment needs start_date (required); null end_date = active",
         "tenant_scoped": false,
         "field_patterns": [
           {
@@ -160,13 +160,32 @@
             "params": {
               "target_entity": "Department"
             }
+          },
+          {
+            "field_name": "start_date",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -900,
+              "max_offset_days": -30
+            }
+          },
+          {
+            "field_name": "end_date",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                null
+              ],
+              "sampling": "cycle"
+            }
           }
         ]
       },
       {
         "name": "Salary",
         "row_count_default": 12,
-        "notes": "Salary history",
+        "notes": "Salary needs amount + effective_from + reason (required)",
         "tenant_scoped": false,
         "field_patterns": [
           {
@@ -179,6 +198,63 @@
             "strategy": "foreign_key",
             "params": {
               "target_entity": "Person"
+            }
+          },
+          {
+            "field_name": "amount_minor",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 3500000,
+              "max": 12000000
+            }
+          },
+          {
+            "field_name": "amount_currency",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                "GBP"
+              ],
+              "sampling": "cycle"
+            }
+          },
+          {
+            "field_name": "effective_from",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -800,
+              "max_offset_days": -14
+            }
+          },
+          {
+            "field_name": "effective_to",
+            "strategy": "static_list",
+            "params": {
+              "values": [
+                null
+              ],
+              "sampling": "cycle"
+            }
+          },
+          {
+            "field_name": "reason",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "new_hire",
+                "promotion",
+                "market_adjustment",
+                "annual_review",
+                "correction"
+              ],
+              "weights": [
+                0.3,
+                0.25,
+                0.2,
+                0.2,
+                0.05
+              ]
             }
           }
         ]
