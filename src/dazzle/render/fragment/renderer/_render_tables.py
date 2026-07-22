@@ -218,10 +218,9 @@ class _RenderTablesMixin:
             # its column count matches the hydrated render_data_row rows.
             head_html = head_cells
             if t.has_actions:
-                head_html += (
-                    '<th scope="col" class="dz-table-th-actions">'
-                    '<span class="visually-hidden">Actions</span></th>'
-                )
+                # Visible "Actions" title: column is chrome, but with state-transition
+                # text chips it must read as intentional (not a broken trailing field).
+                head_html += '<th scope="col" class="dz-table-th dz-table-th-actions">Actions</th>'
             caption_html = (
                 f'<caption class="visually-hidden">{ctx.escape(t.caption)}</caption>'
                 if t.caption

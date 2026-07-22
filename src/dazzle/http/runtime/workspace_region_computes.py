@@ -27,6 +27,7 @@ from dazzle.http.runtime.workspace_card_data import (
 from dazzle.render.display_names import _resolve_display_name
 from dazzle.render.fragment.insight import InsightNarrative, build_insight_narrative
 from dazzle.render.fragment.outliers import Flag, flag_outliers
+from dazzle.render.fragment.state_affordance import transition_action_label
 
 
 def _coerce_float(value: Any) -> float | None:
@@ -376,10 +377,6 @@ def compute_queue(
             to_state = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
             if to_state not in seen:
                 seen.add(to_state)
-                from dazzle.render.fragment.state_affordance import (
-                    transition_action_label,
-                )
-
                 transitions.append(
                     {
                         "to_state": to_state,

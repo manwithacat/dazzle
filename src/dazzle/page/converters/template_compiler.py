@@ -46,6 +46,7 @@ from dazzle.render.context import (
     TransitionContext,
 )
 from dazzle.render.filters import status_tone_map
+from dazzle.render.fragment.state_affordance import transition_action_label
 
 if TYPE_CHECKING:
     pass
@@ -1255,10 +1256,6 @@ def _compile_view_surface(
             key = (t.from_state, t.to_state)
             if key not in seen:
                 seen.add(key)
-                from dazzle.render.fragment.state_affordance import (
-                    transition_action_label,
-                )
-
                 transitions.append(
                     TransitionContext(
                         from_state=t.from_state,

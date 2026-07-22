@@ -104,6 +104,11 @@ class RowCapabilities:
     inline_editable: tuple[str, ...] = ()
     drill: bool = False
     peek: str = "off"
+    # Mutation affordances (default True for unit fixtures without RBAC).
+    # List transport sets False when permit denies the op for this principal
+    # (humanqa: anon trash + hx-confirm still removed the row visually).
+    delete: bool = True
+    update: bool = True
 
 
 @dataclass(frozen=True, slots=True)

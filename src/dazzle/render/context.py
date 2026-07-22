@@ -523,6 +523,13 @@ class PageContext(BaseModel):
     # rendered body. Empty string = no guide active.
     active_guide_html: str = ""
 
+    # App-shell content measure (`data-dz-measure` on <main>).
+    # None → dispatch infers from table/form/detail context:
+    #   list (table) → "app" (near full-bleed; tables need room)
+    #   form / detail → "product" (readable measure)
+    # Explicit: "app" | "product" | "wide" | "" (true full-bleed).
+    content_measure: str | None = None
+
     # Extra data for custom templates
     extra: dict[str, Any] = Field(default_factory=dict)
 

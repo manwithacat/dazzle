@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
-from dazzle.core.access import AccessOperationKind
+from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.strings import entity_slug, to_api_plural
 from dazzle.http.runtime.audit_wrap import _log_audit_decision
 from dazzle.http.runtime.auth import AuthContext
@@ -51,10 +51,12 @@ from dazzle.http.runtime.route_support import (
 )
 from dazzle.http.runtime.usage_signal import USAGE_KIND_FIELD, read_usage_counts_for_request
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy_by_usage
+from dazzle.render.access_evaluator import evaluate_permission
 from dazzle.render.access_messages import _forbidden_detail
 from dazzle.render.context import TransitionContext
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.renderer._data_row import render_data_table_rows
+from dazzle.render.fragment.state_affordance import transition_action_label
 
 if TYPE_CHECKING:
     from dazzle.core.ir.fk_graph import FKGraph
@@ -88,8 +90,6 @@ def _principal_can_op(
     """
     if cedar_access_spec is None:
         return True
-    from dazzle.core.access import AccessRuntimeContext
-    from dazzle.render.access_evaluator import evaluate_permission
 
     _op_rules = [r for r in cedar_access_spec.permissions if r.operation == operation]
     _has_scopes = bool(getattr(cedar_access_spec, "scopes", None))
@@ -169,10 +169,6 @@ def list_state_transitions(
         key = (t.from_state, t.to_state)
         if key not in seen:
             seen.add(key)
-            from dazzle.render.fragment.state_affordance import (
-                transition_action_label,
-            )
-
             out.append(
                 TransitionContext(
                     from_state=t.from_state,
