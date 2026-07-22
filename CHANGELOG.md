@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.107.0] - 2026-07-22
+
 ### Added
 - **Example eval hub (local multi-host harness)** — `scripts/example_hub/`:
   catalogue at `dazzle.local:9080`, per-app hosts `{app}.dazzle.local:9080`,
@@ -86,6 +88,8 @@
   scope-creep feature slices (`--warehouse-index`, `--next-wi`).
 
 ### Fixed
+
+- **Security dependency** — bump transitive `pyasn1` 0.6.3→0.6.4 (pip-audit PYSEC-2026-3455/3456/3457).
 - **#1637 product maturity Goodhart** — WI densify hard-stop when
   residual=0 and `wi_fleet ≤ wi_floor` (`densify_allowed=0`, empty
   `--next-wi`); D scores only *job-backed* desks (default/story; orphan
@@ -244,6 +248,10 @@
   personas and fell through to list-surface fallback (SystemHealth stills).
   Prefer `personas`; filter platform entities from surface fallback. Re-captured
   simple_task / support_tickets / invoice_ops job desks with seeded data.
+
+### Agent Guidance
+- Prefer `dazzle qa smoke-crawl` / improve `agent_qa_smoke` for 404/empty-main density before deep `qa trial`; humans (`/humanqa`) are L4 after L1–L3.
+- Person-like `ref User` list/detail cells emit Avatar chips by default (`.dz-avatar`); opt out with column `avatar: false`.
 
 ## [0.106.0] - 2026-07-18
 
