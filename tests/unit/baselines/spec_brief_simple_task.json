@@ -579,7 +579,16 @@
         "entity": "Task",
         "operation": "list",
         "personas": [
-          "*"
+          "member"
+        ],
+        "rule": "(its assigned to is the signed-in user or its created by is the signed-in user)"
+      },
+      {
+        "entity": "Task",
+        "operation": "list",
+        "personas": [
+          "admin",
+          "manager"
         ],
         "rule": "all records"
       },
@@ -587,7 +596,16 @@
         "entity": "Task",
         "operation": "read",
         "personas": [
-          "*"
+          "member"
+        ],
+        "rule": "(its assigned to is the signed-in user or its created by is the signed-in user)"
+      },
+      {
+        "entity": "Task",
+        "operation": "read",
+        "personas": [
+          "admin",
+          "manager"
         ],
         "rule": "all records"
       },
