@@ -1820,3 +1820,89 @@ def qa_trial_hypotheses(
     from dazzle.qa.trial_cli import run_trial_hypotheses
 
     run_trial_hypotheses(_resolve_project_dir(app))
+
+
+@qa_app.command("smoke-crawl")
+def qa_smoke_crawl(
+    app: str | None = typer.Option(None, "--app", "-a", help="Example app name (defaults to cwd)"),
+    persona: str = typer.Option(
+        "manager", "--persona", "-p", help="QA persona for magic-link auth"
+    ),
+    base_url: str = typer.Option(
+        ...,
+        "--base-url",
+        "-u",
+        help="Running app base URL (DAZZLE_QA_MODE=1 required)",
+    ),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Write JSON report path"),
+    headless: bool = typer.Option(
+        True, "--headless/--headed", help="Run browser headless (default) or visible"
+    ),
+    max_clicks: int = typer.Option(
+        20,
+        "--max-clicks",
+        help="BFS click budget after inventory phase (0 = inventory only)",
+    ),
+    bfs: bool = typer.Option(
+        True,
+        "--bfs/--no-bfs",
+        help="After inventory, follow rendered /app links (default: on)",
+    ),
+    fail_on_product: bool = typer.Option(
+        False,
+        "--fail-on-product",
+        help="Exit 1 when auto_seed has product medium+ bugs (default: always 0)",
+    ),
+) -> None:
+    """Mechanical browser crawl for 404s, empty main, and page errors.
+
+    Complements ``trial-coverage`` (HTTP only — misses white screens) and
+    ``qa trial`` (qualitative pilot, not bug-density smoke). See
+    ``docs/recipes/agent-qa-ladder.md`` (L2.5 smoke crawl).
+    """
+    from dazzle.qa.trial_cli import run_smoke_crawl
+
+    run_smoke_crawl(
+        _resolve_project_dir(app),
+        persona=persona,
+        base_url=base_url,
+        output=output,
+        headless=headless,
+        max_clicks=max_clicks,
+        enable_bfs=bfs,
+        fail_on_product=fail_on_product,
+    )
+
+
+@qa_app.command("smoke-dig")
+def qa_smoke_dig(
+    app: str | None = typer.Option(
+        None, "--app", "-a", help="Single app (default: next in seeded rotation)"
+    ),
+    all_apps: bool = typer.Option(False, "--all", help="Dig entire showcase fleet this run"),
+    seed: int | None = typer.Option(None, "--seed", help="RNG seed for fleet order"),
+    once: bool = typer.Option(True, "--once/--cycle", help="One app (default) or multi-app slice"),
+    max_clicks: int = typer.Option(12, "--max-clicks", help="BFS click budget per app"),
+    headless: bool = typer.Option(True, "--headless/--headed"),
+    fail_on_product: bool = typer.Option(
+        False, "--fail-on-product", help="Exit 1 if any app leaves product auto_seed"
+    ),
+    run_coverage: bool = typer.Option(
+        True, "--coverage/--no-coverage", help="Also run HTTP trial-coverage first"
+    ),
+) -> None:
+    """Fleet L2.5 dig: random-seed showcase rotation for gross bugs (404 / empty main)."""
+    from dazzle.qa.smoke_dig import dig_cycle
+
+    results = dig_cycle(
+        app=app,
+        all_apps=all_apps or not once,
+        seed=seed,
+        max_clicks=max_clicks,
+        headless=headless,
+        fail_on_product=fail_on_product,
+        run_coverage=run_coverage,
+    )
+    n_fail = sum(1 for r in results if not r.ok)
+    if fail_on_product and n_fail:
+        raise typer.Exit(code=1)

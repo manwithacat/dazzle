@@ -205,7 +205,8 @@ persona admin "Administrator":
   goals: "Manage all tasks", "Configure team settings", "View analytics"
   proficiency: expert
   default_workspace: admin_dashboard
-  default_route: "/admin"
+  # Must be a real app path — bare /admin 404s (L2.5 smoke dig landing).
+  default_route: "/app/workspaces/admin_dashboard"
   uses nav admin_nav
 
 persona manager "Team Manager":
@@ -213,7 +214,8 @@ persona manager "Team Manager":
   goals: "Assign tasks to team", "Track team progress", "Review completed work"
   proficiency: intermediate
   default_workspace: team_overview
-  default_route: "/team"
+  # Was /team → product 404 after magic-link / post-login redirect.
+  default_route: "/app/workspaces/team_overview"
   uses nav manager_nav
 
 persona member "Team Member":
@@ -221,7 +223,7 @@ persona member "Team Member":
   goals: "Complete assigned tasks", "Update task status", "Request help"
   proficiency: novice
   default_workspace: my_work
-  default_route: "/my-work"
+  default_route: "/app/workspaces/my_work"
   uses nav member_nav
 
 # admin_dashboard is platform-prefix excluded from product D; still a valid nav target.
@@ -254,25 +256,25 @@ scenario empty "Empty State":
   description: "Fresh install with no data - test onboarding flows"
 
   as persona admin:
-    start_route: "/admin"
+    start_route: "/app/workspaces/admin_dashboard"
 
   as persona manager:
-    start_route: "/team"
+    start_route: "/app/workspaces/team_overview"
 
   as persona member:
-    start_route: "/my-work"
+    start_route: "/app/workspaces/my_work"
 
 scenario busy_sprint "Active Sprint":
   description: "Mid-sprint with tasks in various states"
 
   as persona admin:
-    start_route: "/admin"
+    start_route: "/app/workspaces/admin_dashboard"
 
   as persona manager:
-    start_route: "/team"
+    start_route: "/app/workspaces/team_overview"
 
   as persona member:
-    start_route: "/my-work"
+    start_route: "/app/workspaces/my_work"
 
   demo:
     User:
@@ -295,13 +297,13 @@ scenario overdue_crisis "Overdue Tasks":
   description: "Several overdue tasks needing attention"
 
   as persona admin:
-    start_route: "/admin"
+    start_route: "/app/workspaces/admin_dashboard"
 
   as persona manager:
-    start_route: "/team"
+    start_route: "/app/workspaces/team_overview"
 
   as persona member:
-    start_route: "/my-work"
+    start_route: "/app/workspaces/my_work"
 
 # =============================================================================
 # Surfaces - UI views for entities

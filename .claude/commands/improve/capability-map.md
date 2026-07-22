@@ -56,9 +56,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1301 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1301 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1298 | USED |
-| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `hyperpart-opportunities` + `qa_smoke_bar.py` | **example-apps** + trials | 1281 | USED |
-| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1281 | USED |
-| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1281 | USED |
+| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1305 | USED |
+| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1305 | USED |
+| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1305 | USED |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials | 1281 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1278 | STALE |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1278 | STALE |
@@ -116,6 +116,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1305 (2026-07-22).** **example-apps agent_qa_smoke** (campaign `land-l25-smoke`) — re-landed L2.5 smoke stack + improve-policy; digs found **simple_task product 404** on `/team` persona default_route → fixed to `/app/workspaces/*`; support_tickets/invoice_ops/hr_records clean; structure (dup region ids) on project_tracker/design_studio/simple_task (framework, not auto_seed). densify_allowed=0. Stamped agent_qa_smoke/smoke-crawl/smoke-dig **USED@1305**. Explore **51/100**.
 
 > **Cycle 1304 (2026-07-22).** **hm-convergence HYGIENE dig** — dual_lock queue **0**; shadcn gaps **0**; zero-floor **GREEN** (0/0); coherence queue=0 mean=8.7; gallery_probes **6/6 PASS**. densify_allowed=0. Stamped dual_lock/shadcn/zero-floor/gallery/coherence **USED@1304**. budget_consumed 1. Explore **50/100**.
 

@@ -175,3 +175,73 @@ def run_trial_hypotheses(project_dir: Path) -> None:
             typer.echo(str(p.relative_to(project_dir)))
         except ValueError:
             typer.echo(str(p))
+
+
+def run_smoke_crawl(
+    project_dir: Path,
+    *,
+    persona: str,
+    base_url: str,
+    output: Path | None,
+    headless: bool = True,
+    max_clicks: int = 20,
+    enable_bfs: bool = True,
+    fail_on_product: bool = False,
+) -> None:
+    """Mechanical browser smoke crawl (404 / empty main / pageerror).
+
+    Requires a running app with ``DAZZLE_QA_MODE=1`` and Playwright Chromium.
+    """
+    from dazzle.cli.utils import load_project_appspec
+    from dazzle.qa.smoke_crawl import build_smoke_report
+    from dazzle.qa.smoke_crawl import run_smoke_crawl as _crawl
+    from dazzle.qa.trial_inventory import build_coverage_inventory
+
+    if not persona:
+        typer.echo("--persona is required for smoke-crawl", err=True)
+        raise typer.Exit(code=2)
+    if not base_url:
+        typer.echo("--base-url is required (running app with DAZZLE_QA_MODE=1)", err=True)
+        raise typer.Exit(code=2)
+
+    appspec = load_project_appspec(project_dir)
+    targets = build_coverage_inventory(appspec)
+    app_name = project_dir.name
+
+    try:
+        hits = _crawl(
+            base_url=base_url.rstrip("/"),
+            persona=persona,
+            targets=targets,
+            appspec=appspec,
+            headless=headless,
+            max_clicks=max_clicks,
+            enable_bfs=enable_bfs,
+        )
+    except RuntimeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+
+    report = build_smoke_report(
+        app=app_name,
+        persona=persona,
+        base_url=base_url.rstrip("/"),
+        hits=hits,
+        max_clicks=max_clicks,
+    )
+    path = _default_coverage_path(project_dir, output, f"qa-smoke-{persona}")
+    path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    counts = report.get("counts") or {}
+    n_seed = len(report.get("auto_seed") or [])
+    typer.echo(
+        f"Smoke crawl {persona}: {counts} auto_seed={n_seed} → {path} "
+        f"({len(hits)} hits / {len(targets)} inventory targets)"
+    )
+    for h in hits:
+        if h.ok:
+            continue
+        codes = ",".join(i.code for i in h.issues) or "fail"
+        typer.echo(f"  FAIL {h.phase:10} {h.url:40} {codes} ({h.ownership_hint})")
+
+    if fail_on_product and n_seed:
+        raise typer.Exit(code=1)

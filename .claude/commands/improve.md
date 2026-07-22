@@ -17,6 +17,7 @@ when residual remains: product → demo → journey):
 | `example-apps journey_dogfood` | `improve/strategies/journey_dogfood.md` | `scripts/example_journey_maturity.py` |
 | `example-apps story_walk` | `improve/strategies/story_walk.md` | `scripts/story_walk_bar.py` (landing stories ↔ walks) |
 | `example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` | `scripts/trial_verdict_bar.py` + live `qa trial` |
+| `example-apps agent_qa_smoke` | `improve/strategies/agent_qa_smoke.md` | `scripts/qa_smoke_bar.py` + `dazzle qa smoke-dig` |
 
 Unified OBSERVE for every example-apps cycle (and for `--status`):
 
@@ -199,6 +200,24 @@ See **State compaction** above. Skip silently when both files are under the thre
 If Step 0c already claimed this cycle for CI repair, Step 0c2 for CodeQL repair, or Step 0c3 claimed it for github-prs / consumer-issues, skip Step 1–2 (already handled).
 
 If `$ARGUMENTS` forces a lane, skip to Step 2.
+
+**Configurable prioritisation** (`improve/improve-policy.yaml`):
+
+```bash
+python scripts/improve_policy.py --status
+# improve_policy active_campaign=… pick force=… reason=…
+python scripts/improve_policy.py --pick    # e.g. example-apps agent_qa_smoke
+```
+
+When `--pick` returns non-empty `force_args` (active **campaign** or **recurring**
+L2.5 / `qa_smoke` residual), use that as the lane+strategy **unless** hard
+preemption applies (REGRESSION rows, self-audit cadence, capability-sweep cadence,
+fresh signal bias still listed below may reorder — campaign `yield_to` only
+skips for CI/CodeQL/inbox/REGRESSION/self-audit). Near-term campaign
+`land-l25-smoke` forces dig exercise on examples (gross bugs: 404 / empty main).
+
+Playbook: `improve/strategies/agent_qa_smoke.md`. Residual bar:
+`python scripts/qa_smoke_bar.py --status`.
 
 For each lane, compute two numbers from the unified backlog:
 

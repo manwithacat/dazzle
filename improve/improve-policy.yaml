@@ -1,0 +1,72 @@
+# Configurable /improve prioritisation — steady-state vs campaign override.
+#
+# Read by scripts/improve_policy.py (and human operators at Step 1).
+# Campaign override beats residual-only explore when active; hard preemption
+# still applies (REGRESSION, red CI, CodeQL high, GitHub inbox claim).
+#
+# Toggle campaign:
+#   python scripts/improve_policy.py --activate land-l25-smoke
+#   python scripts/improve_policy.py --clear-campaign
+#   python scripts/improve_policy.py --status
+
+version: 1
+
+# Active campaign id, or null / omitted for pure steady_state.
+# Near-term: dig exercising examples for gross bugs (404 / empty main).
+active_campaign: land-l25-smoke
+
+steady_state:
+  # After hard preemption (CI / CodeQL / REGRESSION / inbox), prefer in order:
+  selection_order:
+    - regression
+    - self_audit_cadence
+    - capability_sweep_cadence
+    - signal_bias
+    - probe_residual          # product/demo/journey/story/acceptance + qa_smoke
+    - tr_signal_drain
+    - campaign_or_recurring   # see campaigns + recurring
+    - explore_cognition
+    - explore_hygiene
+    - explore_ordinary        # densify only if densify_allowed=1
+
+  recurring:
+    # Mechanical L2.5 smoke dig — not residual-gated. Every N cycles when
+    # residual is clear, force agent_qa_smoke so digs don't starve under
+    # hygiene STALE re-stamps.
+    - id: agent_qa_smoke
+      every_n_cycles: 3
+      lane: example-apps
+      strategy: agent_qa_smoke
+      force_args: "example-apps agent_qa_smoke"
+      note: "L2.5 smoke-dig fleet rotation (404 / empty main / structure)"
+
+  densify:
+    hard_stop_when_floor: true   # densify_allowed=0 → never WI densify
+
+campaigns:
+  land-l25-smoke:
+    title: "Land L2.5 smoke digs on showcase examples"
+    success_criteria:
+      - "Gross bugs found or cleared: HTTP 404/5xx, empty main, white screens"
+      - "At least one full showcase rotation via smoke-dig"
+      - "qa_smoke residual drives improve when auto_seed non-empty"
+    prefer:
+      lane: example-apps
+      strategy: agent_qa_smoke
+      force_args: "example-apps agent_qa_smoke"
+    # Still yield to hard preemption (CI red, CodeQL, REGRESSION, inbox).
+    yield_to:
+      - regression
+      - ci_repair
+      - codeql
+      - github_inbox
+      - self_audit_cadence
+    # While campaign active, probe residual for product_maturity still
+    # wins only when critical; otherwise campaign dig runs.
+    preempt_probe_residual: false
+    # Prefer smoke residual over generic product residual when both set.
+    boost_probe: qa_smoke
+    max_cycles: 40
+    notes: >
+      Near-term priority: dig exercising examples. Success = finding gross
+      bugs (404s). Subtler bugs welcome. Do not densify.

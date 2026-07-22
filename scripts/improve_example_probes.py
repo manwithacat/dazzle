@@ -131,6 +131,15 @@ def _process_dig() -> tuple[str, str | None, int, str | None]:
     return mod.format_process_status(), nxt, len(rows), strategy
 
 
+def _qa_smoke() -> tuple[str, str | None, int]:
+    """L2.5 smoke residual — last smoke-crawl auto_seed / stale / missing."""
+    mod = _load("qa_smoke_bar", REPO / "scripts" / "qa_smoke_bar.py")
+    rows = mod.scan()
+    residual = [r for r in rows if r.is_residual()]
+    nxt = residual[0].app if residual else None
+    return mod.format_status(rows), nxt, len(residual)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--status", action="store_true", help="One-line suite (default)")
@@ -186,7 +195,14 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # noqa: BLE001
         results.append(("process_dig", f"process_dig error={type(exc).__name__}", None, -1))
 
-    # Selection: structure → demo → journey → felt → story_walk → trial → process.
+    try:
+        s_line, s_nxt, s_n = _qa_smoke()
+        results.append(("qa_smoke", s_line, s_nxt, s_n))
+    except Exception as exc:  # noqa: BLE001
+        results.append(("qa_smoke", f"qa_smoke error={type(exc).__name__}", None, -1))
+
+    # Selection: structure → demo → journey → felt → story_walk → trial → process → smoke.
+    # Campaign land-l25-smoke / improve_policy may force agent_qa_smoke ahead of this list.
     STRATEGY_FOR = {
         "product_maturity": "product_maturity",
         "demo_fleet": "demo_fleet",
@@ -195,6 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         "story_walk": "story_walk",
         "trial_verdict": "agent_acceptance_panel",
         "process_dig": "story_walk",  # default; overridden by receipt strategy
+        "qa_smoke": "agent_qa_smoke",
     }
     preferred_next: str | None = None
     preferred_probe: str | None = None
