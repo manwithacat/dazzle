@@ -56,9 +56,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1301 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1301 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1298 | USED |
-| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1313 | USED |
-| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1313 | USED |
-| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1313 | USED |
+| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1315 | USED |
+| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1315 | USED |
+| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1315 | USED |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials | 1281 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1278 | STALE |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1278 | STALE |
@@ -105,8 +105,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1314 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1314 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1315 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1315 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -116,6 +116,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1315 (2026-07-22).** **example-apps agent_qa_smoke** (campaign `land-l25-smoke`) — tip CI run 29958972323 **in_progress** (self-audit stamp 8d47a9497). Light re-dig **contact_manager** auto_seed=0 (10 ok / 0 fail inventory; 3× http_error all `rbac_expected` 403 only). residual_total=0 densify_allowed=0. Stamped agent_qa_smoke/smoke-crawl/smoke-dig + CodeQL/inbox **USED@1315**. budget_consumed 1. Explore **57/100**. Next light dig → project_tracker (cursor=6).
 
 > **Cycle 1314 (2026-07-22).** **self-audit** window acb1c0f6b..8a9753f30 — 5 CLEAN (c1300 map sweep, c1301 cognition stamp, c1305 L2.5 land + simple_task 404 fix, c1307–1309 smoke_dig/root+Playwright settle+TYPE_CHECKING, c1310–1313 light smoke reports). 0 DISCREPANCY. densify_allowed=0 residual=0. CodeQL+inbox **USED@1314**. budget 0. Explore **56/100**. Next self-audit ~1329; capability-sweep due ~1320 (last@1300). Campaign land-l25-smoke still active (next light dig contact_manager).
 
