@@ -81,11 +81,11 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1230 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
-| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1228 | STALE |
+| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | USED |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1231 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1228 | STALE |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1303 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1229 | STALE |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1229 | STALE |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1229 | STALE |
@@ -95,7 +95,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1235 | STALE |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1228 | STALE |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | USED |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1235 | STALE |
@@ -105,8 +105,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1302 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1302 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1303 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1303 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -116,6 +116,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1303 (2026-07-22).** **framework-ux HYGIENE dig** simple_task — pulse run/radar **health_score 67**; composition audit **100/100**; fragment-audit all regions OK (incl. plate_by_person WI desks). densify_allowed=0. Restored pulse radar side-effect dsl_generated_tests.json (no product commit). Stamped pulse/composition/fragment-audit **USED@1303**. budget_consumed 1. Explore **49/100**.
+
 
 > **Cycle 1302 (2026-07-22).** **framework-ux/example-apps HYGIENE dig** simple_task — serve :3402; `ux verify --contracts` **45/0/24** pass/fail/pending; `sentinel scan` **22** findings (advisory medium/low); `process propose` OK skipped_crud User/Task/TaskComment. densify_allowed=0. Stamped ux-verify/sentinel/process **USED@1302**. budget_consumed 1. Explore **48/100**.
 
