@@ -105,8 +105,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1306 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1306 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1308 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1308 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -116,6 +116,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1308 (2026-07-22).** **cimonitor** — tip run 29950202757 (c04632e0a) type-check red: unused `type: ignore[misc,assignment]` on Playwright ImportError fallback in `smoke_crawl.py` (CI mypy 2.1). Fixed with explicit `type[BaseException]` bindings + no ignores. preflight+ship green. Campaign `land-l25-smoke` still active (full showcase re-dig@1307; residual=0). Stamped CodeQL + GitHub inbox **USED@1308**. budget_consumed 0. Explore **52/100**.
 
 > **Cycle 1306 (2026-07-22).** **cimonitor** — main red after L2.5 smoke land (run 29946842459): complexity/deferred/bare-except/swallow + mypy on smoke_crawl/smoke_dig. Fixed structural debt, baselines, hoisted imports; preflight+ship green. Campaign `land-l25-smoke` remains active — next cycle resumes agent_qa_smoke digs. Stamped fitness CLI + CodeQL + GitHub inbox **USED@1306**. budget_consumed 0. Explore **51/100**.
 
