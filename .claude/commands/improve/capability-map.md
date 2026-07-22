@@ -69,7 +69,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1233 | STALE |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1233 | STALE |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1259 | STALE |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1227 | STALE |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1302 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1233 | STALE |
@@ -82,7 +82,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1230 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1228 | STALE |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1227 | STALE |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | USED |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1231 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1228 | STALE |
@@ -96,7 +96,7 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1235 | STALE |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1228 | STALE |
-| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1227 | STALE |
+| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | USED |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1235 | STALE |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1235 | STALE |
@@ -105,8 +105,8 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1301 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1301 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1302 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1302 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -116,6 +116,9 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1302 (2026-07-22).** **framework-ux/example-apps HYGIENE dig** simple_task — serve :3402; `ux verify --contracts` **45/0/24** pass/fail/pending; `sentinel scan` **22** findings (advisory medium/low); `process propose` OK skipped_crud User/Task/TaskComment. densify_allowed=0. Stamped ux-verify/sentinel/process **USED@1302**. budget_consumed 1. Explore **48/100**.
+
 
 > **Cycle 1301 (2026-07-22).** **example-apps COGNITION dig** simple_task — domain extract/show/gaps/promote (ready_to_promote=True); `demo quality` residual_total=0 metric risk=1 (member my_summary advisory); serve :3401 + `demo reset-and-load -y` **created_count=12** persona_homes=0 live_desk=0; MCP status demo_world runtime OK; db status User×5 Task×10. densify_allowed=0 held. Stamped domain/product_quality/demo quality/reset-and-load/demo_world/db + maturity probes **USED@1301**. budget_consumed 1. Explore **47/100**.
 
