@@ -47,8 +47,11 @@ class TestSkeletonTableChrome:
         html = _render(
             Table(columns=("Name",), rows=(), skeleton=True, hx_endpoint="/x", has_actions=True)
         )
-        assert '<th scope="col" class="dz-table-th-actions">' in html
-        assert '<span class="visually-hidden">Actions</span>' in html
+        # Visible "Actions" chrome (transition chips need a labeled column; not
+        # visually-hidden icon strip only — cycle 1287 / fieldtest acceptance).
+        assert "dz-table-th-actions" in html
+        assert "Actions</th>" in html or ">Actions<" in html
+        assert 'visually-hidden">Actions' not in html
         # actions th comes AFTER the data header (matches render_data_row cell order)
         assert html.index("Name") < html.index("dz-table-th-actions")
 

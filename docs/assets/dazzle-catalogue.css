@@ -966,7 +966,12 @@ a.dz-action-card:hover {
 /* ── dz-alert-dialog — designed hx-confirm surface ───────────────────── */
 /* HYPERPART: confirm */
 dialog.dz-alert-dialog {
+  /* Global reset sets `margin: 0` on all elements, which cancels the UA
+   * centering of modal <dialog>. Explicit auto margins restore center
+   * placement (humanqa: delete confirm painted top-left). */
+  margin: auto;
   width: min(26rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
   padding: var(--space-2xl);
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-lg);
@@ -1035,13 +1040,98 @@ dialog.dz-alert-dialog::backdrop {
 
 .dz-app-shell {
   /* Root container — sidebarOpen attribute lives here. */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .dz-app-content {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   transition: padding var(--duration-base) var(--ease-out);
+}
+
+/* ── Content measure on the app shell ───────────────────────────────
+ * product — forms / detail (readable column; ~48rem + sidebar)
+ * wide    — medium intermediate (~56rem + sidebar)
+ * app     — list / grid / board workspaces: near full-bleed with a soft
+ *           ultrawide cap only (tables need room; don't grow infinitely)
+ *
+ * Grey stage outside the shell is figure/ground, not "wasted table width".
+ */
+
+/* Product measure — forms/detail: constrain whole chrome to a reading unit. */
+.dz-app-shell:has(.dz-app-main[data-dz-measure="product"]) {
+  max-width: min(
+    100%,
+    calc(var(--dz-content-measure, 48rem) + 16rem)
+  );
+  margin-inline: auto;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--colour-bg, #fff);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--colour-border, #cbd5e1) 70%, transparent);
+}
+
+.dz-app-shell:has(.dz-app-main[data-dz-measure="wide"]) {
+  max-width: min(
+    100%,
+    calc(var(--dz-content-measure-wide, 56rem) + 16rem)
+  );
+  margin-inline: auto;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--colour-bg, #fff);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--colour-border, #cbd5e1) 70%, transparent);
+}
+
+/* App measure — lists/boards: use most of the viewport; soft max only. */
+.dz-app-shell:has(.dz-app-main[data-dz-measure="app"]) {
+  max-width: min(100%, var(--dz-content-measure-app, 96rem));
+  margin-inline: auto;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--colour-bg, #fff);
+  /* Lighter edge than product card — shell is the app, not a floating form */
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--colour-border, #cbd5e1) 40%, transparent);
+}
+
+/* When sidebar is closed / mobile, don't reserve 16rem for the rail. */
+@media (max-width: 63.99rem) {
+  .dz-app-shell:has(.dz-app-main[data-dz-measure="product"]) {
+    max-width: min(100%, var(--dz-content-measure, 48rem));
+  }
+  .dz-app-shell:has(.dz-app-main[data-dz-measure="wide"]) {
+    max-width: min(100%, var(--dz-content-measure-wide, 56rem));
+  }
+  .dz-app-shell:has(.dz-app-main[data-dz-measure="app"]) {
+    max-width: min(100%, var(--dz-content-measure-app, 96rem));
+  }
+}
+
+[data-dz-sidebar="closed"].dz-app-shell:has(.dz-app-main[data-dz-measure="product"]) {
+  max-width: min(100%, var(--dz-content-measure, 48rem));
+}
+
+[data-dz-sidebar="closed"].dz-app-shell:has(.dz-app-main[data-dz-measure="wide"]) {
+  max-width: min(100%, var(--dz-content-measure-wide, 56rem));
+}
+
+[data-dz-sidebar="closed"].dz-app-shell:has(.dz-app-main[data-dz-measure="app"]) {
+  max-width: min(100%, var(--dz-content-measure-app, 96rem));
+}
+
+/* Inner main content still fills the constrained shell. */
+.dz-app-main[data-dz-measure="product"] > *,
+.dz-app-main-inner[data-dz-measure="product"],
+.dz-app-main[data-dz-measure="wide"] > *,
+.dz-app-main-inner[data-dz-measure="wide"],
+.dz-app-main[data-dz-measure="app"] > *,
+.dz-app-main-inner[data-dz-measure="app"] {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (min-width: 64rem) {
@@ -1079,6 +1169,41 @@ dialog.dz-alert-dialog::backdrop {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+}
+
+/* Soft empty state when a region HTMX swap fails (hub 502 during restart). */
+.dz-region-unavailable {
+  padding: var(--space-lg);
+  text-align: center;
+  color: var(--colour-text-muted);
+  font-size: var(--text-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.dz-region-unavailable p {
+  margin: 0;
+  max-width: 28rem;
+}
+
+/* Account pack sits on the trailing edge (title takes free space). */
+.dz-topbar-trailing {
+  margin-inline-start: auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.dz-topbar-trailing .dz-cluster,
+.dz-topbar-trailing .dz-row {
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.dz-account-logout {
+  display: inline-flex;
+  margin: 0;
 }
 
 /* #1294 / #1602 — sidebar toggle (hamburger).
@@ -1180,13 +1305,14 @@ dialog.dz-alert-dialog::backdrop {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 12.5rem;
+  max-width: min(16rem, 36vw);
   display: none;
 }
 
 @media (min-width: 40rem) {
   .dz-topbar-user {
-    display: inline;
+    display: inline-block;
+    vertical-align: middle;
   }
 }
 
@@ -1528,6 +1654,7 @@ dialog.dz-alert-dialog::backdrop {
 .dz-badge {
   display: inline-flex;
   align-items: center;
+  gap: 0; /* icon spacing via .dz-badge-icon margin */
   border-radius: var(--radius-sm);
   font-weight: var(--weight-medium);
   /* Defaults match the macro's `size="md"` branch. The .dz-badge-sm
@@ -1535,6 +1662,16 @@ dialog.dz-alert-dialog::backdrop {
   padding-inline: var(--space-sm);
   height: 1.25rem;
   font-size: var(--text-xs);
+  line-height: 1;
+  /* Multi-word enum labels (In Progress) must stay one line — wrapping
+   * against a fixed height is the humanqa STATUS column failure mode. */
+  white-space: nowrap;
+  max-width: 100%;
+  box-sizing: border-box;
+  /* Prefer ellipsis over mid-word break if a column is still too tight. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
 .dz-badge-sm {
@@ -3569,7 +3706,10 @@ dialog.dz-alert-dialog::backdrop {
  */
 
 dialog.dz-dialog {
+  /* Reset zeroes margin; restore UA modal centering. */
+  margin: auto;
   width: min(32rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
   padding: 0;
   border: 1px solid var(--colour-border);
   border-radius: var(--radius-lg);
@@ -3894,234 +4034,6 @@ dialog.dz-drawer > form {
 #dz-detail-drawer.dz-drawer {
   width: min(42rem, calc(100vw - 3rem));
 }
-/* --- hatchi-maxchi/components/feedback-widget.css --- */
-@layer framework {
-/* HaTchi-MaXchi — Feedback widget (floating feedback FAB + panel: categories, severities, form). Ported from Dazzle feedback-widget.css (HM-sitespec 1C, 2026-07-09) — was orphaned (unlinked) on the Dazzle side; now served via the HM dist. Authored with dz- prefix. */
-
-/* Floating button */
-.dz-feedback-btn {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 9999px;
-  background: var(--colour-brand);
-  color: var(--colour-brand-contrast);
-  border: none;
-  cursor: pointer;
-  z-index: 9998;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.dz-feedback-btn:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 16px rgb(0 0 0 / 0.2);
-}
-.dz-feedback-btn svg {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-/* Slide-out panel */
-.dz-feedback-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 24rem;
-  max-width: 100vw;
-  height: 100dvh;
-  background: var(--colour-surface);
-  border-left: 1px solid var(--colour-border);
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
-  z-index: 9999;
-  transform: translateX(100%);
-  transition: transform 0.25s ease;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-.dz-feedback-panel.open {
-  transform: translateX(0);
-}
-
-/* Panel header */
-.dz-feedback-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--colour-border);
-}
-.dz-feedback-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--colour-text);
-}
-.dz-feedback-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--colour-text);
-  font-size: 1.25rem;
-  padding: 0.25rem;
-}
-
-/* Panel body */
-.dz-feedback-body {
-  padding: 1.25rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-/* Category buttons */
-.dz-feedback-categories {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-}
-.dz-feedback-cat-btn {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--colour-border);
-  border-radius: 0.375rem;
-  background: var(--colour-surface-muted);
-  color: var(--colour-text);
-  cursor: pointer;
-  font-size: 0.8125rem;
-  text-align: center;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-.dz-feedback-cat-btn:hover {
-  border-color: var(--colour-brand);
-}
-.dz-feedback-cat-btn.selected {
-  background: var(--colour-brand);
-  color: var(--colour-brand-contrast);
-  border-color: var(--colour-brand);
-}
-
-/* Severity toggles */
-.dz-feedback-severities {
-  display: flex;
-  gap: 0.5rem;
-}
-.dz-feedback-sev-btn {
-  flex: 1;
-  padding: 0.375rem 0.5rem;
-  border: 1px solid var(--colour-border);
-  border-radius: 0.375rem;
-  background: var(--colour-surface-muted);
-  color: var(--colour-text);
-  cursor: pointer;
-  font-size: 0.75rem;
-  text-align: center;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-.dz-feedback-sev-btn.selected[data-severity="blocker"] {
-  background: var(--danger-600);
-  color: white;
-  border-color: var(--danger-600);
-}
-.dz-feedback-sev-btn.selected[data-severity="annoying"] {
-  background: var(--warning-600);
-  color: white;
-  border-color: var(--warning-600);
-}
-.dz-feedback-sev-btn.selected[data-severity="minor"] {
-  background: var(--success-600);
-  color: white;
-  border-color: var(--success-600);
-}
-
-/* Description textarea */
-.dz-feedback-description {
-  width: 100%;
-  min-height: 6rem;
-  padding: 0.75rem;
-  border: 1px solid var(--colour-border);
-  border-radius: 0.375rem;
-  background: var(--colour-surface);
-  color: var(--colour-text);
-  font-family: inherit;
-  font-size: 0.875rem;
-  resize: vertical;
-}
-.dz-feedback-description:focus {
-  outline: 2px solid var(--colour-brand);
-  outline-offset: -1px;
-}
-
-/* Submit button */
-.dz-feedback-submit {
-  width: 100%;
-  padding: 0.625rem 1rem;
-  border: none;
-  border-radius: 0.375rem;
-  background: var(--colour-brand);
-  color: var(--colour-brand-contrast);
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-}
-.dz-feedback-submit:hover {
-  opacity: 0.9;
-}
-.dz-feedback-submit:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Label */
-.dz-feedback-label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--colour-text);
-}
-
-/* Toast notification */
-.dz-feedback-toast {
-  position: fixed;
-  bottom: 5rem;
-  right: 1.5rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: 0.375rem;
-  background: var(--success-600);
-  color: white;
-  font-size: 0.875rem;
-  z-index: 10000;
-  opacity: 0;
-  transform: translateY(0.5rem);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  pointer-events: none;
-}
-.dz-feedback-toast.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Backdrop overlay */
-.dz-feedback-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 0.3);
-  z-index: 9998;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  pointer-events: none;
-}
-.dz-feedback-backdrop.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-} /* end @layer framework */
 /* --- hatchi-maxchi/components/form-chrome.css --- */
 /* HYPERPART: form-chrome */
 /* Promoted from Dazzle fragments.css (Tier F3, fleet convergence):
@@ -7246,6 +7158,26 @@ input.dz-switch:checked::before {
 
 .dz-avatar-group .dz-avatar + .dz-avatar {
   margin-inline-start: -0.5rem;
+}
+
+/* ── dz-user-chip ────────────────────────────────────────────────────
+ * Default person-ref cell: avatar + name (list / detail).
+ * Emitted by dazzle.render.user_chip for User-like FK columns.
+ */
+.dz-user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.dz-user-chip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: inherit;
+  line-height: 1.2;
 }
 
 /* ── dz-breadcrumb ───────────────────────────────────────────────────
@@ -10468,9 +10400,12 @@ dz-onboarding-step {
 }
 
 /* Hover tint only when no attention accent — attention accents
- * carry their own tint via attention_classes macro. */
+ * carry their own tint via attention_classes macro.
+ * Use a light brand wash (not --colour-bg): bg often matches the page
+ * chrome behind the card and reads as a “flash” on mouseover (humanqa
+ * admin_dashboard overdue queue). */
 .dz-queue-row:not([data-dz-attn]):hover {
-  background: var(--colour-bg);
+  background: color-mix(in oklch, var(--colour-brand) 6%, var(--colour-surface, transparent));
 }
 
 .dz-queue-row-main {
@@ -10495,6 +10430,9 @@ dz-onboarding-step {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Stay selectable for copy (humanqa: couldn't select bits of overdue text). */
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .dz-queue-row-attn {
@@ -11977,6 +11915,47 @@ dz-onboarding-step {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Content measure tokens — surface kind chooses which:
+ * product (forms/detail) · wide (medium) · app (lists/boards near full-bleed). */
+:root {
+  --dz-content-measure: 48rem;
+  --dz-content-measure-wide: 56rem;
+  /* Soft ultrawide cap only — tables use the viewport, not a form column. */
+  --dz-content-measure-app: 96rem;
+}
+
+#dz-site-main {
+  flex: 1 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Platform QA chrome — outside product <main> (fleet: eval contamination).
+ * No dz-qa-* classes (#1553); attribute hooks only. */
+[data-qa-personas] > [data-qa-open] {
+  position: fixed;
+  z-index: 2147483000;
+  left: 1rem;
+  bottom: 1rem;
+  box-shadow: 0 4px 16px oklch(0% 0 0 / 0.18);
+}
+
+[data-qa-drawer-body] {
+  padding: 1.25rem;
+  overflow: auto;
+  max-height: 100dvh;
+  box-sizing: border-box;
+}
+
+[data-qa-drawer-head] {
+  justify-content: space-between;
+}
+
+[data-qa-drawer-head] form {
+  margin: 0;
 }
 
 /* Default body background — overridden per page via {% block body_class %}.
@@ -12073,9 +12052,11 @@ dz-onboarding-step {
 
 .dz-site-footer {
   margin-top: auto;
+  flex-shrink: 0;
   background: var(--dz-footer-bg);
   color: var(--dz-footer-text);
-  padding: 3rem 1.5rem 1.5rem;
+  /* Tighter chrome: large padding + orphan white band was a fleet mark */
+  padding: 1.75rem 1.5rem 1.25rem;
 }
 
 .dz-footer-content {
@@ -12083,8 +12064,8 @@ dz-onboarding-step {
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 2rem;
-  margin-bottom: 2rem;
+  gap: 1.25rem 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .dz-footer-col h4 {
@@ -12113,6 +12094,46 @@ dz-onboarding-step {
 
 .dz-footer-col a:hover {
   color: var(--dz-footer-heading);
+}
+
+/* Compact legal boilerplate footer (fleet: inelegant titled "Legal" column).
+ * Horizontal link cluster + centered disclaimer — no heavy column heading. */
+.dz-site-footer[data-dz-footer="legal"] {
+  padding: 1.25rem 1.5rem 1.1rem;
+}
+
+.dz-site-footer[data-dz-footer="legal"] .dz-footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 2rem;
+  margin-bottom: 0.85rem;
+  max-width: var(--dz-content-measure-wide, 56rem);
+}
+
+.dz-site-footer[data-dz-footer="legal"] .dz-footer-col {
+  flex: 0 1 auto;
+}
+
+.dz-site-footer[data-dz-footer="legal"] .dz-footer-col ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 1.25rem;
+}
+
+.dz-site-footer[data-dz-footer="legal"] .dz-footer-col li {
+  margin-bottom: 0;
+}
+
+.dz-site-footer[data-dz-footer="legal"] .dz-footer-bottom {
+  border-top: none;
+  padding-top: 0.25rem;
+}
+
+.dz-site-footer[data-dz-footer="legal"] .dz-footer-bottom p {
+  color: var(--dz-footer-text);
+  opacity: 0.85;
 }
 
 .dz-footer-bottom {
@@ -13356,11 +13377,23 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   border: 1px solid var(--colour-border);
   cursor: pointer;
   user-select: none;
-  transition: background var(--duration-fast) var(--ease-out);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .dz-table-col-menu-trigger:hover {
   background: var(--colour-surface);
+}
+
+/* Open state — matches popover triggers (shadcn/DropdownMenu): pressed surface + focus ring. */
+.dz-table-col-menu[open] > .dz-table-col-menu-trigger {
+  background: var(--colour-surface);
+  color: var(--colour-text);
+  border-color: color-mix(in oklch, var(--colour-brand, #2563eb) 45%, var(--colour-border));
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--colour-brand, #2563eb) 22%, transparent);
 }
 
 .dz-table-col-menu-panel {
@@ -13501,6 +13534,10 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 
 .dz-table-grid {
   width: 100%;
+  /* Fixed layout so text cells can ellipsize against real column widths
+     instead of a hard-coded max-width on .dz-tr-cell-truncate (humanqa
+     trace: titles "Board-visible: migrate hero C…" + dates "21 Jul 20…"). */
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -13524,8 +13561,21 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   width: 2.5rem;
 }
 
-.dz-table-th-actions {
-  width: 4rem;
+/* Actions is chrome, not a data field: no sort/resize, no data-dz-col.
+ * Width must fit icon cluster AND optional state-transition chips
+ * (humanqa: "Review"/"Done" stacked in 1.75rem squares).
+ * Header uses .dz-table-th + .dz-table-th-actions (visible "Actions" label). */
+.dz-table-th-actions,
+.dz-table-col-actions {
+  width: 11rem;
+  min-width: 7rem;
+  text-align: end;
+  white-space: nowrap;
+}
+
+/* Keep header label flush with the chip strip (both end-aligned). */
+.dz-table-th.dz-table-th-actions {
+  text-align: end;
 }
 
 /* HYPERPART: grid (extension) */
@@ -13973,6 +14023,10 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 
 .dz-tr-cell {
   padding-inline: var(--space-md);
+  /* Allow flex/grid-like shrink so ellipsis children respect column width */
+  min-width: 0;
+  overflow: hidden;
+  vertical-align: middle;
 }
 
 .dz-tr-cell.is-numeric {
@@ -13980,9 +14034,54 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   font-variant-numeric: tabular-nums;
 }
 
+/* Identifying text columns take remaining width under table-layout: fixed. */
+.dz-tr-cell[data-dz-col="title"],
+.dz-tr-cell[data-dz-col="name"],
+.dz-tr-cell[data-dz-col="label"],
+.dz-tr-cell[data-dz-col="subject"],
+.dz-table-th[data-dz-col="title"],
+.dz-table-th[data-dz-col="name"],
+.dz-table-th[data-dz-col="label"],
+.dz-table-th[data-dz-col="subject"] {
+  width: auto;
+}
+
+/* Temporal / compact columns: reserve readable width, never mid-label clip. */
+.dz-tr-cell[data-dz-kind="date"],
+.dz-tr-cell[data-dz-kind="datetime"],
+.dz-tr-cell[data-dz-col$="_date"],
+.dz-tr-cell[data-dz-col$="_at"],
+.dz-table-th[data-dz-col$="_date"],
+.dz-table-th[data-dz-col$="_at"],
+.dz-table-th[data-dz-col="due_date"] {
+  width: 8.5rem;
+  white-space: nowrap;
+}
+
+/* Badge/enum columns: wide enough for icon + multi-word labels
+ * ("In Progress", "High") without wrap (humanqa STATUS annotate). */
+.dz-tr-cell[data-dz-kind="badge"],
+.dz-table-th[data-dz-col="status"],
+.dz-table-th[data-dz-col="priority"] {
+  width: 9.5rem;
+  min-width: 8.5rem;
+  white-space: nowrap;
+}
+
+.dz-tr-cell[data-dz-kind="badge"] .dz-badge {
+  max-width: 100%;
+}
+
+.dz-tr-cell[data-dz-kind="ref"] {
+  width: 7rem;
+}
+
 .dz-tr-cell-display {
   display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   padding-inline: 0.25rem;
   margin-inline: -0.25rem;
@@ -13990,56 +14089,210 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: outline var(--duration-fast) var(--ease-out);
+  transition: outline var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out);
   /* double-tap must open the editor, not zoom (dblclick on touch) */
   touch-action: manipulation;
 }
 
-.dz-tr-cell-display:hover {
+/*
+ * Drillable rows (hx-get on <tr>): the row owns the bare click (#1592/#1598).
+ * The edit display must NOT look/act like a text field — a hover outline +
+ * cursor:text made the title box intercept perceived row interaction
+ * (humanqa LATEST_TRACE: click title → no drill). Keep edit on dblclick only.
+ */
+.dz-tr-row[hx-get] .dz-tr-cell-display,
+.dz-tr-row[hx-get] .dz-tr-cell-truncate {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dz-tr-row[hx-get] .dz-tr-cell-display:hover {
+  outline: none;
+  cursor: pointer;
+  background: transparent;
+}
+
+/* Non-drill lists (no row hx-get): keep a light edit-target affordance. */
+.dz-tr-row:not([hx-get]) .dz-tr-cell-display:hover {
   outline: 1px solid var(--colour-border);
   cursor: text;
 }
 
+/* Truncate spans fill the cell — no fixed 15rem cap (that forced early
+   ellipsis while neighbour columns still had free space). */
 .dz-tr-cell-truncate {
   display: block;
-  max-width: 15rem;
+  max-width: 100%;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* Date/datetime (and common temporal col keys): never ellipsize calendar days
+   (fleet/humanqa: "21 Jul 20…"). Covers display wrapper AND truncate child. */
+.dz-tr-cell[data-dz-kind="date"] .dz-tr-cell-truncate,
+.dz-tr-cell[data-dz-kind="datetime"] .dz-tr-cell-truncate,
+.dz-tr-cell[data-dz-col$="_date"] .dz-tr-cell-truncate,
+.dz-tr-cell[data-dz-col$="_at"] .dz-tr-cell-truncate,
+.dz-table-td[data-type="date"] .dz-tr-cell-truncate,
+.dz-table-td[data-type="datetime"] .dz-tr-cell-truncate,
+.dz-tr-cell[data-dz-kind="date"] .dz-tr-cell-display,
+.dz-tr-cell[data-dz-kind="datetime"] .dz-tr-cell-display,
+.dz-tr-cell[data-dz-col$="_date"] .dz-tr-cell-display,
+.dz-tr-cell[data-dz-col$="_at"] .dz-tr-cell-display,
+.dz-tr-cell:has([data-dz-edit-kind="date"]) .dz-tr-cell-display,
+.dz-tr-cell:has([data-dz-edit-kind="date"]) .dz-tr-cell-truncate {
+  max-width: none;
+  min-width: 7rem;
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .dz-tr-actions-cell {
-  width: 4rem;
+  width: 11rem;
+  min-width: 7rem;
   padding-inline: var(--space-sm);
   text-align: end;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: visible;
 }
 
+/* Full-cell flex so chips sit under the right-aligned ACTIONS header
+ * (inline-flex + text-align was inconsistent — humanqa annotate). */
 .dz-tr-actions {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.125rem;
-  opacity: 0;
-  transition: opacity var(--duration-fast) var(--ease-out);
-}
-
-.dz-tr-row:hover .dz-tr-actions {
+  justify-content: flex-end;
+  gap: 0.25rem;
+  width: 100%;
+  box-sizing: border-box;
+  /* Icon affordances stay hover-reveal; transition chips stay visible so
+   * state moves are discoverable without hunting empty chrome. */
   opacity: 1;
 }
 
+/*
+ * Resting state: icon-only chrome must leave the flow (not just opacity:0).
+ * Opacity-hidden icons still occupied 1.75rem each → chips looked left-stacked
+ * under a right-aligned ACTIONS title (humanqa perception mismatch).
+ *
+ * Exception: `.dz-tr-peek-toggle` is disclosure chrome — always visible so
+ * expand is discoverable without hunting hover (humanqa expand inconsistency).
+ */
+.dz-tr-row:not(:hover):not(:focus-within)
+  .dz-tr-action:not(.dz-tr-transition):not(.dz-tr-peek-toggle) {
+  opacity: 0;
+  width: 0;
+  min-width: 0;
+  max-width: 0;
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.dz-tr-row:hover .dz-tr-action,
+.dz-tr-row:focus-within .dz-tr-action {
+  opacity: 1;
+}
+
+.dz-tr-row:hover .dz-tr-action:not(.dz-tr-transition),
+.dz-tr-row:focus-within .dz-tr-action:not(.dz-tr-transition) {
+  width: 1.75rem;
+  min-width: 1.75rem;
+  max-width: 1.75rem;
+  height: 1.75rem;
+  min-height: 1.75rem;
+  pointer-events: auto;
+}
+
+/* Expand affordance: always on (not hover-collapsed). */
+.dz-tr-action.dz-tr-peek-toggle {
+  opacity: 1;
+  width: 1.75rem;
+  min-width: 1.75rem;
+  max-width: 1.75rem;
+  height: 1.75rem;
+  min-height: 1.75rem;
+  pointer-events: auto;
+}
+
+.dz-tr-peek-chevron {
+  transition: transform var(--duration-fast, 0.15s) var(--ease-out, ease);
+}
+
+.dz-tr-peek-toggle[aria-expanded="true"] .dz-tr-peek-chevron {
+  transform: rotate(180deg);
+}
+
+/* Peek panel empty / denied body (auth miss, 403) — not a nested surface. */
+.dz-tr-peek-empty {
+  padding: var(--space-md, 1rem);
+  color: var(--colour-text-muted, #64748b);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.dz-tr-peek-panel .dz-tr-peek-cell {
+  padding: 0;
+  background: color-mix(in oklch, var(--colour-bg, #f8fafc) 92%, var(--colour-border, #e2e8f0));
+  border-block-end: 1px solid var(--colour-border, #e2e8f0);
+}
+
+.dz-tr-peek-panel .dz-tr-peek-cell > .dz-region,
+.dz-tr-peek-panel .dz-tr-peek-cell > .dz-stack {
+  padding: var(--space-md, 1rem);
+}
+
+/* Icon-only row chrome (view / edit / delete / peek). */
 .dz-tr-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   width: 1.75rem;
   height: 1.75rem;
+  padding: 0;
   border-radius: var(--radius-sm);
   color: var(--colour-text-muted);
   background: transparent;
   border: 0;
   cursor: pointer;
+  font: inherit;
+  line-height: 1;
   transition: background var(--duration-fast) var(--ease-out),
-              color var(--duration-fast) var(--ease-out);
+              color var(--duration-fast) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out);
   text-decoration: none;
+}
+
+/* State-machine transitions are *labels*, not icons — never force square. */
+.dz-tr-action.dz-tr-transition {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 1.5rem;
+  padding: 0.125rem 0.4rem;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  border: 1px solid var(--colour-border);
+  background: var(--colour-surface, var(--colour-bg));
+  color: var(--colour-text);
+  border-radius: var(--radius-sm);
+}
+
+.dz-tr-action.dz-tr-transition:hover {
+  border-color: var(--colour-brand);
+  background: color-mix(in oklch, var(--colour-brand) 8%, transparent);
+  color: var(--colour-text);
 }
 
 .dz-tr-action:hover {
@@ -14050,6 +14303,12 @@ summary.dz-table-col-menu-trigger::-webkit-details-marker {
 .dz-tr-action.is-destructive:hover {
   background: color-mix(in oklch, var(--colour-danger) 10%, transparent);
   color: var(--colour-danger);
+}
+
+.dz-tr-action-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
 }
 
 /* Empty-state row spans the full table */

@@ -2675,8 +2675,7 @@
  *
  * Same idiom as the primitive: delegated document-level listeners, state in
  * the DOM + localStorage, no framework. The menu itself is a native
- * `<details>` disclosure; we add popover-style dismiss (outside click + Esc)
- * and open-state styling hooks so it matches shadcn/DropdownMenu expectations.
+ * `<details>` disclosure (the HM `.menu` idiom — no open/close JS).
  *
  * Contract:
  *   - root:    the `[data-grid]` element; its `id` keys the persisted
@@ -2799,31 +2798,6 @@
   }
   document.addEventListener("htmx:after:swap", onSwap); // htmx 4
   document.addEventListener("htmx:afterSwap", onSwap); // htmx ≤2
-
-  // Popover dismiss — native <details> only toggles on its summary.
-  // Fleet UX: match shadcn/DropdownMenu — outside click + Escape close.
-  document.addEventListener("click", function (evt) {
-    var openMenus = document.querySelectorAll(
-      "details.table-col-menu[open]",
-    );
-    if (!openMenus.length) return;
-    var t = evt.target;
-    for (var i = 0; i < openMenus.length; i++) {
-      var menu = openMenus[i];
-      if (menu.contains(t)) continue;
-      menu.removeAttribute("open");
-    }
-  });
-
-  document.addEventListener("keydown", function (evt) {
-    if (evt.key !== "Escape" && evt.key !== "Esc") return;
-    var openMenus = document.querySelectorAll(
-      "details.table-col-menu[open]",
-    );
-    for (var i = 0; i < openMenus.length; i++) {
-      openMenus[i].removeAttribute("open");
-    }
-  });
 
   // Init: prune stale keys, then apply the stored preference.
   var grids = document.querySelectorAll("[data-grid]");
@@ -3036,10 +3010,6 @@
  *             (JSON [[value,label],…]).
  *   - open:   dblclick the span (dzTable parity; pointer-first — a keyboard
  *             entry point is tracked follow-up work).
- *   - drill:  when the span sits on a drillable row (`tr[hx-get]`), a single
- *             click must open the row — not look like a dead text field.
- *             We hold the row drill ~280ms so a following dblclick can cancel
- *             navigation and open the editor instead (humanqa trace).
  *   - keys:   Enter commits (text/date), Escape cancels, Tab / Shift-Tab
  *             commits then advances to the next/previous editable cell
  *             (wrapping to the adjacent row); bool/select commit on change.
@@ -3251,81 +3221,6 @@
       });
   }
 
-  // Click-vs-dblclick arbitration for editable cells on drillable rows.
-  // Without this, the first click of a double-click (or a single click on the
-  // title "box") races the row's hx-get drill — and the hover outline made the
-  // cell feel like it ate the interaction (humanqa LATEST_TRACE).
-  var DRILL_DELAY_MS = 280;
-  var pendingDrill = null; // { timer, row }
-
-  function cancelPendingDrill() {
-    if (!pendingDrill) return;
-    clearTimeout(pendingDrill.timer);
-    pendingDrill = null;
-  }
-
-  function fireRowDrill(row) {
-    if (!row) return;
-    // Prefer htmx's trigger so hx-get / hx-push-url run the same path as a
-    // bare row click. Fall back to a synthetic bubble click.
-    if (typeof htmx !== "undefined" && typeof htmx.trigger === "function") {
-      htmx.trigger(row, "click");
-      return;
-    }
-    row.dispatchEvent(
-      new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-      }),
-    );
-  }
-
-  function drillableRowFrom(el) {
-    if (!el || !el.closest) return null;
-    var row = el.closest("tr.tr-row, tr[data-row-id]");
-    if (!row) return null;
-    // hx-get may be present as attribute (htmx) or data-hx-get in some builds
-    if (row.hasAttribute("hx-get") || row.getAttribute("hx-get")) return row;
-    if (row.hasAttribute("data-hx-get")) return row;
-    return null;
-  }
-
-  document.addEventListener(
-    "click",
-    function (evt) {
-      var span =
-        evt.target &&
-        evt.target.closest &&
-        evt.target.closest("[data-grid-edit]");
-      if (!span) return;
-      var row = drillableRowFrom(span);
-      if (!row) return; // non-drill lists: let the click fall through
-
-      // Second click of a double-click: cancel any pending drill, eat the click.
-      if (evt.detail > 1) {
-        cancelPendingDrill();
-        evt.preventDefault();
-        evt.stopPropagation();
-        return;
-      }
-
-      // Hold row navigation so dblclick can win.
-      evt.preventDefault();
-      evt.stopPropagation();
-      cancelPendingDrill();
-      pendingDrill = {
-        row: row,
-        timer: setTimeout(function () {
-          var target = pendingDrill && pendingDrill.row;
-          pendingDrill = null;
-          fireRowDrill(target);
-        }, DRILL_DELAY_MS),
-      };
-    },
-    true,
-  );
-
   document.addEventListener("dblclick", function (evt) {
     var span =
       evt.target &&
@@ -3334,10 +3229,6 @@
     if (!span) return;
     var root = rootOf(span);
     if (!root || !root.hasAttribute("data-grid-edit-url")) return;
-    // Win over the delayed row drill.
-    cancelPendingDrill();
-    evt.preventDefault();
-    evt.stopPropagation();
     startEdit(root, span);
   });
 
