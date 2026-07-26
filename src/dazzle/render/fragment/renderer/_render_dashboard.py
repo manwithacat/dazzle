@@ -186,9 +186,13 @@ class _RenderDashboardMixin:
         if c.refresh_interval:
             trigger += f", every {c.refresh_interval}s"
 
+        # data-dz-region on the body slot: HTMX region fetches return typed
+        # body only (no nested chrome), so this is the stable JS / closest
+        # filter handle. Unique id remains region-{name}-{card_id}.
         body_html = (
             f'<div class="dz-card-body" '
             f'id="region-{ctx.escape_attr(c.name)}-{ctx.escape_attr(c.card_id)}" '
+            f'data-dz-region data-dz-region-name="{ctx.escape_attr(c.name)}" '
             f'data-display="{ctx.escape_attr(c.display.lower())}" '
             f'hx-get="{ctx.escape_attr(c.hx_endpoint)}" '
             f'hx-trigger="{ctx.escape_attr(trigger)}" '

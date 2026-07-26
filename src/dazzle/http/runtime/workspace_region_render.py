@@ -828,37 +828,31 @@ async def render_region_html(
                     "</p>"
                 )
 
-    # Wrap in region chrome. Every region (typed or not) goes through here
-    # — the data-dz-region attrs are the JS handle for live updates.
+    # Wrap in region chrome — or not, for HTMX fragment responses.
     #
-    # HTML id policy (smoke structure oracle / multi-card uniqueness):
-    # Card bodies already own a unique id `region-{name}-{card_id}` (dashboard
-    # SSR). HTMX swaps this fragment as *innerHTML* into that body. Emitting a
-    # second bare `id="region-{name}"` on the chrome collides when the same
-    # region name appears as two cards (isomorphic desks, focus+workspace) —
-    # smoke_crawl flags `duplicate region ids` (ownership=framework).
-    # When the request targets a card body id, omit the chrome id and keep
-    # data-dz-region / data-dz-region-name for JS. Bare `id="region-{name}"`
-    # remains for non-card / full-region targets that still address by name.
+    # Dashboard cards SSR a unique body slot `id="region-{name}-{card_id}"`
+    # with hx-swap=innerHTML. Polls / filters re-fetch this endpoint into that
+    # slot (or into a prior chrome node). Returning another full chrome wrapper
+    # with `id="region-{name}"` on every poll nests wrappers forever (live DOM
+    # observed 9 deep on fieldtest_hub device_attention) and multiplies bare
+    # region ids → smoke structure oracle FAIL.
+    #
+    # HTMX requests: return the typed body only. Card body SSR carries
+    # data-dz-region / data-dz-region-name for JS and `closest [data-dz-region]`
+    # filter targets. Non-HTMX: keep a single chrome wrapper with bare id.
     region_name = getattr(ctx.ctx_region, "name", "") or ""
     region_name_attr = _html_mod.escape(region_name, quote=True)
     headers = getattr(request, "headers", None)
-    raw_target = ""
+    is_htmx = False
     if headers is not None:
-        raw_target = headers.get("hx-target") or headers.get("HX-Target") or ""
-    hx_target = str(raw_target).lstrip("#") if raw_target else ""
-    bare_id = f"region-{region_name}"
-    # Card body ids: region-{name}-{card_id} (extra suffix after the bare name).
-    is_card_body_target = bool(
-        region_name and hx_target.startswith(f"{bare_id}-") and hx_target != bare_id
-    )
-    if is_card_body_target:
-        id_attr = ""
-    else:
-        id_attr = f'id="region-{region_name_attr}" '
+        hx_flag = headers.get("hx-request") or headers.get("HX-Request") or ""
+        is_htmx = str(hx_flag).lower() in ("true", "1")
+    body = typed_primitive_html or ""
+    if is_htmx:
+        return body
     return (
         f'<div data-dz-region data-dz-region-name="{region_name_attr}" '
-        f"{id_attr}>"
-        f"{typed_primitive_html or ''}"
+        f'id="region-{region_name_attr}">'
+        f"{body}"
         f"</div>"
     )
