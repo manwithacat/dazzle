@@ -16,6 +16,22 @@ import re
 from collections import Counter
 from html.parser import HTMLParser
 
+from contracts._kit import DomContract, Node, Present
+
+# Surface required by the contract-module sweep (test_contracts.py). This
+# module is not a dual-lock Hyperpart — it documents the region *identity*
+# substrate that swap/innerHTML fragments must respect (ADR-0054).
+DOM_CONTRACT = DomContract(
+    part="swap-identity",
+    root="[data-dz-region]",
+    nodes=(
+        Node(
+            "[data-dz-region]",
+            attrs={"data-dz-region": Present()},
+        ),
+    ),
+)
+
 _ID_RE = re.compile(r"""(?<![A-Za-z0-9_-])id\s*=\s*(["'])(.*?)\1""", re.I | re.DOTALL)
 
 
@@ -176,3 +192,13 @@ def validate_fragment_identity(html: str) -> list[str]:
     for v in find_nested_region_hooks(html):
         out.append(v)
     return out
+
+
+__all__ = [
+    "DOM_CONTRACT",
+    "bare_region_id_for_card_body",
+    "find_duplicate_ids",
+    "find_nested_region_hooks",
+    "validate_fragment_identity",
+    "validate_inner_swap_response",
+]

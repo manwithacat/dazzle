@@ -1716,6 +1716,39 @@ def _dispatch_custom_mode(
         return None
 
 
+def _resolve_dispatch_surface(prc: _PageRequestContext) -> SurfaceSpec | None:
+    """Resolve the surface for ADR-0049 dispatch, including synthetic VIEW.
+
+    #1421 synthetic VIEW pages (list/workspace entities without an authored
+    ``mode: view`` surface) live only in page contexts — not in
+    ``appspec.surfaces``. Reconstruct a minimal VIEW ``SurfaceSpec`` so
+    substrate dispatch still runs (else the legacy path raises RuntimeError).
+    """
+    surface_name = prc.surface_name
+    if not surface_name:
+        return None
+    appspec = prc.deps.appspec
+    surface = appspec.get_surface(surface_name) if appspec is not None else None
+    if surface is not None:
+        return surface
+    entity_ref = (
+        prc.deps.surface_entity.get(surface_name) or getattr(prc.ctx, "entity_ref", None) or ""
+    )
+    if entity_ref and getattr(prc.ctx, "detail", None) is not None:
+        return SurfaceSpec(
+            name=surface_name,
+            entity_ref=str(entity_ref),
+            mode=SurfaceMode.VIEW,
+        )
+    return None
+
+
+def _request_services(prc: _PageRequestContext) -> Any | None:
+    """Services live on FastAPI app state; missing → legacy path."""
+    services = getattr(getattr(prc.request, "app", None), "state", None)
+    return getattr(services, "services", None) if services is not None else None
+
+
 def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str | None:
     """If the surface declares an explicit ``render:`` clause, route the
     inner-HTML render through the renderer registry. Returns the inner
@@ -1726,27 +1759,9 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     contained — only surfaces with an explicit ``render:`` clause AND a
     well-formed table context can opt in.
     """
-    surface_name = prc.surface_name
-    if not surface_name:
-        return None
-    appspec = prc.deps.appspec
-    surface = appspec.get_surface(surface_name) if appspec is not None else None
+    surface = _resolve_dispatch_surface(prc)
     if surface is None:
-        # #1421 synthetic VIEW pages (list/workspace entities without an
-        # authored mode: view surface) live only in page contexts — not in
-        # appspec.surfaces. Reconstruct a minimal VIEW SurfaceSpec so ADR-0049
-        # substrate dispatch still runs (else legacy path raises RuntimeError).
-        entity_ref = (
-            prc.deps.surface_entity.get(surface_name) or getattr(prc.ctx, "entity_ref", None) or ""
-        )
-        if entity_ref and getattr(prc.ctx, "detail", None) is not None:
-            surface = SurfaceSpec(
-                name=surface_name,
-                entity_ref=str(entity_ref),
-                mode=SurfaceMode.VIEW,
-            )
-        else:
-            return None
+        return None
     # ADR-0049: list (Phase 1), view (Phase 2) and create/edit (Phase 3)
     # surfaces all dispatch to the typed substrate even when `render is None`
     # (the fleet default) — the substrate is the universal render path for
@@ -1760,10 +1775,7 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     ):
         return None
 
-    # Services live on the FastAPI app state. Fall back to legacy path
-    # if they aren't present (e.g. test fixtures with no app shell).
-    services = getattr(getattr(prc.request, "app", None), "state", None)
-    services = getattr(services, "services", None) if services is not None else None
+    services = _request_services(prc)
     if services is None:
         return None
 
