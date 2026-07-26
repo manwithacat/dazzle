@@ -2,6 +2,29 @@ Single autonomous-improvement entrypoint for Dazzle. Each cycle: lock → local 
 
 Replaces /improve, /ux-cycle, /trial-cycle, /ux-converge. The lanes preserve those skills' bodies; the driver owns the scaffolding (lock, preflight, CI gate, CodeQL gate, GitHub inbox, signal bus, log, self-schedule).
 
+### Multi-agent workflows (Grok Build)
+
+Parallel cognition panels are extracted as project workflows under
+`.grok/workflows/` (see that directory's `README.md`). The driver still owns
+lock, gates, pick, ship, and self-schedule; workflows return structured
+`complete()` results for the driver to apply.
+
+| Force / cadence | Workflow | Notes |
+|-----------------|----------|--------|
+| `self-audit` / ≥15 cycles | `improve-self-audit` | ≤5 parallel commit skeptics; `budget_consumed: 0` |
+| `capability-sweep` / ≥20 cycles | `improve-capability-sweep` | inventory + 3 dig recommenders; `budget_consumed: 0` |
+| `example-apps` visual tier-2 | `improve-visual-review` | after `dazzle qa capture`; pass `manifest_path`; budget **5** |
+
+```text
+/workflow improve-self-audit
+/workflow improve-self-audit {"apply":true}
+/workflow improve-capability-sweep
+/workflow improve-visual-review {"manifest_path":"dev_docs/ux_cycle_runs/…/manifest.json"}
+```
+
+On hosts without the workflow tool, fall back to the numbered playbooks in
+`improve/strategies/*.md` (hand-rolled subagent dispatch).
+
 ARGUMENTS: $ARGUMENTS
 
 If `$ARGUMENTS` is empty: driver picks the lane.
@@ -237,8 +260,8 @@ lane: `product_maturity` → `demo_fleet` → `journey_dogfood` → `story_walk`
 Selection priority:
 
 1. **Any lane with REGRESSION rows** → that lane (most urgent backlog — shipped broken). Note: a red CI badge or CodeQL high/error already preempted this step via 0c / 0c2; GitHub inbox (0c3) already ran if it claimed the cycle.
-2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`.
-3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute STALE-effective (lag ≥20), and report **actionable digs** split by **Class** (`COGNITION` vs `HYGIENE`) — not a raw STALE count alone. Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt.
+2. **Self-audit cadence**: if ≥15 cycles since the last `lane: self-audit` log entry (or none exists), run the self-audit strategy this cycle (playbook: `improve/strategies/self_audit.md` — adversarial review of recent `improve:` commits vs their log/backlog claims). Forceable via `/improve self-audit`. **Grok preferred:** `/workflow improve-self-audit` (or `{"apply":true}` to write AUD/REGRESSION rows in-workflow).
+3. **Capability-sweep cadence**: if ≥20 cycles since the last `lane: capability-sweep` log entry (or none exists), run a capability sweep this cycle — re-derive the inventory (`dazzle --help` + the MCP table in `.claude/CLAUDE.md` + the `.claude/skills`/`.claude/commands` tree) and reconcile `improve/capability-map.md`: flag any newly-built capability as `UNOWNED`, recompute STALE-effective (lag ≥20), and report **actionable digs** split by **Class** (`COGNITION` vs `HYGIENE`) — not a raw STALE count alone. Forceable via `/improve capability-sweep`. `REGRESSION` + self-audit still preempt. **Grok preferred:** `/workflow improve-capability-sweep` (then log counts from the result).
 4. **Signal-biased pick**: if a `trial-friction` / `ux-component-shipped` / `ux-regression` signal is fresh, prefer the biased lane regardless of count
 5. **Highest `actionable_count > 0`** → that lane; ties broken by oldest `last_run_at`
 6. **TR-signal drain (autonomous-only).** If the trials backlog (`## Lane: trials`) has any **autonomous-actionable** TR row (see below), pick the owning lane for that row and run `improve/strategies/trial_signal_action.md` this cycle (log `picked {lane} for TR-N — {status}/{severity}`). Forceable via `/improve trial-signals`. Preempts pure capability re-stamps when product signal is sitting idle. Does **not** preempt REGRESSION / self-audit / capability-sweep / fresh signal bias.

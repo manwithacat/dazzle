@@ -4,6 +4,24 @@ Detailed playbook for `example-apps` lane's **Tier 2** visual-QA explore. Runs a
 
 Replaces the API-bound screenshot-scrape CLI (`qa visual`, removed in the same commit that introduced this strategy) — capture is now `dazzle qa capture` + this subagent.
 
+## Grok workflow (preferred judgment path)
+
+After steps 1–2 produce a non-empty `manifest.json`, prefer **parallel per-app**
+review via:
+
+```text
+/workflow improve-visual-review {"manifest_path":"<STATE_DIR>/manifest.json"}
+```
+
+| Stage | Owner |
+|-------|--------|
+| Boot + `dazzle qa capture` (steps 1–2) | Driver / this playbook |
+| Load manifest + one reviewer agent per app | `.grok/workflows/improve-visual-review.rhai` |
+| Ingest + log + budget +5 (steps 6–8) | Driver (`visual_tier2_ingest`) |
+
+Workflow result: `findings`, `findings_path` (scratch JSON), `budget_consumed: 5`.
+Fall back to single-subagent steps 3–5 below when workflows are unavailable.
+
 ## Prerequisites
 
 - A host harness running this very session with subagent-dispatch available (on Claude Code: the Task tool)

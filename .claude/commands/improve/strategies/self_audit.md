@@ -10,6 +10,25 @@ Runs as its own cycle (`lane: self-audit` in the log). No backlog section of its
 own — findings land in the *audited* lane's section. `budget_consumed: 0`
 (verification, not exploration).
 
+## Grok workflow (preferred multi-agent path)
+
+When the host is Grok Build with workflows enabled, **prefer** the project
+workflow over hand-rolled subagent fan-out:
+
+```text
+/workflow improve-self-audit
+/workflow improve-self-audit {"apply":true}   # also write AUD/REGRESSION + log
+```
+
+| Path | Role |
+|------|------|
+| `.grok/workflows/improve-self-audit.rhai` | Sample window → parallel read-only skeptics (≤5) → fail-closed report |
+| This playbook §4–5 | Driver apply if `apply` was false; always release lock + self-schedule |
+
+Workflow hard-codes the shared-tree mutation ban (cycle 231 lesson). Result
+includes `status` (`PASS`/`FAIL`), `verdicts`, `apply_hints`, `path` (scratch
+markdown). Fall back to the numbered playbook below on hosts without workflows.
+
 ## Cadence (driver rule — Step 1)
 
 Run when **≥15 cycles** have elapsed since the last `lane: self-audit` log entry

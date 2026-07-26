@@ -37,6 +37,10 @@ Never rank them as top dig on a paid metered path; never idle citing “metered 
 (every 20 cycles) re-derives inventory and reports **actionable digs**:
 `COGNITION_STALE=N`, `HYGIENE_STALE=N`, `UNOWNED=N` — not a single raw STALE total.
 
+**Grok workflow:** `/workflow improve-capability-sweep` (see `.grok/workflows/README.md`)
+runs inventory + parallel dig recommenders; driver logs the three counts and may
+apply map patches with `{"apply":true}`.
+
 ---
 
 ## Registry
