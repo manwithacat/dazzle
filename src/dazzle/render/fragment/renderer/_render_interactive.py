@@ -448,7 +448,10 @@ class _RenderInteractiveMixin:
         `hx-include="closest .filter-bar"` so all active filter values
         ride along on each change.
         """
-        target = f"#region-{ctx.escape_attr(f.region_name)}"
+        # Prefer closest region chrome over bare #region-{name}: card HTMX
+        # fragments omit the bare id (multi-card uniqueness). data-dz-region
+        # is always present on the chrome wrapper.
+        target = "closest [data-dz-region]"
         endpoint = ctx.escape_attr(str(f.endpoint))
 
         def _render_column(col: FilterColumn) -> str:
@@ -555,7 +558,7 @@ class _RenderInteractiveMixin:
         else:
             next_dir = "asc"
         endpoint = ctx.escape_attr(str(s.endpoint))
-        target = f"#region-{ctx.escape_attr(s.region_name)}"
+        target = "closest [data-dz-region]"
         column_key = ctx.escape_attr(s.column_key)
         # Use &amp; for the URL param separator inside the attribute value
         href = f"{endpoint}?sort={column_key}&amp;dir={next_dir}"
@@ -606,6 +609,6 @@ class _RenderInteractiveMixin:
                 endpoint=str(d.endpoint),
                 date_from=d.date_from,
                 date_to=d.date_to,
-                target=f"#region-{rname}",
+                target="closest [data-dz-region]",
             )
         )

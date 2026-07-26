@@ -13,8 +13,7 @@ version: 1
 
 # Active campaign id, or null / omitted for pure steady_state.
 # Near-term: dig exercising examples for gross bugs (404 / empty main).
-active_campaign: land-l25-smoke
-
+active_campaign: null
 steady_state:
   # After hard preemption (CI / CodeQL / REGRESSION / inbox), prefer in order:
   selection_order:

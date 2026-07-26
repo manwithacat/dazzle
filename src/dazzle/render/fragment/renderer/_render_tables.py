@@ -723,7 +723,7 @@ class _RenderTablesMixin:
             f'{ctx.escape_attr(row.row_id)}" '
             f'hx-vals=\'{{"{q.queue_status_field}": '
             f'"{t.to_state}"}}\' '
-            f'hx-target="#region-{ctx.escape_attr(q.region_name)}" '
+            f'hx-target="closest [data-dz-region]" '
             f'hx-swap="innerHTML">'
             f"{ctx.escape(t.label)}"
             f"</button>"

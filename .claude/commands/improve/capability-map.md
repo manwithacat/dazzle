@@ -60,9 +60,9 @@ apply map patches with `{"apply":true}`.
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1301 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1301 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1298 | USED |
-| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1317 | USED |
-| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1317 | USED |
-| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1317 | USED |
+| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1318 | USED |
+| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1318 | USED |
+| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1318 | USED |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials | 1281 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1278 | STALE |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1278 | STALE |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1317 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1317 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1319 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1319 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -120,6 +120,10 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1319 (2026-07-26).** **capability-sweep** — UNOWNED=0 COGNITION_STALE_eff=7 HYGIENE_STALE_eff=20. Top COGNITION digs: story_walk / test walk (lag~39), hyperpart-opportunities (36); skip metered vision STALE (subscription substitute only). Top HYGIENE: discovery/compliance/sentinel/deploy plan. Grok workflows `improve-capability-sweep` available. budget_consumed 0. Explore **60/100**.
+
+> **Cycle 1318 (2026-07-26).** **example-apps agent_qa_smoke** — finished campaign rotation: light re-dig **fieldtest_hub** auto_seed=0 (23 ok / 5 fail; structure framework dup region ids only + rbac_expected). Report `examples/fieldtest_hub/dev_docs/qa-smoke-manager-20260726-161858.json`. Full showcase completed; **`--clear-campaign` land-l25-smoke**. Framework fix landed same day: omit bare `id=region-{name}` on card HTMX fragments. Stamped smoke USED@1318. budget_consumed 1. Explore **60/100**.
 
 > **Cycle 1317 (2026-07-22).** **example-apps agent_qa_smoke** (campaign `land-l25-smoke`) — main CI **green** (run 29961343123 tip 82ba244fe cycle 1316). Light re-dig **design_studio** auto_seed=0 (17 ok / 8 fail; structure framework dup region ids on 8 workspaces + 3× http_error `rbac_expected` 403 only). residual_total=0 densify_allowed=0. Stamped agent_qa_smoke/smoke-crawl/smoke-dig + CodeQL/inbox **USED@1317**. budget_consumed 1. Explore **59/100**. Next light dig → fieldtest_hub (cursor=8).
 

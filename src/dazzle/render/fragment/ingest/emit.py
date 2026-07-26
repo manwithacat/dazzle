@@ -1107,7 +1107,8 @@ def render_date_range(d: DateRange) -> str:
     endpoint = _html.escape(d.endpoint, quote=True)
     date_from = _html.escape(d.date_from, quote=True)
     date_to = _html.escape(d.date_to, quote=True)
-    target = d.target or f"#region-{d.region_name}"
+    # Default to closest region chrome (card HTMX fragments omit bare #region-{name}).
+    target = d.target or "closest [data-dz-region]"
     target_esc = _html.escape(target, quote=True)
     return (
         f'<div class="dz-date-range-picker date-range-bar" {root_attrs}>'

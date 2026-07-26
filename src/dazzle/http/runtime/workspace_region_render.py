@@ -830,10 +830,35 @@ async def render_region_html(
 
     # Wrap in region chrome. Every region (typed or not) goes through here
     # — the data-dz-region attrs are the JS handle for live updates.
-    region_name_attr = _html_mod.escape(ctx.ctx_region.name, quote=True)
+    #
+    # HTML id policy (smoke structure oracle / multi-card uniqueness):
+    # Card bodies already own a unique id `region-{name}-{card_id}` (dashboard
+    # SSR). HTMX swaps this fragment as *innerHTML* into that body. Emitting a
+    # second bare `id="region-{name}"` on the chrome collides when the same
+    # region name appears as two cards (isomorphic desks, focus+workspace) —
+    # smoke_crawl flags `duplicate region ids` (ownership=framework).
+    # When the request targets a card body id, omit the chrome id and keep
+    # data-dz-region / data-dz-region-name for JS. Bare `id="region-{name}"`
+    # remains for non-card / full-region targets that still address by name.
+    region_name = getattr(ctx.ctx_region, "name", "") or ""
+    region_name_attr = _html_mod.escape(region_name, quote=True)
+    headers = getattr(request, "headers", None)
+    raw_target = ""
+    if headers is not None:
+        raw_target = headers.get("hx-target") or headers.get("HX-Target") or ""
+    hx_target = str(raw_target).lstrip("#") if raw_target else ""
+    bare_id = f"region-{region_name}"
+    # Card body ids: region-{name}-{card_id} (extra suffix after the bare name).
+    is_card_body_target = bool(
+        region_name and hx_target.startswith(f"{bare_id}-") and hx_target != bare_id
+    )
+    if is_card_body_target:
+        id_attr = ""
+    else:
+        id_attr = f'id="region-{region_name_attr}" '
     return (
         f'<div data-dz-region data-dz-region-name="{region_name_attr}" '
-        f'id="region-{region_name_attr}">'
+        f"{id_attr}>"
         f"{typed_primitive_html or ''}"
         f"</div>"
     )
