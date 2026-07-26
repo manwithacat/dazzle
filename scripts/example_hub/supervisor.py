@@ -116,6 +116,12 @@ class Supervisor:
         log_fh = log.open("ab")
         env = os.environ.copy()
         env.setdefault("DAZZLE_ENV", "development")
+        # Magic-link / smoke dig require QA mode on the child serve process.
+        # ``--test-mode`` alone does not inherit DAZZLE_QA_MODE from a hub that
+        # never set it — arm it here so fleet digs work after hub restart.
+        if self.test_mode:
+            env["DAZZLE_QA_MODE"] = "1"
+            env.setdefault("DAZZLE_ENV", "development")
         logger.info("starting %s: %s", app.name, " ".join(cmd))
         proc = subprocess.Popen(
             cmd,

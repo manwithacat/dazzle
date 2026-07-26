@@ -27,7 +27,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
 from dazzle.core.condition_eval import evaluate_condition
-from dazzle.core.ir import SurfaceMode
+from dazzle.core.ir import SurfaceMode, SurfaceSpec
 from dazzle.core.ir.integrations import MappingTriggerType
 from dazzle.core.strings import to_api_plural
 
@@ -1732,7 +1732,21 @@ def _maybe_dispatch_inner_html(prc: _PageRequestContext, render_ctx: Any) -> str
     appspec = prc.deps.appspec
     surface = appspec.get_surface(surface_name) if appspec is not None else None
     if surface is None:
-        return None
+        # #1421 synthetic VIEW pages (list/workspace entities without an
+        # authored mode: view surface) live only in page contexts — not in
+        # appspec.surfaces. Reconstruct a minimal VIEW SurfaceSpec so ADR-0049
+        # substrate dispatch still runs (else legacy path raises RuntimeError).
+        entity_ref = (
+            prc.deps.surface_entity.get(surface_name) or getattr(prc.ctx, "entity_ref", None) or ""
+        )
+        if entity_ref and getattr(prc.ctx, "detail", None) is not None:
+            surface = SurfaceSpec(
+                name=surface_name,
+                entity_ref=str(entity_ref),
+                mode=SurfaceMode.VIEW,
+            )
+        else:
+            return None
     # ADR-0049: list (Phase 1), view (Phase 2) and create/edit (Phase 3)
     # surfaces all dispatch to the typed substrate even when `render is None`
     # (the fleet default) — the substrate is the universal render path for

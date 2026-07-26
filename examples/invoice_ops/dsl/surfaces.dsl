@@ -102,6 +102,17 @@ surface payment_attempt_list "Payment Attempts":
   ux:
     purpose: "Payment trail — open a row for the parent Invoice hub"
 
+surface payment_attempt_create "New Payment Attempt":
+  uses entity PaymentAttempt
+  mode: create
+  section main:
+    field invoice "Invoice"
+    field attempt_number "Attempt"
+    field status "Status"
+    field provider_reference "Provider reference"
+  ux:
+    purpose: "Record a settlement attempt against an approved invoice"
+
 # =============================================================================
 # AUDIT EXPORT SURFACE
 # =============================================================================
@@ -193,6 +204,19 @@ surface line_item_list "Line Items":
     field unit_amount "Unit Amount"
   ux:
     purpose: "Line items — open a row for the parent Invoice hub"
+
+# Explicit VIEW so related-table drills and synthetic #1421 detail routes
+# share one authored surface (substrate + sections) instead of an empty shell.
+surface lineitem_detail "Line Item":
+  uses entity LineItem
+  mode: view
+  section main "Line":
+    field invoice "Invoice"
+    field description "Description"
+    field quantity "Qty"
+    field unit_amount "Unit Amount"
+  ux:
+    purpose: "Single line on an invoice — hop to the parent invoice for settlement"
 
 # =============================================================================
 # INVOICE EDIT SURFACE — generates PUT /invoices/{id} + drives state machine
