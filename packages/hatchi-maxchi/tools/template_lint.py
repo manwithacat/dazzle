@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Lint HaTchi-MaXchi partial HTML for morph-safe hypermedia (decisions 0005–0008).
+"""Lint HaTchi-MaXchi partial HTML for morph-safe hypermedia (decisions 0005–0008, 0012).
 
 Shared by pytest gates and the agent-facing CLI. Rules are regex/fixture-level
 on author-controlled partials — not a full HTML5 parser (see decision 0008).
+Swap/identity (ADR-0054 / decision 0012) lives in ``contracts/swap_identity.py``.
 
 Usage::
 
@@ -176,6 +177,16 @@ def lint_fragment(html: str, *, location: str = "") -> list[LintIssue]:
     for id_val, count in Counter(id_list(html)).items():
         if count > 1:
             issues.append(LintIssue("dup-id", f"id={id_val!r} appears {count} times", loc))
+
+    # ADR-0054 / decision 0012 — nested region hooks (beyond simple dup-id).
+    try:
+        sys.path.insert(0, str(PKG))
+        from contracts.swap_identity import find_nested_region_hooks  # noqa: E402
+
+        for msg in find_nested_region_hooks(html):
+            issues.append(LintIssue("nested-region", msg, loc))
+    except Exception as exc:  # noqa: BLE001 — lint must not crash on import edge
+        issues.append(LintIssue("swap-identity", f"swap_identity import failed: {exc}", loc))
 
     for m in ID_ATTR_RE.finditer(html):
         id_val = m.group(2)
@@ -560,6 +571,26 @@ def lint_registry() -> list[LintIssue]:
                         c.id,
                     )
                 )
+            # Inner swap into a named body/slot: response prose must not
+            # claim a second chrome root with the same identity.
+            swap_l = (e.swap or "").lower()
+            resp_l = (e.response or "").lower()
+            if re.search(r"inner(morph|html)|inner\s+morph", swap_l) and re.search(
+                r"#\{?region\}?-?body|region.?body|card body|list body", swap_l
+            ):
+                if re.search(
+                    r"full (page|chrome|shell)|re-?wrap|outer (region |)chrome",
+                    resp_l,
+                ):
+                    issues.append(
+                        LintIssue(
+                            "swap-identity",
+                            "inner swap into region/card body but response "
+                            "prose suggests re-wrapping chrome — body-only "
+                            "(ADR-0054 / decision 0012)",
+                            c.id,
+                        )
+                    )
     for bp in BLUEPRINTS:
         issues.extend(lint_fragment(bp.partial, location=f"blueprint:{bp.id}"))
 

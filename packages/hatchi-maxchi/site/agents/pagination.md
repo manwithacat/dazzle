@@ -37,11 +37,17 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 
 ## Morph / swap
 
-Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007, **0012** (swap/identity · ADR-0054). Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
 
 ### Morph (persistent region)
 
 - `GET /app/{region}?page={n}&page_size={size}` → innerMorph of the region's body (`#{region}-body`)
+
+### Identity / envelope (decision 0012)
+
+- **Slot owns identity:** `#{region}-body` (or card body) keeps the stable `id` / region hook.
+- **Inner swap ⇒ body-only:** the page response is the **rows/body interior** — do **not** re-wrap another element with the same `id` or nest `data-dz-region` chrome for the same region. Dual-lock green ≠ envelope-safe.
+- **Outer swap** only when the response *replaces* the target element wholesale.
 
 ### Identity rules
 

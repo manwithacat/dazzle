@@ -1,7 +1,8 @@
-"""Template gates for morph-safe hypermedia (decisions 0005–0008).
+"""Template gates for morph-safe hypermedia (decisions 0005–0008, 0012).
 
 Implementation lives in ``tools/template_lint.py`` (shared with the CLI).
 These tests assert the registry, controllers, and built-in compositions stay clean.
+Swap/identity unit cases: ``test_swap_identity.py``.
 """
 
 from __future__ import annotations

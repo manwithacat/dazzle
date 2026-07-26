@@ -31,6 +31,7 @@ templates violate architectural invariants from decisions 0005–0007.
 | ARIA id refs + accessible names | **Fail** | `test_aria_id_references_*`, `test_dialog_and_listbox_*`, `test_aria_expanded_*` |
 | `hx-target` validity / brittle ancestry | **Fail** | `test_hx_target_hash_ids_*`, `test_hx_target_not_brittle_*` |
 | Morph vs replace policy | **Fail** (clear cases) | `test_swap_policy_*` (no morph on flash; grid-body prefers Morph; exchange toast morph) |
+| Swap / identity (nested region, re-wrap) | **Fail** | `test_swap_identity.py` + lint codes `nested-region` / `swap-identity` (ADR-0054 / decision 0012) |
 | Third-party island boundary | **Fail** | `test_third_party_patterns_declare_island_boundary` |
 
 Island markers accepted: `data-dz-island` / `data-hm-island`, `data-*-morph-skip`,

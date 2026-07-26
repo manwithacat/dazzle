@@ -45,8 +45,12 @@ Composition is **declared host embedding** (and explicit refusal), not imports.
 
 **htmx4 / morph:** prefer morphing for *stable* surfaces (shells, tables, forms);
 replacement for disposable fragments. Stable IDs and DOM-carried state are
-load-bearing. **Alpine is not HM core** — delegated vanilla controllers only.
-Reconstruct: `stems/morph-safe-hypermedia.md` (decisions 0005–0008).
+load-bearing. **Swap / identity (decision 0012 / monorepo ADR-0054):** the
+persistent slot owns `id` / region hooks; `innerHTML`/`innerMorph` responses
+are **body-only** (no nested `data-dz-region` re-wrap). Dual-lock is orthogonal
+(part shape, not HTMX envelope). **Alpine is not HM core** — delegated vanilla
+controllers only. Reconstruct: `stems/morph-safe-hypermedia.md` (decisions
+0005–0008, **0012**).
 **Controller standards:** vanilla IIFE, DOM-local state, structural ESLint —
 decision **0010** (no TypeScript for shipped controllers).
 Lint fixtures: `python packages/hatchi-maxchi/tools/template_lint.py`
@@ -74,7 +78,7 @@ decisions. Decisions under `docs/decisions/` are **expressions** of the same ste
 | **Three layers** | L0 recipe → L1 surface → L2 host | `stems/three-layers.md` |
 | **Declared composition** | `composes` / `does_not_compose` / extensions | `stems/composition-declared.md` |
 | **Invention ladder** | Reuse → refuse+spike → promote → new part | `stems/invention-ladder.md` |
-| **Morph-safe hypermedia** | htmx4 morph for stable surfaces; DOM identity/state; no Alpine in core | `stems/morph-safe-hypermedia.md` |
+| **Morph-safe hypermedia** | htmx4 morph for stable surfaces; DOM identity/state; swap/identity envelope; no Alpine in core | `stems/morph-safe-hypermedia.md` |
 | **Details open intent** | Multi-`<details>` peers: exclusive vs multi_open; chrome needs outside dismiss | `stems/details-open-intent.md` |
 | **Affordance disclosure chrome** | Expand/submenu signals: CSS/SVG chevron at control scale, not tiny Unicode | `stems/affordance-disclosure-chrome.md` |
 | **Selection strip honest** | Tabs/segments: button vs link by intent; square active underline; no half ARIA tablist | `stems/selection-strip-honest.md` |

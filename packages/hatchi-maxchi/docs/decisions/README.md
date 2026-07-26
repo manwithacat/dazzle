@@ -17,6 +17,7 @@ package **stems** (`stems/INDEX.md`), not a parallel doctrine. Reconstruct from
 | [0009](0009-carousel-stage-and-motion.md) | Carousel: stage, composition, wrap, autoplay | Accepted |
 | [0010](0010-controller-coding-standards.md) | HM controller coding standards | Accepted |
 | [0011](0011-toast-page-chrome.md) | Toast as page chrome (stack host + emission) | Accepted |
+| [0012](0012-swap-identity-contract.md) | Swap / identity contract (htmx exchanges) | Accepted |
 
 **How agents should use these**
 
