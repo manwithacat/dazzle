@@ -129,27 +129,35 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 | `POST /app/{region}/bulk` | a bulk-action button (e.g. Delete), after the user approves its confirm dialog; the controller injects the selection on `htmx:configRequest` | the server RE-VALIDATES permissions and RE-SCOPES the action to the echoed query (never trusting the client `selected_ids` alone) and applies it. Two patterns: with `data-dz-grid-bulk-refresh` on the button (this demo), the response swaps NOTHING (JSON/204) and the controller re-fetches rows + footer via the normal GET; without it, put `hx-target` on the button and return the refreshed `<tr>` rows directly. When `all_matching_selected=true`, the action applies to the WHOLE matched query minus `excluded_ids` — the server re-runs the echoed query itself, and MUST strip `page`/`page_size` first (they window the display, not the matched set — re-running them verbatim would apply the action to one page only); `selected_ids` is informational (visible state) only. NB form encoding: with no exclusions the `excluded_ids` key is ABSENT from the POST (not sent empty) — default it to the empty list | innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer (its `data-dz-grid-total` re-stamps the matched total) | populated empty error |
 | `PUT /app/{entity}/{id}` | the inline-edit extension (dz-grid-edit.js): dblclick an editable cell's display span opens an in-cell editor; Enter (or a change, for bool/select/date) commits a raw fetch PUT to `{data-dz-grid-edit-url}/{rowId}` — NOT an htmx exchange | this is the entity's STANDARD update route, not a bespoke field endpoint: the body is a single-field JSON object (`{"plan": "Pro"}`), so an all-optional update schema + exclude-unset semantics make it a partial update, and the full update gate (permissions, scoping, validation) applies. Return 2xx JSON on success; any non-2xx keeps the editor open with the response text as its error. The controller then fires `dz-grid:refresh` on the tbody, so the committed value renders SERVER-side (badges/dates re-render; no client patching) | none (raw fetch) — the follow-up `dz-grid:refresh` re-fetches rows + footer via the tbody's normal GET | populated error |
 
-## Morph / swap
+## Swap contract
 
-Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007, **0012** (swap/identity · monorepo ADR-0054). Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+Agent-visible HTMX topology (ADR-0054 / decision 0012). **Exchange envelope** = what the response may re-emit relative to the persistent slot (`body_only` | `outer` | `none` | `host_owned` | `document`). Dual-lock validates part markup only — not this envelope. Stem: `stems/morph-safe-hypermedia.md`.
+
+Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### Exchanges (swap · envelope)
+
+- `GET /app/{region}/rows?q=&sort=&dir=&page=&page_size=` → innerMorph of the tbody (`[data-dz-grid-body]`) — idiomorph keys on each row's `id`, so a live selection follows its row across a re-sort — PLUS an out-of-band update of the pagination footer: append `<nav data-dz-grid-pagination data-dz-grid-total="N" hx-swap-oob="true">…</nav>` to the response (the stamped total feeds the all-matching affordance) (or target a wrapping region that contains both the tbody and the footer in one swap). The footer's current-page button carries `aria-current="page"` — the client reads it back as the authoritative (possibly server-clamped) page · **envelope=`body_only`**
+- `POST /app/{region}/bulk` → innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer (its `data-dz-grid-total` re-stamps the matched total) · **envelope=`body_only`**
+- `PUT /app/{entity}/{id}` → none (raw fetch) — the follow-up `dz-grid:refresh` re-fetches rows + footer via the tbody's normal GET · **envelope=`none`**
 
 ### Morph (persistent region)
 
-- `GET /app/{region}/rows?q=&sort=&dir=&page=&page_size=` → innerMorph of the tbody (`[data-dz-grid-body]`) — idiomorph keys on each row's `id`, so a live selection follows its row across a re-sort — PLUS an out-of-band update of the pagination footer: append `<nav data-dz-grid-pagination data-dz-grid-total="N" hx-swap-oob="true">…</nav>` to the response (the stamped total feeds the all-matching affordance) (or target a wrapping region that contains both the tbody and the footer in one swap). The footer's current-page button carries `aria-current="page"` — the client reads it back as the authoritative (possibly server-clamped) page · envelope=`body_only`
-- `POST /app/{region}/bulk` → innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer (its `data-dz-grid-total` re-stamps the matched total) · envelope=`body_only`
+- `GET /app/{region}/rows?q=&sort=&dir=&page=&page_size=` → body_only
+- `POST /app/{region}/bulk` → body_only
 
 ### No HTML swap (raw fetch / companion OOB)
 
-- `PUT /app/{entity}/{id}` → none (raw fetch) — the follow-up `dz-grid:refresh` re-fetches rows + footer via the tbody's normal GET
+- `PUT /app/{entity}/{id}` → none
 
-### Identity / envelope (decision 0012)
+### Envelope rules
 
-- **Slot owns identity** — the persistent target keeps the stable `id` / `data-dz-region` hook across polls.
-- **`body_only` (innerHTML / innerMorph into a slot)** — response is interior content only; do **not** re-wrap chrome that re-declares the same id or nests `data-dz-region` for the same region. Dual-lock green ≠ envelope-safe.
-- **`outer` (outerHTML / outerMorph)** — response may carry identity; it *replaces* the target element.
-- Morph participants need **stable** `id` / domain keys (not loop indexes).
-- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
-- Mark third-party widgets as explicit islands / morph-skip boundaries.
+- **`body_only`** — innerHTML / innerMorph into a slot; response is interior only (no re-wrap of slot id / nested `data-dz-region`).
+- **`outer`** — outerHTML / outerMorph; response may carry identity.
+- **`none`** — no HTML swap (JSON/204/bytes; client or OOB companion).
+- **`host_owned`** — swap target/mode chosen by the host button's `hx-target` / `hx-swap` (part does not fix the envelope).
+- **`document`** — full navigation / document load (not a fragment).
+- Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
 ## How to use it
 

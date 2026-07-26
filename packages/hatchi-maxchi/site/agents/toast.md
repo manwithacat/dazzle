@@ -29,20 +29,13 @@ Stack host + auto-dismiss notifications — title, body, optional actions; hover
 
 This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
 
-## Morph / swap
+## Swap contract
 
-Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007, **0012** (swap/identity · monorepo ADR-0054). Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+Agent-visible HTMX topology (ADR-0054 / decision 0012). **Exchange envelope** = what the response may re-emit relative to the persistent slot (`body_only` | `outer` | `none` | `host_owned` | `document`). Dual-lock validates part markup only — not this envelope. Stem: `stems/morph-safe-hypermedia.md`.
 
-This L2 host has no declared hypermedia exchanges in the registry. If you add persistent region updates, prefer `innerMorph` / `outerMorph` with stable row/panel ids; use replacement for flash panes and full resets.
+**No host HTMX exchange** on this part — presentation or client chrome only. **Exchange envelope:** `n/a`.
 
-### Identity / envelope (decision 0012)
-
-- **Slot owns identity** — the persistent target keeps the stable `id` / `data-dz-region` hook across polls.
-- **`body_only` (innerHTML / innerMorph into a slot)** — response is interior content only; do **not** re-wrap chrome that re-declares the same id or nests `data-dz-region` for the same region. Dual-lock green ≠ envelope-safe.
-- **`outer` (outerHTML / outerMorph)** — response may carry identity; it *replaces* the target element.
-- Morph participants need **stable** `id` / domain keys (not loop indexes).
-- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
-- Mark third-party widgets as explicit islands / morph-skip boundaries.
+If a **host** wraps this markup in `hx-*`, **that host owns the swap contract** (sole identity + envelope). Prefer `innerMorph` / `outerMorph` for stable slots; replacement for flash; body-only responses under inner swaps.
 
 ## How to use it
 

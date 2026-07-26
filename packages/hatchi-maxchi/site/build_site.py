@@ -968,17 +968,43 @@ def _epistemic_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
 
 
 def _morph_swap_section(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
-    """Agent pack: morph vs replace from declared exchanges (decision 0005).
+    """Agent pack: always-on **Swap contract** (decision 0012 / ADR-0054).
 
-    Emitted for parts with exchanges and for L2 hosts (even without exchanges)
-    so agents do not invent Alpine state or blind morph rewrites.
+    Vocabulary (agent-facing):
+    - **Swap contract** — the full package: does this part own HTMX exchanges,
+      each exchange's swap mode, and its **exchange envelope**.
+    - **Exchange envelope** — what the response may re-emit relative to the
+      persistent slot: ``body_only`` | ``outer`` | ``none`` | ``host_owned`` |
+      ``document``.
+
+    Every Hyperpart gets this section so agents never invent topology by
+    silence. Presentation-only parts declare envelope ``n/a`` explicitly.
     """
-    from registry import effective_layer
-
-    layer = effective_layer(hyperpart)
     exchanges = list(hyperpart.exchanges or ())
-    if not exchanges and layer != "L2":
-        return []
+
+    lines = [
+        "## Swap contract",
+        "",
+        "Agent-visible HTMX topology (ADR-0054 / decision 0012). "
+        "**Exchange envelope** = what the response may re-emit relative to the "
+        "persistent slot (`body_only` | `outer` | `none` | `host_owned` | "
+        "`document`). Dual-lock validates part markup only — not this envelope. "
+        "Stem: `stems/morph-safe-hypermedia.md`.",
+        "",
+    ]
+
+    if not exchanges:
+        lines += [
+            "**No host HTMX exchange** on this part — presentation or client chrome "
+            "only. **Exchange envelope:** `n/a`.",
+            "",
+            "If a **host** wraps this markup in `hx-*`, **that host owns the swap "
+            "contract** (sole identity + envelope). Prefer `innerMorph` / "
+            "`outerMorph` for stable slots; replacement for flash; body-only "
+            "responses under inner swaps.",
+            "",
+        ]
+        return lines
 
     morph_ex = [e for e in exchanges if e.swap and re.search(r"morph", e.swap, re.I)]
     none_ex = [
@@ -995,73 +1021,71 @@ def _morph_swap_section(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
         and not re.search(r"\bnone\b", e.swap, re.I)
     ]
 
-    lines = [
-        "## Morph / swap",
+    lines += [
+        "Gallery mocks may approximate morph with `innerHTML` — production "
+        "follows the swap column in **Server exchange**.",
         "",
-        "Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007, **0012** "
-        "(swap/identity · monorepo ADR-0054). Morph for **stable** surfaces; "
-        "replacement for **disposable** fragments. Gallery mocks may approximate "
-        "morph with `innerHTML` — production follows the swap column in "
-        "**Server exchange**.",
+        "### Exchanges (swap · envelope)",
         "",
     ]
+    for e in exchanges:
+        env = _exchange_envelope(e)
+        lines.append(f"- `{e.method} {e.endpoint}` → {e.swap} · **envelope=`{env}`**")
+    lines.append("")
+
     if morph_ex:
         lines += ["### Morph (persistent region)", ""]
         for e in morph_ex:
-            env = _exchange_envelope(e)
-            env_bit = f" · envelope=`{env}`" if env != "unspecified" else ""
-            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}{env_bit}")
+            lines.append(f"- `{e.method} {e.endpoint}` → {_exchange_envelope(e)}")
         lines.append("")
     if replace_ex:
-        lines += ["### Replace / `innerHTML` (reset OK)", ""]
+        lines += ["### Replace / other HTML swap", ""]
         for e in replace_ex:
-            env = _exchange_envelope(e)
-            env_bit = f" · envelope=`{env}`" if env != "unspecified" else ""
-            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}{env_bit}")
+            lines.append(f"- `{e.method} {e.endpoint}` → {_exchange_envelope(e)}")
         lines.append("")
     if none_ex:
         lines += ["### No HTML swap (raw fetch / companion OOB)", ""]
         for e in none_ex:
-            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}")
+            lines.append(f"- `{e.method} {e.endpoint}` → {_exchange_envelope(e)}")
         lines.append("")
-    if layer == "L2" and not morph_ex and not replace_ex and not none_ex:
-        lines += [
-            "This L2 host has no declared hypermedia exchanges in the registry. "
-            "If you add persistent region updates, prefer `innerMorph` / `outerMorph` "
-            "with stable row/panel ids; use replacement for flash panes and full resets.",
-            "",
-        ]
+
     lines += [
-        "### Identity / envelope (decision 0012)",
+        "### Envelope rules",
         "",
-        "- **Slot owns identity** — the persistent target keeps the stable `id` / "
-        "`data-dz-region` hook across polls.",
-        "- **`body_only` (innerHTML / innerMorph into a slot)** — response is interior content only; "
-        "do **not** re-wrap chrome that re-declares the same id or nests "
-        "`data-dz-region` for the same region. Dual-lock green ≠ envelope-safe.",
-        "- **`outer` (outerHTML / outerMorph)** — response may carry identity; it "
-        "*replaces* the target element.",
-        "- Morph participants need **stable** `id` / domain keys (not loop indexes).",
-        "- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — "
-        "not Alpine/`x-data` or a JS array a morph would orphan.",
-        "- Mark third-party widgets as explicit islands / morph-skip boundaries.",
+        "- **`body_only`** — innerHTML / innerMorph into a slot; response is "
+        "interior only (no re-wrap of slot id / nested `data-dz-region`).",
+        "- **`outer`** — outerHTML / outerMorph; response may carry identity.",
+        "- **`none`** — no HTML swap (JSON/204/bytes; client or OOB companion).",
+        "- **`host_owned`** — swap target/mode chosen by the host button's "
+        "`hx-target` / `hx-swap` (part does not fix the envelope).",
+        "- **`document`** — full navigation / document load (not a fragment).",
+        "- Slot owns stable `id` / domain keys; state in DOM, not Alpine.",
         "",
     ]
     return lines
 
 
+_ENVELOPE_VALUES = frozenset({"body_only", "outer", "none", "host_owned", "document"})
+
+
 def _exchange_envelope(e) -> str:  # type: ignore[no-untyped-def]
-    """Resolve Exchange.envelope or infer from swap prose (ADR-0054)."""
+    """Resolve Exchange.envelope or infer from swap prose (ADR-0054).
+
+    Never returns empty for a declared Exchange when swap prose is
+    classifiable; remaining ``unspecified`` is a CI failure.
+    """
     explicit = (getattr(e, "envelope", None) or "").strip()
-    if explicit in ("body_only", "outer"):
+    if explicit in _ENVELOPE_VALUES:
         return explicit
     swap = (e.swap or "").lower()
+    if re.search(r"\bnone\b", swap) or re.search(r"raw fetch|bytes|json|204", swap):
+        return "none"
+    if re.search(r"hx-target|per the button|host.?owned|caller.?supplie", swap):
+        return "host_owned"
+    if re.search(r"\bdocument\b|navigation|full (page|document|record)", swap):
+        return "document"
     if re.search(r"outer\s*(morph|html)|outermorph|outerhtml", swap):
         return "outer"
-    if re.search(r"inner\s*(morph|html)|innermorph|innerhtml", swap) and re.search(
-        r"body|tbody|slot|region", swap
-    ):
-        return "body_only"
     if re.search(r"inner\s*(morph|html)|innermorph|innerhtml", swap):
         return "body_only"
     return "unspecified"

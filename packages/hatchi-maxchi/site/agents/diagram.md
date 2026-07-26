@@ -23,6 +23,14 @@ A horizontal-scroll wrapper for server-emitted Mermaid source — the library re
 
 This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
 
+## Swap contract
+
+Agent-visible HTMX topology (ADR-0054 / decision 0012). **Exchange envelope** = what the response may re-emit relative to the persistent slot (`body_only` | `outer` | `none` | `host_owned` | `document`). Dual-lock validates part markup only — not this envelope. Stem: `stems/morph-safe-hypermedia.md`.
+
+**No host HTMX exchange** on this part — presentation or client chrome only. **Exchange envelope:** `n/a`.
+
+If a **host** wraps this markup in `hx-*`, **that host owns the swap contract** (sole identity + envelope). Prefer `innerMorph` / `outerMorph` for stable slots; replacement for flash; body-only responses under inner swaps.
+
 ## How to use it
 
 No extended guidance authored yet — start from Copy this and the dependency chips.

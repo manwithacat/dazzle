@@ -41,22 +41,28 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 |---|---|---|---|---|
 | `GET /_dazzle/documents/{entity}/{id}/{field}/file` | PDF.js fetching document bytes (initial + Range requests as the user pages) | the file field's bytes — 200 whole-body or 206 partial with Content-Range; opaque 404 when the record is out of scope; 416 for unsatisfiable ranges | none (bytes consumed by the rendering engine) | — |
 
-## Morph / swap
+## Swap contract
 
-Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007, **0012** (swap/identity · monorepo ADR-0054). Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+Agent-visible HTMX topology (ADR-0054 / decision 0012). **Exchange envelope** = what the response may re-emit relative to the persistent slot (`body_only` | `outer` | `none` | `host_owned` | `document`). Dual-lock validates part markup only — not this envelope. Stem: `stems/morph-safe-hypermedia.md`.
+
+Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+
+### Exchanges (swap · envelope)
+
+- `GET /_dazzle/documents/{entity}/{id}/{field}/file` → none (bytes consumed by the rendering engine) · **envelope=`none`**
 
 ### No HTML swap (raw fetch / companion OOB)
 
-- `GET /_dazzle/documents/{entity}/{id}/{field}/file` → none (bytes consumed by the rendering engine)
+- `GET /_dazzle/documents/{entity}/{id}/{field}/file` → none
 
-### Identity / envelope (decision 0012)
+### Envelope rules
 
-- **Slot owns identity** — the persistent target keeps the stable `id` / `data-dz-region` hook across polls.
-- **`body_only` (innerHTML / innerMorph into a slot)** — response is interior content only; do **not** re-wrap chrome that re-declares the same id or nests `data-dz-region` for the same region. Dual-lock green ≠ envelope-safe.
-- **`outer` (outerHTML / outerMorph)** — response may carry identity; it *replaces* the target element.
-- Morph participants need **stable** `id` / domain keys (not loop indexes).
-- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
-- Mark third-party widgets as explicit islands / morph-skip boundaries.
+- **`body_only`** — innerHTML / innerMorph into a slot; response is interior only (no re-wrap of slot id / nested `data-dz-region`).
+- **`outer`** — outerHTML / outerMorph; response may carry identity.
+- **`none`** — no HTML swap (JSON/204/bytes; client or OOB companion).
+- **`host_owned`** — swap target/mode chosen by the host button's `hx-target` / `hx-swap` (part does not fix the envelope).
+- **`document`** — full navigation / document load (not a fragment).
+- Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
 ## How to use it
 

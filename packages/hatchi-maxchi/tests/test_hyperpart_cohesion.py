@@ -142,6 +142,7 @@ _LINEAR_SECTION_IDS = ("copy", "exchange", "how-to", "dom-contract", "files")
 _LINEAR_MD_HEADINGS = (
     "## Copy this",
     "## Server exchange",
+    "## Swap contract",
     "## How to use it",
     "## DOM contract",
     "## Source files",

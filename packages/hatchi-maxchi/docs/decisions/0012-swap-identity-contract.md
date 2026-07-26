@@ -20,19 +20,28 @@ what the exchange response may re-emit under which swap mode.
 
 ## Decision
 
-Adopt the framework **swap / identity contract** (ADR-0054) as HM package law:
+Adopt the framework **swap / identity contract** (ADR-0054) as HM package law.
+
+### Vocabulary (agent-facing)
+
+| Term | Meaning |
+|------|---------|
+| **Swap contract** | The full agent-visible package for a Hyperpart: whether it owns HTMX exchanges, each exchange’s swap mode, and its **exchange envelope**. Every part’s `agents/<id>.md` has a `## Swap contract` section. |
+| **Exchange envelope** | What the **response** may re-emit relative to the persistent slot: `body_only` \| `outer` \| `none` \| `host_owned` \| `document`. |
+
+### Rules
 
 1. **Sole identity owner** — one stable id / region hook per logical slot.
-2. **Inner swap ⇒ body-only** — `innerHTML` / `innerMorph` into a slot must not
+2. **Inner swap ⇒ body_only** — `innerHTML` / `innerMorph` into a slot must not
    re-declare that slot’s id or nest another `data-dz-region` chrome for the
    same region name. Return the interior fragment only.
-3. **Outer swap ⇒ replacement may carry identity** — `outerHTML` / `outerMorph`
-   may replace the target element wholesale.
+3. **Outer swap ⇒ outer** — `outerHTML` / `outerMorph` may replace the target
+   element wholesale.
 4. **Dual-lock is orthogonal** — part contracts validate interiors; this
    contract validates host/exchange envelopes.
-5. **Document envelope on every exchange** — Server exchange tables and agent
-   packs state **response envelope** (body-only vs outer replace), not only
-   swap mode.
+5. **Every Hyperpart has a swap contract** — presentation-only parts declare
+   envelope `n/a` explicitly (no silent omission). Every declared `Exchange`
+   resolves to a known envelope (CI fails on `unspecified`).
 
 ### Machine gates (HM)
 
@@ -40,6 +49,7 @@ Adopt the framework **swap / identity contract** (ADR-0054) as HM package law:
 |-------|--------|
 | Nested `data-dz-region` / duplicate ids in fixtures | `contracts/swap_identity.py` + `tools/template_lint.py` |
 | Inner-swap response re-owns target id | `validate_inner_swap_response` |
+| Every Hyperpart has `## Swap contract`; no unspecified envelope | `test_every_hyperpart_has_agent_visible_swap_contract` |
 | Registry / composition lint | `tests/test_morph_template_gates.py` |
 
 CLI: `python packages/hatchi-maxchi/tools/template_lint.py` (existing entry;

@@ -114,6 +114,42 @@ def test_exchange_envelope_inferred_and_explicit() -> None:
         envelope="outer",
     )
     assert _exchange_envelope(explicit) == "outer"
-    assert any(
-        e.envelope == "body_only" for h in __import__("registry").HYPERPARTS for e in h.exchanges
+    assert _exchange_envelope(Exchange("PUT", "/e", "t", "json", "none (raw fetch)")) == "none"
+    assert (
+        _exchange_envelope(
+            Exchange("DELETE", "/e", "t", "row gone", "per the button's hx-target/hx-swap")
+        )
+        == "host_owned"
     )
+
+
+def test_every_hyperpart_has_agent_visible_swap_contract() -> None:
+    """Confidence gate: every Hyperpart ships an agent-visible Swap contract.
+
+    Presentation-only parts declare envelope n/a; exchange parts resolve every
+    Exchange to a known envelope (never unspecified).
+    """
+    sys.path.insert(0, str(PKG / "site"))
+    from build_site import _ENVELOPE_VALUES, _exchange_envelope, _morph_swap_section
+    from registry import HYPERPARTS
+
+    agents = PKG / "site" / "agents"
+    missing_section: list[str] = []
+    unspecified: list[str] = []
+    for h in HYPERPARTS:
+        md_path = agents / f"{h.id}.md"
+        assert md_path.is_file(), f"missing agent pack for {h.id}"
+        md = md_path.read_text(encoding="utf-8")
+        if "## Swap contract" not in md:
+            missing_section.append(h.id)
+        section = "\n".join(_morph_swap_section(h))
+        assert "## Swap contract" in section, h.id
+        assert "Exchange envelope" in section or "exchange envelope" in section.lower(), h.id
+        if not h.exchanges:
+            assert "n/a" in section or "No host HTMX exchange" in section, h.id
+        for e in h.exchanges or ():
+            env = _exchange_envelope(e)
+            if env not in _ENVELOPE_VALUES:
+                unspecified.append(f"{h.id}: {e.method} {e.endpoint} → {env!r}")
+    assert not missing_section, f"agent packs missing ## Swap contract: {missing_section}"
+    assert not unspecified, f"exchanges with unspecified envelope: {unspecified}"

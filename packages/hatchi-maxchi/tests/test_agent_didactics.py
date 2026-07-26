@@ -141,19 +141,22 @@ def test_agent_packs_carry_epistemic_one_liner() -> None:
 
 
 def test_agent_packs_document_morph_swap_for_morphing_hosts() -> None:
-    """Grid (and other morph exchangers) must teach morph vs replace (decision 0005)."""
+    """Grid (and other morph exchangers) must teach swap contract + envelope."""
     grid = (PKG / "site" / "agents" / "grid.md").read_text(encoding="utf-8")
-    assert "## Morph / swap" in grid, "grid agent pack missing Morph / swap section"
+    assert "## Swap contract" in grid, "grid agent pack missing Swap contract section"
     assert "innerMorph" in grid
     assert "morph-safe-hypermedia" in grid
+    assert "envelope=" in grid
     assert "stable" in grid.lower()
     # Do/Don't covers morph identity
     assert "morph key" in grid.lower() or "data-dz-grid-row-id" in grid
 
     pagination = (PKG / "site" / "agents" / "pagination.md").read_text(encoding="utf-8")
-    assert "## Morph / swap" in pagination
+    assert "## Swap contract" in pagination
     assert "innerMorph" in pagination
+    assert "body_only" in pagination
 
-    # L2 host without exchanges still gets identity rules
+    # L2 host without exchanges still gets an explicit swap contract
     shell = (PKG / "site" / "agents" / "app-shell.md").read_text(encoding="utf-8")
-    assert "## Morph / swap" in shell
+    assert "## Swap contract" in shell
+    assert "n/a" in shell or "No host HTMX exchange" in shell

@@ -45,12 +45,13 @@ Composition is **declared host embedding** (and explicit refusal), not imports.
 
 **htmx4 / morph:** prefer morphing for *stable* surfaces (shells, tables, forms);
 replacement for disposable fragments. Stable IDs and DOM-carried state are
-load-bearing. **Swap / identity (decision 0012 / monorepo ADR-0054):** the
-persistent slot owns `id` / region hooks; `innerHTML`/`innerMorph` responses
-are **body-only** (no nested `data-dz-region` re-wrap). Dual-lock is orthogonal
-(part shape, not HTMX envelope). **Alpine is not HM core** — delegated vanilla
-controllers only. Reconstruct: `stems/morph-safe-hypermedia.md` (decisions
-0005–0008, **0012**).
+load-bearing. **Swap contract (decision 0012 / ADR-0054):** every Hyperpart’s
+agent pack has `## Swap contract`. **Exchange envelope** = what the response may
+re-emit (`body_only` \| `outer` \| `none` \| `host_owned` \| `document`;
+presentation-only → `n/a`). Slot owns `id` / region hooks; inner swaps are
+body-only. Dual-lock is orthogonal (part shape, not envelope). **Alpine is not
+HM core** — delegated vanilla controllers only. Reconstruct:
+`stems/morph-safe-hypermedia.md` (decisions 0005–0008, **0012**).
 **Controller standards:** vanilla IIFE, DOM-local state, structural ESLint —
 decision **0010** (no TypeScript for shipped controllers).
 Lint fixtures: `python packages/hatchi-maxchi/tools/template_lint.py`
