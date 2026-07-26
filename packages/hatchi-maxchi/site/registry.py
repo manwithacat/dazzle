@@ -52,6 +52,11 @@ class Exchange:
     # coding agent needs these enumerated, not implied — an endpoint-backed
     # component is under-specified without its empty/error behaviour.
     states: tuple[str, ...] = ()
+    # ADR-0054 / decision 0012 — response envelope relative to the swap target.
+    # ``body_only``: innerHTML/innerMorph into a slot; response must not re-own
+    # the slot id or nest data-dz-region chrome. ``outer``: outerHTML/outerMorph
+    # may carry identity. Empty → inferred from ``swap`` prose in build/lint.
+    envelope: str = ""  # "" | "body_only" | "outer"
     # Optional FastAPI-shaped handler source for HTMX4 app authors / agents.
     # This is the *exchange* endpoint (what runs after the client affordance),
     # not a dual-lock module. Omit when the part is pure client chrome.
@@ -517,6 +522,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     "with the current-page button marked `is-current` + `aria-current='page'`",
                     swap="innerMorph of the region's body (`#{region}-body`)",
                     states=("loading", "populated", "error"),
+                    envelope="body_only",
                 ),
             ),
             mock="/mock/pagination",
@@ -801,6 +807,7 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
                     'one swap). The footer\'s current-page button carries `aria-current="page"` — '
                     "the client reads it back as the authoritative (possibly server-clamped) page",
                     states=("loading", "empty", "populated", "error"),
+                    envelope="body_only",
                 ),
                 Exchange(
                     method="POST",

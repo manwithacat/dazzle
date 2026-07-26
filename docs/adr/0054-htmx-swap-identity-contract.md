@@ -102,7 +102,8 @@ Fragment response (must not re-own the same identity under inner* swaps)
 | Dazzle: HTMX body-only region response + card-body data-dz-region | Shipped (2026-07-26, nested-chrome fix) |
 | ADR-0054 (this record) | Accepted |
 | HM decision 0012 + stem/lint/tests (`contracts/swap_identity.py`) | Shipped with this ADR |
-| Composite poll×2 gate in Dazzle ship-surface | Recommended follow-up |
+| Composite poll×2 gate (`apply_inner_swap` + unit tests) | Shipped (`tests/unit/test_htmx_workspace_composite.py`) |
+| HM `Exchange.envelope` + regenerated agent packs | Shipped |
 
 ## See also
 

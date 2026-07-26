@@ -998,21 +998,26 @@ def _morph_swap_section(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
     lines = [
         "## Morph / swap",
         "",
-        "Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. "
-        "Morph for **stable** surfaces; replacement for **disposable** fragments. "
-        "Gallery mocks may approximate morph with `innerHTML` — production follows "
-        "the swap column in **Server exchange**.",
+        "Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007, **0012** "
+        "(swap/identity · monorepo ADR-0054). Morph for **stable** surfaces; "
+        "replacement for **disposable** fragments. Gallery mocks may approximate "
+        "morph with `innerHTML` — production follows the swap column in "
+        "**Server exchange**.",
         "",
     ]
     if morph_ex:
         lines += ["### Morph (persistent region)", ""]
         for e in morph_ex:
-            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}")
+            env = _exchange_envelope(e)
+            env_bit = f" · envelope=`{env}`" if env != "unspecified" else ""
+            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}{env_bit}")
         lines.append("")
     if replace_ex:
         lines += ["### Replace / `innerHTML` (reset OK)", ""]
         for e in replace_ex:
-            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}")
+            env = _exchange_envelope(e)
+            env_bit = f" · envelope=`{env}`" if env != "unspecified" else ""
+            lines.append(f"- `{e.method} {e.endpoint}` → {e.swap}{env_bit}")
         lines.append("")
     if none_ex:
         lines += ["### No HTML swap (raw fetch / companion OOB)", ""]
@@ -1027,8 +1032,15 @@ def _morph_swap_section(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
             "",
         ]
     lines += [
-        "### Identity rules",
+        "### Identity / envelope (decision 0012)",
         "",
+        "- **Slot owns identity** — the persistent target keeps the stable `id` / "
+        "`data-dz-region` hook across polls.",
+        "- **`body_only` (innerHTML / innerMorph into a slot)** — response is interior content only; "
+        "do **not** re-wrap chrome that re-declares the same id or nests "
+        "`data-dz-region` for the same region. Dual-lock green ≠ envelope-safe.",
+        "- **`outer` (outerHTML / outerMorph)** — response may carry identity; it "
+        "*replaces* the target element.",
         "- Morph participants need **stable** `id` / domain keys (not loop indexes).",
         "- Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — "
         "not Alpine/`x-data` or a JS array a morph would orphan.",
@@ -1036,6 +1048,23 @@ def _morph_swap_section(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
         "",
     ]
     return lines
+
+
+def _exchange_envelope(e) -> str:  # type: ignore[no-untyped-def]
+    """Resolve Exchange.envelope or infer from swap prose (ADR-0054)."""
+    explicit = (getattr(e, "envelope", None) or "").strip()
+    if explicit in ("body_only", "outer"):
+        return explicit
+    swap = (e.swap or "").lower()
+    if re.search(r"outer\s*(morph|html)|outermorph|outerhtml", swap):
+        return "outer"
+    if re.search(r"inner\s*(morph|html)|innermorph|innerhtml", swap) and re.search(
+        r"body|tbody|slot|region", swap
+    ):
+        return "body_only"
+    if re.search(r"inner\s*(morph|html)|innermorph|innerhtml", swap):
+        return "body_only"
+    return "unspecified"
 
 
 def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-def]

@@ -90,3 +90,30 @@ def test_lint_fragment_flags_nested_region() -> None:
     )
     issues = lint_fragment(html, location="t")
     assert any(i.code == "nested-region" for i in issues)
+
+
+def test_exchange_envelope_inferred_and_explicit() -> None:
+    sys.path.insert(0, str(PKG / "site"))
+    from build_site import _exchange_envelope
+    from registry import Exchange
+
+    inferred = Exchange(
+        "GET",
+        "/x",
+        "t",
+        "rows only",
+        "innerMorph of the region's body (`#{region}-body`)",
+    )
+    assert _exchange_envelope(inferred) == "body_only"
+    explicit = Exchange(
+        "GET",
+        "/x",
+        "t",
+        "full element",
+        "outerHTML of #panel",
+        envelope="outer",
+    )
+    assert _exchange_envelope(explicit) == "outer"
+    assert any(
+        e.envelope == "body_only" for h in __import__("registry").HYPERPARTS for e in h.exchanges
+    )

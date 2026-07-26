@@ -131,19 +131,22 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 
 ## Morph / swap
 
-Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007. Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
+Stem: `stems/morph-safe-hypermedia.md` · decisions 0005–0007, **0012** (swap/identity · monorepo ADR-0054). Morph for **stable** surfaces; replacement for **disposable** fragments. Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
 
 ### Morph (persistent region)
 
-- `GET /app/{region}/rows?q=&sort=&dir=&page=&page_size=` → innerMorph of the tbody (`[data-dz-grid-body]`) — idiomorph keys on each row's `id`, so a live selection follows its row across a re-sort — PLUS an out-of-band update of the pagination footer: append `<nav data-dz-grid-pagination data-dz-grid-total="N" hx-swap-oob="true">…</nav>` to the response (the stamped total feeds the all-matching affordance) (or target a wrapping region that contains both the tbody and the footer in one swap). The footer's current-page button carries `aria-current="page"` — the client reads it back as the authoritative (possibly server-clamped) page
-- `POST /app/{region}/bulk` → innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer (its `data-dz-grid-total` re-stamps the matched total)
+- `GET /app/{region}/rows?q=&sort=&dir=&page=&page_size=` → innerMorph of the tbody (`[data-dz-grid-body]`) — idiomorph keys on each row's `id`, so a live selection follows its row across a re-sort — PLUS an out-of-band update of the pagination footer: append `<nav data-dz-grid-pagination data-dz-grid-total="N" hx-swap-oob="true">…</nav>` to the response (the stamped total feeds the all-matching affordance) (or target a wrapping region that contains both the tbody and the footer in one swap). The footer's current-page button carries `aria-current="page"` — the client reads it back as the authoritative (possibly server-clamped) page · envelope=`body_only`
+- `POST /app/{region}/bulk` → innerMorph of the tbody (`[data-dz-grid-body]`) plus the OOB footer (its `data-dz-grid-total` re-stamps the matched total) · envelope=`body_only`
 
 ### No HTML swap (raw fetch / companion OOB)
 
 - `PUT /app/{entity}/{id}` → none (raw fetch) — the follow-up `dz-grid:refresh` re-fetches rows + footer via the tbody's normal GET
 
-### Identity rules
+### Identity / envelope (decision 0012)
 
+- **Slot owns identity** — the persistent target keeps the stable `id` / `data-dz-region` hook across polls.
+- **`body_only` (innerHTML / innerMorph into a slot)** — response is interior content only; do **not** re-wrap chrome that re-declares the same id or nests `data-dz-region` for the same region. Dual-lock green ≠ envelope-safe.
+- **`outer` (outerHTML / outerMorph)** — response may carry identity; it *replaces* the target element.
 - Morph participants need **stable** `id` / domain keys (not loop indexes).
 - Carry selection/edit affordances in the **DOM** (checked, `data-*`, ARIA) — not Alpine/`x-data` or a JS array a morph would orphan.
 - Mark third-party widgets as explicit islands / morph-skip boundaries.

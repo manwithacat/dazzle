@@ -264,3 +264,44 @@ def assemble_workspace_composite(
             count=1,
         )
     return composite
+
+
+def apply_inner_swap(html: str, element_id: str, fragment: str) -> str:
+    """Simulate one ``hx-swap=innerHTML`` into the first element with ``id=element_id``.
+
+    Used for ADR-0054 poll×2 / double-swap identity tests. First-match only;
+    nested same-id trees (the antipattern) still hit the outermost id first
+    under common browsers — tests that need inner targeting pass a bare
+    ``region-{name}`` id after the first re-wrap. Matching close-tag is
+    depth-aware so nested ``<div>`` trees are not truncated early.
+    """
+    tid = element_id.lstrip("#")
+    open_re = re.compile(
+        r"<([a-zA-Z][\w:-]*)((?:[^>\"']|\"[^\"]*\"|'[^']*')*\bid=\""
+        + re.escape(tid)
+        + r"\"(?:[^>\"']|\"[^\"]*\"|'[^']*')*)>",
+        re.DOTALL,
+    )
+    m = open_re.search(html)
+    if not m:
+        raise ValueError(f"apply_inner_swap: id={tid!r} not found")
+    tag = m.group(1)
+    start_content = m.end()
+    open_tag = re.compile(rf"<{re.escape(tag)}\b[^>]*>", re.I)
+    close_tag = re.compile(rf"</{re.escape(tag)}\s*>", re.I)
+    depth = 1
+    pos = start_content
+    while pos < len(html) and depth > 0:
+        mo = open_tag.search(html, pos)
+        mc = close_tag.search(html, pos)
+        if mc is None:
+            raise ValueError(f"apply_inner_swap: unclosed <{tag}> for id={tid!r}")
+        if mo is not None and mo.start() < mc.start():
+            depth += 1
+            pos = mo.end()
+            continue
+        depth -= 1
+        if depth == 0:
+            return html[:start_content] + fragment + html[mc.start() :]
+        pos = mc.end()
+    raise ValueError(f"apply_inner_swap: failed to close id={tid!r}")
