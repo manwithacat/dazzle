@@ -2666,6 +2666,12 @@ def create_page_routes(
         if app_prefix and reg_path.startswith(app_prefix):
             reg_path = reg_path[len(app_prefix) :] or "/"
 
+        # Match API route_generator: uuid-typed ``{id}`` so literal segments
+        # like ``create`` never coerce as a path id (psycopg "invalid uuid:
+        # create" 500). Concrete links still pass real UUID strings.
+        if "{id}" in reg_path and "{id:" not in reg_path:
+            reg_path = reg_path.replace("{id}", "{id:uuid}")
+
         handler = _make_page_handler(
             deps, route_path, ctx, view_name=getattr(ctx, "view_name", None)
         )

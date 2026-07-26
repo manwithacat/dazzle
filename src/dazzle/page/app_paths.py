@@ -36,11 +36,16 @@ def create_path(app_prefix: str, slug: str) -> str:
 
 
 def detail_path(app_prefix: str, slug: str, id: str = "{id}") -> str:
-    """Detail (VIEW) page: ``{app_prefix}/{slug}/{id}``. ``id`` defaults to the
-    literal ``{id}`` template segment used for route registration."""
+    """Detail (VIEW) page: ``{app_prefix}/{slug}/{id}``.
+
+    ``id`` defaults to the literal ``{id}`` template segment for *link*
+    construction. Route *registration* upgrades bare ``{id}`` to
+    ``{id:uuid}`` in ``create_page_routes`` (ADR-0054 / create-vs-id
+    footgun) so literal segments like ``create`` never coerce as UUIDs.
+    """
     return f"{app_prefix}/{slug}/{id}"
 
 
 def edit_path(app_prefix: str, slug: str, id: str = "{id}") -> str:
-    """Edit page: ``{app_prefix}/{slug}/{id}/edit``."""
+    """Edit page: ``{app_prefix}/{slug}/{id}/edit`` (same ``{id}`` note as detail)."""
     return f"{app_prefix}/{slug}/{id}/edit"

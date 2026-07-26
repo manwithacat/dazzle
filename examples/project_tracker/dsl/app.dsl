@@ -114,6 +114,8 @@ entity Project "Project":
   scope:
     list: all
       as: admin, manager, member
+    read: all
+      as: admin, manager, member
     create: all
       as: admin, manager
     update: all
@@ -146,6 +148,8 @@ entity Milestone "Milestone":
 
   scope:
     list: all
+      as: admin, manager, member
+    read: all
       as: admin, manager, member
     create: all
       as: admin, manager
@@ -194,6 +198,11 @@ entity Task "Task":
       as: admin, manager
     list: assigned_to = current_user
       as: member
+    # Queue drills + detail surfaces need READ (list-only scope → detail 404).
+    read: all
+      as: admin, manager
+    read: assigned_to = current_user
+      as: member
     create: all
       as: admin, manager, member
     update: all
@@ -220,6 +229,8 @@ entity Comment "Comment":
   scope:
     list: all
       as: admin, manager, member
+    read: all
+      as: admin, manager, member
     create: all
       as: admin, manager, member
     update: all
@@ -244,6 +255,8 @@ entity Attachment "Attachment":
 
   scope:
     list: all
+      as: admin, manager, member
+    read: all
       as: admin, manager, member
     create: all
       as: admin, manager, member
