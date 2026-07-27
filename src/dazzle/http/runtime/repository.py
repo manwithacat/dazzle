@@ -9,6 +9,7 @@ and relation loading.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import time
 from datetime import date, datetime
@@ -16,7 +17,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from dazzle.core import ir
 from dazzle.core.archetype_expander import _to_snake_case
@@ -28,6 +29,8 @@ from dazzle.http.specs.entity import (
     FieldType,
     ScalarType,
 )
+
+logger = logging.getLogger(__name__)
 
 # Build a tuple of IntegrityError types for PostgreSQL.
 _INTEGRITY_ERRORS: tuple[type[Exception], ...] = ()
@@ -1285,7 +1288,27 @@ class Repository[T: BaseModel]:
             # to rows that don't conform to the current entity enum).
             items = [self._convert_row_dict(row) for row in row_dicts]
         else:
-            items = [self._row_to_model(row) for row in rows]
+            # Soft-skip rows that fail entity validation so one poisoned principal
+            # (e.g. domain User.role='user' outside enum[admin,manager,member])
+            # cannot empty every workspace region sourcing that entity. Fail-closed
+            # still applies to query/scope failures higher in the call stack; this
+            # is row-level resilience only.
+            items = []
+            for row in rows:
+                try:
+                    items.append(self._row_to_model(row))
+                except ValidationError as exc:
+                    row_id = None
+                    try:
+                        row_id = dict(row).get("id")
+                    except Exception:  # noqa: BLE001
+                        row_id = None
+                    logger.warning(
+                        "repository.list skip invalid row entity=%s id=%s errors=%s",
+                        self.table_name,
+                        row_id,
+                        exc.error_count() if hasattr(exc, "error_count") else str(exc),
+                    )
 
         return {
             "items": items,

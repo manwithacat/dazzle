@@ -621,6 +621,36 @@ def _session_for_test_user(deps: _TestDeps, user: Any) -> Any:
     return deps.auth_store.create_session(user, active_membership_id=active_membership_id)
 
 
+def _role_enum_values(deps: _TestDeps) -> list[str]:
+    """User.role enum tokens from IR, if declared."""
+    if deps.user_ir_spec is None:
+        return []
+    for f in deps.user_ir_spec.fields:
+        if f.name == "role" and getattr(f.type, "enum_values", None):
+            return list(f.type.enum_values or [])
+    return []
+
+
+def _resolve_test_auth_role(deps: _TestDeps, request: AuthenticateRequest) -> tuple[str, str]:
+    """Username + role for ``/__test__/authenticate``.
+
+    Prefer an explicit persona role. The historical default ``\"user\"`` is not
+    in most showcase role enums (admin/manager/member) and used to mirror a
+    domain User row that broke every ``source: User`` workspace region
+    (ValidationError → empty people desk). Fall back to member-like tokens
+    that apps commonly declare, else leave ``user`` for free-form schemas.
+    """
+    username = request.username or request.role or "test_user"
+    role = request.role or ""
+    if role:
+        return username, role
+    enum_vals = _role_enum_values(deps)
+    for candidate in ("member", "user", "admin"):
+        if not enum_vals or candidate in enum_vals:
+            return username, candidate
+    return username, (enum_vals[0] if enum_vals else "user")
+
+
 async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest) -> Any:
     """
     Create a test authentication session.
@@ -636,8 +666,7 @@ async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest)
 
     from starlette.responses import JSONResponse
 
-    username = request.username or request.role or "test_user"
-    role = request.role or "user"
+    username, role = _resolve_test_auth_role(deps, request)
 
     if deps.auth_store is not None:
         user = _lookup_test_auth_user(deps, username=username, role=role)

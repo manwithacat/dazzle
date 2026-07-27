@@ -91,6 +91,21 @@ class TestMirrorAuthUserSchemaDerived:
         assert '"name"' in sql and '"role"' in sql and '"is_active"' in sql
         assert "Bob" in params and "member" in params and True in params
 
+    def test_enum_role_coerces_invalid_user_token(self) -> None:
+        """role='user' must not land outside enum[admin,manager,member]."""
+        deps, conn = self._deps(
+            "  email: str(120) required\n  name: str(80)\n"
+            "  role: enum[admin,manager,member]=member\n  is_active: bool=true\n"
+        )
+        _mirror_auth_user_to_domain(deps, "u-role", "x@example.com", "X", "user")
+        assert len(conn.executed) == 1
+        sql, params = conn.executed[0]
+        # Coerced to field default `member` — never the illegal 'user' token.
+        assert "user" not in params
+        assert "member" in params
+        # Label columns preserve existing seed names on conflict update.
+        assert "CASE WHEN" in sql and "EXCLUDED" in sql
+
     def test_no_user_entity_is_noop(self) -> None:
         from types import SimpleNamespace
 

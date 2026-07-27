@@ -567,9 +567,11 @@ workspace people_desk "People":
 
   roster:
     source: User
+    filter: is_active = true
     sort: name asc
     limit: 25
     display: grid
+    action: user_detail
     empty: "No team members yet"
 
   unassigned:

@@ -4,7 +4,7 @@
 name = "manager_board"
 login_persona = "manager"
 time_budget_seconds = 450
-max_steps = 30
+max_steps = 50
 
 user_identity = """
 You are Ken, engineering manager running a single active project board.
@@ -27,6 +27,42 @@ adoption_criteria = [
     "Board shows work in more than one column",
     "Task titles are story-grade, not empty placeholders",
     "Would keep watching a sales demo of this board",
+]
+
+stop_when = """
+Stop when adoption_criteria can be scored. Call submit_verdict.
+"""
+
+[[scenario]]
+name = "member_teammate_hub"
+login_persona = "member"
+time_budget_seconds = 480
+max_steps = 50
+# Story ST-005 — assignee hop lands Team Member Overview (cycle 1347–1348).
+
+user_identity = """
+You are Sam, an IC on the engineering team. You live in My Tasks and the
+project board. When a card shows Ken as assignee, you hop their name to
+see what else they own before you ping them.
+"""
+
+business_context = """
+Two active projects, a populated board, and real teammate hubs (not 404s).
+A pilot dies if assignee names are dead ends or People shows an empty roster
+while the company has three named principals.
+"""
+
+tasks = [
+    "From the board or My Tasks, open a teammate hub via an assignee name (or Team Member list).",
+    "Does the hub show identity, role strip, assigned work, and owned projects?",
+    "As manager (or via People if reachable), is the team roster non-empty with openable people?",
+    "Decide if teammate context hops are credible for a two-week pilot.",
+]
+
+adoption_criteria = [
+    "Assignee hop lands a Team Member Overview without 404",
+    "Hub shows assigned work and/or owned projects for that person",
+    "Would trust teammate context in a sales demo",
 ]
 
 stop_when = """

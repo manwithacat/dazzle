@@ -53,13 +53,13 @@ apply map patches with `{"apply":true}`.
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1348 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1338 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1350 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1258 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1330 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1347 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1330 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1338 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1350 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | USED |
@@ -121,6 +121,8 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1350 (2026-07-27).** **example-apps agent_acceptance_panel** project_tracker — dig found people_desk empty from invalid `User.role=user` poison; **framework** enum coerce + list soft-skip + test auth role resolve; **product** roster `action:user_detail`; trial ST-005 scenario. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1350**. budget 1. Explore **17/100**.
+>
 > **Cycle 1349 (2026-07-27).** **hm-convergence gallery_probes** 6/6 PASS discover uncovered=0; **framework-ux** #1426 false positive — `{id:uuid}` vs `{id}` normalize in validate_app_links; unit pin. densify_allowed=0. Stamped gallery_probes **USED@1349**. budget 1. Explore **16/100**.
 >
 > **Cycle 1348 (2026-07-27).** **example-apps story_walk** project_tracker ST-005 — `member_st_005` land my_tasks + hop `/app/user/{Ken}` live 2/2 PASS after reset-and-load 22; dig receipt story_walk; residual_total 1→0. densify_allowed=0. Stamped story_walk/test walk/process_dig/reset-and-load **USED@1348**. budget 1. Explore **15/100**.

@@ -60,6 +60,31 @@ def _scalar_placeholder(field: ir.FieldSpec) -> Any:
     return _SCALAR_PLACEHOLDERS.get(field.type.kind, _NO_PLACEHOLDER)
 
 
+def _coerce_enum_role(field: ir.FieldSpec, role: str) -> str | None:
+    """Map an auth role onto a domain enum column without inventing invalid values.
+
+    ``/__test__/authenticate`` historically defaulted ``role="user"`` when the
+    caller omitted a persona. Apps that declare ``role: enum[admin,manager,member]``
+    then got a domain row that failed Pydantic validation on every workspace
+    ``source: User`` list — fail-closed regions rendered "No team members yet"
+    even when valid teammates existed (project_tracker people_desk, cycle 1350).
+
+    Returns a legal enum token (caller role if allowed, else field default, else
+    first enum value), or ``None`` when the field is not an enum / has no values
+    (caller should write the raw role string for free-form ``str`` role columns).
+    """
+    if field.type.kind != ir.FieldTypeKind.ENUM:
+        return None
+    values = list(field.type.enum_values or [])
+    if not values:
+        return None
+    if role in values:
+        return role
+    if field.default is not None and str(field.default) in values:
+        return str(field.default)
+    return values[0]
+
+
 def _resolve_source(source: str, *, user_id: str, email: str, username: str, role: str) -> str:
     """Resolve an ``auth_identity: map`` source token to the auth principal's value."""
     localpart = email.split("@", 1)[0] if email else (username or user_id)
@@ -101,9 +126,22 @@ def build_domain_user_upsert(
             bound[binding.link_via] = email
         for col, source in binding.field_map:
             if col in writable:
-                bound[col] = _resolve_source(
+                value = _resolve_source(
                     source, user_id=user_id, email=email, username=username, role=role
                 )
+                if source == "role":
+                    coerced = _coerce_enum_role(writable[col], value)
+                    if coerced is not None:
+                        if coerced != value:
+                            logger.warning(
+                                "auth→domain User mirror (declared): role %r not in "
+                                "enum %s — using %r",
+                                value,
+                                writable[col].type.enum_values,
+                                coerced,
+                            )
+                        value = coerced
+                bound[col] = value
         for col, literal in binding.defaults:
             if col in writable:
                 bound[col] = literal
@@ -118,7 +156,16 @@ def build_domain_user_upsert(
         if "username" in writable:
             bound["username"] = username or (email.split("@", 1)[0] if email else user_id)
         if "role" in writable:
-            bound["role"] = role
+            role_field = writable["role"]
+            coerced = _coerce_enum_role(role_field, role)
+            bound["role"] = role if coerced is None else coerced
+            if coerced is not None and coerced != role:
+                logger.warning(
+                    "auth→domain User mirror: role %r not in enum %s — using %r",
+                    role,
+                    role_field.type.enum_values,
+                    coerced,
+                )
         if "is_active" in writable:
             bound["is_active"] = True
         for fname, f in writable.items():
@@ -141,15 +188,28 @@ def build_domain_user_upsert(
     if has_created_at:
         col_sql += ', "created_at"'
         val_sql += ", NOW()"
+    table = quote_identifier(user_spec.name)
     update_cols = [c for c in cols if c != "id"]
     if update_cols:
-        set_sql = ", ".join(
-            f"{quote_identifier(c)} = EXCLUDED.{quote_identifier(c)}" for c in update_cols
-        )
-        conflict = f"ON CONFLICT (id) DO UPDATE SET {set_sql}"
+        # Preserve seed-quality display labels already on the domain row
+        # (Ken Manager, Sam Member, …). Auth username ("manager") must not
+        # clobber them on every /__test__/authenticate mirror.
+        _label_cols = {"name", "display_name", "full_name"}
+        set_parts: list[str] = []
+        for c in update_cols:
+            qc = quote_identifier(c)
+            if c in _label_cols:
+                existing = f"{table}.{qc}"
+                set_parts.append(
+                    f"{qc} = CASE WHEN {existing} IS NULL OR "
+                    f"BTRIM(COALESCE({existing}::text, '')) = '' "
+                    f"THEN EXCLUDED.{qc} ELSE {existing} END"
+                )
+            else:
+                set_parts.append(f"{qc} = EXCLUDED.{qc}")
+        conflict = f"ON CONFLICT (id) DO UPDATE SET {', '.join(set_parts)}"
     else:
         conflict = "ON CONFLICT (id) DO NOTHING"
-    table = quote_identifier(user_spec.name)
     sql = f"INSERT INTO {table} ({col_sql}) VALUES ({val_sql}) {conflict}"
     return sql, tuple(params)
 
