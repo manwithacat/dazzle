@@ -49,3 +49,16 @@ story ST-004 "Manager reviews project portfolio":
   then:
     - "Manager sees all projects"
     - "Opening a project shows related tasks and milestones"
+
+story ST-005 "Member follows an assignee hop to a teammate hub":
+  status: accepted
+  executed_by: surface.user_detail
+  persona: member
+  trigger: user_click
+  entities: [User, Task, Project]
+  given:
+    - "Task assigned_to ref resolves to /app/user/{id}"
+    - "User has read permission"
+  then:
+    - "Teammate hub shows identity, role strip, assigned work, and owned projects"
+    - "No 404 on assignee context hop from kanban/queue"

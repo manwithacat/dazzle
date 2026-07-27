@@ -37,3 +37,18 @@ scenes:
           - Task
           - Milestone
     expects: "Parent Project overview hub shows related tasks and milestones (seed Website relaunch)"
+  # Cycle 1347: assignee FK hop after user_detail + scope:read (#303)
+  - id: hop_assignee_user_hub
+    story: ST-002
+    entry: /app/user/a1000000-0000-4000-8000-000000000001
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - member
+          - Role
+          - Assigned
+          - Task
+    expects: "Kanban assignee hop lands Team Member Overview with assigned work"

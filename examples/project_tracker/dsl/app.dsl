@@ -85,6 +85,10 @@ entity User "Team Member":
   scope:
     list: all
       as: admin, manager, member
+    # Cycle 1347: read required so /app/user/{id} hub (and kanban assignee hops)
+    # resolve — list-only scope made gated_read return opaque 404 (#303).
+    read: all
+      as: admin, manager, member
     create: all
       as: admin
     update: all
@@ -818,3 +822,70 @@ surface attachment_create "Upload Attachment":
     field task "Task"
     field file "File"
     field filename "Filename"
+
+# Cycle 1347 / PENDING #303 — User VIEW hub so kanban assignee FK hops
+# (/app/user/{id}) land on a real page after ref_route→detail_path fix (c1345).
+surface user_list "Team Members":
+  uses entity User
+  mode: list
+  open: User via id
+  access: persona(admin, manager, member)
+
+  section main "Team":
+    field name "Name"
+    field email "Email"
+    field role "Role"
+    field department "Department"
+    field is_active "Active"
+
+  ux:
+    purpose: "Team roster — open a member for identity and assigned work"
+    sort: name asc
+    filter: role, department, is_active
+    search: name, email
+    empty: "No team members yet."
+
+surface user_detail "Team Member Overview":
+  uses entity User
+  mode: view
+  access: persona(admin, manager, member)
+
+  section identity "Identity":
+    field name "Name"
+    field email "Email"
+
+  section role "Role & access":
+    layout: strip
+    field role "Role"
+    field department "Department"
+    field is_active "Active"
+
+  section timeline "Timeline":
+    field created_at "Joined"
+
+  related assigned_work "Assigned work":
+    display: table
+    show: Task
+    columns: title, status, priority, parent_project, due_date
+
+  related owned_projects "Owned projects":
+    display: table
+    show: Project
+    columns: name, status, target_date
+
+  ux:
+    purpose: "Context hub — identity, role, and related work from assignee hops"
+
+surface user_edit "Edit Team Member":
+  uses entity User
+  mode: edit
+  access: persona(admin)
+
+  section identity "Identity":
+    field name "Name"
+    field email "Email"
+
+  section organisation "Organisation":
+    field role "Role"
+    field department "Department"
+    field is_active "Active"
