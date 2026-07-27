@@ -1,4 +1,4 @@
-"""#1421 — the app-shell detail route `/app/<slug>/{id}` must exist for every
+"""#1421 — the app-shell detail route `/app/<slug>/{id:uuid}` must exist for every
 entity whose list emits a `detail_url` row link.
 
 Regression: a list surface (and the workspace list-region) emits row links to
@@ -6,6 +6,9 @@ Regression: a list surface (and the workspace list-region) emits row links to
 explicit `mode: view` surface — so list-only entities 404'd on drill-to-detail.
 The fix synthesizes a default detail page-context for list entities lacking a
 VIEW surface (mirroring the converter's auto-READ at `/<plural>/{id}`).
+
+Route path uses FastAPI ``{id:uuid}`` so static segments like ``/create`` are
+not captured as ids (fleet dig residual).
 """
 
 from __future__ import annotations
@@ -56,12 +59,13 @@ surface job_list "Jobs":
 
 class TestAppDetailRoute:
     def test_list_only_entity_has_app_detail_route(self) -> None:
-        # Reg paths are app_prefix-stripped; mounted at /app → /app/job/{id}.
-        assert "/job/{id}" in _reg_paths(_appspec(_LIST_ONLY))
+        # Reg paths are app_prefix-stripped; mounted at /app → /app/job/{id:uuid}.
+        assert "/job/{id:uuid}" in _reg_paths(_appspec(_LIST_ONLY))
 
     def test_every_emitted_detail_url_has_a_route(self) -> None:
         """Link↔route gate: for every entity with a list surface, the
-        `/app/<slug>/{id}` detail link the framework emits must resolve."""
+        `/app/<slug>/{id}` detail link the framework emits must resolve
+        (path param is typed ``{id:uuid}``)."""
         dsl = (
             _LIST_ONLY
             + """
@@ -87,4 +91,4 @@ surface note_list "Notes":
                 for s in appspec.surfaces
             )
             if has_list:
-                assert f"/{slug}/{{id}}" in reg, f"{entity.name}: detail route missing"
+                assert f"/{slug}/{{id:uuid}}" in reg, f"{entity.name}: detail route missing"
