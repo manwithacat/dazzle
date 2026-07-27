@@ -296,6 +296,18 @@ _HISTORY_MSG_MAX_LEN = 60
 _TOOL_RESULT_MAX_LEN = 1200
 
 
+def _history_state_true_suffix(result: ActionResult) -> str:
+    """Render the trailing clause when ``state_changed is True``."""
+    if result.from_url and result.to_url and result.from_url != result.to_url:
+        return f" -> navigated {result.from_url} → {result.to_url}"
+    # Prefer TYPE search_box settle summaries over bare "state changed"
+    # so panels see FTS hit titles (A–Z list stays full by design).
+    msg = result.message or ""
+    if "search results panel" in msg:
+        return f" -> {msg[: max(_HISTORY_MSG_MAX_LEN, 160)]}"
+    return " -> state changed"
+
+
 def _format_history_line(step: Step) -> str:
     """Render one history step for the LLM's compressed history (cycle 197).
 
@@ -313,10 +325,8 @@ def _format_history_line(step: Step) -> str:
     elif r.state_changed is False:
         loc = f"still at {r.to_url}" if r.to_url else "no state change"
         s += f" -> NO state change ({loc})"
-    elif r.state_changed is True and r.from_url and r.to_url and r.from_url != r.to_url:
-        s += f" -> navigated {r.from_url} → {r.to_url}"
     elif r.state_changed is True:
-        s += " -> state changed"
+        s += _history_state_true_suffix(r)
     elif r.message:
         # Tool results must be shown in full so the LLM can read structured
         # output (e.g. entity/id/token from read_inbox) without truncation.

@@ -195,6 +195,7 @@ class TestStateCapture:
         page.wait_for_timeout = AsyncMock()
         page.wait_for_load_state = AsyncMock()
         page.wait_for_function = AsyncMock()
+        page.evaluate = AsyncMock(return_value="3 results: Suzanne Adams")
         # After fill+settle, DOM reflects FTS results panel
         page.content = AsyncMock(side_effect=["<html>before</html>", "<html>after results</html>"])
         executor = PlaywrightExecutor(page=page)
@@ -209,6 +210,53 @@ class TestStateCapture:
         page.wait_for_function.assert_awaited()
         page.wait_for_load_state.assert_awaited()
         assert result.state_changed is True
+        assert "search results panel" in (result.message or "")
+        assert "Suzanne Adams" in (result.message or "")
+
+    async def test_type_search_settle_forces_state_changed_even_if_hash_stable(
+        self,
+    ) -> None:
+        """Settle success must not report NO state change (cycle 1336)."""
+        page = _make_mock_page(url="http://localhost/app", content="<html>same</html>")
+        locator = MagicMock()
+        locator.fill = AsyncMock()
+        page.locator = MagicMock(return_value=locator)
+        page.wait_for_timeout = AsyncMock()
+        page.wait_for_load_state = AsyncMock()
+        page.wait_for_function = AsyncMock()
+        page.evaluate = AsyncMock(return_value="2 results: Ada, Bob")
+        # Identical before/after hash would previously yield state_changed=False
+        page.content = AsyncMock(return_value="<html>same</html>")
+        executor = PlaywrightExecutor(page=page)
+        action = AgentAction(
+            type=ActionType.TYPE,
+            target="#dz-search-results-contact_search-input",
+            value="Ada",
+        )
+        result = await executor.execute(action)
+        assert result.error is None
+        assert result.state_changed is True
+
+    async def test_type_swallows_playwright_timeout_error(self) -> None:
+        """Playwright TimeoutError is not builtin TimeoutError — must not abort TYPE."""
+        from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+
+        page = _make_mock_page(url="http://localhost/app", content="<html>x</html>")
+        locator = MagicMock()
+        locator.fill = AsyncMock()
+        page.locator = MagicMock(return_value=locator)
+        page.wait_for_timeout = AsyncMock()
+        page.wait_for_function = AsyncMock(side_effect=PlaywrightTimeoutError("settle"))
+        page.wait_for_load_state = AsyncMock(side_effect=PlaywrightTimeoutError("idle"))
+        page.content = AsyncMock(side_effect=["<html>before</html>", "<html>after</html>"])
+        executor = PlaywrightExecutor(page=page)
+        action = AgentAction(
+            type=ActionType.TYPE,
+            target="#dz-search-results-contact_search-input",
+            value="Adams",
+        )
+        result = await executor.execute(action)
+        assert result.error is None  # timeouts swallowed; fill still succeeded
 
 
 def test_search_box_results_selector_helper() -> None:

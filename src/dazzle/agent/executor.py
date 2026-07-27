@@ -59,6 +59,59 @@ def _search_box_results_selector(target: str) -> str | None:
     return None
 
 
+# Playwright's TimeoutError is *not* a subclass of builtin TimeoutError
+# (playwright._impl._errors.TimeoutError → Error → Exception). Catching only
+# builtin TimeoutError lets settle/networkidle timeouts abort TYPE as hard
+# errors and skip the state_changed snapshot — false "search broken" panels
+# (contact_manager agent_acceptance, cycles 1332–1336).
+_SETTLE_TIMEOUT_TYPES: tuple[type[BaseException], ...] = (TimeoutError, OSError, RuntimeError)
+try:
+    from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
+
+    _SETTLE_TIMEOUT_TYPES = (_PlaywrightTimeoutError, TimeoutError, OSError, RuntimeError)
+except ImportError:  # pragma: no cover — playwright optional for HttpExecutor-only hosts
+    pass
+
+
+async def _search_box_results_summary(page: Any, results_sel: str) -> str:
+    """Human-readable hit list for TYPE action messages (agent history).
+
+    The A–Z directory list stays full by design; panels that only watch that
+    list report search as broken. Surfacing the results-panel titles in the
+    action line makes working FTS unmissable (cycle 1336).
+    """
+    try:
+        summary = await page.evaluate(
+            """(sel) => {
+                const el = document.querySelector(sel);
+                if (!el) return '';
+                const count = el.querySelector('.dz-search-box-result-count');
+                if (count && count.textContent) {
+                    const titles = Array.from(
+                        el.querySelectorAll('.dz-search-box-result-title')
+                    )
+                        .map((n) => (n.textContent || '').trim())
+                        .filter(Boolean)
+                        .slice(0, 5);
+                    const tail = titles.length ? ': ' + titles.join(', ') : '';
+                    return (count.textContent || '').trim() + tail;
+                }
+                const empty = el.querySelector('.dz-search-box-empty--no-results');
+                if (empty && empty.textContent) {
+                    return (empty.textContent || '').trim();
+                }
+                return '';
+            }""",
+            results_sel,
+        )
+    except Exception:
+        logger.debug("search_box results summary failed for %s", results_sel, exc_info=True)
+        return ""
+    if not isinstance(summary, str):
+        return ""
+    return summary.strip()[:200]
+
+
 class PlaywrightExecutor:
     """
     Execute actions via Playwright page interactions.
@@ -109,6 +162,7 @@ class PlaywrightExecutor:
         capture_state = action.type not in (ActionType.TOOL, ActionType.DONE)
         from_url: str | None = None
         from_hash: str | None = None
+        search_box_settled = False
         if capture_state:
             from_url = self._page.url
             from_hash = _dom_hash(await self._page.content())
@@ -137,6 +191,7 @@ class PlaywrightExecutor:
                 # search_box input: networkidle often never settles under
                 # SSE/lazy regions, so a fixed 400ms race still mis-scores
                 # working FTS as broken (cycle 1332 panel).
+                results_summary = ""
                 try:
                     target_sel = action.target or ""
                     results_sel = _search_box_results_selector(target_sel)
@@ -156,7 +211,11 @@ class PlaywrightExecutor:
                                 arg=results_sel,
                                 timeout=5000,
                             )
-                        except (TimeoutError, OSError, RuntimeError):
+                            search_box_settled = True
+                            results_summary = await _search_box_results_summary(
+                                self._page, results_sel
+                            )
+                        except _SETTLE_TIMEOUT_TYPES:
                             logger.debug(
                                 "search_box results settle timeout for %s",
                                 target_sel,
@@ -165,16 +224,21 @@ class PlaywrightExecutor:
                     else:
                         await self._page.wait_for_timeout(400)
                     await self._page.wait_for_load_state("networkidle", timeout=5000)
-                except (TimeoutError, OSError, RuntimeError):
-                    # Narrow types keep the swallow ratchet green; Playwright
-                    # timeouts + transport errors are expected when SSE/HTMX
-                    # keep the network busy after fill() already succeeded.
+                except _SETTLE_TIMEOUT_TYPES:
+                    # Playwright TimeoutError is not builtin TimeoutError —
+                    # must catch both so settle success still reaches the
+                    # state_changed snapshot (cycle 1336).
                     logger.debug(
                         "networkidle timeout after type into %s",
                         action.target,
                         exc_info=True,
                     )
-                base = ActionResult(message=f"Typed '{action.value}' into {action.target}")
+                msg = f"Typed '{action.value}' into {action.target}"
+                if search_box_settled and results_summary:
+                    msg += f" — search results panel: {results_summary}"
+                elif search_box_settled:
+                    msg += " — search results panel updated (A–Z list stays full by design)"
+                base = ActionResult(message=msg)
 
             elif action.type == ActionType.SELECT:
                 locator = self._resolve_locator(action.target or "")
@@ -253,6 +317,10 @@ class PlaywrightExecutor:
                 base.state_changed = True  # optimistic
             elif action.type == ActionType.ASSERT:
                 base.state_changed = False  # optimistic
+            elif search_box_settled:
+                # FTS results panel updated — never report NO state change when
+                # the settle predicate already saw hits/empty (cycle 1336).
+                base.state_changed = True
             else:
                 base.state_changed = (from_url != to_url) or (from_hash != to_hash)
         # else: TOOL / DONE leave state fields at None defaults
