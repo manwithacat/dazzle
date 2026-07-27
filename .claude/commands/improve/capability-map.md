@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1340 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1340 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1342 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1342 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1342 (2026-07-27).** **framework-ux** (#1640 mutation, aggressive-change require_mutation=1) — `playwright_click` honours `api_fallback_status` via `actions_playwright` extract + `playwright_click_api_fallback` (GET already-at-target or PATCH/PUT durability). Unit tests for fallback paths; runner MI kept A. densify_allowed=0. Stamped dazzle test walk **USED@1342**. budget 1. Explore **11/100**.
 > **Cycle 1341 (2026-07-27).** **hm-convergence dual_lock_expand** — sole remaining queue stem `swap_identity` is lint/morph identity substrate (ADR-0054), not a Hyperpart; added to `DOM_ONLY_DEFERRED`. dual_lock **queue depth 0**; coverage deferred=2 (code, swap_identity). No WI densify. Stamped dual_lock_expand **USED@1341**. budget 0. Explore **10/100**.
 > **Cycle 1340 (2026-07-27).** **capability-sweep** (cadence ≥20 since 1319) — inventory reconcile vs tip `6abed823b`. **UNOWNED=0** **COGNITION_STALE_eff=6** (3 metered vision → free substitutes only; `qa-trial` skill lag82; process_dig lag39; hyperpart coherence lag36) **HYGIENE_STALE_eff=30** (discovery/compliance lag124; sentinel mutate/sweep 111; deploy/rhythm/story/coverage/scaffold ~110). Map: flipped lag≥20 USED→STALE and lag<20 STALE→USED; DRIVER CodeQL+inbox **USED@1340**. Next digs: dual_lock_expand (policy+lag36) or process_dig receipt exercise / hyperpart coherence; do **not** densify (densify_allowed=0). budget 0. Explore **10/100**.
 > **Cycle 1338 (2026-07-27).** **example-apps agent_acceptance_panel** simple_task agency_lead deep panel — live trial recommend synthesized **no** under harness-only ERR_INSUFFICIENT_RESOURCES; **framework:** `_infer_recommend` treats harness-only friction as **unclear** (not product residual); PlaywrightExecutor console sample cap. residual_total 1→0. Dig receipt PASS. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1338**. budget 1. Explore **10/100**.
