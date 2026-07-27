@@ -44,6 +44,26 @@ from dazzle.render.fragment.region._shared import (
 _LABEL_CANDIDATES: tuple[str, ...] = ("title", "name", "id")
 
 
+def _search_box_placeholder(ctx: RegionContext, region: Any, empty_msg: Any) -> str:
+    """Resolve visible search input chrome.
+
+    Prefer explicit placeholder → *author* region.title (not auto-derived
+    name titles) → short empty: coaching. Bare "Search…" is last resort —
+    pilots and panel agents otherwise watch the A–Z list and report
+    "search broken" when FTS results land in the results panel (cycle 1332).
+    """
+    explicit_ph = str(ctx.get("placeholder") or "").strip()
+    if explicit_ph:
+        return explicit_ph
+    author_title = getattr(region, "title", None)
+    if author_title and str(author_title).strip():
+        return str(author_title).strip()
+    if empty_msg:
+        clause = str(empty_msg).split(".")[0].strip()
+        return clause[:72] if clause else "Type to search"
+    return "Search…"
+
+
 def _pick_label(
     item: dict[str, Any],
     field_hint: str = "",
@@ -179,30 +199,13 @@ class _BuildersMiscMixin:
         empty_msg = getattr(region, "empty_message", None) or ctx.get("empty_message")
         coaching = str(ctx.get("coaching_message") or empty_msg or "Type to search")
         # Placeholder is the only visible input chrome (label is
-        # visually-hidden). Prefer explicit placeholder → *author*
-        # region.title (not auto-derived name titles) → short empty:
-        # coaching. Bare "Search…" is a last resort — pilots and panel
-        # agents otherwise watch the A–Z list and report "search broken"
-        # when FTS results land in the results panel (cycle 1332).
-        explicit_ph = str(ctx.get("placeholder") or "").strip()
-        author_title = getattr(region, "title", None)
-        if explicit_ph:
-            placeholder = explicit_ph
-        elif author_title and str(author_title).strip():
-            placeholder = str(author_title).strip()
-        elif empty_msg:
-            clause = str(empty_msg).split(".")[0].strip()
-            placeholder = clause[:72] if clause else "Type to search"
-        else:
-            placeholder = "Search…"
+        # visually-hidden). See `_search_box_placeholder` for priority.
+        placeholder = _search_box_placeholder(ctx, region, empty_msg)
         label = str(ctx.get("label") or title or placeholder)
 
-        if source_entity:
-            endpoint = URL(f"/_dazzle/fts/{source_entity}?html=1")
-        else:
-            # Fallback: use the region's own name as the entity hint.
-            # Mainly for tests; runtime will supply source_entity.
-            endpoint = URL(f"/_dazzle/fts/{name}?html=1")
+        # Prefer source_entity; fall back to region name (tests / missing ctx).
+        entity_hint = source_entity or name
+        endpoint = URL(f"/_dazzle/fts/{entity_hint}?html=1")
 
         body: Fragment = SearchBox(
             name=name,
