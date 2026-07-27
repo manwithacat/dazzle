@@ -60,9 +60,9 @@ apply map patches with `{"apply":true}`.
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1301 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1301 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1298 | USED |
-| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1318 | USED |
-| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1318 | USED |
-| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1318 | USED |
+| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1324 | USED |
+| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1324 | USED |
+| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1324 | USED |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials | 1281 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1278 | STALE |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1278 | STALE |
