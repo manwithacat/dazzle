@@ -63,7 +63,7 @@ jobs:
         python-version: ["3.12", "3.13", "3.14"]
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -131,7 +131,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -227,7 +227,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -313,7 +313,7 @@ jobs:
     name: HaTchi-MaXchi standalone CI (mirror)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -335,7 +335,7 @@ jobs:
     # + `warn_unused_ignores` flags fire on functions that wrap them.
     # Matching the dev-install superset keeps the type-check env
     # identical to local mypy.
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -352,7 +352,7 @@ jobs:
     needs: [python-tests, lint, security-tests]
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -389,7 +389,7 @@ jobs:
     needs: [python-tests, lint]
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -459,7 +459,7 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
 
@@ -515,7 +515,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -620,7 +620,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -785,7 +785,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -853,7 +853,7 @@ jobs:
       DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - uses: ./.github/actions/setup-dazzle
       with:
@@ -893,7 +893,7 @@ jobs:
     runs-on: macos-14  # Need macOS for brew commands
 
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
     - name: Extract expected version
       id: version

@@ -39,7 +39,7 @@ jobs:
       # commit that lands on hatchi-maxchi main when fast-forward succeeds).
       hm_tip_sha: ${{ steps.push.outputs.hm_tip_sha }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0  # subtree split walks the full history
       - name: Split package history and push to standalone repo
@@ -92,7 +92,7 @@ jobs:
     needs: sync
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
