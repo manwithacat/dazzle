@@ -19,6 +19,7 @@ from .validator import (
     validate_integrations,
     validate_ledgers,
     validate_lifecycles,
+    validate_list_without_read_scope,
     validate_llm_subject_surface,
     validate_money_fields,
     validate_nav_curation,
@@ -247,6 +248,7 @@ def lint_appspec(
     for check in (
         validate_role_references_against_enum,
         validate_scope_personas_declared,
+        validate_list_without_read_scope,
         validate_stable_persona_ids_for_demo,
         validate_tenancy_partition_key,
         validate_admin_personas_scope_conflict,

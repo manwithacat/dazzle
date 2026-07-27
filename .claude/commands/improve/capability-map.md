@@ -72,7 +72,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1343 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1349 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1331 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1353 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1302 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
@@ -97,7 +97,7 @@ apply map patches with `{"apply":true}`.
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1235 | STALE |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1353 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1353 (2026-07-27).** **framework-ux** (#303 list-without-read validator + repository.read soft-skip ValidationError parity with list). Aggressive require_mutation=1. densify_allowed=0. Stamped dazzle validate/rbac **USED@1353**. budget 1. Explore **19/100**.
 > **Cycle 1350 (2026-07-27).** **example-apps agent_acceptance_panel** project_tracker — dig found people_desk empty from invalid `User.role=user` poison; **framework** enum coerce + list soft-skip + test auth role resolve; **product** roster `action:user_detail`; trial ST-005 scenario. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1350**. budget 1. Explore **17/100**.
 >
 > **Cycle 1349 (2026-07-27).** **hm-convergence gallery_probes** 6/6 PASS discover uncovered=0; **framework-ux** #1426 false positive — `{id:uuid}` vs `{id}` normalize in validate_app_links; unit pin. densify_allowed=0. Stamped gallery_probes **USED@1349**. budget 1. Explore **16/100**.

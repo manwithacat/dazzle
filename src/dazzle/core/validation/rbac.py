@@ -485,6 +485,82 @@ def validate_stable_persona_ids_for_demo(
     return errors, warnings
 
 
+def validate_list_without_read_scope(
+    appspec: ir.AppSpec,
+) -> tuple[list[str], list[str]]:
+    """Warn when ``scope: list:`` covers a persona with no ``scope: read:`` (#303).
+
+    Detail hubs, open-via hops, kanban card drills, and related VIEW surfaces all
+    go through ``gated_read`` → ``_scoped_pre_read(operation="read")``. A persona
+    that can list rows but has no matching read scope gets an opaque 404 on every
+    drill-in even though the board/table shows the row (project_tracker User hub
+    and Task peer-task hubs — cycles 1347/1352).
+
+    ``as: *`` on read covers every list persona. ``as: *`` on list without a
+    matching read wildcard (or per-persona read rules for all list personas)
+    still warns — future personas inherit list but not read.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    def _op(rule: Any) -> str:
+        op = getattr(rule, "operation", None)
+        if op is None:
+            return ""
+        return str(op.value if hasattr(op, "value") else op)
+
+    for entity in appspec.domain.entities:
+        if entity.access is None or not entity.access.scopes:
+            continue
+        # Framework-generated entities (AIJob, …) get their access from the
+        # framework; authors cannot add matching read scopes in app DSL.
+        if "system" in (getattr(entity, "patterns", None) or []):
+            continue
+
+        list_personas: set[str] = set()
+        read_personas: set[str] = set()
+        for rule in entity.access.scopes:
+            personas = {str(p) for p in (rule.personas or []) if p}
+            op = _op(rule)
+            if op == "list":
+                list_personas |= personas
+            elif op == "read":
+                read_personas |= personas
+
+        if not list_personas:
+            continue
+        if "*" in read_personas:
+            continue
+
+        missing: set[str] = set()
+        if "*" in list_personas:
+            # Wildcard list without wildcard read — every list-only persona
+            # (or the * token itself when no per-persona read rules exist)
+            # is a drill-in hazard.
+            uncovered = list_personas - {"*"} - read_personas
+            if uncovered:
+                missing |= uncovered
+            else:
+                # Pure `list: … as: *` with no (or incomplete) read side.
+                missing.add("*")
+        for persona in list_personas - {"*"}:
+            if persona not in read_personas:
+                missing.add(persona)
+
+        if not missing:
+            continue
+
+        warnings.append(
+            f"Entity '{entity.name}': scope list covers persona(s) "
+            f"{', '.join(sorted(missing))} without matching scope read — "
+            f"detail hubs / open-via / gated_read will opaque-404 for them "
+            f"(#303). Add `scope: read: … as: …` for the same personas "
+            f"(often `read: all` matching list)."
+        )
+
+    return errors, warnings
+
+
 def _appspec_uses_current_user(appspec: ir.AppSpec) -> bool:
     """True if any scope/region filter text mentions current_user."""
     for entity in appspec.domain.entities:

@@ -685,6 +685,30 @@ class Repository[T: BaseModel]:
         converted = {k: _db_to_python(v, self._field_types.get(k)) for k, v in data.items()}
         return self.model_class(**converted)
 
+    def _safe_row_to_model(self, row: Any) -> T | None:
+        """Like ``_row_to_model`` but soft-skip rows that fail entity validation.
+
+        One poisoned principal (e.g. domain ``User.role='user'`` outside
+        ``enum[admin,manager,member]``) must not 500 the list or detail path —
+        list soft-skips (cycle 1350); read returns ``None`` so gated_read keeps
+        the opaque-404 shape instead of an uncaught ValidationError.
+        """
+        try:
+            return self._row_to_model(row)
+        except ValidationError as exc:
+            row_id = None
+            try:
+                row_id = dict(row).get("id")
+            except Exception:  # noqa: BLE001
+                row_id = None
+            logger.warning(
+                "repository skip invalid row entity=%s id=%s errors=%s",
+                self.table_name,
+                row_id,
+                exc.error_count() if hasattr(exc, "error_count") else str(exc),
+            )
+            return None
+
     def _read_on_conn(self, conn: Any, id: UUID) -> T | dict[str, Any] | None:
         """Read a row by id on a caller-provided connection (#1319, ADR-0032 Slice B).
 
@@ -919,7 +943,7 @@ class Repository[T: BaseModel]:
                 )
             return self._convert_row_dict(row_dicts_l[0])
 
-        return self._row_to_model(row)
+        return self._safe_row_to_model(row)
 
     async def update(
         self, id: UUID, data: dict[str, Any], *, conn: Any | None = None
@@ -1292,23 +1316,12 @@ class Repository[T: BaseModel]:
             # (e.g. domain User.role='user' outside enum[admin,manager,member])
             # cannot empty every workspace region sourcing that entity. Fail-closed
             # still applies to query/scope failures higher in the call stack; this
-            # is row-level resilience only.
+            # is row-level resilience only. Shared with read via _safe_row_to_model.
             items = []
             for row in rows:
-                try:
-                    items.append(self._row_to_model(row))
-                except ValidationError as exc:
-                    row_id = None
-                    try:
-                        row_id = dict(row).get("id")
-                    except Exception:  # noqa: BLE001
-                        row_id = None
-                    logger.warning(
-                        "repository.list skip invalid row entity=%s id=%s errors=%s",
-                        self.table_name,
-                        row_id,
-                        exc.error_count() if hasattr(exc, "error_count") else str(exc),
-                    )
+                model = self._safe_row_to_model(row)
+                if model is not None:
+                    items.append(model)
 
         return {
             "items": items,
