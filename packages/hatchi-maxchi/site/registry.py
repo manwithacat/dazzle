@@ -4658,9 +4658,11 @@ def select(source: str, id: str) -> str:
             "<code>data-dz-tree</code> (<code>contracts/tree.py</code>). Pure "
             "hypermedia: state is the native <code>open</code> attribute; "
             "chevron keys off <code>.dz-tree-node[open]</code>; levels indent "
-            "via <code>dz-tree-children</code>. Depth-0 nodes default "
-            "<code>open</code>; count chip only when children exist. Gallery "
-            "probe <code>tree.multi_open</code> (scope <code>.hm-preview</code>).",
+            "via <code>dz-tree-children</code> (space-xl nest pad, cycle 1343). "
+            "Depth-0 nodes default <code>open</code>; Platform/Design systems "
+            "are the two Engineering children (closed mid-levels are intentional "
+            "for multi_open click probes). Count chip only when children exist. "
+            "Gallery probe <code>tree.multi_open</code> (scope <code>.hm-preview</code>).",
             tags=("data",),
             contracts=("contracts/tree.py",),
             guidance=Guidance(

@@ -15398,7 +15398,8 @@ body.cursor-col-resize * {
 }
 
 .dz-tree-children {
-  padding-inline-start: var(--space-lg);
+  /* space-xl (was lg) — clearer nest indent for gallery/coherence captures */
+  padding-inline-start: var(--space-xl);
   padding-inline-end: var(--space-sm);
   padding-block-end: var(--space-xs);
 }

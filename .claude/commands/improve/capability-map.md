@@ -70,13 +70,13 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1304 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1304 | STALE |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1343 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1343 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1331 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1302 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1304 | STALE |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1343 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1343 (2026-07-27).** **hm-convergence hyperpart_coherence** investigate+drain — recapture 92 hyperparts; host-Read batches 00–07 → coherent=92 mean=8.89; soft tree missing_content cleared (Platform/Design systems are Engineering children); **mutation** tree-children indent space-lg→xl + catalogue regen. gallery probes 6/6. queue=0. Stamped hyperpart coherence + gallery_probes **USED@1343**. budget 1. Explore **12/100**.
 > **Cycle 1342 (2026-07-27).** **framework-ux** (#1640 mutation, aggressive-change require_mutation=1) — `playwright_click` honours `api_fallback_status` via `actions_playwright` extract + `playwright_click_api_fallback` (GET already-at-target or PATCH/PUT durability). Unit tests for fallback paths; runner MI kept A. densify_allowed=0. Stamped dazzle test walk **USED@1342**. budget 1. Explore **11/100**.
 > **Cycle 1341 (2026-07-27).** **hm-convergence dual_lock_expand** — sole remaining queue stem `swap_identity` is lint/morph identity substrate (ADR-0054), not a Hyperpart; added to `DOM_ONLY_DEFERRED`. dual_lock **queue depth 0**; coverage deferred=2 (code, swap_identity). No WI densify. Stamped dual_lock_expand **USED@1341**. budget 0. Explore **10/100**.
 > **Cycle 1340 (2026-07-27).** **capability-sweep** (cadence ≥20 since 1319) — inventory reconcile vs tip `6abed823b`. **UNOWNED=0** **COGNITION_STALE_eff=6** (3 metered vision → free substitutes only; `qa-trial` skill lag82; process_dig lag39; hyperpart coherence lag36) **HYGIENE_STALE_eff=30** (discovery/compliance lag124; sentinel mutate/sweep 111; deploy/rhythm/story/coverage/scaffold ~110). Map: flipped lag≥20 USED→STALE and lag<20 STALE→USED; DRIVER CodeQL+inbox **USED@1340**. Next digs: dual_lock_expand (policy+lag36) or process_dig receipt exercise / hyperpart coherence; do **not** densify (densify_allowed=0). budget 0. Explore **10/100**.

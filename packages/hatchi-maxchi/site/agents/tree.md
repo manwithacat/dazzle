@@ -115,7 +115,7 @@ def render(t: Tree) -> str:
 
 ## Notes
 
-Open intent: multi_open (stem details-open-intent) — sibling branches stay open; do not add exclusive-open. Dual-lock root data-dz-tree (contracts/tree.py). Pure hypermedia: state is the native open attribute; chevron keys off .dz-tree-node[open]; levels indent via dz-tree-children. Depth-0 nodes default open; count chip only when children exist. Gallery probe tree.multi_open (scope .hm-preview).
+Open intent: multi_open (stem details-open-intent) — sibling branches stay open; do not add exclusive-open. Dual-lock root data-dz-tree (contracts/tree.py). Pure hypermedia: state is the native open attribute; chevron keys off .dz-tree-node[open]; levels indent via dz-tree-children (space-xl nest pad, cycle 1343). Depth-0 nodes default open; Platform/Design systems are the two Engineering children (closed mid-levels are intentional for multi_open click probes). Count chip only when children exist. Gallery probe tree.multi_open (scope .hm-preview).
 
 ## Source files
 
