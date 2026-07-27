@@ -71,12 +71,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1343 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1343 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1349 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1331 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1302 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1343 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1349 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -121,6 +121,8 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1349 (2026-07-27).** **hm-convergence gallery_probes** 6/6 PASS discover uncovered=0; **framework-ux** #1426 false positive — `{id:uuid}` vs `{id}` normalize in validate_app_links; unit pin. densify_allowed=0. Stamped gallery_probes **USED@1349**. budget 1. Explore **16/100**.
+>
 > **Cycle 1348 (2026-07-27).** **example-apps story_walk** project_tracker ST-005 — `member_st_005` land my_tasks + hop `/app/user/{Ken}` live 2/2 PASS after reset-and-load 22; dig receipt story_walk; residual_total 1→0. densify_allowed=0. Stamped story_walk/test walk/process_dig/reset-and-load **USED@1348**. budget 1. Explore **15/100**.
 >
 > **Cycle 1347 (2026-07-27).** **example-apps** PENDING#303 project_tracker user_detail + scope:read; assignee hop live PASS. journey residual=0 claimed seed. budget 1. Explore **14/100**.

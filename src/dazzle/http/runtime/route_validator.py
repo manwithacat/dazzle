@@ -99,14 +99,49 @@ def validate_routes(app: FastAPI, *, strict: bool = False) -> list[str]:
 _STRICT_LINKS_ENV = "DAZZLE_STRICT_LINKS"
 
 
+def _normalize_path_template(path: str) -> str:
+    """Strip FastAPI path converters so templates compare as link SSOT paths.
+
+    ``create_page_routes`` registers VIEW/EDIT segments as ``{id:uuid}``
+    (create-vs-id footgun; see ``app_paths.detail_path`` note) while
+    ``detail_path`` / list drill-down links advertise ``{id}``. Without
+    normalizing, ``validate_app_links`` false-positives every real VIEW
+    surface (User/Project/Task hubs included — cycle 1349).
+    """
+    # ``{name:converter}`` → ``{name}``; leave bare ``{name}`` alone.
+    out: list[str] = []
+    i = 0
+    while i < len(path):
+        if path[i] == "{":
+            end = path.find("}", i)
+            if end == -1:
+                out.append(path[i:])
+                break
+            segment = path[i + 1 : end]
+            name = segment.split(":", 1)[0]
+            out.append("{" + name + "}")
+            i = end + 1
+        else:
+            out.append(path[i])
+            i += 1
+    return "".join(out)
+
+
 def _mounted_get_paths(app: FastAPI) -> set[str]:
-    """The set of GET route path templates mounted on the app."""
+    """The set of GET route path templates mounted on the app.
+
+    Paths are stored both raw and converter-normalized so a registered
+    ``/app/user/{id:uuid}`` satisfies an advertised ``/app/user/{id}`` link.
+    """
     mounted: set[str] = set()
     for route in app.routes:
         path = getattr(route, "path", None)
         methods = getattr(route, "methods", None)
         if path and methods and "GET" in methods:
             mounted.add(path)
+            normalized = _normalize_path_template(path)
+            if normalized != path:
+                mounted.add(normalized)
     return mounted
 
 

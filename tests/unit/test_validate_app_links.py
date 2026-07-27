@@ -37,6 +37,14 @@ def test_clean_app_has_no_problems():
     assert validate_app_links(app, appspec) == []
 
 
+def test_uuid_typed_detail_route_satisfies_bare_id_link():
+    """create_page_routes registers ``{id:uuid}``; links advertise ``{id}``."""
+    entities = {"User": SimpleNamespace(name="User")}
+    appspec = _appspec(surfaces=[_list_surface("User")], entities=entities)
+    app = _app(["/app/user", "/app/user/{id:uuid}"])
+    assert validate_app_links(app, appspec) == []
+
+
 def test_list_without_detail_route_is_flagged():
     entities = {"Task": SimpleNamespace(name="Task")}
     appspec = _appspec(surfaces=[_list_surface("Task")], entities=entities)
