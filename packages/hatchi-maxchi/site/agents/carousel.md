@@ -117,6 +117,30 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 - **`document`** — full navigation / document load (not a fragment).
 - Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+#### `GET /app/adoptions/request` · envelope=`body_only`
+
+Correct response for body_only into #hm-carousel-adopt (innerHTML / innerMorph). Wrong: re-wrapping the slot.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=body_only → live-region confirmation in the slide -->
+<span class="dz-badge" data-dz-tone="success">Request sent</span>
+```
+
+**Don’t — violates `body_only`**
+
+```html
+<!-- WRONG: whole carousel stage -->
+<div class="dz-carousel" data-dz-carousel>
+  <div class="dz-carousel__track">…</div>
+</div>
+```
+
 ## How to use it
 
 ### Seams

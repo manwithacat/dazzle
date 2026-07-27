@@ -356,11 +356,440 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     )
 
 
+def _slot_hint(swap: str, part_id: str) -> str:
+    """Best-effort persistent slot id/selector from swap prose (for examples)."""
+    s = swap or ""
+    m = re.search(r"`(#[^`]+)`", s)
+    if m:
+        return m.group(1)
+    m = re.search(r"`(\[[^\]]+\])`", s)
+    if m:
+        return m.group(1)
+    m = re.search(r"#([\w.-]+)", s)
+    if m:
+        return f"#{m.group(1)}"
+    # Part-specific defaults
+    defaults = {
+        "pagination": "#{region}-body",
+        "grid": "[data-dz-grid-body]",
+        "command": ".dz-command__results",
+        "master-detail": ".dz-master-detail__detail",
+        "drawer": "#drawer-body",
+        "tabs": ".dz-tabs__panel",
+        "search-box": ".dz-search-box-results",
+        "search-select": ".dz-search-results",
+        "date-range": "#{region}-body",
+        "carousel": "#live-region",
+    }
+    return defaults.get(part_id, "#slot")
+
+
+def _envelope_snippets(hyperpart, e) -> tuple[str, str, str, str]:  # type: ignore[no-untyped-def]
+    """Return (lang, correct_source, wrong_source, caption) for one exchange.
+
+    Correct / wrong pair teaches the envelope; part-specific markup when known.
+    """
+    env = _exchange_envelope(e)
+    pid = hyperpart.id
+    slot = _slot_hint(e.swap or "", pid)
+    slot_id = slot.lstrip("#") if slot.startswith("#") else "slot"
+    region_name = (
+        "invoice_queue" if "region" in (e.endpoint + e.swap + pid) else pid.replace("-", "_")
+    )
+
+    # ── body_only ──────────────────────────────────────────────────────
+    if env == "body_only":
+        if pid == "pagination":
+            good = (
+                "<!-- envelope=body_only → rows/interior only into #{region}-body -->\n"
+                '<div class="dz-list-row">INV-041 · Acme</div>\n'
+                '<div class="dz-list-row">INV-042 · Globex</div>\n'
+                "<!-- optional OOB footer — not a second region chrome -->\n"
+            )
+            bad = (
+                "<!-- WRONG: re-wraps the slot / nests data-dz-region under innerMorph -->\n"
+                f'<div id="{region_name}-body" data-dz-region data-dz-region-name="{region_name}">\n'
+                '  <div class="dz-list-row">INV-041 · Acme</div>\n'
+                "</div>\n"
+            )
+        elif pid == "grid":
+            good = (
+                "<!-- envelope=body_only → <tr> rows (+ optional OOB footer), not a table -->\n"
+                '<tr class="dz-tr-row" id="row-42" data-dz-grid-row-id="42">\n'
+                "  <td>…</td><td>…</td>\n"
+                "</tr>\n"
+                '<tr class="dz-tr-row" id="row-43" data-dz-grid-row-id="43">\n'
+                "  <td>…</td><td>…</td>\n"
+                "</tr>\n"
+                "<!-- optional: -->\n"
+                '<!-- <nav data-dz-grid-pagination data-dz-grid-total="N" hx-swap-oob="true">…</nav> -->\n'
+            )
+            bad = (
+                "<!-- WRONG: full table / tbody root into [data-dz-grid-body] -->\n"
+                '<table class="dz-table" data-dz-grid>\n'
+                "  <tbody>…</tbody>\n"
+                "</table>\n"
+            )
+        elif pid == "command":
+            good = (
+                "<!-- envelope=body_only → option rows for the results listbox -->\n"
+                '<div class="dz-command__group" role="group" aria-label="Actions">\n'
+                '  <a class="dz-command__item" role="option" href="/app/invoices">Invoices</a>\n'
+                '  <button type="button" class="dz-command__item" role="option">New contact</button>\n'
+                "</div>\n"
+            )
+            bad = (
+                "<!-- WRONG: whole command palette chrome -->\n"
+                '<div class="dz-command" data-dz-command>\n'
+                '  <input class="dz-command__input" />\n'
+                '  <div class="dz-command__results">…</div>\n'
+                "</div>\n"
+            )
+        elif pid == "master-detail":
+            good = (
+                "<!-- envelope=body_only → detail pane interior -->\n"
+                '<div class="dz-card dz-card-body">\n'
+                '  <h2 class="dz-heading" data-dz-level="3">Acme Ltd</h2>\n'
+                "  <p>Company #12345678 · Active</p>\n"
+                "</div>\n"
+            )
+            bad = (
+                "<!-- WRONG: whole master–detail shell -->\n"
+                '<div class="dz-master-detail" data-dz-master-detail>\n'
+                '  <div class="dz-master-detail__list">…</div>\n'
+                '  <div class="dz-master-detail__detail">…</div>\n'
+                "</div>\n"
+            )
+        elif pid == "drawer":
+            good = (
+                "<!-- envelope=body_only → drawer body content only -->\n"
+                '<div class="dz-stack" data-dz-gap="md">\n'
+                '  <div class="dz-card">Record detail…</div>\n'
+                '  <div class="dz-cluster">…actions…</div>\n'
+                "</div>\n"
+            )
+            bad = (
+                "<!-- WRONG: nested <dialog> / drawer chrome into body target -->\n"
+                '<dialog class="dz-drawer" open data-dz-drawer>\n'
+                '  <form method="dialog">…</form>\n'
+                "  <div>…</div>\n"
+                "</dialog>\n"
+            )
+        elif pid == "tabs":
+            good = (
+                "<!-- envelope=body_only → panel interior for the active tab -->\n"
+                '<div class="dz-stack" data-dz-gap="sm">\n'
+                "  <p>Tab panel content for this section…</p>\n"
+                "</div>\n"
+            )
+            bad = (
+                "<!-- WRONG: whole tabs strip + panels -->\n"
+                '<div class="dz-tabs" data-dz-tabs>\n'
+                '  <div role="tablist">…</div>\n'
+                '  <div role="tabpanel">…</div>\n'
+                "</div>\n"
+            )
+        elif pid in ("search-box", "search-select"):
+            good = (
+                "<!-- envelope=body_only → results list rows / empty prompt -->\n"
+                '<div class="dz-search-result-row" role="option">\n'
+                '  <div class="dz-search-result-name">Acme Ltd</div>\n'
+                '  <div class="dz-search-result-secondary">Co. 123</div>\n'
+                "</div>\n"
+            )
+            bad = (
+                "<!-- WRONG: entire search field + listbox chrome -->\n"
+                f'<div class="dz-search-box" data-dz-search-box id="{slot_id}">\n'
+                '  <input type="search" />\n'
+                "  <div>…results…</div>\n"
+                "</div>\n"
+            )
+        elif pid == "date-range":
+            good = (
+                "<!-- envelope=body_only → re-rendered region body for the range -->\n"
+                '<div class="dz-stack" data-dz-gap="sm">\n'
+                "  <!-- metrics / rows for date_from..date_to -->\n"
+                "</div>\n"
+            )
+            bad = (
+                "<!-- WRONG: date-range chrome re-emitted into the region body -->\n"
+                f'<div id="{slot_id}" data-dz-region>\n'
+                '  <input type="date" name="date_from" />\n'
+                '  <input type="date" name="date_to" />\n'
+                "</div>\n"
+            )
+        elif pid == "carousel":
+            good = (
+                "<!-- envelope=body_only → live-region confirmation in the slide -->\n"
+                '<span class="dz-badge" data-dz-tone="success">Request sent</span>\n'
+            )
+            bad = (
+                "<!-- WRONG: whole carousel stage -->\n"
+                '<div class="dz-carousel" data-dz-carousel>\n'
+                '  <div class="dz-carousel__track">…</div>\n'
+                "</div>\n"
+            )
+        else:
+            good = (
+                f"<!-- envelope=body_only → interior only for {slot} -->\n"
+                f"<!-- do NOT re-declare id={slot_id!r} or data-dz-region on the root -->\n"
+                '<div class="dz-stack" data-dz-gap="sm">\n'
+                "  <!-- body content -->\n"
+                "</div>\n"
+            )
+            bad = (
+                "<!-- WRONG: re-owns the slot identity under an inner swap -->\n"
+                f'<div id="{slot_id}" data-dz-region data-dz-region-name="{region_name}">\n'
+                "  <!-- body content -->\n"
+                "</div>\n"
+            )
+        return (
+            "html",
+            good,
+            bad,
+            f"Correct response for <code>body_only</code> into <code>{_html.escape(slot)}</code> "
+            "(innerHTML / innerMorph). Wrong: re-wrapping the slot.",
+        )
+
+    # ── outer ──────────────────────────────────────────────────────────
+    if env == "outer":
+        good = (
+            f"<!-- envelope=outer → response root may carry the slot identity -->\n"
+            f'<div id="{slot_id}" class="dz-card" data-dz-card>\n'
+            "  <!-- full replacement of the previous element -->\n"
+            "</div>\n"
+        )
+        bad = (
+            "<!-- WRONG for outer: body-only fragment when the host expects a full element -->\n"
+            "<!-- (missing root that matches hx-target — leaves empty or nested junk) -->\n"
+            "<span>partial content without the target root</span>\n"
+        )
+        return (
+            "html",
+            good,
+            bad,
+            f"Correct response for <code>outer</code> (outerHTML / outerMorph) replacing "
+            f"<code>{_html.escape(slot)}</code>.",
+        )
+
+    # ── none ───────────────────────────────────────────────────────────
+    if env == "none":
+        if (
+            pid == "pdf"
+            or "file" in (e.endpoint or "").lower()
+            or "bytes" in (e.swap or "").lower()
+        ):
+            good = (
+                "# envelope=none — opaque bytes (not an HTML fragment)\n"
+                "# HTTP 200 application/pdf  (or 206 + Content-Range)\n"
+                "# Body: raw file bytes\n"
+                "# No HTML document chrome, no <html> wrapper\n"
+            )
+            bad = (
+                "<!-- WRONG: HTML page wrapping the PDF bytes -->\n"
+                "<!DOCTYPE html><html><body>…embed…</body></html>\n"
+            )
+            return (
+                "text",
+                good,
+                bad,
+                "Correct response for <code>none</code> (bytes / no HTML swap).",
+            )
+        good = (
+            "// envelope=none — no HTML swap (JSON/204; client or OOB companion)\n"
+            "// HTTP 204 No Content\n"
+            "// or:\n"
+            '{ "ok": true }\n'
+            "// Application/json; status 200\n"
+            "// Optional: separate OOB HTML fragments if the host declares them\n"
+        )
+        bad = (
+            "<!-- WRONG: HTML body when hx-swap is none / raw fetch expects JSON|204 -->\n"
+            '<div class="dz-alert">Deleted</div>\n'
+        )
+        return (
+            "text",
+            good,
+            bad,
+            "Correct response for <code>none</code> (raw fetch / no HTML swap).",
+        )
+
+    # ── host_owned ─────────────────────────────────────────────────────
+    if env == "host_owned":
+        good = (
+            "<!-- envelope=host_owned → match the *button's* hx-target / hx-swap -->\n"
+            "<!-- Example A: button hx-swap=delete → empty body (row removed) -->\n"
+            "\n"
+            "<!-- Example B: button hx-target=#region-body hx-swap=innerHTML → body_only fragment -->\n"
+            '<div class="dz-list-row">remaining rows…</div>\n'
+            "\n"
+            "<!-- Example C: button hx-swap=outerHTML on a card → full card root -->\n"
+            '<div class="dz-card" id="invoice-42">…updated card…</div>\n'
+        )
+        bad = (
+            "<!-- WRONG: assuming a fixed envelope without reading the host affordance -->\n"
+            "<!-- e.g. always returning outer chrome when the button asked for delete/none -->\n"
+            '<div data-dz-region id="region-x">…</div>\n'
+        )
+        return (
+            "html",
+            good,
+            bad,
+            "Correct responses for <code>host_owned</code> — follow the initiating "
+            "control’s <code>hx-target</code> / <code>hx-swap</code>.",
+        )
+
+    # ── document ───────────────────────────────────────────────────────
+    if env == "document":
+        good = (
+            "<!-- envelope=document → full document navigation (not a fragment swap) -->\n"
+            "<!DOCTYPE html>\n"
+            '<html lang="en">\n'
+            "<head><title>Record · Acme Ltd</title>…</head>\n"
+            '<body class="dz-page">\n'
+            "  <!-- full app chrome + record page Blueprint -->\n"
+            "</body>\n"
+            "</html>\n"
+        )
+        bad = (
+            "<!-- WRONG: fragment returned when the control is a plain navigation link -->\n"
+            '<div class="dz-card">partial record…</div>\n'
+        )
+        return (
+            "html",
+            good,
+            bad,
+            "Correct response for <code>document</code> (full page / navigation).",
+        )
+
+    # unspecified / fallback
+    good = (
+        f"<!-- envelope={env} — classify swap prose; prefer body_only for inner swaps -->\n"
+        f"<!-- endpoint: {e.method} {e.endpoint} -->\n"
+        "<!-- return HTML that matches the Response fragment column -->\n"
+    )
+    bad = "<!-- Avoid inventing a second identity owner for a persistent slot -->\n"
+    return ("html", good, bad, f"Response sketch for envelope <code>{_html.escape(env)}</code>.")
+
+
+def _envelope_examples_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    """Per-exchange correct/wrong code samples for the part's envelopes."""
+    exchanges = list(hyperpart.exchanges or ())
+    if not exchanges:
+        # Presentation-only: still show a host-owned teaching pair
+        good = (
+            "<!-- Host wraps this presentation part with hx-* (host owns envelope) -->\n"
+            '<!-- Prefer: hx-swap="innerMorph" hx-target="#panel-body" -->\n'
+            "<!-- Server returns body_only interior for #panel-body -->\n"
+            '<div class="dz-stack">content…</div>\n'
+        )
+        bad = (
+            "<!-- WRONG: server returns the presentation root with a new id every poll -->\n"
+            f'<div id="{hyperpart.id}-root" data-dz-region>…</div>\n'
+        )
+        return (
+            "<h4>Envelope response examples</h4>"
+            '<p class="hm-ref-lead">This part has no owned exchange '
+            "(envelope <code>n/a</code>). If a host adds <code>hx-*</code>, "
+            "that host’s envelope applies — typically <code>body_only</code>:</p>"
+            + render_code_block(good, language="html", aria_label="host body_only correct")
+            + '<p class="hm-ref-lead hm-ref-lead--warn"><strong>Do not</strong> re-own the slot:</p>'
+            + render_code_block(bad, language="html", aria_label="host body_only wrong")
+        )
+
+    blocks: list[str] = [
+        "<h4>Envelope response examples</h4>"
+        f'<p class="hm-ref-lead">What the <strong>server returns</strong> for each '
+        f"exchange on <strong>{_html.escape(hyperpart.title)}</strong>. "
+        f"Match the {_term('exchange-envelope')}; dual-lock still applies to interior markup.</p>"
+    ]
+    for e in exchanges:
+        env = _exchange_envelope(e)
+        lang, good, bad, caption = _envelope_snippets(hyperpart, e)
+        blocks.append(
+            f'<h5><code class="hm-verb">{_html.escape(e.method)}</code> '
+            f"<code>{_html.escape(e.endpoint)}</code> · "
+            f"envelope=<code>{_html.escape(env)}</code></h5>"
+            f'<p class="hm-ref-lead">{caption}</p>'
+            f'<p class="hm-ref-lead"><strong>Do — correct response body</strong></p>'
+            + render_code_block(
+                good,
+                language=lang if lang in ("html", "python", "json") else "text",
+                aria_label=f"{e.method} {e.endpoint} correct envelope {env}",
+            )
+            + f'<p class="hm-ref-lead hm-ref-lead--warn"><strong>Don’t — violates '
+            f"<code>{_html.escape(env)}</code></strong></p>"
+            + render_code_block(
+                bad,
+                language=lang if lang in ("html", "python", "json") else "text",
+                aria_label=f"{e.method} {e.endpoint} wrong envelope {env}",
+            )
+        )
+    return "".join(blocks)
+
+
+def _envelope_examples_md(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
+    """Markdown twin of _envelope_examples_html for agents/<id>.md."""
+    exchanges = list(hyperpart.exchanges or ())
+    lines: list[str] = [
+        "### Envelope response examples",
+        "",
+        "What the **server returns** for each exchange. Match the **exchange envelope**; "
+        "dual-lock still applies to interior markup.",
+        "",
+    ]
+    if not exchanges:
+        lines += [
+            "This part has no owned exchange (envelope `n/a`). If a host adds `hx-*`, "
+            "that host’s envelope applies — typically `body_only`:",
+            "",
+            "```html",
+            "<!-- Prefer hx-swap=innerMorph into a stable body slot -->",
+            '<div class="dz-stack">content…</div>',
+            "```",
+            "",
+            "Do **not** re-own the slot:",
+            "",
+            "```html",
+            f'<div id="{hyperpart.id}-root" data-dz-region>…</div>',
+            "```",
+            "",
+        ]
+        return lines
+
+    for e in exchanges:
+        env = _exchange_envelope(e)
+        lang, good, bad, caption = _envelope_snippets(hyperpart, e)
+        fence = "html" if lang == "html" else ("json" if lang == "json" else "text")
+        # strip HTML tags from caption for md
+        cap_plain = re.sub(r"<[^>]+>", "", caption)
+        lines += [
+            f"#### `{e.method} {e.endpoint}` · envelope=`{env}`",
+            "",
+            cap_plain,
+            "",
+            "**Do — correct response body**",
+            "",
+            f"```{fence}",
+            good.rstrip("\n"),
+            "```",
+            "",
+            f"**Don’t — violates `{env}`**",
+            "",
+            f"```{fence}",
+            bad.rstrip("\n"),
+            "```",
+            "",
+        ]
+    return lines
+
+
 def _swap_contract_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     """Always-visible Swap contract section (HTML twin of agent ## Swap contract).
 
     ADR-0054 / decision 0012 — sole identity owner + exchange envelopes.
     Dual-lock validates part markup only; this section is the host/exchange topology.
+    Includes per-exchange **code examples** for the envelope (do / don’t).
     """
     exchanges = list(hyperpart.exchanges or ())
     head = (
@@ -384,7 +813,9 @@ def _swap_contract_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             f"<code>hx-*</code>, <strong>that host owns the swap contract</strong> "
             f"(sole identity + envelope). Prefer <code>innerMorph</code> / "
             f"<code>outerMorph</code> for stable slots; replacement for flash; "
-            f"body-only responses under inner swaps.</p></section>"
+            f"body-only responses under inner swaps.</p>"
+            + _envelope_examples_html(hyperpart)
+            + "</section>"
         )
 
     items = []
@@ -413,7 +844,10 @@ def _swap_contract_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
         "<code>innerHTML</code> — production follows the Swap + Envelope columns in "
         f'<a href="#exchange">{_term("exchange")}</a>.</p>'
         "<h4>Exchanges (swap · envelope)</h4>"
-        f'<ul class="hm-ref-list">{"".join(items)}</ul>' + rules + "</section>"
+        f'<ul class="hm-ref-list">{"".join(items)}</ul>'
+        + rules
+        + _envelope_examples_html(hyperpart)
+        + "</section>"
     )
 
 
@@ -1097,6 +1531,7 @@ def _morph_swap_section(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
             "responses under inner swaps.",
             "",
         ]
+        lines += _envelope_examples_md(hyperpart)
         return lines
 
     morph_ex = [e for e in exchanges if e.swap and re.search(r"morph", e.swap, re.I)]
@@ -1155,6 +1590,7 @@ def _morph_swap_section(hyperpart) -> list[str]:  # type: ignore[no-untyped-def]
         "- Slot owns stable `id` / domain keys; state in DOM, not Alpine.",
         "",
     ]
+    lines += _envelope_examples_md(hyperpart)
     return lines
 
 

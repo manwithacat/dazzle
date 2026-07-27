@@ -60,6 +60,35 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 - **`document`** — full navigation / document load (not a fragment).
 - Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+#### `GET /app/{region}/{tab}` · envelope=`host_owned`
+
+Correct responses for host_owned — follow the initiating control’s hx-target / hx-swap.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=host_owned → match the *button's* hx-target / hx-swap -->
+<!-- Example A: button hx-swap=delete → empty body (row removed) -->
+
+<!-- Example B: button hx-target=#region-body hx-swap=innerHTML → body_only fragment -->
+<div class="dz-list-row">remaining rows…</div>
+
+<!-- Example C: button hx-swap=outerHTML on a card → full card root -->
+<div class="dz-card" id="invoice-42">…updated card…</div>
+```
+
+**Don’t — violates `host_owned`**
+
+```html
+<!-- WRONG: assuming a fixed envelope without reading the host affordance -->
+<!-- e.g. always returning outer chrome when the button asked for delete/none -->
+<div data-dz-region id="region-x">…</div>
+```
+
 ## How to use it
 
 ### Seams

@@ -150,13 +150,56 @@ def test_agent_packs_document_morph_swap_for_morphing_hosts() -> None:
     assert "stable" in grid.lower()
     # Do/Don't covers morph identity
     assert "morph key" in grid.lower() or "data-dz-grid-row-id" in grid
+    # Per-exchange envelope code samples
+    assert "### Envelope response examples" in grid
+    assert "Do — correct response body" in grid
+    assert "Don’t — violates" in grid or "Don't — violates" in grid
 
     pagination = (PKG / "site" / "agents" / "pagination.md").read_text(encoding="utf-8")
     assert "## Swap contract" in pagination
     assert "innerMorph" in pagination
     assert "body_only" in pagination
+    assert "### Envelope response examples" in pagination
+    assert "INV-041" in pagination or "list-row" in pagination
 
     # L2 host without exchanges still gets an explicit swap contract
     shell = (PKG / "site" / "agents" / "app-shell.md").read_text(encoding="utf-8")
     assert "## Swap contract" in shell
     assert "n/a" in shell or "No host HTMX exchange" in shell
+    assert "### Envelope response examples" in shell
+
+
+def test_every_hyperpart_html_has_envelope_response_examples() -> None:
+    """GitHub Pages part pages ship do/don't code for each exchange envelope.
+
+    Registry Hyperparts map to ``hyperparts/<id>.html``. Framed *live* demos
+    (``*-live.html``) and extension substrate pages (``grid-cols`` etc.) are
+    not full reference pages — excluded.
+    """
+    from registry import HYPERPARTS  # type: ignore  # noqa: E402
+
+    missing: list[str] = []
+    for h in HYPERPARTS:
+        path = PKG / "site" / "hyperparts" / f"{h.id}.html"
+        if not path.is_file():
+            missing.append(f"{h.id}: missing html")
+            continue
+        html = path.read_text(encoding="utf-8")
+        if "Envelope response examples" not in html:
+            missing.append(f"{h.id}: no Envelope response examples")
+            continue
+        if 'id="swap-contract"' not in html and "id='swap-contract'" not in html:
+            missing.append(f"{h.id}: no #swap-contract section")
+        # Parts with exchanges must show at least one Do / Don't pair
+        if h.exchanges:
+            if "Do — correct response body" not in html:
+                missing.append(f"{h.id}: missing Do — correct")
+            if "Don’t — violates" not in html and "Don't — violates" not in html:
+                missing.append(f"{h.id}: missing Don’t — violates")
+        # Agent pack twin
+        amd = PKG / "site" / "agents" / f"{h.id}.md"
+        if amd.is_file():
+            md = amd.read_text(encoding="utf-8")
+            if "### Envelope response examples" not in md:
+                missing.append(f"{h.id}: agent pack missing Envelope response examples")
+    assert not missing, "envelope examples missing:\n  " + "\n  ".join(missing)

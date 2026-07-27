@@ -58,6 +58,32 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 - **`document`** — full navigation / document load (not a fragment).
 - Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+#### `GET /app/{region}?page={n}&page_size={size}` · envelope=`body_only`
+
+Correct response for body_only into #{region}-body (innerHTML / innerMorph). Wrong: re-wrapping the slot.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=body_only → rows/interior only into #{region}-body -->
+<div class="dz-list-row">INV-041 · Acme</div>
+<div class="dz-list-row">INV-042 · Globex</div>
+<!-- optional OOB footer — not a second region chrome -->
+```
+
+**Don’t — violates `body_only`**
+
+```html
+<!-- WRONG: re-wraps the slot / nests data-dz-region under innerMorph -->
+<div id="invoice_queue-body" data-dz-region data-dz-region-name="invoice_queue">
+  <div class="dz-list-row">INV-041 · Acme</div>
+</div>
+```
+
 ## How to use it
 
 No extended guidance authored yet — start from Copy this and the dependency chips.

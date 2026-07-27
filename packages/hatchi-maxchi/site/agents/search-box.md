@@ -56,6 +56,34 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 - **`document`** — full navigation / document load (not a fragment).
 - Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+#### `GET /app/fts/{entity}?q=&html=1` · envelope=`body_only`
+
+Correct response for body_only into .dz-search-box-results (innerHTML / innerMorph). Wrong: re-wrapping the slot.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=body_only → results list rows / empty prompt -->
+<div class="dz-search-result-row" role="option">
+  <div class="dz-search-result-name">Acme Ltd</div>
+  <div class="dz-search-result-secondary">Co. 123</div>
+</div>
+```
+
+**Don’t — violates `body_only`**
+
+```html
+<!-- WRONG: entire search field + listbox chrome -->
+<div class="dz-search-box" data-dz-search-box id="slot">
+  <input type="search" />
+  <div>…results…</div>
+</div>
+```
+
 ## How to use it
 
 No extended guidance authored yet — start from Copy this and the dependency chips.

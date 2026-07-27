@@ -64,6 +64,30 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 - **`document`** — full navigation / document load (not a fragment).
 - Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+#### `GET /_dazzle/documents/{entity}/{id}/{field}/file` · envelope=`none`
+
+Correct response for none (bytes / no HTML swap).
+
+**Do — correct response body**
+
+```text
+# envelope=none — opaque bytes (not an HTML fragment)
+# HTTP 200 application/pdf  (or 206 + Content-Range)
+# Body: raw file bytes
+# No HTML document chrome, no <html> wrapper
+```
+
+**Don’t — violates `none`**
+
+```text
+<!-- WRONG: HTML page wrapping the PDF bytes -->
+<!DOCTYPE html><html><body>…embed…</body></html>
+```
+
 ## How to use it
 
 ### Seams

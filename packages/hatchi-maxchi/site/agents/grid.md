@@ -159,6 +159,86 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 - **`document`** — full navigation / document load (not a fragment).
 - Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+#### `GET /app/{region}/rows?q=&sort=&dir=&page=&page_size=` · envelope=`body_only`
+
+Correct response for body_only into [data-dz-grid-body] (innerHTML / innerMorph). Wrong: re-wrapping the slot.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=body_only → <tr> rows (+ optional OOB footer), not a table -->
+<tr class="dz-tr-row" id="row-42" data-dz-grid-row-id="42">
+  <td>…</td><td>…</td>
+</tr>
+<tr class="dz-tr-row" id="row-43" data-dz-grid-row-id="43">
+  <td>…</td><td>…</td>
+</tr>
+<!-- optional: -->
+<!-- <nav data-dz-grid-pagination data-dz-grid-total="N" hx-swap-oob="true">…</nav> -->
+```
+
+**Don’t — violates `body_only`**
+
+```html
+<!-- WRONG: full table / tbody root into [data-dz-grid-body] -->
+<table class="dz-table" data-dz-grid>
+  <tbody>…</tbody>
+</table>
+```
+
+#### `POST /app/{region}/bulk` · envelope=`body_only`
+
+Correct response for body_only into [data-dz-grid-body] (innerHTML / innerMorph). Wrong: re-wrapping the slot.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=body_only → <tr> rows (+ optional OOB footer), not a table -->
+<tr class="dz-tr-row" id="row-42" data-dz-grid-row-id="42">
+  <td>…</td><td>…</td>
+</tr>
+<tr class="dz-tr-row" id="row-43" data-dz-grid-row-id="43">
+  <td>…</td><td>…</td>
+</tr>
+<!-- optional: -->
+<!-- <nav data-dz-grid-pagination data-dz-grid-total="N" hx-swap-oob="true">…</nav> -->
+```
+
+**Don’t — violates `body_only`**
+
+```html
+<!-- WRONG: full table / tbody root into [data-dz-grid-body] -->
+<table class="dz-table" data-dz-grid>
+  <tbody>…</tbody>
+</table>
+```
+
+#### `PUT /app/{entity}/{id}` · envelope=`none`
+
+Correct response for none (raw fetch / no HTML swap).
+
+**Do — correct response body**
+
+```text
+// envelope=none — no HTML swap (JSON/204; client or OOB companion)
+// HTTP 204 No Content
+// or:
+{ "ok": true }
+// Application/json; status 200
+// Optional: separate OOB HTML fragments if the host declares them
+```
+
+**Don’t — violates `none`**
+
+```text
+<!-- WRONG: HTML body when hx-swap is none / raw fetch expects JSON|204 -->
+<div class="dz-alert">Deleted</div>
+```
+
 ## How to use it
 
 ### Seams

@@ -40,6 +40,23 @@ Agent-visible HTMX topology (ADR-0054 / decision 0012). **Exchange envelope** = 
 
 If a **host** wraps this markup in `hx-*`, **that host owns the swap contract** (sole identity + envelope). Prefer `innerMorph` / `outerMorph` for stable slots; replacement for flash; body-only responses under inner swaps.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+This part has no owned exchange (envelope `n/a`). If a host adds `hx-*`, that host’s envelope applies — typically `body_only`:
+
+```html
+<!-- Prefer hx-swap=innerMorph into a stable body slot -->
+<div class="dz-stack">content…</div>
+```
+
+Do **not** re-own the slot:
+
+```html
+<div id="funnel-root" data-dz-region>…</div>
+```
+
 ## How to use it
 
 No extended guidance authored yet — start from Copy this and the dependency chips.

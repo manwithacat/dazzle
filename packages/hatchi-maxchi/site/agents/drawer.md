@@ -114,6 +114,58 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 - **`document`** — full navigation / document load (not a fragment).
 - Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+#### `GET /app/records/{id}?peek=1` · envelope=`body_only`
+
+Correct response for body_only into #drawer-body (innerHTML / innerMorph). Wrong: re-wrapping the slot.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=body_only → drawer body content only -->
+<div class="dz-stack" data-dz-gap="md">
+  <div class="dz-card">Record detail…</div>
+  <div class="dz-cluster">…actions…</div>
+</div>
+```
+
+**Don’t — violates `body_only`**
+
+```html
+<!-- WRONG: nested <dialog> / drawer chrome into body target -->
+<dialog class="dz-drawer" open data-dz-drawer>
+  <form method="dialog">…</form>
+  <div>…</div>
+</dialog>
+```
+
+#### `GET /app/records/{id}` · envelope=`document`
+
+Correct response for document (full page / navigation).
+
+**Do — correct response body**
+
+```html
+<!-- envelope=document → full document navigation (not a fragment swap) -->
+<!DOCTYPE html>
+<html lang="en">
+<head><title>Record · Acme Ltd</title>…</head>
+<body class="dz-page">
+  <!-- full app chrome + record page Blueprint -->
+</body>
+</html>
+```
+
+**Don’t — violates `document`**
+
+```html
+<!-- WRONG: fragment returned when the control is a plain navigation link -->
+<div class="dz-card">partial record…</div>
+```
+
 ## How to use it
 
 ### Seams

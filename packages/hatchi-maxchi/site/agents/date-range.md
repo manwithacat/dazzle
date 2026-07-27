@@ -54,6 +54,33 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 - **`document`** — full navigation / document load (not a fragment).
 - Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+#### `GET /app/{region}?date_from=&date_to=` · envelope=`body_only`
+
+Correct response for body_only into #{region}-body (innerHTML / innerMorph). Wrong: re-wrapping the slot.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=body_only → re-rendered region body for the range -->
+<div class="dz-stack" data-dz-gap="sm">
+  <!-- metrics / rows for date_from..date_to -->
+</div>
+```
+
+**Don’t — violates `body_only`**
+
+```html
+<!-- WRONG: date-range chrome re-emitted into the region body -->
+<div id="{region}-body" data-dz-region>
+  <input type="date" name="date_from" />
+  <input type="date" name="date_to" />
+</div>
+```
+
 ## How to use it
 
 No extended guidance authored yet — start from Copy this and the dependency chips.

@@ -61,6 +61,34 @@ Gallery mocks may approximate morph with `innerHTML` — production follows the 
 - **`document`** — full navigation / document load (not a fragment).
 - Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
+### Envelope response examples
+
+What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
+
+#### `GET /app/master-detail/{id}` · envelope=`body_only`
+
+Correct response for body_only into .dz-master-detail__detail (innerHTML / innerMorph). Wrong: re-wrapping the slot.
+
+**Do — correct response body**
+
+```html
+<!-- envelope=body_only → detail pane interior -->
+<div class="dz-card dz-card-body">
+  <h2 class="dz-heading" data-dz-level="3">Acme Ltd</h2>
+  <p>Company #12345678 · Active</p>
+</div>
+```
+
+**Don’t — violates `body_only`**
+
+```html
+<!-- WRONG: whole master–detail shell -->
+<div class="dz-master-detail" data-dz-master-detail>
+  <div class="dz-master-detail__list">…</div>
+  <div class="dz-master-detail__detail">…</div>
+</div>
+```
+
 ## How to use it
 
 ### Seams
