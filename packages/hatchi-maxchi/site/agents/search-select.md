@@ -27,10 +27,10 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 
 > **Do not reimplement the gallery.** Flash toasts (e.g. confirm’s > “Deleted (demo).”), `/mock/*` paths, and other static-site > scaffolding are **demo-only** (`MOCK_HTMX` in `site/build_site.py`). > They are not Hyperpart surface and not a product API. If you are > stuck making a toast or mock URL work, stop — implement the > exchange row below instead. See AGENTS.md › *Gallery demos are not > the product API*.
 
-| Request | Trigger | Response fragment | Swap | States |
-|---|---|---|---|---|
-| `GET /app/fragments/search?source={source}&q=` | keyup on the combobox, debounced (`delay:{n}ms`) | HTML fragment: zero-or-more `.dz-search-result-row` options (fixed anatomy: optional media + name + optional secondary; each row hx-gets the select endpoint) OR one `.dz-search-result-empty` prompt — never JSON | innerHTML into the listbox | prompt/min-chars results empty error |
-| `GET /app/fragments/select?source={source}&id={id}` | click / activate on a result row | confirm fragment replacing the listbox (`dz-select-result-confirm`) and server-side fill of the hidden FK (and usually the typeahead label via OOB) | innerHTML (listbox) + OOB for hidden/input as needed | selected |
+| Request | Trigger | Response fragment | Swap | Envelope | States |
+|---|---|---|---|---|---|
+| `GET /app/fragments/search?source={source}&q=` | keyup on the combobox, debounced (`delay:{n}ms`) | HTML fragment: zero-or-more `.dz-search-result-row` options (fixed anatomy: optional media + name + optional secondary; each row hx-gets the select endpoint) OR one `.dz-search-result-empty` prompt — never JSON | innerHTML into the listbox | `body_only` | prompt/min-chars results empty error |
+| `GET /app/fragments/select?source={source}&id={id}` | click / activate on a result row | confirm fragment replacing the listbox (`dz-select-result-confirm`) and server-side fill of the hidden FK (and usually the typeahead label via OOB) | innerHTML (listbox) + OOB for hidden/input as needed | `body_only` | selected |
 
 ### `GET /app/fragments/search?source={source}&q=` — example handler
 

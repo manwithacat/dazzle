@@ -27,9 +27,9 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 
 > **Do not reimplement the gallery.** Flash toasts (e.g. confirm’s > “Deleted (demo).”), `/mock/*` paths, and other static-site > scaffolding are **demo-only** (`MOCK_HTMX` in `site/build_site.py`). > They are not Hyperpart surface and not a product API. If you are > stuck making a toast or mock URL work, stop — implement the > exchange row below instead. See AGENTS.md › *Gallery demos are not > the product API*.
 
-| Request | Trigger | Response fragment | Swap | States |
-|---|---|---|---|---|
-| `GET /app/{region}?date_from=&date_to=` | either date input's change — hx-include sends both bounds | the re-rendered region body for the new range | innerHTML | — |
+| Request | Trigger | Response fragment | Swap | Envelope | States |
+|---|---|---|---|---|---|
+| `GET /app/{region}?date_from=&date_to=` | either date input's change — hx-include sends both bounds | the re-rendered region body for the new range | innerHTML | `body_only` | — |
 
 ## Swap contract
 

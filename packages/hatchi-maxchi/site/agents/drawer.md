@@ -84,10 +84,10 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 
 > **Do not reimplement the gallery.** Flash toasts (e.g. confirm’s > “Deleted (demo).”), `/mock/*` paths, and other static-site > scaffolding are **demo-only** (`MOCK_HTMX` in `site/build_site.py`). > They are not Hyperpart surface and not a product API. If you are > stuck making a toast or mock URL work, stop — implement the > exchange row below instead. See AGENTS.md › *Gallery demos are not > the product API*.
 
-| Request | Trigger | Response fragment | Swap | States |
-|---|---|---|---|---|
-| `GET /app/records/{id}?peek=1` | the opener button's click — the SAME click also fires the dz-dialog.js opener (`data-dz-dialog-open`), so the drawer shows while the body loads | composed detail fragment (card, badge, meta stack, actions) swapped into the drawer's body target | innerHTML | — |
-| `GET /app/records/{id}` | Open full page footer link (plain navigation — not hx-*) | full record document (tabs, KPI grid, edit actions) — gallery Blueprint `record-page`; not a fragment swap | document (navigation) | — |
+| Request | Trigger | Response fragment | Swap | Envelope | States |
+|---|---|---|---|---|---|
+| `GET /app/records/{id}?peek=1` | the opener button's click — the SAME click also fires the dz-dialog.js opener (`data-dz-dialog-open`), so the drawer shows while the body loads | composed detail fragment (card, badge, meta stack, actions) swapped into the drawer's body target | innerHTML | `body_only` | — |
+| `GET /app/records/{id}` | Open full page footer link (plain navigation — not hx-*) | full record document (tabs, KPI grid, edit actions) — gallery Blueprint `record-page`; not a fragment swap | document (navigation) | `document` | — |
 
 ## Swap contract
 

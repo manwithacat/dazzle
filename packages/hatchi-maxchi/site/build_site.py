@@ -216,7 +216,20 @@ _GLOSSARY: dict[str, tuple[str, str]] = {
     "exchange": (
         "Server exchange",
         "The deal for one action: which request goes out, what HTML comes back, "
-        "and where it lands. Classic hypermedia — not a private JSON API for a SPA.",
+        "and where it lands. Classic hypermedia — not a private JSON API for a SPA. "
+        "Each row also carries an exchange envelope (body_only / outer / …).",
+    ),
+    "swap-contract": (
+        "Swap contract",
+        "Agent-visible HTMX topology for a Hyperpart: whether it owns exchanges, "
+        "each exchange’s swap mode, and its exchange envelope (ADR-0054 / decision 0012). "
+        "Orthogonal to dual-lock part markup.",
+    ),
+    "exchange-envelope": (
+        "exchange envelope",
+        "What the response may re-emit relative to the persistent slot: "
+        "body_only (inner swap → interior only), outer, none, host_owned, or document. "
+        "Prevents nested region chrome and duplicate ids on poll.",
     ),
     "dom-contract": (
         "DOM contract",
@@ -231,7 +244,8 @@ _GLOSSARY: dict[str, tuple[str, str]] = {
     "dual-lock": (
         "dual-lock",
         "Same design, two namespaces: gallery demos use plain class names; "
-        "Dazzle apps use a product prefix on classes and data attributes.",
+        "Dazzle apps use a product prefix on classes and data attributes. "
+        "Also: DOM + optional schema gates on part markup — not the swap envelope.",
     ),
 }
 
@@ -266,6 +280,9 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
     wonder whether the page is incomplete. Default empty state = pure client /
     presentation; ``exchange_empty`` overrides that for form-bound contracts
     (e.g. combobox growing-list catalogue upsert on the enclosing form POST).
+
+    Each declared exchange includes its **exchange envelope** (ADR-0054) so the
+    GitHub Pages gallery matches agent packs and registry.Exchange.envelope.
     """
     head = f'<section class="hm-ref" id="exchange"><h3>{_term("exchange")}</h3>'
     if not hyperpart.exchanges:
@@ -277,12 +294,14 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             "exchange</strong> — it is presentation or client chrome only. htmx does "
             f"not issue a request on this part&#x27;s behalf. If you put an {_term('affordance')} "
             "(<code>hx-*</code>) on a control that uses this markup, that action&#x27;s "
-            "exchange belongs to the action, not this part.</p></section>"
+            "exchange belongs to the action, not this part. See "
+            f"{_term('swap-contract')} for host-owned envelopes.</p></section>"
         )
     rows = []
     examples: list[str] = []
     for e in hyperpart.exchanges:
         states = " ".join(f"<code>{_html.escape(s)}</code>" for s in e.states) if e.states else "—"
+        env = _exchange_envelope(e)
         rows.append(
             "<tr>"
             f'<td><code class="hm-verb">{_html.escape(e.method)}</code> '
@@ -290,6 +309,7 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
             f"<td>{_html.escape(e.trigger)}</td>"
             f"<td>{_html.escape(e.response)}</td>"
             f"<td>{_html.escape(e.swap)}</td>"
+            f"<td><code>{_html.escape(env)}</code></td>"
             f"<td>{states}</td>"
             "</tr>"
         )
@@ -301,7 +321,9 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
                 "Dazzle often emits this for you from the model; agents building a "
                 "plain FastAPI app should match this shape. "
                 "Not a dual-lock module — application code. "
-                "Not a gallery mock.</p>"
+                "Not a gallery mock. "
+                f"Respect {_term('exchange-envelope')} "
+                f"<code>{_html.escape(env)}</code> on the response.</p>"
                 + render_code_block(
                     e.server_example.strip() + "\n",
                     language="python",
@@ -314,7 +336,10 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
         "Your API must return the <strong>response fragment</strong> in the table — "
         "usually HTML, not JSON (unless the partial says otherwise). "
         "Dazzle often renders these routes from the app model; a standalone HTMX4 "
-        "app implements them explicitly.</p>"
+        "app implements them explicitly. "
+        f"The <strong>Envelope</strong> column is the {_term('exchange-envelope')} "
+        f"(part of the {_term('swap-contract')}) — what the response may re-emit "
+        "relative to the persistent slot.</p>"
         '<p class="hm-ref-lead hm-ref-lead--warn" role="note">'
         "<strong>Do not reimplement the gallery.</strong> "
         "Flash toasts (e.g. “Deleted (demo).”), <code>/mock/*</code> paths, and "
@@ -325,8 +350,70 @@ def _exchanges_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
         "exchange row below instead."
         "</p>"
         '<table class="hm-contract-table"><thead><tr>'
-        "<th>Request</th><th>Trigger</th><th>Response fragment</th><th>Swap</th><th>States</th>"
+        "<th>Request</th><th>Trigger</th><th>Response fragment</th>"
+        "<th>Swap</th><th>Envelope</th><th>States</th>"
         f"</tr></thead><tbody>{''.join(rows)}</tbody></table>" + "".join(examples) + "</section>"
+    )
+
+
+def _swap_contract_html(hyperpart) -> str:  # type: ignore[no-untyped-def]
+    """Always-visible Swap contract section (HTML twin of agent ## Swap contract).
+
+    ADR-0054 / decision 0012 — sole identity owner + exchange envelopes.
+    Dual-lock validates part markup only; this section is the host/exchange topology.
+    """
+    exchanges = list(hyperpart.exchanges or ())
+    head = (
+        f'<section class="hm-ref" id="swap-contract">'
+        f"<h3>{_term('swap-contract')}</h3>"
+        f'<p class="hm-ref-lead">Agent-visible HTMX topology '
+        f"(ADR-0054 / decision 0012). {_term('exchange-envelope')} = "
+        "what the response may re-emit relative to the persistent slot "
+        "(<code>body_only</code> | <code>outer</code> | <code>none</code> | "
+        "<code>host_owned</code> | <code>document</code>). "
+        f"{_term('dual-lock')} validates part markup only — not this envelope. "
+        "Stem: <code>stems/morph-safe-hypermedia.md</code>; "
+        "decision: <code>docs/decisions/0012-swap-identity-contract.md</code>.</p>"
+    )
+    if not exchanges:
+        return (
+            head + f'<p class="hm-ref-lead"><strong>No host HTMX exchange</strong> on this '
+            f"part — presentation or client chrome only. "
+            f"{_term('exchange-envelope')}: <code>n/a</code>.</p>"
+            f'<p class="hm-ref-lead">If a <strong>host</strong> wraps this markup in '
+            f"<code>hx-*</code>, <strong>that host owns the swap contract</strong> "
+            f"(sole identity + envelope). Prefer <code>innerMorph</code> / "
+            f"<code>outerMorph</code> for stable slots; replacement for flash; "
+            f"body-only responses under inner swaps.</p></section>"
+        )
+
+    items = []
+    for e in exchanges:
+        env = _exchange_envelope(e)
+        items.append(
+            f"<li><code>{_html.escape(e.method)} {_html.escape(e.endpoint)}</code> → "
+            f"{_html.escape(e.swap)} · "
+            f"<strong>envelope=<code>{_html.escape(env)}</code></strong></li>"
+        )
+    rules = (
+        "<h4>Envelope rules</h4>"
+        '<ul class="hm-ref-list">'
+        "<li><code>body_only</code> — innerHTML / innerMorph into a slot; response is "
+        "interior only (no re-wrap of slot id / nested <code>data-dz-region</code>).</li>"
+        "<li><code>outer</code> — outerHTML / outerMorph; response may carry identity.</li>"
+        "<li><code>none</code> — no HTML swap (JSON/204/bytes; client or OOB companion).</li>"
+        "<li><code>host_owned</code> — swap target/mode chosen by the host button’s "
+        "<code>hx-target</code> / <code>hx-swap</code>.</li>"
+        "<li><code>document</code> — full navigation / document load (not a fragment).</li>"
+        "<li>Slot owns stable <code>id</code> / domain keys; state in DOM, not Alpine.</li>"
+        "</ul>"
+    )
+    return (
+        head + '<p class="hm-ref-lead">Gallery mocks may approximate morph with '
+        "<code>innerHTML</code> — production follows the Swap + Envelope columns in "
+        f'<a href="#exchange">{_term("exchange")}</a>.</p>'
+        "<h4>Exchanges (swap · envelope)</h4>"
+        f'<ul class="hm-ref-list">{"".join(items)}</ul>' + rules + "</section>"
     )
 
 
@@ -863,12 +950,18 @@ def _guide_body() -> str:
         '<section class="hm-comp" id="contracts"><h2>4 · '
         f"{_term('exchange', 'Exchanges')} &amp; contracts</h2>"
         f"<p>A {_term('hyperpart')} is only half markup. The other half is the "
-        "contract the server must satisfy: the exchange (request/response "
-        f"round-trip each {_term('affordance')} initiates) and, for data-bearing "
+        "contract the server must satisfy: the {_term('exchange')} "
+        f"(request/response round-trip each {_term('affordance')} initiates), "
+        f"its {_term('swap-contract')} / {_term('exchange-envelope')} "
+        "(what the fragment may re-emit into a persistent slot — "
+        "<code>body_only</code> under inner swaps, etc.), and, for data-bearing "
         "seams, the <em>typed contract module</em> — ingestion model, "
         f"{_term('dom-contract')}, and an executable exemplar that CI renders and "
-        "validates. Both halves for the grid:</p>"
+        "validates. Dual-lock freezes <strong>part</strong> HTML; the swap contract "
+        "freezes <strong>host/exchange topology</strong> (decision 0012 / ADR-0054). "
+        "Both for the grid:</p>"
         + _exchanges_html(grid)
+        + _swap_contract_html(grid)
         + _contracts_html(grid)
         + "</section>"
     )
@@ -1148,13 +1241,15 @@ def _agent_md(hyperpart, snippet_src: str) -> str:  # type: ignore[no-untyped-de
             "> exchange row below instead. See AGENTS.md › *Gallery demos are not "
             "> the product API*.",
             "",
-            "| Request | Trigger | Response fragment | Swap | States |",
-            "|---|---|---|---|---|",
+            "| Request | Trigger | Response fragment | Swap | Envelope | States |",
+            "|---|---|---|---|---|---|",
         ]
         for e in hyperpart.exchanges:
             states = " ".join(e.states) if e.states else "—"
+            env = _exchange_envelope(e)
             row = (
-                f"| `{e.method} {e.endpoint}` | {e.trigger} | {e.response} | {e.swap} | {states} |"
+                f"| `{e.method} {e.endpoint}` | {e.trigger} | {e.response} | "
+                f"{e.swap} | `{env}` | {states} |"
             )
             lines.append(row.replace("\n", " "))
         lines.append("")
@@ -2681,6 +2776,9 @@ window.addEventListener('storage', function (e) {{
                     # Dialect/dogfood/provenance live in the page footer — not
                     # ahead of the implementer spine (agents use agents/<id>.md).
                     f"{apply_prefix(_exchanges_html(c), prefix)}"
+                    # Swap contract prose documents dual-lock identity (data-dz-region);
+                    # do not run apply_prefix or it rewrites those source tokens.
+                    f"{_swap_contract_html(c)}"
                     f"{apply_prefix(_guidance_html(c), prefix)}"
                     # Contract Python keeps dual-lock names (data-dz-*).
                     f"{_contracts_html_prefixed(c, prefix)}"
@@ -3108,11 +3206,16 @@ document.addEventListener('click', function (e) {{
         " pick-a-surface, compose-or-refuse, mutate-a-primitive, invent-safely\n"
         "- [Decisions (expressions of stems)]"
         "(https://github.com/manwithacat/hatchi-maxchi/tree/main/docs/decisions):"
-        " dated why — Hyperpart, layers, composition, invention ladder\n"
+        " dated why — Hyperpart, layers, composition, invention ladder, "
+        "swap/identity (0012)\n"
+        "- [0012 — Swap / identity contract]"
+        "(https://github.com/manwithacat/hatchi-maxchi/blob/main/"
+        "docs/decisions/0012-swap-identity-contract.md): "
+        "exchange envelopes (`body_only` | `outer` | …) orthogonal to dual-lock\n"
         "- [Component registry (source of truth)]"
         "(https://github.com/manwithacat/hatchi-maxchi/blob/main/site/registry.py):"
-        " canonical markup + exchange contracts per component — parse this,"
-        " don't scrape the gallery\n"
+        " canonical markup + exchange contracts (`Exchange.envelope`) per component "
+        "— parse this, don't scrape the gallery\n"
         "- [CONSUMER_MAP]"
         "(https://github.com/manwithacat/hatchi-maxchi/blob/main/CONSUMER_MAP.md):"
         " reverse composition / refusal index (blast radius)\n"
@@ -3128,7 +3231,10 @@ document.addEventListener('click', function (e) {{
         " setup, theming, prefixing, releases\n"
         "- [Guide](https://manwithacat.github.io/hatchi-maxchi/guide):"
         " human theory track — hypermedia model, tokens, Hyperpart anatomy,"
-        " exchanges & contracts, Blueprints, layers\n\n"
+        " exchanges & contracts (incl. swap contract / envelopes), Blueprints, layers\n"
+        "- [Guide § Exchanges & contracts]"
+        "(https://manwithacat.github.io/hatchi-maxchi/guide#contracts):"
+        " Server exchange + Swap contract worked example (grid)\n\n"
         "## Per-part agent files (one chunk per Hyperpart)\n\n"
         + "".join(
             f"- [{h.title}](https://manwithacat.github.io/hatchi-maxchi/"

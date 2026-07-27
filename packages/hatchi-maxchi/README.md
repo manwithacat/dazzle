@@ -102,7 +102,7 @@ wire format**.
 | **Testing Library / Playwright** — `getByRole`, `data-testid` asserts | **DOM half**: `DOM_CONTRACT` — root selector + required attrs (`data-dz-*`, stable classes) checked against emitted HTML |
 | **TS props on a component** | "What the host may put in" — but enforced on **server-rendered markup**, not a client component instance |
 | **Storybook + Chromatic** | Gallery exemplars + optional visual smoke; dual-lock is the **structural** CI gate, not the pixel judge |
-| **OpenAPI for endpoints** | Closer to the **exchange contract** above (request/response). Dual-lock is the *partial* side |
+| **OpenAPI for endpoints** | Closer to the **exchange contract** above (request/response + **exchange envelope**). Dual-lock is the *partial* side; the [swap contract](docs/decisions/0012-swap-identity-contract.md) is the topology side |
 
 A **dual-lock** is the pair of gates that freeze **one Hyperpart** so design
 system and host (e.g. [Dazzle](https://github.com/manwithacat/dazzle)) cannot
@@ -172,6 +172,7 @@ layers, invention ladder). Procedures: `docs/agent/`. Constitution:
 | `tools/consumer_map.py --write` | `CONSUMER_MAP.md` | Reverse composition index + explicit non-compositions |
 | `tools/contract_surface.py --write` | `CONTRACT_SURFACE.md` | DOM/model surface breaking-change detector |
 | `tools/dual_lock_coverage.py --write` | `DUAL_LOCK_COVERAGE.md` | Dual-lock inventory (schema+DOM vs DOM-only) — see [Dual-locks](#dual-locks--if-zod-is-for-json-this-is-for-the-fragment) |
+| Gallery Pages (`site/build_site.py`) | `site/hyperparts/*.html`, `site/guide.html` | Human-facing **Server exchange** + **Swap contract** (envelope column); rebuild after registry envelope changes |
 
 `tests/test_hyperpart_cohesion.py` fails CI if the manifest and the markers
 disagree (unowned controller, orphan marker, interactive Hyperpart with no

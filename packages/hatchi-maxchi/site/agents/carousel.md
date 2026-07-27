@@ -80,9 +80,9 @@ When the client affordance finishes, htmx issues **this** request. Return the **
 
 > **Do not reimplement the gallery.** Flash toasts (e.g. confirm’s > “Deleted (demo).”), `/mock/*` paths, and other static-site > scaffolding are **demo-only** (`MOCK_HTMX` in `site/build_site.py`). > They are not Hyperpart surface and not a product API. If you are > stuck making a toast or mock URL work, stop — implement the > exchange row below instead. See AGENTS.md › *Gallery demos are not > the product API*.
 
-| Request | Trigger | Response fragment | Swap | States |
-|---|---|---|---|---|
-| `GET /app/adoptions/request` | Request visit CTA inside a rich (non-media) slide | confirmation fragment into the slide live region (badge / status line) — not a full strip re-render | #hm-carousel-adopt innerHTML (gallery) / live region in the slide | populated error |
+| Request | Trigger | Response fragment | Swap | Envelope | States |
+|---|---|---|---|---|---|
+| `GET /app/adoptions/request` | Request visit CTA inside a rich (non-media) slide | confirmation fragment into the slide live region (badge / status line) — not a full strip re-render | #hm-carousel-adopt innerHTML (gallery) / live region in the slide | `body_only` | populated error |
 
 ### `GET /app/adoptions/request` — example handler
 
