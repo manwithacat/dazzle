@@ -65,6 +65,10 @@ SANCTIONED = {
     # Hyperpart coherence drain queue: ranks .dazzle sweep findings; writes
     # packages/hatchi-maxchi/COHERENCE_QUEUE.md (measurement/governance, not runtime).
     "scripts/hm_coherence_queue.py",
+    # /improve campaign picker gates dual_lock rotation on queue depth by reading
+    # packages/hatchi-maxchi/DUAL_LOCK_QUEUE.md (or invoking the queue tool). Governance
+    # only — not runtime HM consumption.
+    "scripts/improve_policy.py",
     # Cross-repo CI mirror: public Actions API for hatchi-maxchi main (governance).
     "scripts/hm_standalone_ci_status.py",
     # Design-context facade names the HM families path in *generated doc prose*

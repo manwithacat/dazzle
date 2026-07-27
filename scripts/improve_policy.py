@@ -108,22 +108,42 @@ def current_cycle_hint() -> int | None:
     return max(nums) if nums else None
 
 
+def _cycle_blocks(text: str) -> list[tuple[int, str]]:
+    """Return (cycle_num, body) for each ``## Cycle N`` block in the log."""
+    blocks = list(re.finditer(r"^## Cycle\s+(\d+)\b", text, re.M))
+    out: list[tuple[int, str]] = []
+    for i, m in enumerate(blocks):
+        start = m.start()
+        end = blocks[i + 1].start() if i + 1 < len(blocks) else len(text)
+        out.append((int(m.group(1)), text[start:end]))
+    return out
+
+
 def last_strategy_cycle(strategy: str) -> int | None:
-    if not LOG_PATH.is_file():
+    """Most recent cycle that ran ``strategy``.
+
+    Matches the explicit ``**strategy:**`` field (substring). When the rotation
+    id is a lane name (e.g. ``framework-ux``), also matches ``**lane:**``.
+    Does not scan Next/picked prose (avoids inflating last-run from mentions).
+    """
+    if not LOG_PATH.is_file() or not strategy:
         return None
     try:
         text = LOG_PATH.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return None
-    # Recent log entries mention strategy / agent_qa_smoke
+    needle = strategy.lower()
     best: int | None = None
-    for m in re.finditer(
-        rf"(?i)cycle\s+(\d{{3,5}}).{{0,200}}{re.escape(strategy)}|{re.escape(strategy)}.{{0,80}}cycle\s+(\d{{3,5}})",
-        text,
-    ):
-        n = int(m.group(1) or m.group(2))
-        if best is None or n > best:
-            best = n
+    for num, chunk in _cycle_blocks(text):
+        m = re.search(r"\*\*strategy:\*\*\s*([^\n]+)", chunk)
+        if m and needle in m.group(1).lower():
+            if best is None or num > best:
+                best = num
+            continue
+        lane_m = re.search(r"\*\*lane:\*\*\s*([^\s\n]+)", chunk)
+        if lane_m and lane_m.group(1).lower() == needle:
+            if best is None or num > best:
+                best = num
     return best
 
 
@@ -135,17 +155,12 @@ def recent_strategy_streak(strategy: str, *, window: int = 8) -> int:
         text = LOG_PATH.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return 0
-    # Parse recent cycle blocks (newest first via reverse scan of headings).
-    blocks = list(re.finditer(r"^## Cycle\s+(\d+)\b", text, re.M))
+    blocks = _cycle_blocks(text)
     if not blocks:
         return 0
-    # Walk from last heading backward across the last `window` cycles.
     streak = 0
-    for i in range(len(blocks) - 1, max(-1, len(blocks) - 1 - window), -1):
-        start = blocks[i].start()
-        end = blocks[i + 1].start() if i + 1 < len(blocks) else len(text)
-        chunk = text[start:end]
-        # Prefer explicit **strategy:** line; fall back to force/args mentions.
+    for num, chunk in reversed(blocks[-window:]):
+        del num  # cycle id unused; order is enough
         m = re.search(r"\*\*strategy:\*\*\s*([^\n]+)", chunk)
         strat_line = (m.group(1) if m else chunk[:400]).lower()
         if strategy.lower() in strat_line:
@@ -156,7 +171,38 @@ def recent_strategy_streak(strategy: str, *, window: int = 8) -> int:
 
 
 def dual_lock_queue_depth() -> int | None:
-    """Return dual-lock promotion queue depth, or None if tool unavailable."""
+    """Return dual-lock promotion queue depth (markdown table preferred).
+
+    Prefer parsing the generated DUAL_LOCK_QUEUE.md (no subprocess). Fall back to
+    the queue tool ``--json`` when the markdown is missing.
+    """
+    md = REPO / "packages" / "hatchi-maxchi" / "DUAL_LOCK_QUEUE.md"
+    if md.is_file():
+        try:
+            text = md.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            text = ""
+        if text:
+            # Count data rows under the main queue table (stem | kind | pri | …).
+            rows = 0
+            in_table = False
+            for line in text.splitlines():
+                if line.startswith("| # | stem |"):
+                    in_table = True
+                    continue
+                if in_table:
+                    if not line.startswith("|"):
+                        break
+                    if re.match(r"^\|\s*-+", line):
+                        continue
+                    # Skip empty placeholder rows (only pipes/spaces)
+                    cells = [c.strip() for c in line.strip("|").split("|")]
+                    if cells and cells[0].isdigit():
+                        # row with an index but empty stem → no candidate
+                        if len(cells) > 1 and cells[1]:
+                            rows += 1
+            return rows
+
     tool = REPO / "packages" / "hatchi-maxchi" / "tools" / "dual_lock_queue.py"
     if not tool.is_file():
         return None
