@@ -10323,6 +10323,85 @@ a.action-card:hover {
   color: var(--colour-text-muted);
 }
 
+/* Items list — icon is the leading mark; suppress default ul bullets
+ * so they do not double the affordance next to Lucide icons (HMC
+ * coherence: decorative_noise on task-inbox). */
+.task-inbox-items {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0;
+  gap: 0;
+}
+
+.task-inbox-item + .task-inbox-item {
+  border-block-start: 1px solid var(--colour-border);
+}
+
+.task-inbox-item {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-inbox-item-link {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding-block: var(--space-sm);
+  padding-inline: 0;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.task-inbox-item-link:hover {
+  color: var(--colour-brand);
+}
+
+.task-inbox-item-body {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.task-inbox-item-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  color: var(--colour-text);
+}
+
+.task-inbox-item-link:hover .task-inbox-item-title {
+  color: var(--colour-brand);
+}
+
+.task-inbox-item-meta {
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--colour-text-muted);
+  margin-block-start: 0.125rem;
+}
+
+/* Urgency tint on the leading icon (data-urgency from the emitter). */
+.task-inbox-item[data-urgency="overdue"] .task-inbox-item-icon {
+  color: var(--colour-danger);
+}
+
+.task-inbox-item[data-urgency="due"] .task-inbox-item-icon {
+  color: var(--colour-warning);
+}
+
+.task-inbox-item[data-urgency="soon"] .task-inbox-item-icon {
+  color: var(--colour-brand);
+}
+
+.task-inbox-empty {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--colour-text-muted);
+}
+
 }
 /* ── components/grid-list.css ── */
 @layer components {

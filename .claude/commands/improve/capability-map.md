@@ -70,7 +70,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1343 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1355 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1349 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1353 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1302 | STALE |
@@ -129,6 +129,8 @@ apply map patches with `{"apply":true}`.
 > **Cycle 1348 (2026-07-27).** **example-apps story_walk** project_tracker ST-005 — `member_st_005` land my_tasks + hop `/app/user/{Ken}` live 2/2 PASS after reset-and-load 22; dig receipt story_walk; residual_total 1→0. densify_allowed=0. Stamped story_walk/test walk/process_dig/reset-and-load **USED@1348**. budget 1. Explore **15/100**.
 >
 > **Cycle 1347 (2026-07-27).** **example-apps** PENDING#303 project_tracker user_detail + scope:read; assignee hop live PASS. journey residual=0 claimed seed. budget 1. Explore **14/100**.
+>
+> **Cycle 1355 (2026-07-27).** **hm-convergence hyperpart_coherence** drain task-inbox — suppress ul bullets + flex item rows/urgency icon tones (coherence decorative_noise→clear, score 8→9); queue=0; mean 8.9. Stamped HM hyperpart coherence **USED@1355**. budget 1. Explore **20/100**.
 >
 > **Cycle 1345 (2026-07-27).** **example-apps story_walk** project_tracker — framework `ref_route` API plural→`/app` detail_path; 4 walks multi-scene live PASS; PENDING user_detail 404. densify_allowed=0. Stamped story_walk/test walk/process_dig/reset-and-load **USED@1345**. budget 1. Explore **13/100**.
 >
