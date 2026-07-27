@@ -349,6 +349,139 @@ class TestApiActions:
         assert result.ok is True
         assert "already" in result.message
 
+    def test_playwright_click_api_fallback_already_at_target(self) -> None:
+        """#1640: GET already at fallback status → no PATCH/PUT."""
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle.testing.walk.actions_api import playwright_click_api_fallback
+        from dazzle.testing.walk.models import ActionSpec, WalkActionType
+
+        async def fake_get(path):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {"status": "signed"}
+            return resp
+
+        client = MagicMock()
+        client.get = AsyncMock(side_effect=fake_get)
+        client.patch = AsyncMock()
+        client.put = AsyncMock()
+        action = ActionSpec(
+            type=WalkActionType.PLAYWRIGHT_CLICK,
+            name="Signed",
+            api_fallback_status="signed",
+            path_template="/engagementletters/{el_id}",
+            wait_ms=0,
+        )
+        result = asyncio.run(
+            playwright_click_api_fallback(
+                client,
+                action,
+                {"el_id": "el1"},
+                click_ok=True,
+                click_message="clicked button/'Signed'",
+                settle_ms=0,
+            )
+        )
+        assert result.ok is True
+        assert result.type == "playwright_click"
+        assert "already status=signed" in result.message
+        client.patch.assert_not_called()
+        client.put.assert_not_called()
+
+    def test_playwright_click_api_fallback_mutates_when_lag(self) -> None:
+        """#1640: click ok but status lag → PATCH with target status."""
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle.testing.walk.actions_api import playwright_click_api_fallback
+        from dazzle.testing.walk.models import ActionSpec, WalkActionType
+
+        async def fake_get(path):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {"status": "viewed"}
+            return resp
+
+        async def fake_patch(path, json=None):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.text = ""
+            return resp
+
+        client = MagicMock()
+        client.get = AsyncMock(side_effect=fake_get)
+        client.patch = AsyncMock(side_effect=fake_patch)
+        client.put = AsyncMock()
+        action = ActionSpec(
+            type=WalkActionType.PLAYWRIGHT_CLICK,
+            name="Signed",
+            api_fallback_status="signed",
+            path_template="/engagementletters/{el_id}",
+        )
+        result = asyncio.run(
+            playwright_click_api_fallback(
+                client,
+                action,
+                {"el_id": "el1"},
+                click_ok=True,
+                click_message="clicked button/'Signed'",
+                settle_ms=0,
+            )
+        )
+        assert result.ok is True
+        assert "api_fallback" in result.message
+        assert "signed" in result.message
+        client.patch.assert_awaited()
+        call_kwargs = client.patch.await_args
+        assert call_kwargs.args[0] == "/engagementletters/el1"
+        assert call_kwargs.kwargs.get("json") == {"status": "signed"}
+
+    def test_playwright_click_api_fallback_on_click_fail(self) -> None:
+        """#1640 R2: click miss still forces status when path available."""
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle.testing.walk.actions_api import playwright_click_api_fallback
+        from dazzle.testing.walk.models import ActionSpec, WalkActionType
+
+        async def fake_get(path):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.json.return_value = {"status": "viewed"}
+            return resp
+
+        async def fake_patch(path, json=None):
+            resp = MagicMock()
+            resp.status_code = 200
+            resp.text = ""
+            return resp
+
+        client = MagicMock()
+        client.get = AsyncMock(side_effect=fake_get)
+        client.patch = AsyncMock(side_effect=fake_patch)
+        action = ActionSpec(
+            type=WalkActionType.PLAYWRIGHT_CLICK,
+            name="Signed",
+            api_fallback_status="signed",
+            path_template="/engagementletters/{el_id}",
+        )
+        result = asyncio.run(
+            playwright_click_api_fallback(
+                client,
+                action,
+                {"el_id": "el1"},
+                click_ok=False,
+                click_message="click failed button/'Signed': TimeoutError",
+                settle_ms=0,
+            )
+        )
+        assert result.ok is True
+        assert "click failed" in result.message
+        assert "api_fallback" in result.message
+        client.patch.assert_awaited()
+
     def test_extension_action_runs_in_runner(self, tmp_path: Path) -> None:
         """Dry-run no longer fails on api_find; live dispatches (mocked auth)."""
         import asyncio

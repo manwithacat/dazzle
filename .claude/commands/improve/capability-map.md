@@ -64,8 +64,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | USED |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI (not on main — map debt; reports under examples/*/dev_docs only) | **example-apps** + trials | 1332 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1327 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1327 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1342 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1342 | USED |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1301 | STALE |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
@@ -1270,3 +1270,5 @@ apply map patches with `{"apply":true}`.
 > **Cycle 1048 (2026-07-19).** housekeeping — explore cap (policy later forbids blaming STALE).
 
 > **Cycle 1043 (2026-07-19).** **self-audit** 5 CLEAN. Next self-audit ~**1058**.
+
+> **Cycle 1342 (2026-07-27).** **framework-ux** #1640 — `playwright_click` honours `api_fallback_status` (GET after click; PATCH/PUT via api_ensure_status path); module `actions_playwright.py`; unit tests + recipe. densify_allowed=0. Stamped test walk **USED@1342**. budget_consumed 1. Explore **11/100**.

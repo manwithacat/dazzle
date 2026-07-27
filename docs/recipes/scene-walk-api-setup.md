@@ -29,11 +29,20 @@ scenes:
         role: button
         name: "Approve"
         regex: true
+        # Optional durability (#1640): if UI click does not land the domain
+        # transition (HTMX race / guard), force status via PATCH/PUT + CSRF.
+        # Requires path_template (or path) already resolvable from vars.
+        api_fallback_status: client_approved
+        path_template: /vatreturns/{vat_id}
       - type: api_assert_field
         path_template: /vatreturns/{vat_id}
         field: status
         equals: client_approved
 ```
+
+When `api_fallback_status` is set, a trailing `api_ensure_status` for the
+same target is usually redundant — drop it so the walk stays subject-bearing
+with API durability only on lag.
 
 ## Commands
 
@@ -77,3 +86,6 @@ paths in production.
 3. Upload field default is **`file`** (`file_field: file`); **`save_as`** is filled from the JSON `id` in the upload response.
 4. Prefer seed/sanitize for known states; use `api_ensure_status` only when re-runs need a reset.
 5. Pack execute auto-enables Playwright when walks contain `playwright_*`.
+6. `playwright_click` + `api_fallback_status` + `path_template` re-GETs the
+   entity after click; if `status` ≠ target, PATCHes/PUTs like
+   `api_ensure_status` (#1640). Click is always attempted first.

@@ -6,12 +6,13 @@ auth. Not CyFuture-domain-specific except a best-effort hook for EL viewed.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
 import httpx
 
-from dazzle.testing.walk.models import ActionSpec
+from dazzle.testing.walk.models import ActionSpec, WalkActionType
 from dazzle.testing.walk.results import ActionResult
 from dazzle.testing.walk.results import render_template as _render
 
@@ -163,6 +164,72 @@ async def api_ensure_status(
         f"set status {current!r} → {action.status!r}",
         {"path": path},
     )
+
+
+async def playwright_click_api_fallback(
+    client: httpx.AsyncClient,
+    action: ActionSpec,
+    vars_: dict[str, str],
+    *,
+    click_ok: bool,
+    click_message: str,
+    settle_ms: int | None = None,
+) -> ActionResult:
+    """Durability fallback after UI click (#1640).
+
+    When ``api_fallback_status`` is set with ``path_template``/``path``:
+
+    1. Wait briefly for HTMX/process races (``wait_ms`` or default 1500ms).
+    2. GET entity; if ``status`` already equals fallback → PASS (no mutation).
+    3. Else PATCH/PUT via the same path as :func:`api_ensure_status`.
+
+    Click remains subject-bearing; API only runs when the domain transition
+    did not land. Result type stays ``playwright_click``.
+    """
+    target = action.api_fallback_status
+    path = _render(action.path_template or action.path or "", vars_)
+    if not target or not path:
+        skip = (
+            click_message
+            if click_ok
+            else f"{click_message}; api_fallback skipped (need path_template/path)"
+        )
+        return ActionResult("playwright_click", click_ok, skip)
+
+    wait = settle_ms if settle_ms is not None else (action.wait_ms or 1500)
+    if wait > 0:
+        await asyncio.sleep(wait / 1000.0)
+
+    ensure = ActionSpec(
+        type=WalkActionType.API_ENSURE_STATUS,
+        path_template=action.path_template,
+        path=action.path,
+        status=target,
+    )
+    ensured = await api_ensure_status(client, ensure, vars_)
+    combined = _fallback_message(click_message, target, ensured)
+    # Fallback success makes the step ok even when click locator failed (R2)
+    return ActionResult(
+        "playwright_click",
+        ensured.ok,
+        combined,
+        {
+            "path": path,
+            "click_ok": click_ok,
+            "fallback_status": target,
+            "fallback_ok": ensured.ok,
+            **(ensured.detail or {}),
+        },
+    )
+
+
+def _fallback_message(click_message: str, target: str, ensured: ActionResult) -> str:
+    note = ensured.message
+    if ensured.ok and note.startswith("already"):
+        return f"{click_message}; api_fallback: already status={target}"
+    if ensured.ok:
+        return f"{click_message}; api_fallback: {note}"
+    return f"{click_message}; api_fallback failed: {note}"
 
 
 async def api_assert_field(

@@ -10,12 +10,13 @@ from __future__ import annotations
 import asyncio
 import re
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 import httpx
 
 from dazzle.testing.session_manager import SessionManager
 from dazzle.testing.walk.actions_api import dispatch_api_action
+from dazzle.testing.walk.actions_playwright import playwright_click_with_fallback
 from dazzle.testing.walk.models import (
     CORE_ACTION_TYPES,
     ActionSpec,
@@ -25,7 +26,6 @@ from dazzle.testing.walk.models import (
 )
 from dazzle.testing.walk.policies import (
     attach_csrf_request_hook,
-    cookies_for_playwright,
     prime_csrf_cookie,
 )
 from dazzle.testing.walk.results import (
@@ -368,60 +368,22 @@ class WalkRunner:
         return ActionResult(action.type.value, True, f"waited {wait_ms}ms")
 
     async def _playwright_click(self, action: ActionSpec) -> ActionResult:
-        """Click by role/name using Playwright async API."""
-        try:
-            from playwright.async_api import async_playwright
-        except ImportError:
-            return ActionResult(
-                action.type.value,
-                False,
-                "playwright not installed (pip install playwright && playwright install chromium)",
-            )
-
-        role = action.role or "button"
-        name = action.name or ""
-        timeout_ms = action.wait_ms or 5000
-
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=True)
-            ctx = await browser.new_context(
-                base_url=self.base_url,
-                storage_state=None,
-            )
-            # Session + CSRF cookies from the same jar as httpx (R4.1)
-            jar = (
-                cookies_for_playwright(self._client, self.base_url)
-                if self._client is not None
-                else [
-                    {"name": k, "value": v, "url": self.base_url} for k, v in self._cookies.items()
-                ]
-            )
-            if jar:
-                await ctx.add_cookies(jar)
-            page = await ctx.new_page()
-            try:
-                target = self.last_url or self.base_url + "/"
-                if not target.startswith("http"):
-                    target = urljoin(self.base_url + "/", target.lstrip("/"))
-                await page.goto(target, wait_until="networkidle", timeout=timeout_ms)
-                if action.regex and name:
-                    locator = page.get_by_role(role, name=re.compile(name))
-                else:
-                    locator = page.get_by_role(role, name=name, exact=True)
-                await locator.first.click(timeout=timeout_ms)
-                await page.wait_for_load_state("networkidle", timeout=timeout_ms)
-                self.last_url = page.url
-                self.last_body = await page.content()
-                self.last_status = 200
-                return ActionResult(
-                    action.type.value,
-                    True,
-                    f"clicked {role}/{name!r}",
-                    {"url": page.url},
-                )
-            finally:
-                await ctx.close()
-                await browser.close()
+        """Click by role/name; optional ``api_fallback_status`` durability (#1640)."""
+        result, new_url, new_body, new_status = await playwright_click_with_fallback(
+            action=action,
+            base_url=self.base_url,
+            last_url=self.last_url,
+            client=self._client,
+            cookies=self._cookies,
+            vars_=self.vars,
+        )
+        if new_url is not None:
+            self.last_url = new_url
+        if new_body is not None:
+            self.last_body = new_body
+        if new_status is not None:
+            self.last_status = new_status
+        return result
 
 
 async def run_walk(
