@@ -50,7 +50,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1330 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1331 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1331 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1331 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1345 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1338 | USED |
@@ -64,9 +64,9 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | USED |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI (not on main — map debt; reports under examples/*/dev_docs only) | **example-apps** + trials | 1332 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1342 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1342 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1301 | STALE |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1345 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1345 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1345 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
@@ -121,6 +121,8 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1345 (2026-07-27).** **example-apps story_walk** project_tracker — framework `ref_route` API plural→`/app` detail_path; 4 walks multi-scene live PASS; PENDING user_detail 404. densify_allowed=0. Stamped story_walk/test walk/process_dig/reset-and-load **USED@1345**. budget 1. Explore **13/100**.
+>
 > **Cycle 1344 (2026-07-27).** **self-audit** window 04929a71b..05f258649 — 5 CLEAN (c1342 #1640 api_fallback + tests, c1336/1338/1334 acceptance harness ships + dig receipts PASS, c1343 tree nest indent + coherence queue). 0 DISCREPANCY. densify_allowed=0 residual=0. CodeQL+inbox **USED@1344**. budget 0. Explore **12/100**. Next self-audit ~1359; aggressive rotation story_walk / acceptance.
 > **Cycle 1343 (2026-07-27).** **hm-convergence hyperpart_coherence** investigate+drain — recapture 92 hyperparts; host-Read batches 00–07 → coherent=92 mean=8.89; soft tree missing_content cleared (Platform/Design systems are Engineering children); **mutation** tree-children indent space-lg→xl + catalogue regen. gallery probes 6/6. queue=0. Stamped hyperpart coherence + gallery_probes **USED@1343**. budget 1. Explore **12/100**.
 > **Cycle 1342 (2026-07-27).** **framework-ux** (#1640 mutation, aggressive-change require_mutation=1) — `playwright_click` honours `api_fallback_status` via `actions_playwright` extract + `playwright_click_api_fallback` (GET already-at-target or PATCH/PUT durability). Unit tests for fallback paths; runner MI kept A. densify_allowed=0. Stamped dazzle test walk **USED@1342**. budget 1. Explore **11/100**.

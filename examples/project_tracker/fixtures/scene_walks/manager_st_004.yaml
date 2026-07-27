@@ -1,5 +1,8 @@
 # Story walk ST-004 — Manager reviews project portfolio
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-004 then:
+#   - Manager sees all projects
+#   - Opening a project shows related tasks and milestones
+# Deepened cycle 1345: land dashboard → open seed project hub.
 
 persona: manager
 home_workspace: dashboard
@@ -20,3 +23,17 @@ scenes:
           - Milestone
           - Dashboard
     expects: "Authenticated manager sees portfolio metrics and project list cues"
+  - id: open_portfolio_project
+    story: ST-004
+    entry: /app/project/6a000000-0000-4000-8000-000000000001
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Website relaunch
+          - Task
+          - Milestone
+          - Project
+    expects: "Opening a portfolio project shows related tasks and milestones"

@@ -25,9 +25,22 @@ from __future__ import annotations
 
 from typing import Any
 
-from dazzle.core.strings import to_api_plural
+from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.runtime.column_economy_resolver import resolve_column_economy
 from dazzle.render.filters import status_tone_map
+
+
+def _ref_detail_route(ref_entity: Any) -> str:
+    """UI VIEW hub template for a ref/belongs_to column (``/app/<slug>/{id}``).
+
+    Workspace kanban/detail/grid secondary fields render these as ``<a href>``.
+    Historically this used API plurals (``/projects/{id}``) which serve JSON
+    (or 404/405) — not the typed entity hub. SSOT is :func:`detail_path` so
+    links stay mounted with route registration (#1426).
+    """
+    if not ref_entity:
+        return ""
+    return detail_path("/app", entity_slug(str(ref_entity)))
 
 
 def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
@@ -117,7 +130,7 @@ def build_surface_columns(
         if kind_val in ("ref", "belongs_to"):
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
             ref_entity = getattr(ft, "ref_entity", None)
-            ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
+            ref_route = _ref_detail_route(ref_entity)
             ref_col: dict[str, Any] = {
                 "key": rel_name,
                 "label": rel_name.replace("_", " ").title(),
@@ -199,8 +212,7 @@ def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[
         if kind_val in ("ref", "belongs_to"):
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
             ref_entity = getattr(ft, "ref_entity", None)
-            # Ensure ref_entity is a plain string (not a pydantic/Cython object)
-            ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
+            ref_route = _ref_detail_route(ref_entity)
             columns.append(
                 {
                     "key": rel_name,

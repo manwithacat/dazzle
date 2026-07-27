@@ -138,9 +138,9 @@ class TestFilterableColumns:
             if kind_val in ("ref", "belongs_to"):
                 rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
                 ref_entity = getattr(ft, "ref_entity", None)
-                from dazzle.core.strings import to_api_plural
+                from dazzle.page.app_paths import detail_path, entity_slug
 
-                ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
+                ref_route = detail_path("/app", entity_slug(str(ref_entity))) if ref_entity else ""
                 columns.append(
                     {
                         "key": rel_name,
@@ -713,6 +713,37 @@ class TestBuildSurfaceColumns:
         keys = [c["key"] for c in columns]
         assert "title" in keys
         assert "status" in keys
+
+    def test_ref_columns_use_app_detail_route_not_api_plural(self) -> None:
+        """Kanban/detail FK links must target /app/<slug>/{id} hubs (#1426),
+        not JSON API plurals like /projects/{id} (story-walk friction)."""
+        from dazzle.http.runtime.workspace_columns import (
+            build_entity_columns_full,
+        )
+        from dazzle.http.runtime.workspace_columns import (
+            build_surface_columns as _build_surface_columns,
+        )
+
+        entity = _make_entity(
+            "Task",
+            [
+                _make_field("id", FieldTypeKind.UUID),
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("project", FieldTypeKind.REF, ref_entity="Project"),
+                _make_field("assigned_to", FieldTypeKind.REF, ref_entity="User"),
+            ],
+        )
+        surface = _make_surface("Task", field_names=["title", "project", "assigned_to"])
+        by_key = {c["key"]: c for c in _build_surface_columns(entity, surface)}
+        assert by_key["project"]["ref_route"] == "/app/project/{id}"
+        assert by_key["assigned_to"]["ref_route"] == "/app/user/{id}"
+        # API plurals must not leak into UI secondary-field hrefs
+        assert "/projects/" not in by_key["project"]["ref_route"]
+        assert "/users/" not in by_key["assigned_to"]["ref_route"]
+
+        full = {c["key"]: c for c in build_entity_columns_full(entity)}
+        assert full["project"]["ref_route"] == "/app/project/{id}"
+        assert full["assigned_to"]["ref_route"] == "/app/user/{id}"
 
     def test_skips_id_field_in_projection(self) -> None:
         """'id' in surface fields should be ignored."""

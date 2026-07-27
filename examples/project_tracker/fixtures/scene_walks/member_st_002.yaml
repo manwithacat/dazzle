@@ -1,5 +1,8 @@
 # Story walk ST-002 — Member works the task board with project context hops
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-002 then:
+#   - Member sees tasks scoped to self (member scope)
+#   - Row open hops to the parent Project overview hub
+# Deepened cycle 1345: land my_tasks → open seed project hub (FK hop target).
 
 persona: member
 home_workspace: my_tasks
@@ -20,3 +23,17 @@ scenes:
           - Assigned
           - Status
     expects: "Authenticated member sees task board and project context hop cues"
+  - id: hop_parent_project_hub
+    story: ST-002
+    entry: /app/project/6a000000-0000-4000-8000-000000000001
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Project
+          - Website relaunch
+          - Task
+          - Milestone
+    expects: "Parent Project overview hub shows related tasks and milestones (seed Website relaunch)"

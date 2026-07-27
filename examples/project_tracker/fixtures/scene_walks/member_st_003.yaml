@@ -1,5 +1,7 @@
 # Story walk ST-003 — Member opens a task hub with discussion and files
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-003 then:
+#   - Task hub shows status strip, ownership, discussion, and files
+# Deepened cycle 1345: land my_tasks → open seed task detail hub.
 
 persona: member
 home_workspace: my_tasks
@@ -20,3 +22,17 @@ scenes:
           - Status
           - Owner
     expects: "Authenticated member sees path cues to task hub with discussion/files"
+  - id: open_task_hub
+    story: ST-003
+    entry: /app/task/6c000000-0000-4000-8000-000000000002
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Task
+          - Draft wireframes
+          - Status
+          - Project
+    expects: "Task hub for seed Draft wireframes shows ownership and project context"
