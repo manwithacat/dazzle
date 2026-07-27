@@ -60,9 +60,9 @@ apply map patches with `{"apply":true}`.
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1301 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1301 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1298 | USED |
-| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1324 | USED |
-| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1324 | USED |
-| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1324 | USED |
+| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1328 | USED |
+| `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | USED |
+| `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | USED |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials | 1281 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1327 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1327 | USED |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1328 (2026-07-27).** **example-apps agent_qa_smoke** (recurring due last@1324) — `dazzle qa smoke-dig --once` → **hr_records** hr_admin ok=36 fail=0 auto_seed=0; report qa-smoke-hr_admin-20260727-165834.json. residual_total=0 densify_allowed=0. CI tip 778ec48fb still in_progress. Stamped agent_qa_smoke/smoke-crawl/smoke-dig **USED@1328**. budget_consumed 1. Explore **3/100**. Next: self-audit ~1329.
 > **Cycle 1327 (2026-07-27).** **example-apps COGNITION dig** story_walk/test walk simple_task — residual=0 re-touch STALE@1278; map stems/story-driven-jobs.md+SPEC; validate 0 / dry-run 5/5 / **live 5/5** after reset-and-load created_count=12; mark-live all walks; densify_allowed=0. Stamped story_walk/test walk/reset-and-load **USED@1327**. budget_consumed 1. Explore **2/100**.
 > **Cycle 1319 (2026-07-26).** **capability-sweep** — UNOWNED=0 COGNITION_STALE_eff=7 HYGIENE_STALE_eff=20. Top COGNITION digs: story_walk / test walk (lag~39), hyperpart-opportunities (36); skip metered vision STALE (subscription substitute only). Top HYGIENE: discovery/compliance/sentinel/deploy plan. Grok workflows `improve-capability-sweep` available. budget_consumed 0. Explore **60/100**.
 
