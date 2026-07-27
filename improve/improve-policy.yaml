@@ -13,7 +13,7 @@
 version: 1
 
 # Active campaign id, or null / omitted for pure steady_state.
-# Operator 2026-07-27: aggressive-change — deeper digs / real mutations, not stamp thrash.
+# Operator 2026-07-27: aggressive-change — ship product/framework mutations, not clean re-stamps.
 active_campaign: aggressive-change
 
 steady_state:
@@ -70,55 +70,75 @@ campaigns:
       Near-term priority: dig exercising examples. Success = finding gross
       bugs (404s). Subtler bugs welcome. Do not densify.
 
-  # Operator posture: more aggressive mutation (2026-07-27).
-  # Prefer digs that change product/framework over clean re-stamps.
+  # Operator posture: ship real mutations (2026-07-27, re-tightened after stamp thrash).
+  # Aggression = product/framework code ships + fix-in-cycle when dig finds friction.
+  # NOT: clean dual-lock deferrals, map stamps, or endless harness-only re-panels.
   aggressive-change:
-    title: "Aggressive digs — real mutations over stamp thrash"
+    title: "Aggressive digs — ship product/framework mutations"
     posture: aggressive
+    # Dig cycles should leave a code or PENDING-seed trail, not map-only PASS.
+    require_mutation: true
+    # After this many consecutive acceptance panels without a product/framework
+    # ship, rotate hard to framework-ux / hyperpart (breaks harness re-panel thrash).
+    max_consecutive_panels: 2
     success_criteria:
-      - "Cycles prefer deep digs (acceptance / dual-lock / story_walk / framework) over map-only stamps"
-      - "When smoke finds structure/fail>0, next cycles fix product or framework"
-      - "agent_acceptance_panel or dual_lock_expand runs at least every few cycles"
+      - "Most dig cycles ship product or framework code (or seed actionable PENDING)"
+      - "Friction found in digs is fixed in-cycle or next cycle — not re-logged forever"
+      - "Drained queues (dual_lock depth 0) are skipped, not re-stamped as PASS"
       - "No isomorphic *_ops densify while densify_allowed=0 (#1637)"
-    # Primary pick when residual is clear (rotation overrides when set).
     prefer:
-      lane: example-apps
-      strategy: agent_acceptance_panel
-      force_args: "example-apps agent_acceptance_panel"
-    # Round-robin among high-leverage strategies (policy pick uses least-recent).
+      lane: framework-ux
+      strategy: explore
+      force_args: "framework-ux"
     prefer_rotation:
-      - force_args: "example-apps agent_acceptance_panel"
-        lane: example-apps
-        strategy: agent_acceptance_panel
-        note: "Live trial + auto_seed product friction"
+      # Mutation-first order (picker still LRU among eligible entries).
+      - force_args: "framework-ux"
+        lane: framework-ux
+        strategy: framework-ux
+        note: "Ship UX/fragment/runtime improvements; fix harness-class friction at root"
+      - force_args: "hm-convergence hyperpart_coherence"
+        lane: hm-convergence
+        strategy: hyperpart_coherence
+        note: "Investigate or drain Hyperpart visual defects — fix ships"
       - force_args: "example-apps story_walk"
         lane: example-apps
         strategy: story_walk
-        note: "Live walk contracts; fix failing walks"
-      - force_args: "hm-convergence dual_lock_expand"
-        lane: hm-convergence
-        strategy: dual_lock_expand
-        note: "Promote dual-lock queue heads"
+        note: "Live walk contracts; failing walks → ship product/story fixes"
+      - force_args: "example-apps agent_acceptance_panel"
+        lane: example-apps
+        strategy: agent_acceptance_panel
+        note: "Live trial; same-cycle fix or PENDING seed when friction is product/framework"
+        is_panel: true
+      - force_args: "example-apps journey_dogfood"
+        lane: example-apps
+        strategy: journey_dogfood
+        note: "Journey maturity residual — ship journey/story gaps"
       - force_args: "hm-convergence gallery_probes"
         lane: hm-convergence
         strategy: gallery_probes
-        note: "Gallery probe residual / visual truth"
+        note: "Gallery probe residual / visual truth — fix emitters when red"
+      - force_args: "hm-convergence dual_lock_expand"
+        lane: hm-convergence
+        strategy: dual_lock_expand
+        note: "Promote dual-lock queue heads only"
+        require_dual_lock_queue: true
       - force_args: "example-apps agent_qa_smoke"
         lane: example-apps
         strategy: agent_qa_smoke
-        note: "Deep smoke dig — fix auto_seed/structure, not stamp-only"
+        note: "Deep smoke only when structure/fail>0 or auto_seed — else skip stamp"
+        require_smoke_residual: true
     yield_to:
       - regression
       - ci_repair
       - codeql
       - github_inbox
-      # Self-audit still runs on cadence from driver Step 1; not forced every pick.
     suppress_recurring_smoke: true
-    # Only force smoke when residual non-empty (do not always dig smoke).
     boost_probe: null
     max_cycles: 80
     notes: >
-      Operator asked for more aggressive change. Prefer acceptance panels and
-      dual-lock/story digs that mutate code or seed PENDING. Still yield to
-      red CI / CodeQL / REGRESSION / inbox. densify_allowed=0 remains hard stop
-      for warehouse desk clones — aggression is depth, not sprawl.
+      Operator: more aggressive change. Prefer framework-ux and hyperpart ships
+      over clean dual-lock deferrals and harness-only re-panels. When a dig finds
+      product or framework friction, fix it in the same cycle (or seed PENDING and
+      claim next). densify_allowed=0 remains hard stop for warehouse desk clones —
+      aggression is depth and real ships, not sprawl. Skip dual_lock when queue
+      depth is 0; skip smoke when residual is 0.

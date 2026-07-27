@@ -240,16 +240,30 @@ skips for CI/CodeQL/inbox/REGRESSION/self-audit). Near-term campaign
 `land-l25-smoke` forces dig exercise on examples (gross bugs: 404 / empty main).
 
 **Aggressive posture** (operator): activate `aggressive-change` when residual is
-clear but the loop is stamp-thrashing smoke/map digs. Policy rotates
-`agent_acceptance_panel` → `story_walk` → `hm-convergence dual_lock_expand` →
-`gallery_probes` → (occasional deep) `agent_qa_smoke`. Suppresses sparse
-recurring smoke; still yields to red CI / CodeQL / REGRESSION / inbox. Does
-**not** bypass `densify_allowed=0` (WI clone desks stay banned — aggression is
-depth, not sprawl).
+clear but the loop is stamp-thrashing smoke/map digs **or** when digs keep
+passing without product/framework ships. Policy rotates mutation-first:
+
+`framework-ux` → `hm-convergence hyperpart_coherence` → `story_walk` →
+`agent_acceptance_panel` → `journey_dogfood` → `gallery_probes`
+(→ `dual_lock_expand` only if queue depth > 0; → smoke only if residual > 0).
+
+Rules the driver **must** honor under `posture=aggressive` / `require_mutation=1`:
+
+1. **Ship or seed.** Dig cycles leave a code commit **or** an actionable
+   `PENDING` backlog/auto_seed row. Map-only PASS / dual-lock defer-when-queue-0
+   is not progress under this campaign.
+2. **Fix friction in-cycle.** When a panel/walk finds product or framework
+   friction, fix it in the same cycle (or seed PENDING and claim next). Do not
+   re-panel the same harness thrash for >`max_consecutive_panels` (default 2).
+3. **Skip drained queues.** dual_lock queue depth 0 → skip `dual_lock_expand`.
+   smoke residual 0 → skip stamp-only smoke digs.
+4. **Still yield** to red CI / CodeQL / REGRESSION / inbox. Does **not** bypass
+   `densify_allowed=0` (WI clone desks stay banned — aggression is depth and
+   real ships, not sprawl).
 
 ```bash
 python scripts/improve_policy.py --activate aggressive-change
-python scripts/improve_policy.py --status   # posture=aggressive + next force
+python scripts/improve_policy.py --status   # posture=aggressive require_mutation=1 + next force
 python scripts/improve_policy.py --clear-campaign   # back to steady_state
 ```
 

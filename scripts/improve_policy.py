@@ -127,6 +127,72 @@ def last_strategy_cycle(strategy: str) -> int | None:
     return best
 
 
+def recent_strategy_streak(strategy: str, *, window: int = 8) -> int:
+    """How many of the most recent dig cycles used ``strategy`` consecutively from tip."""
+    if not LOG_PATH.is_file() or not strategy:
+        return 0
+    try:
+        text = LOG_PATH.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return 0
+    # Parse recent cycle blocks (newest first via reverse scan of headings).
+    blocks = list(re.finditer(r"^## Cycle\s+(\d+)\b", text, re.M))
+    if not blocks:
+        return 0
+    # Walk from last heading backward across the last `window` cycles.
+    streak = 0
+    for i in range(len(blocks) - 1, max(-1, len(blocks) - 1 - window), -1):
+        start = blocks[i].start()
+        end = blocks[i + 1].start() if i + 1 < len(blocks) else len(text)
+        chunk = text[start:end]
+        # Prefer explicit **strategy:** line; fall back to force/args mentions.
+        m = re.search(r"\*\*strategy:\*\*\s*([^\n]+)", chunk)
+        strat_line = (m.group(1) if m else chunk[:400]).lower()
+        if strategy.lower() in strat_line:
+            streak += 1
+        else:
+            break
+    return streak
+
+
+def dual_lock_queue_depth() -> int | None:
+    """Return dual-lock promotion queue depth, or None if tool unavailable."""
+    tool = REPO / "packages" / "hatchi-maxchi" / "tools" / "dual_lock_queue.py"
+    if not tool.is_file():
+        return None
+    import subprocess
+
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(tool), "--json"],
+            cwd=str(REPO),
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0 or not (proc.stdout or "").strip():
+        return None
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(data, list):
+        return len(data)
+    if isinstance(data, dict):
+        rows = data.get("rows") or data.get("queue") or data.get("items")
+        if isinstance(rows, list):
+            return len(rows)
+        if "depth" in data:
+            try:
+                return int(data["depth"])
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
 def qa_smoke_residual() -> tuple[int, str | None]:
     bar = REPO / "scripts" / "qa_smoke_bar.py"
     if not bar.is_file():
@@ -144,16 +210,67 @@ def qa_smoke_residual() -> tuple[int, str | None]:
     return len(residual), nxt
 
 
+def _entry_eligible(
+    ent: dict[str, Any],
+    *,
+    smoke_n: int,
+    dual_depth: int | None,
+    panel_streak: int,
+    max_consecutive_panels: int,
+) -> bool:
+    """Filter rotation entries that would be stamp-only under current signals."""
+    if ent.get("require_dual_lock_queue") and dual_depth is not None and dual_depth <= 0:
+        return False
+    if ent.get("require_smoke_residual") and smoke_n <= 0:
+        return False
+    if (
+        ent.get("is_panel")
+        and max_consecutive_panels > 0
+        and panel_streak >= max_consecutive_panels
+    ):
+        return False
+    return True
+
+
 def _pick_rotation(
     rotation: list[Any],
     *,
     cur: int,
     campaign_id: str,
+    camp: dict[str, Any] | None = None,
+    smoke_n: int = 0,
 ) -> dict[str, Any] | None:
-    """Pick least-recently-used strategy from campaign prefer_rotation list."""
-    entries = [r for r in rotation if isinstance(r, dict) and r.get("force_args")]
-    if not entries:
+    """Pick least-recently-used eligible strategy from campaign prefer_rotation."""
+    camp = camp or {}
+    dual_depth = dual_lock_queue_depth()
+    max_panels = int(camp.get("max_consecutive_panels") or 0)
+    panel_streak = recent_strategy_streak("agent_acceptance_panel") if max_panels else 0
+
+    raw = [r for r in rotation if isinstance(r, dict) and r.get("force_args")]
+    if not raw:
         return None
+
+    entries = [
+        e
+        for e in raw
+        if _entry_eligible(
+            e,
+            smoke_n=smoke_n,
+            dual_depth=dual_depth,
+            panel_streak=panel_streak,
+            max_consecutive_panels=max_panels,
+        )
+    ]
+    # If filters emptied the list (e.g. all gated), fall back to non-gated only.
+    if not entries:
+        entries = [
+            e
+            for e in raw
+            if not e.get("require_dual_lock_queue")
+            and not e.get("require_smoke_residual")
+            and not e.get("is_panel")
+        ] or raw
+
     best: dict[str, Any] | None = None
     best_last = 10**9
     for ent in entries:
@@ -161,24 +278,36 @@ def _pick_rotation(
         force = str(ent.get("force_args") or "")
         last = last_strategy_cycle(sid) if sid else None
         if last is None and force:
-            # Fall back to matching strategy token in force_args
             parts = force.split()
             if len(parts) >= 2:
                 last = last_strategy_cycle(parts[-1])
-        lag_key = last if last is not None else 0
+            elif parts:
+                last = last_strategy_cycle(parts[0])
         # Prefer never-run (None) then oldest last-run
-        score = lag_key if last is not None else -1
+        score = last if last is not None else -1
         if best is None or score < best_last:
             best = ent
             best_last = score
     if best is None:
-        # Stable fallback: rotate by cycle index
         best = entries[cur % len(entries)]
+
+    reason = f"campaign:{campaign_id} rotation={best.get('strategy') or best.get('force_args')}"
+    if dual_depth is not None and best.get("require_dual_lock_queue"):
+        reason += f" dual_queue={dual_depth}"
+    if (
+        panel_streak
+        and best.get("is_panel") is not True
+        and max_panels
+        and panel_streak >= max_panels
+    ):
+        reason += f" panel_streak_break={panel_streak}"
     return {
         "force_args": best.get("force_args"),
         "lane": best.get("lane"),
         "strategy": best.get("strategy"),
-        "reason": f"campaign:{campaign_id} rotation={best.get('strategy') or best.get('force_args')}",
+        "reason": reason,
+        "dual_lock_queue_depth": dual_depth,
+        "panel_streak": panel_streak,
     }
 
 
@@ -229,9 +358,17 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
         # Aggressive / multi-strategy campaigns: rotate high-leverage digs.
         rotation = camp.get("prefer_rotation") or []
         if rotation:
-            rot = _pick_rotation(rotation, cur=cur, campaign_id=str(active))
+            rot = _pick_rotation(
+                rotation,
+                cur=cur,
+                campaign_id=str(active),
+                camp=camp,
+                smoke_n=smoke_n,
+            )
             if rot:
                 decision.update(rot)
+                if camp.get("require_mutation"):
+                    decision["require_mutation"] = True
                 return decision
 
         # Legacy single-prefer campaigns (e.g. land-l25-smoke always digs smoke).
@@ -303,6 +440,12 @@ def format_status(policy: dict[str, Any] | None = None) -> str:
     ]
     if camp.get("suppress_recurring_smoke"):
         lines.append("suppress_recurring_smoke=1")
+    if camp.get("require_mutation") or d.get("require_mutation"):
+        lines.append("require_mutation=1")
+    if d.get("dual_lock_queue_depth") is not None:
+        lines.append(f"dual_lock_queue_depth={d.get('dual_lock_queue_depth')}")
+    if d.get("panel_streak"):
+        lines.append(f"panel_streak={d.get('panel_streak')}")
     return "\n".join(lines)
 
 
