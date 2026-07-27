@@ -87,6 +87,42 @@ class TestFrictionSchema:
         assert e["ownership"] == "harness"
         assert filter_auto_seed([e]) == []
 
+    def test_infer_recommend_harness_only_not_product_no(self) -> None:
+        """Synthesized 'don't switch' under pure console thrash → unclear (cycle 1338)."""
+        from dazzle.qa.trial_report import _infer_recommend
+
+        friction = [
+            {
+                "category": "other",
+                "severity": "medium",
+                "description": "Console storm on Team Overview",
+                "evidence": "htmx:error Failed to fetch and net::ERR_INSUFFICIENT_RESOURCES",
+                "ownership": "harness",
+            }
+        ]
+        assert (
+            _infer_recommend(
+                "Don't switch — console storms make me uneasy.",
+                friction=friction,
+            )
+            == "unclear"
+        )
+        assert (
+            _infer_recommend(
+                "Don't switch — create form is broken.",
+                friction=[
+                    {
+                        "category": "bug",
+                        "severity": "high",
+                        "description": "Create 500",
+                        "evidence": "POST /app/task → 500",
+                        "ownership": "product",
+                    }
+                ],
+            )
+            == "no"
+        )
+
 
 class TestInventory:
     def test_build_from_minimal_appspec(self) -> None:

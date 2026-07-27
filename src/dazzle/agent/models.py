@@ -167,6 +167,9 @@ class ActionResult:
     state_changed: bool | None = None
     # Cycle 197 — cognition foothold (action-linked console errors)
     console_errors_during_action: list[str] = field(default_factory=list)
+    # Total console errors this action (may exceed samples list length — thrash
+    # caps samples; count stays honest for history / storm detection).
+    console_error_count: int | None = None
 
     @property
     def ok(self) -> bool:

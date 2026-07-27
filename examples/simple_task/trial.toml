@@ -3,8 +3,12 @@
 [[scenario]]
 name = "agency_lead"
 login_persona = "manager"
-time_budget_seconds = 400
-max_steps = 30
+# Hub / Monday-review pilot budgets (qa-trial Rule 4b) — 30/400s burned out
+# with only 5 steps under journey+console storm (cycle 1332); deep panel needs
+# room for create/status recovery + criteria scoring.
+time_budget_seconds = 900
+max_steps = 55
+token_budget = 450000
 
 user_identity = """
 You are Maya, lead of a 5-person design agency. You've been running the

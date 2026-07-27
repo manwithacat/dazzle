@@ -127,10 +127,16 @@ class PlaywrightExecutor:
     CSS rendering, network interception).
     """
 
+    # Cap samples kept per action-window (team_overview HTMX thrash can emit
+    # 10k+ identical ERR_INSUFFICIENT_RESOURCES lines). Total count is tracked
+    # separately so history can still report the real storm size.
+    _CONSOLE_SAMPLE_CAP = 32
+
     def __init__(self, page: Any) -> None:
         self._page = page
         # Cycle 197 — console error buffer for action-window attribution
         self._console_errors_buffer: list[str] = []
+        self._console_error_total: int = 0
         page.on("console", self._on_console)
 
     def _on_console(self, msg: Any) -> None:
@@ -141,9 +147,26 @@ class PlaywrightExecutor:
         """
         try:
             if msg.type == "error":
-                self._console_errors_buffer.append(msg.text)
+                self._console_error_total += 1
+                buf = self._console_errors_buffer
+                if len(buf) < self._CONSOLE_SAMPLE_CAP:
+                    buf.append(msg.text)
+                else:
+                    # Ring: keep newest samples so action windows still have a
+                    # representative first error after early thrash fills the cap.
+                    buf.pop(0)
+                    buf.append(msg.text)
         except Exception:
             logger.debug("Malformed console message; skipping", exc_info=True)
+
+    def _console_window(self, count_before: int) -> tuple[list[str], int]:
+        """Return (capped samples, total count) for the action window."""
+        n = max(0, self._console_error_total - count_before)
+        if n <= 0:
+            return [], 0
+        # Samples are a rolling window of recent errors — take min(n, cap).
+        samples = list(self._console_errors_buffer[-min(n, self._CONSOLE_SAMPLE_CAP) :])
+        return samples, n
 
     def _resolve_locator(self, selector: str) -> Any:
         """Resolve a selector to a Playwright locator.
@@ -173,7 +196,7 @@ class PlaywrightExecutor:
         if capture_state:
             from_url = self._page.url
             from_hash = _dom_hash(await self._page.content())
-        console_before = len(self._console_errors_buffer)
+        console_count_before = self._console_error_total
 
         try:
             if action.type == ActionType.CLICK:
@@ -305,13 +328,15 @@ class PlaywrightExecutor:
 
         except Exception as e:
             # Error path: capture available state but leave state_changed=None
+            err_samples, err_n = self._console_window(console_count_before)
             return ActionResult(
                 message="",
                 error=str(e),
                 from_url=from_url,
                 to_url=self._page.url if capture_state else None,
                 state_changed=None,
-                console_errors_during_action=list(self._console_errors_buffer[console_before:]),
+                console_errors_during_action=err_samples,
+                console_error_count=err_n,
             )
 
         # Happy path: compute after state and populate the new fields
@@ -332,7 +357,9 @@ class PlaywrightExecutor:
                 base.state_changed = (from_url != to_url) or (from_hash != to_hash)
         # else: TOOL / DONE leave state fields at None defaults
 
-        base.console_errors_during_action = list(self._console_errors_buffer[console_before:])
+        samples, n_console = self._console_window(console_count_before)
+        base.console_errors_during_action = samples
+        base.console_error_count = n_console
         return base
 
 

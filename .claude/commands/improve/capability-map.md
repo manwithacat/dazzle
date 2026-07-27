@@ -53,13 +53,13 @@ apply map patches with `{"apply":true}`.
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1331 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1336 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1338 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1258 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1330 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | USED |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1330 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1330 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1336 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1338 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | USED |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1338 (2026-07-27).** **example-apps agent_acceptance_panel** simple_task agency_lead deep panel — live trial recommend synthesized **no** under harness-only ERR_INSUFFICIENT_RESOURCES; **framework:** `_infer_recommend` treats harness-only friction as **unclear** (not product residual); PlaywrightExecutor console sample cap. residual_total 1→0. Dig receipt PASS. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1338**. budget 1. Explore **10/100**.
 > **Cycle 1336 (2026-07-27).** **example-apps agent_acceptance_panel** contact_manager small_firm_owner re-panel (CI green 30289874476) — recommend=**unclear** synthesized (budget_exceeded/17 steps); same search false-positive (FTS live 3 results Adams). **Harness:** catch Playwright TimeoutError (not builtin); TYPE search settle forces state_changed=True + results panel titles in history. Dig receipt PASS. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1336**. budget 1. Explore **9/100**.
 > **Cycle 1334 (2026-07-27).** **example-apps agent_acceptance_panel** contact_manager small_firm_owner (aggressive-change) — live trial recommend=**no** synthesized (budget_exceeded/16 steps); friction high product search (false — FTS works; agent watched A–Z list) + low True/False favorite + praise detail hub. **Framework:** search_box placeholder prefers author title/empty; Playwright TYPE waits for search_box results panel. Dig receipt PASS. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1334**. budget 1. Explore **8/100**.
 > **Cycle 1333 (2026-07-27).** **example-apps agent_acceptance_panel** support_tickets manager_evaluation + **framework fix** grok-cli pure-text (`--tools ""` — `*` disallowed-tools was no-op; burned max_turns exploring repo). Live trial after fix: 10 steps / recommend=unclear / budget_exceeded; friction harness ERR_INSUFFICIENT_RESOURCES on manager_ops (ownership=harness; auto_seed=[]). Dig receipt PASS. densify_allowed=0. Stamped agent_acceptance/qa trial **USED@1333**. budget 1. Explore **7/100**.

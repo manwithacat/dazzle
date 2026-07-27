@@ -444,7 +444,7 @@ def trial_report_to_json(report: TrialReport) -> dict[str, Any]:
         "scenario": report.scenario_name,
         "identity_headline": report.user_identity_headline,
         "verdict": report.verdict,
-        "recommend": report.recommend or _infer_recommend(report.verdict),
+        "recommend": report.recommend or _infer_recommend(report.verdict, friction=friction),
         "criteria_scores": list(report.criteria_scores),
         "pilot_blockers_summary": report.pilot_blockers_summary,
         "friction": friction,
@@ -463,8 +463,20 @@ def trial_report_to_json(report: TrialReport) -> dict[str, Any]:
     }
 
 
-def _infer_recommend(verdict: str) -> str:
-    """Best-effort recommend when agent skipped submit_verdict fields."""
+def _infer_recommend(
+    verdict: str,
+    *,
+    friction: list[dict[str, Any]] | None = None,
+) -> str:
+    """Best-effort recommend when agent skipped submit_verdict fields.
+
+    When every recorded friction row is instrument/harness thrash (or there is
+    no product-owned signal), do **not** treat synthesized "don't switch"
+    prose as a product residual — that is an incomplete pilot under broken
+    instrumentation (simple_task team_overview ERR_INSUFFICIENT_RESOURCES,
+    cycles 1298–1338). Return ``unclear`` so trial_verdict residual tracks
+    real pilot rejection, not console storms.
+    """
     v = (verdict or "").lower()
     v = (
         v.replace("\u2019", "'")
@@ -474,6 +486,17 @@ def _infer_recommend(verdict: str) -> str:
     )
     if not v:
         return "unclear"
+
+    product_signal = False
+    if friction:
+        from dazzle.qa.trial_friction import apply_ownership_heuristics
+
+        for raw in friction:
+            e = apply_ownership_heuristics(raw if isinstance(raw, dict) else {})
+            if e.get("ownership") == "product":
+                product_signal = True
+                break
+
     if any(
         x in v
         for x in (
@@ -485,8 +508,12 @@ def _infer_recommend(verdict: str) -> str:
             "wouldn't switch",
         )
     ):
+        if friction is not None and not product_signal:
+            return "unclear"
         return "no"
     if "conditional" in v or "with fixes" in v or "minor fix" in v:
+        if friction is not None and not product_signal:
+            return "unclear"
         return "conditional"
     if any(x in v for x in ("would pilot", "would switch", "recommend this")):
         return "yes"

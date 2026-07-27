@@ -335,10 +335,18 @@ def _format_history_line(step: Step) -> str:
             _TOOL_RESULT_MAX_LEN if step.action.type.value == "tool" else _HISTORY_MSG_MAX_LEN
         )
         s += f" -> {r.message[:msg_limit]}"
-    if r.console_errors_during_action:
-        n = len(r.console_errors_during_action)
-        first = r.console_errors_during_action[0][:_HISTORY_MSG_MAX_LEN]
-        suffix = "s" if n > 1 else ""
+    if r.console_errors_during_action or (r.console_error_count or 0) > 0:
+        n = (
+            r.console_error_count
+            if r.console_error_count is not None
+            else len(r.console_errors_during_action)
+        )
+        first = (
+            r.console_errors_during_action[0][:_HISTORY_MSG_MAX_LEN]
+            if r.console_errors_during_action
+            else "…"
+        )
+        suffix = "s" if n != 1 else ""
         s += f" [+{n} console error{suffix}: {first}]"
     return s
 
