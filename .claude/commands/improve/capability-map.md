@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1342 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1342 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1344 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1344 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1344 (2026-07-27).** **self-audit** window 04929a71b..05f258649 — 5 CLEAN (c1342 #1640 api_fallback + tests, c1336/1338/1334 acceptance harness ships + dig receipts PASS, c1343 tree nest indent + coherence queue). 0 DISCREPANCY. densify_allowed=0 residual=0. CodeQL+inbox **USED@1344**. budget 0. Explore **12/100**. Next self-audit ~1359; aggressive rotation story_walk / acceptance.
 > **Cycle 1343 (2026-07-27).** **hm-convergence hyperpart_coherence** investigate+drain — recapture 92 hyperparts; host-Read batches 00–07 → coherent=92 mean=8.89; soft tree missing_content cleared (Platform/Design systems are Engineering children); **mutation** tree-children indent space-lg→xl + catalogue regen. gallery probes 6/6. queue=0. Stamped hyperpart coherence + gallery_probes **USED@1343**. budget 1. Explore **12/100**.
 > **Cycle 1342 (2026-07-27).** **framework-ux** (#1640 mutation, aggressive-change require_mutation=1) — `playwright_click` honours `api_fallback_status` via `actions_playwright` extract + `playwright_click_api_fallback` (GET already-at-target or PATCH/PUT durability). Unit tests for fallback paths; runner MI kept A. densify_allowed=0. Stamped dazzle test walk **USED@1342**. budget 1. Explore **11/100**.
 > **Cycle 1341 (2026-07-27).** **hm-convergence dual_lock_expand** — sole remaining queue stem `swap_identity` is lint/morph identity substrate (ADR-0054), not a Hyperpart; added to `DOM_ONLY_DEFERRED`. dual_lock **queue depth 0**; coverage deferred=2 (code, swap_identity). No WI densify. Stamped dual_lock_expand **USED@1341**. budget 0. Explore **10/100**.
