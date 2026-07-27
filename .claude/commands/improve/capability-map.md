@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1319 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1319 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1329 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1329 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1329 (2026-07-27).** **self-audit** window 8d47a9497..966179184 — 5 CLEAN (c1327 story_walk dig contract+live_green, c1328/1324/1317/1316 smoke dig reports match counts). 0 DISCREPANCY. densify_allowed=0 residual=0. CodeQL+inbox **USED@1329**. budget 0. Explore **3/100**. Next self-audit ~1344; prefer COGNITION domain/demo@1301 or hyperpart-opps@1281.
 > **Cycle 1328 (2026-07-27).** **example-apps agent_qa_smoke** (recurring due last@1324) — `dazzle qa smoke-dig --once` → **hr_records** hr_admin ok=36 fail=0 auto_seed=0; report qa-smoke-hr_admin-20260727-165834.json. residual_total=0 densify_allowed=0. CI tip 778ec48fb still in_progress. Stamped agent_qa_smoke/smoke-crawl/smoke-dig **USED@1328**. budget_consumed 1. Explore **3/100**. Next: self-audit ~1329.
 > **Cycle 1327 (2026-07-27).** **example-apps COGNITION dig** story_walk/test walk simple_task — residual=0 re-touch STALE@1278; map stems/story-driven-jobs.md+SPEC; validate 0 / dry-run 5/5 / **live 5/5** after reset-and-load created_count=12; mark-live all walks; densify_allowed=0. Stamped story_walk/test walk/reset-and-load **USED@1327**. budget_consumed 1. Explore **2/100**.
 > **Cycle 1319 (2026-07-26).** **capability-sweep** — UNOWNED=0 COGNITION_STALE_eff=7 HYGIENE_STALE_eff=20. Top COGNITION digs: story_walk / test walk (lag~39), hyperpart-opportunities (36); skip metered vision STALE (subscription substitute only). Top HYGIENE: discovery/compliance/sentinel/deploy plan. Grok workflows `improve-capability-sweep` available. budget_consumed 0. Explore **60/100**.
