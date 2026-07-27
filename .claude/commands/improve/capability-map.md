@@ -48,11 +48,11 @@ apply map patches with `{"apply":true}`.
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1330 | USED |
-| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1330 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1330 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1327 | USED |
-| MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1301 | USED |
-| MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1301 | USED |
+| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1331 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1331 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1331 | USED |
+| MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
+| MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1298 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1258 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1330 | USED |
@@ -63,7 +63,7 @@ apply map patches with `{"apply":true}`.
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | USED |
-| `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials | 1281 | USED |
+| `dazzle qa hyperpart-opportunities` | COGNITION | CLI (not on main — map debt; reports under examples/*/dev_docs only) | **example-apps** + trials | 1281 | STALE |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1327 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1327 | USED |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1301 | USED |
@@ -72,7 +72,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1304 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1304 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1259 | STALE |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1331 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1302 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1329 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1329 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1331 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1331 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1331 (2026-07-27).** **example-apps COGNITION dig** simple_task — validate OK; serve :9100; reset-and-load **created_count=12** persona_homes=0 live_desk=0; demo quality residual_total=0; MCP demo_world residual=0; db User×8 Task×10; hyperpart-opps CLI **absent on main** (map STALE/debt). densify_allowed=0 held. Stamped reset-and-load/demo_world/db/product_quality/demo quality/validate **USED@1331**. budget_consumed 1. Explore **5/100**.
 > **Cycle 1330 (2026-07-27).** **example-apps COGNITION dig** contact_manager — domain extract write AGENT_DOMAIN (personas=3 grounded_nouns=8 desks=3 ready_to_promote=True); gaps/promote OK; `demo quality` residual_total=0; hub serve :9103; reset-and-load **no demo_data** (binding OK, seed skip); densify_allowed=0 held. Stamped domain/product_quality/demo quality + maturity probes **USED@1330**. budget_consumed 1. Explore **4/100**.
 > **Cycle 1329 (2026-07-27).** **self-audit** window 8d47a9497..966179184 — 5 CLEAN (c1327 story_walk dig contract+live_green, c1328/1324/1317/1316 smoke dig reports match counts). 0 DISCREPANCY. densify_allowed=0 residual=0. CodeQL+inbox **USED@1329**. budget 0. Explore **3/100**. Next self-audit ~1344; prefer COGNITION domain/demo@1301 or hyperpart-opps@1281.
 > **Cycle 1328 (2026-07-27).** **example-apps agent_qa_smoke** (recurring due last@1324) — `dazzle qa smoke-dig --once` → **hr_records** hr_admin ok=36 fail=0 auto_seed=0; report qa-smoke-hr_admin-20260727-165834.json. residual_total=0 densify_allowed=0. CI tip 778ec48fb still in_progress. Stamped agent_qa_smoke/smoke-crawl/smoke-dig **USED@1328**. budget_consumed 1. Explore **3/100**. Next: self-audit ~1329.
