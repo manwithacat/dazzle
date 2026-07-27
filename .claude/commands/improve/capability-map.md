@@ -50,7 +50,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1301 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1301 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1301 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1301 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1327 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1301 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1301 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1298 | USED |
@@ -64,8 +64,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1324 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1324 | USED |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials | 1281 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1278 | STALE |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1278 | STALE |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1327 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1327 | USED |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1301 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1327 (2026-07-27).** **example-apps COGNITION dig** story_walk/test walk simple_task — residual=0 re-touch STALE@1278; map stems/story-driven-jobs.md+SPEC; validate 0 / dry-run 5/5 / **live 5/5** after reset-and-load created_count=12; mark-live all walks; densify_allowed=0. Stamped story_walk/test walk/reset-and-load **USED@1327**. budget_consumed 1. Explore **2/100**.
 > **Cycle 1319 (2026-07-26).** **capability-sweep** — UNOWNED=0 COGNITION_STALE_eff=7 HYGIENE_STALE_eff=20. Top COGNITION digs: story_walk / test walk (lag~39), hyperpart-opportunities (36); skip metered vision STALE (subscription substitute only). Top HYGIENE: discovery/compliance/sentinel/deploy plan. Grok workflows `improve-capability-sweep` available. budget_consumed 0. Explore **60/100**.
 
 > **Cycle 1318 (2026-07-26).** **example-apps agent_qa_smoke** — finished campaign rotation: light re-dig **fieldtest_hub** auto_seed=0 (23 ok / 5 fail; structure framework dup region ids only + rbac_expected). Report `examples/fieldtest_hub/dev_docs/qa-smoke-manager-20260726-161858.json`. Full showcase completed; **`--clear-campaign` land-l25-smoke**. Framework fix landed same day: omit bare `id=region-{name}` on card HTMX fragments. Stamped smoke USED@1318. budget_consumed 1. Explore **60/100**.
