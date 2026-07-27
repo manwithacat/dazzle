@@ -104,8 +104,15 @@ async def _search_box_results_summary(page: Any, results_sel: str) -> str:
             }""",
             results_sel,
         )
-    except Exception:
-        logger.debug("search_box results summary failed for %s", results_sel, exc_info=True)
+    except Exception as exc:
+        # Best-effort history enrichment only — never abort TYPE for a summary
+        # miss. warning (not debug) so swallow ratchet stays green (cycle 1337).
+        logger.warning(
+            "search_box results summary failed for %s: %s",
+            results_sel,
+            exc,
+            exc_info=True,
+        )
         return ""
     if not isinstance(summary, str):
         return ""

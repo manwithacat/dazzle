@@ -238,8 +238,17 @@ class TestStateCapture:
         assert result.state_changed is True
 
     async def test_type_swallows_playwright_timeout_error(self) -> None:
-        """Playwright TimeoutError is not builtin TimeoutError — must not abort TYPE."""
-        from playwright.async_api import TimeoutError as PlaywrightTimeoutError
+        """Playwright TimeoutError is not builtin TimeoutError — must not abort TYPE.
+
+        Unit CI has no ``playwright`` package; simulate its Error→Exception hierarchy
+        (not a subclass of builtin TimeoutError) and inject it into the settle tuple
+        the way production does when the optional dep is present.
+        """
+        import dazzle.agent.executor as ex_mod
+
+        # playwright._impl._errors.TimeoutError → Error → Exception (not TimeoutError)
+        class PlaywrightTimeoutError(Exception):
+            pass
 
         page = _make_mock_page(url="http://localhost/app", content="<html>x</html>")
         locator = MagicMock()
@@ -249,14 +258,24 @@ class TestStateCapture:
         page.wait_for_function = AsyncMock(side_effect=PlaywrightTimeoutError("settle"))
         page.wait_for_load_state = AsyncMock(side_effect=PlaywrightTimeoutError("idle"))
         page.content = AsyncMock(side_effect=["<html>before</html>", "<html>after</html>"])
-        executor = PlaywrightExecutor(page=page)
-        action = AgentAction(
-            type=ActionType.TYPE,
-            target="#dz-search-results-contact_search-input",
-            value="Adams",
+        prev = ex_mod._SETTLE_TIMEOUT_TYPES
+        ex_mod._SETTLE_TIMEOUT_TYPES = (
+            PlaywrightTimeoutError,
+            TimeoutError,
+            OSError,
+            RuntimeError,
         )
-        result = await executor.execute(action)
-        assert result.error is None  # timeouts swallowed; fill still succeeded
+        try:
+            executor = PlaywrightExecutor(page=page)
+            action = AgentAction(
+                type=ActionType.TYPE,
+                target="#dz-search-results-contact_search-input",
+                value="Adams",
+            )
+            result = await executor.execute(action)
+            assert result.error is None  # timeouts swallowed; fill still succeeded
+        finally:
+            ex_mod._SETTLE_TIMEOUT_TYPES = prev
 
 
 def test_search_box_results_selector_helper() -> None:
