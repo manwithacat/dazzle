@@ -62,6 +62,21 @@ class TestConsoleListener:
             "TypeError: x is undefined",
             "TypeError: x is undefined",
         ]
+        assert executor._console_error_total == 2
+
+    def test_console_error_sample_cap_keeps_honest_total(self) -> None:
+        """HTMX thrash must not grow unbounded sample lists (cycle 1338)."""
+        page = _make_mock_page()
+        executor = PlaywrightExecutor(page=page)
+        error_handler = page._listeners["console"][0]
+        n = PlaywrightExecutor._CONSOLE_SAMPLE_CAP + 40
+        for i in range(n):
+            error_handler(MagicMock(type="error", text=f"ERR_INSUFFICIENT_RESOURCES #{i}"))
+        assert len(executor._console_errors_buffer) == PlaywrightExecutor._CONSOLE_SAMPLE_CAP
+        assert executor._console_error_total == n
+        samples, total = executor._console_window(0)
+        assert total == n
+        assert len(samples) == PlaywrightExecutor._CONSOLE_SAMPLE_CAP
 
 
 def _dom_hash_of(html: str) -> str:

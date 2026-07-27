@@ -463,6 +463,48 @@ def trial_report_to_json(report: TrialReport) -> dict[str, Any]:
     }
 
 
+_NO_SWITCH_PHRASES = (
+    "don't switch",
+    "do not switch",
+    "cannot recommend",
+    "can't recommend",
+    "would not switch",
+    "wouldn't switch",
+)
+_YES_SWITCH_PHRASES = ("would pilot", "would switch", "recommend this")
+
+
+def _normalize_verdict_text(verdict: str) -> str:
+    v = (verdict or "").lower()
+    return (
+        v.replace("\u2019", "'")
+        .replace("\u2018", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+    )
+
+
+def _friction_has_product_signal(friction: list[dict[str, Any]] | None) -> bool:
+    """True when any ownership-normalized row is product-owned.
+
+    Callers (``trial_report_to_json``) must pass friction that already ran
+    through ``apply_ownership_heuristics`` so harness thrash is not counted
+    as product residual.
+    """
+    if not friction:
+        return False
+    for raw in friction:
+        row = raw if isinstance(raw, dict) else {}
+        if row.get("ownership") == "product":
+            return True
+    return False
+
+
+def _harness_only_downgrade(friction: list[dict[str, Any]] | None, *, product_signal: bool) -> bool:
+    """Downgrade inferred no/conditional when friction is harness-only thrash."""
+    return friction is not None and not product_signal
+
+
 def _infer_recommend(
     verdict: str,
     *,
@@ -476,45 +518,23 @@ def _infer_recommend(
     instrumentation (simple_task team_overview ERR_INSUFFICIENT_RESOURCES,
     cycles 1298–1338). Return ``unclear`` so trial_verdict residual tracks
     real pilot rejection, not console storms.
+
+    ``friction`` should already be ownership-normalized (see
+    ``trial_report_to_json``); this helper does not re-import heuristics.
     """
-    v = (verdict or "").lower()
-    v = (
-        v.replace("\u2019", "'")
-        .replace("\u2018", "'")
-        .replace("\u201c", '"')
-        .replace("\u201d", '"')
-    )
+    v = _normalize_verdict_text(verdict)
     if not v:
         return "unclear"
 
-    product_signal = False
-    if friction:
-        from dazzle.qa.trial_friction import apply_ownership_heuristics
-
-        for raw in friction:
-            e = apply_ownership_heuristics(raw if isinstance(raw, dict) else {})
-            if e.get("ownership") == "product":
-                product_signal = True
-                break
-
-    if any(
-        x in v
-        for x in (
-            "don't switch",
-            "do not switch",
-            "cannot recommend",
-            "can't recommend",
-            "would not switch",
-            "wouldn't switch",
-        )
-    ):
-        if friction is not None and not product_signal:
+    product_signal = _friction_has_product_signal(friction)
+    if any(x in v for x in _NO_SWITCH_PHRASES):
+        if _harness_only_downgrade(friction, product_signal=product_signal):
             return "unclear"
         return "no"
     if "conditional" in v or "with fixes" in v or "minor fix" in v:
-        if friction is not None and not product_signal:
+        if _harness_only_downgrade(friction, product_signal=product_signal):
             return "unclear"
         return "conditional"
-    if any(x in v for x in ("would pilot", "would switch", "recommend this")):
+    if any(x in v for x in _YES_SWITCH_PHRASES):
         return "yes"
     return "unclear"

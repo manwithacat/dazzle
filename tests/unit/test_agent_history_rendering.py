@@ -110,6 +110,23 @@ class TestFormatHistoryLine:
         assert "[+1 console error:" in line
         assert "errors" not in line  # singular form
 
+    def test_console_error_count_outranks_sample_len(self) -> None:
+        """Storm totals report real n when samples are capped (cycle 1338)."""
+        step = _make_step(
+            7,
+            ActionType.CLICK,
+            target="button.status",
+            result_kwargs={
+                "from_url": "/a",
+                "to_url": "/a",
+                "state_changed": False,
+                "console_errors_during_action": ["ERR_INSUFFICIENT_RESOURCES"],
+                "console_error_count": 15470,
+            },
+        )
+        line = _format_history_line(step)
+        assert "[+15470 console errors:" in line
+
     def test_error_path_shows_error_not_state(self) -> None:
         step = _make_step(
             8,
