@@ -174,11 +174,27 @@ class _BuildersMiscMixin:
         title = _region_title(region)
         source_entity = str(ctx.get("source_entity") or "")
         name = str(ctx.get("name") or getattr(region, "name", "") or "searchbox")
-        placeholder = str(ctx.get("placeholder") or "Search…")
         # Prefer explicit coaching_message; else region empty: copy (DSL empty
         # on search_box is pilot coaching — cycle 1280 contact_manager).
         empty_msg = getattr(region, "empty_message", None) or ctx.get("empty_message")
         coaching = str(ctx.get("coaching_message") or empty_msg or "Type to search")
+        # Placeholder is the only visible input chrome (label is
+        # visually-hidden). Prefer explicit placeholder → *author*
+        # region.title (not auto-derived name titles) → short empty:
+        # coaching. Bare "Search…" is a last resort — pilots and panel
+        # agents otherwise watch the A–Z list and report "search broken"
+        # when FTS results land in the results panel (cycle 1332).
+        explicit_ph = str(ctx.get("placeholder") or "").strip()
+        author_title = getattr(region, "title", None)
+        if explicit_ph:
+            placeholder = explicit_ph
+        elif author_title and str(author_title).strip():
+            placeholder = str(author_title).strip()
+        elif empty_msg:
+            clause = str(empty_msg).split(".")[0].strip()
+            placeholder = clause[:72] if clause else "Type to search"
+        else:
+            placeholder = "Search…"
         label = str(ctx.get("label") or title or placeholder)
 
         if source_entity:

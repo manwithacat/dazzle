@@ -194,6 +194,7 @@ class TestStateCapture:
         page.locator = MagicMock(return_value=locator)
         page.wait_for_timeout = AsyncMock()
         page.wait_for_load_state = AsyncMock()
+        page.wait_for_function = AsyncMock()
         # After fill+settle, DOM reflects FTS results panel
         page.content = AsyncMock(side_effect=["<html>before</html>", "<html>after results</html>"])
         executor = PlaywrightExecutor(page=page)
@@ -205,5 +206,17 @@ class TestStateCapture:
         result = await executor.execute(action)
         assert result.error is None
         page.wait_for_timeout.assert_awaited()
+        page.wait_for_function.assert_awaited()
         page.wait_for_load_state.assert_awaited()
         assert result.state_changed is True
+
+
+def test_search_box_results_selector_helper() -> None:
+    from dazzle.agent.executor import _search_box_results_selector
+
+    assert (
+        _search_box_results_selector("#dz-search-results-contact_search-input")
+        == "#dz-search-results-contact_search"
+    )
+    assert _search_box_results_selector("button.submit") is None
+    assert _search_box_results_selector("#other-input") is None

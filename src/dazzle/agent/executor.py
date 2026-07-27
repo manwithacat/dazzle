@@ -42,6 +42,23 @@ def _dom_hash(html: str) -> str:
     return hashlib.sha256(html.encode("utf-8")).hexdigest()[:16]
 
 
+def _search_box_results_selector(target: str) -> str | None:
+    """Map a search_box input selector to its results panel id.
+
+    Inputs are ``#dz-search-results-<name>-input``; results live in
+    ``#dz-search-results-<name>``. Returns None for non-search targets.
+    """
+    sel = (target or "").strip()
+    if sel.startswith("#"):
+        sel = sel[1:]
+    # CSS id only — reject compound selectors
+    if not sel or " " in sel or ">" in sel or "[" in sel:
+        return None
+    if sel.startswith("dz-search-results-") and sel.endswith("-input"):
+        return f"#{sel[: -len('-input')]}"
+    return None
+
+
 class PlaywrightExecutor:
     """
     Execute actions via Playwright page interactions.
@@ -116,8 +133,37 @@ class PlaywrightExecutor:
                 # fill() dispatches input but without a settle wait the agent
                 # snapshots "NO state change" before results swap — false
                 # search-broken friction in qa trial (contact_manager panel).
+                # Prefer waiting on the results panel when the target is a
+                # search_box input: networkidle often never settles under
+                # SSE/lazy regions, so a fixed 400ms race still mis-scores
+                # working FTS as broken (cycle 1332 panel).
                 try:
-                    await self._page.wait_for_timeout(400)
+                    target_sel = action.target or ""
+                    results_sel = _search_box_results_selector(target_sel)
+                    if results_sel:
+                        await self._page.wait_for_timeout(300)  # HTMX debounce
+                        try:
+                            await self._page.wait_for_function(
+                                """(sel) => {
+                                    const el = document.querySelector(sel);
+                                    if (!el) return false;
+                                    return !!el.querySelector(
+                                      '.dz-search-box-result-count,'
+                                      + ' .dz-search-box-result-list,'
+                                      + ' .dz-search-box-empty--no-results'
+                                    );
+                                }""",
+                                arg=results_sel,
+                                timeout=5000,
+                            )
+                        except (TimeoutError, OSError, RuntimeError):
+                            logger.debug(
+                                "search_box results settle timeout for %s",
+                                target_sel,
+                                exc_info=True,
+                            )
+                    else:
+                        await self._page.wait_for_timeout(400)
                     await self._page.wait_for_load_state("networkidle", timeout=5000)
                 except (TimeoutError, OSError, RuntimeError):
                     # Narrow types keep the swallow ratchet green; Playwright

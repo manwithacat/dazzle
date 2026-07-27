@@ -1325,6 +1325,34 @@ def test_search_box_default_coaching_message() -> None:
     assert "Type to search" in _render(fragment)
 
 
+def test_search_box_placeholder_uses_author_title() -> None:
+    """Visible input chrome should surface author title (results-panel
+    coaching) so pilots do not treat FTS as a silent list filter."""
+    adapter = WorkspaceRegionAdapter()
+    region = _FakeRegion(
+        "contact_search",
+        display="search_box",
+        title="Find a contact — results appear below",
+        empty_message="Results appear below as you type. The A–Z list is not filtered.",
+    )
+    html = _render(
+        adapter.build(region, {"source_entity": "Contact"}),
+    )
+    assert 'placeholder="Find a contact — results appear below"' in html
+    assert "Results appear below as you type" in html
+
+
+def test_search_box_placeholder_falls_back_to_empty_clause() -> None:
+    adapter = WorkspaceRegionAdapter()
+    region = _FakeRegion(
+        "find_contact",
+        display="search_box",
+        empty_message="Results appear below as you type (name, company, or email).",
+    )
+    html = _render(adapter.build(region, {"source_entity": "Contact"}))
+    assert 'placeholder="Results appear below as you type (name, company, or email)"' in html
+
+
 def test_search_box_results_div_uses_unique_dom_id_per_region() -> None:
     """Multiple SearchBoxes on one page must have distinct results
     panels. The panel id is derived from the `name` ctx key (or the
