@@ -144,6 +144,44 @@ def qa_smoke_residual() -> tuple[int, str | None]:
     return len(residual), nxt
 
 
+def _pick_rotation(
+    rotation: list[Any],
+    *,
+    cur: int,
+    campaign_id: str,
+) -> dict[str, Any] | None:
+    """Pick least-recently-used strategy from campaign prefer_rotation list."""
+    entries = [r for r in rotation if isinstance(r, dict) and r.get("force_args")]
+    if not entries:
+        return None
+    best: dict[str, Any] | None = None
+    best_last = 10**9
+    for ent in entries:
+        sid = str(ent.get("strategy") or ent.get("id") or "")
+        force = str(ent.get("force_args") or "")
+        last = last_strategy_cycle(sid) if sid else None
+        if last is None and force:
+            # Fall back to matching strategy token in force_args
+            parts = force.split()
+            if len(parts) >= 2:
+                last = last_strategy_cycle(parts[-1])
+        lag_key = last if last is not None else 0
+        # Prefer never-run (None) then oldest last-run
+        score = lag_key if last is not None else -1
+        if best is None or score < best_last:
+            best = ent
+            best_last = score
+    if best is None:
+        # Stable fallback: rotate by cycle index
+        best = entries[cur % len(entries)]
+    return {
+        "force_args": best.get("force_args"),
+        "lane": best.get("lane"),
+        "strategy": best.get("strategy"),
+        "reason": f"campaign:{campaign_id} rotation={best.get('strategy') or best.get('force_args')}",
+    }
+
+
 def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
     """Return recommended lane/strategy force for this cycle (policy layer only)."""
     policy = policy or load_policy()
@@ -160,30 +198,59 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
         "lane": None,
         "strategy": None,
         "reason": "steady_state_default",
+        "posture": None,
     }
 
     campaigns = policy.get("campaigns") or {}
     if active and active in campaigns:
         camp = campaigns[active] or {}
+        decision["posture"] = camp.get("posture")
         prefer = camp.get("prefer") or {}
-        # Boost: non-empty smoke residual always forces smoke dig under campaign.
-        if smoke_n > 0 or camp.get("boost_probe") == "qa_smoke":
+        boost = camp.get("boost_probe")
+
+        # Smoke residual always wins when present (gross bugs).
+        if smoke_n > 0:
+            decision.update(
+                {
+                    "force_args": prefer.get("force_args")
+                    if boost == "qa_smoke"
+                    else "example-apps agent_qa_smoke",
+                    "lane": "example-apps",
+                    "strategy": "agent_qa_smoke",
+                    "reason": f"campaign:{active} smoke_residual={smoke_n} next={smoke_next}",
+                }
+            )
+            if boost == "qa_smoke" and prefer.get("force_args"):
+                decision["force_args"] = prefer.get("force_args")
+                decision["lane"] = prefer.get("lane") or "example-apps"
+                decision["strategy"] = prefer.get("strategy") or "agent_qa_smoke"
+            return decision
+
+        # Aggressive / multi-strategy campaigns: rotate high-leverage digs.
+        rotation = camp.get("prefer_rotation") or []
+        if rotation:
+            rot = _pick_rotation(rotation, cur=cur, campaign_id=str(active))
+            if rot:
+                decision.update(rot)
+                return decision
+
+        # Legacy single-prefer campaigns (e.g. land-l25-smoke always digs smoke).
+        if boost == "qa_smoke" or prefer.get("force_args"):
             decision.update(
                 {
                     "force_args": prefer.get("force_args") or "example-apps agent_qa_smoke",
                     "lane": prefer.get("lane") or "example-apps",
                     "strategy": prefer.get("strategy") or "agent_qa_smoke",
-                    "reason": f"campaign:{active}"
-                    + (
-                        f" smoke_residual={smoke_n} next={smoke_next}"
-                        if smoke_n
-                        else " dig_exercise"
-                    ),
+                    "reason": f"campaign:{active} dig_exercise",
                 }
             )
             return decision
 
     # Recurring L2.5 when residual clear of campaign
+    suppress_smoke = False
+    if active and active in campaigns:
+        suppress_smoke = bool((campaigns.get(active) or {}).get("suppress_recurring_smoke"))
+
     recurring = (policy.get("steady_state") or {}).get("recurring") or []
     for rec in recurring:
         if not isinstance(rec, dict):
@@ -192,6 +259,9 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
         if every <= 0:
             continue
         sid = str(rec.get("id") or rec.get("strategy") or "")
+        if suppress_smoke and sid in ("agent_qa_smoke", "agent_qa_smoke".replace("_", "-")):
+            # Aggressive campaigns still honor non-empty smoke residual above.
+            continue
         last = last_strategy_cycle(sid) or last_strategy_cycle(str(rec.get("strategy") or ""))
         due = last is None or (cur and (cur - last) >= every)
         if due or smoke_n > 0:
@@ -224,11 +294,15 @@ def pick(policy: dict[str, Any] | None = None) -> dict[str, Any]:
 def format_status(policy: dict[str, Any] | None = None) -> str:
     policy = policy or load_policy()
     d = pick(policy)
+    camp = (policy.get("campaigns") or {}).get(policy.get("active_campaign") or "") or {}
     lines = [
         f"improve_policy active_campaign={policy.get('active_campaign') or '-'}",
+        f"posture={d.get('posture') or camp.get('posture') or 'steady'}",
         f"pick force={d.get('force_args') or '-'} reason={d.get('reason')}",
         f"qa_smoke residual={d.get('qa_smoke_residual')} next={d.get('qa_smoke_next') or '-'}",
     ]
+    if camp.get("suppress_recurring_smoke"):
+        lines.append("suppress_recurring_smoke=1")
     return "\n".join(lines)
 
 
@@ -243,8 +317,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.activate:
         pol = load_policy()
-        if args.activate not in (pol.get("campaigns") or {}) and args.activate != "land-l25-smoke":
+        known = set(pol.get("campaigns") or {}) | {"land-l25-smoke", "aggressive-change"}
+        if args.activate not in known:
             print(f"unknown campaign: {args.activate}", file=sys.stderr)
+            print(f"known: {sorted(known)}", file=sys.stderr)
             return 2
         save_active_campaign(args.activate)
         print(f"active_campaign={args.activate}")

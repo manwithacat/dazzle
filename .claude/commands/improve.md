@@ -239,6 +239,20 @@ fresh signal bias still listed below may reorder — campaign `yield_to` only
 skips for CI/CodeQL/inbox/REGRESSION/self-audit). Near-term campaign
 `land-l25-smoke` forces dig exercise on examples (gross bugs: 404 / empty main).
 
+**Aggressive posture** (operator): activate `aggressive-change` when residual is
+clear but the loop is stamp-thrashing smoke/map digs. Policy rotates
+`agent_acceptance_panel` → `story_walk` → `hm-convergence dual_lock_expand` →
+`gallery_probes` → (occasional deep) `agent_qa_smoke`. Suppresses sparse
+recurring smoke; still yields to red CI / CodeQL / REGRESSION / inbox. Does
+**not** bypass `densify_allowed=0` (WI clone desks stay banned — aggression is
+depth, not sprawl).
+
+```bash
+python scripts/improve_policy.py --activate aggressive-change
+python scripts/improve_policy.py --status   # posture=aggressive + next force
+python scripts/improve_policy.py --clear-campaign   # back to steady_state
+```
+
 Playbook: `improve/strategies/agent_qa_smoke.md`. Residual bar:
 `python scripts/qa_smoke_bar.py --status`.
 

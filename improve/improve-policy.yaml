@@ -6,14 +6,16 @@
 #
 # Toggle campaign:
 #   python scripts/improve_policy.py --activate land-l25-smoke
+#   python scripts/improve_policy.py --activate aggressive-change
 #   python scripts/improve_policy.py --clear-campaign
 #   python scripts/improve_policy.py --status
 
 version: 1
 
 # Active campaign id, or null / omitted for pure steady_state.
-# Near-term: dig exercising examples for gross bugs (404 / empty main).
-active_campaign: null
+# Operator 2026-07-27: aggressive-change — deeper digs / real mutations, not stamp thrash.
+active_campaign: aggressive-change
+
 steady_state:
   # After hard preemption (CI / CodeQL / REGRESSION / inbox), prefer in order:
   selection_order:
@@ -29,18 +31,20 @@ steady_state:
     - explore_ordinary        # densify only if densify_allowed=1
 
   recurring:
-    # Mechanical L2.5 smoke dig — not residual-gated. Every N cycles when
-    # residual is clear, force agent_qa_smoke so digs don't starve under
-    # hygiene STALE re-stamps.
+    # Mechanical L2.5 smoke dig — not residual-gated. Kept sparse so deep digs
+    # and acceptance panels are not starved by map-stamp thrash.
     - id: agent_qa_smoke
-      every_n_cycles: 3
+      every_n_cycles: 8
       lane: example-apps
       strategy: agent_qa_smoke
       force_args: "example-apps agent_qa_smoke"
       note: "L2.5 smoke-dig fleet rotation (404 / empty main / structure)"
 
   densify:
-    hard_stop_when_floor: true   # densify_allowed=0 → never WI densify
+    # #1637 hard floor still applies when densify_allowed=0 (wi_fleet ≤ 0.25).
+    # Aggressive campaigns do NOT bypass WI clone-desk ban — they dig deeper
+    # elsewhere (acceptance, dual-lock, story_walk, framework-ux).
+    hard_stop_when_floor: true
 
 campaigns:
   land-l25-smoke:
@@ -53,19 +57,68 @@ campaigns:
       lane: example-apps
       strategy: agent_qa_smoke
       force_args: "example-apps agent_qa_smoke"
-    # Still yield to hard preemption (CI red, CodeQL, REGRESSION, inbox).
     yield_to:
       - regression
       - ci_repair
       - codeql
       - github_inbox
       - self_audit_cadence
-    # While campaign active, probe residual for product_maturity still
-    # wins only when critical; otherwise campaign dig runs.
     preempt_probe_residual: false
-    # Prefer smoke residual over generic product residual when both set.
     boost_probe: qa_smoke
     max_cycles: 40
     notes: >
       Near-term priority: dig exercising examples. Success = finding gross
       bugs (404s). Subtler bugs welcome. Do not densify.
+
+  # Operator posture: more aggressive mutation (2026-07-27).
+  # Prefer digs that change product/framework over clean re-stamps.
+  aggressive-change:
+    title: "Aggressive digs — real mutations over stamp thrash"
+    posture: aggressive
+    success_criteria:
+      - "Cycles prefer deep digs (acceptance / dual-lock / story_walk / framework) over map-only stamps"
+      - "When smoke finds structure/fail>0, next cycles fix product or framework"
+      - "agent_acceptance_panel or dual_lock_expand runs at least every few cycles"
+      - "No isomorphic *_ops densify while densify_allowed=0 (#1637)"
+    # Primary pick when residual is clear (rotation overrides when set).
+    prefer:
+      lane: example-apps
+      strategy: agent_acceptance_panel
+      force_args: "example-apps agent_acceptance_panel"
+    # Round-robin among high-leverage strategies (policy pick uses least-recent).
+    prefer_rotation:
+      - force_args: "example-apps agent_acceptance_panel"
+        lane: example-apps
+        strategy: agent_acceptance_panel
+        note: "Live trial + auto_seed product friction"
+      - force_args: "example-apps story_walk"
+        lane: example-apps
+        strategy: story_walk
+        note: "Live walk contracts; fix failing walks"
+      - force_args: "hm-convergence dual_lock_expand"
+        lane: hm-convergence
+        strategy: dual_lock_expand
+        note: "Promote dual-lock queue heads"
+      - force_args: "hm-convergence gallery_probes"
+        lane: hm-convergence
+        strategy: gallery_probes
+        note: "Gallery probe residual / visual truth"
+      - force_args: "example-apps agent_qa_smoke"
+        lane: example-apps
+        strategy: agent_qa_smoke
+        note: "Deep smoke dig — fix auto_seed/structure, not stamp-only"
+    yield_to:
+      - regression
+      - ci_repair
+      - codeql
+      - github_inbox
+      # Self-audit still runs on cadence from driver Step 1; not forced every pick.
+    suppress_recurring_smoke: true
+    # Only force smoke when residual non-empty (do not always dig smoke).
+    boost_probe: null
+    max_cycles: 80
+    notes: >
+      Operator asked for more aggressive change. Prefer acceptance panels and
+      dual-lock/story digs that mutate code or seed PENDING. Still yield to
+      red CI / CodeQL / REGRESSION / inbox. densify_allowed=0 remains hard stop
+      for warehouse desk clones — aggression is depth, not sprawl.
