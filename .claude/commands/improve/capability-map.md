@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1344 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1344 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1359 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1359 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1359 (2026-07-27).** **self-audit** window 5d93f8f48..21f6be711 — 5+ CLEAN (c1349 #1426 uuid link match, c1350 role poison + people_desk, c1345 ref_route /app, c1353 list-without-read #303, c1355 task-inbox CSS; dig contracts 1347/1348/1352 PASS). 0 DISCREPANCY. densify_allowed=0 residual=0. CodeQL+inbox **USED@1359**. budget 0. Explore **20/100**. Next self-audit ~1374; capability-sweep due ~1360 (last@1340); aggressive → journey_dogfood product dig (residual=0 → real mutation or PENDING).
 > **Cycle 1353 (2026-07-27).** **framework-ux** (#303 list-without-read validator + repository.read soft-skip ValidationError parity with list). Aggressive require_mutation=1. densify_allowed=0. Stamped dazzle validate/rbac **USED@1353**. budget 1. Explore **19/100**.
 > **Cycle 1350 (2026-07-27).** **example-apps agent_acceptance_panel** project_tracker — dig found people_desk empty from invalid `User.role=user` poison; **framework** enum coerce + list soft-skip + test auth role resolve; **product** roster `action:user_detail`; trial ST-005 scenario. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1350**. budget 1. Explore **17/100**.
 >
