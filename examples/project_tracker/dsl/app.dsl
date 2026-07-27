@@ -198,15 +198,14 @@ entity Task "Task":
     delete: role(admin) or role(manager)
 
   scope:
+    # Shared board + teammate hubs (ST-005) need list/read across assignees.
+    # Member-only assigned_to scope emptied "Task · assigned to" on peer hubs
+    # and 404'd kanban drills into teammates' cards (cycle 1350 acceptance).
     list: all
-      as: admin, manager
-    list: assigned_to = current_user
-      as: member
+      as: admin, manager, member
     # Queue drills + detail surfaces need READ (list-only scope → detail 404).
     read: all
-      as: admin, manager
-    read: assigned_to = current_user
-      as: member
+      as: admin, manager, member
     create: all
       as: admin, manager, member
     update: all
