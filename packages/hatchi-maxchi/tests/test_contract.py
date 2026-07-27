@@ -96,15 +96,9 @@ SEMANTIC_ONLY = {
     # region — pure structure, its children (count/list/rows) carry the
     # styling.
     "dz-search-box-results",
-    # task-inbox item skeleton: rule-less in Dazzle too (the dashboard's
-    # plain list); the icon is the only styled piece. Follow-up candidate.
-    "dz-task-inbox-items",
-    # (dz-task-inbox-item itself matches via the styled -item-icon substring)
-    "dz-task-inbox-item-link",
-    "dz-task-inbox-item-body",
-    "dz-task-inbox-item-title",
-    "dz-task-inbox-item-meta",
-    "dz-task-inbox-empty",
+    # task-inbox item skeleton (items/link/body/title/meta/empty) gained
+    # rules in cycle 1355 coherence drain (list-style + flex row/urgency
+    # tones) — removed from SEMANTIC_ONLY when styles landed.
 }
 
 
