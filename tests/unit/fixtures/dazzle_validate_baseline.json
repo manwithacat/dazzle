@@ -71,7 +71,7 @@
     },
     "fixtures/rbac_validation": {
       "expected_errors": 0,
-      "expected_warnings_min": 76
+      "expected_warnings_min": 92
     },
     "fixtures/shapes_validation": {
       "expected_errors": 0,

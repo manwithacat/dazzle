@@ -41,6 +41,9 @@ entity Task "Task":
   scope:
     list: all
       as: *
+    # Pair read with list so gated_read / detail hubs work (#303)
+    read: all
+      as: *
 
   fitness:
     repr_fields: [title, status]
