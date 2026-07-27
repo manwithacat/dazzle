@@ -50,7 +50,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1330 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1331 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1331 | USED |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1345 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1348 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | USED |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1338 | USED |
@@ -64,9 +64,9 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | USED |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI (not on main — map debt; reports under examples/*/dev_docs only) | **example-apps** + trials | 1332 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1347 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1347 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1345 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1348 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1348 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1348 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
@@ -121,6 +121,8 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1348 (2026-07-27).** **example-apps story_walk** project_tracker ST-005 — `member_st_005` land my_tasks + hop `/app/user/{Ken}` live 2/2 PASS after reset-and-load 22; dig receipt story_walk; residual_total 1→0. densify_allowed=0. Stamped story_walk/test walk/process_dig/reset-and-load **USED@1348**. budget 1. Explore **15/100**.
+>
 > **Cycle 1347 (2026-07-27).** **example-apps** PENDING#303 project_tracker user_detail + scope:read; assignee hop live PASS. journey residual=0 claimed seed. budget 1. Explore **14/100**.
 >
 > **Cycle 1345 (2026-07-27).** **example-apps story_walk** project_tracker — framework `ref_route` API plural→`/app` detail_path; 4 walks multi-scene live PASS; PENDING user_detail 404. densify_allowed=0. Stamped story_walk/test walk/process_dig/reset-and-load **USED@1345**. budget 1. Explore **13/100**.

@@ -1,0 +1,41 @@
+# Story walk ST-005 — Member follows an assignee hop to a teammate hub
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-005 then:
+#   - Teammate hub shows identity, role strip, assigned work, and owned projects
+#   - No 404 on assignee context hop from kanban/queue
+# Cycle 1348: cover missing landing after user_detail + scope:read (#303).
+
+persona: member
+home_workspace: my_tasks
+
+scenes:
+  - id: land_st_005
+    story: ST-005
+    entry: /app/workspaces/my_tasks
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Task
+          - Assigned
+          - Project
+          - Board
+          - Status
+    expects: "Authenticated member sees kanban/queue path for assignee context hops"
+
+  - id: hop_teammate_user_hub
+    story: ST-005
+    entry: /app/user/a1000000-0000-4000-8000-000000000002
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Ken Manager
+          - Role
+          - Assigned
+          - Project
+          - manager
+    expects: "Assignee hop lands Team Member Overview with identity, role strip, and related work (no 404)"
