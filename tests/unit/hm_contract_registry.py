@@ -749,6 +749,15 @@ DOM_ONLY_DEFERRED: list[tuple[str, str]] = [
     # "HM gallery + agent-pack snippets". Promote to DOM_ONLY_CONTRACTS only
     # when Dazzle gains a stable fenced-code emitter (not invent a fixture).
     ("contracts/code.py", "gallery/docs highlighter only — no FragmentRenderer emit"),
+    # Lint / morph identity substrate (ADR-0054, HM decision 0012) — not a
+    # Hyperpart. Nested-region + sole-id rules enforced by template_lint and
+    # packages/hatchi-maxchi/tests/test_swap_identity.py. Dual-lock N/A until
+    # there is a sole FragmentRenderer emission path dedicated to this stem
+    # (there is not: root is every [data-dz-region]).
+    (
+        "contracts/swap_identity.py",
+        "lint/morph identity substrate — no Hyperpart emit (cycle 1341 dual_lock drain)",
+    ),
 ]
 
 
