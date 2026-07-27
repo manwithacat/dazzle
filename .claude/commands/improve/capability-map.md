@@ -63,20 +63,20 @@ apply map patches with `{"apply":true}`.
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | USED |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | USED |
-| `dazzle qa hyperpart-opportunities` | COGNITION | CLI (not on main — map debt; reports under examples/*/dev_docs only) | **example-apps** + trials | 1332 | STALE |
+| `dazzle qa hyperpart-opportunities` | COGNITION | CLI (not on main — map debt; reports under examples/*/dev_docs only) | **example-apps** + trials | 1332 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1327 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1327 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1301 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1301 | STALE |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1304 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1304 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1304 | STALE |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1304 | STALE |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1331 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1302 | USED |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1302 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1304 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1304 | STALE |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -85,22 +85,22 @@ apply map patches with `{"apply":true}`.
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1230 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
-| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | USED |
-| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | USED |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1306 | USED |
+| `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
+| `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1306 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1303 | USED |
-| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1304 | USED |
-| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1304 | USED |
-| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1304 | USED |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1303 | STALE |
+| `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1304 | STALE |
+| `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1304 | STALE |
+| **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1304 | STALE |
 | `dazzle sweep` / `nightly` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `dazzle rbac` | HYGIENE | CLI | framework-ux | 1235 | STALE |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
-| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | USED |
-| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | USED |
+| `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | STALE |
+| `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
 | `dazzle compliance` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | MCP `policy` | HYGIENE | MCP | framework-ux | 1235 | STALE |
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1235 | STALE |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1332 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1332 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1340 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1340 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1340 (2026-07-27).** **capability-sweep** (cadence ≥20 since 1319) — inventory reconcile vs tip `6abed823b`. **UNOWNED=0** **COGNITION_STALE_eff=6** (3 metered vision → free substitutes only; `qa-trial` skill lag82; process_dig lag39; hyperpart coherence lag36) **HYGIENE_STALE_eff=30** (discovery/compliance lag124; sentinel mutate/sweep 111; deploy/rhythm/story/coverage/scaffold ~110). Map: flipped lag≥20 USED→STALE and lag<20 STALE→USED; DRIVER CodeQL+inbox **USED@1340**. Next digs: dual_lock_expand (policy+lag36) or process_dig receipt exercise / hyperpart coherence; do **not** densify (densify_allowed=0). budget 0. Explore **10/100**.
 > **Cycle 1338 (2026-07-27).** **example-apps agent_acceptance_panel** simple_task agency_lead deep panel — live trial recommend synthesized **no** under harness-only ERR_INSUFFICIENT_RESOURCES; **framework:** `_infer_recommend` treats harness-only friction as **unclear** (not product residual); PlaywrightExecutor console sample cap. residual_total 1→0. Dig receipt PASS. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1338**. budget 1. Explore **10/100**.
 > **Cycle 1336 (2026-07-27).** **example-apps agent_acceptance_panel** contact_manager small_firm_owner re-panel (CI green 30289874476) — recommend=**unclear** synthesized (budget_exceeded/17 steps); same search false-positive (FTS live 3 results Adams). **Harness:** catch Playwright TimeoutError (not builtin); TYPE search settle forces state_changed=True + results panel titles in history. Dig receipt PASS. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1336**. budget 1. Explore **9/100**.
 > **Cycle 1334 (2026-07-27).** **example-apps agent_acceptance_panel** contact_manager small_firm_owner (aggressive-change) — live trial recommend=**no** synthesized (budget_exceeded/16 steps); friction high product search (false — FTS works; agent watched A–Z list) + low True/False favorite + praise detail hub. **Framework:** search_box placeholder prefers author title/empty; Playwright TYPE waits for search_box results panel. Dig receipt PASS. densify_allowed=0. Stamped qa trial/agent_acceptance **USED@1334**. budget 1. Explore **8/100**.
