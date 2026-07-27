@@ -271,6 +271,10 @@ class TestCallGrokCli:
         assert "--system-prompt-override" in cmd and "be brief" in cmd
         assert "--model" in cmd and "grok-4.5" in cmd
         assert "--output-format" in cmd and "json" in cmd
+        # Pure text: allow zero tools (empty --tools) + deny remainder
+        assert "--tools" in cmd
+        tools_idx = cmd.index("--tools")
+        assert cmd[tools_idx + 1] == ""
         assert "--disallowed-tools" in cmd and "*" in cmd
 
     def test_long_prompt_uses_prompt_file(self) -> None:

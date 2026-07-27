@@ -354,8 +354,13 @@ def call_grok_cli(
             "--no-subagents",
             "--no-plan",
             "--disable-web-search",
-            # Deny tools so this stays a pure text completion (same contract
-            # as claude-cli --disallowedTools "*").
+            # Pure text completion: allow zero built-ins (mirrors claude-cli
+            # `--tools ""`). `--disallowed-tools *` alone is a no-op on current
+            # Grok Build CLI — the model still has read_file/run_terminal/etc.
+            # and burns max_turns exploring the repo mid-trial (observed
+            # 2026-07-27 support_tickets manager_evaluation step 4 abort).
+            "--tools",
+            "",
             "--disallowed-tools",
             "*",
         ]
