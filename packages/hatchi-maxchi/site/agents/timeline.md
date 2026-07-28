@@ -96,6 +96,7 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | `date_label` | `string` | no |
 | `fields_html` | `string` | no |
 | `bullet_html` | `string` | no |
+| `drill_url` | `string` | no |
 
 #### Exemplar `render()`
 
@@ -103,6 +104,17 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 def render(evt: TimelineEvent) -> str:
     """Model → one ``<li>`` timeline item."""
     title = html.escape(evt.title)
+    if evt.drill_url:
+        href = html.escape(evt.drill_url, quote=True)
+        # Keep p + class for dual-lock/CSS; wrap title text in hub drill
+        # (queue/kanban pattern; empty drill_url stays byte-stable plain p).
+        title_html = (
+            f'<p class="dz-timeline-title">'
+            f'<a href="{href}" data-dz-timeline-drill>{title}</a>'
+            f"</p>"
+        )
+    else:
+        title_html = f'<p class="dz-timeline-title">{title}</p>'
     date = html.escape(evt.date_label)
     bullet = evt.bullet_html.strip() or _DEFAULT_BULLET
     return (
@@ -111,7 +123,7 @@ def render(evt: TimelineEvent) -> str:
         f'<div class="dz-timeline-row">'
         f'<div class="dz-timeline-date">{date}</div>'
         f'<div class="dz-timeline-content">'
-        f'<p class="dz-timeline-title">{title}</p>'
+        f"{title_html}"
         f"{evt.fields_html}"
         f"</div>"
         f"</div>"

@@ -507,6 +507,14 @@ def render_activity_row(row: ActivityRow) -> str:
 def render_timeline_event(evt: TimelineEvent) -> str:
     """Model → one timeline item (matches HM contracts/timeline.py)."""
     title = _html.escape(evt.title)
+    drill = getattr(evt, "drill_url", "") or ""
+    if drill:
+        href = _html.escape(drill, quote=True)
+        title_html = (
+            f'<p class="dz-timeline-title"><a href="{href}" data-dz-timeline-drill>{title}</a></p>'
+        )
+    else:
+        title_html = f'<p class="dz-timeline-title">{title}</p>'
     date = _html.escape(evt.date_label)
     bullet = evt.bullet_html.strip() or _TIMELINE_DEFAULT_BULLET
     root_attrs = timeline_item_root_attrs(evt)
@@ -516,7 +524,7 @@ def render_timeline_event(evt: TimelineEvent) -> str:
         f'<div class="dz-timeline-row">'
         f'<div class="dz-timeline-date">{date}</div>'
         f'<div class="dz-timeline-content">'
-        f'<p class="dz-timeline-title">{title}</p>'
+        f"{title_html}"
         f"{evt.fields_html}"
         f"</div>"
         f"</div>"

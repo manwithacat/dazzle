@@ -321,6 +321,7 @@ class TimelineEvent(BaseModel):
     date_label: str = ""
     fields_html: str = ""
     bullet_html: str = ""
+    drill_url: str = ""
 
     @field_validator("title")
     @classmethod

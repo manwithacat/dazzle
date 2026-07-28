@@ -558,6 +558,9 @@ def _build_list_adapter_ctx(
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns
         _set_display_key(adapter_ctx, inputs, ctx)
+        # #1303 / cycle 1412 — timeline events drill via detail_url_template
+        # (action: task_edit → …/edit demotes when UPDATE denied, same as LIST).
+        _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
     elif display_upper == "GRID":
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns

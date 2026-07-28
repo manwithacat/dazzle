@@ -1,4 +1,4 @@
-"""#1303: workspace list/task_inbox/kanban rows drill to entity detail.
+"""#1303: workspace list/task_inbox/kanban/timeline rows drill to entity detail.
 
 Standalone `/app/<entity>` lists already emit a per-row drill link; workspace
 list regions rendered plain `<tr>` with no link. This pins:
@@ -11,6 +11,8 @@ list regions rendered plain `<tr>` with no link. This pins:
   entity → detail-URL map; an empty map (drill-gated) leaves them inert.
 - Kanban cards (cycle 1410) put the same template on the card title as
   ``data-dz-kanban-drill`` (EDIT paths demoted request-time when UPDATE denied).
+- Timeline events (cycle 1412) put the same template on the title as
+  ``data-dz-timeline-drill`` (EDIT paths demoted request-time when UPDATE denied).
 - `ListRegion.row_links` arity is validated.
 """
 
@@ -257,3 +259,59 @@ def test_kanban_cards_honor_edit_path_template() -> None:
     )
     assert 'href="/app/task/t9/edit"' in html
     assert "data-dz-kanban-drill" in html
+
+
+# ── timeline adapter: per-event hub drill (cycle 1412) ────────────────────
+
+
+def _build_timeline_html(ctx: dict) -> str:
+    return FragmentRenderer().render(
+        WorkspaceRegionAdapter().build(_FakeRegion(name="events", display="timeline"), ctx)
+    )
+
+
+def test_timeline_events_drill_when_detail_url_template_set() -> None:
+    html = _build_timeline_html(
+        {
+            "items": [
+                {"id": "e1", "title": "Payment failed", "created_at": "2026-07-01T12:00:00Z"},
+                {"id": "e2", "title": "Invoice sent", "created_at": "2026-07-02T12:00:00Z"},
+            ],
+            "columns": [
+                {"key": "title", "label": "Title", "type": "str"},
+                {"key": "created_at", "label": "When", "type": "date"},
+            ],
+            "display_key": "title",
+            "detail_url_template": "/app/event/{id}",
+        }
+    )
+    assert 'href="/app/event/e1"' in html
+    assert 'href="/app/event/e2"' in html
+    assert html.count("data-dz-timeline-drill") == 2
+
+
+def test_timeline_events_no_drill_without_template() -> None:
+    """No detail_url_template → plain titles, no regression."""
+    html = _build_timeline_html(
+        {
+            "items": [{"id": "e1", "title": "Payment failed"}],
+            "columns": [{"key": "title", "label": "Title", "type": "str"}],
+            "display_key": "title",
+        }
+    )
+    assert "data-dz-timeline-drill" not in html
+    assert 'href="/app/event/' not in html
+
+
+def test_timeline_events_honor_edit_path_template() -> None:
+    """action: task_edit stamps …/edit; host demotes later when UPDATE denied."""
+    html = _build_timeline_html(
+        {
+            "items": [{"id": "e9", "title": "Ship it"}],
+            "columns": [{"key": "title", "label": "Title", "type": "str"}],
+            "display_key": "title",
+            "detail_url_template": "/app/event/{id}/edit",
+        }
+    )
+    assert 'href="/app/event/e9/edit"' in html
+    assert "data-dz-timeline-drill" in html

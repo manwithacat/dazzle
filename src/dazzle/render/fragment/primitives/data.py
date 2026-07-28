@@ -383,11 +383,16 @@ class TimelineEvent:
     string (rendered with HTML escaping) or a Fragment (rendered via
     the renderer's emit dispatch). Trusted markup (e.g. `RawHTML`
     from a legacy filter) renders verbatim.
+
+    ``drill_url`` (#1303 / cycle 1412): when set, the title renders as a
+    hub link so timeline events open VIEW/EDIT the same way list/queue/
+    kanban rows do. Host request-time gates EDIT paths when UPDATE denied.
     """
 
     title: str
     date_label: str = ""
     fields: tuple[tuple[str, object], ...] = ()
+    drill_url: str = ""
 
 
 @dataclass(frozen=True, slots=True)

@@ -32,6 +32,7 @@ from dazzle.render.fragment import (
     TimelineEvent,
 )
 from dazzle.render.fragment.region._context import RegionContext
+from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
@@ -96,8 +97,11 @@ class _BuildersTimelineMixin:
         instances carrying per-event date_label (already-formatted via
         `timeago` filter), title (from display_key), and secondary
         fields (per-column type-aware values, omitting the date and
-        display_key columns). Click-through (`hx-get` on the content
-        div) is not yet plumbed — read-only display only.
+        display_key columns).
+
+        #1303 / cycle 1412: optional ``detail_url_template`` resolves to
+        per-event ``drill_url`` (title hub link). Host request-time gates
+        EDIT paths when UPDATE is denied (same as LIST/QUEUE/KANBAN).
 
         ctx shape:
             items: list of dicts (rows from the source entity)
@@ -108,6 +112,7 @@ class _BuildersTimelineMixin:
             entity_name: str — fallback title when display_key value is None
             total: int — overflow indicator denominator
             empty_message: optional empty-state fallback
+            detail_url_template: optional #1303 hub drill
         """
         from dazzle.render.filters import _timeago_filter
 
@@ -116,6 +121,7 @@ class _BuildersTimelineMixin:
         columns = ctx.get("columns") or []
         display_key = str(ctx.get("display_key") or "")
         entity_name = str(ctx.get("entity_name") or "Event")
+        detail_url_template = str(ctx.get("detail_url_template") or "")
         try:
             total = int(ctx.get("total") or 0)
         except (TypeError, ValueError):
@@ -127,6 +133,16 @@ class _BuildersTimelineMixin:
             if isinstance(col, dict) and col.get("type") == "date":
                 date_col_key = str(col.get("key") or "")
                 break
+
+        # #1303: resolve hub drills once (index-aligned with dict items).
+        dict_items = [i for i in items if isinstance(i, dict)]
+        row_links: tuple[str | None, ...] = (
+            _resolve_row_links(dict_items, detail_url_template) if detail_url_template else ()
+        )
+        drill_by_id: dict[int, str] = {}
+        for item, link in zip(dict_items, row_links, strict=False):
+            if link:
+                drill_by_id[id(item)] = str(link)
 
         events: list[TimelineEvent] = []
         for item in items:
@@ -155,6 +171,7 @@ class _BuildersTimelineMixin:
                     title=str(primary),
                     date_label=date_label,
                     fields=tuple(fields),
+                    drill_url=drill_by_id.get(id(item), ""),
                 )
             )
 

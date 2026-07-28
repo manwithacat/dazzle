@@ -192,6 +192,7 @@ class _RenderChartsMixin:
                         title=evt.title,
                         date_label=evt.date_label,
                         fields_html=fields_html,
+                        drill_url=getattr(evt, "drill_url", "") or "",
                     )
                 )
             )
