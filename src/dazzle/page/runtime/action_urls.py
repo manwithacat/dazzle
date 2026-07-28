@@ -42,10 +42,12 @@ def surface_entity_path(entity_ref: str, mode: Any) -> str:
 def surface_entity_path_for_row(entity_ref: str, mode: Any) -> str:
     """Map a surface's entity + mode when a single row id is available later.
 
-    Used by confirm_action_panel (cycle 1402): the panel binds to a source
-    row, so EDIT/VIEW keep the ``{id}`` template segment and request-time
-    fills the concrete id. CREATE still uses create_path; LIST / CUSTOM /
-    unknown stay on the list path.
+    Used by confirm_action_panel (cycle 1402) and region row ``action:``
+    drills (cycle 1403): the panel/row binds a source id, so EDIT/VIEW keep
+    the ``{id}`` template segment and request-time fills the concrete id.
+    CREATE → create_path; LIST → list (no id). CUSTOM / missing / unknown
+    default to **detail** (row-nav safe; pre-1403 always did detail) — only
+    explicit LIST demotes to list without ``{id}``.
     """
     slug = app_paths.entity_slug(entity_ref)
     m = _mode_str(mode)
@@ -53,9 +55,10 @@ def surface_entity_path_for_row(entity_ref: str, mode: Any) -> str:
         return app_paths.create_path("/app", slug)
     if m == "edit":
         return app_paths.edit_path("/app", slug)
-    if m == "view":
-        return app_paths.detail_path("/app", slug)
-    return app_paths.list_path("/app", slug)
+    if m == "list":
+        return app_paths.list_path("/app", slug)
+    # VIEW, CUSTOM, missing mode → detail with {id} (row drill default)
+    return app_paths.detail_path("/app", slug)
 
 
 def action_to_url(action: str, app_spec: Any | None = None) -> str:

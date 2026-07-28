@@ -239,6 +239,13 @@ def test_region_row_drill_url_honors_edit_and_view_mode() -> None:
                 entity_ref="System",
                 mode=ir.SurfaceMode.CREATE,
             ),
+            SimpleNamespace(
+                name="task_list",
+                entity_ref="Task",
+                mode=ir.SurfaceMode.LIST,
+            ),
+            # Missing mode (stub surfaces) → detail with {id}, not list
+            SimpleNamespace(name="task_legacy", entity_ref="Task"),
         ]
     )
     # Workspaces on the stub for name-collision path
@@ -247,6 +254,8 @@ def test_region_row_drill_url_honors_edit_and_view_mode() -> None:
     assert region_row_drill_url("task_edit", spec) == "/app/task/{id}/edit"
     assert region_row_drill_url("task_detail", spec) == "/app/task/{id}"
     assert region_row_drill_url("system_create", spec) == "/app/system/create"
+    assert region_row_drill_url("task_list", spec) == "/app/task"
+    assert region_row_drill_url("task_legacy", spec) == "/app/task/{id}"
     assert (
         region_row_drill_url("ops_dashboard", spec)
         == "/app/workspaces/ops_dashboard?context_id={id}"
