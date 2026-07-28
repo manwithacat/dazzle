@@ -41,6 +41,7 @@ from dazzle.render.fragment import (
     Surface,
 )
 from dazzle.render.fragment.region._context import RegionContext
+from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.region._shared import (
     _region_title,
     _render_typed_value,
@@ -74,6 +75,8 @@ class _BuildersCardsMixin:
             entity_name: str — fallback title when display_key is None
             total: int — overflow indicator denominator
             empty_message: optional empty-state fallback
+            detail_url_template: optional #1303 hub drill
+                (``/app/<slug>/{id}`` or EDIT path; request-time gated)
         """
         from dazzle.render.filters import _timeago_filter
 
@@ -91,6 +94,7 @@ class _BuildersCardsMixin:
         except (TypeError, ValueError):
             total = 0
         endpoint = str(ctx.get("endpoint") or "")
+        detail_url_template = str(ctx.get("detail_url_template") or "")
 
         # Build the per-card secondary-field list once — the same set
         # of meta columns applies to every card.
@@ -143,6 +147,17 @@ class _BuildersCardsMixin:
             key = str(item.get(group_by, "") or "")
             buckets.setdefault(key, []).append(item)
 
+        # #1303 / cycle 1410: resolve hub drills once for all dict items
+        # (index-aligned), then look up by object identity when bucketing.
+        dict_items = [i for i in items if isinstance(i, dict)]
+        row_links: tuple[str | None, ...] = (
+            _resolve_row_links(dict_items, detail_url_template) if detail_url_template else ()
+        )
+        drill_by_id: dict[int, str] = {}
+        for item, link in zip(dict_items, row_links, strict=False):
+            if link:
+                drill_by_id[id(item)] = str(link)
+
         for col_key in column_keys:
             cards: list[KanbanCard] = []
             for item in buckets.get(col_key, []):
@@ -171,6 +186,7 @@ class _BuildersCardsMixin:
                         fields=tuple(fields),
                         attention_level=attn_level,
                         attention_message=attn_message,
+                        drill_url=drill_by_id.get(id(item), ""),
                     )
                 )
             kanban_cols.append(KanbanColumn(label=col_key, cards=tuple(cards)))

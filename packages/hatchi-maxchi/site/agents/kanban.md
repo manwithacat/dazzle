@@ -111,6 +111,7 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | `fields_html` | `string` | no |
 | `attention_level` | `string` | no |
 | `attention_message` | `string` | no |
+| `drill_url` | `string` | no |
 
 #### Exemplar `render()`
 
@@ -118,6 +119,17 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 def render(card: KanbanCard) -> str:
     """Model → one kanban card."""
     title = html.escape(card.title)
+    if card.drill_url:
+        href = html.escape(card.drill_url, quote=True)
+        # Keep h4 + class for dual-lock/CSS; wrap title text in hub drill
+        # (queue-row pattern; empty drill_url stays byte-stable plain h4).
+        title_html = (
+            f'<h4 class="dz-kanban-card-title">'
+            f'<a href="{href}" data-dz-kanban-drill>{title}</a>'
+            f"</h4>"
+        )
+    else:
+        title_html = f'<h4 class="dz-kanban-card-title">{title}</h4>'
     attn_html = ""
     if card.attention_level:
         level = html.escape(card.attention_level, quote=True)
@@ -126,7 +138,7 @@ def render(card: KanbanCard) -> str:
     return (
         f'<div class="dz-kanban-card" data-dz-kanban-card>'
         f'<div class="dz-kanban-card-body">'
-        f'<h4 class="dz-kanban-card-title">{title}</h4>'
+        f"{title_html}"
         f"{card.fields_html}"
         f"{attn_html}"
         f"</div>"

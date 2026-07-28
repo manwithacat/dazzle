@@ -1,4 +1,4 @@
-"""#1303: workspace list/task_inbox rows drill to entity detail.
+"""#1303: workspace list/task_inbox/kanban rows drill to entity detail.
 
 Standalone `/app/<entity>` lists already emit a per-row drill link; workspace
 list regions rendered plain `<tr>` with no link. This pins:
@@ -9,6 +9,8 @@ list regions rendered plain `<tr>` with no link. This pins:
 - The `drill:` keyword parses (detail | none; invalid rejected).
 - task_inbox items get a `drill_url` resolved per source from the
   entity → detail-URL map; an empty map (drill-gated) leaves them inert.
+- Kanban cards (cycle 1410) put the same template on the card title as
+  ``data-dz-kanban-drill`` (EDIT paths demoted request-time when UPDATE denied).
 - `ListRegion.row_links` arity is validated.
 """
 
@@ -199,3 +201,59 @@ def test_list_region_row_links_arity_validated() -> None:
     cols = (ListColumn(key="name", label="Name"),)
     with pytest.raises(ValueError, match="row_links arity"):
         ListRegion(columns=cols, rows=(("a",), ("b",)), row_links=("/app/x/a",))  # 1 link, 2 rows
+
+
+# ── kanban adapter: per-card hub drill (cycle 1410) ───────────────────────
+
+
+def _build_kanban_html(ctx: dict) -> str:
+    return FragmentRenderer().render(
+        WorkspaceRegionAdapter().build(_FakeRegion(name="board", display="kanban"), ctx)
+    )
+
+
+def test_kanban_cards_drill_when_detail_url_template_set() -> None:
+    html = _build_kanban_html(
+        {
+            "items": [
+                {"id": "t1", "title": "Buy milk", "status": "todo"},
+                {"id": "t2", "title": "Walk dog", "status": "doing"},
+            ],
+            "kanban_columns": ["todo", "doing"],
+            "group_by": "status",
+            "display_key": "title",
+            "detail_url_template": "/app/task/{id}",
+        }
+    )
+    assert 'href="/app/task/t1"' in html
+    assert 'href="/app/task/t2"' in html
+    assert html.count("data-dz-kanban-drill") == 2
+
+
+def test_kanban_cards_no_drill_without_template() -> None:
+    """No detail_url_template → plain titles, no regression."""
+    html = _build_kanban_html(
+        {
+            "items": [{"id": "t1", "title": "Buy milk", "status": "todo"}],
+            "kanban_columns": ["todo"],
+            "group_by": "status",
+            "display_key": "title",
+        }
+    )
+    assert "data-dz-kanban-drill" not in html
+    assert 'href="/app/task/' not in html
+
+
+def test_kanban_cards_honor_edit_path_template() -> None:
+    """action: task_edit stamps …/edit; host demotes later when UPDATE denied."""
+    html = _build_kanban_html(
+        {
+            "items": [{"id": "t9", "title": "Ship it", "status": "todo"}],
+            "kanban_columns": ["todo"],
+            "group_by": "status",
+            "display_key": "title",
+            "detail_url_template": "/app/task/{id}/edit",
+        }
+    )
+    assert 'href="/app/task/t9/edit"' in html
+    assert "data-dz-kanban-drill" in html

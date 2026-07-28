@@ -696,12 +696,17 @@ class KanbanCard:
     typically `RawHTML` from `_render_typed_value` (badge / bool /
     date / currency / ref / default). `attention_level` is one of
     "" (no attention), "critical", "warning", "notice".
+
+    ``drill_url`` (#1303 / cycle 1410): when set, the title renders as a
+    hub link so board cards open VIEW/EDIT the same way list/queue rows
+    do. Host request-time gates EDIT paths when UPDATE is denied.
     """
 
     title: str
     fields: tuple[tuple[str, object], ...] = ()
     attention_level: str = ""
     attention_message: str = ""
+    drill_url: str = ""
 
 
 @dataclass(frozen=True, slots=True)

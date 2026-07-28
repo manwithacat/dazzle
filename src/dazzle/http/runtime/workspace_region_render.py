@@ -538,6 +538,11 @@ def _build_list_adapter_ctx(
         adapter_ctx["group_by"] = (
             inputs.group_by.field if isinstance(inputs.group_by, _BucketRef) else inputs.group_by
         )
+        # #1303 / cycle 1410 — board cards drill via detail_url_template
+        # (action: task_edit → …/edit demotes when UPDATE denied, same as LIST).
+        _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
+        adapter_ctx["endpoint"] = ctx_region.endpoint
+        adapter_ctx["entity_name"] = ctx.source
     elif display_upper == "QUEUE":
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns

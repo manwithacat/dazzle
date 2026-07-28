@@ -34,6 +34,8 @@ class KanbanCard(BaseModel):
     - ``title`` → headline (required)
     - ``fields_html`` → trusted secondary field lines
     - ``attention_level`` / ``attention_message`` → optional SLA chrome
+    - ``drill_url`` → when set, title becomes an ``<a href>`` hub drill
+      (same class as queue row / list #1303; host gates EDIT paths)
     """
 
     title: str
@@ -43,6 +45,10 @@ class KanbanCard(BaseModel):
     )
     attention_level: str = ""
     attention_message: str = ""
+    drill_url: str = Field(
+        default="",
+        description="Optional hub URL (/app/<slug>/{id} or …/edit); title becomes a link.",
+    )
 
     @field_validator("title")
     @classmethod
@@ -69,6 +75,17 @@ EXEMPLARS: list[KanbanCard] = [
 def render(card: KanbanCard) -> str:
     """Model → one kanban card."""
     title = html.escape(card.title)
+    if card.drill_url:
+        href = html.escape(card.drill_url, quote=True)
+        # Keep h4 + class for dual-lock/CSS; wrap title text in hub drill
+        # (queue-row pattern; empty drill_url stays byte-stable plain h4).
+        title_html = (
+            f'<h4 class="dz-kanban-card-title">'
+            f'<a href="{href}" data-dz-kanban-drill>{title}</a>'
+            f"</h4>"
+        )
+    else:
+        title_html = f'<h4 class="dz-kanban-card-title">{title}</h4>'
     attn_html = ""
     if card.attention_level:
         level = html.escape(card.attention_level, quote=True)
@@ -77,7 +94,7 @@ def render(card: KanbanCard) -> str:
     return (
         f'<div class="dz-kanban-card" data-dz-kanban-card>'
         f'<div class="dz-kanban-card-body">'
-        f'<h4 class="dz-kanban-card-title">{title}</h4>'
+        f"{title_html}"
         f"{card.fields_html}"
         f"{attn_html}"
         f"</div>"

@@ -582,6 +582,7 @@ class _RenderChartsMixin:
                             fields_html=fields_html,
                             attention_level=card.attention_level,
                             attention_message=card.attention_message,
+                            drill_url=getattr(card, "drill_url", "") or "",
                         )
                     )
                 )

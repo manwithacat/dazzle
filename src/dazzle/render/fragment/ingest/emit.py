@@ -441,6 +441,16 @@ def render_metric_tile(tile: MetricTile) -> str:
 def render_kanban_card(card: KanbanCard) -> str:
     """Model → one kanban card (matches HM contracts/kanban.py)."""
     title = _html.escape(card.title)
+    drill = getattr(card, "drill_url", "") or ""
+    if drill:
+        href = _html.escape(str(drill), quote=True)
+        title_html = (
+            f'<h4 class="dz-kanban-card-title">'
+            f'<a href="{href}" data-dz-kanban-drill>{title}</a>'
+            f"</h4>"
+        )
+    else:
+        title_html = f'<h4 class="dz-kanban-card-title">{title}</h4>'
     attn_html = ""
     if card.attention_level:
         level = _html.escape(card.attention_level, quote=True)
@@ -450,7 +460,7 @@ def render_kanban_card(card: KanbanCard) -> str:
     return (
         f'<div class="dz-kanban-card" {root_attrs}>'
         f'<div class="dz-kanban-card-body">'
-        f'<h4 class="dz-kanban-card-title">{title}</h4>'
+        f"{title_html}"
         f"{card.fields_html}"
         f"{attn_html}"
         f"</div>"

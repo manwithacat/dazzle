@@ -282,6 +282,8 @@ class KanbanCard(BaseModel):
     fields_html: str = ""
     attention_level: str = ""
     attention_message: str = ""
+    # #1303 / cycle 1410 — optional hub drill (title becomes a link).
+    drill_url: str = ""
 
     @field_validator("title")
     @classmethod
