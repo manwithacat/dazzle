@@ -374,6 +374,11 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
     entity_name_lower = entity_name.lower()
     api_endpoint = _html_mod.escape(str(table.get("api_endpoint", "") or ""), quote=True)
     inline_editable = set(table.get("inline_editable") or [])
+    # Mutation affordances — default True for fixtures without RBAC. List
+    # transport sets False when permit denies delete/update for this principal
+    # (humanqa: anon trash + hx-confirm still removed the painted row).
+    can_delete = bool(table.get("can_delete", True))
+    can_update = bool(table.get("can_update", True))
 
     item_id = str(item.get("id", "") or "")
     item_id_attr = _html_mod.escape(item_id, quote=True)
@@ -484,13 +489,15 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             f'class="dz-tr-action">'
             f"{lucide_svg_html('eye', cls='dz-tr-action-icon')}</a>"
         )
-        edit_link_html = (
-            f'<a href="{detail_url_attr}/edit" '  # nosemgrep
-            f'data-dazzle-action="{entity_name_attr}.edit" '
-            f'aria-label="Edit {row_label_attr}" '
-            f'class="dz-tr-action">'
-            f"{lucide_svg_html('pencil', cls='dz-tr-action-icon')}</a>"
-        )
+        # Pencil only when UPDATE is permitted — view (eye) stays for readers.
+        if can_update:
+            edit_link_html = (
+                f'<a href="{detail_url_attr}/edit" '  # nosemgrep
+                f'data-dazzle-action="{entity_name_attr}.edit" '
+                f'aria-label="Edit {row_label_attr}" '
+                f'class="dz-tr-action">'
+                f"{lucide_svg_html('pencil', cls='dz-tr-action-icon')}</a>"
+            )
 
     checkbox_cell = ""
     if bulk_actions:
@@ -609,26 +616,29 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
             f"{cell_inner}</td>"
         )
 
-    # Delete action.
+    # Delete action — omitted when DELETE is denied for this principal.
     # #1613: hard-pin hx-trigger="click" so tbody hx-trigger=load cannot
     # inherit onto destructive controls (implicitInheritance=true).
-    delete_button = (
-        f'<button type="button" '  # nosemgrep
-        f'data-dazzle-action="{entity_name_attr}.delete" '
-        f'aria-label="Delete {row_label_attr}" '
-        f'hx-delete="{api_endpoint}/{item_id_attr}" '
-        f'hx-trigger="click" '
-        f'hx-confirm="Delete this {_html_mod.escape(entity_name_lower, quote=False)}?" '
-        f'hx-target="closest tr" '
-        f'hx-swap="outerHTML swap:300ms" '
-        f'class="dz-tr-action is-destructive">'
-        f"{lucide_svg_html('trash-2', cls='dz-tr-action-icon')}</button>"
-    )
+    delete_button = ""
+    if can_delete:
+        delete_button = (
+            f'<button type="button" '  # nosemgrep
+            f'data-dazzle-action="{entity_name_attr}.delete" '
+            f'aria-label="Delete {row_label_attr}" '
+            f'hx-delete="{api_endpoint}/{item_id_attr}" '
+            f'hx-trigger="click" '
+            f'hx-confirm="Delete this {_html_mod.escape(entity_name_lower, quote=False)}?" '
+            f'hx-target="closest tr" '
+            f'hx-swap="outerHTML swap:300ms" '
+            f'class="dz-tr-action is-destructive">'
+            f"{lucide_svg_html('trash-2', cls='dz-tr-action-icon')}</button>"
+        )
     # #1558 3c: state-gated transition affordances — only transitions valid from
     # THIS row's current state (mirrors the queue's per-row transitions). Byte-
     # identical when the entity has no state machine (empty state_transitions).
+    # Also suppressed when UPDATE is denied (SM chips are mutations).
     transition_buttons = ""
-    state_transitions = table.get("state_transitions") or ()
+    state_transitions = table.get("state_transitions") or () if can_update else ()
     status_field = str(table.get("status_field") or "")
     transition_endpoint = str(table.get("transition_endpoint") or "")
     if state_transitions and status_field and transition_endpoint and item_id:
@@ -731,16 +741,19 @@ def render_data_row(
         # #1614: same-entity detail when open-via FK is null
         "detail_url_fallback_template": (detail_url_fallback_template if caps.drill else ""),
         "bulk_actions": caps.bulk_select,
-        "inline_editable": list(caps.inline_editable),
+        "inline_editable": list(caps.inline_editable) if caps.update else [],
         "table_id": table_id,
         # #1494: `peek: expand` chevron + inline detail panel. Requires a detail
         # surface (the chevron lives inside the `drill` block), so peek with no
         # detail URL is inert.
         "peek_mode": caps.peek,
         # #1558 3c: state-gated transition affordances (per-row, gated to current state).
-        "state_transitions": state_transitions,
+        "state_transitions": state_transitions if caps.update else (),
         "status_field": status_field,
         "transition_endpoint": transition_endpoint,
+        # Mutation chrome: trash / pencil / SM chips honor permit (not just API 403).
+        "can_delete": caps.delete,
+        "can_update": caps.update,
     }
     return _render_table_row(table, dict(item))
 

@@ -73,7 +73,7 @@ apply map patches with `{"apply":true}`.
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1355 | STALE |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1382 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1353 | STALE |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1388 | USED |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1390 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1382 | USED |
@@ -87,9 +87,9 @@ apply map patches with `{"apply":true}`.
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1388 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1390 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
-| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1388 | USED |
+| `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | USED |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
 | `shadcn_parity` | HYGIENE | script + strategy | **hm-convergence** | 1304 | STALE |
 | **HM zero-floor** | HYGIENE | script + gate | **hm-convergence** | 1341 | STALE |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1390 (2026-07-28).** **framework-ux edge** list row mutation chrome — honor `RowCapabilities.delete/update` in `_render_table_row` (trash/pencil/SM chips omitted when permit denies; humanqa anon painted trash despite DELETE 403). list_handlers already set can_*; render path ignored them. budget 1. Explore **42/100**. CI green on 203b75d05; self-audit@1389 next~1404; capability-sweep@1380 next~1400.
 > **Cycle 1383 (2026-07-28).** **example-apps COGNITION** domain noun recovery — type-evidence canonical_case + domain-section bullet inventory; project_tracker gains Task/Milestone/TeamMember without Email/Phone chrome; fleet re-extract. budget 1. Explore **37/100**.
 > **Cycle 1382 (2026-07-28).** **example-apps COGNITION** domain topic probes — invoice settlement ≠ booking payment; notify/message gated; gallery_probes 6/6 PASS (hyperpart queue=0 fall-through). budget 1. Explore **36/100**.
 > **Cycle 1381 (2026-07-28).** **example-apps COGNITION** domain open_q status/right-ground — BAD_LEFT/RIGHT lifecycle+severity status words + `audit`; cardinality requires **both** sides ∈ entity stems; noise filter opens/audits/status subjects; fleet re-extract drops fieldtest "multiple opens" + acme/invoice audit qs. budget 1. Explore **35/100**.
