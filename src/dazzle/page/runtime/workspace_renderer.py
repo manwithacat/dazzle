@@ -26,6 +26,9 @@ from dazzle.page.runtime.action_urls import (
 from dazzle.page.runtime.action_urls import (
     confirm_action_to_url as _confirm_action_to_url,
 )
+from dazzle.page.runtime.action_urls import (
+    surface_entity_path_for_row as _surface_entity_path_for_row,
+)
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
 
 # Action URL helpers live in action_urls.py (MI leaf). Tests may import
@@ -491,18 +494,18 @@ def build_workspace_context(
                     if surf.name == action_name:
                         entity_ref = surf.entity_ref or ""
                         if entity_ref:
-                            if entity_ref == source_name:
-                                # Same entity — use row id
-                                action_url = _entity_to_app_url(entity_ref)
-                            else:
-                                # Cross-entity — find FK field in source entity
+                            # Mode-aware path (cycle 1403): EDIT → edit/{id},
+                            # VIEW → detail/{id}, CREATE → create, LIST → list.
+                            # Pre-fix always used detail, so action: task_edit
+                            # silently opened the detail page.
+                            action_url = _surface_entity_path_for_row(
+                                entity_ref, getattr(surf, "mode", None)
+                            )
+                            if entity_ref != source_name:
+                                # Cross-entity — thread FK field as the id
                                 fk_field = _resolve_fk_field(source_name, entity_ref, app_spec)
                                 if fk_field:
-                                    action_url = _entity_to_app_url(entity_ref)
                                     action_id_field = fk_field
-                                else:
-                                    # Fallback: use row id
-                                    action_url = _entity_to_app_url(entity_ref)
                         break
 
         # Default: if no explicit action, link rows to the source entity detail view

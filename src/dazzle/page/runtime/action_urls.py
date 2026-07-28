@@ -149,7 +149,51 @@ def fill_row_id_in_url(url: str, item_id: str) -> str:
     return url.replace("{id}", rid)
 
 
+def region_row_drill_url(
+    action: str,
+    app_spec: Any | None = None,
+    *,
+    source_entity: str = "",
+) -> str:
+    """Resolve workspace region ``action:`` to a row-drill URL template.
+
+    Fleet authors write ``action: task_edit`` / ``action: system_edit`` so
+    list rows open the edit form. Pre-cycle-1403 the substrate always
+    drilled to VIEW detail (``_entity_detail_url_map``) and
+    ``RegionContext.action_url`` ignored surface mode — so EDIT surfaces
+    navigated to detail.
+
+    Priority:
+
+      1. Workspace name → ``/app/workspaces/{name}?context_id={id}``
+      2. Surface name → mode-aware path via :func:`surface_entity_path_for_row`
+         (EDIT/VIEW keep ``{id}``; CREATE → create; LIST → list)
+      3. Empty when unresolved (caller falls back to source-entity detail)
+
+    ``source_entity`` is reserved for future cross-entity FK templates;
+    same-entity EDIT/VIEW use the surface's entity_ref.
+    """
+    del source_entity  # reserved; same-entity templates use surface entity_ref
+    if not action or not app_spec:
+        return ""
+
+    workspaces = getattr(app_spec, "workspaces", None) or []
+    for ws in workspaces:
+        if getattr(ws, "name", None) == action:
+            return f"/app/workspaces/{action}?context_id={{id}}"
+
+    surfaces = getattr(app_spec, "surfaces", None) or []
+    for s in surfaces:
+        if getattr(s, "name", None) == action:
+            entity_ref = getattr(s, "entity_ref", None) or ""
+            if entity_ref:
+                return surface_entity_path_for_row(entity_ref, getattr(s, "mode", None))
+            break
+    return ""
+
+
 # Private aliases kept for call-sites / tests that used the old names.
 _surface_entity_path = surface_entity_path
 _action_to_url = action_to_url
 _confirm_action_to_url = confirm_action_to_url
+_region_row_drill_url = region_row_drill_url

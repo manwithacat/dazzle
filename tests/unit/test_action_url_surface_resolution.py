@@ -211,3 +211,45 @@ def test_fill_row_id_in_url() -> None:
     assert fill_row_id_in_url("/app/system/create", rid) == "/app/system/create"
     # Missing row → omit CTA rather than leave a literal ``{id}`` path
     assert fill_row_id_in_url("/app/integration/{id}/edit", "") == ""
+
+
+def test_region_row_drill_url_honors_edit_and_view_mode() -> None:
+    """Workspace ``action: task_edit`` must drill to edit, not detail (cycle 1403).
+
+    Fleet regions (simple_task, ops_dashboard, contact_manager) author
+    EDIT surfaces as row actions; pre-fix always used VIEW detail.
+    """
+    from dazzle.core import ir
+    from dazzle.page.runtime.action_urls import region_row_drill_url
+
+    spec = _stub_app_spec(
+        [
+            SimpleNamespace(
+                name="task_edit",
+                entity_ref="Task",
+                mode=ir.SurfaceMode.EDIT,
+            ),
+            SimpleNamespace(
+                name="task_detail",
+                entity_ref="Task",
+                mode=ir.SurfaceMode.VIEW,
+            ),
+            SimpleNamespace(
+                name="system_create",
+                entity_ref="System",
+                mode=ir.SurfaceMode.CREATE,
+            ),
+        ]
+    )
+    # Workspaces on the stub for name-collision path
+    spec.workspaces = [SimpleNamespace(name="ops_dashboard")]
+
+    assert region_row_drill_url("task_edit", spec) == "/app/task/{id}/edit"
+    assert region_row_drill_url("task_detail", spec) == "/app/task/{id}"
+    assert region_row_drill_url("system_create", spec) == "/app/system/create"
+    assert (
+        region_row_drill_url("ops_dashboard", spec)
+        == "/app/workspaces/ops_dashboard?context_id={id}"
+    )
+    assert region_row_drill_url("ghost", spec) == ""
+    assert region_row_drill_url("task_edit", None) == ""

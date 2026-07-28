@@ -48,8 +48,8 @@ apply map patches with `{"apply":true}`.
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1385 | USED |
-| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1370 | STALE |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1370 | STALE |
+| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1403 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1403 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1367 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
@@ -97,7 +97,7 @@ apply map patches with `{"apply":true}`.
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1402 | USED |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1403 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1402 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1402 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1403 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1403 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -120,6 +120,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1403 (2026-07-28).** **framework-ux edge** region row `action:` mode-aware drill — `region_row_drill_url` + substrate `detail_url_template` honor EDIT/VIEW/CREATE (was always VIEW detail). simple_task `task_edit` → `/app/task/{id}/edit`; ops `system_edit`/`alert_ack` → edit; live fleet compile verified. Stamped product_quality/demo quality + rbac + CodeQL/inbox **USED@1403**. budget 1. Explore **52/100**. Next **self-audit due ~1404**; capability-sweep@1400 next~1420.
 
 > **Cycle 1402 (2026-07-28).** **framework-ux edge** confirm_action_panel row-aware URLs — `confirm_action_to_url` keeps EDIT/VIEW `{id}` templates; unknown action names fall back to source-entity edit path; request-time `fill_row_id_in_url` before UPDATE gate. Extracted `action_urls.py` leaf (MI). ops_dashboard integration_authorise → `/app/integration/{id}/edit`. budget 1. Explore **51/100**. Next self-audit ~1404; capability-sweep@1400 next~1420.
 

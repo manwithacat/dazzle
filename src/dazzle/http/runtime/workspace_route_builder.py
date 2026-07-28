@@ -130,6 +130,12 @@ class WorkspaceRouteBuilder:
             # the standalone list uses to auto-suppress its Create button.
             # app_prefix is "/app" at the page-route mount (app_factory.py).
             # SSOT path formula (#1426) — never invent /brands/{id} API plurals.
+            #
+            # Cycle 1403: when the region authors `action: <surface|workspace>`,
+            # prefer that target's mode-aware path (EDIT → `…/{id}/edit`) over
+            # the default VIEW map so `action: task_edit` actually opens edit.
+            from dazzle.page.runtime.action_urls import region_row_drill_url
+
             _entity_detail_url_map = {
                 _surf.entity_ref: app_paths.detail_path(
                     "/app", app_paths.entity_slug(_surf.entity_ref)
@@ -140,13 +146,26 @@ class WorkspaceRouteBuilder:
 
             def _detail_urls_for(region: Any) -> dict[str, str]:
                 """#1303 — drill-gated entity→detail-URL map for this region.
-                Empty when the region opted out via `drill: none`."""
+                Empty when the region opted out via `drill: none`.
+                Honors ``action:`` (cycle 1403) for the region's source entity.
+                """
                 if getattr(region, "drill", None) == "none":
                     return {}
-                return _entity_detail_url_map
+                base = dict(_entity_detail_url_map)
+                action = getattr(region, "action", None) or ""
+                source = getattr(region, "source", "") or ""
+                if action and source:
+                    override = region_row_drill_url(action, appspec, source_entity=source)
+                    if override:
+                        base[source] = override
+                return base
 
             def _detail_url_template_for(region: Any, source: str) -> str:
-                """The single-source detail URL for a list region (or ``""``)."""
+                """The single-source drill URL for a list region (or ``""``).
+
+                Prefers region ``action:`` mode-aware path (EDIT/VIEW/…) then
+                falls back to the VIEW-surface detail map (#1303 / cycle 1403).
+                """
                 return _detail_urls_for(region).get(source, "")
 
             require_auth = self._enable_auth and not self._enable_test_mode
