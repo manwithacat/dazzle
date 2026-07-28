@@ -263,6 +263,64 @@ def highlight_source(source: str, language: str | None = None) -> str:
     return html.escape(source)
 
 
+# Live demos ship the registry partial as raw HTML. When that partial is a
+# code Hyperpart figure, the body is plain source text — run the same
+# build-time highlighter so the gallery dogfoods token colour (not mono).
+# Matches both source (dz-) and gallery-stripped (prefix="") forms.
+_CODE_FIGURE_BODY_RE = re.compile(
+    r"(?P<pre><figure\b(?P<figure_attrs>[^>]*)>)"
+    r"(?P<meta>[\s\S]*?)"
+    r"(?P<code_open><code\b[^>]*\b(?:dz-)?code__source\b[^>]*>)"
+    r"(?P<body>[\s\S]*?)"
+    r"(?P<code_close></code>)",
+    re.IGNORECASE,
+)
+
+
+def _prefix_token_classes(highlighted: str, prefix: str) -> str:
+    """``highlight_source`` always emits ``dz-code__tok--*``; rewrite for gallery."""
+    if prefix == "dz-":
+        return highlighted
+    return highlighted.replace("dz-code__tok--", f"{prefix}code__tok--")
+
+
+def highlight_code_figures(markup: str, *, prefix: str = "dz-") -> str:
+    """Highlight plain source inside published ``code`` / ``dz-code`` figures.
+
+    Used for gallery **live demos**. ``render_code_block`` already highlights
+    "Copy this" snippets; live markup was previously left monochrome.
+
+    *prefix* rewrites ``dz-code__tok--*`` token classes (pass ``""`` for the
+    unprefixed gallery, ``"dz-"`` for Dazzle).
+    """
+
+    def repl(m: re.Match[str]) -> str:
+        attrs = m.group("figure_attrs")
+        lang_m = re.search(
+            r"""\bdata-(?:dz-)?language=(["'])([^"']+)\1""",
+            attrs,
+            re.IGNORECASE,
+        )
+        if not lang_m:
+            return m.group(0)
+        body = m.group("body")
+        # Already tokenised (re-build / nested call) — leave alone.
+        if "tok--" in body:
+            return m.group(0)
+        # Strip accidental tags; unescape entities; treat remainder as source.
+        plain = html.unescape(re.sub(r"<[^>]+>", "", body))
+        if not plain.strip():
+            return m.group(0)
+        lang = lang_m.group(2)
+        highlighted = _prefix_token_classes(highlight_source(plain, lang), prefix)
+        return (
+            f"{m.group('pre')}{m.group('meta')}{m.group('code_open')}"
+            f"{highlighted}{m.group('code_close')}"
+        )
+
+    return _CODE_FIGURE_BODY_RE.sub(repl, markup)
+
+
 def render_code_block(
     source: str,
     *,

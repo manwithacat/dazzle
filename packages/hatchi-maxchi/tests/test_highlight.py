@@ -11,6 +11,7 @@ PKG = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PKG / "site"))
 
 from highlight import (  # noqa: E402
+    highlight_code_figures,
     highlight_html,
     highlight_python,
     highlight_source,
@@ -117,3 +118,36 @@ def test_render_code_block_highlight_false_is_plain_escape() -> None:
     )
     assert "&lt;button" in block
     assert "dz-code__tok--" not in block
+
+
+def test_highlight_code_figures_live_demo_python() -> None:
+    """Gallery live demos ship registry partials as plain source — colour them."""
+    raw = (
+        '<figure class="dz-code" data-dz-code data-dz-language="python">'
+        '<div class="dz-code__meta"><span class="dz-code__lang">python</span></div>'
+        '<pre class="dz-code__pre"><code class="dz-code__source">'
+        "def greet(name: str) -> str:\n"
+        '    return f"Hello, {name}"\n'
+        "</code></pre></figure>"
+    )
+    out = highlight_code_figures(raw, prefix="dz-")
+    assert "dz-code__tok--kw" in out
+    assert ">def<" in out
+    assert ">return<" in out
+    # Idempotent — re-run does not double-wrap
+    out2 = highlight_code_figures(out, prefix="dz-")
+    assert out2.count("dz-code__tok--kw") == out.count("dz-code__tok--kw")
+
+
+def test_highlight_code_figures_gallery_unprefixed() -> None:
+    raw = (
+        '<figure class="code" data-code data-language="python">'
+        '<pre class="code__pre"><code class="code__source">'
+        "def x():\n    pass\n"
+        "</code></pre></figure>"
+    )
+    out = highlight_code_figures(raw, prefix="")
+    assert "code__tok--kw" in out
+    assert "dz-code__tok--" not in out
+    assert ">def<" in out
+    assert ">pass<" in out

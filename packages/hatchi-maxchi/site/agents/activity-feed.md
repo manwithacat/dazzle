@@ -90,6 +90,7 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | `time_str` | `string` | yes |
 | `description` | `string` | yes |
 | `actor` | `string` | no |
+| `drill_url` | `string` | no |
 
 #### Exemplar `render()`
 
@@ -100,6 +101,13 @@ def render(row: ActivityRow) -> str:
     actor_html = ""
     if row.actor:
         actor_html = f'<span class="dz-activity-actor">{html.escape(row.actor)}</span> '
+    desc = html.escape(row.description)
+    if row.drill_url:
+        href = html.escape(row.drill_url, quote=True)
+        # Empty drill_url stays byte-stable plain text (no anchor).
+        desc_html = f'<a href="{href}" data-dz-activity-drill>{desc}</a>'
+    else:
+        desc_html = desc
     # Trailing space after bubble open class mirrors Dazzle emitter legacy.
     return (
         f'<li class="dz-activity-row" data-dz-activity-row>'
@@ -107,7 +115,7 @@ def render(row: ActivityRow) -> str:
         f'<div class="dz-activity-row-inner">'
         f'<div class="dz-activity-time">{time_s}</div>'
         f'<div class="dz-activity-bubble" >'
-        f"{actor_html}{html.escape(row.description)}"
+        f"{actor_html}{desc_html}"
         f"</div>"
         f"</div>"
         f"</li>"

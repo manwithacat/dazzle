@@ -36,7 +36,7 @@ from build import (  # noqa: E402  (package build.py)
     build_css,
     build_js,
 )
-from highlight import render_code_block  # noqa: E402
+from highlight import highlight_code_figures, render_code_block  # noqa: E402
 from hyperpart import anatomy  # noqa: E402  (package tools/hyperpart.py)
 
 # GitHub Pages resolves extensionless paths to ``*.html`` when the file exists
@@ -3113,6 +3113,10 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         # Live may prepend demo_shell (gallery chrome); Copy this is partial only.
         live_src = (getattr(c, "demo_shell", "") or "") + c.partial
         live = apply_prefix(expand_icons(live_src), prefix)
+        # Dogfood: build-time syntax colour inside live code figures
+        # (registry partials ship plain source; Copy this already uses
+        # render_code_block). Prefix matches gallery strip / Dazzle dz-.
+        live = highlight_code_figures(live, prefix=prefix)
         # __HM_ROOT__ → site-root-relative prefix (index "" vs part pages "../")
         live_index = live.replace("__HM_ROOT__", "")
         live_part = live.replace("__HM_ROOT__", "../")
