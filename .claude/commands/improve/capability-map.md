@@ -47,7 +47,7 @@ apply map patches with `{"apply":true}`.
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1377 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1378 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1370 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1370 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1367 | USED |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1374 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1374 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1378 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1378 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1378 (2026-07-28).** **example-apps COGNITION** domain open_q persona/det/team noise — BAD_LEFT+=admin/manager/agent/designer/reviewer/auditor; BAD_RIGHT+=their/the/team/can; noise filter `can a|an` + persona subjects; fleet drop admin/* teams payment/audits. budget 1. Explore **33/100**.
 > **Cycle 1374 (2026-07-28).** **self-audit** window 8aef15731..fca62068f — 5 CLEAN (c1370 ack owner, c1371 domain_join+llm AGENT_DOMAIN, c1368 person self-scope, c1361 hyperpart+Avatar, c1372 cardinality quality); dig contracts N/A this window (no story_walk/acceptance ships). 0 DISCREPANCY. Process note: 1361→1362 / 1367→1369 / 1372→1373 CI ratchet repairs honest. CodeQL+inbox **USED@1374**. budget 0. Explore **30/100**. Next self-audit ~1389; capability-sweep@1360 next~1380.
 > **Cycle 1373 (2026-07-28).** **cimonitor** repair — extract cardinality/topic helpers from `_generate_questions` (CC 23→under ratchet after 1372 inline). budget 0. Explore **30/100**.
 > **Cycle 1372 (2026-07-28).** **example-apps COGNITION** domain open_q quality — generate_questions cardinality grounded (letter-only, subject∈entities, stop stems) + filter digits/double-s/verb plurals; designer-draft → created_by owner; fleet re-extract 12/12 ready_to_promote=True. budget 1. Explore **30/100**.

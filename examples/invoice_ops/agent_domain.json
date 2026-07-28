@@ -247,13 +247,8 @@
   ],
   "open_questions": [
     {
-      "id": "q4",
+      "id": "q1",
       "text": "Can an invoice have multiple payments, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q5",
-      "text": "Can a payment have multiple audits, or just one?",
       "blocks_promote": false
     }
   ],

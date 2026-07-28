@@ -232,6 +232,14 @@ def test_broken_cardinality_questions_filtered() -> None:
         "Can a role have multiple quorums, or just one?",
         "Can a task have multiple tracks, or just one?",
         "Can a role have multiple queues, or just one?",
+        # Cycle 1378: persona subjects + org/det chrome as objects
+        "Can an admin have multiple designers, or just one?",
+        "Can an admin have multiple members, or just one?",
+        "Can a manager have multiple administrators, or just one?",
+        "Can a task have multiple teams, or just one?",
+        "Can a customer have multiple teams, or just one?",
+        "Can a tenant have multiple theirs, or just one?",
+        "Can a brand have multiple thes, or just one?",
     ]
     for q in broken:
         assert _is_noise_or_broken_question(q, brief), q
@@ -311,6 +319,50 @@ def test_generate_questions_skips_role_quorum_and_track_fragments() -> None:
     assert any("task" in t.lower() and "assignment" in t.lower() for t in card), card
 
 
+def test_generate_questions_skips_persona_subjects_and_det_chrome() -> None:
+    """Persona pairs and determiner/org chrome must not become cardinality qs.
+
+    Cycle 1378: design_studio \"admins and designers\" → admin/designers;
+    domain_join admin/members; \"tenants and their\" → multiple theirs;
+    \"brands and the visibility\" → multiple thes; task/customer + teams.
+    """
+    import json
+
+    from dazzle.mcp.server.handlers.spec_analyze import _generate_questions
+
+    spec = (
+        "Three kinds of people work in the system — admins and designers "
+        "and reviewers land on desks. "
+        "Workspace admins and members share announcements. "
+        "Managers and administrators oversee the fleet. "
+        "Tenants and their people share storage. "
+        "Brands and the visibility rules compile. "
+        "Customers and teams file tickets. "
+        "Tasks and teams coordinate delivery. "
+        "Tasks and assignments bind work. "
+        "A Task is a unit of work. A Brand owns assets. "
+        "An Assignment links a person to a task. A Brand is a label.\n"
+    )
+    data = json.loads(
+        _generate_questions(
+            {
+                "spec_text": spec,
+                "entities": ["Task", "Brand", "Assignment"],
+            }
+        )
+    )
+    texts = [q.get("question", "") for q in data.get("questions", [])]
+    card = [t for t in texts if "multiple" in t.lower()]
+    joined = " | ".join(card).lower()
+    assert "admin" not in joined, card
+    assert "designer" not in joined, card
+    assert "manager" not in joined, card
+    assert "theirs" not in joined, card
+    assert " thes" not in joined and "multiple thes" not in joined, card
+    assert "team" not in joined, card
+    assert any("task" in t.lower() and "assignment" in t.lower() for t in card), card
+
+
 def test_generate_questions_indefinite_article_and_review_signal() -> None:
     """Vowel-onset subjects use *an*; lifecycle 'review' is not bilateral ratings.
 
@@ -374,7 +426,10 @@ def test_generate_questions_indefinite_article_and_review_signal() -> None:
     assert not re.search(r"\bCan a (organization|invoice|admin)\b", joined, re.I), texts
     assert any(re.search(r"\bCan an organization\b", t, re.I) for t in card), card
     assert any(re.search(r"\bCan an invoice\b", t, re.I) for t in card), card
-    assert any(re.search(r"\bCan an admin\b", t, re.I) for t in card), card
+    # Cycle 1378: persona stems (admin/designer) are BAD_LEFT — article helper
+    # still returns *an* for "admin", but cardinality no longer emits them.
+    assert not any(re.search(r"\bCan an admin\b", t, re.I) for t in card), card
+    assert "designer" not in " | ".join(card).lower(), card
     # No bilateral-review topic from lifecycle prose
     assert not any("both parties leave reviews" in t.lower() for t in texts), texts
     # Lifecycle "projects and reviews" style must not emit review cardinality

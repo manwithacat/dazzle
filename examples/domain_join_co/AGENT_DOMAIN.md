@@ -43,7 +43,7 @@
 
 ## Open questions
 
-- `q2`: Can an admin have multiple members, or just one?
+_None blocking._
 
 ## Research notes
 
@@ -177,13 +177,7 @@
       "entity_hint": "JoinCo"
     }
   ],
-  "open_questions": [
-    {
-      "id": "q2",
-      "text": "Can an admin have multiple members, or just one?",
-      "blocks_promote": false
-    }
-  ],
+  "open_questions": [],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",

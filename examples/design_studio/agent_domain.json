@@ -130,17 +130,12 @@
   ],
   "open_questions": [
     {
-      "id": "q2",
+      "id": "q1",
       "text": "Can a brand have multiple assets, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q3",
-      "text": "Can an admin have multiple designers, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q5",
+      "id": "q2",
       "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }

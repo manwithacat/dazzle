@@ -60,8 +60,7 @@
 
 ## Open questions
 
-- `q4`: Can an invoice have multiple payments, or just one?
-- `q5`: Can a payment have multiple audits, or just one?
+- `q1`: Can an invoice have multiple payments, or just one?
 
 ## Research notes
 
@@ -321,18 +320,8 @@
   ],
   "open_questions": [
     {
-      "id": "q4",
+      "id": "q1",
       "text": "Can an invoice have multiple payments, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q5",
-      "text": "Can a payment have multiple audits, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q6",
-      "text": "Can a role have multiple quorums, or just one?",
       "blocks_promote": false
     }
   ],

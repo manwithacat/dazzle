@@ -129,11 +129,6 @@
   "open_questions": [
     {
       "id": "q1",
-      "text": "Can a task have multiple teams, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
       "text": "Can a task have multiple assignments, or just one?",
       "blocks_promote": false
     }

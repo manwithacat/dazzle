@@ -741,17 +741,18 @@ def _is_noise_or_broken_question(text_q: str, brief: str) -> bool:
         r"\b(the|to|create|review|admin)\b", text_q, re.I
     ):
         return True
-    # "Can a <non-noun> have multiple <non-noun>s" — not a real cardinality question
+    # "Can a/an <non-noun> have multiple <non-noun>s" — not a real cardinality question
     if re.search(
-        r"\bcan\s+a\s+\w+\s+have\s+multiple\s+\w+\b",
+        r"\bcan\s+(?:a|an)\s+\w+\s+have\s+multiple\s+\w+\b",
         text_q,
         re.I,
     ) and re.search(
         r"\bmultiple\s+(theirs|wheres|theres|whats|whiches|ops|tos|thes|ones|"
         r"overdues|workloads|filterings|justs|assigns|approves|handles|views|"
-        r"settings|sres|tracks|quorums|queues|readinesses|readiness)\b"
+        r"settings|sres|tracks|quorums|queues|readinesses|readiness|teams|cans)\b"
         r"|\bcan\s+(?:a|an)\s+(operate|create|review|approve|manage|progres|indicator|"
-        r"warning|assign|send|submit|batche|update|sale|org|owner|devop|role)\b",
+        r"warning|assign|send|submit|batche|update|sale|org|owner|devop|role|"
+        r"admin|administrator|manager|agent|designer|reviewer|auditor)\b",
         text_q,
         re.I,
     ):

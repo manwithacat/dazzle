@@ -46,11 +46,21 @@ _CARDINALITY_BAD_LEFT = frozenset(
         "devop",  # DevOps
         "sre",
         "role",  # RBAC chrome ("roles and quorums/queues"), not a domain parent
+        # Persona / job-title stems from "admins and designers" prose — not
+        # domain parents that own multi-refs (cycle 1378).
+        "admin",
+        "administrator",
+        "manager",
+        "agent",
+        "designer",
+        "reviewer",
+        "auditor",
     }
 )
 _CARDINALITY_BAD_RIGHT = frozenset(
     {
         "theirs",
+        "their",  # "tenants and their …" → multiple theirs (cycle 1378)
         "wheres",
         "theres",
         "whats",
@@ -60,6 +70,7 @@ _CARDINALITY_BAD_RIGHT = frozenset(
         "ones",
         "tos",
         "thes",
+        "the",  # "brands and the visibility" → multiple thes
         "ops",
         "overdue",  # adjective / filter language, not an entity
         "workload",  # metric prose next to "progress"
@@ -83,6 +94,8 @@ _CARDINALITY_BAD_RIGHT = frozenset(
         "quorum",  # governance config prose ("roles and quorums"), not multi-ref child
         "queue",  # infra/RBAC prose ("roles and queues"), not domain child
         "readiness",  # metric prose ("metrics and readiness")
+        "team",  # org chrome ("tasks and teams" / "customers and teams"), not multi-ref child
+        "can",  # modal fragment ("alerts can …") → multiple cans
     }
 )
 

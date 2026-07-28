@@ -42,8 +42,7 @@
 
 ## Open questions
 
-- `q1`: Can a task have multiple teams, or just one?
-- `q2`: Can a task have multiple assignments, or just one?
+- `q1`: Can a task have multiple assignments, or just one?
 
 ## Research notes
 
@@ -185,17 +184,7 @@
   "open_questions": [
     {
       "id": "q1",
-      "text": "Can a task have multiple teams, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
       "text": "Can a task have multiple assignments, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q3",
-      "text": "Can a task have multiple tracks, or just one?",
       "blocks_promote": false
     }
   ],

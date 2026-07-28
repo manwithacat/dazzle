@@ -44,9 +44,8 @@
 
 ## Open questions
 
-- `q2`: Can a brand have multiple assets, or just one?
-- `q3`: Can an admin have multiple designers, or just one?
-- `q5`: Can both parties leave reviews, or just one side?
+- `q1`: Can a brand have multiple assets, or just one?
+- `q2`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -189,17 +188,12 @@
   ],
   "open_questions": [
     {
-      "id": "q2",
+      "id": "q1",
       "text": "Can a brand have multiple assets, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q3",
-      "text": "Can an admin have multiple designers, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q5",
+      "id": "q2",
       "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }

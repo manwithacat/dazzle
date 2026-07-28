@@ -70,7 +70,7 @@
 
 ## Open questions
 
-- `q1`: Can a customer have multiple teams, or just one?
+_None blocking._
 
 ## Research notes
 
@@ -398,13 +398,7 @@
       "entity_hint": "Move"
     }
   ],
-  "open_questions": [
-    {
-      "id": "q1",
-      "text": "Can a customer have multiple teams, or just one?",
-      "blocks_promote": false
-    }
-  ],
+  "open_questions": [],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
