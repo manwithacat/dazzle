@@ -1,51 +1,54 @@
-# Agent domain: FieldTest Hub – Product Specification
+# Agent domain: FieldTest Hub — Specification
 
 > **Audience: AI agents.** Not runtime SSOT (DSL). Not investor prose.
 > Promote only when `dazzle domain promote` is green. No chrome entities.
 
 ## Summary
 
-**Project Type**: Distributed beta testing + product quality platform **Target Users**: Hardware founders, product managers, QA engineers, beta testers **Deployment**: Multi-tenant app for startups and hardware teams I need an application that allows early-stage hardware companies to coordinate real-world field testing of physical devices (e.g., wearables, IoT sensors, robotics components). Curren
+FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k
 
-**Source:** `/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPEC.md`
-**Fingerprint:** `20f06d857af42844`
+**Source:** `examples/fieldtest_hub/SPECIFICATION.md`
+**Fingerprint:** `f1955f72605c3e98`
 
 ## Personas (jobs)
 
 - **Tester** (`tester`, stable≈`tester`, grounded) — desk `tester_desk` — role word in founder brief
-- **Engineer** (`engineer`, stable≈`engineer`, grounded) — desk `engineer_desk` — role word in founder brief
 - **Manager** (`manager`, stable≈`manager`, grounded) — desk `manager_desk` — role word in founder brief
+- **Engineer** (`engineer`, stable≈`engineer`, grounded) — desk `engineer_desk` — role word in founder brief
 - **User** (`user`, stable≈`user`, grounded) — desk `user_desk` — Generic system user
 
 ## Nouns (domain types)
 
-- **Device** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
-- **FirmwareRelease** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
-- **IssueReport** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
-- **Task** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
-- **TestSession** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
+- **Device** (grounded) owner≈`assigned_to` lifecycle: prototype → active — definitional sentence in founder brief (A X is …)
+- **FirmwareRelease** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **IssueReport** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Task** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — definitional sentence in founder brief (A X is …)
+- **TestSession** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 
 ## Rejected chrome (not domain)
 
-`Assigned`, `Auto`, `Automated`, `Batch`, `Board`, `Cancelled`, `Capture`, `Casual`, `Completed`, `Connectivity`, `Crash`, `Dashboard`, `Date`, `Deprecated`, `Detect`, `Draft`, `Engineer`, `Enthusiast`, `File`, `Filter`, `Fixed`, `Fleet`, `Form`, `Full`, `Geo`, `Hardware`, `High`, `Identify`, `Indoor`, `Industrial`, `Issue`, `Know`, `Level`, `List`, `Low`, `Mark`, `Medium`, `Non`, `Notification`, `Number`, `Outdoor`, `Page`, `Personal`, `Progre`, `Prototype`, `Recall`, `Recalled`, `Release`, `Released`, `Report`, `Reproduce`, `Request`, `Retired`, `Robotic`, `Role`, `Scenario`, `Session`, `Slack`, `Spreadsheet`, `Test`, `Tester`, `Timeline`, `Triaged`, `Update`, `Vehicle`, `Verified`, `Version`, `Wearable`, `assign`, `cluster`, `critical`, `detail`, `directory`, `firmware`, `kanban`, `latch`, `problem`, `queue`, `result`, `specific`, `team`, `triage`
+`Account`, `Administrator`, `Condition`, `Cost`, `Create`, `Dashboard`, `Data`, `Dazzle`, `Devices`, `Firmware`, `Issue`, `JavaScript`, `Kit`, `Log`, `Op`, `Pipeline`, `Release`, `Report`, `Session`, `Sessions`, `Tasks`, `Test`, `TigerBeetle`, `assigned`, `auditable`, `balanced`, `batch`, `books`, `budget`, `command`, `engineer`, `evidence`, `explicit`, `fourth`, `issues`, `live`, `logged`, `loop`, `mature`, `operations`, `physical`, `problem`, `product`, `programme`, `repair`, `representative`, `roster`, `signed`, `specific`, `technical`, `tester`, `timeline`, `triage`, `versioned`
 
 ## Desks
 
 - **tester_desk** for `tester` (hypothesis) owner≈`assigned_to` — Job desk for Tester
-- **engineer_desk** for `engineer` (hypothesis) owner≈`assigned_to` — Job desk for Engineer
 - **manager_desk** for `manager` (hypothesis) owner≈`assigned_to` — Job desk for Manager
+- **engineer_desk** for `engineer` (hypothesis) owner≈`assigned_to` — Job desk for Engineer
 - **user_desk** for `user` (hypothesis) owner≈`assigned_to` — Job desk for User
 
 ## Demo spine (seed stories)
 
 - `tester`: Tester has seeded Device rows for their desk (min_rows=1, entity≈Device)
-- `engineer`: Engineer has seeded Device rows for their desk (min_rows=1, entity≈Device)
 - `manager`: Manager has seeded Device rows for their desk (min_rows=1, entity≈Device)
+- `engineer`: Engineer has seeded Device rows for their desk (min_rows=1, entity≈Device)
 - `user`: User has seeded Device rows for their desk (min_rows=1, entity≈Device)
 
 ## Open questions
 
-_None blocking._
+- `q1`: Can a device have multiple issues, or just one?
+- `q2`: Can a report have multiple tests, or just one?
+- `q3`: Can an issue have multiple opens, or just one?
+- `q4`: Can an issue have multiple tasks, or just one?
 
 ## Research notes
 
@@ -58,10 +61,10 @@ _None blocking._
 ```json
 {
   "version": 1,
-  "title": "FieldTest Hub \u2013 Product Specification",
-  "summary": "**Project Type**: Distributed beta testing + product quality platform **Target Users**: Hardware founders, product managers, QA engineers, beta testers **Deployment**: Multi-tenant app for startups and hardware teams I need an application that allows early-stage hardware companies to coordinate real-world field testing of physical devices (e.g., wearables, IoT sensors, robotics components). Curren",
-  "source_path": "/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPEC.md",
-  "source_sha256": "20f06d857af42844",
+  "title": "FieldTest Hub \u2014 Specification",
+  "summary": "FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k",
+  "source_path": "examples/fieldtest_hub/SPECIFICATION.md",
+  "source_sha256": "f1955f72605c3e98",
   "personas": [
     {
       "id_hint": "tester",
@@ -73,20 +76,20 @@ _None blocking._
       "evidence": "role word in founder brief"
     },
     {
-      "id_hint": "engineer",
-      "label": "Engineer",
-      "job": "",
-      "desk": "engineer_desk",
-      "stable_id_candidate": "engineer",
-      "status": "grounded",
-      "evidence": "role word in founder brief"
-    },
-    {
       "id_hint": "manager",
       "label": "Manager",
       "job": "",
       "desk": "manager_desk",
       "stable_id_candidate": "manager",
+      "status": "grounded",
+      "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "engineer",
+      "label": "Engineer",
+      "job": "",
+      "desk": "engineer_desk",
+      "stable_id_candidate": "engineer",
       "status": "grounded",
       "evidence": "role word in founder brief"
     },
@@ -104,35 +107,44 @@ _None blocking._
     {
       "name": "Device",
       "status": "grounded",
-      "evidence": "entity section header in founder brief",
-      "lifecycle_hint": [],
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [
+        "prototype",
+        "active"
+      ],
       "owner_field_hint": "assigned_to"
     },
     {
       "name": "FirmwareRelease",
       "status": "grounded",
-      "evidence": "entity section header in founder brief",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "assigned_to"
     },
     {
       "name": "IssueReport",
       "status": "grounded",
-      "evidence": "entity section header in founder brief",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "assigned_to"
     },
     {
       "name": "Task",
       "status": "grounded",
-      "evidence": "entity section header in founder brief",
-      "lifecycle_hint": [],
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [
+        "pending",
+        "assigned",
+        "in_progress",
+        "completed",
+        "blocked"
+      ],
       "owner_field_hint": "assigned_to"
     },
     {
       "name": "TestSession",
       "status": "grounded",
-      "evidence": "entity section header in founder brief",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "assigned_to"
     }
@@ -146,16 +158,16 @@ _None blocking._
       "status": "hypothesis"
     },
     {
-      "persona": "engineer",
-      "name": "engineer_desk",
-      "purpose": "Job desk for Engineer",
+      "persona": "manager",
+      "name": "manager_desk",
+      "purpose": "Job desk for Manager",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
     },
     {
-      "persona": "manager",
-      "name": "manager_desk",
-      "purpose": "Job desk for Manager",
+      "persona": "engineer",
+      "name": "engineer_desk",
+      "purpose": "Job desk for Engineer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
     },
@@ -175,14 +187,14 @@ _None blocking._
       "entity_hint": "Device"
     },
     {
-      "persona": "engineer",
-      "story": "Engineer has seeded Device rows for their desk",
+      "persona": "manager",
+      "story": "Manager has seeded Device rows for their desk",
       "min_rows": 1,
       "entity_hint": "Device"
     },
     {
-      "persona": "manager",
-      "story": "Manager has seeded Device rows for their desk",
+      "persona": "engineer",
+      "story": "Engineer has seeded Device rows for their desk",
       "min_rows": 1,
       "entity_hint": "Device"
     },
@@ -193,95 +205,88 @@ _None blocking._
       "entity_hint": "Device"
     }
   ],
-  "open_questions": [],
+  "open_questions": [
+    {
+      "id": "q1",
+      "text": "Can a device have multiple issues, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q2",
+      "text": "Can a report have multiple tests, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q3",
+      "text": "Can an issue have multiple opens, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q4",
+      "text": "Can an issue have multiple tasks, or just one?",
+      "blocks_promote": false
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
-    "Assigned",
-    "Auto",
-    "Automated",
-    "Batch",
-    "Board",
-    "Cancelled",
-    "Capture",
-    "Casual",
-    "Completed",
-    "Connectivity",
-    "Crash",
+    "Account",
+    "Administrator",
+    "Condition",
+    "Cost",
+    "Create",
     "Dashboard",
-    "Date",
-    "Deprecated",
-    "Detect",
-    "Draft",
-    "Engineer",
-    "Enthusiast",
-    "File",
-    "Filter",
-    "Fixed",
-    "Fleet",
-    "Form",
-    "Full",
-    "Geo",
-    "Hardware",
-    "High",
-    "Identify",
-    "Indoor",
-    "Industrial",
+    "Data",
+    "Dazzle",
+    "Devices",
+    "Firmware",
     "Issue",
-    "Know",
-    "Level",
-    "List",
-    "Low",
-    "Mark",
-    "Medium",
-    "Non",
-    "Notification",
-    "Number",
-    "Outdoor",
-    "Page",
-    "Personal",
-    "Progre",
-    "Prototype",
-    "Recall",
-    "Recalled",
+    "JavaScript",
+    "Kit",
+    "Log",
+    "Op",
+    "Pipeline",
     "Release",
-    "Released",
     "Report",
-    "Reproduce",
-    "Request",
-    "Retired",
-    "Robotic",
-    "Role",
-    "Scenario",
     "Session",
-    "Slack",
-    "Spreadsheet",
+    "Sessions",
+    "Tasks",
     "Test",
-    "Tester",
-    "Timeline",
-    "Triaged",
-    "Update",
-    "Vehicle",
-    "Verified",
-    "Version",
-    "Wearable",
-    "assign",
-    "cluster",
-    "critical",
-    "detail",
-    "directory",
-    "firmware",
-    "kanban",
-    "latch",
+    "TigerBeetle",
+    "assigned",
+    "auditable",
+    "balanced",
+    "batch",
+    "books",
+    "budget",
+    "command",
+    "engineer",
+    "evidence",
+    "explicit",
+    "fourth",
+    "issues",
+    "live",
+    "logged",
+    "loop",
+    "mature",
+    "operations",
+    "physical",
     "problem",
-    "queue",
-    "result",
+    "product",
+    "programme",
+    "repair",
+    "representative",
+    "roster",
+    "signed",
     "specific",
-    "team",
-    "triage"
+    "technical",
+    "tester",
+    "timeline",
+    "triage",
+    "versioned"
   ]
 }
 ```

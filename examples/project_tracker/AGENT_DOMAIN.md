@@ -7,7 +7,7 @@
 
 Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces — a Dashboard for the overview and a Project Board for day-to-day task and milestone management.
 
-**Source:** `/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md`
+**Source:** `examples/project_tracker/SPECIFICATION.md`
 **Fingerprint:** `336597f66186a6ca`
 
 ## Personas (jobs)
@@ -19,11 +19,9 @@ Project Tracker is a team project-management product. It organises work as Proje
 
 ## Nouns (domain types)
 
-- **EveryAttachment** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **EveryComment** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Attachment** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Project** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Comment** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Attachment** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
@@ -38,10 +36,10 @@ Project Tracker is a team project-management product. It organises work as Proje
 
 ## Demo spine (seed stories)
 
-- `admin`: Admin has seeded EveryAttachment rows for their desk (min_rows=1, entity≈EveryAttachment)
-- `manager`: Manager has seeded EveryAttachment rows for their desk (min_rows=1, entity≈EveryAttachment)
-- `member`: Member has seeded EveryAttachment rows for their desk (min_rows=1, entity≈EveryAttachment)
-- `user`: User has seeded EveryAttachment rows for their desk (min_rows=1, entity≈EveryAttachment)
+- `admin`: Admin has seeded Attachment rows for their desk (min_rows=1, entity≈Attachment)
+- `manager`: Manager has seeded Attachment rows for their desk (min_rows=1, entity≈Attachment)
+- `member`: Member has seeded Attachment rows for their desk (min_rows=1, entity≈Attachment)
+- `user`: User has seeded Attachment rows for their desk (min_rows=1, entity≈Attachment)
 
 ## Open questions
 
@@ -65,7 +63,7 @@ Project Tracker is a team project-management product. It organises work as Proje
   "version": 1,
   "title": "Project Tracker \u2014 Specification",
   "summary": "Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces \u2014 a Dashboard for the overview and a Project Board for day-to-day task and milestone management.",
-  "source_path": "/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md",
+  "source_path": "examples/project_tracker/SPECIFICATION.md",
   "source_sha256": "336597f66186a6ca",
   "personas": [
     {
@@ -107,16 +105,9 @@ Project Tracker is a team project-management product. It organises work as Proje
   ],
   "nouns": [
     {
-      "name": "EveryAttachment",
+      "name": "Attachment",
       "status": "grounded",
-      "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "EveryComment",
-      "status": "grounded",
-      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
     },
@@ -129,13 +120,6 @@ Project Tracker is a team project-management product. It organises work as Proje
     },
     {
       "name": "Comment",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Attachment",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -175,27 +159,27 @@ Project Tracker is a team project-management product. It organises work as Proje
   "demo_spine": [
     {
       "persona": "admin",
-      "story": "Admin has seeded EveryAttachment rows for their desk",
+      "story": "Admin has seeded Attachment rows for their desk",
       "min_rows": 1,
-      "entity_hint": "EveryAttachment"
+      "entity_hint": "Attachment"
     },
     {
       "persona": "manager",
-      "story": "Manager has seeded EveryAttachment rows for their desk",
+      "story": "Manager has seeded Attachment rows for their desk",
       "min_rows": 1,
-      "entity_hint": "EveryAttachment"
+      "entity_hint": "Attachment"
     },
     {
       "persona": "member",
-      "story": "Member has seeded EveryAttachment rows for their desk",
+      "story": "Member has seeded Attachment rows for their desk",
       "min_rows": 1,
-      "entity_hint": "EveryAttachment"
+      "entity_hint": "Attachment"
     },
     {
       "persona": "user",
-      "story": "User has seeded EveryAttachment rows for their desk",
+      "story": "User has seeded Attachment rows for their desk",
       "min_rows": 1,
-      "entity_hint": "EveryAttachment"
+      "entity_hint": "Attachment"
     }
   ],
   "open_questions": [

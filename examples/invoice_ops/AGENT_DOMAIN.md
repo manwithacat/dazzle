@@ -7,7 +7,7 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those
 
-**Source:** `/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md`
+**Source:** `examples/invoice_ops/SPECIFICATION.md`
 **Fingerprint:** `829eb476d540bff7`
 
 ## Personas (jobs)
@@ -61,6 +61,10 @@
 ## Open questions
 
 - `q1`: Can an invoice have multiple payments, or just one?
+- `q2`: Can a payment have multiple audits, or just one?
+- `q3`: When is payment collected - at booking, at start of service, or at completion?
+- `q4`: Should users receive email/push notifications for key events?
+- `q5`: Do users need to message each other within the app?
 
 ## Research notes
 
@@ -75,7 +79,7 @@
   "version": 1,
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
-  "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
+  "source_path": "examples/invoice_ops/SPECIFICATION.md",
   "source_sha256": "829eb476d540bff7",
   "personas": [
     {
@@ -322,6 +326,26 @@
     {
       "id": "q1",
       "text": "Can an invoice have multiple payments, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q2",
+      "text": "Can a payment have multiple audits, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q3",
+      "text": "When is payment collected - at booking, at start of service, or at completion?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q4",
+      "text": "Should users receive email/push notifications for key events?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q5",
+      "text": "Do users need to message each other within the app?",
       "blocks_promote": false
     }
   ],

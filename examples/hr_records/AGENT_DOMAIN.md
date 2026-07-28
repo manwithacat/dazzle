@@ -1,58 +1,57 @@
-# Agent domain: HR Records — Product Specification
+# Agent domain: HR Records — System Specification
 
 > **Audience: AI agents.** Not runtime SSOT (DSL). Not investor prose.
 > Promote only when `dazzle domain promote` is green. No chrome entities.
 
 ## Summary
 
-> **Document Status**: First-draft specification ready for DSL generation > **Complexity Level**: Intermediate (RBAC + temporal data) > **DSL Features Exercised**: state-machine-free entity lifecycle, effective-dated rows, current-row resolution, hierarchical traversal (department tree + manager chain), RBAC scope rules differentiating tenant-wide vs team-only vs self-only
+*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every
 
-**Source:** `/Volumes/SSD/Dazzle/examples/hr_records/SPEC.md`
-**Fingerprint:** `22463473afd9375d`
+**Source:** `examples/hr_records/SPECIFICATION.md`
+**Fingerprint:** `048d177d288d7ef2`
 
 ## Personas (jobs)
 
-- **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — role word in founder brief
 - **Manager** (`manager`, stable≈`manager`, grounded) — desk `manager_desk` — role word in founder brief
+- **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — role word in founder brief
 - **Finance** (`finance`, stable≈`finance`, grounded) — desk `finance_desk` — role word in founder brief
 - **Employee** (`employee`, stable≈`employee`, grounded) — desk `employee_desk` — role word in founder brief
-- **Engineer** (`engineer`, stable≈`engineer`, grounded) — desk `engineer_desk` — role word in founder brief
+- **Owner** (`owner`, stable≈`owner`, grounded) — desk `owner_desk` — Person who owns/creates primary content
 - **Staff** (`staff`, stable≈`staff`, grounded) — desk `staff_desk` — Internal team member
 - **User** (`user`, stable≈`user`, grounded) — desk `user_desk` — Generic system user
 - **Member** (`member`, stable≈`member`, grounded) — desk `member_desk` — Registered community member
 
 ## Nouns (domain types)
 
-- **Frontend** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Pattern** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **ManagerLink** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Phase** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Department** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Person** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Role** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 
 ## Rejected chrome (not domain)
 
-`Audit`, `Average`, `Backend`, `Benefit`, `Bonuse`, `Channel`, `Create`, `Dazzle`, `Engineer`, `Equity`, `Exercised`, `Filtered`, `Goal`, `Group`, `Invariant`, `Leave`, `Level`, `Multi`, `Non`, `Partner`, `Prediction`, `Python`, `Recent`, `Sale`, `Senior`, `Target`, `Think`, `Total`, `Two`, `bare`, `bespoke`, `candidate`, `canonical`, `career`, `catalogue`, `close`, `compare`, `current`, `date`, `department`, `desired`, `direct`, `directory`, `effective`, `firm`, `four`, `framework`, `hand`, `historical`, `identity`, `inverse`, `org`, `page`, `past`, `payroll`, `performance`, `person`, `personal`, `personnel`, `picker`, `promotion`, `report`, `role`, `runtime`, `salary`, `scope`, `starter`, `temporal`, `tree`, `unit`, `view`, `whole`
+`Beyond`, `Card`, `JavaScript`, `Link`, `Machine`, `ManagerLink`, `Metric`, `Team`, `Think`, `auditable`, `career`, `catalogued`, `clear`, `command`, `compensation`, `current`, `currently`, `data`, `detail`, `directory`, `effective`, `facts`, `formal`, `framework`, `idea`, `identity`, `line`, `live`, `mature`, `organisation`, `organisational`, `parent`, `period`, `personnel`, `present`, `product`, `report`, `review`, `rules`, `starter`, `technical`, `time`, `tree`, `visual`, `work`
 
 ## Desks
 
-- **admin_desk** for `admin` (hypothesis) owner≈`person` — Job desk for Admin
-- **manager_desk** for `manager` (hypothesis) owner≈`person` — Job desk for Manager
-- **finance_desk** for `finance` (hypothesis) owner≈`person` — Job desk for Finance
-- **employee_desk** for `employee` (hypothesis) owner≈`person` — Job desk for Employee
-- **engineer_desk** for `engineer` (hypothesis) owner≈`person` — Job desk for Engineer
-- **staff_desk** for `staff` (hypothesis) owner≈`person` — Job desk for Staff
-- **user_desk** for `user` (hypothesis) owner≈`person` — Job desk for User
-- **member_desk** for `member` (hypothesis) owner≈`person` — Job desk for Member
+- **manager_desk** for `manager` (hypothesis) owner≈`owner` — Job desk for Manager
+- **admin_desk** for `admin` (hypothesis) owner≈`owner` — Job desk for Admin
+- **finance_desk** for `finance` (hypothesis) owner≈`owner` — Job desk for Finance
+- **employee_desk** for `employee` (hypothesis) owner≈`owner` — Job desk for Employee
+- **owner_desk** for `owner` (hypothesis) owner≈`owner` — Job desk for Owner
+- **staff_desk** for `staff` (hypothesis) owner≈`owner` — Job desk for Staff
+- **user_desk** for `user` (hypothesis) owner≈`owner` — Job desk for User
+- **member_desk** for `member` (hypothesis) owner≈`owner` — Job desk for Member
 
 ## Demo spine (seed stories)
 
-- `admin`: Admin has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
-- `manager`: Manager has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
-- `finance`: Finance has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
-- `employee`: Employee has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
-- `engineer`: Engineer has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
-- `staff`: Staff has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
-- `user`: User has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
-- `member`: Member has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
+- `manager`: Manager has seeded Department rows for their desk (min_rows=1, entity≈Department)
+- `admin`: Admin has seeded Department rows for their desk (min_rows=1, entity≈Department)
+- `finance`: Finance has seeded Department rows for their desk (min_rows=1, entity≈Department)
+- `employee`: Employee has seeded Department rows for their desk (min_rows=1, entity≈Department)
+- `owner`: Owner has seeded Department rows for their desk (min_rows=1, entity≈Department)
+- `staff`: Staff has seeded Department rows for their desk (min_rows=1, entity≈Department)
+- `user`: User has seeded Department rows for their desk (min_rows=1, entity≈Department)
+- `member`: Member has seeded Department rows for their desk (min_rows=1, entity≈Department)
 
 ## Open questions
 
@@ -69,26 +68,26 @@ _None blocking._
 ```json
 {
   "version": 1,
-  "title": "HR Records \u2014 Product Specification",
-  "summary": "> **Document Status**: First-draft specification ready for DSL generation > **Complexity Level**: Intermediate (RBAC + temporal data) > **DSL Features Exercised**: state-machine-free entity lifecycle, effective-dated rows, current-row resolution, hierarchical traversal (department tree + manager chain), RBAC scope rules differentiating tenant-wide vs team-only vs self-only",
-  "source_path": "/Volumes/SSD/Dazzle/examples/hr_records/SPEC.md",
-  "source_sha256": "22463473afd9375d",
+  "title": "HR Records \u2014 System Specification",
+  "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every",
+  "source_path": "examples/hr_records/SPECIFICATION.md",
+  "source_sha256": "048d177d288d7ef2",
   "personas": [
-    {
-      "id_hint": "admin",
-      "label": "Admin",
-      "job": "",
-      "desk": "admin_desk",
-      "stable_id_candidate": "admin",
-      "status": "grounded",
-      "evidence": "role word in founder brief"
-    },
     {
       "id_hint": "manager",
       "label": "Manager",
       "job": "",
       "desk": "manager_desk",
       "stable_id_candidate": "manager",
+      "status": "grounded",
+      "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "admin",
+      "label": "Admin",
+      "job": "",
+      "desk": "admin_desk",
+      "stable_id_candidate": "admin",
       "status": "grounded",
       "evidence": "role word in founder brief"
     },
@@ -111,13 +110,13 @@ _None blocking._
       "evidence": "role word in founder brief"
     },
     {
-      "id_hint": "engineer",
-      "label": "Engineer",
-      "job": "",
-      "desk": "engineer_desk",
-      "stable_id_candidate": "engineer",
+      "id_hint": "owner",
+      "label": "Owner",
+      "job": "Person who owns/creates primary content",
+      "desk": "owner_desk",
+      "stable_id_candidate": "owner",
       "status": "grounded",
-      "evidence": "role word in founder brief"
+      "evidence": "extract_personas + brief"
     },
     {
       "id_hint": "staff",
@@ -149,140 +148,133 @@ _None blocking._
   ],
   "nouns": [
     {
-      "name": "Frontend",
+      "name": "Department",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
-      "owner_field_hint": "person"
+      "owner_field_hint": "owner"
     },
     {
-      "name": "Pattern",
+      "name": "Person",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
-      "owner_field_hint": "person"
+      "owner_field_hint": "owner"
     },
     {
-      "name": "ManagerLink",
+      "name": "Role",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
-      "owner_field_hint": "person"
-    },
-    {
-      "name": "Phase",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "person"
+      "owner_field_hint": "owner"
     }
   ],
   "desks": [
     {
-      "persona": "admin",
-      "name": "admin_desk",
-      "purpose": "Job desk for Admin",
-      "owner_field_hint": "person",
-      "status": "hypothesis"
-    },
-    {
       "persona": "manager",
       "name": "manager_desk",
       "purpose": "Job desk for Manager",
-      "owner_field_hint": "person",
+      "owner_field_hint": "owner",
+      "status": "hypothesis"
+    },
+    {
+      "persona": "admin",
+      "name": "admin_desk",
+      "purpose": "Job desk for Admin",
+      "owner_field_hint": "owner",
       "status": "hypothesis"
     },
     {
       "persona": "finance",
       "name": "finance_desk",
       "purpose": "Job desk for Finance",
-      "owner_field_hint": "person",
+      "owner_field_hint": "owner",
       "status": "hypothesis"
     },
     {
       "persona": "employee",
       "name": "employee_desk",
       "purpose": "Job desk for Employee",
-      "owner_field_hint": "person",
+      "owner_field_hint": "owner",
       "status": "hypothesis"
     },
     {
-      "persona": "engineer",
-      "name": "engineer_desk",
-      "purpose": "Job desk for Engineer",
-      "owner_field_hint": "person",
+      "persona": "owner",
+      "name": "owner_desk",
+      "purpose": "Job desk for Owner",
+      "owner_field_hint": "owner",
       "status": "hypothesis"
     },
     {
       "persona": "staff",
       "name": "staff_desk",
       "purpose": "Job desk for Staff",
-      "owner_field_hint": "person",
+      "owner_field_hint": "owner",
       "status": "hypothesis"
     },
     {
       "persona": "user",
       "name": "user_desk",
       "purpose": "Job desk for User",
-      "owner_field_hint": "person",
+      "owner_field_hint": "owner",
       "status": "hypothesis"
     },
     {
       "persona": "member",
       "name": "member_desk",
       "purpose": "Job desk for Member",
-      "owner_field_hint": "person",
+      "owner_field_hint": "owner",
       "status": "hypothesis"
     }
   ],
   "demo_spine": [
     {
-      "persona": "admin",
-      "story": "Admin has seeded Frontend rows for their desk",
+      "persona": "manager",
+      "story": "Manager has seeded Department rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Frontend"
+      "entity_hint": "Department"
     },
     {
-      "persona": "manager",
-      "story": "Manager has seeded Frontend rows for their desk",
+      "persona": "admin",
+      "story": "Admin has seeded Department rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Frontend"
+      "entity_hint": "Department"
     },
     {
       "persona": "finance",
-      "story": "Finance has seeded Frontend rows for their desk",
+      "story": "Finance has seeded Department rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Frontend"
+      "entity_hint": "Department"
     },
     {
       "persona": "employee",
-      "story": "Employee has seeded Frontend rows for their desk",
+      "story": "Employee has seeded Department rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Frontend"
+      "entity_hint": "Department"
     },
     {
-      "persona": "engineer",
-      "story": "Engineer has seeded Frontend rows for their desk",
+      "persona": "owner",
+      "story": "Owner has seeded Department rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Frontend"
+      "entity_hint": "Department"
     },
     {
       "persona": "staff",
-      "story": "Staff has seeded Frontend rows for their desk",
+      "story": "Staff has seeded Department rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Frontend"
+      "entity_hint": "Department"
     },
     {
       "persona": "user",
-      "story": "User has seeded Frontend rows for their desk",
+      "story": "User has seeded Department rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Frontend"
+      "entity_hint": "Department"
     },
     {
       "persona": "member",
-      "story": "Member has seeded Frontend rows for their desk",
+      "story": "Member has seeded Department rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Frontend"
+      "entity_hint": "Department"
     }
   ],
   "open_questions": [],
@@ -292,78 +284,51 @@ _None blocking._
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
-    "Audit",
-    "Average",
-    "Backend",
-    "Benefit",
-    "Bonuse",
-    "Channel",
-    "Create",
-    "Dazzle",
-    "Engineer",
-    "Equity",
-    "Exercised",
-    "Filtered",
-    "Goal",
-    "Group",
-    "Invariant",
-    "Leave",
-    "Level",
-    "Multi",
-    "Non",
-    "Partner",
-    "Prediction",
-    "Python",
-    "Recent",
-    "Sale",
-    "Senior",
-    "Target",
+    "Beyond",
+    "Card",
+    "JavaScript",
+    "Link",
+    "Machine",
+    "ManagerLink",
+    "Metric",
+    "Team",
     "Think",
-    "Total",
-    "Two",
-    "bare",
-    "bespoke",
-    "candidate",
-    "canonical",
+    "auditable",
     "career",
-    "catalogue",
-    "close",
-    "compare",
+    "catalogued",
+    "clear",
+    "command",
+    "compensation",
     "current",
-    "date",
-    "department",
-    "desired",
-    "direct",
+    "currently",
+    "data",
+    "detail",
     "directory",
     "effective",
-    "firm",
-    "four",
+    "facts",
+    "formal",
     "framework",
-    "hand",
-    "historical",
+    "idea",
     "identity",
-    "inverse",
-    "org",
-    "page",
-    "past",
-    "payroll",
-    "performance",
-    "person",
-    "personal",
+    "line",
+    "live",
+    "mature",
+    "organisation",
+    "organisational",
+    "parent",
+    "period",
     "personnel",
-    "picker",
-    "promotion",
+    "present",
+    "product",
     "report",
-    "role",
-    "runtime",
-    "salary",
-    "scope",
+    "review",
+    "rules",
     "starter",
-    "temporal",
+    "technical",
+    "time",
     "tree",
-    "unit",
-    "view",
-    "whole"
+    "visual",
+    "work"
   ]
 }
 ```

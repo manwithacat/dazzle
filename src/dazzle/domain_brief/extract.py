@@ -382,6 +382,56 @@ _NOUN_DENY = frozenset(
         "summary",
         "system",
         "specification",
+        # UI action / chrome verbs mistaken for entities (support_tickets SPEC.md)
+        "click",
+        "edit",
+        "delete",
+        "view",
+        "move",
+        "change",
+        "back",
+        "reassign",
+        "created",
+        "timestamp",
+        "everyone",
+        "slack",  # channel name, not a domain type
+        "priority",  # enum value language, not a type
+        "criteria",
+        "search",
+        "flow",
+        "star",
+        "acceptance",
+        "quick",
+        "style",
+        "persona",
+        "frontend",
+        "backend",
+        "pattern",
+        "phase",
+        "console",
+        "approval",  # process step unless CamelCase compound
+        "letter",  # A–Z index chrome (contact_manager)
+        "home",
+        "center",
+        "link",
+        "support",  # product genre / adjective; prefer SupportTicket
+        "agent",  # persona title alone
+        "supervisor",  # persona
+        "customer",  # persona title alone
+        "waiver",  # prefer SLAWaiver compound
+        "tickets",  # plural chrome of Ticket
+        "supporttickets",  # product title fused ("Support Tickets is a …")
+        "managerlink",  # process/UX compound from org-chart prose
+        # Workspace / desk titles mistaken for types ("My Work is …")
+        "mywork",
+        "teamoverview",
+        "ticketqueue",
+        "commandcenter",
+        "incidentresponse",
+        # Integration product names (not domain types)
+        "pagerduty",
+        "websocket",
+        # "javascript" already listed above with dazzle/hub chrome
     }
 )
 
@@ -392,12 +442,19 @@ _ENTITY_HEADER_RE = re.compile(
     re.M,
 )
 # "A Brand is …" / "An Invoice is …" / "A Design Asset is …" / "A Task has …"
+# Optional markdown bold (**Support Ticket**) and "tracks" as definitional verb
+# (cycle 1379 — support_tickets SPECIFICATION uses bold + tracks).
+# Use [ \t] (not \\s) between tokens so multiword never fuses across newlines
+# (Task\\nComment / Engagement\\nLetter regression).
 _DEFINITION_NOUN_RE = re.compile(
-    r"\b(?:A|An)\s+([A-Z][A-Za-z0-9]+(?:\s+[A-Z][A-Za-z0-9]+)?)\s+(?:is|also|has)\b"
+    r"\b(?:A|An)[ \t]+\*{0,2}([A-Z][A-Za-z0-9]+(?:[ \t]+[A-Z][A-Za-z0-9]+)?)\*{0,2}[ \t]+"
+    r"(?:is|also|has|tracks)\b"
 )
 # Multi-word without leading article: "Design Feedback is always tied…"
 # (must not capture "An Invoice" / "Acme Billing" product titles — filtered below)
-_MULTIWORD_DEF_RE = re.compile(r"\b([A-Z][A-Za-z0-9]+\s+[A-Z][A-Za-z0-9]+)\s+(?:is|also)\b")
+_MULTIWORD_DEF_RE = re.compile(
+    r"\b\*{0,2}([A-Z][A-Za-z0-9]+[ \t]+[A-Z][A-Za-z0-9]+)\*{0,2}[ \t]+(?:is|also|tracks)\b"
+)
 # Broken generate_questions output ("multiple thes", "assetss", "managess",
 # "multiple theirs/wheres", "Can a operate have…") — domain_join_co cycle 1370.
 _BROKEN_Q_RE = re.compile(
@@ -449,6 +506,9 @@ def _definition_entities(text: str) -> set[str]:
             "manager",
             "portal",
             "console",
+            "tickets",  # "Support Tickets is a …" product title
+            # "HR Records is a …"
+            "join",  # "Domain Join Co is a …" residual
         }
     )
     for m in list(_DEFINITION_NOUN_RE.finditer(text)) + list(_MULTIWORD_DEF_RE.finditer(text)):
@@ -493,8 +553,12 @@ def _strong_noun_signal(
         return True
     if re.search(rf"\b(entity|record|type|model)\s+{re.escape(name)}\b", text, re.I):
         return True
-    # Definitional sentence: "A Brand is …" / "An Invoice is …" / "A Task has …"
-    if re.search(rf"\b(?:A|An)\s+{re.escape(name)}\s+(?:is|also|has)\b", text):
+    # Definitional sentence: "A Brand is …" / "An Invoice is …" / "A Task has/tracks …"
+    # (optional markdown bold around the name — cycle 1379)
+    if re.search(
+        rf"\b(?:A|An)\s+\*{{0,2}}{re.escape(name)}\*{{0,2}}\s+(?:is|also|has|tracks)\b",
+        text,
+    ):
         return True
     hits = len(re.findall(rf"\b{re.escape(name)}\b", text, re.I))
     # article_noun used to accept hits>=1 and flooded generated SPECs with adjectives.
@@ -523,7 +587,12 @@ def _try_add_header_noun(
     # Allow multi-word headers/definitions as CamelCase compact form only
     compact = re.sub(r"\s+", "", name)
     candidate = compact if " " in name else name
-    if candidate.lower() in _NOUN_DENY or len(candidate) < 3 or candidate in seen:
+    if (
+        candidate.lower() in _NOUN_DENY
+        or len(candidate) < 3
+        or candidate in seen
+        or _is_every_fused_prose(candidate)
+    ):
         return
     spaced = re.sub(r"([a-z])([A-Z])", r"\1 \2", candidate)
     if not _grounded_in_brief(candidate, text) and not any(
@@ -561,6 +630,19 @@ def _is_plural_of_known(name: str, known: set[str]) -> bool:
     return stem in known or any(s.lower() == stem.lower() for s in known)
 
 
+def _is_every_fused_prose(name: str) -> bool:
+    """True for ``EveryAttachment`` / ``EveryAlert`` — quantifier fused to a type.
+
+    Cycle 1379: project_tracker / ops_dashboard discover emitted these from
+    prose like \"every attachment is …\" / \"every alert routes …\".
+    """
+    if not name.startswith("Every") or len(name) < 8:
+        return False
+    # Every + CapitalizedRest (CamelCase after quantifier)
+    rest = name[5:]
+    return bool(rest) and rest[0].isupper()
+
+
 def _discovered_noun_reject_reason(
     name: str,
     source: str,
@@ -573,6 +655,8 @@ def _discovered_noun_reject_reason(
     """Return reject reason, or None when the candidate may be grounded."""
     if name.lower() in _NOUN_DENY or len(name) < 4:
         return "deny_or_short"
+    if _is_every_fused_prose(name):
+        return "every_fused_prose"
     if not name[0].isupper():
         return "lowercase"
     if _is_plural_of_known(name, definitions | headers | seen):
@@ -752,7 +836,7 @@ def _is_noise_or_broken_question(text_q: str, brief: str) -> bool:
         r"settings|sres|tracks|quorums|queues|readinesses|readiness|teams|cans)\b"
         r"|\bcan\s+(?:a|an)\s+(operate|create|review|approve|manage|progres|indicator|"
         r"warning|assign|send|submit|batche|update|sale|org|owner|devop|role|"
-        r"admin|administrator|manager|agent|designer|reviewer|auditor)\b",
+        r"admin|administrator|manager|agent|designer|reviewer|auditor|system|card)\b",
         text_q,
         re.I,
     ):
@@ -866,17 +950,56 @@ def extract_from_path(path: Path) -> AgentDomain:
     return extract_from_text(path.read_text(encoding="utf-8"), source_path=str(path))
 
 
+def _brief_domain_score(text: str) -> int:
+    """Heuristic domain density for picking among co-present briefs (cycle 1379).
+
+    Definitional sentences (``A Brand is``) and Core Entities headers outweigh
+    raw length so a short founder idea.md still beats a UI walkthrough when it
+    actually names types — while a polished SPECIFICATION.md with definitions
+    outranks a SPEC.md full of Click/Edit chrome.
+    """
+    if not text or len(text.strip()) < 40:
+        return 0
+    defs = len(_DEFINITION_NOUN_RE.findall(text)) + len(_MULTIWORD_DEF_RE.findall(text))
+    headers = len(_header_entities(text))
+    # light length term so empty-definition short stubs lose to real SPECs
+    length_term = min(len(text) // 2000, 5)
+    return defs * 10 + headers * 15 + length_term
+
+
 def find_founder_brief(project_root: Path) -> Path | None:
-    # Prefer founder-authored briefs; SPECIFICATION.md is generated but richer than README
-    for name in (
+    """Pick the best founder brief under *project_root*.
+
+    Candidates are scored by domain density (definitional sentences + Core
+    Entities headers). When scores tie, prefer founder-authored names
+    (SPEC.md before generated SPECIFICATION.md before README).
+    """
+    # Order = tie-break preference (founder-authored first).
+    names = (
         "SPEC.md",
         "spec.md",
         "idea.md",
         "requirements.md",
         "SPECIFICATION.md",
         "README.md",
-    ):
+    )
+    best: Path | None = None
+    best_score = -1
+    best_rank = 999
+    for rank, name in enumerate(names):
         p = project_root / name
-        if p.is_file() and len(p.read_text(encoding="utf-8").strip()) > 40:
-            return p
-    return None
+        if not p.is_file():
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if len(text.strip()) <= 40:
+            continue
+        score = _brief_domain_score(text)
+        # Higher domain score wins; equal score → earlier name (founder-first).
+        if score > best_score or (score == best_score and rank < best_rank):
+            best = p
+            best_score = score
+            best_rank = rank
+    return best

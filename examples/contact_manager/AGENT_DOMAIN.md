@@ -7,7 +7,7 @@
 
 > **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Beginner+ > **DSL Features Demonstrated**: dual_pane_flow stage, intent declaration, domain/pattern tags, indexes A personal contact management app that lets users efficiently browse and manage their professional and personal contacts. The dual-pane interface enables quick scanning of contacts while viewi
 
-**Source:** `/Volumes/SSD/Dazzle/examples/contact_manager/SPEC.md`
+**Source:** `examples/contact_manager/SPEC.md`
 **Fingerprint:** `9fbeb4dabddc0413`
 
 ## Personas (jobs)
@@ -18,18 +18,11 @@
 
 ## Nouns (domain types)
 
-- **Click** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Criteria** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Star** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Search** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Contact** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Edit** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Flow** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Acceptance** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Add`, `Change`, `Delete`, `Duplicate`, `Efficient`, `Import`, `Indexe`, `Level`, `Multiple`, `Point`, `Profile`, `Rule`, `Sale`, `Scrollable`, `bare`, `currently`, `detail`, `directory`, `dual`, `email`, `favorite`, `favourites`, `form`, `implementation`, `list`, `pane`, `pattern`, `personal`, `phone`, `save`, `short`, `unique`
+`Acceptance`, `Add`, `Change`, `Click`, `Criteria`, `Delete`, `Duplicate`, `Edit`, `Efficient`, `Flow`, `Import`, `Indexe`, `Level`, `Multiple`, `Point`, `Profile`, `Rule`, `Sale`, `Scrollable`, `Search`, `Star`, `bare`, `currently`, `detail`, `directory`, `dual`, `email`, `favorite`, `favourites`, `form`, `implementation`, `list`, `pane`, `pattern`, `personal`, `phone`, `save`, `short`, `unique`
 
 ## Desks
 
@@ -39,9 +32,9 @@
 
 ## Demo spine (seed stories)
 
-- `manager`: Manager has seeded Click rows for their desk (min_rows=1, entity≈Click)
-- `owner`: Owner has seeded Click rows for their desk (min_rows=1, entity≈Click)
-- `user`: User has seeded Click rows for their desk (min_rows=1, entity≈Click)
+- `manager`: Manager has seeded Contact rows for their desk (min_rows=1, entity≈Contact)
+- `owner`: Owner has seeded Contact rows for their desk (min_rows=1, entity≈Contact)
+- `user`: User has seeded Contact rows for their desk (min_rows=1, entity≈Contact)
 
 ## Open questions
 
@@ -60,7 +53,7 @@ _None blocking._
   "version": 1,
   "title": "Contact Manager - Product Specification",
   "summary": "> **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Beginner+ > **DSL Features Demonstrated**: dual_pane_flow stage, intent declaration, domain/pattern tags, indexes A personal contact management app that lets users efficiently browse and manage their professional and personal contacts. The dual-pane interface enables quick scanning of contacts while viewi",
-  "source_path": "/Volumes/SSD/Dazzle/examples/contact_manager/SPEC.md",
+  "source_path": "examples/contact_manager/SPEC.md",
   "source_sha256": "9fbeb4dabddc0413",
   "personas": [
     {
@@ -93,56 +86,7 @@ _None blocking._
   ],
   "nouns": [
     {
-      "name": "Click",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Criteria",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Star",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Search",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
       "name": "Contact",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Edit",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Flow",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Acceptance",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -175,21 +119,21 @@ _None blocking._
   "demo_spine": [
     {
       "persona": "manager",
-      "story": "Manager has seeded Click rows for their desk",
+      "story": "Manager has seeded Contact rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Click"
+      "entity_hint": "Contact"
     },
     {
       "persona": "owner",
-      "story": "Owner has seeded Click rows for their desk",
+      "story": "Owner has seeded Contact rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Click"
+      "entity_hint": "Contact"
     },
     {
       "persona": "user",
-      "story": "User has seeded Click rows for their desk",
+      "story": "User has seeded Contact rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Click"
+      "entity_hint": "Contact"
     }
   ],
   "open_questions": [],
@@ -199,11 +143,16 @@ _None blocking._
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
+    "Acceptance",
     "Add",
     "Change",
+    "Click",
+    "Criteria",
     "Delete",
     "Duplicate",
+    "Edit",
     "Efficient",
+    "Flow",
     "Import",
     "Indexe",
     "Level",
@@ -213,6 +162,8 @@ _None blocking._
     "Rule",
     "Sale",
     "Scrollable",
+    "Search",
+    "Star",
     "bare",
     "currently",
     "detail",

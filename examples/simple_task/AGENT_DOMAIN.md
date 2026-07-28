@@ -1,14 +1,14 @@
-# Agent domain: Team Task Manager - Product Specification
+# Agent domain: Team Task Manager — Specification
 
 > **Audience: AI agents.** Not runtime SSOT (DSL). Not investor prose.
 > Promote only when `dazzle domain promote` is green. No chrome entities.
 
 ## Summary
 
-> **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Intermediate > **DSL Features Demonstrated**: Multi-entity relationships, personas, scenarios, access control, state machines A team task management tool that enables collaboration between administrators, managers, and team members. The app provides role-based dashboards, task assignment workflows, and pr
+Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it — Administrators, Team Managers, and Team Members — each seeing exactly the work
 
-**Source:** `/Volumes/SSD/Dazzle/examples/simple_task/SPEC.md`
-**Fingerprint:** `a08f9cf2587cb89c`
+**Source:** `examples/simple_task/SPECIFICATION.md`
+**Fingerprint:** `a2cdc96dd942fc9d`
 
 ## Personas (jobs)
 
@@ -19,12 +19,13 @@
 
 ## Nouns (domain types)
 
+- **TeamMember** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Task** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — appears in founder brief (source=capitalized_noun)
-- **TaskComment** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — appears in founder brief (source=article_noun)
+- **Comment** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Create`, `Demo`, `Level`, `List`, `Machine`, `Mix`, `Need`, `Pre`, `Progre`, `Require`, `Scenario`, `Several`, `Signal`, `Surface`, `Team`, `Test`, `Variant`, `Variou`, `completed`, `control`, `declared`, `development`, `discrete`, `implementation`, `intention`, `lifecycle`, `organization`, `review`, `right`, `specific`, `state`, `transition`, `urgent`, `work`, `workload`
+`Dashboard`, `Data`, `JavaScript`, `Metric`, `Tasks`, `Team`, `administrator`, `approval`, `auditable`, `board`, `built`, `creator`, `database`, `declared`, `discussion`, `effort`, `explicit`, `flat`, `framework`, `human`, `interrupted`, `live`, `mature`, `model`, `organisation`, `overdue`, `precise`, `priority`, `product`, `review`, `rhythm`, `technical`, `visibility`, `whole`, `work`
 
 ## Desks
 
@@ -35,14 +36,17 @@
 
 ## Demo spine (seed stories)
 
-- `manager`: Manager has seeded Task rows for their desk (min_rows=1, entity≈Task)
-- `member`: Member has seeded Task rows for their desk (min_rows=1, entity≈Task)
-- `admin`: Admin has seeded Task rows for their desk (min_rows=1, entity≈Task)
-- `user`: User has seeded Task rows for their desk (min_rows=1, entity≈Task)
+- `manager`: Manager has seeded TeamMember rows for their desk (min_rows=1, entity≈TeamMember)
+- `member`: Member has seeded TeamMember rows for their desk (min_rows=1, entity≈TeamMember)
+- `admin`: Admin has seeded TeamMember rows for their desk (min_rows=1, entity≈TeamMember)
+- `user`: User has seeded TeamMember rows for their desk (min_rows=1, entity≈TeamMember)
 
 ## Open questions
 
 - `q1`: Can a task have multiple assignments, or just one?
+- `q2`: Can a task have multiple users, or just one?
+- `q3`: Should users receive email/push notifications for key events?
+- `q4`: Do users need to message each other within the app?
 
 ## Research notes
 
@@ -55,10 +59,10 @@
 ```json
 {
   "version": 1,
-  "title": "Team Task Manager - Product Specification",
-  "summary": "> **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Intermediate > **DSL Features Demonstrated**: Multi-entity relationships, personas, scenarios, access control, state machines A team task management tool that enables collaboration between administrators, managers, and team members. The app provides role-based dashboards, task assignment workflows, and pr",
-  "source_path": "/Volumes/SSD/Dazzle/examples/simple_task/SPEC.md",
-  "source_sha256": "a08f9cf2587cb89c",
+  "title": "Team Task Manager \u2014 Specification",
+  "summary": "Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it \u2014 Administrators, Team Managers, and Team Members \u2014 each seeing exactly the work",
+  "source_path": "examples/simple_task/SPECIFICATION.md",
+  "source_sha256": "a2cdc96dd942fc9d",
   "personas": [
     {
       "id_hint": "manager",
@@ -99,6 +103,13 @@
   ],
   "nouns": [
     {
+      "name": "TeamMember",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
+    {
       "name": "Task",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -112,16 +123,10 @@
       "owner_field_hint": "assigned_to"
     },
     {
-      "name": "TaskComment",
+      "name": "Comment",
       "status": "grounded",
       "evidence": "appears in founder brief (source=article_noun)",
-      "lifecycle_hint": [
-        "pending",
-        "assigned",
-        "in_progress",
-        "completed",
-        "blocked"
-      ],
+      "lifecycle_hint": [],
       "owner_field_hint": "assigned_to"
     }
   ],
@@ -158,33 +163,48 @@
   "demo_spine": [
     {
       "persona": "manager",
-      "story": "Manager has seeded Task rows for their desk",
+      "story": "Manager has seeded TeamMember rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "TeamMember"
     },
     {
       "persona": "member",
-      "story": "Member has seeded Task rows for their desk",
+      "story": "Member has seeded TeamMember rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "TeamMember"
     },
     {
       "persona": "admin",
-      "story": "Admin has seeded Task rows for their desk",
+      "story": "Admin has seeded TeamMember rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "TeamMember"
     },
     {
       "persona": "user",
-      "story": "User has seeded Task rows for their desk",
+      "story": "User has seeded TeamMember rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Task"
+      "entity_hint": "TeamMember"
     }
   ],
   "open_questions": [
     {
       "id": "q1",
       "text": "Can a task have multiple assignments, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q2",
+      "text": "Can a task have multiple users, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q3",
+      "text": "Should users receive email/push notifications for key events?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q4",
+      "text": "Do users need to message each other within the app?",
       "blocks_promote": false
     }
   ],
@@ -194,42 +214,41 @@
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
-    "Administrator",
-    "Create",
-    "Demo",
-    "Level",
-    "List",
-    "Machine",
-    "Mix",
-    "Need",
-    "Pre",
-    "Progre",
-    "Require",
-    "Scenario",
-    "Several",
-    "Signal",
-    "Surface",
+    "Dashboard",
+    "Data",
+    "JavaScript",
+    "Metric",
+    "Tasks",
     "Team",
-    "Test",
-    "Variant",
-    "Variou",
-    "completed",
-    "control",
+    "administrator",
+    "approval",
+    "auditable",
+    "board",
+    "built",
+    "creator",
+    "database",
     "declared",
-    "development",
-    "discrete",
-    "implementation",
-    "intention",
-    "lifecycle",
-    "organization",
+    "discussion",
+    "effort",
+    "explicit",
+    "flat",
+    "framework",
+    "human",
+    "interrupted",
+    "live",
+    "mature",
+    "model",
+    "organisation",
+    "overdue",
+    "precise",
+    "priority",
+    "product",
     "review",
-    "right",
-    "specific",
-    "state",
-    "transition",
-    "urgent",
-    "work",
-    "workload"
+    "rhythm",
+    "technical",
+    "visibility",
+    "whole",
+    "work"
   ]
 }
 ```

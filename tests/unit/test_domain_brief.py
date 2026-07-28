@@ -240,6 +240,8 @@ def test_broken_cardinality_questions_filtered() -> None:
         "Can a customer have multiple teams, or just one?",
         "Can a tenant have multiple theirs, or just one?",
         "Can a brand have multiple thes, or just one?",
+        # Cycle 1379: meta "system" subject
+        "Can a system have multiple alerts, or just one?",
     ]
     for q in broken:
         assert _is_noise_or_broken_question(q, brief), q
@@ -600,3 +602,75 @@ def test_cli_help_lists_domain() -> None:
     assert r.exit_code == 0
     assert "extract" in r.stdout
     assert "research" in r.stdout
+
+
+def test_ui_action_verbs_and_every_fused_rejected_as_nouns() -> None:
+    """UI chrome verbs and Every* fused prose must not become grounded nouns.
+
+    Cycle 1379: support_tickets SPEC.md extract grounded Click/Edit/Delete;
+    project_tracker had EveryAttachment/EveryComment from quantifier fusion.
+    """
+    from dazzle.domain_brief.extract import extract_from_text
+
+    brief = """
+# Support Desk
+
+A Support Ticket tracks issues. A Comment is threaded on a ticket.
+A Project has milestones. An Attachment is a file on a comment.
+
+Click Edit to change. Delete or View the row. Move and Reassign tickets.
+Back to the list. Everyone can Search. Slack and Priority timestamps.
+Every attachment is stored. Every comment has an author.
+Criteria and Acceptance flow. Quick Style Persona Frontend Phase.
+"""
+    d = extract_from_text(brief, source_path="SPEC.md")
+    names = {n.name for n in d.nouns}
+    chrome = {
+        "Click",
+        "Edit",
+        "Delete",
+        "View",
+        "Move",
+        "Reassign",
+        "Back",
+        "Everyone",
+        "Search",
+        "Slack",
+        "Priority",
+        "Criteria",
+        "Acceptance",
+        "Quick",
+        "Style",
+        "Persona",
+        "Frontend",
+        "Phase",
+        "EveryAttachment",
+        "EveryComment",
+    }
+    assert not (names & chrome), names
+    # Real domain types from definitional sentences still land
+    assert "SupportTicket" in names or "Project" in names or "Comment" in names, names
+
+
+def test_find_founder_brief_prefers_definition_rich_specification(tmp_path) -> None:
+    """When SPEC.md is UI chrome and SPECIFICATION.md has A X is…, pick SPECIFICATION.
+
+    Cycle 1379: example apps often keep both; founder-first order alone made
+    support_tickets extract UI verbs from SPEC.md.
+    """
+    from dazzle.domain_brief.extract import find_founder_brief
+
+    (tmp_path / "SPEC.md").write_text(
+        "# Product\n\nClick Edit Delete View Move. Everyone uses Slack.\n" * 5,
+        encoding="utf-8",
+    )
+    (tmp_path / "SPECIFICATION.md").write_text(
+        "# Domain\n\n"
+        "A Support Ticket tracks issues from first report to resolution.\n"
+        "A Comment enables threaded communication on a ticket.\n"
+        "An SLA Waiver is a signed acknowledgement of a breach.\n",
+        encoding="utf-8",
+    )
+    picked = find_founder_brief(tmp_path)
+    assert picked is not None
+    assert picked.name == "SPECIFICATION.md"

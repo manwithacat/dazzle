@@ -1,14 +1,14 @@
-# Agent domain: Operations Dashboard - Product Specification
+# Agent domain: Operations Dashboard — Specification
 
 > **Audience: AI agents.** Not runtime SSOT (DSL). Not investor prose.
 > Promote only when `dazzle domain promote` is green. No chrome entities.
 
 ## Summary
 
-> **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Intermediate+ > **DSL Features Demonstrated**: Personas, COMMAND_CENTER archetype, engine hints, aggregations A real-time operations monitoring dashboard for DevOps and SRE teams. The command center interface enables engineers to monitor system health, respond to alerts, and maintain situational awareness
+Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services — each monitored System moves through healthy, degraded, critical, and offline states — and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex
 
-**Source:** `/Volumes/SSD/Dazzle/examples/ops_dashboard/SPEC.md`
-**Fingerprint:** `6c84f84c239ec519`
+**Source:** `examples/ops_dashboard/SPECIFICATION.md`
+**Fingerprint:** `1bf315204ea846ce`
 
 ## Personas (jobs)
 
@@ -17,17 +17,11 @@
 
 ## Nouns (domain types)
 
-- **Criteria** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Style** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Quick** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Persona** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **WebSocket** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Acceptance** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Alert** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=article_noun)
+- **Alert** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Aggregation`, `Auto`, `Average`, `Color`, `DevOp`, `Explicit`, `External`, `Flow`, `Hint`, `Level`, `Live`, `Mobile`, `Multi`, `Operation`, `Point`, `Related`, `Review`, `Runbook`, `Unacknowledged`, `archetype`, `bare`, `click`, `command`, `dense`, `glance`, `health`, `healthy`, `high`, `implementation`, `incident`, `keyboard`, `monitored`, `real`, `response`, `sorted`, `specific`, `system`, `total`
+`Administrator`, `Center`, `Command`, `Data`, `Dazzle`, `JavaScript`, `Operations`, `PagerDuty`, `System`, `auditable`, `backend`, `cohort`, `comparison`, `confirm`, `create`, `cross`, `degraded`, `detail`, `engineer`, `glance`, `guided`, `healthy`, `heatmap`, `incident`, `insight`, `integration`, `journey`, `kanban`, `live`, `mature`, `monitored`, `operation`, `operational`, `product`, `real`, `representative`, `responder`, `response`, `review`, `rich`, `rule`, `step`, `team`, `technical`
 
 ## Desks
 
@@ -36,13 +30,12 @@
 
 ## Demo spine (seed stories)
 
-- `engineer`: Engineer has seeded Criteria rows for their desk (min_rows=1, entity≈Criteria)
-- `user`: User has seeded Criteria rows for their desk (min_rows=1, entity≈Criteria)
+- `engineer`: Engineer has seeded Alert rows for their desk (min_rows=1, entity≈Alert)
+- `user`: User has seeded Alert rows for their desk (min_rows=1, entity≈Alert)
 
 ## Open questions
 
-- `q1`: Can a system have multiple alerts, or just one?
-- `q2`: Should users receive email/push notifications for key events?
+_None blocking._
 
 ## Research notes
 
@@ -55,10 +48,10 @@
 ```json
 {
   "version": 1,
-  "title": "Operations Dashboard - Product Specification",
-  "summary": "> **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Intermediate+ > **DSL Features Demonstrated**: Personas, COMMAND_CENTER archetype, engine hints, aggregations A real-time operations monitoring dashboard for DevOps and SRE teams. The command center interface enables engineers to monitor system health, respond to alerts, and maintain situational awareness",
-  "source_path": "/Volumes/SSD/Dazzle/examples/ops_dashboard/SPEC.md",
-  "source_sha256": "6c84f84c239ec519",
+  "title": "Operations Dashboard \u2014 Specification",
+  "summary": "Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services \u2014 each monitored System moves through healthy, degraded, critical, and offline states \u2014 and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex",
+  "source_path": "examples/ops_dashboard/SPECIFICATION.md",
+  "source_sha256": "1bf315204ea846ce",
   "personas": [
     {
       "id_hint": "engineer",
@@ -81,51 +74,9 @@
   ],
   "nouns": [
     {
-      "name": "Criteria",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
-      "name": "Style",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
-      "name": "Quick",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
-      "name": "Persona",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
-      "name": "WebSocket",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
-      "name": "Acceptance",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
       "name": "Alert",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=article_noun)",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "acknowledged_by"
     }
@@ -149,73 +100,68 @@
   "demo_spine": [
     {
       "persona": "engineer",
-      "story": "Engineer has seeded Criteria rows for their desk",
+      "story": "Engineer has seeded Alert rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Criteria"
+      "entity_hint": "Alert"
     },
     {
       "persona": "user",
-      "story": "User has seeded Criteria rows for their desk",
+      "story": "User has seeded Alert rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Criteria"
+      "entity_hint": "Alert"
     }
   ],
-  "open_questions": [
-    {
-      "id": "q1",
-      "text": "Can a system have multiple alerts, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
-      "text": "Should users receive email/push notifications for key events?",
-      "blocks_promote": false
-    }
-  ],
+  "open_questions": [],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
-    "Aggregation",
-    "Auto",
-    "Average",
-    "Color",
-    "DevOp",
-    "Explicit",
-    "External",
-    "Flow",
-    "Hint",
-    "Level",
-    "Live",
-    "Mobile",
-    "Multi",
-    "Operation",
-    "Point",
-    "Related",
-    "Review",
-    "Runbook",
-    "Unacknowledged",
-    "archetype",
-    "bare",
-    "click",
-    "command",
-    "dense",
+    "Administrator",
+    "Center",
+    "Command",
+    "Data",
+    "Dazzle",
+    "JavaScript",
+    "Operations",
+    "PagerDuty",
+    "System",
+    "auditable",
+    "backend",
+    "cohort",
+    "comparison",
+    "confirm",
+    "create",
+    "cross",
+    "degraded",
+    "detail",
+    "engineer",
     "glance",
-    "health",
+    "guided",
     "healthy",
-    "high",
-    "implementation",
+    "heatmap",
     "incident",
-    "keyboard",
+    "insight",
+    "integration",
+    "journey",
+    "kanban",
+    "live",
+    "mature",
     "monitored",
+    "operation",
+    "operational",
+    "product",
     "real",
+    "representative",
+    "responder",
     "response",
-    "sorted",
-    "specific",
-    "system",
-    "total"
+    "review",
+    "rich",
+    "rule",
+    "step",
+    "team",
+    "technical"
   ]
 }
 ```

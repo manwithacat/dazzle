@@ -55,6 +55,8 @@ _CARDINALITY_BAD_LEFT = frozenset(
         "designer",
         "reviewer",
         "auditor",
+        "system",  # meta prose ("the system manages…"), not a domain parent
+        "card",  # UI chrome ("employment cards" / desk cards), not a domain parent
     }
 )
 _CARDINALITY_BAD_RIGHT = frozenset(

@@ -1,25 +1,25 @@
 {
   "version": 1,
-  "title": "Support Tickets System - Product Specification",
-  "summary": "**Project Type**: Internal Support/Help Desk System **Target Users**: Small teams (5-20 people) handling customer support or IT tickets **Deployment**: Multi-user web application I need a support ticket system for my small team. We're getting overwhelmed with support requests coming through email, Slack, and random conversations. I want a central place where:",
-  "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPEC.md",
-  "source_sha256": "bceadae509405b99",
+  "title": "Support Tickets \u2014 Specification",
+  "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
+  "source_path": "examples/support_tickets/SPECIFICATION.md",
+  "source_sha256": "b6a4daae03f88387",
   "personas": [
-    {
-      "id_hint": "manager",
-      "label": "Manager",
-      "job": "",
-      "desk": "manager_desk",
-      "stable_id_candidate": "manager",
-      "status": "grounded",
-      "evidence": "role word in founder brief"
-    },
     {
       "id_hint": "agent",
       "label": "Agent",
       "job": "",
       "desk": "agent_desk",
       "stable_id_candidate": "agent",
+      "status": "grounded",
+      "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "manager",
+      "label": "Manager",
+      "job": "",
+      "desk": "manager_desk",
+      "stable_id_candidate": "manager",
       "status": "grounded",
       "evidence": "role word in founder brief"
     },
@@ -33,42 +33,6 @@
       "evidence": "role word in founder brief"
     },
     {
-      "id_hint": "admin",
-      "label": "Admin",
-      "job": "",
-      "desk": "admin_desk",
-      "stable_id_candidate": "admin",
-      "status": "grounded",
-      "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "requester",
-      "label": "Requester",
-      "job": "",
-      "desk": "requester_desk",
-      "stable_id_candidate": "requester",
-      "status": "grounded",
-      "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "owner",
-      "label": "Owner",
-      "job": "Person who owns/creates primary content",
-      "desk": "owner_desk",
-      "stable_id_candidate": "owner",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
-    },
-    {
-      "id_hint": "staff",
-      "label": "Staff",
-      "job": "Internal team member",
-      "desk": "staff_desk",
-      "stable_id_candidate": "staff",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
-    },
-    {
       "id_hint": "user",
       "label": "User",
       "job": "Generic system user",
@@ -76,343 +40,143 @@
       "stable_id_candidate": "user",
       "status": "grounded",
       "evidence": "extract_personas + brief"
-    },
-    {
-      "id_hint": "member",
-      "label": "Member",
-      "job": "Registered community member",
-      "desk": "member_desk",
-      "stable_id_candidate": "member",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
     {
-      "name": "Move",
+      "name": "SupportTicket",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Everyone",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Priority",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Slack",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Timestamp",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Click",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Support",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "View",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Change",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
+      "owner_field_hint": "assigned_to"
     },
     {
       "name": "Comment",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "appears in founder brief (source=comma_list)",
       "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Back",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Reassign",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Edit",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Delete",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Created",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
+      "owner_field_hint": "assigned_to"
     }
   ],
   "desks": [
     {
-      "persona": "manager",
-      "name": "manager_desk",
-      "purpose": "Job desk for Manager",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
       "persona": "agent",
       "name": "agent_desk",
       "purpose": "Job desk for Agent",
-      "owner_field_hint": "requester",
+      "owner_field_hint": "assigned_to",
+      "status": "hypothesis"
+    },
+    {
+      "persona": "manager",
+      "name": "manager_desk",
+      "purpose": "Job desk for Manager",
+      "owner_field_hint": "assigned_to",
       "status": "hypothesis"
     },
     {
       "persona": "customer",
       "name": "customer_desk",
       "purpose": "Job desk for Customer",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "admin",
-      "name": "admin_desk",
-      "purpose": "Job desk for Admin",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "requester",
-      "name": "requester_desk",
-      "purpose": "Job desk for Requester",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "owner",
-      "name": "owner_desk",
-      "purpose": "Job desk for Owner",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "staff",
-      "name": "staff_desk",
-      "purpose": "Job desk for Staff",
-      "owner_field_hint": "requester",
+      "owner_field_hint": "assigned_to",
       "status": "hypothesis"
     },
     {
       "persona": "user",
       "name": "user_desk",
       "purpose": "Job desk for User",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "member",
-      "name": "member_desk",
-      "purpose": "Job desk for Member",
-      "owner_field_hint": "requester",
+      "owner_field_hint": "assigned_to",
       "status": "hypothesis"
     }
   ],
   "demo_spine": [
     {
-      "persona": "manager",
-      "story": "Manager has seeded Move rows for their desk",
+      "persona": "agent",
+      "story": "Agent has seeded SupportTicket rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Move"
+      "entity_hint": "SupportTicket"
     },
     {
-      "persona": "agent",
-      "story": "Agent has seeded Move rows for their desk",
+      "persona": "manager",
+      "story": "Manager has seeded SupportTicket rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Move"
+      "entity_hint": "SupportTicket"
     },
     {
       "persona": "customer",
-      "story": "Customer has seeded Move rows for their desk",
+      "story": "Customer has seeded SupportTicket rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Move"
-    },
-    {
-      "persona": "admin",
-      "story": "Admin has seeded Move rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Move"
-    },
-    {
-      "persona": "requester",
-      "story": "Requester has seeded Move rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Move"
-    },
-    {
-      "persona": "owner",
-      "story": "Owner has seeded Move rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Move"
-    },
-    {
-      "persona": "staff",
-      "story": "Staff has seeded Move rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Move"
+      "entity_hint": "SupportTicket"
     },
     {
       "persona": "user",
-      "story": "User has seeded Move rows for their desk",
+      "story": "User has seeded SupportTicket rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Move"
-    },
-    {
-      "persona": "member",
-      "story": "Member has seeded Move rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Move"
+      "entity_hint": "SupportTicket"
     }
   ],
-  "open_questions": [],
+  "open_questions": [
+    {
+      "id": "q1",
+      "text": "Can a ticket have multiple conversations, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q2",
+      "text": "Can a ticket have multiple comments, or just one?",
+      "blocks_promote": false
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
-    "Advanced",
-    "Attach",
-    "Author",
-    "Basic",
-    "Breadcrumb",
-    "Brief",
-    "Bulk",
-    "Button",
-    "Canned",
-    "Check",
+    "Administrator",
+    "Agent",
+    "Approval",
     "Close",
-    "Confirm",
     "Console",
-    "Create",
-    "Critical",
-    "Current",
-    "Data",
-    "Desk",
-    "Easy",
-    "Export",
-    "File",
-    "Fill",
-    "Fixe",
-    "Fixed",
-    "Focused",
-    "Full",
-    "Funnel",
-    "Heroku",
-    "High",
-    "Icon",
-    "Identify",
-    "Kanban",
-    "Knowledge",
-    "Low",
-    "Manage",
-    "Mark",
-    "Medium",
-    "Mobile",
-    "Normal",
+    "Dashboard",
+    "JavaScript",
     "Op",
-    "Personal",
-    "Post",
-    "Progre",
-    "Quick",
-    "Railway",
-    "Read",
-    "Report",
-    "Review",
-    "Scenario",
-    "Search",
-    "Select",
-    "Top",
-    "Transparency",
-    "Trie",
-    "Update",
-    "Visual",
-    "Welcome",
-    "Worked",
-    "add",
-    "agent",
-    "are",
-    "assign",
-    "assigned",
-    "assignment",
-    "central",
-    "complex",
-    "confirmed",
-    "cracks",
-    "creator",
-    "detail",
-    "don",
-    "email",
-    "fast",
-    "flat",
-    "form",
-    "generated",
-    "integration",
-    "investigate",
-    "issue",
-    "know",
-    "left",
-    "long",
-    "need",
-    "open",
-    "picture",
-    "problem",
-    "resolved",
-    "someone",
-    "submit",
+    "Support",
+    "Tickets",
+    "Waiver",
+    "associated",
+    "auditable",
+    "authenticated",
+    "breach",
+    "byte",
+    "change",
+    "chosen",
+    "critical",
+    "data",
+    "datastore",
+    "declared",
+    "framework",
+    "informal",
+    "kanban",
+    "lifecycle",
+    "live",
+    "mature",
+    "model",
+    "operation",
+    "operational",
+    "personal",
+    "product",
+    "queue",
+    "response",
+    "review",
+    "shared",
+    "signed",
+    "solo",
+    "static",
     "team",
+    "technical",
     "ticket",
+    "visibility",
+    "whole",
     "work"
   ]
 }

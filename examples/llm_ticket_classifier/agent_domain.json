@@ -2,7 +2,7 @@
   "version": 1,
   "title": "Support Ticket Classifier \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,",
-  "source_path": "/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md",
+  "source_path": "examples/llm_ticket_classifier/SPECIFICATION.md",
   "source_sha256": "3b8fb00022056a7f",
   "personas": [
     {
@@ -45,27 +45,6 @@
       "name": "TicketClassification",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
-      "owner_field_hint": null
-    },
-    {
-      "name": "Supervisor",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": null
-    },
-    {
-      "name": "Agent",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": null
-    },
-    {
-      "name": "Support",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": null
     },
@@ -133,6 +112,7 @@
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
+    "Agent",
     "Beyond",
     "Dashboard",
     "Data",
@@ -140,6 +120,8 @@
     "JavaScript",
     "Readines",
     "Result",
+    "Supervisor",
+    "Support",
     "Their",
     "administrative",
     "auditable",
