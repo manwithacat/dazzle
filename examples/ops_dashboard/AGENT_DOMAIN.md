@@ -17,11 +17,12 @@ Operations Dashboard is a real-time monitoring and incident-response product. It
 
 ## Nouns (domain types)
 
-- **Alert** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Alert** (grounded) owner≈`acknowledged_by` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Integration** (grounded) owner≈`acknowledged_by` lifecycle: — — definitional sentence in founder brief (A X is …)
 
 ## Rejected chrome (not domain)
 
-`Administrator`, `Center`, `Command`, `Data`, `Dazzle`, `JavaScript`, `Operations`, `PagerDuty`, `System`, `auditable`, `backend`, `cohort`, `comparison`, `confirm`, `create`, `cross`, `degraded`, `detail`, `engineer`, `glance`, `guided`, `healthy`, `heatmap`, `incident`, `insight`, `integration`, `journey`, `kanban`, `live`, `mature`, `monitored`, `operation`, `operational`, `product`, `real`, `representative`, `responder`, `response`, `review`, `rich`, `rule`, `step`, `team`, `technical`
+`Administrator`, `Center`, `Command`, `Data`, `Dazzle`, `JavaScript`, `Operations`, `PagerDuty`, `System`, `auditable`, `backend`, `cohort`, `comparison`, `confirm`, `create`, `cross`, `degraded`, `detail`, `engineer`, `glance`, `guided`, `healthy`, `heatmap`, `incident`, `insight`, `journey`, `kanban`, `live`, `mature`, `monitored`, `operation`, `operational`, `product`, `real`, `representative`, `responder`, `response`, `review`, `rich`, `rule`, `step`, `team`, `technical`
 
 ## Desks
 
@@ -76,7 +77,14 @@ _None blocking._
     {
       "name": "Alert",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Integration",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "acknowledged_by"
     }
@@ -143,7 +151,6 @@ _None blocking._
     "heatmap",
     "incident",
     "insight",
-    "integration",
     "journey",
     "kanban",
     "live",

@@ -769,3 +769,52 @@ def test_topic_questions_invoice_settlement_not_booking_marketplace() -> None:
     )
     texts_b = [q.get("question", "") for q in data_b.get("questions", [])]
     assert any("booking" in t.lower() for t in texts_b), texts_b
+
+
+def test_canonical_case_prefers_type_evidence_not_field_chrome() -> None:
+    """Lowercase discover hits upgrade only for typed domain nouns.
+
+    Cycle 1383: first case-insensitive match was mid-prose \"task\", so Task
+    never grounded; preferring any Capitalized hit re-admitted Email/Phone
+    field chrome from contact SPECs. Type evidence (bold / A X / bullet) gates.
+    """
+    from dazzle.domain_brief.extract import _canonical_case, extract_from_text
+
+    tracker = """
+# Project Tracker
+
+day-to-day task and milestone management for the team.
+
+## What it does
+
+The product manages six kinds of thing:
+
+- **Projects** — the top-level containers of work.
+- **Milestones** — staging posts within a Project.
+- **Tasks** — the units of work.
+- **Comments** — the discussion on a Task.
+- **Attachments** — supporting files on a Task.
+- **Team Members** — people who own and are assigned work.
+
+A **Task** moves from backlog to done. A **Milestone** moves from planning to completed.
+Every comment is attached. Every attachment is stored.
+"""
+    d = extract_from_text(tracker, source_path="SPECIFICATION.md")
+    names = {n.name for n in d.nouns}
+    assert "Task" in names, names
+    assert "Milestone" in names, names
+    assert "Project" in names, names
+    assert "TeamMember" in names, names
+    # Quantifier fusion + workspace chrome stay out
+    assert "EveryComment" not in names
+    assert "Dashboard" not in names
+
+    # Field labels: first mid-prose hit is lowercase; no type evidence → stay low
+    field_brief = (
+        "Contacts have an email and a phone number on the card.\n"
+        "Users can favorite a row, save the form, set a unique id, open a pane.\n"
+        "Later the form shows Email and Phone columns once each.\n"
+    )
+    assert _canonical_case("email", field_brief)[0].islower(), _canonical_case("email", field_brief)
+    assert _canonical_case("task", tracker)[0].isupper(), _canonical_case("task", tracker)
+    assert _canonical_case("milestone", tracker)[0].isupper()

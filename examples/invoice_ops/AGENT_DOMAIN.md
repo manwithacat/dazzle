@@ -27,12 +27,13 @@
 - **Invoice** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Supplier** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Tenant** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
 - **Bank** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Approver** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Account`, `Administrator`, `Auditor`, `Desk`, `Finally`, `Item`, `Itemise`, `JavaScript`, `Long`, `Manage`, `Metric`, `Operator`, `Requester`, `Review`, `Significant`, `Two`, `approval`, `approved`, `attempt`, `attempts`, `auditable`, `built`, `checker`, `command`, `data`, `database`, `declared`, `discrete`, `flat`, `framework`, `general`, `human`, `informal`, `interrupted`, `invoices`, `lifecycle`, `line`, `live`, `maker`, `mature`, `model`, `multi`, `operation`, `override`, `payment`, `product`, `read`, `roles`, `rule`, `signed`, `technical`, `users`
+`Account`, `Administrator`, `Auditor`, `Desk`, `Finally`, `Item`, `Itemise`, `JavaScript`, `Long`, `Manage`, `Metric`, `Operator`, `Requester`, `Review`, `Significant`, `Two`, `approval`, `approved`, `attempt`, `attempts`, `auditable`, `built`, `checker`, `command`, `data`, `database`, `declared`, `discrete`, `flat`, `framework`, `general`, `human`, `informal`, `interrupted`, `invoices`, `lifecycle`, `line`, `live`, `maker`, `mature`, `model`, `multi`, `operation`, `override`, `product`, `read`, `roles`, `rule`, `signed`, `technical`, `users`
 
 ## Desks
 
@@ -181,6 +182,19 @@
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Payment",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [
+        "pending",
+        "processing",
+        "completed",
+        "failed",
+        "refunded"
+      ],
       "owner_field_hint": "requester"
     },
     {
@@ -381,7 +395,6 @@
     "multi",
     "operation",
     "override",
-    "payment",
     "product",
     "read",
     "roles",

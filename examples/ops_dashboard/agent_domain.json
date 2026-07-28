@@ -28,7 +28,14 @@
     {
       "name": "Alert",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Integration",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "acknowledged_by"
     }
@@ -95,7 +102,6 @@
     "heatmap",
     "incident",
     "insight",
-    "integration",
     "journey",
     "kanban",
     "live",

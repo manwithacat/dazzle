@@ -110,6 +110,19 @@
       "owner_field_hint": "requester"
     },
     {
+      "name": "Payment",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [
+        "pending",
+        "processing",
+        "completed",
+        "failed",
+        "refunded"
+      ],
+      "owner_field_hint": "requester"
+    },
+    {
       "name": "Bank",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -307,7 +320,6 @@
     "multi",
     "operation",
     "override",
-    "payment",
     "product",
     "read",
     "roles",

@@ -35,6 +35,13 @@
   ],
   "nouns": [
     {
+      "name": "AssessmentResult",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": null
+    },
+    {
       "name": "SupportTicket",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
@@ -60,6 +67,13 @@
         "reopened"
       ],
       "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Classification",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=article_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": null
     }
   ],
   "desks": [
@@ -88,21 +102,21 @@
   "demo_spine": [
     {
       "persona": "agent",
-      "story": "Agent has seeded SupportTicket rows for their desk",
+      "story": "Agent has seeded AssessmentResult rows for their desk",
       "min_rows": 1,
-      "entity_hint": "SupportTicket"
+      "entity_hint": "AssessmentResult"
     },
     {
       "persona": "customer",
-      "story": "Customer has seeded SupportTicket rows for their desk",
+      "story": "Customer has seeded AssessmentResult rows for their desk",
       "min_rows": 1,
-      "entity_hint": "SupportTicket"
+      "entity_hint": "AssessmentResult"
     },
     {
       "persona": "user",
-      "story": "User has seeded SupportTicket rows for their desk",
+      "story": "User has seeded AssessmentResult rows for their desk",
       "min_rows": 1,
-      "entity_hint": "SupportTicket"
+      "entity_hint": "AssessmentResult"
     }
   ],
   "open_questions": [],
@@ -118,6 +132,7 @@
     "Data",
     "Four",
     "JavaScript",
+    "Priority",
     "Readines",
     "Result",
     "Supervisor",
@@ -125,7 +140,6 @@
     "Their",
     "administrative",
     "auditable",
-    "classification",
     "command",
     "confidence",
     "declared",
@@ -138,7 +152,6 @@
     "mature",
     "model",
     "parent",
-    "priority",
     "product",
     "record",
     "related",

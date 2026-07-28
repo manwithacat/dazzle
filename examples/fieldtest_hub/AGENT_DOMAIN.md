@@ -27,7 +27,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
 
 ## Rejected chrome (not domain)
 
-`Account`, `Administrator`, `Condition`, `Cost`, `Create`, `Dashboard`, `Data`, `Dazzle`, `Devices`, `Firmware`, `Issue`, `JavaScript`, `Kit`, `Log`, `Op`, `Pipeline`, `Release`, `Report`, `Session`, `Sessions`, `Tasks`, `Test`, `TigerBeetle`, `assigned`, `auditable`, `balanced`, `batch`, `books`, `budget`, `command`, `engineer`, `evidence`, `explicit`, `fourth`, `issues`, `live`, `logged`, `loop`, `mature`, `operations`, `physical`, `problem`, `product`, `programme`, `repair`, `representative`, `roster`, `signed`, `specific`, `technical`, `tester`, `timeline`, `triage`, `versioned`
+`Account`, `Administrator`, `Condition`, `Cost`, `Create`, `Dashboard`, `Data`, `Dazzle`, `Devices`, `Engineer`, `Firmware`, `Issue`, `JavaScript`, `Kit`, `Log`, `Op`, `Pipeline`, `Release`, `Report`, `Session`, `Sessions`, `Tasks`, `Test`, `Tester`, `TigerBeetle`, `assigned`, `auditable`, `balanced`, `batch`, `books`, `budget`, `command`, `evidence`, `explicit`, `fourth`, `issues`, `live`, `logged`, `loop`, `mature`, `operations`, `physical`, `problem`, `product`, `programme`, `repair`, `representative`, `roster`, `signed`, `specific`, `technical`, `timeline`, `triage`, `versioned`
 
 ## Desks
 
@@ -236,6 +236,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "Data",
     "Dazzle",
     "Devices",
+    "Engineer",
     "Firmware",
     "Issue",
     "JavaScript",
@@ -249,6 +250,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "Sessions",
     "Tasks",
     "Test",
+    "Tester",
     "TigerBeetle",
     "assigned",
     "auditable",
@@ -257,7 +259,6 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "books",
     "budget",
     "command",
-    "engineer",
     "evidence",
     "explicit",
     "fourth",
@@ -277,7 +278,6 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     "signed",
     "specific",
     "technical",
-    "tester",
     "timeline",
     "triage",
     "versioned"

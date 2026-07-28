@@ -19,13 +19,13 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
 
 ## Nouns (domain types)
 
+- **Task** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — definitional sentence in founder brief (A X is …)
 - **TeamMember** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Task** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — appears in founder brief (source=capitalized_noun)
 - **Comment** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Dashboard`, `Data`, `JavaScript`, `Metric`, `Tasks`, `Team`, `administrator`, `approval`, `auditable`, `board`, `built`, `creator`, `database`, `declared`, `discussion`, `effort`, `explicit`, `flat`, `framework`, `human`, `interrupted`, `live`, `mature`, `model`, `organisation`, `overdue`, `precise`, `priority`, `product`, `review`, `rhythm`, `technical`, `visibility`, `whole`, `work`
+`Administrator`, `Dashboard`, `Data`, `Discussion`, `JavaScript`, `Metric`, `Tasks`, `Team`, `approval`, `auditable`, `board`, `built`, `creator`, `database`, `declared`, `effort`, `explicit`, `flat`, `framework`, `human`, `interrupted`, `live`, `mature`, `model`, `organisation`, `overdue`, `precise`, `priority`, `product`, `review`, `rhythm`, `technical`, `visibility`, `whole`, `work`
 
 ## Desks
 
@@ -36,10 +36,10 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
 
 ## Demo spine (seed stories)
 
-- `manager`: Manager has seeded TeamMember rows for their desk (min_rows=1, entity≈TeamMember)
-- `member`: Member has seeded TeamMember rows for their desk (min_rows=1, entity≈TeamMember)
-- `admin`: Admin has seeded TeamMember rows for their desk (min_rows=1, entity≈TeamMember)
-- `user`: User has seeded TeamMember rows for their desk (min_rows=1, entity≈TeamMember)
+- `manager`: Manager has seeded Task rows for their desk (min_rows=1, entity≈Task)
+- `member`: Member has seeded Task rows for their desk (min_rows=1, entity≈Task)
+- `admin`: Admin has seeded Task rows for their desk (min_rows=1, entity≈Task)
+- `user`: User has seeded Task rows for their desk (min_rows=1, entity≈Task)
 
 ## Open questions
 
@@ -101,16 +101,9 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
   ],
   "nouns": [
     {
-      "name": "TeamMember",
-      "status": "grounded",
-      "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "assigned_to"
-    },
-    {
       "name": "Task",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [
         "pending",
         "assigned",
@@ -118,6 +111,13 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
         "completed",
         "blocked"
       ],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "TeamMember",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
       "owner_field_hint": "assigned_to"
     },
     {
@@ -161,27 +161,27 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
   "demo_spine": [
     {
       "persona": "manager",
-      "story": "Manager has seeded TeamMember rows for their desk",
+      "story": "Manager has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "TeamMember"
+      "entity_hint": "Task"
     },
     {
       "persona": "member",
-      "story": "Member has seeded TeamMember rows for their desk",
+      "story": "Member has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "TeamMember"
+      "entity_hint": "Task"
     },
     {
       "persona": "admin",
-      "story": "Admin has seeded TeamMember rows for their desk",
+      "story": "Admin has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "TeamMember"
+      "entity_hint": "Task"
     },
     {
       "persona": "user",
-      "story": "User has seeded TeamMember rows for their desk",
+      "story": "User has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "TeamMember"
+      "entity_hint": "Task"
     }
   ],
   "open_questions": [
@@ -202,13 +202,14 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
+    "Administrator",
     "Dashboard",
     "Data",
+    "Discussion",
     "JavaScript",
     "Metric",
     "Tasks",
     "Team",
-    "administrator",
     "approval",
     "auditable",
     "board",
@@ -216,7 +217,6 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
     "creator",
     "database",
     "declared",
-    "discussion",
     "effort",
     "explicit",
     "flat",

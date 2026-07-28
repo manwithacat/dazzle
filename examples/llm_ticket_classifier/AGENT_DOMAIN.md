@@ -18,13 +18,15 @@
 
 ## Nouns (domain types)
 
+- **AssessmentResult** (grounded) owner≈`—` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **SupportTicket** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **TicketClassification** (grounded) owner≈`—` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Ticket** (grounded) owner≈`assigned_to` lifecycle: open → in_progress → resolved → closed → reopened — appears in founder brief (source=capitalized_noun)
+- **Classification** (grounded) owner≈`—` lifecycle: — — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Agent`, `Beyond`, `Dashboard`, `Data`, `Four`, `JavaScript`, `Readines`, `Result`, `Supervisor`, `Support`, `Their`, `administrative`, `auditable`, `classification`, `command`, `confidence`, `declared`, `explicit`, `framework`, `human`, `inventory`, `lifecycle`, `live`, `mature`, `model`, `parent`, `priority`, `product`, `record`, `related`, `response`, `specific`, `suggested`, `team`, `technical`, `work`
+`Agent`, `Beyond`, `Dashboard`, `Data`, `Four`, `JavaScript`, `Priority`, `Readines`, `Result`, `Supervisor`, `Support`, `Their`, `administrative`, `auditable`, `command`, `confidence`, `declared`, `explicit`, `framework`, `human`, `inventory`, `lifecycle`, `live`, `mature`, `model`, `parent`, `product`, `record`, `related`, `response`, `specific`, `suggested`, `team`, `technical`, `work`
 
 ## Desks
 
@@ -34,9 +36,9 @@
 
 ## Demo spine (seed stories)
 
-- `agent`: Agent has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
-- `customer`: Customer has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
-- `user`: User has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
+- `agent`: Agent has seeded AssessmentResult rows for their desk (min_rows=1, entity≈AssessmentResult)
+- `customer`: Customer has seeded AssessmentResult rows for their desk (min_rows=1, entity≈AssessmentResult)
+- `user`: User has seeded AssessmentResult rows for their desk (min_rows=1, entity≈AssessmentResult)
 
 ## Open questions
 
@@ -88,6 +90,13 @@ _None blocking._
   ],
   "nouns": [
     {
+      "name": "AssessmentResult",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": null
+    },
+    {
       "name": "SupportTicket",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
@@ -113,6 +122,13 @@ _None blocking._
         "reopened"
       ],
       "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "Classification",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=article_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": null
     }
   ],
   "desks": [
@@ -141,21 +157,21 @@ _None blocking._
   "demo_spine": [
     {
       "persona": "agent",
-      "story": "Agent has seeded SupportTicket rows for their desk",
+      "story": "Agent has seeded AssessmentResult rows for their desk",
       "min_rows": 1,
-      "entity_hint": "SupportTicket"
+      "entity_hint": "AssessmentResult"
     },
     {
       "persona": "customer",
-      "story": "Customer has seeded SupportTicket rows for their desk",
+      "story": "Customer has seeded AssessmentResult rows for their desk",
       "min_rows": 1,
-      "entity_hint": "SupportTicket"
+      "entity_hint": "AssessmentResult"
     },
     {
       "persona": "user",
-      "story": "User has seeded SupportTicket rows for their desk",
+      "story": "User has seeded AssessmentResult rows for their desk",
       "min_rows": 1,
-      "entity_hint": "SupportTicket"
+      "entity_hint": "AssessmentResult"
     }
   ],
   "open_questions": [],
@@ -171,6 +187,7 @@ _None blocking._
     "Data",
     "Four",
     "JavaScript",
+    "Priority",
     "Readines",
     "Result",
     "Supervisor",
@@ -178,7 +195,6 @@ _None blocking._
     "Their",
     "administrative",
     "auditable",
-    "classification",
     "command",
     "confidence",
     "declared",
@@ -191,7 +207,6 @@ _None blocking._
     "mature",
     "model",
     "parent",
-    "priority",
     "product",
     "record",
     "related",

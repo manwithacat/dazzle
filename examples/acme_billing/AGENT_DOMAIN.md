@@ -23,10 +23,11 @@
 - **Invoice** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Organization** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Project** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Membership** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Acme`, `Acros`, `Appear`, `Auditor`, `Beyond`, `JavaScript`, `Op`, `administrator`, `assignment`, `auditable`, `boundary`, `break`, `command`, `contractor`, `data`, `declared`, `formal`, `framework`, `given`, `invoices`, `limited`, `live`, `matrix`, `mature`, `membership`, `multi`, `person`, `product`, `projects`, `read`, `record`, `review`, `rules`, `sensitive`, `signed`, `skeptic`, `technical`, `tenancy`, `visibility`, `work`
+`Acme`, `Acros`, `Administrator`, `Appear`, `Auditor`, `Beyond`, `Invoices`, `JavaScript`, `Op`, `Projects`, `assignment`, `auditable`, `boundary`, `break`, `command`, `contractor`, `data`, `declared`, `formal`, `framework`, `given`, `limited`, `live`, `matrix`, `mature`, `multi`, `person`, `product`, `read`, `record`, `review`, `rules`, `sensitive`, `signed`, `skeptic`, `technical`, `tenancy`, `visibility`, `work`
 
 ## Desks
 
@@ -131,6 +132,13 @@
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
+    },
+    {
+      "name": "Membership",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
     }
   ],
   "desks": [
@@ -217,12 +225,14 @@
   "rejected_chrome": [
     "Acme",
     "Acros",
+    "Administrator",
     "Appear",
     "Auditor",
     "Beyond",
+    "Invoices",
     "JavaScript",
     "Op",
-    "administrator",
+    "Projects",
     "assignment",
     "auditable",
     "boundary",
@@ -234,16 +244,13 @@
     "formal",
     "framework",
     "given",
-    "invoices",
     "limited",
     "live",
     "matrix",
     "mature",
-    "membership",
     "multi",
     "person",
     "product",
-    "projects",
     "read",
     "record",
     "review",

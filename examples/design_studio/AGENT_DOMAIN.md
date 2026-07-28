@@ -23,10 +23,11 @@
 - **Campaign** (grounded) owner≈`created_by` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **DesignAsset** (grounded) owner≈`created_by` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **DesignFeedback** (grounded) owner≈`created_by` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Feedback** (grounded) owner≈`created_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Beyond`, `Catalog`, `Dashboard`, `Data`, `Design`, `Designer`, `Desk`, `JavaScript`, `Metric`, `Studio`, `asset`, `auditable`, `byte`, `campaigns`, `command`, `creative`, `current`, `explicit`, `feedback`, `formal`, `framework`, `live`, `matrix`, `mature`, `people`, `product`, `record`, `review`, `reviewer`, `skeptic`, `specific`, `static`, `technical`, `visibility`
+`Beyond`, `Campaigns`, `Catalog`, `Dashboard`, `Data`, `Design`, `Designer`, `Desk`, `JavaScript`, `Metric`, `Reviewer`, `Studio`, `asset`, `auditable`, `byte`, `command`, `creative`, `current`, `explicit`, `formal`, `framework`, `live`, `matrix`, `mature`, `people`, `product`, `record`, `review`, `skeptic`, `specific`, `static`, `technical`, `visibility`
 
 ## Desks
 
@@ -128,6 +129,13 @@
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "created_by"
+    },
+    {
+      "name": "Feedback",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "created_by"
     }
   ],
   "desks": [
@@ -205,6 +213,7 @@
   ],
   "rejected_chrome": [
     "Beyond",
+    "Campaigns",
     "Catalog",
     "Dashboard",
     "Data",
@@ -213,16 +222,15 @@
     "Desk",
     "JavaScript",
     "Metric",
+    "Reviewer",
     "Studio",
     "asset",
     "auditable",
     "byte",
-    "campaigns",
     "command",
     "creative",
     "current",
     "explicit",
-    "feedback",
     "formal",
     "framework",
     "live",
@@ -232,7 +240,6 @@
     "product",
     "record",
     "review",
-    "reviewer",
     "skeptic",
     "specific",
     "static",

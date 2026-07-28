@@ -46,21 +46,46 @@
     {
       "name": "Attachment",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Project",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
     },
     {
       "name": "Comment",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Milestone",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Project",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Task",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [
+        "progress",
+        "review",
+        "done"
+      ],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "TeamMember",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
     }
@@ -163,7 +188,9 @@
     "Dashboard",
     "Data",
     "Dazzle",
+    "Discussion",
     "JavaScript",
+    "People",
     "Plan",
     "Tasks",
     "assignee",
@@ -173,20 +200,16 @@
     "byte",
     "command",
     "declared",
-    "discussion",
     "evidence",
     "five",
     "kanban",
     "larger",
     "live",
     "mature",
-    "milestone",
     "parent",
-    "people",
     "product",
     "signed",
     "static",
-    "task",
     "team",
     "technical"
   ]

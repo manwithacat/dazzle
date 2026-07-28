@@ -44,16 +44,9 @@
   ],
   "nouns": [
     {
-      "name": "TeamMember",
-      "status": "grounded",
-      "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "assigned_to"
-    },
-    {
       "name": "Task",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [
         "pending",
         "assigned",
@@ -61,6 +54,13 @@
         "completed",
         "blocked"
       ],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "TeamMember",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
       "owner_field_hint": "assigned_to"
     },
     {
@@ -104,27 +104,27 @@
   "demo_spine": [
     {
       "persona": "manager",
-      "story": "Manager has seeded TeamMember rows for their desk",
+      "story": "Manager has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "TeamMember"
+      "entity_hint": "Task"
     },
     {
       "persona": "member",
-      "story": "Member has seeded TeamMember rows for their desk",
+      "story": "Member has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "TeamMember"
+      "entity_hint": "Task"
     },
     {
       "persona": "admin",
-      "story": "Admin has seeded TeamMember rows for their desk",
+      "story": "Admin has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "TeamMember"
+      "entity_hint": "Task"
     },
     {
       "persona": "user",
-      "story": "User has seeded TeamMember rows for their desk",
+      "story": "User has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "TeamMember"
+      "entity_hint": "Task"
     }
   ],
   "open_questions": [
@@ -145,13 +145,14 @@
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
+    "Administrator",
     "Dashboard",
     "Data",
+    "Discussion",
     "JavaScript",
     "Metric",
     "Tasks",
     "Team",
-    "administrator",
     "approval",
     "auditable",
     "board",
@@ -159,7 +160,6 @@
     "creator",
     "database",
     "declared",
-    "discussion",
     "effort",
     "explicit",
     "flat",

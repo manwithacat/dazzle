@@ -16,6 +16,12 @@ from dazzle.domain_brief.models import (
     DomainPersona,
     OpenQuestion,
 )
+from dazzle.domain_brief.noun_signals import (
+    bullet_entities as _bullet_entities_impl,
+)
+from dazzle.domain_brief.noun_signals import (
+    canonical_case as _canonical_case_impl,
+)
 
 _STABLE_ALIASES: dict[str, str] = {
     "employee": "employee",
@@ -442,18 +448,21 @@ _ENTITY_HEADER_RE = re.compile(
     re.M,
 )
 # "A Brand is …" / "An Invoice is …" / "A Design Asset is …" / "A Task has …"
-# Optional markdown bold (**Support Ticket**) and "tracks" as definitional verb
-# (cycle 1379 — support_tickets SPECIFICATION uses bold + tracks).
+# Optional markdown bold (**Support Ticket**) and definitional verbs
+# (cycle 1379 — support_tickets SPECIFICATION uses bold + tracks;
+#  cycle 1383 — project_tracker "A Task moves from backlog…").
 # Use [ \t] (not \\s) between tokens so multiword never fuses across newlines
 # (Task\\nComment / Engagement\\nLetter regression).
+_DEF_VERBS = r"(?:is|also|has|tracks|moves|belongs|travels|records|organises|organizes)"
+# Brace-escape quantifiers in rf-strings so {0,2} is not an f-expression.
 _DEFINITION_NOUN_RE = re.compile(
-    r"\b(?:A|An)[ \t]+\*{0,2}([A-Z][A-Za-z0-9]+(?:[ \t]+[A-Z][A-Za-z0-9]+)?)\*{0,2}[ \t]+"
-    r"(?:is|also|has|tracks)\b"
+    rf"\b(?:A|An)[ \t]+\*{{0,2}}([A-Z][A-Za-z0-9]+(?:[ \t]+[A-Z][A-Za-z0-9]+)?)\*{{0,2}}[ \t]+"
+    rf"{_DEF_VERBS}\b"
 )
 # Multi-word without leading article: "Design Feedback is always tied…"
 # (must not capture "An Invoice" / "Acme Billing" product titles — filtered below)
 _MULTIWORD_DEF_RE = re.compile(
-    r"\b\*{0,2}([A-Z][A-Za-z0-9]+[ \t]+[A-Z][A-Za-z0-9]+)\*{0,2}[ \t]+(?:is|also|tracks)\b"
+    rf"\b\*{{0,2}}([A-Z][A-Za-z0-9]+[ \t]+[A-Z][A-Za-z0-9]+)\*{{0,2}}[ \t]+{_DEF_VERBS}\b"
 )
 # Broken generate_questions output ("multiple thes", "assetss", "managess",
 # "multiple theirs/wheres", "Can a operate have…") — domain_join_co cycle 1370.
@@ -482,6 +491,11 @@ def _header_entities(text: str) -> set[str]:
         if " " not in label:
             out.add(label)
     return out
+
+
+def _bullet_entities(text: str) -> set[str]:
+    """Bold inventory bullets under domain sections (see noun_signals)."""
+    return _bullet_entities_impl(text, _NOUN_DENY)
 
 
 def _definition_entities(text: str) -> set[str]:
@@ -517,6 +531,9 @@ def _definition_entities(text: str) -> set[str]:
         # Multiword false-positives: "An Invoice is" matched without article group
         if parts and parts[0].lower() in {"a", "an", "the"}:
             continue
+        # Quantifier fusion: "Every Comment is attached…" (cycle 1383)
+        if parts and parts[0].lower() == "every":
+            continue
         # Skip product-title noise (second token is product genre, not a domain type)
         if len(parts) == 2 and parts[1].lower() in _PRODUCT_GENRE:
             continue
@@ -526,13 +543,14 @@ def _definition_entities(text: str) -> set[str]:
             out.add(label)
         # Multi-word: keep full compact only. Do **not** add the last token alone
         # ("Firmware Release" → Release) — that floods chrome fragments.
+    # Bold inventory bullets often carry the real type set when prose is long.
+    out |= _bullet_entities(text)
     return out
 
 
 def _canonical_case(name: str, text: str) -> str:
-    """Recover brief casing (TaskComment) when discover lowercases mid-humps."""
-    m = re.search(rf"\b({re.escape(name)})\b", text, re.I)
-    return m.group(1) if m else name
+    """Recover brief casing when offline discover lowercases types (cycle 1383)."""
+    return _canonical_case_impl(name, text)
 
 
 def _strong_noun_signal(
@@ -553,10 +571,11 @@ def _strong_noun_signal(
         return True
     if re.search(rf"\b(entity|record|type|model)\s+{re.escape(name)}\b", text, re.I):
         return True
-    # Definitional sentence: "A Brand is …" / "An Invoice is …" / "A Task has/tracks …"
-    # (optional markdown bold around the name — cycle 1379)
+    # Definitional sentence: "A Brand is …" / "An Invoice is …" / "A Task has/tracks/moves …"
+    # (optional markdown bold around the name — cycle 1379; moves cycle 1383)
     if re.search(
-        rf"\b(?:A|An)\s+\*{{0,2}}{re.escape(name)}\*{{0,2}}\s+(?:is|also|has|tracks)\b",
+        rf"\b(?:A|An)\s+\*{{0,2}}{re.escape(name)}\*{{0,2}}\s+"
+        rf"(?:is|also|has|tracks|moves|belongs|travels|records)\b",
         text,
     ):
         return True

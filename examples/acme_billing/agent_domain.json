@@ -72,6 +72,13 @@
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
+    },
+    {
+      "name": "Membership",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
     }
   ],
   "desks": [
@@ -158,12 +165,14 @@
   "rejected_chrome": [
     "Acme",
     "Acros",
+    "Administrator",
     "Appear",
     "Auditor",
     "Beyond",
+    "Invoices",
     "JavaScript",
     "Op",
-    "administrator",
+    "Projects",
     "assignment",
     "auditable",
     "boundary",
@@ -175,16 +184,13 @@
     "formal",
     "framework",
     "given",
-    "invoices",
     "limited",
     "live",
     "matrix",
     "mature",
-    "membership",
     "multi",
     "person",
     "product",
-    "projects",
     "read",
     "record",
     "review",

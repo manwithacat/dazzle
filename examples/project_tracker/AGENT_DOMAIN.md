@@ -19,13 +19,16 @@ Project Tracker is a team project-management product. It organises work as Proje
 
 ## Nouns (domain types)
 
-- **Attachment** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Project** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Comment** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Attachment** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Comment** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Milestone** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Project** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Task** (grounded) owner≈`assigned_to` lifecycle: progress → review → done — definitional sentence in founder brief (A X is …)
+- **TeamMember** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 
 ## Rejected chrome (not domain)
 
-`Board`, `Dashboard`, `Data`, `Dazzle`, `JavaScript`, `Plan`, `Tasks`, `assignee`, `auditable`, `author`, `built`, `byte`, `command`, `declared`, `discussion`, `evidence`, `five`, `kanban`, `larger`, `live`, `mature`, `milestone`, `parent`, `people`, `product`, `signed`, `static`, `task`, `team`, `technical`
+`Board`, `Dashboard`, `Data`, `Dazzle`, `Discussion`, `JavaScript`, `People`, `Plan`, `Tasks`, `assignee`, `auditable`, `author`, `built`, `byte`, `command`, `declared`, `evidence`, `five`, `kanban`, `larger`, `live`, `mature`, `parent`, `product`, `signed`, `static`, `team`, `technical`
 
 ## Desks
 
@@ -107,21 +110,46 @@ Project Tracker is a team project-management product. It organises work as Proje
     {
       "name": "Attachment",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Project",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
     },
     {
       "name": "Comment",
       "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Milestone",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Project",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Task",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [
+        "progress",
+        "review",
+        "done"
+      ],
+      "owner_field_hint": "assigned_to"
+    },
+    {
+      "name": "TeamMember",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
     }
@@ -224,7 +252,9 @@ Project Tracker is a team project-management product. It organises work as Proje
     "Dashboard",
     "Data",
     "Dazzle",
+    "Discussion",
     "JavaScript",
+    "People",
     "Plan",
     "Tasks",
     "assignee",
@@ -234,20 +264,16 @@ Project Tracker is a team project-management product. It organises work as Proje
     "byte",
     "command",
     "declared",
-    "discussion",
     "evidence",
     "five",
     "kanban",
     "larger",
     "live",
     "mature",
-    "milestone",
     "parent",
-    "people",
     "product",
     "signed",
     "static",
-    "task",
     "team",
     "technical"
   ]
