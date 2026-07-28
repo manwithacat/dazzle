@@ -44,7 +44,6 @@
 
 - `q1`: Can a task have multiple teams, or just one?
 - `q2`: Can a task have multiple assignments, or just one?
-- `q3`: Can a task have multiple tracks, or just one?
 
 ## Research notes
 

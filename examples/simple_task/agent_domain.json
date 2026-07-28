@@ -136,11 +136,6 @@
       "id": "q2",
       "text": "Can a task have multiple assignments, or just one?",
       "blocks_promote": false
-    },
-    {
-      "id": "q3",
-      "text": "Can a task have multiple tracks, or just one?",
-      "blocks_promote": false
     }
   ],
   "research_notes": [

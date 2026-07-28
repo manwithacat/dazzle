@@ -228,6 +228,10 @@ def test_broken_cardinality_questions_filtered() -> None:
         "Can a organization have multiple audits, or just one?",
         "Can a invoice have multiple payments, or just one?",
         "Can a admin have multiple designers, or just one?",
+        # Cycle 1377: RBAC/verb fragments as cardinality objects
+        "Can a role have multiple quorums, or just one?",
+        "Can a task have multiple tracks, or just one?",
+        "Can a role have multiple queues, or just one?",
     ]
     for q in broken:
         assert _is_noise_or_broken_question(q, brief), q
@@ -268,6 +272,42 @@ def test_generate_questions_skips_digit_and_prose_cardinality() -> None:
     assert "progres" not in joined.lower(), card
     assert "overdue" not in joined.lower(), card
     # Entity-grounded real pair from "tasks and assignments"
+    assert any("task" in t.lower() and "assignment" in t.lower() for t in card), card
+
+
+def test_generate_questions_skips_role_quorum_and_track_fragments() -> None:
+    """RBAC 'roles and quorums' and verb 'track' must not become cardinality qs.
+
+    Cycle 1377: invoice_ops open_qs had \"Can a role have multiple quorums\";
+    simple_task had \"Can a task have multiple tracks\" from track-progress prose.
+    """
+    import json
+
+    from dazzle.mcp.server.handlers.spec_analyze import _generate_questions
+
+    spec = (
+        "Approval roles and quorums gate payments. "
+        "Roles and queues route work. "
+        "Managers track progress on tasks and track status. "
+        "Tasks and assignments bind work. "
+        "A Task is a unit of work. A Payment is settlement. "
+        "An Assignment links a person to a task.\n"
+    )
+    data = json.loads(
+        _generate_questions(
+            {
+                "spec_text": spec,
+                "entities": ["Task", "Payment", "Assignment"],
+            }
+        )
+    )
+    texts = [q.get("question", "") for q in data.get("questions", [])]
+    card = [t for t in texts if "multiple" in t.lower()]
+    joined = " | ".join(card).lower()
+    assert "quorum" not in joined, card
+    assert "queue" not in joined, card
+    assert "track" not in joined, card
+    assert "role" not in joined, card
     assert any("task" in t.lower() and "assignment" in t.lower() for t in card), card
 
 

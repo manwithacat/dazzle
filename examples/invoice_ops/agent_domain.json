@@ -255,11 +255,6 @@
       "id": "q5",
       "text": "Can a payment have multiple audits, or just one?",
       "blocks_promote": false
-    },
-    {
-      "id": "q6",
-      "text": "Can a role have multiple quorums, or just one?",
-      "blocks_promote": false
     }
   ],
   "research_notes": [

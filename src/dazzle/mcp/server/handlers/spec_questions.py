@@ -45,6 +45,7 @@ _CARDINALITY_BAD_LEFT = frozenset(
         "owner",
         "devop",  # DevOps
         "sre",
+        "role",  # RBAC chrome ("roles and quorums/queues"), not a domain parent
     }
 )
 _CARDINALITY_BAD_RIGHT = frozenset(
@@ -78,6 +79,10 @@ _CARDINALITY_BAD_RIGHT = frozenset(
         "contractor",
         "review",  # lifecycle state / "permission review" / verb noun
         "feedback",  # chrome desk label, not usually a multi-ref child
+        "track",  # verb fragment ("tasks and track progress" → "multiple tracks")
+        "quorum",  # governance config prose ("roles and quorums"), not multi-ref child
+        "queue",  # infra/RBAC prose ("roles and queues"), not domain child
+        "readiness",  # metric prose ("metrics and readiness")
     }
 )
 

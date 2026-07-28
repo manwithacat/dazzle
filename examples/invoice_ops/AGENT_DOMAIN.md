@@ -62,7 +62,6 @@
 
 - `q4`: Can an invoice have multiple payments, or just one?
 - `q5`: Can a payment have multiple audits, or just one?
-- `q6`: Can a role have multiple quorums, or just one?
 
 ## Research notes
 

@@ -749,9 +749,9 @@ def _is_noise_or_broken_question(text_q: str, brief: str) -> bool:
     ) and re.search(
         r"\bmultiple\s+(theirs|wheres|theres|whats|whiches|ops|tos|thes|ones|"
         r"overdues|workloads|filterings|justs|assigns|approves|handles|views|"
-        r"settings|sres)\b"
-        r"|\bcan\s+a\s+(operate|create|review|approve|manage|progres|indicator|"
-        r"warning|assign|send|submit|batche|update|sale|org|owner|devop)\b",
+        r"settings|sres|tracks|quorums|queues|readinesses|readiness)\b"
+        r"|\bcan\s+(?:a|an)\s+(operate|create|review|approve|manage|progres|indicator|"
+        r"warning|assign|send|submit|batche|update|sale|org|owner|devop|role)\b",
         text_q,
         re.I,
     ):
