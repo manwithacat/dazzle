@@ -1144,6 +1144,108 @@ def _plural_obj(word2: str) -> str:
     return f"{word2}s"
 
 
+def _right_stem(word2: str) -> str:
+    if word2.endswith("s") and not word2.endswith("ss") and len(word2) > 3:
+        return word2[:-1]
+    return word2
+
+
+def _is_bad_cardinality_pair(word1: str, word2: str) -> bool:
+    """True when either side is a known prose/verb stem, not a domain noun."""
+    w2_stem = _right_stem(word2)
+    return (
+        word1 in _CARDINALITY_BAD_LEFT
+        or word2 in _CARDINALITY_BAD_RIGHT
+        or w2_stem in _CARDINALITY_BAD_RIGHT
+        or word1 in _CARDINALITY_BAD_RIGHT
+    )
+
+
+def _cardinality_questions(spec_text: str, entities: list[Any]) -> list[dict[str, str]]:
+    """Emit grounded one-to-many clarification questions from ``Xs and/or Ys`` prose.
+
+    Letter-only tokens only; when ``entities`` is non-empty the *subject* (left)
+    must match a discovered entity stem so "members and 7 tasks" / verb pairs drop.
+    """
+    ent_stems = _entity_stems(entities)
+    plurals = re.findall(
+        r"\b([a-z]{3,24})s\s+(?:and|or)\s+([a-z]{3,24})s?\b",
+        spec_text.lower(),
+    )
+    out: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for word1, word2 in plurals:
+        if not _plausible_cardinality_token(word1) or not _plausible_cardinality_token(word2):
+            continue
+        if _is_bad_cardinality_pair(word1, word2):
+            continue
+        if ent_stems and word1 not in ent_stems:
+            continue
+        key = (word1, word2)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {
+                "topic": "cardinality",
+                "question": f"Can a {word1} have multiple {_plural_obj(word2)}, or just one?",
+                "impact": "Affects whether to use ref() or list of refs",
+            }
+        )
+    return out
+
+
+def _topic_questions(spec_text: str, entities: list[Any]) -> list[dict[str, str]]:
+    """Payment / cancel / notify / review / messaging topic probes (non-cardinality)."""
+    low = spec_text.lower()
+    questions: list[dict[str, str]] = []
+    if re.search(r"\b(pay|payment)\b", low) and not re.search(
+        r"\b(escrow|upfront|completion|booking)\b", low
+    ):
+        questions.append(
+            {
+                "topic": "payment_flow",
+                "question": (
+                    "When is payment collected - at booking, at start of service, or at completion?"
+                ),
+                "impact": "Affects payment state machine and process flow",
+            }
+        )
+    if re.search(r"\b(book|request|order)\b", low) and not re.search(r"\b(cancel|refund)\b", low):
+        questions.append(
+            {
+                "topic": "cancellation",
+                "question": "What happens if someone cancels? Are there refund rules?",
+                "impact": "Affects state machine transitions and financial rules",
+            }
+        )
+    if isinstance(entities, list) and len(entities) >= 2:
+        questions.append(
+            {
+                "topic": "notifications",
+                "question": "Should users receive email/push notifications for key events?",
+                "impact": "Affects whether to add notification triggers",
+            }
+        )
+    if re.search(r"\b(review|rating|feedback)\b", low):
+        questions.append(
+            {
+                "topic": "reviews",
+                "question": "Can both parties leave reviews, or just one side?",
+                "impact": "Affects Review entity design and who can create",
+            }
+        )
+    if not re.search(r"\b(message|chat|communicate)\b", low):
+        questions.append(
+            {
+                "topic": "communication",
+                "question": "Do users need to message each other within the app?",
+                "impact": "Major feature decision - adds Message entity and real-time requirements",
+            }
+        )
+    return questions
+
+
 def _generate_questions(arguments: dict[str, Any]) -> str:
     """
     Generate clarification questions for ambiguities.
@@ -1159,97 +1261,10 @@ def _generate_questions(arguments: dict[str, Any]) -> str:
     if not spec_text:
         return error_response("spec_text is required")
 
-    questions = []
-    ent_stems = _entity_stems(entities if isinstance(entities, list) else [])
-
-    # Check for plural ambiguity (one-to-many vs one-to-one).
-    # Require letter-only tokens so "members and 7 tasks" never yields
-    # "multiple 7s". Prefer pairs grounded in discovered entities when present.
-    plurals = re.findall(r"\b([a-z]{3,24})s\s+(?:and|or)\s+([a-z]{3,24})s?\b", spec_text.lower())
-    seen_card: set[tuple[str, str]] = set()
-    for word1, word2 in plurals:
-        if not _plausible_cardinality_token(word1) or not _plausible_cardinality_token(word2):
-            continue
-        w2_stem = (
-            word2[:-1]
-            if word2.endswith("s") and not word2.endswith("ss") and len(word2) > 3
-            else word2
-        )
-        if (
-            word1 in _CARDINALITY_BAD_LEFT
-            or word2 in _CARDINALITY_BAD_RIGHT
-            or w2_stem in _CARDINALITY_BAD_RIGHT
-            or word1 in _CARDINALITY_BAD_RIGHT
-        ):
-            continue
-        # When discover_entities ran, require the *subject* (left) to match an
-        # entity stem — "tasks and tracks" keeps; "members and contractors" /
-        # "updates and comments" drop unless Member/Update are entities.
-        if ent_stems and word1 not in ent_stems:
-            continue
-        key = (word1, word2)
-        if key in seen_card:
-            continue
-        seen_card.add(key)
-        questions.append(
-            {
-                "topic": "cardinality",
-                "question": (f"Can a {word1} have multiple {_plural_obj(word2)}, or just one?"),
-                "impact": "Affects whether to use ref() or list of refs",
-            }
-        )
-
-    # Check for missing payment flow details
-    if re.search(r"\b(pay|payment)\b", spec_text.lower()):
-        if not re.search(r"\b(escrow|upfront|completion|booking)\b", spec_text.lower()):
-            questions.append(
-                {
-                    "topic": "payment_flow",
-                    "question": "When is payment collected - at booking, at start of service, or at completion?",
-                    "impact": "Affects payment state machine and process flow",
-                }
-            )
-
-    # Check for missing cancellation handling
-    if re.search(r"\b(book|request|order)\b", spec_text.lower()):
-        if not re.search(r"\b(cancel|refund)\b", spec_text.lower()):
-            questions.append(
-                {
-                    "topic": "cancellation",
-                    "question": "What happens if someone cancels? Are there refund rules?",
-                    "impact": "Affects state machine transitions and financial rules",
-                }
-            )
-
-    # Check for notification ambiguity
-    if len(entities) >= 2:
-        questions.append(
-            {
-                "topic": "notifications",
-                "question": "Should users receive email/push notifications for key events?",
-                "impact": "Affects whether to add notification triggers",
-            }
-        )
-
-    # Check for rating/review system
-    if re.search(r"\b(review|rating|feedback)\b", spec_text.lower()):
-        questions.append(
-            {
-                "topic": "reviews",
-                "question": "Can both parties leave reviews, or just one side?",
-                "impact": "Affects Review entity design and who can create",
-            }
-        )
-
-    # Check for messaging
-    if not re.search(r"\b(message|chat|communicate)\b", spec_text.lower()):
-        questions.append(
-            {
-                "topic": "communication",
-                "question": "Do users need to message each other within the app?",
-                "impact": "Major feature decision - adds Message entity and real-time requirements",
-            }
-        )
+    entity_list = entities if isinstance(entities, list) else []
+    questions = _cardinality_questions(spec_text, entity_list) + _topic_questions(
+        spec_text, entity_list
+    )
 
     return json.dumps(
         {

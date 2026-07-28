@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1373 (2026-07-28).** **cimonitor** repair — extract cardinality/topic helpers from `_generate_questions` (CC 23→under ratchet after 1372 inline). budget 0. Explore **30/100**.
 > **Cycle 1372 (2026-07-28).** **example-apps COGNITION** domain open_q quality — generate_questions cardinality grounded (letter-only, subject∈entities, stop stems) + filter digits/double-s/verb plurals; designer-draft → created_by owner; fleet re-extract 12/12 ready_to_promote=True. budget 1. Explore **30/100**.
 > **Cycle 1371 (2026-07-28).** **example-apps COGNITION** domain open_q quality + first AGENT_DOMAIN for domain_join_co + llm_ticket_classifier (ready_to_promote=True); broken cardinality filter (multiple theirs/wheres, a operate) landed with tip 1370 extract.py. budget 1. Explore **29/100**.
 
