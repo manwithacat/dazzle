@@ -118,6 +118,11 @@ class RegionRenderInputs:
     queue_transitions: list[dict[str, str]] = field(default_factory=list)
     queue_status_field: str = ""
     queue_api_endpoint: str = ""
+    # Linear-class kanban rearrange (gated UPDATE + SM edges).
+    kanban_rearrange: str = ""
+    kanban_status_field: str = ""
+    kanban_api_endpoint: str = ""
+    kanban_allowed_by_id: dict[str, tuple[str, ...]] = field(default_factory=dict)
     overlay_series_data: list[dict[str, Any]] = field(default_factory=list)
     group_by: Any = None  # str | BucketRef | None
     filter_columns: list[dict[str, Any]] = field(default_factory=list)
@@ -543,6 +548,13 @@ def _build_list_adapter_ctx(
         _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
         adapter_ctx["endpoint"] = ctx_region.endpoint
         adapter_ctx["entity_name"] = ctx.source
+        # Linear-class rearrange — only when orchestration stamped status mode
+        # after UPDATE gate (read-only personas get empty strings).
+        adapter_ctx["kanban_rearrange"] = inputs.kanban_rearrange
+        adapter_ctx["kanban_status_field"] = inputs.kanban_status_field
+        adapter_ctx["kanban_api_endpoint"] = inputs.kanban_api_endpoint
+        adapter_ctx["kanban_allowed_by_id"] = inputs.kanban_allowed_by_id
+        adapter_ctx["kanban_refresh_src"] = ctx_region.endpoint
     elif display_upper == "QUEUE":
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns

@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+## [0.109.0] - 2026-07-28
+
+### Added
+- **Kanban rearrange (Linear-class, HTMX)** — drag / keyboard status move on
+  `display: kanban` when the persona may **UPDATE**. Exemplar requirements
+  from Linear’s board + Trello gesture grammar, recontextualised as:
+  SSR stamps `data-dz-kanban-rearrange` + per-card `data-dz-allowed-to`
+  (manual SM edges only); `dz-kanban.js` does PUT entity then GET-refresh
+  the region (grid bulk-refresh pattern). Read-only personas get zero
+  rearrange attrs (queue chrome gate class). Gallery mock:
+  `/mock/kanban/*`. Design:
+  `docs/superpowers/specs/2026-07-28-kanban-rearrange-htmx-design.md`.
+
 ## [0.108.0] - 2026-07-28
 
 ### Fixed

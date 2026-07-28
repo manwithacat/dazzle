@@ -138,6 +138,7 @@ JS_SOURCES = [
     "controllers/dz-grid-cols.js",
     "controllers/dz-grid-resize.js",
     "controllers/dz-grid-edit.js",
+    "controllers/dz-kanban.js",
     "controllers/dz-app-shell.js",
     "controllers/dz-confirm-gate.js",
     "controllers/dz-search-select.js",

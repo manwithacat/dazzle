@@ -355,9 +355,27 @@ def metric_tile_root_attrs(tile: MetricTile) -> str:
     return base
 
 
-def kanban_card_root_attrs(_card: KanbanCard) -> str:
-    """Assemble kanban-card dual-lock root — sole emitter site."""
-    return "data-dz-kanban-card"
+def kanban_card_root_attrs(card: KanbanCard) -> str:
+    """Assemble kanban-card dual-lock root — sole emitter site.
+
+    Always stamps ``data-dz-kanban-card``. When the host enables rearrange
+    (row_id + allowed_to), also stamps entity id / from_state / allowed_to
+    / draggable so dz-kanban.js can offer Linear-class moves only where
+    the persona may mutate.
+    """
+    bits = ["data-dz-kanban-card"]
+    row_id = getattr(card, "row_id", "") or ""
+    from_state = getattr(card, "from_state", "") or ""
+    allowed = getattr(card, "allowed_to", ()) or ()
+    if row_id:
+        bits.append(f'data-dz-entity-id="{_html.escape(str(row_id), quote=True)}"')
+    if from_state:
+        bits.append(f'data-dz-from-state="{_html.escape(str(from_state), quote=True)}"')
+    if allowed:
+        joined = _html.escape(" ".join(str(s) for s in allowed), quote=True)
+        bits.append(f'data-dz-allowed-to="{joined}"')
+        bits.append('draggable="true"')
+    return " ".join(bits)
 
 
 def activity_row_root_attrs(_row: ActivityRow) -> str:
@@ -456,13 +474,35 @@ def render_kanban_card(card: KanbanCard) -> str:
         level = _html.escape(card.attention_level, quote=True)
         msg = _html.escape(card.attention_message)
         attn_html = f'<p class="dz-kanban-card-attn" data-dz-attn="{level}">{msg}</p>'
+    # Keyboard parity (R6): Move select when rearrange targets exist.
+    move_html = ""
+    allowed = getattr(card, "allowed_to", ()) or ()
+    row_id = getattr(card, "row_id", "") or ""
+    if row_id and allowed:
+        options = ['<option value="">Move to…</option>']
+        for state in allowed:
+            label = _html.escape(str(state).replace("_", " ").title())
+            val = _html.escape(str(state), quote=True)
+            options.append(f'<option value="{val}">{label}</option>')
+        move_html = (
+            f'<div class="dz-kanban-card-move">'
+            f'<label><span class="visually-hidden">Move card</span>'
+            f'<select data-dz-kanban-move aria-label="Move {title}">'
+            f"{''.join(options)}"
+            f"</select></label>"
+            f"</div>"
+        )
     root_attrs = kanban_card_root_attrs(card)
+    id_attr = ""
+    if row_id:
+        id_attr = f' id="dz-kanban-card-{_html.escape(str(row_id), quote=True)}"'
     return (
-        f'<div class="dz-kanban-card" {root_attrs}>'
+        f'<div class="dz-kanban-card" {root_attrs}{id_attr}>'
         f'<div class="dz-kanban-card-body">'
         f"{title_html}"
         f"{card.fields_html}"
         f"{attn_html}"
+        f"{move_html}"
         f"</div>"
         f"</div>"
     )

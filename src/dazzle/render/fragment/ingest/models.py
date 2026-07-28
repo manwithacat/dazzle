@@ -284,6 +284,10 @@ class KanbanCard(BaseModel):
     attention_message: str = ""
     # #1303 / cycle 1410 — optional hub drill (title becomes a link).
     drill_url: str = ""
+    # Linear-class rearrange (2026-07-28) — empty = presentation-only.
+    row_id: str = ""
+    from_state: str = ""
+    allowed_to: tuple[str, ...] = ()
 
     @field_validator("title")
     @classmethod

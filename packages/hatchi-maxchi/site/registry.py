@@ -3853,52 +3853,124 @@ def select(source: str, id: str) -> str:
             # scroll horizontally). After the gallery main track was constrained
             # (minmax(0,1fr)), the board actually scrolls and axe requires keyboard
             # access to the scrollable region (scrollable-region-focusable).
+            # Linear-class rearrange demo (gallery mock): mutator board only.
+            # /mock/kanban/* is offline demo — product hosts stamp the same
+            # attrs only when UPDATE is permitted (see agent Server exchange).
             '<div class="dz-kanban-board" role="region" aria-label="Kanban board" '
-            'tabindex="0">'
+            'tabindex="0" data-dz-kanban-board data-dz-kanban-rearrange="status" '
+            'data-dz-kanban-status-field="status" '
+            'data-dz-kanban-api="/mock/kanban" '
+            'data-dz-kanban-src="/mock/kanban/board">'
+            '<div class="dz-kanban-announce" data-dz-kanban-announce '
+            'aria-live="polite" aria-atomic="true"></div>'
             '<div class="dz-kanban-column">'
             '<div class="dz-kanban-column-head">'
             '<span class="dz-badge" data-dz-tone="neutral">Open</span>'
             '<span class="dz-kanban-column-count">2</span></div>'
-            '<div class="dz-kanban-stack">'
-            '<div class="dz-kanban-card" data-dz-kanban-card>'
+            '<div class="dz-kanban-stack" data-dz-kanban-stack data-dz-to-state="open">'
+            '<div class="dz-kanban-card" data-dz-kanban-card '
+            'id="dz-kanban-card-k1" data-dz-entity-id="k1" '
+            'data-dz-from-state="open" data-dz-allowed-to="in_progress done" '
+            'draggable="true">'
             '<div class="dz-kanban-card-body">'
             '<h4 class="dz-kanban-card-title">Refund request — Acme</h4>'
             '<p class="dz-kanban-card-field">£1,250 · assigned to Ada</p>'
             '<p class="dz-kanban-card-attn" data-dz-attn="critical">SLA breaches at 16:00</p>'
+            '<div class="dz-kanban-card-move"><label>'
+            '<span class="visually-hidden">Move card</span>'
+            '<select data-dz-kanban-move aria-label="Move Refund request — Acme">'
+            '<option value="">Move to…</option>'
+            '<option value="in_progress">In Progress</option>'
+            '<option value="done">Done</option>'
+            "</select></label></div>"
             "</div></div>"
-            '<div class="dz-kanban-card" data-dz-kanban-card>'
+            '<div class="dz-kanban-card" data-dz-kanban-card '
+            'id="dz-kanban-card-k2" data-dz-entity-id="k2" '
+            'data-dz-from-state="open" data-dz-allowed-to="in_progress" '
+            'draggable="true">'
             '<div class="dz-kanban-card-body">'
             '<h4 class="dz-kanban-card-title">KYC review — Globex</h4>'
             '<p class="dz-kanban-card-field">due tomorrow</p>'
+            '<div class="dz-kanban-card-move"><label>'
+            '<span class="visually-hidden">Move card</span>'
+            '<select data-dz-kanban-move aria-label="Move KYC review — Globex">'
+            '<option value="">Move to…</option>'
+            '<option value="in_progress">In Progress</option>'
+            "</select></label></div>"
             "</div></div></div></div>"
             '<div class="dz-kanban-column">'
             '<div class="dz-kanban-column-head">'
             '<span class="dz-badge" data-dz-tone="info">In progress</span>'
             '<span class="dz-kanban-column-count">1</span></div>'
-            '<div class="dz-kanban-stack">'
-            '<div class="dz-kanban-card" data-dz-kanban-card>'
+            '<div class="dz-kanban-stack" data-dz-kanban-stack '
+            'data-dz-to-state="in_progress">'
+            '<div class="dz-kanban-card" data-dz-kanban-card '
+            'id="dz-kanban-card-k3" data-dz-entity-id="k3" '
+            'data-dz-from-state="in_progress" data-dz-allowed-to="done open" '
+            'draggable="true">'
             '<div class="dz-kanban-card-body">'
             '<h4 class="dz-kanban-card-title">Chargeback — Initech</h4>'
             '<p class="dz-kanban-card-field">evidence uploaded</p>'
+            '<div class="dz-kanban-card-move"><label>'
+            '<span class="visually-hidden">Move card</span>'
+            '<select data-dz-kanban-move aria-label="Move Chargeback — Initech">'
+            '<option value="">Move to…</option>'
+            '<option value="done">Done</option>'
+            '<option value="open">Open</option>'
+            "</select></label></div>"
             "</div></div></div></div>"
             '<div class="dz-kanban-column">'
             '<div class="dz-kanban-column-head">'
             '<span class="dz-badge" data-dz-tone="success">'
             '<span class="dz-badge-icon">{svg:circle-check}</span>Done</span>'
             '<span class="dz-kanban-column-count">0</span></div>'
-            '<div class="dz-kanban-stack">'
+            '<div class="dz-kanban-stack" data-dz-kanban-stack data-dz-to-state="done">'
             '<p class="dz-kanban-empty">Nothing here yet.</p>'
             "</div></div></div>",
             notes="Cards are SERVER-rendered — dual-lock root is "
             "<code>data-dz-kanban-card</code> (<code>contracts/kanban.py</code>). "
-            "A drag-and-drop extension is a future controller on these seams, not "
-            "a client state graph. Attention text carries "
-            "<code>data-dz-attn</code> (critical/warning/notice — the same attn "
-            "contract the timeline's bullets and the queue's rows use). An "
-            "overflowing board renders a <code>dz-kanban-load-all</code> button "
-            "whose <code>hx-get</code> re-fetches the region at full page size.",
+            "Linear-class rearrange: when the host stamps "
+            '<code>data-dz-kanban-rearrange="status"</code> (UPDATE only), '
+            "<code>dz-kanban.js</code> moves cards via PUT + region refresh; "
+            "per-card <code>data-dz-allowed-to</code> lists legal edges. "
+            "Read-only boards omit rearrange attrs entirely. Gallery "
+            "<code>/mock/kanban/*</code> is demo-only. Attention text carries "
+            "<code>data-dz-attn</code> (critical/warning/notice).",
             tags=("data",),
             contracts=("contracts/kanban.py",),
+            controller="controllers/dz-kanban.js",
+            guidance=Guidance(
+                seams=(
+                    "rearrange: host stamps data-dz-kanban-rearrange=status only when "
+                    "UPDATE is permitted — never CSS-only drag",
+                    "per-card data-dz-allowed-to lists manual SM edges; empty = not draggable",
+                    "PUT entity update then GET data-dz-kanban-src (region refresh) — "
+                    "same bulk-refresh pattern as the grid",
+                    "keyboard: select[data-dz-kanban-move] offers the same targets as drag",
+                ),
+                pitfalls=(
+                    "do not invent a second rearrange API — reuse entity UPDATE + SM validation",
+                    "do not stamp rearrange attrs for read-only personas (chrome leak)",
+                    "do not use dashboard personal-layout drag as the product model",
+                    "client allowed_to is a hint — server re-validates every drop",
+                ),
+                do_dont=(
+                    (
+                        "gate rearrange chrome on UPDATE like queue transitions",
+                        "show grab cursors for everyone and 403 on drop",
+                    ),
+                    (
+                        "refresh the board from the region endpoint after PUT",
+                        "optimistically reorder the DOM without a server settle",
+                    ),
+                ),
+                a11y_keys=(
+                    "Move select is keyboard parity for drag",
+                    "aria-live announce region reports move result",
+                    "title hub drills stay clickable — drag starts off links/controls",
+                ),
+                composes_with=("queue",),
+            ),
         ),
         Hyperpart(
             "timeline",

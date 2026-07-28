@@ -129,6 +129,11 @@ class RegionContext(TypedDict, total=False):
     day_timeline_slots: Any
     pipeline_stage_data: Any
     kanban_columns: Any
+    kanban_rearrange: str
+    kanban_status_field: str
+    kanban_api_endpoint: str
+    kanban_allowed_by_id: Any
+    kanban_refresh_src: str
     queue_api_endpoint: str
     queue_status_field: str
     queue_transitions: Any

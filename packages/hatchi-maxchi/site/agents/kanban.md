@@ -13,39 +13,69 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
-<div class="kanban-board" role="region" aria-label="Kanban board" tabindex="0">
+<div class="kanban-board" role="region" aria-label="Kanban board" tabindex="0" data-kanban-board data-kanban-rearrange="status" data-kanban-status-field="status" data-kanban-api="/mock/kanban" data-kanban-src="/mock/kanban/board">
+  <div class="kanban-announce" data-kanban-announce aria-live="polite" aria-atomic="true"></div>
   <div class="kanban-column">
     <div class="kanban-column-head"><span class="badge" data-tone="neutral">Open</span><span class="kanban-column-count">2</span></div>
-    <div class="kanban-stack">
-      <div class="kanban-card" data-kanban-card>
+    <div class="kanban-stack" data-kanban-stack data-to-state="open">
+      <div class="kanban-card" data-kanban-card id="kanban-card-k1" data-entity-id="k1" data-from-state="open" data-allowed-to="in_progress done" draggable="true">
         <div class="kanban-card-body">
           <h4 class="kanban-card-title">Refund request — Acme</h4>
           <p class="kanban-card-field">£1,250 · assigned to Ada</p>
           <p class="kanban-card-attn" data-attn="critical">SLA breaches at 16:00</p>
+          <div class="kanban-card-move">
+            <label>
+              <span class="visually-hidden">Move card</span>
+              <select data-kanban-move aria-label="Move Refund request — Acme">
+                <option value="">Move to…</option>
+                <option value="in_progress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+            </label>
+          </div>
         </div>
       </div>
-      <div class="kanban-card" data-kanban-card>
+      <div class="kanban-card" data-kanban-card id="kanban-card-k2" data-entity-id="k2" data-from-state="open" data-allowed-to="in_progress" draggable="true">
         <div class="kanban-card-body">
           <h4 class="kanban-card-title">KYC review — Globex</h4>
           <p class="kanban-card-field">due tomorrow</p>
+          <div class="kanban-card-move">
+            <label>
+              <span class="visually-hidden">Move card</span>
+              <select data-kanban-move aria-label="Move KYC review — Globex">
+                <option value="">Move to…</option>
+                <option value="in_progress">In Progress</option>
+              </select>
+            </label>
+          </div>
         </div>
       </div>
     </div>
   </div>
   <div class="kanban-column">
     <div class="kanban-column-head"><span class="badge" data-tone="info">In progress</span><span class="kanban-column-count">1</span></div>
-    <div class="kanban-stack">
-      <div class="kanban-card" data-kanban-card>
+    <div class="kanban-stack" data-kanban-stack data-to-state="in_progress">
+      <div class="kanban-card" data-kanban-card id="kanban-card-k3" data-entity-id="k3" data-from-state="in_progress" data-allowed-to="done open" draggable="true">
         <div class="kanban-card-body">
           <h4 class="kanban-card-title">Chargeback — Initech</h4>
           <p class="kanban-card-field">evidence uploaded</p>
+          <div class="kanban-card-move">
+            <label>
+              <span class="visually-hidden">Move card</span>
+              <select data-kanban-move aria-label="Move Chargeback — Initech">
+                <option value="">Move to…</option>
+                <option value="done">Done</option>
+                <option value="open">Open</option>
+              </select>
+            </label>
+          </div>
         </div>
       </div>
     </div>
   </div>
   <div class="kanban-column">
     <div class="kanban-column-head"><span class="badge" data-tone="success"><span class="badge-icon"><svg class="icon" aria-hidden="true"><use href="#i-circle-check"/></svg></span>Done</span><span class="kanban-column-count">0</span></div>
-    <div class="kanban-stack">
+    <div class="kanban-stack" data-kanban-stack data-to-state="done">
       <p class="kanban-empty">Nothing here yet.</p>
     </div>
   </div>
@@ -83,13 +113,36 @@ Do **not** re-own the slot:
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- no Server exchange on this part — pure presentation or client chrome
-- satisfy the DOM contract tables (CI stop-ship)
+- rearrange: host stamps data-dz-kanban-rearrange=status only when UPDATE is permitted — never CSS-only drag
+- per-card data-dz-allowed-to lists manual SM edges; empty = not draggable
+- PUT entity update then GET data-dz-kanban-src (region refresh) — same bulk-refresh pattern as the grid
+- keyboard: select[data-dz-kanban-move] offers the same targets as drag
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| gate rearrange chrome on UPDATE like queue transitions | show grab cursors for everyone and 403 on drop |
+| refresh the board from the region endpoint after PUT | optimistically reorder the DOM without a server settle |
+
+### Pitfalls
+
+- do not invent a second rearrange API — reuse entity UPDATE + SM validation
+- do not stamp rearrange attrs for read-only personas (chrome leak)
+- do not use dashboard personal-layout drag as the product model
+- client allowed_to is a hint — server re-validates every drop
+
+### Keyboard / AT
+
+- Move select is keyboard parity for drag
+- aria-live announce region reports move result
+- title hub drills stay clickable — drag starts off links/controls
+
+### Related parts
+
+- `queue` — agents/queue.md
 
 ## DOM contract
 
@@ -112,6 +165,9 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | `attention_level` | `string` | no |
 | `attention_message` | `string` | no |
 | `drill_url` | `string` | no |
+| `row_id` | `string` | no |
+| `from_state` | `string` | no |
+| `allowed_to` | `array` | no |
 
 #### Exemplar `render()`
 
@@ -135,12 +191,30 @@ def render(card: KanbanCard) -> str:
         level = html.escape(card.attention_level, quote=True)
         msg = html.escape(card.attention_message)
         attn_html = f'<p class="dz-kanban-card-attn" data-dz-attn="{level}">{msg}</p>'
+
+    # Dual-lock root: always data-dz-kanban-card; rearrange attrs only when
+    # host stamped capability (read-only boards stay presentation-only).
+    root_bits = ["data-dz-kanban-card"]
+    id_attr = ""
+    if card.row_id:
+        rid = html.escape(card.row_id, quote=True)
+        root_bits.append(f'data-dz-entity-id="{rid}"')
+        id_attr = f' id="dz-kanban-card-{rid}"'
+    if card.from_state:
+        root_bits.append(f'data-dz-from-state="{html.escape(card.from_state, quote=True)}"')
+    if card.allowed_to:
+        allowed = html.escape(" ".join(card.allowed_to), quote=True)
+        root_bits.append(f'data-dz-allowed-to="{allowed}"')
+        root_bits.append('draggable="true"')
+    root_attrs = " ".join(root_bits)
+
     return (
-        f'<div class="dz-kanban-card" data-dz-kanban-card>'
+        f'<div class="dz-kanban-card" {root_attrs}{id_attr}>'
         f'<div class="dz-kanban-card-body">'
         f"{title_html}"
         f"{card.fields_html}"
         f"{attn_html}"
+        f"{_move_select_html(card)}"
         f"</div>"
         f"</div>"
     )
@@ -148,9 +222,10 @@ def render(card: KanbanCard) -> str:
 
 ## Notes
 
-Cards are SERVER-rendered — dual-lock root is data-dz-kanban-card (contracts/kanban.py). A drag-and-drop extension is a future controller on these seams, not a client state graph. Attention text carries data-dz-attn (critical/warning/notice — the same attn contract the timeline's bullets and the queue's rows use). An overflowing board renders a dz-kanban-load-all button whose hx-get re-fetches the region at full page size.
+Cards are SERVER-rendered — dual-lock root is data-dz-kanban-card (contracts/kanban.py). Linear-class rearrange: when the host stamps data-dz-kanban-rearrange="status" (UPDATE only), dz-kanban.js moves cards via PUT + region refresh; per-card data-dz-allowed-to lists legal edges. Read-only boards omit rearrange attrs entirely. Gallery /mock/kanban/* is demo-only. Attention text carries data-dz-attn (critical/warning/notice).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
 - `contracts/kanban.py`
+- `controllers/dz-kanban.js`

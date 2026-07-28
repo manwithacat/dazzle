@@ -8964,6 +8964,76 @@ a.action-card:hover {
   box-shadow: 0 1px 3px oklch(0% 0 0 / 0.04);
 }
 
+/* Linear-class rearrange: only when SSR stamped draggable / drop targets */
+.kanban-card[draggable="true"] {
+  cursor: grab;
+  touch-action: none;
+}
+
+.kanban-card[draggable="true"]:active,
+.kanban-card.is-dragging {
+  cursor: grabbing;
+  opacity: 0.72;
+  box-shadow: 0 8px 24px oklch(0% 0 0 / 0.12);
+}
+
+.kanban-card.is-moving {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.kanban-board.is-busy {
+  cursor: progress;
+}
+
+.kanban-board.is-dragging .kanban-stack[data-to-state] {
+  outline: 1px dashed color-mix(in oklch, var(--colour-border) 80%, transparent);
+  outline-offset: 2px;
+  min-height: 3rem;
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-out),
+    outline-color var(--duration-fast) var(--ease-out);
+}
+
+.kanban-stack.is-drop-target {
+  outline-color: var(--colour-brand);
+  background: color-mix(in oklch, var(--colour-brand) 8%, transparent);
+}
+
+.kanban-stack.is-drop-deny {
+  outline-color: var(--colour-destructive, oklch(55% 0.2 25));
+  background: color-mix(in oklch, var(--colour-destructive, oklch(55% 0.2 25)) 6%, transparent);
+}
+
+.kanban-card-move {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-block-start: var(--space-xs);
+}
+
+.kanban-card-move label {
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.kanban-card-move select {
+  font-size: var(--text-xs);
+  max-width: 100%;
+}
+
+.kanban-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .kanban-card.is-clickable {
   cursor: pointer;
   transition: box-shadow var(--duration-fast) var(--ease-out),

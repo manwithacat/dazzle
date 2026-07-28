@@ -661,6 +661,10 @@ _No composition edges declared._
 - `ops-queue` — blueprint
 - `triage-drawer` — blueprint
 
+**Related from (`composes_with`)**
+
+- `kanban` — composes_with
+
 ### `radar`
 
 **Layer:** `L1`

@@ -2707,10 +2707,87 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   // entity's STANDARD update route with a single-field JSON body — not an
   // htmx exchange, so the mock intercepts window.fetch for /mock/grid/<id>.
   // A real server runs its full update gate (RBAC, scope, validation) here.
+  //
+  // Kanban rearrange (dz-kanban.js) uses the same shape: PUT /mock/kanban/<id>
+  // then GET /mock/kanban/board for board refresh (Linear-class PUT-then-GET).
+  var KANBAN_CARDS = [
+    { id: "k1", title: "Refund request — Acme", field: "£1,250 · assigned to Ada",
+      attn: "SLA breaches at 16:00", status: "open",
+      allowed: { open: ["in_progress", "done"], in_progress: ["done", "open"], done: ["open"] } },
+    { id: "k2", title: "KYC review — Globex", field: "due tomorrow",
+      attn: "", status: "open",
+      allowed: { open: ["in_progress"], in_progress: ["done"], done: ["open"] } },
+    { id: "k3", title: "Chargeback — Initech", field: "evidence uploaded",
+      attn: "", status: "in_progress",
+      allowed: { open: ["in_progress", "done"], in_progress: ["done", "open"], done: ["open"] } }
+  ];
+  var KANBAN_COLS = [
+    { key: "open", label: "Open", tone: "neutral" },
+    { key: "in_progress", label: "In progress", tone: "info" },
+    { key: "done", label: "Done", tone: "success" }
+  ];
+  function escKanban(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function renderKanbanBoard() {
+    var html = '<div class="dz-kanban-board" role="region" aria-label="Kanban board" '
+      + 'tabindex="0" data-dz-kanban-board data-dz-kanban-rearrange="status" '
+      + 'data-dz-kanban-status-field="status" data-dz-kanban-api="/mock/kanban" '
+      + 'data-dz-kanban-src="/mock/kanban/board">'
+      + '<div class="dz-kanban-announce" data-dz-kanban-announce '
+      + 'aria-live="polite" aria-atomic="true"></div>';
+    KANBAN_COLS.forEach(function (col) {
+      var cards = KANBAN_CARDS.filter(function (c) { return c.status === col.key; });
+      html += '<div class="dz-kanban-column"><div class="dz-kanban-column-head">'
+        + '<span class="dz-badge" data-dz-tone="' + col.tone + '">' + escKanban(col.label)
+        + '</span><span class="dz-kanban-column-count">' + cards.length + '</span></div>'
+        + '<div class="dz-kanban-stack" data-dz-kanban-stack data-dz-to-state="'
+        + col.key + '">';
+      if (!cards.length) {
+        html += '<p class="dz-kanban-empty">Nothing here yet.</p>';
+      } else {
+        cards.forEach(function (c) {
+          var allowed = (c.allowed[c.status] || []).slice();
+          var allowedAttr = allowed.join(" ");
+          var opts = '<option value="">Move to…</option>';
+          allowed.forEach(function (s) {
+            var lab = String(s).replace(/_/g, " ");
+            opts += '<option value="' + escKanban(s) + '">' + escKanban(lab) + '</option>';
+          });
+          html += '<div class="dz-kanban-card" data-dz-kanban-card id="dz-kanban-card-'
+            + escKanban(c.id) + '" data-dz-entity-id="' + escKanban(c.id) + '" '
+            + 'data-dz-from-state="' + escKanban(c.status) + '" '
+            + (allowedAttr
+              ? 'data-dz-allowed-to="' + escKanban(allowedAttr) + '" draggable="true"'
+              : '')
+            + '><div class="dz-kanban-card-body">'
+            + '<h4 class="dz-kanban-card-title">' + escKanban(c.title) + '</h4>'
+            + '<p class="dz-kanban-card-field">' + escKanban(c.field) + '</p>'
+            + (c.attn
+              ? '<p class="dz-kanban-card-attn" data-dz-attn="critical">'
+                + escKanban(c.attn) + '</p>'
+              : '')
+            + (allowedAttr
+              ? '<div class="dz-kanban-card-move"><label>'
+                + '<span class="visually-hidden">Move card</span>'
+                + '<select data-dz-kanban-move aria-label="Move ' + escKanban(c.title)
+                + '">' + opts + '</select></label></div>'
+              : '')
+            + '</div></div>';
+        });
+      }
+      html += '</div></div>';
+    });
+    return html + '</div>';
+  }
+
   var realFetch = window.fetch ? window.fetch.bind(window) : null;
   window.fetch = function (url, opts) {
-    var m = typeof url === "string" && url.match(/^\\/mock\\/grid\\/([^/?]+)$/);
-    if (m && opts && String(opts.method).toUpperCase() === "PUT") {
+    var u = typeof url === "string" ? url : "";
+    var method = opts && opts.method ? String(opts.method).toUpperCase() : "GET";
+    var m = u.match(/^\\/mock\\/grid\\/([^/?]+)$/);
+    if (m && method === "PUT") {
       var patch = {};
       try { patch = JSON.parse(opts.body || "{}"); } catch (e) { patch = {}; }
       var hit = null;
@@ -2721,6 +2798,34 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       });
       return Promise.resolve(new Response("{}", {
         status: 200, headers: { "Content-Type": "application/json" }
+      }));
+    }
+    var km = u.match(/^\\/mock\\/kanban\\/([^/?]+)$/);
+    if (km && method === "PUT") {
+      var body = {};
+      try { body = JSON.parse(opts.body || "{}"); } catch (e2) { body = {}; }
+      var kid = decodeURIComponent(km[1]);
+      if (kid === "board") {
+        return Promise.resolve(new Response("method not allowed", { status: 405 }));
+      }
+      var card = null;
+      KANBAN_CARDS.forEach(function (c) { if (c.id === kid) card = c; });
+      if (!card) return Promise.resolve(new Response("{}", { status: 404 }));
+      var next = body.status != null ? String(body.status) : "";
+      var legal = card.allowed[card.status] || [];
+      if (!next || legal.indexOf(next) < 0) {
+        return Promise.resolve(new Response(JSON.stringify({ detail: "illegal transition" }), {
+          status: 422, headers: { "Content-Type": "application/json" }
+        }));
+      }
+      card.status = next;
+      return Promise.resolve(new Response(JSON.stringify({ id: card.id, status: card.status }), {
+        status: 200, headers: { "Content-Type": "application/json" }
+      }));
+    }
+    if (u.split("?")[0] === "/mock/kanban/board" && method === "GET") {
+      return Promise.resolve(new Response(renderKanbanBoard(), {
+        status: 200, headers: { "Content-Type": "text/html" }
       }));
     }
     return realFetch ? realFetch(url, opts) : Promise.reject(new Error("no fetch"));

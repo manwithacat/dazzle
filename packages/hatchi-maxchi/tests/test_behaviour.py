@@ -2946,3 +2946,37 @@ def test_toast_stack_host_pause_dismiss_and_client_fire(page) -> None:  # type: 
     page.wait_for_timeout(120)
     assert page.locator(toast_sel).count() == after_dismiss + 1
     assert page.locator(".toast__title, .dz-toast__title").filter(has_text="Host test").count() == 1
+
+
+def test_kanban_rearrange_attrs_and_keyboard_move(page):  # type: ignore[no-untyped-def]
+    """kanban Hyperpart: Linear-class rearrange seams are live in the gallery.
+
+    Mutator board stamps data-dz-kanban-rearrange + allowed_to + move select.
+    Keyboard path fires PUT via the mock then refreshes the board (counts move).
+    Coverage meta-gate greps for goto_part(page, "kanban").
+    """
+    goto_part(page, "kanban")
+    rearr = page.locator("#kanban .hm-preview [data-dz-kanban-rearrange='status']")
+    assert rearr.count() == 1, "gallery demo stamps rearrange for mutator board"
+    card = rearr.locator("[data-dz-kanban-card][draggable='true']").first
+    assert card.count() == 1
+    entity_id = card.get_attribute("data-dz-entity-id")
+    assert entity_id
+    assert card.get_attribute("data-dz-allowed-to")
+    move = card.locator("select[data-dz-kanban-move]")
+    assert move.count() == 1
+    opts = move.locator("option")
+    assert opts.count() >= 2
+    target = opts.nth(1).get_attribute("value")
+    assert target
+    before_col = card.get_attribute("data-dz-from-state")
+    move.select_option(target)
+    page.wait_for_timeout(500)
+    rearr2 = page.locator("#kanban .hm-preview [data-dz-kanban-rearrange='status']")
+    assert rearr2.count() == 1, "board still rearrange-capable after refresh"
+    moved = rearr2.locator(f"[data-dz-entity-id='{entity_id}']")
+    assert moved.count() == 1
+    after_col = moved.get_attribute("data-dz-from-state")
+    assert after_col == target, (
+        f"expected column {target!r}, got {after_col!r} (was {before_col!r})"
+    )

@@ -674,10 +674,87 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   // entity's STANDARD update route with a single-field JSON body — not an
   // htmx exchange, so the mock intercepts window.fetch for /mock/grid/<id>.
   // A real server runs its full update gate (RBAC, scope, validation) here.
+  //
+  // Kanban rearrange (kanban.js) uses the same shape: PUT /mock/kanban/<id>
+  // then GET /mock/kanban/board for board refresh (Linear-class PUT-then-GET).
+  var KANBAN_CARDS = [
+    { id: "k1", title: "Refund request — Acme", field: "£1,250 · assigned to Ada",
+      attn: "SLA breaches at 16:00", status: "open",
+      allowed: { open: ["in_progress", "done"], in_progress: ["done", "open"], done: ["open"] } },
+    { id: "k2", title: "KYC review — Globex", field: "due tomorrow",
+      attn: "", status: "open",
+      allowed: { open: ["in_progress"], in_progress: ["done"], done: ["open"] } },
+    { id: "k3", title: "Chargeback — Initech", field: "evidence uploaded",
+      attn: "", status: "in_progress",
+      allowed: { open: ["in_progress", "done"], in_progress: ["done", "open"], done: ["open"] } }
+  ];
+  var KANBAN_COLS = [
+    { key: "open", label: "Open", tone: "neutral" },
+    { key: "in_progress", label: "In progress", tone: "info" },
+    { key: "done", label: "Done", tone: "success" }
+  ];
+  function escKanban(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function renderKanbanBoard() {
+    var html = '<div class="kanban-board" role="region" aria-label="Kanban board" '
+      + 'tabindex="0" data-kanban-board data-kanban-rearrange="status" '
+      + 'data-kanban-status-field="status" data-kanban-api="/mock/kanban" '
+      + 'data-kanban-src="/mock/kanban/board">'
+      + '<div class="kanban-announce" data-kanban-announce '
+      + 'aria-live="polite" aria-atomic="true"></div>';
+    KANBAN_COLS.forEach(function (col) {
+      var cards = KANBAN_CARDS.filter(function (c) { return c.status === col.key; });
+      html += '<div class="kanban-column"><div class="kanban-column-head">'
+        + '<span class="badge" data-tone="' + col.tone + '">' + escKanban(col.label)
+        + '</span><span class="kanban-column-count">' + cards.length + '</span></div>'
+        + '<div class="kanban-stack" data-kanban-stack data-to-state="'
+        + col.key + '">';
+      if (!cards.length) {
+        html += '<p class="kanban-empty">Nothing here yet.</p>';
+      } else {
+        cards.forEach(function (c) {
+          var allowed = (c.allowed[c.status] || []).slice();
+          var allowedAttr = allowed.join(" ");
+          var opts = '<option value="">Move to…</option>';
+          allowed.forEach(function (s) {
+            var lab = String(s).replace(/_/g, " ");
+            opts += '<option value="' + escKanban(s) + '">' + escKanban(lab) + '</option>';
+          });
+          html += '<div class="kanban-card" data-kanban-card id="kanban-card-'
+            + escKanban(c.id) + '" data-entity-id="' + escKanban(c.id) + '" '
+            + 'data-from-state="' + escKanban(c.status) + '" '
+            + (allowedAttr
+              ? 'data-allowed-to="' + escKanban(allowedAttr) + '" draggable="true"'
+              : '')
+            + '><div class="kanban-card-body">'
+            + '<h4 class="kanban-card-title">' + escKanban(c.title) + '</h4>'
+            + '<p class="kanban-card-field">' + escKanban(c.field) + '</p>'
+            + (c.attn
+              ? '<p class="kanban-card-attn" data-attn="critical">'
+                + escKanban(c.attn) + '</p>'
+              : '')
+            + (allowedAttr
+              ? '<div class="kanban-card-move"><label>'
+                + '<span class="visually-hidden">Move card</span>'
+                + '<select data-kanban-move aria-label="Move ' + escKanban(c.title)
+                + '">' + opts + '</select></label></div>'
+              : '')
+            + '</div></div>';
+        });
+      }
+      html += '</div></div>';
+    });
+    return html + '</div>';
+  }
+
   var realFetch = window.fetch ? window.fetch.bind(window) : null;
   window.fetch = function (url, opts) {
-    var m = typeof url === "string" && url.match(/^\/mock\/grid\/([^/?]+)$/);
-    if (m && opts && String(opts.method).toUpperCase() === "PUT") {
+    var u = typeof url === "string" ? url : "";
+    var method = opts && opts.method ? String(opts.method).toUpperCase() : "GET";
+    var m = u.match(/^\/mock\/grid\/([^/?]+)$/);
+    if (m && method === "PUT") {
       var patch = {};
       try { patch = JSON.parse(opts.body || "{}"); } catch (e) { patch = {}; }
       var hit = null;
@@ -688,6 +765,34 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       });
       return Promise.resolve(new Response("{}", {
         status: 200, headers: { "Content-Type": "application/json" }
+      }));
+    }
+    var km = u.match(/^\/mock\/kanban\/([^/?]+)$/);
+    if (km && method === "PUT") {
+      var body = {};
+      try { body = JSON.parse(opts.body || "{}"); } catch (e2) { body = {}; }
+      var kid = decodeURIComponent(km[1]);
+      if (kid === "board") {
+        return Promise.resolve(new Response("method not allowed", { status: 405 }));
+      }
+      var card = null;
+      KANBAN_CARDS.forEach(function (c) { if (c.id === kid) card = c; });
+      if (!card) return Promise.resolve(new Response("{}", { status: 404 }));
+      var next = body.status != null ? String(body.status) : "";
+      var legal = card.allowed[card.status] || [];
+      if (!next || legal.indexOf(next) < 0) {
+        return Promise.resolve(new Response(JSON.stringify({ detail: "illegal transition" }), {
+          status: 422, headers: { "Content-Type": "application/json" }
+        }));
+      }
+      card.status = next;
+      return Promise.resolve(new Response(JSON.stringify({ id: card.id, status: card.status }), {
+        status: 200, headers: { "Content-Type": "application/json" }
+      }));
+    }
+    if (u.split("?")[0] === "/mock/kanban/board" && method === "GET") {
+      return Promise.resolve(new Response(renderKanbanBoard(), {
+        status: 200, headers: { "Content-Type": "text/html" }
       }));
     }
     return realFetch ? realFetch(url, opts) : Promise.reject(new Error("no fetch"));
@@ -4126,6 +4231,281 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
   }
   document.addEventListener("htmx:after:swap", onAfterSwap); // htmx 4
   document.addEventListener("htmx:afterSwap", onAfterSwap); // htmx ≤2
+})();
+
+/* ── controllers/kanban.js ── */
+/* HYPERPART: kanban */
+/*
+ * kanban — board rearrange controller (Linear-class status move on HTMX).
+ *
+ * SPA technique (dnd-kit / Linear board): drag card → legal column → PATCH
+ * status in a client store → re-render. HTMX recontext:
+ *   1. SSR stamps capability in the DOM (rearrange attrs only when UPDATE
+ *      is permitted; per-card data-allowed-to from the state machine).
+ *   2. Controller validates the drop against those attrs (hint only).
+ *   3. PUT the existing entity update endpoint with {status_field: to}.
+ *   4. GET-refresh the workspace region (data-kanban-src) so the server
+ *      owns the new board HTML — grid bulk-refresh pattern, morph-safe.
+ *
+ * Contract (when rearrange is on):
+ *   - board:  [data-kanban-board][data-kanban-rearrange="status"]
+ *             data-kanban-status-field, data-kanban-api,
+ *             data-kanban-src (region refresh URL)
+ *   - card:   [data-kanban-card][data-entity-id][data-from-state]
+ *             [data-allowed-to="a b c"]  (space-separated; empty = inert)
+ *             draggable="true" when allowed_to non-empty
+ *   - stack:  [data-kanban-stack][data-to-state]
+ *   - move:   [data-kanban-move] <select> keyboard parity
+ *
+ * No Alpine. Document-delegated. Survives morph (re-reads attrs each event).
+ */
+(function () {
+  "use strict";
+
+  var DRAG_THRESHOLD_PX = 6;
+  var MIME = "application/x-kanban-card";
+
+  function boardOf(el) {
+    return el && el.closest
+      ? el.closest("[data-kanban-board][data-kanban-rearrange]")
+      : null;
+  }
+
+  function parseAllowed(card) {
+    var raw = (card.getAttribute("data-allowed-to") || "").trim();
+    if (!raw) return [];
+    return raw.split(/\s+/).filter(Boolean);
+  }
+
+  function canDrop(card, toState) {
+    if (!toState) return false;
+    var from = card.getAttribute("data-from-state") || "";
+    if (toState === from) return false;
+    return parseAllowed(card).indexOf(toState) !== -1;
+  }
+
+  function csrfHeaders() {
+    var headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    // Prefer dazzle csrf helper when present (csrf / window.dz).
+    try {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      if (meta && meta.content) headers["X-CSRF-Token"] = meta.content;
+      var m = document.cookie.match(/(?:^|;\s*)dazzle_csrf=([^;]+)/);
+      if (m) headers["X-CSRF-Token"] = decodeURIComponent(m[1]);
+    } catch (_) {
+      /* ignore */
+    }
+    return headers;
+  }
+
+  function announce(board, msg) {
+    var live = board.querySelector("[data-kanban-announce]");
+    if (live) live.textContent = msg;
+  }
+
+  function regionTarget(board) {
+    return board.closest("[data-region]") || board;
+  }
+
+  function refreshBoard(board) {
+    var src = board.getAttribute("data-kanban-src") || "";
+    if (!src) {
+      // Fallback: full page reload if host forgot src (still better than silent).
+      if (typeof window !== "undefined" && window.location)
+        window.location.reload();
+      return;
+    }
+    var target = regionTarget(board);
+    // Prefer outerHTML when replacing the board or a region shell so we
+    // never nest a board inside itself (gallery mock has no htmx.ajax).
+    var useOuter =
+      target === board ||
+      target.hasAttribute("data-region") ||
+      target.hasAttribute("data-kanban-board");
+    if (window.htmx && typeof window.htmx.ajax === "function") {
+      window.htmx.ajax("GET", src, {
+        target: target,
+        swap: useOuter ? "outerHTML" : "innerHTML",
+        headers: { "HX-Request": "true" },
+      });
+      return;
+    }
+    // No htmx: fetch + replace (gallery / tests).
+    fetch(src, {
+      headers: { "HX-Request": "true", Accept: "text/html" },
+      credentials: "same-origin",
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error("refresh " + r.status);
+        return r.text();
+      })
+      .then(function (html) {
+        if (useOuter) {
+          target.outerHTML = html;
+        } else {
+          target.innerHTML = html;
+        }
+      })
+      .catch(function () {
+        announce(board, "Board refresh failed");
+      });
+  }
+
+  function putStatus(board, card, toState) {
+    var api = (board.getAttribute("data-kanban-api") || "").replace(
+      /\/$/,
+      "",
+    );
+    var field = board.getAttribute("data-kanban-status-field") || "status";
+    var id = card.getAttribute("data-entity-id") || "";
+    if (!api || !id) return Promise.reject(new Error("missing api/id"));
+    var body = {};
+    body[field] = toState;
+    card.classList.add("is-moving");
+    board.classList.add("is-busy");
+    announce(board, "Moving card…");
+    return fetch(api + "/" + encodeURIComponent(id), {
+      method: "PUT",
+      headers: csrfHeaders(),
+      credentials: "same-origin",
+      body: JSON.stringify(body),
+    }).then(function (r) {
+      card.classList.remove("is-moving");
+      board.classList.remove("is-busy");
+      if (!r.ok) {
+        announce(board, "Move failed (" + r.status + ")");
+        throw new Error("put " + r.status);
+      }
+      announce(board, "Moved to " + toState.replace(/_/g, " "));
+      refreshBoard(board);
+    });
+  }
+
+  // ── Drag (HTML5 DnD — progressive enhancement; keyboard uses <select>) ──
+
+  var dragState = null;
+
+  document.addEventListener("dragstart", function (e) {
+    var card =
+      e.target && e.target.closest
+        ? e.target.closest("[data-kanban-card][draggable='true']")
+        : null;
+    if (!card) return;
+    // Don't start drag from hub drill links.
+    if (
+      e.target.closest &&
+      e.target.closest(
+        "a[data-kanban-drill], a, button, select, input, textarea, label",
+      )
+    ) {
+      e.preventDefault();
+      return;
+    }
+    var board = boardOf(card);
+    if (!board) return;
+    if (!parseAllowed(card).length) {
+      e.preventDefault();
+      return;
+    }
+    dragState = {
+      card: card,
+      board: board,
+      startX: e.clientX,
+      startY: e.clientY,
+    };
+    card.classList.add("is-dragging");
+    board.classList.add("is-dragging");
+    try {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData(
+        MIME,
+        card.getAttribute("data-entity-id") || "",
+      );
+      e.dataTransfer.setData(
+        "text/plain",
+        card.getAttribute("data-entity-id") || "",
+      );
+    } catch (_) {
+      /* IE / locked DT */
+    }
+  });
+
+  document.addEventListener("dragend", function () {
+    if (!dragState) return;
+    dragState.card.classList.remove("is-dragging");
+    dragState.board.classList.remove("is-dragging");
+    dragState.board.querySelectorAll(".is-drop-target").forEach(function (el) {
+      el.classList.remove("is-drop-target");
+      el.classList.remove("is-drop-deny");
+    });
+    dragState = null;
+  });
+
+  document.addEventListener("dragover", function (e) {
+    if (!dragState) return;
+    var stack = e.target.closest
+      ? e.target.closest("[data-kanban-stack][data-to-state]")
+      : null;
+    if (!stack || !dragState.board.contains(stack)) return;
+    var to = stack.getAttribute("data-to-state") || "";
+    var ok = canDrop(dragState.card, to);
+    e.preventDefault();
+    try {
+      e.dataTransfer.dropEffect = ok ? "move" : "none";
+    } catch (_) {
+      /* ignore */
+    }
+    dragState.board
+      .querySelectorAll(".is-drop-target, .is-drop-deny")
+      .forEach(function (el) {
+        el.classList.remove("is-drop-target");
+        el.classList.remove("is-drop-deny");
+      });
+    stack.classList.add(ok ? "is-drop-target" : "is-drop-deny");
+  });
+
+  document.addEventListener("drop", function (e) {
+    if (!dragState) return;
+    var stack = e.target.closest
+      ? e.target.closest("[data-kanban-stack][data-to-state]")
+      : null;
+    if (!stack || !dragState.board.contains(stack)) return;
+    e.preventDefault();
+    var to = stack.getAttribute("data-to-state") || "";
+    var card = dragState.card;
+    var board = dragState.board;
+    if (!canDrop(card, to)) {
+      announce(board, "That move is not allowed");
+      return;
+    }
+    putStatus(board, card, to).catch(function () {
+      /* announced */
+    });
+  });
+
+  // ── Keyboard / pointer-free: native select ──
+
+  document.addEventListener("change", function (e) {
+    var sel = e.target;
+    if (!sel || !sel.matches || !sel.matches("select[data-kanban-move]"))
+      return;
+    var card = sel.closest("[data-kanban-card]");
+    var board = boardOf(sel);
+    if (!card || !board) return;
+    var to = sel.value;
+    if (!to) return;
+    if (!canDrop(card, to)) {
+      announce(board, "That move is not allowed");
+      sel.value = "";
+      return;
+    }
+    putStatus(board, card, to).catch(function () {
+      sel.value = "";
+    });
+  });
 })();
 
 /* ── controllers/app-shell.js ── */

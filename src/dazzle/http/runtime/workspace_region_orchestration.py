@@ -52,6 +52,7 @@ from dazzle.http.runtime.workspace_region_computes import (
     compute_filter_columns_and_active,
     compute_heatmap,
     compute_kanban_columns,
+    compute_kanban_rearrange,
     compute_pipeline_steps,
     compute_profile_card,
     compute_progress,
@@ -93,6 +94,32 @@ def gate_queue_transitions_for_principal(
     ):
         return transitions
     return []
+
+
+def gate_kanban_rearrange_for_principal(
+    rearrange: str,
+    cedar_access_spec: Any,
+    auth_ctx: Any,
+    *,
+    entity_name: str = "",
+) -> str:
+    """Clear kanban rearrange capability when UPDATE is denied (Linear R4).
+
+    Same chrome class as :func:`gate_queue_transitions_for_principal`: pure
+    role rules suppress drag/drop attrs so read-only personas never see a
+    grab cursor; field-conditioned rules leave rearrange on (write path
+    still enforces). Returns ``""`` or ``"status"``.
+    """
+    if rearrange != "status":
+        return ""
+    if _principal_can_op(
+        cedar_access_spec,
+        AccessOperationKind.UPDATE,
+        auth_ctx,
+        entity_name=entity_name,
+    ):
+        return "status"
+    return ""
 
 
 def gate_confirm_action_urls_for_principal(
@@ -528,6 +555,35 @@ async def compute_region_render_inputs(
         queue_status_field = ""
         queue_api_endpoint = ""
 
+    # Kanban rearrange (Linear-class status move) — capability from SM/enum,
+    # chrome gated on UPDATE like queue transitions (R4).
+    kanban_rearrange = ""
+    kanban_status_field = ""
+    kanban_api_endpoint = ""
+    kanban_allowed_by_id: dict[str, tuple[str, ...]] = {}
+    if display == "KANBAN" and ctx.entity_spec and group_by and not gb_is_bucket:
+        (
+            kanban_rearrange,
+            kanban_status_field,
+            kanban_api_endpoint,
+            kanban_allowed_by_id,
+        ) = compute_kanban_rearrange(
+            ctx.entity_spec,
+            str(group_by),
+            ctx.source or "",
+            items if isinstance(items, list) else [],
+        )
+        kanban_rearrange = gate_kanban_rearrange_for_principal(
+            kanban_rearrange,
+            ctx.cedar_access_spec,
+            user_ctx.auth_ctx_for_filters,
+            entity_name=ctx.source or "",
+        )
+        if kanban_rearrange != "status":
+            kanban_status_field = ""
+            kanban_api_endpoint = ""
+            kanban_allowed_by_id = {}
+
     # Multi-source tabbed regions.
     source_tabs = ctx_region.source_tabs or []
 
@@ -655,6 +711,10 @@ async def compute_region_render_inputs(
         queue_transitions=queue_transitions,
         queue_status_field=queue_status_field,
         queue_api_endpoint=queue_api_endpoint,
+        kanban_rearrange=kanban_rearrange,
+        kanban_status_field=kanban_status_field,
+        kanban_api_endpoint=kanban_api_endpoint,
+        kanban_allowed_by_id=kanban_allowed_by_id,
         overlay_series_data=overlay_series_data,
         group_by=group_by,
         filter_columns=filter_columns,

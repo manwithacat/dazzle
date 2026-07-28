@@ -704,6 +704,10 @@ class KanbanCard:
     ``drill_url`` (#1303 / cycle 1410): when set, the title renders as a
     hub link so board cards open VIEW/EDIT the same way list/queue rows
     do. Host request-time gates EDIT paths when UPDATE is denied.
+
+    Rearrange fields (Linear-class / 2026-07-28): ``row_id``,
+    ``from_state``, ``allowed_to`` are stamped only when the host enables
+    status rearrange for the principal; empty means presentation-only.
     """
 
     title: str
@@ -711,6 +715,9 @@ class KanbanCard:
     attention_level: str = ""
     attention_message: str = ""
     drill_url: str = ""
+    row_id: str = ""
+    from_state: str = ""
+    allowed_to: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -733,12 +740,22 @@ class KanbanRegion:
 
     `total` + `endpoint` drive the optional "Load all" button when
     the rendered items represent a paginated subset.
+
+    Rearrange (Linear-class): when ``rearrange`` is ``"status"``, the board
+    root and stacks carry drop/API attrs and cards with non-empty
+    ``allowed_to`` become draggable. Default ``""`` is presentation-only.
     """
 
     columns: tuple[KanbanColumn, ...]
     total: int = 0
     endpoint: str = ""
     empty_message: str = "No items found."
+    # Linear-class rearrange — "" | "status"
+    rearrange: str = ""
+    status_field: str = ""
+    api_endpoint: str = ""
+    # Workspace region refresh URL (PUT-then-GET morph target src)
+    refresh_src: str = ""
 
 
 @dataclass(frozen=True, slots=True)

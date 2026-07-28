@@ -1668,3 +1668,78 @@ def compute_kanban_columns(
         return [s if isinstance(s, str) else str(s) for s in sm.states]
 
     return []
+
+
+def _manual_transition_targets(sm: Any, current: str) -> tuple[str, ...]:
+    """Legal manual (non-AUTO) to-states from *current* — empty when none."""
+    if not current:
+        return ()
+    get_from = getattr(sm, "get_transitions_from", None)
+    transitions = get_from(current) if callable(get_from) else []
+    targets: list[str] = []
+    seen: set[str] = set()
+    for t in transitions or []:
+        trigger = getattr(t, "trigger", None)
+        trigger_val = str(getattr(trigger, "value", trigger) or "").lower()
+        if trigger_val == "auto":
+            continue
+        to_state = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
+        if to_state == current or to_state in seen:
+            continue
+        seen.add(to_state)
+        targets.append(to_state)
+    return tuple(targets)
+
+
+def _allowed_by_id_for_sm(
+    sm: Any, group_by_field: str, items: list[dict[str, Any]]
+) -> dict[str, tuple[str, ...]]:
+    """Map row id → manual SM targets for each dict item on the board."""
+    allowed_by_id: dict[str, tuple[str, ...]] = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        row_id = str(item.get("id") or "")
+        if not row_id:
+            continue
+        current = str(item.get(group_by_field, "") or "")
+        allowed_by_id[row_id] = _manual_transition_targets(sm, current)
+    return allowed_by_id
+
+
+def compute_kanban_rearrange(
+    entity_spec: Any,
+    group_by_field: str,
+    source_name: str,
+    items: list[dict[str, Any]],
+) -> tuple[str, str, str, dict[str, tuple[str, ...]]]:
+    """Linear-class kanban rearrange capability for a board.
+
+    Returns ``(rearrange_mode, status_field, api_endpoint, allowed_by_id)``
+    where ``rearrange_mode`` is ``"status"`` when the board can offer
+    status moves (caller still applies the UPDATE permit gate), or ``""``
+    when rearrange is not meaningful (no group field / no entity).
+
+    * When ``group_by`` is the SM status field: ``allowed_by_id`` maps each
+      item id to **manual** transition targets from its current state
+      (AUTO edges never offered — R3).
+    * When there is no SM (or group_by is a free enum): ``allowed_by_id``
+      is empty and the builder falls back to "any other column".
+    """
+    if not group_by_field or entity_spec is None:
+        return "", "", "", {}
+
+    api_endpoint = f"/{to_api_plural(source_name)}" if source_name else ""
+    sm = getattr(entity_spec, "state_machine", None)
+    status_field = group_by_field
+
+    if sm and getattr(sm, "status_field", None) == group_by_field:
+        return (
+            "status",
+            status_field,
+            api_endpoint,
+            _allowed_by_id_for_sm(sm, group_by_field, items),
+        )
+
+    # Free enum / non-SM axis under UPDATE — builder fills any-other-column.
+    return "status", status_field, api_endpoint, {}

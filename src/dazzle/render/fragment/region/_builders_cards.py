@@ -95,6 +95,13 @@ class _BuildersCardsMixin:
             total = 0
         endpoint = str(ctx.get("endpoint") or "")
         detail_url_template = str(ctx.get("detail_url_template") or "")
+        # Linear-class rearrange — host stamps only when UPDATE allowed.
+        rearrange = str(ctx.get("kanban_rearrange") or "")
+        status_field = str(ctx.get("kanban_status_field") or group_by or "")
+        api_endpoint = str(ctx.get("kanban_api_endpoint") or "")
+        refresh_src = str(ctx.get("kanban_refresh_src") or endpoint or "")
+        # per-id allowed targets: {id: [to_state, ...]} from orchestration
+        allowed_by_id: dict[str, tuple[str, ...]] = ctx.get("kanban_allowed_by_id") or {}
 
         # Build the per-card secondary-field list once — the same set
         # of meta columns applies to every card.
@@ -180,6 +187,16 @@ class _BuildersCardsMixin:
                 if isinstance(attn_raw, dict):
                     attn_level = str(attn_raw.get("level") or "")
                     attn_message = str(attn_raw.get("message") or "")
+                row_id = str(item.get("id") or "") if rearrange == "status" else ""
+                from_state = col_key if rearrange == "status" else ""
+                allowed: tuple[str, ...] = ()
+                if rearrange == "status" and row_id:
+                    raw_allowed = allowed_by_id.get(row_id)
+                    if raw_allowed is not None:
+                        allowed = tuple(str(s) for s in raw_allowed)
+                    else:
+                        # Free enum board (no SM graph): any other column.
+                        allowed = tuple(k for k in column_keys if k != col_key)
                 cards.append(
                     KanbanCard(
                         title=_card_title(item),
@@ -187,6 +204,9 @@ class _BuildersCardsMixin:
                         attention_level=attn_level,
                         attention_message=attn_message,
                         drill_url=drill_by_id.get(id(item), ""),
+                        row_id=row_id,
+                        from_state=from_state,
+                        allowed_to=allowed,
                     )
                 )
             kanban_cols.append(KanbanColumn(label=col_key, cards=tuple(cards)))
@@ -199,6 +219,10 @@ class _BuildersCardsMixin:
             total=total,
             endpoint=endpoint,
             empty_message=str(empty_msg),
+            rearrange=rearrange if rearrange == "status" else "",
+            status_field=status_field if rearrange == "status" else "",
+            api_endpoint=api_endpoint if rearrange == "status" else "",
+            refresh_src=refresh_src if rearrange == "status" else "",
         )
         return _wrap_surface(title, "kanban", body)
 

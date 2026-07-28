@@ -72,6 +72,7 @@ from dazzle.render.fragment.primitives import (
     Heatmap,
     Histogram,
     KanbanBoard,
+    KanbanCard,
     KanbanRegion,
     PipelineSteps,
     Radar,
@@ -538,6 +539,53 @@ class _RenderChartsMixin:
             PipelineSeam(body_html=f'<ol class="dz-pipeline-stages">{"".join(items)}</ol>')
         )
 
+    def _kanban_card_fields_html(self, card: KanbanCard, ctx: RenderContext) -> str:
+        """Secondary field lines for one board card."""
+        fields_html = ""
+        for label, value in card.fields:
+            if isinstance(value, str):
+                value_html = ctx.escape(value)
+            else:
+                value_html = self._emit(value, ctx)  # type: ignore[arg-type]
+            fields_html += (
+                f'<p class="dz-kanban-card-field">'
+                f"<span>{ctx.escape(label)}:</span> "
+                f"{value_html}"
+                f"</p>"
+            )
+        return fields_html
+
+    def _emit_kanban_card_html(self, card: KanbanCard, ctx: RenderContext) -> str:
+        """One card via the dual-lock seam (sole emitter path)."""
+        return render_kanban_card(
+            KanbanCardSeam(
+                title=card.title,
+                fields_html=self._kanban_card_fields_html(card, ctx),
+                attention_level=card.attention_level,
+                attention_message=card.attention_message,
+                drill_url=getattr(card, "drill_url", "") or "",
+                row_id=getattr(card, "row_id", "") or "",
+                from_state=getattr(card, "from_state", "") or "",
+                allowed_to=tuple(getattr(card, "allowed_to", ()) or ()),
+            )
+        )
+
+    def _kanban_board_root_attrs(self, k: KanbanRegion, ctx: RenderContext) -> str:
+        """Board root attrs; rearrange stamps only when mode is status (R4)."""
+        attrs = 'class="dz-kanban-board" role="region" aria-label="Kanban board" tabindex="0"'
+        if (getattr(k, "rearrange", "") or "") != "status":
+            return attrs
+        api = ctx.escape_attr(getattr(k, "api_endpoint", "") or "")
+        field = ctx.escape_attr(getattr(k, "status_field", "") or "")
+        src = ctx.escape_attr(getattr(k, "refresh_src", "") or k.endpoint or "")
+        return (
+            f"{attrs} data-dz-kanban-board "
+            f'data-dz-kanban-rearrange="status" '
+            f'data-dz-kanban-status-field="{field}" '
+            f'data-dz-kanban-api="{api}" '
+            f'data-dz-kanban-src="{src}"'
+        )
+
     def _emit_kanban_region(self, k: KanbanRegion, ctx: RenderContext) -> str:
         """Render a KanbanRegion matching legacy
         `workspace/regions/kanban.html` byte-for-byte: outer
@@ -560,45 +608,27 @@ class _RenderChartsMixin:
                 f"</div>"
             )
 
+        rearrange = getattr(k, "rearrange", "") or ""
         column_html: list[str] = []
         total_cards = 0
         for col in k.columns:
-            cards_html: list[str] = []
-            for card in col.cards:
-                fields_html = ""
-                for label, value in card.fields:
-                    if isinstance(value, str):
-                        value_html = ctx.escape(value)
-                    else:
-                        value_html = self._emit(value, ctx)  # type: ignore[arg-type]
-                    fields_html += (
-                        f'<p class="dz-kanban-card-field">'
-                        f"<span>{ctx.escape(label)}:</span> "
-                        f"{value_html}"
-                        f"</p>"
-                    )
-                cards_html.append(
-                    render_kanban_card(
-                        KanbanCardSeam(
-                            title=card.title,
-                            fields_html=fields_html,
-                            attention_level=card.attention_level,
-                            attention_message=card.attention_message,
-                            drill_url=getattr(card, "drill_url", "") or "",
-                        )
-                    )
-                )
-            stack_inner = "".join(cards_html)
-            if not col.cards:
-                stack_inner = '<p class="dz-kanban-empty">No items</p>'
+            cards_html = [self._emit_kanban_card_html(card, ctx) for card in col.cards]
+            stack_inner = "".join(cards_html) or '<p class="dz-kanban-empty">No items</p>'
             badge_html = _render_status_badge_html(col.label)
+            if rearrange == "status":
+                stack_attrs = (
+                    f'class="dz-kanban-stack" data-dz-kanban-stack '
+                    f'data-dz-to-state="{ctx.escape_attr(col.label)}"'
+                )
+            else:
+                stack_attrs = 'class="dz-kanban-stack"'
             column_html.append(
                 f'<div class="dz-kanban-column">'
                 f'<div class="dz-kanban-column-head">'
                 f"{badge_html}"
                 f'<span class="dz-kanban-column-count">{len(col.cards)}</span>'
                 f"</div>"
-                f'<div class="dz-kanban-stack">{stack_inner}</div>'
+                f"<div {stack_attrs}>{stack_inner}</div>"
                 f"</div>"
             )
             total_cards += len(col.cards)
@@ -617,14 +647,14 @@ class _RenderChartsMixin:
                 f"</div>"
             )
 
-        # role=region + tabindex=0: overflow-x:auto is intentional; axe
-        # scrollable-region-focusable requires keyboard access when the board
-        # actually scrolls (common once the container is width-constrained).
-        return (
-            f'<div class="dz-kanban-board" role="region" '
-            f'aria-label="Kanban board" tabindex="0">'
-            f"{''.join(column_html)}</div>{overflow_html}"
+        announce = (
+            '<div class="dz-kanban-announce" data-dz-kanban-announce '
+            'aria-live="polite" aria-atomic="true"></div>'
+            if rearrange == "status"
+            else ""
         )
+        board_attrs = self._kanban_board_root_attrs(k, ctx)
+        return f"<div {board_attrs}>{announce}{''.join(column_html)}</div>{overflow_html}"
 
     def _emit_funnel(self, f: Funnel, ctx: RenderContext) -> str:
         """Render a Funnel via HM dual-lock Funnel seam."""
