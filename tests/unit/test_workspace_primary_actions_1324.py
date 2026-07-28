@@ -8,10 +8,13 @@ route map the template compiler uses.
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.core import ir
 from dazzle.http.runtime.page_routes import (
     _build_workspace_primary_action_candidates,
     _resolve_workspace_authored_actions,
+    gate_authored_primary_actions_for_principal,
 )
 
 
@@ -55,9 +58,37 @@ class TestResolveAuthoredActions:
         )
         # CREATE → /app/<slug>/create ; LIST → /app/<slug> (mirrors
         # template_compiler.compile_appspec_to_templates route_map).
+        # CREATE carries mutation metadata for request-time RBAC gate (cycle 1399).
         assert resolved == [
-            {"label": "New Invoice", "route": "/app/invoice/create"},
+            {
+                "label": "New Invoice",
+                "route": "/app/invoice/create",
+                "mutation": "create",
+                "surface": "create_invoice",
+            },
             {"label": "All Invoices", "route": "/app/invoice"},
+        ]
+
+    def test_edit_surface_carries_update_mutation(self) -> None:
+        edit = _surface("edit_invoice", ir.SurfaceMode.EDIT, "Invoice")
+        ws = ir.WorkspaceSpec(
+            name="reports",
+            primary_actions=[
+                ir.WorkspacePrimaryActionSpec(
+                    label="Edit Invoice", target_kind="surface", target="edit_invoice"
+                ),
+            ],
+        )
+        resolved = _resolve_workspace_authored_actions(
+            ws, app_prefix="/app", surfaces_by_name={"edit_invoice": edit}
+        )
+        assert resolved == [
+            {
+                "label": "Edit Invoice",
+                "route": "/app/invoice/{id}/edit",
+                "mutation": "update",
+                "surface": "edit_invoice",
+            },
         ]
 
     def test_unknown_surface_skipped_defensively(self) -> None:
@@ -105,14 +136,124 @@ class TestAuthoredAppendsAfterInferred:
             ws, app_prefix="/app", surfaces_by_name={"create_invoice": create}
         )
 
-        # The handler builds `primary_actions` as: filtered(inferred) + authored.
-        # Inferred candidates carry a `surface` key (per-request mutate-gated);
-        # authored are already-resolved {label, route}. Assert the inferred
-        # create-CTA is first and the authored action follows it.
+        # The handler builds `primary_actions` as: filtered(inferred) +
+        # gate_authored(authored). Inferred candidates carry a `surface` key;
+        # authored workspace targets are {label, route} (no mutation). Assert
+        # the inferred create-CTA is first and the authored action follows it.
         assert len(inferred) == 1
         assert inferred[0]["label"] == "New Invoice"
-        merged = [{"label": c["label"], "route": c["route"]} for c in inferred] + authored
+        merged = [{"label": c["label"], "route": c["route"]} for c in inferred] + [
+            {"label": a["label"], "route": a["route"]} for a in authored
+        ]
         assert merged == [
             {"label": "New Invoice", "route": "/app/invoice/create"},
             {"label": "Go to Ops", "route": "/app/workspaces/ops_dashboard"},
         ]
+
+
+class TestGateAuthoredPrimaryActions:
+    """Authored CREATE/EDIT heading CTAs respect CREATE/UPDATE (cycle 1399)."""
+
+    def _invoice_create_cedar(self) -> object:
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        return EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.CREATE,
+                    personas=["admin"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.UPDATE,
+                    personas=["admin"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    personas=["admin", "viewer"],
+                ),
+            ],
+        )
+
+    def _deps(self) -> object:
+        from dazzle.http.runtime.page_routes import _PageRouterConfig
+
+        return _PageRouterConfig(
+            appspec=ir.AppSpec(
+                name="t",
+                title="T",
+                module="t",
+                domain=ir.DomainSpec(entities=[]),
+            ),
+            theme_css="",
+            get_auth_context=None,
+            app_prefix="/app",
+            surface_workspace={},
+            entity_cedar_specs={"Invoice": self._invoice_create_cedar()},
+            surface_entity={
+                "create_invoice": "Invoice",
+                "edit_invoice": "Invoice",
+                "list_invoice": "Invoice",
+            },
+            surface_mode={},
+            route_entity={},
+        )
+
+    def _auth(self, roles: list[str]) -> object:
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            is_authenticated=True,
+            user=SimpleNamespace(id="user1", roles=roles, is_superuser=False),
+        )
+
+    def test_create_cta_dropped_when_create_denied(self) -> None:
+        authored = [
+            {
+                "label": "New Invoice",
+                "route": "/app/invoice/create",
+                "mutation": "create",
+                "surface": "create_invoice",
+            },
+            {"label": "All Invoices", "route": "/app/invoice"},
+            {"label": "Ops", "route": "/app/workspaces/ops"},
+        ]
+        out = gate_authored_primary_actions_for_principal(
+            authored, deps=self._deps(), auth_ctx=self._auth(["role_viewer"])
+        )
+        assert out == [
+            {"label": "All Invoices", "route": "/app/invoice"},
+            {"label": "Ops", "route": "/app/workspaces/ops"},
+        ]
+
+    def test_create_cta_kept_when_create_allowed(self) -> None:
+        authored = [
+            {
+                "label": "New Invoice",
+                "route": "/app/invoice/create",
+                "mutation": "create",
+                "surface": "create_invoice",
+            },
+        ]
+        out = gate_authored_primary_actions_for_principal(
+            authored, deps=self._deps(), auth_ctx=self._auth(["role_admin"])
+        )
+        assert out == [{"label": "New Invoice", "route": "/app/invoice/create"}]
+
+    def test_edit_cta_dropped_when_update_denied(self) -> None:
+        authored = [
+            {
+                "label": "Edit Invoice",
+                "route": "/app/invoice/{id}/edit",
+                "mutation": "update",
+                "surface": "edit_invoice",
+            },
+        ]
+        out = gate_authored_primary_actions_for_principal(
+            authored, deps=self._deps(), auth_ctx=self._auth(["role_viewer"])
+        )
+        assert out == []

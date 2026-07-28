@@ -2316,7 +2316,7 @@ def _resolve_workspace_authored_actions(
     app_prefix: str,
     surfaces_by_name: dict[str, Any],
 ) -> list[dict[str, str]]:
-    """Resolve a workspace's authored `primary_actions:` to `{label, route}` (#1324 FR-5).
+    """Resolve a workspace's authored `primary_actions:` (#1324 FR-5).
 
     Each authored action references a declared surface or workspace by name
     (already validated at lint time). The route is a plain GET nav target:
@@ -2326,10 +2326,12 @@ def _resolve_workspace_authored_actions(
       with the SAME ``route_map`` as ``template_compiler.compile_appspec_to_templates``
       so heading CTAs and the rest of the app agree on surface URLs.
 
-    There is NO per-action persona gating in v1: the workspace page's own
-    access already gates visibility, so the caller appends these unconditionally
-    AFTER the (permission-filtered) inferred create-CTAs. Unresolvable targets
-    (which lint would already have errored on) are skipped defensively.
+    Surface targets also carry optional ``mutation`` (``create`` / ``update``)
+    + ``surface`` so the workspace handler can apply the same per-request
+    CREATE/UPDATE gate as inferred "New X" CTAs (cycle 1399 — authored
+    CREATE/EDIT heading buttons were previously painted for any persona that
+    could open the workspace). LIST/VIEW/workspace targets omit mutation and
+    always pass through. Unresolvable targets are skipped defensively.
     """
     resolved: list[dict[str, str]] = []
     for action in getattr(workspace, "primary_actions", []) or []:
@@ -2354,8 +2356,42 @@ def _resolve_workspace_authored_actions(
             SurfaceMode.VIEW: app_paths.detail_path(app_prefix, entity_slug),
         }
         route = route_map.get(surface.mode, f"{app_prefix}/{surface.name}")
-        resolved.append({"label": action.label, "route": route})
+        entry: dict[str, str] = {"label": action.label, "route": route}
+        if surface.mode == SurfaceMode.CREATE:
+            entry["mutation"] = "create"
+            entry["surface"] = surface.name
+        elif surface.mode == SurfaceMode.EDIT:
+            entry["mutation"] = "update"
+            entry["surface"] = surface.name
+        resolved.append(entry)
     return resolved
+
+
+def gate_authored_primary_actions_for_principal(
+    authored: list[dict[str, str]],
+    *,
+    deps: Any,
+    auth_ctx: Any,
+) -> list[dict[str, str]]:
+    """Drop authored heading CTAs that target CREATE/EDIT when denied.
+
+    Inferred "New X" candidates already run through ``_user_can_mutate``
+    (#827). Authored ``primary_actions:`` were appended unfiltered (v1), so a
+    read-only persona who can open the workspace still saw "New Invoice" when
+    authors declared an explicit CREATE surface CTA. LIST/VIEW/workspace
+    targets stay — they are navigation, not mutation chrome.
+
+    Returns ``{label, route}`` only (strips mutation metadata).
+    """
+    out: list[dict[str, str]] = []
+    for action in authored:
+        mutation = action.get("mutation")
+        surface_name = action.get("surface", "")
+        if mutation and surface_name:
+            if not _user_can_mutate(deps, surface_name, mutation, auth_ctx):
+                continue
+        out.append({"label": action["label"], "route": action["route"]})
+    return out
 
 
 def _read_workspace_action_usage(request: Any, surface_name: str) -> dict[str, int]:
@@ -2503,11 +2539,11 @@ async def _workspace_handler(
             )
 
     # #1324 FR-5: APPEND authored heading CTAs AFTER the inferred create-CTAs.
-    # No per-action persona gating in v1 — the workspace page's own access
-    # (enforced above) gates visibility, so authored actions show to anyone
-    # who can see the workspace. Targets are pre-resolved to {label, route}
-    # at registration time (already validated at lint time).
-    primary_actions.extend(authored_actions)
+    # CREATE/EDIT surface targets share the inferred create-CTA mutate gate
+    # (cycle 1399); LIST/VIEW/workspace targets pass through as navigation.
+    primary_actions.extend(
+        gate_authored_primary_actions_for_principal(authored_actions, deps=deps, auth_ctx=auth_ctx)
+    )
 
     # 3a (#1491 → L4, ADR-0050): demote the action tail to a `More ⋯` overflow menu
     # so an action-heavy heading keeps a clear primary row. Ordering is now
