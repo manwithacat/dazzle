@@ -311,6 +311,29 @@ def _gate_related_tab_create_urls(
                 tab.create_url = None
 
 
+def _gate_table_inline_editable(
+    req_table: Any,
+    deps: "_PageRouterConfig",
+    surface_name: str | None,
+    auth_ctx: Any,
+    user_roles: list[str] | None,
+) -> None:
+    """Clear list-shell inline_editable when UPDATE is denied (or workspace read_only).
+
+    HTMX hydrate already clears ``htmx_inline_editable`` when UPDATE is denied
+    (list_handlers). Shell ``DzTableMount`` still stamped the compile-time set
+    for read-only personas — ``persona_read_only`` cleared it, pure Cedar
+    UPDATE deny and workspace ``_should_suppress_mutations`` did not
+    (cycle 1396 — parity with row chips / bulk gate).
+    """
+    if user_roles is None or not getattr(req_table, "inline_editable", None):
+        return
+    if _should_suppress_mutations(deps, surface_name, auth_ctx, user_roles) or not _user_can_mutate(
+        deps, surface_name, "update", auth_ctx
+    ):
+        req_table.inline_editable = []
+
+
 def _suppress_inaccessible_cta(step: Any, prc: "_PageRequestContext", appspec: Any) -> Any:
     """Strip a guide step's CTA when it points at a create/edit surface the
     current persona can't mutate (#1292 runtime backstop).
@@ -1642,6 +1665,11 @@ async def _handle_table(prc: _PageRequestContext) -> None:
             elif not _can_upd:
                 # Keep bar for built-in delete only — drop named transitions.
                 req_table.bulk_action_names = []
+
+    # Inline-edit column set is UPDATE chrome (cycle 1396).
+    _gate_table_inline_editable(
+        req_table, prc.deps, prc.surface_name, prc.auth_ctx, prc.ctx.user_roles
+    )
 
     # Apply per-persona PersonaVariant overrides to the per-request
     # table copy. Extracted to a helper in cycle 243 so the resolver

@@ -97,7 +97,7 @@ apply map patches with `{"apply":true}`.
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1394 | USED |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1396 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1394 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1394 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1396 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1396 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1396 (2026-07-28).** **framework-ux edge** queue SM transitions + list-shell inline_editable RBAC — `gate_queue_transitions_for_principal` clears workspace QUEUE Approve|Reject when UPDATE denied (list/detail@1390–1392 already did); `_gate_table_inline_editable` clears shell DzTableMount columns for Cedar UPDATE deny + workspace read_only (HTMX hydrate already gated; persona_read_only only path previously). budget 1. Explore **47/100**. CI green on 061b3af9b (1395); self-audit@1389 next~1404; capability-sweep@1380 next~1400.
 > **Cycle 1393 (2026-07-28).** **framework-ux edge** edit-form Cedar gate — `_check_entity_cedar_access` maps surface_mode edit→UPDATE (was READ); deep-link edit form 403 when role can READ but not UPDATE (parity with detail edit_url hide@1390–1392 + create→CREATE #581). budget 1. Explore **45/100**. CI in_progress tip 527b7f00e (1392); self-audit@1389 next~1404; capability-sweep@1380 next~1400.
 > **Cycle 1392 (2026-07-28).** **framework-ux edge** HTMX bulk hydrate + detail SM RBAC parity — `bulk_actions_for_principal` gates row checkboxes on update|delete (shell@1391 already did; hydrate re-painted boxes); detail clears transitions+integration when UPDATE denied (list rows@1390). budget 1. Explore **44/100**. CI green on 6e441f4c1; self-audit@1389 next~1404; capability-sweep@1380 next~1400.
 > **Cycle 1391 (2026-07-28).** **framework-ux edge** bulk toolbar DSL actions — emit named `ux: bulk_actions:` buttons (mark_sensitive/…) not only built-in Delete; gate whole bar on update|delete; omit Delete when DELETE denied. Thread bulk_action_names + bulk_include_delete compile→ctx→adapter. budget 1. Explore **43/100**. CI green on 654c9831e; self-audit@1389 next~1404; capability-sweep@1380 next~1400.

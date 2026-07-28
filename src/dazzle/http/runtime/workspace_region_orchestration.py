@@ -23,8 +23,10 @@ is the orchestrator that wires them in the right order.
 import logging
 from typing import Any
 
+from dazzle.core.access import AccessOperationKind
 from dazzle.core.ir import BucketRef as _BucketRef
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec
+from dazzle.http.runtime.handlers.list_handlers import _principal_can_op
 from dazzle.http.runtime.insight_store import get_stored_insight
 from dazzle.http.runtime.workspace_aggregation import (
     _compute_aggregate_metrics,
@@ -58,6 +60,35 @@ from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_region_render import RegionRenderInputs
 
 logger = logging.getLogger(__name__)
+
+
+def gate_queue_transitions_for_principal(
+    transitions: list[dict[str, str]],
+    cedar_access_spec: Any,
+    auth_ctx: Any,
+    *,
+    entity_name: str = "",
+) -> list[dict[str, str]]:
+    """Clear workspace QUEUE transition chrome when UPDATE is denied.
+
+    Queue rows paint SM action buttons (Approve / Reject / …) from
+    ``compute_queue``. List rows and detail toolbars already omit
+    transition chips when permit denies UPDATE (cycles 1390–1392); workspace
+    queues still painted the full primary pair for read-only personas until
+    the PUT 403'd. Reuses the list-handler principal gate so pure role rules
+    suppress chrome and field-conditioned rules leave buttons (write path
+    still enforces).
+    """
+    if not transitions:
+        return transitions
+    if _principal_can_op(
+        cedar_access_spec,
+        AccessOperationKind.UPDATE,
+        auth_ctx,
+        entity_name=entity_name,
+    ):
+        return transitions
+    return []
 
 
 def _read_stored_insight(region_name: str) -> Any:
@@ -374,9 +405,19 @@ async def compute_region_render_inputs(
         )
 
     # Queue: state-machine transitions + API endpoint.
+    # SM transition buttons are UPDATE chrome — gate like list row chips /
+    # detail toolbar (cycles 1390–1392). Compile/compute always stamps the
+    # full primary pair; read-only personas still painted Approve|Reject
+    # until the PUT 403'd.
     if display == "QUEUE" and ctx.entity_spec:
         queue_transitions, queue_status_field, queue_api_endpoint = compute_queue(
             ctx.entity_spec, ctx.source
+        )
+        queue_transitions = gate_queue_transitions_for_principal(
+            queue_transitions,
+            ctx.cedar_access_spec,
+            user_ctx.auth_ctx_for_filters,
+            entity_name=ctx.source or "",
         )
     else:
         queue_transitions = []

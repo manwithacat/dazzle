@@ -381,6 +381,177 @@ class TestRelatedTabCreatePermission:
         assert detail.related_groups[0].tabs[0].create_url is None
 
 
+class TestListShellInlineEditablePermission:
+    """List-shell inline_editable must clear when UPDATE denied (cycle 1396).
+
+    HTMX hydrate already gates; shell DzTableMount still stamped columns
+    for pure Cedar UPDATE deny and workspace read_only.
+    """
+
+    def _ticket_update_cedar(self) -> Any:
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        return EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.UPDATE,
+                    personas=["admin"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.READ,
+                    personas=["admin", "viewer"],
+                ),
+            ],
+        )
+
+    def test_inline_cleared_when_update_denied(self) -> None:
+        from dazzle.http.runtime.page_routes import _gate_table_inline_editable
+
+        deps = _make_deps(
+            _make_appspec(),
+            entity_cedar_specs={"Ticket": self._ticket_update_cedar()},
+            surface_entity={"ticket_list": "Ticket"},
+            surface_mode={"ticket_list": "list"},
+        )
+        table = SimpleNamespace(inline_editable=["title", "status"])
+        _gate_table_inline_editable(
+            table,
+            deps,
+            "ticket_list",
+            _make_auth_ctx(["role_viewer"]),
+            ["role_viewer"],
+        )
+        assert table.inline_editable == []
+
+    def test_inline_kept_when_update_allowed(self) -> None:
+        from dazzle.http.runtime.page_routes import _gate_table_inline_editable
+
+        deps = _make_deps(
+            _make_appspec(),
+            entity_cedar_specs={"Ticket": self._ticket_update_cedar()},
+            surface_entity={"ticket_list": "Ticket"},
+            surface_mode={"ticket_list": "list"},
+        )
+        table = SimpleNamespace(inline_editable=["title", "status"])
+        _gate_table_inline_editable(
+            table,
+            deps,
+            "ticket_list",
+            _make_auth_ctx(["role_admin"]),
+            ["role_admin"],
+        )
+        assert table.inline_editable == ["title", "status"]
+
+    def test_workspace_read_only_clears_inline(self) -> None:
+        from dazzle.http.runtime.page_routes import _gate_table_inline_editable
+
+        appspec = _make_appspec(
+            workspaces=[
+                ir.WorkspaceSpec(
+                    name="ws",
+                    title="WS",
+                    regions=[],
+                    ux=ir.UXSpec(
+                        persona_variants=[ir.PersonaVariant(persona="viewer", read_only=True)]
+                    ),
+                )
+            ],
+        )
+        deps = _make_deps(
+            appspec,
+            surface_workspace={"ticket_list": "ws"},
+            surface_entity={"ticket_list": "Ticket"},
+            surface_mode={"ticket_list": "list"},
+        )
+        table = SimpleNamespace(inline_editable=["title"])
+        _gate_table_inline_editable(
+            table,
+            deps,
+            "ticket_list",
+            _make_auth_ctx(["role_viewer"]),
+            ["role_viewer"],
+        )
+        assert table.inline_editable == []
+
+
+class TestQueueTransitionPermission:
+    """Workspace QUEUE SM buttons must clear when UPDATE denied (cycle 1396)."""
+
+    def _ticket_update_cedar(self) -> Any:
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        return EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.UPDATE,
+                    personas=["admin"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.READ,
+                    personas=["admin", "viewer"],
+                ),
+            ],
+        )
+
+    def test_transitions_cleared_when_update_denied(self) -> None:
+        from dazzle.http.runtime.workspace_region_orchestration import (
+            gate_queue_transitions_for_principal,
+        )
+
+        transitions = [
+            {"to_state": "approved", "label": "Approve"},
+            {"to_state": "rejected", "label": "Reject"},
+        ]
+        out = gate_queue_transitions_for_principal(
+            transitions,
+            self._ticket_update_cedar(),
+            _make_auth_ctx(["role_viewer"]),
+            entity_name="Ticket",
+        )
+        assert out == []
+
+    def test_transitions_kept_when_update_allowed(self) -> None:
+        from dazzle.http.runtime.workspace_region_orchestration import (
+            gate_queue_transitions_for_principal,
+        )
+
+        transitions = [
+            {"to_state": "approved", "label": "Approve"},
+            {"to_state": "rejected", "label": "Reject"},
+        ]
+        out = gate_queue_transitions_for_principal(
+            transitions,
+            self._ticket_update_cedar(),
+            _make_auth_ctx(["role_admin"]),
+            entity_name="Ticket",
+        )
+        assert out == transitions
+
+    def test_no_cedar_leaves_transitions(self) -> None:
+        from dazzle.http.runtime.workspace_region_orchestration import (
+            gate_queue_transitions_for_principal,
+        )
+
+        transitions = [{"to_state": "done", "label": "Done"}]
+        out = gate_queue_transitions_for_principal(
+            transitions,
+            None,
+            _make_auth_ctx(["role_viewer"]),
+            entity_name="Ticket",
+        )
+        assert out == transitions
+
+
 # ---------------------------------------------------------------------------
 # #583 — Sidebar nav filtering by entity access
 # ---------------------------------------------------------------------------
