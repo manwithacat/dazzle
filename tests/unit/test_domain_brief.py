@@ -39,6 +39,24 @@ def test_extract_grounded_spend_no_chrome() -> None:
     assert d.rejected_chrome or "Optional" not in names
 
 
+def test_extract_owner_hint_from_owned_by_prose() -> None:
+    """Phrase forms (owned by / assigned to) must bind desks — not only bare field tokens.
+
+    Regression: project_tracker SPEC blocked promote with q_owner despite clear ownership language.
+    """
+    brief = """
+# Project Tracker
+
+Projects owned by a team member, broken into Tasks assigned to them.
+Admin and Manager and Member roles share the work.
+"""
+    d = extract_from_text(brief, source_path="inline")
+    assert any(desk.owner_field_hint for desk in d.desks), (
+        f"expected owner_field_hint on desks, got {[d.owner_field_hint for d in d.desks]}"
+    )
+    assert not any(q.id == "q_owner" and q.blocks_promote for q in d.open_questions)
+
+
 def test_extract_prefers_core_entity_headers() -> None:
     brief = """
 # App

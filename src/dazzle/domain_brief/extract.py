@@ -87,12 +87,38 @@ def _desk_name(persona_id: str) -> str:
     return f"{persona_id}_desk"
 
 
-def _owner_for_noun(name: str, text: str) -> str | None:
+def _default_owner_from_brief(text: str) -> str | None:
+    """Infer a current_user bind field from founder prose (not DSL).
+
+    Prose often says "owned by" / "assigned to" rather than the exact IR
+    field name. Matching only bare ``owner`` / ``assigned_to`` tokens left
+    desks without ``owner_field_hint`` and blocked promote with ``q_owner``
+    (project_tracker cycle 1366).
+    """
     for h in _OWNER_HINTS:
-        if re.search(rf"\b{h}\b", text, re.I):
+        if re.search(rf"\b{re.escape(h)}\b", text, re.I):
             return h
+    # Phrase forms common in founder briefs / SPECIFICATION.md.
+    if re.search(r"\bowned\s+by\b|\bowning\b|\bowners?\b", text, re.I):
+        return "owner"
+    if re.search(r"\bassign(ed|ee|ees|ment|s)?\b", text, re.I):
+        return "assigned_to"
+    if re.search(r"\bcreated\s+by\b|\bauthors?\b|\buploaders?\b", text, re.I):
+        return "created_by"
+    if re.search(r"\bsubmitted\s+by\b|\brequesters?\b", text, re.I):
+        return "requester"
+    return None
+
+
+def _owner_for_noun(name: str, text: str) -> str | None:
+    # Task/ticket-shaped nouns: assignee bind is the product default.
     if re.search(r"(request|ticket|task|issue)$", name, re.I):
-        return "requester" if re.search(r"request$", name, re.I) else "assigned_to"
+        if re.search(r"request$", name, re.I):
+            return "requester"
+        return "assigned_to"
+    hinted = _default_owner_from_brief(text)
+    if hinted:
+        return hinted
     return None
 
 
@@ -586,6 +612,9 @@ def _build_personas_desks_spine(
     spine: list[DemoSpineRow] = []
     seen: set[str] = set()
     default_owner = next((n.owner_field_hint for n in nouns if n.owner_field_hint), None)
+    if not default_owner:
+        # Brief-level bind even when no noun carried a hint (cycle 1366).
+        default_owner = _default_owner_from_brief(text)
 
     def add(label: str, *, job: str = "", evidence: str = "") -> None:
         if not label or not _grounded_in_brief(label, text):
