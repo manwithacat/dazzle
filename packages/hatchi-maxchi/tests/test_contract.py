@@ -65,7 +65,6 @@ SEMANTIC_ONLY = {
     "dz-action-grid-region",
     "dz-queue-region",
     "dz-timeline-region",
-    "dz-sparkline-region",
     "dz-funnel-chart-region",
     "dz-bar-chart-region",
     "dz-heatmap-region",

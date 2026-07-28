@@ -4064,6 +4064,7 @@ def select(source: str, id: str) -> str:
             '<span class="dz-sparkline-value">184ms</span>'
             '<span class="dz-sparkline-bucket-label">this hour</span></div>'
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" '
+            'preserveAspectRatio="none" '
             'class="dz-sparkline-svg" role="img" '
             'aria-label="Sparkline — 12 points, latest 184ms, peak 240ms">'
             '<polygon points="0,32 0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 '
@@ -4071,14 +4072,14 @@ def select(source: str, id: str) -> str:
             'fill-opacity="0.15" stroke="none"/>'
             '<polyline points="0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 '
             '144,14 162,6 180,9" fill="none" stroke="var(--colour-brand)" '
-            'stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/>'
+            'stroke-width="1.25" vector-effect="non-scaling-stroke" '
+            'stroke-linejoin="round" stroke-linecap="round"/>'
             "</svg></div>",
             notes="Dual-lock root is <code>data-dz-sparkline</code> "
-            "(<code>contracts/sparkline.py</code>). The SVG is server-rendered "
-            "with a numeric summary in <code>aria-label</code> (points / latest "
-            "/ peak) — the glyph is decoration; the numbers are the content. An "
-            "empty series renders <code>dz-sparkline-empty</code>; a single "
-            "point renders the headline alone.",
+            "(<code>contracts/sparkline.py</code>). Headline stacks above the "
+            "glyph. SVG uses preserveAspectRatio=none so the trend fills the "
+            "host width. aria-label carries points/latest/peak. Empty → "
+            "<code>dz-sparkline-empty</code>; single point → headline only.",
             tags=("data", "chart"),
             contracts=("contracts/sparkline.py",),
         ),
@@ -4447,8 +4448,8 @@ def select(source: str, id: str) -> str:
             "profile-card",
             "Profile card",
             "Data",
-            "The identity panel: avatar or initials beside name and meta, an "
-            "optional 3-up stats grid, and a bulleted facts list.",
+            "The identity panel: avatar or initials beside name and meta, a "
+            "KPI stats strip (value above label), and optional facts.",
             '<div class="dz-profile-card-region hm-measure">'
             '<div class="dz-profile-card" data-dz-profile-card>'
             '<div class="dz-profile-identity">'
@@ -4459,7 +4460,7 @@ def select(source: str, id: str) -> str:
             "</div></div>"
             '<dl class="dz-profile-stats">'
             '<div class="dz-profile-stat">'
-            '<dt class="dz-profile-stat-label">Open work orders</dt>'
+            '<dt class="dz-profile-stat-label">Orders</dt>'
             '<dd class="dz-profile-stat-value">7</dd></div>'
             '<div class="dz-profile-stat">'
             '<dt class="dz-profile-stat-label">Sites</dt>'
@@ -4477,11 +4478,13 @@ def select(source: str, id: str) -> str:
             '<span class="dz-profile-fact-text">Joined March 2024</span></li>'
             "</ul></div></div>",
             notes="Dual-lock root is <code>data-dz-profile-card</code> "
-            "(<code>contracts/profile_card.py</code>). The avatar slot prefers "
-            "an <code>&lt;img class=&quot;dz-profile-avatar&quot;&gt;</code> and "
-            "falls back to an initials chip; empty stat values render an "
-            "em-dash (absence is data). Stats are a real <code>&lt;dl&gt;</code>; "
-            "the facts bullet is decorative markup, hidden from assistive tech.",
+            "(<code>contracts/profile_card.py</code>). Avatar prefers "
+            "<code>&lt;img class=&quot;dz-profile-avatar&quot;&gt;</code>, else "
+            "initials; empty stats render an em-dash. Stats are a real "
+            "<code>&lt;dl&gt;</code> KPI strip — value above label, "
+            "<code>auto-fit</code> columns (not a fixed 3-col table). Prefer "
+            "short labels; longer ones wrap under the number. Facts bullets "
+            "are decorative and hidden from assistive tech.",
             tags=("data",),
             contracts=("contracts/profile_card.py",),
         ),

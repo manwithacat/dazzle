@@ -54,7 +54,9 @@ EXEMPLARS: list[ProfileCard] = [
         secondary="Operations lead · North grid",
         initials="MR",
         stats=[
-            ("Open work orders", "7"),
+            # Short labels fit a KPI strip; long multi-word titles wrap
+            # under the value (CSS) but keep demos scannable.
+            ("Orders", "7"),
             ("Sites", "3"),
             ("On call", ""),
         ],

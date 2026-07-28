@@ -3,14 +3,25 @@
  * convergence). The Dazzle emitter contract is unchanged. */
 
 /* ─────────────────────────── sparkline region ───────────────────
- * Compact KPI tile: big-number + tiny line. SVG fills the width of
- * its container; geometry comes from the template's own viewBox
- * computation (180×32 grid) so we just size the host. */
+ * Compact KPI tile: headline (value + bucket) stacked above a tiny
+ * area glyph. Not a side-by-side KPI — the chart is the second row of
+ * one coherent unit. SVG must FILL the host width (preserveAspectRatio
+ * none on the markup); default "meet" letterboxes a 180×32 viewBox into
+ * a wide short box and the glyph floats mid-card like a glitch. */
+
+.dz-sparkline-region {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-xs);
+  min-width: 0;
+}
 
 .dz-sparkline-headline {
   display: flex;
   align-items: baseline;
   gap: var(--space-sm);
+  min-width: 0;
 }
 
 .dz-sparkline-value {
@@ -27,9 +38,11 @@
 }
 
 .dz-sparkline-svg {
-  margin-block-start: var(--space-xs);
+  display: block;
   width: 100%;
   height: 2rem;
+  /* Stretch the fixed viewBox to the host — trend shape over aspect fidelity. */
+  overflow: visible;
 }
 
 .dz-sparkline-empty {

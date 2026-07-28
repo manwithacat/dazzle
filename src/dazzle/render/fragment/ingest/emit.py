@@ -641,6 +641,7 @@ def render_sparkline(s: Sparkline) -> str:
     svg = (
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'viewBox="0 0 {w} {h}" '
+        f'preserveAspectRatio="none" '
         f'class="dz-sparkline-svg" role="img" '
         f'aria-label="Sparkline — {count} points, latest '
         f'{_html.escape(last_value_str)}, peak {_html.escape(max_val_str)}">'
@@ -648,6 +649,7 @@ def render_sparkline(s: Sparkline) -> str:
         f'fill="var(--colour-brand)" fill-opacity="0.15" stroke="none" />'
         f'<polyline points="{pts_str}" fill="none" '
         f'stroke="var(--colour-brand)" stroke-width="1.25" '
+        f'vector-effect="non-scaling-stroke" '
         f'stroke-linejoin="round" stroke-linecap="round" />'
         f"</svg>"
     )

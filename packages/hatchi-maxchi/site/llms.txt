@@ -100,7 +100,7 @@
 - [Histogram](https://manwithacat.github.io/hatchi-maxchi/agents/histogram.md): Value-distribution buckets as a server-rendered SVG plus a mono summary line.
 - [Box plot](https://manwithacat.github.io/hatchi-maxchi/agents/box-plot.md): Distribution five-number summaries per bucket — a server-rendered SVG with the counts in the summary line.
 - [Progress stages](https://manwithacat.github.io/hatchi-maxchi/agents/progress-region.md): A native progress bar with stage chips — where the work is, stage by stage, with completion tones.
-- [Profile card](https://manwithacat.github.io/hatchi-maxchi/agents/profile-card.md): The identity panel: avatar or initials beside name and meta, an optional 3-up stats grid, and a bulleted facts list.
+- [Profile card](https://manwithacat.github.io/hatchi-maxchi/agents/profile-card.md): The identity panel: avatar or initials beside name and meta, a KPI stats strip (value above label), and optional facts.
 - [Cell grid](https://manwithacat.github.io/hatchi-maxchi/agents/grid-list.md): A responsive grid of plain record cells — title plus label: value lines, 1 → 2 → 3 columns as the container widens.
 - [List region](https://manwithacat.github.io/hatchi-maxchi/agents/list-region.md): The in-card data table: an actions row with CSV export, a horizontally scrollable table, and an overflow count.
 - [Task inbox](https://manwithacat.github.io/hatchi-maxchi/agents/task-inbox.md): The personal worklist: filter chips over urgency-flagged items, each a drill link with title and meta.

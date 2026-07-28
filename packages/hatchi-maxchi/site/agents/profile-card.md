@@ -1,6 +1,6 @@
 # Profile card (`profile-card`)
 
-The identity panel: avatar or initials beside name and meta, an optional 3-up stats grid, and a bulleted facts list.
+The identity panel: avatar or initials beside name and meta, a KPI stats strip (value above label), and optional facts.
 
 > **Layer:** L1 surface · **Recipe:** _(unset — see docs/agent/pick-a-surface.md)_
 > Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
@@ -23,7 +23,7 @@ The identity panel: avatar or initials beside name and meta, an optional 3-up st
     </div>
     <dl class="profile-stats">
       <div class="profile-stat">
-        <dt class="profile-stat-label">Open work orders</dt>
+        <dt class="profile-stat-label">Orders</dt>
         <dd class="profile-stat-value">7</dd>
       </div>
       <div class="profile-stat">
@@ -170,7 +170,7 @@ def render(card: ProfileCard) -> str:
 
 ## Notes
 
-Dual-lock root is data-dz-profile-card (contracts/profile_card.py). The avatar slot prefers an <img class="dz-profile-avatar"> and falls back to an initials chip; empty stat values render an em-dash (absence is data). Stats are a real <dl>; the facts bullet is decorative markup, hidden from assistive tech.
+Dual-lock root is data-dz-profile-card (contracts/profile_card.py). Avatar prefers <img class="dz-profile-avatar">, else initials; empty stats render an em-dash. Stats are a real <dl> KPI strip — value above label, auto-fit columns (not a fixed 3-col table). Prefer short labels; longer ones wrap under the number. Facts bullets are decorative and hidden from assistive tech.
 
 ## Source files
 

@@ -14,7 +14,7 @@ A headline number with its recent shape — the smallest chart: a current value,
 ```html
 <div class="sparkline-region" data-sparkline>
   <div class="sparkline-headline"><span class="sparkline-value">184ms</span><span class="sparkline-bucket-label">this hour</span></div>
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" class="sparkline-svg" role="img" aria-label="Sparkline — 12 points, latest 184ms, peak 240ms"><polygon points="0,32 0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9 180,32" fill="var(--colour-brand)" fill-opacity="0.15" stroke="none"/><polyline points="0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9" fill="none" stroke="var(--colour-brand)" stroke-width="1.25" stroke-linejoin="round" stroke-linecap="round"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 32" preserveAspectRatio="none" class="sparkline-svg" role="img" aria-label="Sparkline — 12 points, latest 184ms, peak 240ms"><polygon points="0,32 0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9 180,32" fill="var(--colour-brand)" fill-opacity="0.15" stroke="none"/><polyline points="0,20 18,18 36,22 54,14 72,16 90,10 108,12 126,8 144,14 162,6 180,9" fill="none" stroke="var(--colour-brand)" stroke-width="1.25" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>
 </div>
 ```
 
@@ -119,6 +119,7 @@ def render(s: Sparkline) -> str:
     svg = (
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'viewBox="0 0 {w} {h}" '
+        f'preserveAspectRatio="none" '
         f'class="dz-sparkline-svg" role="img" '
         f'aria-label="Sparkline — {count} points, latest '
         f'{html.escape(last_value_str)}, peak {html.escape(max_val_str)}">'
@@ -126,6 +127,7 @@ def render(s: Sparkline) -> str:
         f'fill="var(--colour-brand)" fill-opacity="0.15" stroke="none" />'
         f'<polyline points="{pts_str}" fill="none" '
         f'stroke="var(--colour-brand)" stroke-width="1.25" '
+        f'vector-effect="non-scaling-stroke" '
         f'stroke-linejoin="round" stroke-linecap="round" />'
         f"</svg>"
     )
@@ -134,7 +136,7 @@ def render(s: Sparkline) -> str:
 
 ## Notes
 
-Dual-lock root is data-dz-sparkline (contracts/sparkline.py). The SVG is server-rendered with a numeric summary in aria-label (points / latest / peak) — the glyph is decoration; the numbers are the content. An empty series renders dz-sparkline-empty; a single point renders the headline alone.
+Dual-lock root is data-dz-sparkline (contracts/sparkline.py). Headline stacks above the glyph. SVG uses preserveAspectRatio=none so the trend fills the host width. aria-label carries points/latest/peak. Empty → dz-sparkline-empty; single point → headline only.
 
 ## Source files
 
