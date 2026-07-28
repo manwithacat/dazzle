@@ -1170,13 +1170,18 @@ def _check_entity_cedar_access(prc: _PageRequestContext) -> Response | None:
     if _cedar_spec is None:
         return None
 
-    # Determine operation: list surfaces use LIST, create surfaces
-    # use CREATE, others use READ.
+    # Determine operation from surface mode. CREATE/EDIT forms must
+    # evaluate the matching mutation permit — not READ. Pre-cycle-1393
+    # mapped edit→READ, so deep-link to /…/edit still painted the form
+    # after detail chrome hid Edit (cycles 1390–1392 RBAC affordance
+    # series). LIST/VIEW keep list/read.
     _mode = prc.deps.surface_mode.get(prc.surface_name, "list")
     if _mode == "list":
         _op = AccessOperationKind.LIST
     elif _mode == "create":
         _op = AccessOperationKind.CREATE
+    elif _mode == "edit":
+        _op = AccessOperationKind.UPDATE
     else:
         _op = AccessOperationKind.READ
 

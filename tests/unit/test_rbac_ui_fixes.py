@@ -103,6 +103,143 @@ class TestCreateFormPermissionCheck:
 
 
 # ---------------------------------------------------------------------------
+# Cycle 1393 — Edit form route uses UPDATE (not READ) for Cedar access
+# ---------------------------------------------------------------------------
+class TestEditFormPermissionCheck:
+    """Edit form surfaces use UPDATE operation for Cedar page gate.
+
+    Parity with #581 create→CREATE and with detail chrome that already
+    clears edit_url when UPDATE is denied (cycles 1390–1392). Without
+    this, a viewer who can READ still deep-links into a painted edit form.
+    """
+
+    def _prc(
+        self,
+        *,
+        deps: Any,
+        surface_name: str,
+        auth_ctx: Any,
+    ) -> Any:
+        from dazzle.http.runtime.page_routes import _PageRequestContext
+
+        return _PageRequestContext(
+            deps=deps,
+            ctx=SimpleNamespace(user_roles=list(auth_ctx.user.roles)),
+            request=SimpleNamespace(),
+            auth_ctx=auth_ctx,
+            surface_name=surface_name,
+            cookies={},
+            path_id="t1",
+        )
+
+    def test_edit_surface_denied_role_raises_403(self) -> None:
+        from fastapi import HTTPException
+
+        from dazzle.http.runtime.page_routes import _check_entity_cedar_access
+
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        cedar = EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.READ,
+                    personas=["admin", "viewer"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.UPDATE,
+                    personas=["admin"],
+                ),
+            ],
+        )
+        deps = _make_deps(
+            _make_appspec(),
+            entity_cedar_specs={"Task": cedar},
+            surface_entity={"task_edit": "Task"},
+            surface_mode={"task_edit": "edit"},
+        )
+        prc = self._prc(
+            deps=deps,
+            surface_name="task_edit",
+            auth_ctx=_make_auth_ctx(["role_viewer"]),
+        )
+        with pytest.raises(HTTPException) as excinfo:
+            _check_entity_cedar_access(prc)
+        assert excinfo.value.status_code == 403
+
+    def test_edit_surface_permitted_role_allows(self) -> None:
+        from dazzle.http.runtime.page_routes import _check_entity_cedar_access
+
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        cedar = EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.UPDATE,
+                    personas=["admin"],
+                ),
+            ],
+        )
+        deps = _make_deps(
+            _make_appspec(),
+            entity_cedar_specs={"Task": cedar},
+            surface_entity={"task_edit": "Task"},
+            surface_mode={"task_edit": "edit"},
+        )
+        prc = self._prc(
+            deps=deps,
+            surface_name="task_edit",
+            auth_ctx=_make_auth_ctx(["role_admin"]),
+        )
+        assert _check_entity_cedar_access(prc) is None
+
+    def test_view_surface_still_uses_read(self) -> None:
+        """Regression: view must not require UPDATE after the edit→UPDATE map."""
+        from dazzle.http.runtime.page_routes import _check_entity_cedar_access
+
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        cedar = EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.READ,
+                    personas=["viewer"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.UPDATE,
+                    personas=["admin"],
+                ),
+            ],
+        )
+        deps = _make_deps(
+            _make_appspec(),
+            entity_cedar_specs={"Task": cedar},
+            surface_entity={"task_view": "Task"},
+            surface_mode={"task_view": "view"},
+        )
+        prc = self._prc(
+            deps=deps,
+            surface_name="task_view",
+            auth_ctx=_make_auth_ctx(["role_viewer"]),
+        )
+        assert _check_entity_cedar_access(prc) is None
+
+
+# ---------------------------------------------------------------------------
 # #583 — Sidebar nav filtering by entity access
 # ---------------------------------------------------------------------------
 class TestNavEntityFiltering:
