@@ -3027,10 +3027,9 @@ def create_page_routes(
         }
 
         # #1324 FR-5: pre-resolve each workspace's AUTHORED heading CTAs to
-        # {label, route}. These APPEND AFTER the inferred create-CTAs above
-        # (which are permission-filtered per request); authored actions carry
-        # no per-action persona gating in v1, so they're surfaced
-        # unconditionally to anyone who can see the workspace.
+        # {label, route} (+ mutation metadata for CREATE/EDIT). Appended after
+        # inferred create-CTAs; request-time gate drops denied CREATE/EDIT
+        # (cycle 1399) — LIST/VIEW/workspace targets stay as navigation.
         _surfaces_by_name: dict[str, Any] = {s.name: s for s in surfaces}
         ws_authored_actions: dict[str, list[dict[str, str]]] = {
             ws.name: _resolve_workspace_authored_actions(

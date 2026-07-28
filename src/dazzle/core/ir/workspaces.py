@@ -1297,9 +1297,10 @@ class WorkspacePrimaryActionSpec(BaseModel):
     ``primary_action: str | None`` on :class:`WorkspaceRegion` (which names
     the commit surface of a confirm_action_panel — a different concept).
 
-    There is NO per-action persona gating in v1: the workspace page's own
-    access gates visibility, so authored actions show to anyone who can see
-    the workspace.
+    Request-time: CREATE/EDIT surface targets are gated per principal via
+    ``gate_authored_primary_actions_for_principal`` (cycle 1399); LIST/VIEW/
+    workspace targets pass through as navigation. Workspace page access still
+    gates who can open the page at all.
 
     Attributes:
         label: Button text (e.g. "New Invoice").

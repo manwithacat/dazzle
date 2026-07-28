@@ -219,6 +219,24 @@ class TestActionToUrl:
             == "/app/marking-result-list?status=flagged"
         )
 
+    def test_create_mode_surface_with_app_spec(self) -> None:
+        """With app_spec, CREATE-mode surface → create_path (cycle 1401)."""
+        from types import SimpleNamespace
+
+        from dazzle.core import ir
+        from dazzle.page.runtime.workspace_renderer import _action_to_url
+
+        spec = SimpleNamespace(
+            surfaces=[
+                SimpleNamespace(
+                    name="system_create",
+                    entity_ref="System",
+                    mode=ir.SurfaceMode.CREATE,
+                )
+            ]
+        )
+        assert _action_to_url("system_create", spec) == "/app/system/create"
+
 
 # ───────────────────────── RegionContext + cards ──────────────────────────
 

@@ -29,6 +29,22 @@ def _entity_to_app_url(entity_name: str) -> str:
     return app_paths.detail_path("/app", app_paths.entity_slug(entity_name))
 
 
+def _surface_entity_path(entity_ref: str, mode: Any) -> str:
+    """Map a surface's entity + mode to an app-shell path (#1426 SSOT).
+
+    CREATE → ``/app/{slug}/create`` so action_grid ``action: system_create``
+    lands on the create form (and the cycle-1397 CREATE RBAC gate can see
+    the ``/create`` suffix). LIST / VIEW / EDIT / CUSTOM / unknown → list
+    path: dashboard CTAs lack a row id, so edit/detail templates are not
+    usable as card hrefs.
+    """
+    slug = app_paths.entity_slug(entity_ref)
+    mode_val = getattr(mode, "value", mode)
+    if str(mode_val or "").lower() == "create":
+        return app_paths.create_path("/app", slug)
+    return app_paths.list_path("/app", slug)
+
+
 def _action_to_url(action: str, app_spec: Any | None = None) -> str:
     """Resolve an ``action_grid`` card target to a URL (#891, #979).
 
@@ -40,13 +56,13 @@ def _action_to_url(action: str, app_spec: Any | None = None) -> str:
          choose this form.
 
       2. **Surface name** registered in ``app_spec.surfaces`` (e.g.
-         ``cohort_analysis_list`` resolved against a surface whose
-         ``entity_ref = "CohortAnalysis"``) → ``/app/cohortanalysis``.
-         The slug derives from the *entity*, not from the surface name,
-         via the shared ``dazzle.page.app_paths`` SSOT (#1426) — the same
-         helper the route generator uses, so link and route agree. Pre-#979
-         we slugified the surface name directly, producing
-         ``/app/cohort-analysis-list`` which doesn't exist.
+         ``cohort_analysis_list`` → ``/app/cohortanalysis``; CREATE-mode
+         ``system_create`` → ``/app/system/create``). The slug derives from
+         the *entity*, not the surface name, via ``app_paths`` SSOT (#1426).
+         Pre-#979 we slugified the surface name directly
+         (``/app/cohort-analysis-list``), which does not exist. Pre-cycle
+         1401 every mode used the list path, so CREATE action_grid cards
+         never hit the create form or the CREATE RBAC gate.
 
       3. **Bare slugified fallback** for legacy / literal-path action
          strings (no matching surface, no matching entity). Same
@@ -69,14 +85,14 @@ def _action_to_url(action: str, app_spec: Any | None = None) -> str:
         name, query = action.split("?", 1)
 
     # Form 2: surface lookup. Resolve to the surface's entity_ref
-    # slug, which is what the route generator actually registers.
+    # slug (+ CREATE mode path when applicable).
     if app_spec is not None:
         surfaces = getattr(app_spec, "surfaces", None) or []
         for s in surfaces:
             if getattr(s, "name", None) == name:
                 entity_ref = getattr(s, "entity_ref", None) or ""
                 if entity_ref:
-                    base = app_paths.list_path("/app", app_paths.entity_slug(entity_ref))
+                    base = _surface_entity_path(entity_ref, getattr(s, "mode", None))
                     return f"{base}?{query}" if query else base
                 # Surface exists but has no entity_ref — fall through
                 # to the legacy slugify path on the surface name.

@@ -81,6 +81,41 @@ def test_surface_name_resolves_to_entity_slug() -> None:
     assert _action_to_url("manuscript_detail", spec) == "/app/manuscript"
 
 
+def test_create_mode_surface_resolves_to_create_path() -> None:
+    """CREATE-mode surfaces must land on ``/create`` (cycle 1401).
+
+    Pre-fix, every mode used list_path, so action_grid ``system_create``
+    navigated to the list and skipped the cycle-1397 CREATE RBAC gate
+    (which keys on the ``/create`` suffix).
+    """
+    from dazzle.core import ir
+
+    spec = _stub_app_spec(
+        [
+            SimpleNamespace(
+                name="system_create",
+                entity_ref="System",
+                mode=ir.SurfaceMode.CREATE,
+            ),
+            SimpleNamespace(
+                name="system_list",
+                entity_ref="System",
+                mode=ir.SurfaceMode.LIST,
+            ),
+            SimpleNamespace(
+                name="system_edit",
+                entity_ref="System",
+                mode=ir.SurfaceMode.EDIT,
+            ),
+        ]
+    )
+    assert _action_to_url("system_create", spec) == "/app/system/create"
+    assert _action_to_url("system_list", spec) == "/app/system"
+    # EDIT lacks a row id on dashboard CTAs → list browse (not edit template)
+    assert _action_to_url("system_edit", spec) == "/app/system"
+    assert _action_to_url("system_create?source=ops", spec) == "/app/system/create?source=ops"
+
+
 @pytest.mark.parametrize(
     ("action", "spec_factory", "expected"),
     [
