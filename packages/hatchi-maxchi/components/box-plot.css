@@ -1,15 +1,24 @@
 /* HYPERPART: box-plot */
-/* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
- * convergence). The Dazzle emitter contract is unchanged. */
+/* Promoted from Dazzle regions.css (Tier C-b), then refined for
+ * whisker geometry + hover figures (key-point marks). */
 
 /* ─────────────────────────── box_plot region ────────────────────
  * Server-rendered SVG quartile boxes per group. SVG fill/stroke
  * tokens stay inline (per-element shape colour); host wrapper sized
- * via .dz-box-plot-svg + summary uses .dz-box-plot-summary. */
+ * via .dz-box-plot-svg + summary uses .dz-box-plot-summary.
+ *
+ * Geometry (in the SVG body from dazzle.render.svg.box_plot_svg):
+ *   - whiskers only outside the IQR box (min→Q1, Q3→max) + end caps
+ *   - hairline median (stroke-width 1)
+ *   - .dz-box-plot-mark groups at min/Q1/median/Q3/max — hover reveals
+ *     the numeric figure (CSS only, no controller). */
 
 .dz-box-plot-svg {
   width: 100%;
   height: auto;
+  overflow: visible; /* hover labels sit just outside the box half-width */
+  /* Decorative geometry does not steal hits — only .dz-box-plot-mark-hit. */
+  pointer-events: none;
 }
 
 .dz-box-plot-summary {
@@ -17,4 +26,48 @@
   color: var(--colour-text-muted);
   margin-block-start: var(--space-sm);
   font-family: var(--font-mono);
+}
+
+/* Geometry classes on server-SVG parts — named hooks for dual-lock / tests;
+ * stroke/fill stay inline on the elements themselves. */
+.dz-box-plot-whisker,
+.dz-box-plot-whisker-cap,
+.dz-box-plot-box,
+.dz-box-plot-median {
+  /* structural identity only — presentation is inline SVG attrs */
+}
+
+/* ── hover marks (five-number figures) ─────────────────────────── */
+
+.dz-box-plot-mark {
+  pointer-events: auto;
+  cursor: default;
+}
+
+.dz-box-plot-mark-hit {
+  pointer-events: all;
+  cursor: help;
+}
+
+.dz-box-plot-mark-dot {
+  opacity: 0;
+  transition: opacity var(--duration-fast, 120ms) var(--ease-out, ease);
+  pointer-events: none;
+}
+
+.dz-box-plot-mark-label {
+  opacity: 0;
+  transition: opacity var(--duration-fast, 120ms) var(--ease-out, ease);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--colour-surface);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.dz-box-plot-mark:hover .dz-box-plot-mark-dot,
+.dz-box-plot-mark:focus-within .dz-box-plot-mark-dot,
+.dz-box-plot-mark:hover .dz-box-plot-mark-label,
+.dz-box-plot-mark:focus-within .dz-box-plot-mark-label {
+  opacity: 1;
 }

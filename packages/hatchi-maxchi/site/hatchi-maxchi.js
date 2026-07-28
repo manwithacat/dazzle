@@ -1,4 +1,4 @@
-window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /></svg>','clipboard-list':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /> <path d="M12 11h4" /> <path d="M12 16h4" /> <path d="M8 11h.01" /> <path d="M8 16h.01" /></svg>','layout-dashboard':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1" /> <rect width="7" height="5" x="14" y="3" rx="1" /> <rect width="7" height="9" x="14" y="12" rx="1" /> <rect width="7" height="5" x="3" y="16" rx="1" /></svg>','map-pin':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /></svg>','receipt':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17V7" /> <path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8" /> <path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z" /></svg>','settings':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /> <circle cx="12" cy="12" r="3" /></svg>','triangle-alert':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></svg>','users':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <path d="M16 3.128a4 4 0 0 1 0 7.744" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <circle cx="9" cy="7" r="4" /></svg>',};
+window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /></svg>','clipboard-list':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /> <path d="M12 11h4" /> <path d="M12 16h4" /> <path d="M8 11h.01" /> <path d="M8 16h.01" /></svg>','download':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3" /> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <path d="m7 10 5 5 5-5" /></svg>','layout-dashboard':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1" /> <rect width="7" height="5" x="14" y="3" rx="1" /> <rect width="7" height="9" x="14" y="12" rx="1" /> <rect width="7" height="5" x="3" y="16" rx="1" /></svg>','map-pin':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /> <circle cx="12" cy="10" r="3" /></svg>','receipt':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17V7" /> <path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8" /> <path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z" /></svg>','settings':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" /> <circle cx="12" cy="12" r="3" /></svg>','triangle-alert':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></svg>','users':'<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <path d="M16 3.128a4 4 0 0 1 0 7.744" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <circle cx="9" cy="7" r="4" /></svg>',};
 /* Minimal htmx4 mock — enough for the static gallery demos.
    Supports: hx-get (canned responses), hx-confirm -> htmx:confirm event,
    hx-boost no-op. NOT a real htmx; the point is that the SAME markup that
@@ -255,7 +255,9 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     "/mock/shell/dashboard": '<div class="stack" data-gap="md"><h1>Dashboard</h1><div class="auto-grid" style="--grid-min: 10rem"><div class="card card-body"><div class="card-label">Outstanding</div><div class="card-value">£12,450</div></div><div class="card card-body"><div class="card-label">Paid</div><div class="card-value">£48,900</div></div></div></div>',
     "/mock/shell/invoices": '<div class="stack" data-gap="md"><h1>Invoices</h1><p class="hm-demo-muted">The routed workspace swapped — the shell, sidebar state, and scroll position persist; only the main slot changed.</p></div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
-    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
+    "/mock/tabs/settings":
+      '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>',
+    // list-region sort is computed in renderListRegion (not a canned RESPONSES row).
   };
 
   // The grid tbody hydrates, filters, and re-sorts its rows over the wire — the
@@ -425,6 +427,108 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     return evt;
   }
 
+  // ── list-region demo: sortable columns + CSV artifact ──────────────
+  // Mirrors the product contract: sort headers hx-get ?sort=&dir= and the
+  // host re-renders the region; CSV is a file download via dz.downloadCsv
+  // (sample-list-export.csv is the gallery artifact, not a mock toast).
+  var LIST_ROWS = [
+    { name: "Capacity review", owner: "J. Dias", status: "Active" },
+    { name: "Load study", owner: "K. Novak", status: "Draft" },
+    { name: "Quarterly audit", owner: "M. Reyes", status: "Active" },
+    { name: "Site walkdown", owner: "M. Reyes", status: "Closed" },
+    { name: "Vendor renewal", owner: "A. Osei", status: "Draft" }
+  ];
+  var LIST_CSV =
+    "Name,Owner,Status\n" +
+    LIST_ROWS.map(function (r) {
+      return r.name + "," + r.owner + "," + r.status;
+    }).join("\n") + "\n";
+
+  function listSortHeader(label, col, activeCol, activeDir) {
+    var isActive = col === activeCol;
+    var nextDir = isActive ? (activeDir === "asc" ? "desc" : "asc") : "asc";
+    var caret = isActive ? (activeDir === "desc" ? "▼" : "▲") : "";
+    var caretHtml = caret ? "<span>" + caret + "</span>" : "";
+    return (
+      '<th><a class="list-sort-link" ' +
+      'hx-get="/mock/list-region?sort=' + col + "&amp;dir=" + nextDir + '" ' +
+      'hx-target="closest [data-list-region]" ' +
+      'hx-swap="outerHTML">' +
+      label + caretHtml +
+      "</a></th>"
+    );
+  }
+  function renderListRegion(url) {
+    var q = parseQuery(url);
+    var sort = q.sort || "name";
+    var dir = q.dir === "desc" ? "desc" : "asc";
+    var rows = LIST_ROWS.slice();
+    rows.sort(function (a, b) {
+      var x = a[sort] || "", y = b[sort] || "";
+      var c = x < y ? -1 : (x > y ? 1 : 0);
+      return dir === "desc" ? -c : c;
+    });
+    var body = rows.map(function (r) {
+      return (
+        '<tr class="list-row is-clickable">' +
+        "<td>" + htmlEnc(r.name) + "</td>" +
+        "<td>" + htmlEnc(r.owner) + "</td>" +
+        "<td>" + htmlEnc(r.status) + "</td></tr>"
+      );
+    }).join("");
+    return (
+      '<div class="list-region" data-list-region id="hm-list-region-demo">' +
+      '<div class="list-actions"><div class="list-action-group">' +
+      '<button type="button" class="list-csv-button" title="Export CSV" ' +
+      'aria-label="Export CSV" data-csv-endpoint="sample-list-export.csv" ' +
+      'data-csv-filename="work-items.csv" ' +
+      'onclick="window.dz.downloadCsv(' +
+      "this.dataset.dzCsvEndpoint||this.dataset.csvEndpoint, " +
+      "this.dataset.dzCsvFilename||this.dataset.csvFilename" +
+      ')">{i:download}</button>' +
+      "</div></div>" +
+      '<div class="list-scroll"><table class="list-table"><thead><tr>' +
+      listSortHeader("Name", "name", sort, dir) +
+      listSortHeader("Owner", "owner", sort, dir) +
+      listSortHeader("Status", "status", sort, dir) +
+      "</tr></thead><tbody>" + body + "</tbody></table></div>" +
+      '<p class="list-overflow">Showing ' + rows.length + " of " +
+      LIST_ROWS.length + "</p></div>"
+    );
+  }
+
+  // Gallery shim — product ships downloadCsv on window.dz; HM standalone
+  // may not. Fetch → Blob → <a download>, matching utils.js.
+  window.dz = window.dz || {};
+  if (typeof window.dz.downloadCsv !== "function") {
+    window.dz.downloadCsv = function (endpoint, filename) {
+      if (!endpoint) return;
+      var url = endpoint.indexOf("?") >= 0
+        ? endpoint + "&format=csv"
+        : endpoint + "?format=csv";
+      // Prefer static gallery artifact; fall back to in-memory LIST_CSV so
+      // the button still works if the file path 404s (file:// previews).
+      fetch(url, { credentials: "same-origin" })
+        .then(function (r) {
+          if (r.ok) return r.blob();
+          return new Blob([LIST_CSV], { type: "text/csv;charset=utf-8" });
+        })
+        .catch(function () {
+          return new Blob([LIST_CSV], { type: "text/csv;charset=utf-8" });
+        })
+        .then(function (blob) {
+          var objectUrl = URL.createObjectURL(blob);
+          var link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = filename || "export.csv";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 0);
+        });
+    };
+  }
+
   function doGet(el) {
     var url = el.getAttribute("hx-get");
     var path = url.split("?")[0];
@@ -432,6 +536,8 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     if (path === "/mock/grid/rows") {
       // the grid rows are computed from the sort/dir query (server owns ORDER BY)
       body = renderGridRows(url);
+    } else if (path === "/mock/list-region") {
+      body = expand(renderListRegion(url));
     } else {
       // Prefer exact URL, then path (search-select select rows carry ?id=).
       body = expand(
@@ -453,6 +559,9 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
           break;
         }
       }
+    } else if (sel && sel.indexOf("closest ") === 0) {
+      // htmx `closest <sel>` — walk up from the initiating element.
+      target = el.closest(sel.slice(8).trim());
     } else if (sel) {
       // plain selector (e.g. an id `#region-body`, as pagination + most real
       // htmx targets use) — resolve like htmx's default querySelector.
@@ -462,6 +571,7 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
       // the lazy tab panels do.
       target = el;
     }
+    var swapMode = (el.getAttribute("hx-swap") || "innerHTML").split(" ")[0];
     // htmx applies `.htmx-request` to the request-initiating element for the
     // duration of the in-flight request — the loading overlay + other CSS states
     // key off it. Mirror that protocol here (add before the swap, remove after).
@@ -476,19 +586,32 @@ window.__HM_ICONS__ = {'circle-check':'<svg class="icon" xmlns="http://www.w3.or
     el.classList.add("htmx-request");
     fire(el, "htmx:before:request", { elt: el });
     if (target) {
-      target.innerHTML = body;
+      var settleEl = target;
+      if (swapMode === "outerHTML" || swapMode === "outerMorph") {
+        // outerHTML replaces the target node; capture parent to fire settle.
+        var parent = target.parentNode;
+        target.outerHTML = body;
+        // Prefer the new node if we can find it (list-region keeps a stable id).
+        settleEl = (parent && parent.querySelector
+          ? (parent.querySelector("#hm-list-region-demo") || parent.firstElementChild)
+          : null) || parent;
+      } else {
+        target.innerHTML = body;
+      }
       // The server re-renders the pagination footer alongside the rows (in a
       // real htmx app: an OOB `<nav>` or a wrapping region swap; here the mock
       // updates it directly). Rows + footer come from the SAME query, so they
       // agree on total / current page.
-      if (url.split("?")[0] === "/mock/grid/rows") {
+      if (url.split("?")[0] === "/mock/grid/rows" && target && target.closest) {
         updateGridFooter(target.closest("[data-grid]"), url);
       }
-      fire(target, "htmx:after:swap", { elt: target });
-      // Real htmx fires after:settle once, after ALL swaps (OOB included)
-      // settle — it's the only event where the OOB footer is guaranteed
-      // final, so focus restoration listens there, not on after:swap.
-      fire(target, "htmx:after:settle", { elt: target });
+      if (settleEl) {
+        fire(settleEl, "htmx:after:swap", { elt: settleEl });
+        // Real htmx fires after:settle once, after ALL swaps (OOB included)
+        // settle — it's the only event where the OOB footer is guaranteed
+        // final, so focus restoration listens there, not on after:swap.
+        fire(settleEl, "htmx:after:settle", { elt: settleEl });
+      }
     }
     el.classList.remove("htmx-request");
     fire(el, "htmx:after:request", { elt: el });

@@ -10,7 +10,9 @@
  * inline `flex flex-wrap gap-x-3 ...` Tailwind across every
  * template. */
 
-.dz-chart-svg {
+.dz-chart-svg,
+.dz-line-chart-svg,
+.dz-area-chart-svg {
   width: 100%;
   height: auto;
 }

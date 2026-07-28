@@ -149,7 +149,13 @@ def _attrs(attrs) -> str:  # type: ignore[no-untyped-def]
     out = []
     for name, value in attrs:
         name = _SVG_CASE.get(name, name)
-        out.append(" " + name if value is None else f' {name}="{value}"')
+        if value is None:
+            out.append(" " + name)
+        else:
+            # Parser decodes charrefs; re-escape so fidelity matches authored
+            # ``&amp;`` in attributes (hx-get query strings, etc.).
+            esc = value.replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;")
+            out.append(f' {name}="{esc}"')
     return "".join(out)
 
 

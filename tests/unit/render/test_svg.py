@@ -180,12 +180,14 @@ def test_box_plot_emits_svg_with_box_and_whiskers() -> None:
     )
     assert svg.startswith("<svg ")
     assert "<rect " in svg  # box bodies
-    # 2 boxes → 6 whisker lines (stem + 2 caps each), 2 medians, 2 baselines, 2 ticks
-    assert svg.count("<line ") >= 8
-    # Group labels
+    assert svg.count('class="dz-box-plot-whisker"') == 4
+    assert svg.count('class="dz-box-plot-whisker-cap"') == 4
+    assert svg.count('class="dz-box-plot-median"') == 2
+    assert svg.count('class="dz-box-plot-mark"') == 10
+    assert 'data-dz-box-mark="median"' in svg
     assert ">p50<" in svg and ">p99<" in svg
-    # Median tooltip carries quartile data
     assert "<title>p50: Q1 1.0, median 2.0, Q3 3.0</title>" in svg
+    assert "<title>p50 median: 2</title>" in svg
     assert svg.endswith("</svg>")
 
 

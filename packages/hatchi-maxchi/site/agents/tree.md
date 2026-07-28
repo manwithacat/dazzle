@@ -1,6 +1,6 @@
 # Tree (`tree`)
 
-Hierarchy on native <details>/<summary> — indented children, rotating chevron, child-count chips. No JS at all.
+Hierarchy on native <details>/<summary> for branches; leaves are plain rows. Chevron is CSS chrome (not summary content). No JS.
 
 > **Layer:** L1 surface · **Recipe:** _(unset — see docs/agent/pick-a-surface.md)_
 > Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
@@ -15,18 +15,19 @@ Hierarchy on native <details>/<summary> — indented children, rotating chevron,
 <div class="hm-measure">
   <div class="tree" data-tree>
     <details class="tree-node" open>
-      <summary class="tree-summary"><svg class="tree-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg><span class="tree-label">Engineering</span><span class="tree-count">2</span></summary>
+      <summary class="tree-summary"><span class="tree-label">Engineering</span><span class="tree-count">2</span></summary>
       <div class="tree-children">
         <details class="tree-node">
-          <summary class="tree-summary"><svg class="tree-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg><span class="tree-label">Platform</span><span class="tree-count">1</span></summary>
+          <summary class="tree-summary"><span class="tree-label">Platform</span><span class="tree-count">1</span></summary>
           <div class="tree-children">
-            <details class="tree-node">
-              <summary class="tree-summary"><svg class="tree-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg><span class="tree-label">Build tooling</span></summary>
-            </details>
+            <div class="tree-leaf"><span class="tree-label">Build tooling</span></div>
           </div>
         </details>
         <details class="tree-node">
-          <summary class="tree-summary"><svg class="tree-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg><span class="tree-label">Design systems</span></summary>
+          <summary class="tree-summary"><span class="tree-label">Design systems</span><span class="tree-count">1</span></summary>
+          <div class="tree-children">
+            <div class="tree-leaf"><span class="tree-label">Tokens</span></div>
+          </div>
         </details>
       </div>
     </details>
@@ -68,16 +69,19 @@ Do **not** re-own the slot:
 ### Seams
 
 - `[data-dz-tree]` / `.dz-tree` forest root (dual-lock)
-- `details.dz-tree-node` + `summary.dz-tree-summary` per node
+- `details.dz-tree-node` + `summary.dz-tree-summary` for branches (label + count only; chevron is CSS)
+- `.dz-tree-leaf` for nodes with no children
 
 ### Do / Don't
 
 | Do | Don't |
 |---|---|
-| Leave multi-open native details for sibling branches | Port dz-menubar exclusive-open onto the tree forest |
+| Leave multi-open native details for sibling branches; emit leaves as .dz-tree-leaf | Port dz-menubar exclusive-open onto the tree forest; or put chevron markup in every summary |
 
 ### Pitfalls
 
+- Do not put chevron SVG/span in the summary — disclosure chrome belongs in CSS (::before on branches)
+- Do not wrap leaves in empty <details> — that still shows a rotating arrow UX with nothing to expand
 - Do not ship exclusive-open or name= exclusivity on tree peers
 - Gallery may mount a second forest under .hm-contract-live__preview — interaction checks use .hm-preview only
 - Not menubar/nav chrome — no outside-dismiss controller
@@ -115,7 +119,7 @@ def render(t: Tree) -> str:
 
 ## Notes
 
-Open intent: multi_open (stem details-open-intent) — sibling branches stay open; do not add exclusive-open. Dual-lock root data-dz-tree (contracts/tree.py). Pure hypermedia: state is the native open attribute; chevron keys off .dz-tree-node[open]; levels indent via dz-tree-children (space-xl nest pad, cycle 1343). Depth-0 nodes default open; Platform/Design systems are the two Engineering children (closed mid-levels are intentional for multi_open click probes). Count chip only when children exist. Gallery probe tree.multi_open (scope .hm-preview).
+Open intent: multi_open (stem details-open-intent) — sibling branches stay open; do not add exclusive-open. Dual-lock root data-dz-tree (contracts/tree.py). Summary holds content (label + count); the rotating chevron is CSS ::before on .dz-tree-node:has(> .dz-tree-children) — never an SVG/span in the summary. Leaves are .dz-tree-leaf (no expand affordance). Count chip only when children exist. Gallery probe tree.multi_open (scope .hm-preview).
 
 ## Source files
 

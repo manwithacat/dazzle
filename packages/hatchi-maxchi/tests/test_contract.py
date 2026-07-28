@@ -70,7 +70,8 @@ SEMANTIC_ONLY = {
     "dz-heatmap-region",
     "dz-bullet-region",
     "dz-pivot-region",
-    "dz-bar-track-region",
+    # dz-bar-track-region removed from SEMANTIC_ONLY — it gained grid
+    # column-stop rules with the summary-alignment fix.
     "dz-histogram-region",
     "dz-box-plot-region",
     "dz-progress-region",

@@ -17,6 +17,7 @@ See issue #1065 for the full decomposition plan.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from dazzle.render.fragment import (
@@ -106,7 +107,7 @@ def _activity_feed_rows(
     items: list[Any],
     drill_by_id: dict[int, str],
     *,
-    timeago,
+    timeago: Callable[[Any], str],
 ) -> list[tuple[str, str, str] | tuple[str, str, str, str]]:
     """Build ActivityFeed item tuples (optional 4th drill_url)."""
     rows: list[tuple[str, str, str] | tuple[str, str, str, str]] = []

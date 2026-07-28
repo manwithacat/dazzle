@@ -144,7 +144,7 @@ def time_series_svg(
         # Baseline grid — single line at the bottom of the plot area.
         f'<line x1="{pl}" y1="{pt + plot_h}" '
         f'x2="{pl + plot_w}" y2="{pt + plot_h}" '
-        f'stroke="var(--colour-border)" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1"/>',
     ]
 
     # Reference bands — render before data so the line/area sit on top.
@@ -190,14 +190,14 @@ def time_series_svg(
     parts.append(
         f'<polygon points="{pl},{base_y} {line_points_str} '
         f'{pl + plot_w},{base_y}" '
-        f'fill="var(--colour-brand)" fill-opacity="0.12" stroke="none" />'
+        f'fill="var(--colour-brand)" fill-opacity="0.12" stroke="none"/>'
     )
 
     # The line itself
     parts.append(
         f'<polyline points="{line_points_str}" '
         f'fill="none" stroke="var(--colour-brand)" stroke-width="1.5" '
-        f'stroke-linejoin="round" stroke-linecap="round" />'
+        f'stroke-linejoin="round" stroke-linecap="round"/>'
     )
 
     # Data points + accessible <title> tooltips
@@ -304,10 +304,10 @@ def _series_layer_parts(
     parts = [
         f'<polygon points="{pl},{base_y} {line_points_str} '
         f'{pl + plot_w},{base_y}" '
-        f'fill="{color}" fill-opacity="0.12" stroke="none" />',
+        f'fill="{color}" fill-opacity="0.12" stroke="none"/>',
         f'<polyline points="{line_points_str}" '
         f'fill="none" stroke="{color}" stroke-width="1.5" '
-        f'stroke-linejoin="round" stroke-linecap="round" />',
+        f'stroke-linejoin="round" stroke-linecap="round"/>',
     ]
     for i, lbl in enumerate(axis_labels):
         px, py = coords[i]
@@ -389,7 +389,7 @@ def _multi_series_svg(
         f'aria-label="{_escape(label, quote=True)} time series — '
         f'{len(series)} series, {count} buckets, peak {_fmt_value(max_val)}">',
         f'<line x1="{pl}" y1="{base_y}" x2="{pl + plot_w}" y2="{base_y}" '
-        f'stroke="var(--colour-border)" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1"/>',
     ]
     parts += _reference_overlay_parts(reference_bands, reference_lines, _y, pl, plot_w)
     for s_idx, (s_name, _pts) in enumerate(series):
@@ -410,21 +410,22 @@ def box_plot_svg(
 ) -> str:
     """Produce inline SVG for a BoxPlot primitive.
 
-    One column per group (label, min, q1, median, q3, max). Renders
-    whisker stem + caps, Q1–Q3 box body, median line. Width scales
-    with group count (56px per box, capped at 460px). Y-axis spans
-    the global min/max of all whiskers so boxes are directly
-    comparable.
+    One column per group (label, min, q1, median, q3, max). Renders:
 
-    Output matches legacy `workspace/regions/box_plot.html` for the
-    common case. Known divergence: the primitive carries 6 stats per
-    group (label, min, q1, median, q3, max) — no separate Tukey
-    whisker fences (whisker_low/high), no outlier list, no sample
-    count `n`. So the SVG renders min/max as the whisker fences (no
-    1.5×IQR clipping), no outlier dots, and tooltips drop the n=N
-    suffix. The runtime's `_compute_box_plot_stats` continues to
-    compute the full set; routing those into the typed primitive is
-    a future ship if/when needed.
+    - **Whiskers** outside the IQR only (min→Q1 and Q3→max) with end caps
+    - **Box** body for Q1–Q3
+    - **Hairline median** (stroke-width 1)
+    - **Hover marks** at the five-number points (``.dz-box-plot-mark``) —
+      CSS reveals the numeric figure on hover; ``<title>`` for SR/native
+      tooltips
+
+    Width scales with group count (56px per box, capped at 460px). Y-axis
+    spans the global min/max of all whiskers so boxes are comparable.
+
+    Known limits vs full Tukey diagrams: min/max are the whisker fences
+    (no separate 1.5×IQR fences / outlier list on the primitive). Pass
+    ``samples`` for ``n=N`` on the box overview tooltip. Outliers remain
+    a future ship when the typed primitive carries them.
     """
     if not groups:
         return ""
@@ -468,10 +469,10 @@ def box_plot_svg(
         # Baseline + Y-axis lines.
         f'<line x1="{pl}" y1="{pt + plot_h}" '
         f'x2="{pl + plot_w}" y2="{pt + plot_h}" '
-        f'stroke="var(--colour-border)" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1"/>',
         f'<line x1="{pl}" y1="{pt}" '
         f'x2="{pl}" y2="{pt + plot_h}" '
-        f'stroke="var(--colour-border)" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1"/>',
         # Y-axis tick labels: min (bottom), max (top).
         f'<text x="{pl - 4}" y="{pt + plot_h + 4}" '
         f'text-anchor="end" font-size="9" '
@@ -485,47 +486,77 @@ def box_plot_svg(
         f"{round(y_max, 1)}</text>",
     ]
 
+    def _fmt_stat(val: float) -> str:
+        """Compact numeric for labels/tooltips (int-narrow when whole)."""
+        return str(int(val)) if val == int(val) else str(round(val, 1))
+
+    def _hover_mark(
+        *,
+        role: str,
+        group_label: str,
+        value: float,
+        cx: float,
+        cy: float,
+        label_dx: float,
+    ) -> str:
+        """Key-point hit target + figure shown on hover (CSS, no JS)."""
+        shown = _fmt_stat(value)
+        role_title = role.replace("_", " ")
+        lx = round(cx + label_dx, 2)
+        ly = round(cy + 3, 2)
+        return (
+            f'<g class="dz-box-plot-mark" data-dz-box-mark="{_escape(role, quote=True)}">'
+            f'<circle class="dz-box-plot-mark-hit" cx="{cx}" cy="{cy}" r="7" '
+            f'fill="transparent" stroke="none"/>'
+            f'<circle class="dz-box-plot-mark-dot" cx="{cx}" cy="{cy}" r="2" '
+            f'fill="var(--colour-brand)" stroke="var(--colour-surface)" '
+            f'stroke-width="1"/>'
+            f'<text class="dz-box-plot-mark-label" x="{lx}" y="{ly}" '
+            f'text-anchor="start" font-size="9" '
+            f'fill="var(--colour-text)" '
+            f"font-family=\"ui-monospace, 'SF Mono', Menlo, monospace\">"
+            f"{shown}</text>"
+            f"<title>{_escape(group_label)} {role_title}: {shown}</title>"
+            f"</g>"
+        )
+
     # Per-group box.
     for i, (group_label, mn, q1, median, q3, mx) in enumerate(groups):
         col_x = round(pl + (i + 0.5) * col_w, 2)
-        # q1_y unused — box rect uses q3_y as `y` and box_h derived from
-        # raw values to avoid pre-rounding drift (Phase 4B.4 wave 2).
+        q1_y = _y(q1)
         q3_y = _y(q3)
         median_y = _y(median)
         whisker_low_y = _y(mn)
         whisker_high_y = _y(mx)
         cap_half = round(box_w / 4, 2)
         box_half = round(box_w / 2, 2)
+        label_dx = box_half + 6
 
-        # Whisker stem.
+        # Whiskers only outside the IQR box (min→Q1, Q3→max).
         parts.append(
-            f'<line x1="{col_x}" y1="{whisker_low_y}" '
+            f'<line class="dz-box-plot-whisker" x1="{col_x}" y1="{whisker_low_y}" '
+            f'x2="{col_x}" y2="{q1_y}" '
+            f'stroke="var(--colour-text-muted)" stroke-width="1"/>'
+        )
+        parts.append(
+            f'<line class="dz-box-plot-whisker" x1="{col_x}" y1="{q3_y}" '
             f'x2="{col_x}" y2="{whisker_high_y}" '
-            f'stroke="var(--colour-text-muted)" stroke-width="1" />'
-        )
-        # Whisker caps.
-        parts.append(
-            f'<line x1="{col_x - cap_half}" y1="{whisker_low_y}" '
-            f'x2="{col_x + cap_half}" y2="{whisker_low_y}" '
-            f'stroke="var(--colour-text-muted)" stroke-width="1" />'
+            f'stroke="var(--colour-text-muted)" stroke-width="1"/>'
         )
         parts.append(
-            f'<line x1="{col_x - cap_half}" y1="{whisker_high_y}" '
-            f'x2="{col_x + cap_half}" y2="{whisker_high_y}" '
-            f'stroke="var(--colour-text-muted)" stroke-width="1" />'
+            f'<line class="dz-box-plot-whisker-cap" x1="{col_x - cap_half}" '
+            f'y1="{whisker_low_y}" x2="{col_x + cap_half}" y2="{whisker_low_y}" '
+            f'stroke="var(--colour-text-muted)" stroke-width="1"/>'
         )
-        # Box body. Compute height from RAW (unrounded) y values to
-        # match the legacy template's order-of-operations: legacy
-        # rounds the final box_h once via Jinja `| round(2)`, while
-        # rounding intermediate q1_y/q3_y first then subtracting
-        # accumulates a 0.01-class drift. (Phase 4B.4 wave 2 fix.)
+        parts.append(
+            f'<line class="dz-box-plot-whisker-cap" x1="{col_x - cap_half}" '
+            f'y1="{whisker_high_y}" x2="{col_x + cap_half}" y2="{whisker_high_y}" '
+            f'stroke="var(--colour-text-muted)" stroke-width="1"/>'
+        )
         box_h = round(_y_raw(q1) - _y_raw(q3), 2)
-        # Per-group sample count for tooltip — appended as `n=N` when
-        # `samples` was supplied, matching the legacy template's
-        # `n={{ s.n }}` suffix.
         n_suffix = f", n={samples[i]}" if i < len(samples) else ""
         parts.append(
-            f'<rect x="{col_x - box_half}" y="{q3_y}" '
+            f'<rect class="dz-box-plot-box" x="{col_x - box_half}" y="{q3_y}" '
             f'width="{round(box_w, 2)}" height="{box_h}" '
             f'fill="var(--colour-brand)" fill-opacity="0.18" '
             f'stroke="var(--colour-brand)" stroke-width="1">'
@@ -534,13 +565,28 @@ def box_plot_svg(
             f"{n_suffix}</title>"
             f"</rect>"
         )
-        # Median line.
         parts.append(
-            f'<line x1="{col_x - box_half}" y1="{median_y}" '
+            f'<line class="dz-box-plot-median" x1="{col_x - box_half}" y1="{median_y}" '
             f'x2="{col_x + box_half}" y2="{median_y}" '
-            f'stroke="var(--colour-brand)" stroke-width="1.5" />'
+            f'stroke="var(--colour-brand)" stroke-width="1"/>'
         )
-        # Group label below the axis.
+        for role, val, cy in (
+            ("max", mx, whisker_high_y),
+            ("q3", q3, q3_y),
+            ("median", median, median_y),
+            ("q1", q1, q1_y),
+            ("min", mn, whisker_low_y),
+        ):
+            parts.append(
+                _hover_mark(
+                    role=role,
+                    group_label=group_label,
+                    value=val,
+                    cx=col_x,
+                    cy=cy,
+                    label_dx=label_dx,
+                )
+            )
         parts.append(
             f'<text x="{col_x}" y="{h - 8}" '
             f'text-anchor="middle" font-size="10" '
@@ -645,7 +691,7 @@ def radar_svg(
         parts.append(
             f'<polygon points="{ring_pts}" '
             f'fill="none" stroke="var(--colour-border)" '
-            f'stroke-width="0.5" stroke-opacity="0.6" />'
+            f'stroke-width="0.5" stroke-opacity="0.6"/>'
         )
 
     # Spoke axis lines.
@@ -655,7 +701,7 @@ def radar_svg(
             f'<line x1="{cx}" y1="{cy}" '
             f'x2="{ax_x}" y2="{ax_y}" '
             f'stroke="var(--colour-border)" '
-            f'stroke-width="0.5" stroke-opacity="0.7" />'
+            f'stroke-width="0.5" stroke-opacity="0.7"/>'
         )
 
     # Data polygon — vertices at value/max_val ratio.
@@ -670,7 +716,7 @@ def radar_svg(
         f'<polygon points="{" ".join(poly_pts)}" '
         f'fill="var(--colour-brand)" fill-opacity="0.15" '
         f'stroke="var(--colour-brand)" stroke-width="1.5" '
-        f'stroke-linejoin="round" />'
+        f'stroke-linejoin="round"/>'
     )
 
     # Vertex markers. Tooltip format matches legacy
@@ -756,7 +802,7 @@ def histogram_svg(
         # Baseline.
         f'<line x1="{pl}" y1="{pt + plot_h}" '
         f'x2="{pl + plot_w}" y2="{pt + plot_h}" '
-        f'stroke="var(--colour-border)" stroke-width="1" />',
+        f'stroke="var(--colour-border)" stroke-width="1"/>',
     ]
 
     # Bars.

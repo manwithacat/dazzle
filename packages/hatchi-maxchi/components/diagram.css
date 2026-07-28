@@ -8,6 +8,9 @@
 
 .dz-diagram-scroll {
   overflow-x: auto;
+  /* Give Mermaid a real box so SVG isn't squeezed to a hairline column. */
+  min-height: 8rem;
+  width: 100%;
 }
 
 .dz-diagram-source {
@@ -15,6 +18,16 @@
   color: var(--colour-text);
   /* Mermaid replaces this <pre> with rendered SVG once initialised;
    * the source-text styling matters only on the initial paint flash. */
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Post-render: Mermaid injects an SVG (or a div wrapping one). Let it
+ * size to content width inside the scroll host. */
+.dz-diagram-scroll > svg,
+.dz-diagram-scroll .mermaid > svg {
+  max-width: none;
+  height: auto;
 }
 
 .dz-diagram-empty {

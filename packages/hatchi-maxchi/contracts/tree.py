@@ -1,7 +1,8 @@
 """HYPERPART: tree — native details/summary hierarchy.
 
-Dual-lock unit is the region root. Nested node markup is host-owned
-(recursive details/summary + chevron SVG).
+Dual-lock unit is the region root. Nested node markup is host-owned:
+branches are ``details``/``summary`` (label + count); leaves are
+``.dz-tree-leaf``. Disclosure chevron is CSS chrome, not summary content.
 """
 
 from __future__ import annotations
@@ -42,10 +43,10 @@ EXEMPLARS: list[Tree] = [
             '<span class="dz-tree-label">Engineering</span>'
             '<span class="dz-tree-count">1</span></summary>'
             '<div class="dz-tree-children">'
-            '<details class="dz-tree-node">'
-            '<summary class="dz-tree-summary">'
-            '<span class="dz-tree-label">Platform</span></summary>'
-            "</details></div></details>"
+            # Leaf — no details, no chevron content.
+            '<div class="dz-tree-leaf">'
+            '<span class="dz-tree-label">Platform</span></div>'
+            "</div></details>"
         ),
     ),
     Tree(body_html=""),

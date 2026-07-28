@@ -364,9 +364,45 @@ body { background: var(--colour-bg); color: var(--colour-text);
 </div>
 <script src="../hatchi-maxchi.js" defer></script>
 <script>document.addEventListener('click',function(e){var b=e.target.closest('[data-hm-open-command]');if(!b)return;var dlg=document.querySelector('dialog.command');if(dlg){dlg.showModal();var i=dlg.querySelector('.command__input');if(i)i.focus();}});</script>
-<script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-mermaid.initialize({ startOnLoad: true, securityLevel: "loose", theme: "neutral" });
+<script>
+(function () {
+  function runMermaid() {
+    if (typeof mermaid === "undefined") return;
+    try {
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "loose",
+        theme: document.documentElement.getAttribute("data-theme") === "dark"
+          ? "dark"
+          : "neutral",
+      });
+      mermaid.run({ querySelector: "pre.mermaid" });
+    } catch (err) {
+      console.error("[hm diagram] mermaid.run failed", err);
+    }
+  }
+  function boot() {
+    if (typeof mermaid !== "undefined") {
+      runMermaid();
+      return;
+    }
+    var s = document.createElement("script");
+    // Pinned like Dazzle's _DIAGRAM_MERMAID_SCRIPT (min.js, not ESM — works
+    // without type=module and after defer scripts).
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.min.js";
+    s.crossOrigin = "anonymous";
+    s.onload = runMermaid;
+    s.onerror = function () {
+      console.error("[hm diagram] failed to load Mermaid from CDN");
+    };
+    document.head.appendChild(s);
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
 </script>
 </body>
 </html>

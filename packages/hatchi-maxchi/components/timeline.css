@@ -24,19 +24,26 @@
 }
 
 .dz-timeline-bullet-wrap {
+  /* Size shared with .dz-timeline-bullet so the rail centre calc tracks the box. */
+  --timeline-bullet-size: 0.75rem;
   position: absolute;
-  inset-inline-start: -1.3125rem;
+  /* Centre on the list border-inline-start rail: back across padding + half
+   * border + half bullet. Hard-coded -1.3125rem predated --space-md: 0.75rem
+   * and sat ~2.5px left of the line. */
+  inset-inline-start: calc(
+    -1 * var(--space-md) - 0.5px - (var(--timeline-bullet-size) / 2)
+  );
   top: 0.375rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 0.75rem;
-  height: 0.75rem;
+  width: var(--timeline-bullet-size);
+  height: var(--timeline-bullet-size);
 }
 
 .dz-timeline-bullet {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: var(--timeline-bullet-size, 0.75rem);
+  height: var(--timeline-bullet-size, 0.75rem);
 }
 
 .dz-timeline-row {

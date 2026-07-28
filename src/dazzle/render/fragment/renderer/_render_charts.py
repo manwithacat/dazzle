@@ -426,34 +426,35 @@ class _RenderChartsMixin:
         return render_tree(TreeSeam(body_html=body))
 
     def _emit_tree_node(self, node: TreeNode, *, depth: int, ctx: RenderContext) -> str:
+        """Emit one tree node.
+
+        Branch nodes are ``<details>`` with label (+ count) only — the
+        rotating chevron is CSS ``::before`` on
+        ``.dz-tree-node:has(> .dz-tree-children)``, not content SVG.
+        Leaves are ``.dz-tree-leaf`` (no disclosure chrome / no open).
+        """
+        label = ctx.escape(node.label)
+        if not node.children:
+            # Leaf: content only — no details, no chevron, no expand hint.
+            return f'<div class="dz-tree-leaf"><span class="dz-tree-label">{label}</span></div>'
         open_attr = " open" if depth == 0 else ""
-        chevron = (
-            '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
-            'stroke="currentColor" stroke-width="2" aria-hidden="true">'
-            '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>'
-            "</svg>"
-        )
-        count_html = (
-            f'<span class="dz-tree-count">{len(node.children)}</span>' if node.children else ""
-        )
+        count_html = f'<span class="dz-tree-count">{len(node.children)}</span>'
+        # Summary holds content (label + count). Disclosure affordance is CSS.
         summary = (
             f'<summary class="dz-tree-summary">'
-            f"{chevron}"
-            f'<span class="dz-tree-label">{ctx.escape(node.label)}</span>'
+            f'<span class="dz-tree-label">{label}</span>'
             f"{count_html}"
             f"</summary>"
         )
-        if node.children:
-            children_html = "".join(
-                self._emit_tree_node(c, depth=depth + 1, ctx=ctx) for c in node.children
-            )
-            return (
-                f'<details class="dz-tree-node"{open_attr}>'
-                f"{summary}"
-                f'<div class="dz-tree-children">{children_html}</div>'
-                f"</details>"
-            )
-        return f'<details class="dz-tree-node"{open_attr}>{summary}</details>'
+        children_html = "".join(
+            self._emit_tree_node(c, depth=depth + 1, ctx=ctx) for c in node.children
+        )
+        return (
+            f'<details class="dz-tree-node"{open_attr}>'
+            f"{summary}"
+            f'<div class="dz-tree-children">{children_html}</div>'
+            f"</details>"
+        )
 
     def _emit_pipeline_steps(self, p: PipelineSteps, ctx: RenderContext) -> str:
         """Render a PipelineSteps row matching legacy

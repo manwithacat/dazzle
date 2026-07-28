@@ -663,15 +663,14 @@ class TreeNode:
 
 @dataclass(frozen=True, slots=True)
 class Tree:
-    """Recursive `<details>`-based hierarchy display.
+    """Recursive hierarchy display on native `<details>` for branches.
 
-    Phase 4B.4 wave 2: emits the legacy
-    `workspace/regions/tree.html` shape — recursive `<details
-    class="dz-tree-node">` with `<summary>` (chevron + label + optional
-    child count) and nested `<div class="dz-tree-children">` for
-    non-leaf nodes. Top-level nodes (depth 0) render with the
-    `[open]` attribute by default; deeper nodes render closed
-    (matches the legacy `{% if depth == 0 %}open{% endif %}` guard).
+    Branches emit ``<details class="dz-tree-node">`` with a summary of
+    **content only** (label + optional child-count chip). The rotating
+    chevron is CSS disclosure chrome
+    (``.dz-tree-node:has(> .dz-tree-children) > .dz-tree-summary::before``),
+    not an SVG/span in the summary. Leaves emit ``.dz-tree-leaf`` with no
+    expand affordance. Depth-0 branches default to ``[open]``.
     """
 
     nodes: tuple[TreeNode, ...]

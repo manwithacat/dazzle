@@ -23,19 +23,24 @@
 }
 
 .dz-activity-dot {
+  /* Same rail geometry as .dz-timeline-bullet-wrap (padding + 1px border). */
+  --activity-dot-size: 0.75rem;
   position: absolute;
-  inset-inline-start: -1.3125rem;
+  inset-inline-start: calc(
+    -1 * var(--space-md) - 0.5px - (var(--activity-dot-size) / 2)
+  );
   top: 0.375rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 0.75rem;
-  height: 0.75rem;
+  width: var(--activity-dot-size);
+  height: var(--activity-dot-size);
 }
 
 .dz-activity-dot > svg {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: var(--activity-dot-size, 0.75rem);
+  height: var(--activity-dot-size, 0.75rem);
+  display: block;
   color: var(--colour-brand);
 }
 

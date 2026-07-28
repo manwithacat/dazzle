@@ -4198,14 +4198,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "Line or area sequential chart — one series of (label, value) points, "
             "or multi-series overlays with a shared legend.",
-            '<div class="dz-line-chart-region hm-measure-lg" data-dz-time-series>'
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" '
-            'role="img" aria-label="Line chart — 3 buckets">'
-            '<polyline points="4,30 90,10 176,34" fill="none" '
-            'stroke="var(--colour-brand)" stroke-width="2"/>'
-            "</svg>"
-            '<p class="dz-chart-summary">3 buckets · peak 18</p>'
-            "</div>",
+            '<div class="dz-line-chart-region hm-measure-lg" data-dz-time-series><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" class="dz-line-chart-svg dz-chart-svg" role="img" aria-label="Traffic time series — 14 buckets, peak 91"><line x1="8" y1="92" x2="392" y2="92" stroke="var(--colour-border)" stroke-width="1"/><polygon points="8,92 8.0,53.23 37.54,44.92 67.08,47.69 96.62,33.85 126.15,26.46 155.69,56.92 185.23,59.69 214.77,38.46 244.31,31.08 273.85,25.54 303.38,18.15 332.92,8.0 362.46,48.62 392.0,51.38 392,92" fill="var(--colour-brand)" fill-opacity="0.12" stroke="none"/><polyline points="8.0,53.23 37.54,44.92 67.08,47.69 96.62,33.85 126.15,26.46 155.69,56.92 185.23,59.69 214.77,38.46 244.31,31.08 273.85,25.54 303.38,18.15 332.92,8.0 362.46,48.62 392.0,51.38" fill="none" stroke="var(--colour-brand)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="8.0" cy="53.23" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>3 Mar: 42</title></circle><circle cx="37.54" cy="44.92" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>4 Mar: 51</title></circle><circle cx="67.08" cy="47.69" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>5 Mar: 48</title></circle><circle cx="96.62" cy="33.85" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>6 Mar: 63</title></circle><circle cx="126.15" cy="26.46" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>7 Mar: 71</title></circle><circle cx="155.69" cy="56.92" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>8 Mar: 38</title></circle><circle cx="185.23" cy="59.69" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>9 Mar: 35</title></circle><circle cx="214.77" cy="38.46" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>10 Mar: 58</title></circle><circle cx="244.31" cy="31.08" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>11 Mar: 66</title></circle><circle cx="273.85" cy="25.54" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>12 Mar: 72</title></circle><circle cx="303.38" cy="18.15" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>13 Mar: 80</title></circle><circle cx="332.92" cy="8.0" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>14 Mar: 91</title></circle><circle cx="362.46" cy="48.62" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>15 Mar: 47</title></circle><circle cx="392.0" cy="51.38" r="2.5" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"><title>16 Mar: 44</title></circle><text x="8.0" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">3 Mar</text><text x="96.62" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">6 Mar</text><text x="185.23" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">9 Mar</text><text x="273.85" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">12 Mar</text><text x="362.46" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">15 Mar</text><text x="392.0" y="112" text-anchor="middle" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">16 Mar</text></svg><p class="dz-chart-summary">14 buckets · peak 91</p></div>',
             notes="Dual-lock root is <code>data-dz-time-series</code> "
             "(<code>contracts/time_series.py</code>). Wrapper class stays "
             "view-specific (<code>dz-line-chart-region</code> / "
@@ -4345,7 +4338,7 @@ def select(source: str, id: str) -> str:
             'title="Compute: 38%"></span></div>'
             '<span class="dz-bar-track-value">38%</span></div>'
             "</div>"
-            '<p class="dz-bar-track-summary">2 rows · scale 0–100</p>'
+            '<p class="dz-bar-track-summary"><span class="dz-bar-track-summary-gutter" aria-hidden="true"></span><span class="dz-bar-track-summary-meta">2 rows</span><span class="dz-bar-track-summary-scale">0–100</span></p>'
             "</div>",
             notes="Dual-lock root is <code>data-dz-bar-track</code> "
             "(<code>contracts/bar_track.py</code>). Each track is a real "
@@ -4388,24 +4381,7 @@ def select(source: str, id: str) -> str:
             "Data",
             "Distribution five-number summaries per bucket — a server-rendered "
             "SVG with the counts in the summary line.",
-            '<div class="dz-box-plot-region hm-measure-lg" data-dz-box-plot>'
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" '
-            'role="img" aria-label="Box plot — 3 buckets">'
-            '<line x1="20" y1="8" x2="20" y2="40" stroke="var(--colour-text-muted)"/>'
-            '<rect x="8" y="16" width="24" height="16" fill="var(--colour-brand)" '
-            'fill-opacity="0.25" stroke="var(--colour-brand)"/>'
-            '<line x1="8" y1="24" x2="32" y2="24" stroke="var(--colour-brand)" stroke-width="2"/>'
-            '<line x1="90" y1="4" x2="90" y2="44" stroke="var(--colour-text-muted)"/>'
-            '<rect x="78" y="12" width="24" height="22" fill="var(--colour-brand)" '
-            'fill-opacity="0.25" stroke="var(--colour-brand)"/>'
-            '<line x1="78" y1="20" x2="102" y2="20" stroke="var(--colour-brand)" stroke-width="2"/>'
-            '<line x1="160" y1="10" x2="160" y2="38" stroke="var(--colour-text-muted)"/>'
-            '<rect x="148" y="18" width="24" height="14" fill="var(--colour-brand)" '
-            'fill-opacity="0.25" stroke="var(--colour-brand)"/>'
-            '<line x1="148" y1="26" x2="172" y2="26" stroke="var(--colour-brand)" stroke-width="2"/>'
-            "</svg>"
-            '<p class="dz-box-plot-summary">3 groups · 0 samples</p>'
-            "</div>",
+            '<div class="dz-box-plot-region hm-measure-lg" data-dz-box-plot><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 232 200" class="dz-box-plot-svg" role="img" aria-label="Latency box plot — 3 groups, range 5.0–95.0"><line x1="32" y1="168" x2="224" y2="168" stroke="var(--colour-border)" stroke-width="1"/><line x1="32" y1="8" x2="32" y2="168" stroke="var(--colour-border)" stroke-width="1"/><text x="28" y="172" text-anchor="end" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">5.0</text><text x="28" y="12" text-anchor="end" font-size="9" fill="var(--colour-text-muted)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">95.0</text><line class="dz-box-plot-whisker" x1="64.0" y1="159.11" x2="64.0" y2="141.33" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker" x1="64.0" y1="96.89" x2="64.0" y2="34.67" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="55.0" y1="159.11" x2="73.0" y2="159.11" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="55.0" y1="34.67" x2="73.0" y2="34.67" stroke="var(--colour-text-muted)" stroke-width="1"/><rect class="dz-box-plot-box" x="46.0" y="96.89" width="36" height="44.44" fill="var(--colour-brand)" fill-opacity="0.18" stroke="var(--colour-brand)" stroke-width="1"><title>API: Q1 20.0, median 30.0, Q3 45.0, n=120</title></rect><line class="dz-box-plot-median" x1="46.0" y1="123.56" x2="82.0" y2="123.56" stroke="var(--colour-brand)" stroke-width="1"/><g class="dz-box-plot-mark" data-dz-box-mark="max"><circle class="dz-box-plot-mark-hit" cx="64.0" cy="34.67" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="64.0" cy="34.67" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="88.0" y="37.67" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">80</text><title>API max: 80</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q3"><circle class="dz-box-plot-mark-hit" cx="64.0" cy="96.89" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="64.0" cy="96.89" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="88.0" y="99.89" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">45</text><title>API q3: 45</title></g><g class="dz-box-plot-mark" data-dz-box-mark="median"><circle class="dz-box-plot-mark-hit" cx="64.0" cy="123.56" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="64.0" cy="123.56" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="88.0" y="126.56" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">30</text><title>API median: 30</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q1"><circle class="dz-box-plot-mark-hit" cx="64.0" cy="141.33" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="64.0" cy="141.33" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="88.0" y="144.33" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">20</text><title>API q1: 20</title></g><g class="dz-box-plot-mark" data-dz-box-mark="min"><circle class="dz-box-plot-mark-hit" cx="64.0" cy="159.11" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="64.0" cy="159.11" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="88.0" y="162.11" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">10</text><title>API min: 10</title></g><text x="64.0" y="192" text-anchor="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">API</text><line class="dz-box-plot-whisker" x1="128.0" y1="168.0" x2="128.0" y2="150.22" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker" x1="128.0" y1="105.78" x2="128.0" y2="52.44" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="119.0" y1="168.0" x2="137.0" y2="168.0" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="119.0" y1="52.44" x2="137.0" y2="52.44" stroke="var(--colour-text-muted)" stroke-width="1"/><rect class="dz-box-plot-box" x="110.0" y="105.78" width="36" height="44.44" fill="var(--colour-brand)" fill-opacity="0.18" stroke="var(--colour-brand)" stroke-width="1"><title>Web: Q1 15.0, median 25.0, Q3 40.0, n=98</title></rect><line class="dz-box-plot-median" x1="110.0" y1="132.44" x2="146.0" y2="132.44" stroke="var(--colour-brand)" stroke-width="1"/><g class="dz-box-plot-mark" data-dz-box-mark="max"><circle class="dz-box-plot-mark-hit" cx="128.0" cy="52.44" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="128.0" cy="52.44" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="152.0" y="55.44" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">70</text><title>Web max: 70</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q3"><circle class="dz-box-plot-mark-hit" cx="128.0" cy="105.78" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="128.0" cy="105.78" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="152.0" y="108.78" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">40</text><title>Web q3: 40</title></g><g class="dz-box-plot-mark" data-dz-box-mark="median"><circle class="dz-box-plot-mark-hit" cx="128.0" cy="132.44" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="128.0" cy="132.44" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="152.0" y="135.44" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">25</text><title>Web median: 25</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q1"><circle class="dz-box-plot-mark-hit" cx="128.0" cy="150.22" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="128.0" cy="150.22" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="152.0" y="153.22" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">15</text><title>Web q1: 15</title></g><g class="dz-box-plot-mark" data-dz-box-mark="min"><circle class="dz-box-plot-mark-hit" cx="128.0" cy="168.0" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="128.0" cy="168.0" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="152.0" y="171.0" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">5</text><title>Web min: 5</title></g><text x="128.0" y="192" text-anchor="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">Web</text><line class="dz-box-plot-whisker" x1="192.0" y1="155.56" x2="192.0" y2="137.78" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker" x1="192.0" y1="88.0" x2="192.0" y2="8.0" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="183.0" y1="155.56" x2="201.0" y2="155.56" stroke="var(--colour-text-muted)" stroke-width="1"/><line class="dz-box-plot-whisker-cap" x1="183.0" y1="8.0" x2="201.0" y2="8.0" stroke="var(--colour-text-muted)" stroke-width="1"/><rect class="dz-box-plot-box" x="174.0" y="88.0" width="36" height="49.78" fill="var(--colour-brand)" fill-opacity="0.18" stroke="var(--colour-brand)" stroke-width="1"><title>Jobs: Q1 22.0, median 35.0, Q3 50.0, n=64</title></rect><line class="dz-box-plot-median" x1="174.0" y1="114.67" x2="210.0" y2="114.67" stroke="var(--colour-brand)" stroke-width="1"/><g class="dz-box-plot-mark" data-dz-box-mark="max"><circle class="dz-box-plot-mark-hit" cx="192.0" cy="8.0" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="192.0" cy="8.0" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="216.0" y="11.0" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">95</text><title>Jobs max: 95</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q3"><circle class="dz-box-plot-mark-hit" cx="192.0" cy="88.0" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="192.0" cy="88.0" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="216.0" y="91.0" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">50</text><title>Jobs q3: 50</title></g><g class="dz-box-plot-mark" data-dz-box-mark="median"><circle class="dz-box-plot-mark-hit" cx="192.0" cy="114.67" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="192.0" cy="114.67" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="216.0" y="117.67" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">35</text><title>Jobs median: 35</title></g><g class="dz-box-plot-mark" data-dz-box-mark="q1"><circle class="dz-box-plot-mark-hit" cx="192.0" cy="137.78" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="192.0" cy="137.78" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="216.0" y="140.78" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">22</text><title>Jobs q1: 22</title></g><g class="dz-box-plot-mark" data-dz-box-mark="min"><circle class="dz-box-plot-mark-hit" cx="192.0" cy="155.56" r="7" fill="transparent" stroke="none"/><circle class="dz-box-plot-mark-dot" cx="192.0" cy="155.56" r="2" fill="var(--colour-brand)" stroke="var(--colour-surface)" stroke-width="1"/><text class="dz-box-plot-mark-label" x="216.0" y="158.56" text-anchor="start" font-size="9" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">12</text><title>Jobs min: 12</title></g><text x="192.0" y="192" text-anchor="middle" font-size="10" fill="var(--colour-text)" font-family="ui-monospace, \'SF Mono\', Menlo, monospace">Jobs</text></svg><p class="dz-box-plot-summary">3 groups · 282 samples</p></div>',
             notes="Dual-lock root is <code>data-dz-box-plot</code> "
             "(<code>contracts/box_plot.py</code>). Schematic demo — real "
             "whisker/quartile geometry is server-computed via "
@@ -4532,45 +4508,87 @@ def select(source: str, id: str) -> str:
             "list-region",
             "List region",
             "Data",
-            "The in-card data table: an actions row with CSV export, a "
-            "horizontally scrollable table, and an overflow count.",
-            '<div class="dz-list-region" data-dz-list-region>'
+            "The in-card data table: CSV export, sortable headers, a scrollable "
+            "table body, and an overflow count.",
+            # Gallery: sort headers hx-get the mock list-region (server owns
+            # ORDER BY); CSV downloads sample-list-export.csv via dz.downloadCsv.
+            '<div class="dz-list-region" data-dz-list-region id="hm-list-region-demo">'
             '<div class="dz-list-actions">'
             '<div class="dz-list-action-group">'
             '<button type="button" class="dz-list-csv-button" '
-            'title="Export CSV" aria-label="Export CSV">{svg:download}</button>'
+            'title="Export CSV" aria-label="Export CSV" '
+            'data-dz-csv-endpoint="sample-list-export.csv" '
+            'data-dz-csv-filename="work-items.csv" '
+            'onclick="window.dz.downloadCsv('
+            "this.dataset.dzCsvEndpoint||this.dataset.csvEndpoint, "
+            "this.dataset.dzCsvFilename||this.dataset.csvFilename"
+            ')">{svg:download}</button>'
             "</div></div>"
             '<div class="dz-list-scroll">'
             '<table class="dz-list-table">'
             "<thead><tr>"
-            '<th><a href="#" class="dz-list-sort-link">Name<span>▲</span></a></th>'
-            "<th>Owner</th><th>Status</th>"
+            '<th><a class="dz-list-sort-link" '
+            'hx-get="/mock/list-region?sort=name&amp;dir=desc" '
+            'hx-target="closest [data-dz-list-region]" '
+            'hx-swap="outerHTML">Name<span>▲</span></a></th>'
+            '<th><a class="dz-list-sort-link" '
+            'hx-get="/mock/list-region?sort=owner&amp;dir=asc" '
+            'hx-target="closest [data-dz-list-region]" '
+            'hx-swap="outerHTML">Owner</a></th>'
+            '<th><a class="dz-list-sort-link" '
+            'hx-get="/mock/list-region?sort=status&amp;dir=asc" '
+            'hx-target="closest [data-dz-list-region]" '
+            'hx-swap="outerHTML">Status</a></th>'
             "</tr></thead>"
             "<tbody>"
             '<tr class="dz-list-row is-clickable">'
+            "<td>Capacity review</td><td>J. Dias</td><td>Active</td></tr>"
+            '<tr class="dz-list-row is-clickable">'
+            "<td>Load study</td><td>K. Novak</td><td>Draft</td></tr>"
+            '<tr class="dz-list-row is-clickable">'
             "<td>Quarterly audit</td><td>M. Reyes</td><td>Active</td></tr>"
+            '<tr class="dz-list-row ">'
+            "<td>Site walkdown</td><td>M. Reyes</td><td>Closed</td></tr>"
             '<tr class="dz-list-row ">'
             "<td>Vendor renewal</td><td>A. Osei</td><td>Draft</td></tr>"
             "</tbody></table></div>"
-            '<p class="dz-list-overflow">Showing 2 of 14</p>'
+            '<p class="dz-list-overflow">Showing 5 of 5</p>'
             "</div>",
             notes="Dual-lock root is <code>data-dz-list-region</code> "
-            "(<code>contracts/list_region.py</code>). The CSV button is ALWAYS "
-            "rendered in the actions row. The snippet omits its wiring: the real "
-            "emitter adds <code>data-dz-csv-endpoint</code>/"
-            "<code>data-dz-csv-filename</code> and an <code>onclick</code> that "
-            "calls <code>window.dz.downloadCsv(endpoint, filename)</code> against "
-            "the server export route. Sortable headers are "
-            "<code>dz-list-sort-link</code> anchors carrying an hx-get with "
-            "<code>?sort=&lt;col&gt;&amp;dir=&lt;asc|desc&gt;</code> — the "
-            "server re-renders the region; the active column shows a text "
-            "caret. Rows wired to a drill URL carry <code>is-clickable</code>; "
-            "the overflow line reports what the page cut. For the full "
-            "hypermedia table primitive (selection, filters, pagination) use "
-            "the <code>grid</code> Hyperpart — this one is the lighter in-card "
-            "region.",
+            "(<code>contracts/list_region.py</code>). CSV export is wired with "
+            "<code>data-dz-csv-endpoint</code> + <code>data-dz-csv-filename</code> "
+            "and <code>window.dz.downloadCsv</code> (gallery serves "
+            "<code>sample-list-export.csv</code> as the downloadable artifact). "
+            "Sortable headers are <code>dz-list-sort-link</code> anchors with "
+            "<code>hx-get ?sort=&amp;dir=</code> — the host re-renders the "
+            "region; the active column shows a caret. Rows with a drill URL "
+            "carry <code>is-clickable</code>. For selection/filters/pagination "
+            "use the <code>grid</code> Hyperpart.",
             tags=("data",),
             contracts=("contracts/list_region.py",),
+            exchanges=(
+                Exchange(
+                    method="GET",
+                    endpoint="/mock/list-region",
+                    trigger="click on a sort header",
+                    response=(
+                        "Full list-region outerHTML reordered by ?sort=&dir=; "
+                        "active column caret ▲/▼"
+                    ),
+                    swap="closest [data-dz-list-region] outerHTML",
+                    envelope="outer",
+                    states=("populated",),
+                ),
+                Exchange(
+                    method="GET",
+                    endpoint="sample-list-export.csv",
+                    trigger="click Export CSV (via dz.downloadCsv)",
+                    response="text/csv file body (download, not a DOM swap)",
+                    swap="n/a — Blob download",
+                    envelope="none",
+                    states=("populated", "error"),
+                ),
+            ),
         ),
         Hyperpart(
             "task-inbox",
@@ -4618,68 +4636,64 @@ def select(source: str, id: str) -> str:
             "tree",
             "Tree",
             "Data",
-            "Hierarchy on native <details>/<summary> — indented children, "
-            "rotating chevron, child-count chips. No JS at all.",
+            "Hierarchy on native <details>/<summary> for branches; leaves are "
+            "plain rows. Chevron is CSS chrome (not summary content). No JS.",
             '<div class="hm-measure">'
             '<div class="dz-tree" data-dz-tree>'
             '<details class="dz-tree-node" open>'
             '<summary class="dz-tree-summary">'
-            '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
-            'stroke="currentColor" stroke-width="2" aria-hidden="true">'
-            '<path stroke-linecap="round" stroke-linejoin="round" '
-            'd="M9 5l7 7-7 7"/></svg>'
             '<span class="dz-tree-label">Engineering</span>'
             '<span class="dz-tree-count">2</span>'
             "</summary>"
             '<div class="dz-tree-children">'
+            # Two sibling branches (multi_open probe) each with leaf children.
             '<details class="dz-tree-node">'
             '<summary class="dz-tree-summary">'
-            '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
-            'stroke="currentColor" stroke-width="2" aria-hidden="true">'
-            '<path stroke-linecap="round" stroke-linejoin="round" '
-            'd="M9 5l7 7-7 7"/></svg>'
             '<span class="dz-tree-label">Platform</span>'
             '<span class="dz-tree-count">1</span>'
             "</summary>"
             '<div class="dz-tree-children">'
-            '<details class="dz-tree-node">'
-            '<summary class="dz-tree-summary">'
-            '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
-            'stroke="currentColor" stroke-width="2" aria-hidden="true">'
-            '<path stroke-linecap="round" stroke-linejoin="round" '
-            'd="M9 5l7 7-7 7"/></svg>'
+            '<div class="dz-tree-leaf">'
             '<span class="dz-tree-label">Build tooling</span>'
-            "</summary></details>"
+            "</div>"
             "</div></details>"
             '<details class="dz-tree-node">'
             '<summary class="dz-tree-summary">'
-            '<svg class="dz-tree-chevron" fill="none" viewBox="0 0 24 24" '
-            'stroke="currentColor" stroke-width="2" aria-hidden="true">'
-            '<path stroke-linecap="round" stroke-linejoin="round" '
-            'd="M9 5l7 7-7 7"/></svg>'
             '<span class="dz-tree-label">Design systems</span>'
-            "</summary></details>"
+            '<span class="dz-tree-count">1</span>'
+            "</summary>"
+            '<div class="dz-tree-children">'
+            '<div class="dz-tree-leaf">'
+            '<span class="dz-tree-label">Tokens</span>'
+            "</div>"
+            "</div></details>"
             "</div></details>"
             "</div></div>",
             notes="Open intent: <strong>multi_open</strong> "
             "(stem <code>details-open-intent</code>) — sibling branches stay "
             "open; do <em>not</em> add exclusive-open. Dual-lock root "
-            "<code>data-dz-tree</code> (<code>contracts/tree.py</code>). Pure "
-            "hypermedia: state is the native <code>open</code> attribute; "
-            "chevron keys off <code>.dz-tree-node[open]</code>; levels indent "
-            "via <code>dz-tree-children</code> (space-xl nest pad, cycle 1343). "
-            "Depth-0 nodes default <code>open</code>; Platform/Design systems "
-            "are the two Engineering children (closed mid-levels are intentional "
-            "for multi_open click probes). Count chip only when children exist. "
-            "Gallery probe <code>tree.multi_open</code> (scope <code>.hm-preview</code>).",
+            "<code>data-dz-tree</code> (<code>contracts/tree.py</code>). "
+            "Summary holds content (label + count); the rotating chevron is "
+            "CSS <code>::before</code> on "
+            "<code>.dz-tree-node:has(&gt; .dz-tree-children)</code> — never an "
+            "SVG/span in the summary. Leaves are <code>.dz-tree-leaf</code> "
+            "(no expand affordance). Count chip only when children exist. "
+            "Gallery probe <code>tree.multi_open</code> (scope "
+            "<code>.hm-preview</code>).",
             tags=("data",),
             contracts=("contracts/tree.py",),
             guidance=Guidance(
                 seams=(
                     "`[data-dz-tree]` / `.dz-tree` forest root (dual-lock)",
-                    "`details.dz-tree-node` + `summary.dz-tree-summary` per node",
+                    "`details.dz-tree-node` + `summary.dz-tree-summary` for branches "
+                    "(label + count only; chevron is CSS)",
+                    "`.dz-tree-leaf` for nodes with no children",
                 ),
                 pitfalls=(
+                    "Do not put chevron SVG/span in the summary — disclosure chrome "
+                    "belongs in CSS (::before on branches)",
+                    "Do not wrap leaves in empty <details> — that still shows a "
+                    "rotating arrow UX with nothing to expand",
                     "Do not ship exclusive-open or name= exclusivity on tree peers",
                     "Gallery may mount a second forest under .hm-contract-live__preview — "
                     "interaction checks use .hm-preview only",
@@ -4687,8 +4701,10 @@ def select(source: str, id: str) -> str:
                 ),
                 do_dont=(
                     (
-                        "Leave multi-open native details for sibling branches",
-                        "Port dz-menubar exclusive-open onto the tree forest",
+                        "Leave multi-open native details for sibling branches; "
+                        "emit leaves as .dz-tree-leaf",
+                        "Port dz-menubar exclusive-open onto the tree forest; "
+                        "or put chevron markup in every summary",
                     ),
                 ),
                 a11y_keys=(

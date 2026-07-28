@@ -96,11 +96,17 @@ def render(b: BarTrack) -> str:
     )
     max_rounded = round(b.max_value, 2)
     max_summary = str(int(max_rounded)) if max_rounded == int(max_rounded) else str(max_rounded)
+    n = len(b.rows)
+    row_word = "row" if n == 1 else "rows"
     return (
         f'<div class="dz-bar-track-region" data-dz-bar-track>'
         f'<div class="dz-bar-track-rows">{rows_html}</div>'
         f'<p class="dz-bar-track-summary">'
-        f"{len(b.rows)} rows · scale 0–{max_summary}"
+        f'<span class="dz-bar-track-summary-gutter" aria-hidden="true"></span>'
+        f'<span class="dz-bar-track-summary-meta">'
+        f"{n} {row_word}</span>"
+        f'<span class="dz-bar-track-summary-scale">'
+        f"0–{max_summary}</span>"
         f"</p>"
         f"</div>"
     )

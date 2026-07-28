@@ -2288,7 +2288,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     "/mock/shell/dashboard": '<div class="dz-stack" data-dz-gap="md"><h1>Dashboard</h1><div class="dz-auto-grid" style="--dz-grid-min: 10rem"><div class="dz-card dz-card-body"><div class="dz-card-label">Outstanding</div><div class="dz-card-value">£12,450</div></div><div class="dz-card dz-card-body"><div class="dz-card-label">Paid</div><div class="dz-card-value">£48,900</div></div></div></div>',
     "/mock/shell/invoices": '<div class="dz-stack" data-dz-gap="md"><h1>Invoices</h1><p class="hm-demo-muted">The routed workspace swapped — the shell, sidebar state, and scroll position persist; only the main slot changed.</p></div>',
     "/mock/tabs/activity": '<p class="hm-demo-muted">3 events today — INV-004 paid, INV-005 sent, a comment added.</p>',
-    "/mock/tabs/settings": '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>'
+    "/mock/tabs/settings":
+      '<p class="hm-demo-muted">Notifications, access, and billing preferences live here.</p>',
+    // list-region sort is computed in renderListRegion (not a canned RESPONSES row).
   };
 
   // The grid tbody hydrates, filters, and re-sorts its rows over the wire — the
@@ -2458,6 +2460,108 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     return evt;
   }
 
+  // ── list-region demo: sortable columns + CSV artifact ──────────────
+  // Mirrors the product contract: sort headers hx-get ?sort=&dir= and the
+  // host re-renders the region; CSV is a file download via dz.downloadCsv
+  // (sample-list-export.csv is the gallery artifact, not a mock toast).
+  var LIST_ROWS = [
+    { name: "Capacity review", owner: "J. Dias", status: "Active" },
+    { name: "Load study", owner: "K. Novak", status: "Draft" },
+    { name: "Quarterly audit", owner: "M. Reyes", status: "Active" },
+    { name: "Site walkdown", owner: "M. Reyes", status: "Closed" },
+    { name: "Vendor renewal", owner: "A. Osei", status: "Draft" }
+  ];
+  var LIST_CSV =
+    "Name,Owner,Status\\n" +
+    LIST_ROWS.map(function (r) {
+      return r.name + "," + r.owner + "," + r.status;
+    }).join("\\n") + "\\n";
+
+  function listSortHeader(label, col, activeCol, activeDir) {
+    var isActive = col === activeCol;
+    var nextDir = isActive ? (activeDir === "asc" ? "desc" : "asc") : "asc";
+    var caret = isActive ? (activeDir === "desc" ? "▼" : "▲") : "";
+    var caretHtml = caret ? "<span>" + caret + "</span>" : "";
+    return (
+      '<th><a class="dz-list-sort-link" ' +
+      'hx-get="/mock/list-region?sort=' + col + "&amp;dir=" + nextDir + '" ' +
+      'hx-target="closest [data-dz-list-region]" ' +
+      'hx-swap="outerHTML">' +
+      label + caretHtml +
+      "</a></th>"
+    );
+  }
+  function renderListRegion(url) {
+    var q = parseQuery(url);
+    var sort = q.sort || "name";
+    var dir = q.dir === "desc" ? "desc" : "asc";
+    var rows = LIST_ROWS.slice();
+    rows.sort(function (a, b) {
+      var x = a[sort] || "", y = b[sort] || "";
+      var c = x < y ? -1 : (x > y ? 1 : 0);
+      return dir === "desc" ? -c : c;
+    });
+    var body = rows.map(function (r) {
+      return (
+        '<tr class="dz-list-row is-clickable">' +
+        "<td>" + htmlEnc(r.name) + "</td>" +
+        "<td>" + htmlEnc(r.owner) + "</td>" +
+        "<td>" + htmlEnc(r.status) + "</td></tr>"
+      );
+    }).join("");
+    return (
+      '<div class="dz-list-region" data-dz-list-region id="hm-list-region-demo">' +
+      '<div class="dz-list-actions"><div class="dz-list-action-group">' +
+      '<button type="button" class="dz-list-csv-button" title="Export CSV" ' +
+      'aria-label="Export CSV" data-dz-csv-endpoint="sample-list-export.csv" ' +
+      'data-dz-csv-filename="work-items.csv" ' +
+      'onclick="window.dz.downloadCsv(' +
+      "this.dataset.dzCsvEndpoint||this.dataset.csvEndpoint, " +
+      "this.dataset.dzCsvFilename||this.dataset.csvFilename" +
+      ')">{i:download}</button>' +
+      "</div></div>" +
+      '<div class="dz-list-scroll"><table class="dz-list-table"><thead><tr>' +
+      listSortHeader("Name", "name", sort, dir) +
+      listSortHeader("Owner", "owner", sort, dir) +
+      listSortHeader("Status", "status", sort, dir) +
+      "</tr></thead><tbody>" + body + "</tbody></table></div>" +
+      '<p class="dz-list-overflow">Showing ' + rows.length + " of " +
+      LIST_ROWS.length + "</p></div>"
+    );
+  }
+
+  // Gallery shim — product ships downloadCsv on window.dz; HM standalone
+  // may not. Fetch → Blob → <a download>, matching dz-utils.js.
+  window.dz = window.dz || {};
+  if (typeof window.dz.downloadCsv !== "function") {
+    window.dz.downloadCsv = function (endpoint, filename) {
+      if (!endpoint) return;
+      var url = endpoint.indexOf("?") >= 0
+        ? endpoint + "&format=csv"
+        : endpoint + "?format=csv";
+      // Prefer static gallery artifact; fall back to in-memory LIST_CSV so
+      // the button still works if the file path 404s (file:// previews).
+      fetch(url, { credentials: "same-origin" })
+        .then(function (r) {
+          if (r.ok) return r.blob();
+          return new Blob([LIST_CSV], { type: "text/csv;charset=utf-8" });
+        })
+        .catch(function () {
+          return new Blob([LIST_CSV], { type: "text/csv;charset=utf-8" });
+        })
+        .then(function (blob) {
+          var objectUrl = URL.createObjectURL(blob);
+          var link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = filename || "export.csv";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 0);
+        });
+    };
+  }
+
   function doGet(el) {
     var url = el.getAttribute("hx-get");
     var path = url.split("?")[0];
@@ -2465,6 +2569,8 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     if (path === "/mock/grid/rows") {
       // the grid rows are computed from the sort/dir query (server owns ORDER BY)
       body = renderGridRows(url);
+    } else if (path === "/mock/list-region") {
+      body = expand(renderListRegion(url));
     } else {
       // Prefer exact URL, then path (search-select select rows carry ?id=).
       body = expand(
@@ -2486,6 +2592,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
           break;
         }
       }
+    } else if (sel && sel.indexOf("closest ") === 0) {
+      // htmx `closest <sel>` — walk up from the initiating element.
+      target = el.closest(sel.slice(8).trim());
     } else if (sel) {
       // plain selector (e.g. an id `#region-body`, as pagination + most real
       // htmx targets use) — resolve like htmx's default querySelector.
@@ -2495,6 +2604,7 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       // the lazy tab panels do.
       target = el;
     }
+    var swapMode = (el.getAttribute("hx-swap") || "innerHTML").split(" ")[0];
     // htmx applies `.htmx-request` to the request-initiating element for the
     // duration of the in-flight request — the loading overlay + other CSS states
     // key off it. Mirror that protocol here (add before the swap, remove after).
@@ -2509,19 +2619,32 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     el.classList.add("htmx-request");
     fire(el, "htmx:before:request", { elt: el });
     if (target) {
-      target.innerHTML = body;
+      var settleEl = target;
+      if (swapMode === "outerHTML" || swapMode === "outerMorph") {
+        // outerHTML replaces the target node; capture parent to fire settle.
+        var parent = target.parentNode;
+        target.outerHTML = body;
+        // Prefer the new node if we can find it (list-region keeps a stable id).
+        settleEl = (parent && parent.querySelector
+          ? (parent.querySelector("#hm-list-region-demo") || parent.firstElementChild)
+          : null) || parent;
+      } else {
+        target.innerHTML = body;
+      }
       // The server re-renders the pagination footer alongside the rows (in a
       // real htmx app: an OOB `<nav>` or a wrapping region swap; here the mock
       // updates it directly). Rows + footer come from the SAME query, so they
       // agree on total / current page.
-      if (url.split("?")[0] === "/mock/grid/rows") {
+      if (url.split("?")[0] === "/mock/grid/rows" && target && target.closest) {
         updateGridFooter(target.closest("[data-dz-grid]"), url);
       }
-      fire(target, "htmx:after:swap", { elt: target });
-      // Real htmx fires after:settle once, after ALL swaps (OOB included)
-      // settle — it's the only event where the OOB footer is guaranteed
-      // final, so focus restoration listens there, not on after:swap.
-      fire(target, "htmx:after:settle", { elt: target });
+      if (settleEl) {
+        fire(settleEl, "htmx:after:swap", { elt: settleEl });
+        // Real htmx fires after:settle once, after ALL swaps (OOB included)
+        // settle — it's the only event where the OOB footer is guaranteed
+        // final, so focus restoration listens there, not on after:swap.
+        fire(settleEl, "htmx:after:settle", { elt: settleEl });
+      }
     }
     el.classList.remove("htmx-request");
     fire(el, "htmx:after:request", { elt: el });
@@ -3098,6 +3221,54 @@ def build(out_dir: Path, prefix: str = DEFAULT_PREFIX) -> None:
         "if(r)r.checked=true;});}})();"
     )
 
+    # Gallery-only Mermaid bootstrap (not shipped in dist). Turns server-
+    # emitted <pre class="mermaid"> into SVG on the index catalogue AND the
+    # diagram part page. Dazzle hosts do this in the emitter
+    # (_DIAGRAM_MERMAID_SCRIPT). Without it, demos show raw source text
+    # (HMC-059). Explicit mermaid.run() — startOnLoad alone is flaky with
+    # deferred scripts / multi-pre pages.
+    _MERMAID_BOOT = """
+<script>
+(function () {
+  function runMermaid() {
+    if (typeof mermaid === "undefined") return;
+    try {
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "loose",
+        theme: document.documentElement.getAttribute("data-theme") === "dark"
+          ? "dark"
+          : "neutral",
+      });
+      mermaid.run({ querySelector: "pre.mermaid" });
+    } catch (err) {
+      console.error("[hm diagram] mermaid.run failed", err);
+    }
+  }
+  function boot() {
+    if (typeof mermaid !== "undefined") {
+      runMermaid();
+      return;
+    }
+    var s = document.createElement("script");
+    // Pinned like Dazzle's _DIAGRAM_MERMAID_SCRIPT (min.js, not ESM — works
+    // without type=module and after defer scripts).
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.min.js";
+    s.crossOrigin = "anonymous";
+    s.onload = runMermaid;
+    s.onerror = function () {
+      console.error("[hm diagram] failed to load Mermaid from CDN");
+    };
+    document.head.appendChild(s);
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+</script>"""
+
     part_sections: list = []  # (hyperpart, full-depth section html) — emitted as hyperparts/<id>.html
     agent_docs: list = []  # (id, markdown) — emitted as agents/<id>.md
     for c in HYPERPARTS:
@@ -3334,6 +3505,7 @@ Every snippet is the live example — copy it into any htmx4 app.
 </div>
 <script src="hatchi-maxchi.js" defer></script>
 <script>{opener_js}</script>
+{_MERMAID_BOOT}
 </body>
 </html>"""
     (out_dir / "index.html").write_text(doc + "\n", encoding="utf-8")
@@ -3350,6 +3522,11 @@ Every snippet is the live example — copy it into any htmx4 app.
     if sample_pdf.exists():
         (out_dir / "sample.pdf").write_bytes(sample_pdf.read_bytes())
         (hp_dir / "sample.pdf").write_bytes(sample_pdf.read_bytes())
+    # List-region gallery CSV artifact (dz.downloadCsv target).
+    sample_csv = Path(__file__).resolve().parent / "sample-list-export.csv"
+    if sample_csv.exists():
+        (out_dir / "sample-list-export.csv").write_bytes(sample_csv.read_bytes())
+        (hp_dir / "sample-list-export.csv").write_bytes(sample_csv.read_bytes())
     # Carousel (and future) demo media: site/media/** → out_dir/media/**
     # Partials use __HM_ROOT__media/... so index and hyperparts/ both resolve.
     media_src = Path(__file__).resolve().parent / "media"
@@ -3364,19 +3541,7 @@ Every snippet is the live example — copy it into any htmx4 app.
         '<label><input type="radio" name="hm-theme" data-hm-theme="dark" '
         "onclick=\"hmTheme('dark')\"><span>Dark</span></label></div></div>"
     )
-    # Gallery-only CDN bootstraps (not shipped in dist). Diagram needs Mermaid to
-    # turn the server-emitted <pre class="mermaid"> into SVG; Dazzle does this in
-    # the host emitter. Without it the live demo is raw source text (coherence
-    # HMC-059).
-    # Inline after opener script with no blank line when absent — a bare
-    # ``{extra}\n</body>`` left ``\\n\\n</body>`` on every part page and broke
-    # gallery byte-identity (HM package suite / monorepo gate).
-    _MERMAID_BOOT = (
-        '\n<script type="module">\n'
-        'import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";\n'
-        'mermaid.initialize({ startOnLoad: true, securityLevel: "loose", theme: "neutral" });\n'
-        "</script>"
-    )
+    # Mermaid boot is defined once above (index + diagram part page).
     for c, section in part_sections:
         boot_tail = _MERMAID_BOOT if c.id == "diagram" else ""
         part_doc = f"""<!doctype html>

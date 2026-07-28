@@ -1,5 +1,29 @@
 ## [Unreleased]
 
+## [0.108.0] - 2026-07-28
+
+### Fixed
+- **Timeline + activity-feed rail dots** — bullet/dot centres track
+  `--space-md` + half the 1px border (no hard-coded `-1.3125rem` offset).
+- **Sparkline layout** — headline stacked above a full-width glyph
+  (`preserveAspectRatio=none`); no mid-card floating chart.
+- **Bar-track summary** — shares the label|track|value grid so footer
+  meta/scale align with row columns.
+- **Box plot** — outer whiskers (min→Q1, Q3→max) + caps, hairline median,
+  CSS hover figures at the five-number points (not a thick median bar).
+- **Profile-card stats** — KPI strip (value above label, `auto-fit`
+  columns, sentence-case labels) instead of a crammed 3-col uppercase table.
+- **Tree** — chevron is CSS disclosure chrome on branches only; leaves are
+  `.dz-tree-leaf` with no expand affordance (no chevron SVG in summary content).
+- **Diagram gallery** — Mermaid boots on the catalogue index and diagram
+  part page (`mermaid.run` on `pre.mermaid`); no more raw source-only demos.
+- **List-region gallery** — working sort headers (`?sort=&dir=`) and CSV
+  download via `sample-list-export.csv` + `dz.downloadCsv`.
+
+### Changed
+- **Time-series gallery exemplar** — dense 14-bucket production SVG (was a
+  3-point schematic polyline).
+
 ## [0.107.0] - 2026-07-22
 
 ### Added

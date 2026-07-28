@@ -1,10 +1,17 @@
 /* HYPERPART: bar-track */
-/* Promoted VERBATIM from Dazzle regions.css (Tier C-b, fleet
- * convergence). The Dazzle emitter contract is unchanged. */
+/* Promoted from Dazzle regions.css (Tier C-b), then refined so the
+ * footer summary shares the same column stops as the rows. */
 
 /* ─────────────────────────── bar_track region ───────────────────
- * Compact horizontal value bars, one per group. Three columns per
- * row: fixed-width label (right-aligned) | flex-grow track | value. */
+ * Compact horizontal value bars. Label | track | value share one
+ * column template with the footer summary so the meta/scale line
+ * sits on the same stops as the rows (not a free-form left flush). */
+
+.dz-bar-track-region {
+  --bar-track-label-col: 7rem;
+  --bar-track-value-col: 4rem;
+  --bar-track-gap: var(--space-sm);
+}
 
 .dz-bar-track-rows {
   display: flex;
@@ -14,14 +21,18 @@
 }
 
 .dz-bar-track-row {
-  display: flex;
+  display: grid;
+  grid-template-columns:
+    var(--bar-track-label-col)
+    minmax(0, 1fr)
+    var(--bar-track-value-col);
+  column-gap: var(--bar-track-gap);
   align-items: center;
-  gap: var(--space-sm);
   font-size: var(--text-xs);
 }
 
 .dz-bar-track-label {
-  width: 7rem;
+  min-width: 0;
   text-align: end;
   color: var(--colour-text);
   white-space: nowrap;
@@ -30,8 +41,9 @@
 }
 
 .dz-bar-track {
-  flex: 1 1 0;
   position: relative;
+  min-width: 0;
+  width: 100%;
   height: 1rem;
   background: var(--colour-bg);
   border-radius: var(--radius-full);
@@ -48,15 +60,39 @@
 }
 
 .dz-bar-track-value {
-  width: 4rem;
+  min-width: 0;
   text-align: end;
   font-family: var(--font-mono);
   color: var(--colour-text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
+/* Summary reuses the row grid: empty label gutter · meta under tracks ·
+ * scale under the value column. */
 .dz-bar-track-summary {
+  display: grid;
+  grid-template-columns:
+    var(--bar-track-label-col)
+    minmax(0, 1fr)
+    var(--bar-track-value-col);
+  column-gap: var(--bar-track-gap);
+  align-items: baseline;
   font-size: var(--text-xs);
   color: var(--colour-text-muted);
   margin-block-start: var(--space-sm);
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.dz-bar-track-summary-gutter {
+  min-width: 0;
+}
+
+.dz-bar-track-summary-meta {
+  min-width: 0;
+}
+
+.dz-bar-track-summary-scale {
+  min-width: 0;
+  text-align: end;
 }

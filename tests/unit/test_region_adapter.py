@@ -1418,7 +1418,11 @@ def test_bar_track_renders_typed_primitive_with_aria() -> None:
     assert 'aria-valuemax="100"' in html
     assert 'aria-valuenow="80"' in html
     assert "width: 80%" in html
-    assert "2 rows · scale 0–100" in html
+    # v0.108: summary is grid-aligned meta + scale spans (not one middot line)
+    assert "2 rows" in html
+    assert "0–100" in html
+    assert "dz-bar-track-summary-meta" in html
+    assert "dz-bar-track-summary-scale" in html
 
 
 def test_bar_track_legacy_items_fallback() -> None:
