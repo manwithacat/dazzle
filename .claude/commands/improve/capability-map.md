@@ -97,7 +97,7 @@ apply map patches with `{"apply":true}`.
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1403 | USED |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1406 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1405 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1405 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1406 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1406 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -120,6 +120,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1406 (2026-07-28).** **framework-ux edge** EDIT-path region row drill UPDATE gate — `gate_edit_path_drill_for_principal` clears `…/{id}/edit` detail_url_template when UPDATE denied (action: task_edit series after 1403 mode-aware path). VIEW drills stay. budget 1. Explore **53/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
 > **Cycle 1405 (2026-07-28).** **cimonitor** — main red tip 4f3ae822c (run 30372933396): `TestCrossEntityAction::test_action_url_resolution` expected `/app/task/{id}` but row path defaulted unknown mode → list. `surface_entity_path_for_row` now defaults missing/CUSTOM/VIEW to detail; only explicit LIST demotes. Pack 14 green. CodeQL+inbox **USED@1405**. budget 0. Explore **52/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 

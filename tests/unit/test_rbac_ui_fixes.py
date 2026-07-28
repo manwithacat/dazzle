@@ -690,6 +690,71 @@ class TestActionGridCreatePermission:
 
 
 # ---------------------------------------------------------------------------
+# Cycle 1406 — EDIT-path region row drill UPDATE gate
+# ---------------------------------------------------------------------------
+class TestEditPathRowDrillGate:
+    """Region action: task_edit → …/{id}/edit clears when UPDATE denied."""
+
+    def _task_update_cedar(self) -> Any:
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        return EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.UPDATE,
+                    personas=["admin"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    personas=["admin", "viewer"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.READ,
+                    personas=["admin", "viewer"],
+                ),
+            ],
+        )
+
+    def test_edit_drill_cleared_when_update_denied(self) -> None:
+        from dazzle.http.runtime.handlers.list_handlers import (
+            gate_edit_path_drill_for_principal,
+        )
+
+        specs = {"Task": self._task_update_cedar()}
+        out = gate_edit_path_drill_for_principal(
+            "/app/task/{id}/edit",
+            specs,
+            _make_auth_ctx(["role_viewer"]),
+        )
+        assert out == ""
+
+    def test_edit_drill_kept_when_update_allowed(self) -> None:
+        from dazzle.http.runtime.handlers.list_handlers import (
+            gate_edit_path_drill_for_principal,
+        )
+
+        specs = {"Task": self._task_update_cedar()}
+        url = "/app/task/{id}/edit"
+        out = gate_edit_path_drill_for_principal(url, specs, _make_auth_ctx(["role_admin"]))
+        assert out == url
+
+    def test_view_drill_always_kept(self) -> None:
+        from dazzle.http.runtime.handlers.list_handlers import (
+            gate_edit_path_drill_for_principal,
+        )
+
+        specs = {"Task": self._task_update_cedar()}
+        url = "/app/task/{id}"
+        out = gate_edit_path_drill_for_principal(url, specs, _make_auth_ctx(["role_viewer"]))
+        assert out == url
+
+
+# ---------------------------------------------------------------------------
 # #583 — Sidebar nav filtering by entity access
 # ---------------------------------------------------------------------------
 class TestNavEntityFiltering:

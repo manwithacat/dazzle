@@ -127,6 +127,60 @@ def _principal_can_op(
     return bool(decision.allowed)
 
 
+def _entity_name_for_edit_url(
+    url: str,
+    entity_access_specs: dict[str, Any] | None,
+) -> str | None:
+    """Map an edit-path URL (``…/{slug}/{id}/edit``) to an entity name.
+
+    Path shape from surface EDIT mode: ``/app/{slug}/{id}/edit``.
+    Unknown / non-edit URLs → None.
+    """
+    if not url or not entity_access_specs:
+        return None
+    path = str(url).split("?", 1)[0].rstrip("/")
+    if not path.endswith("/edit"):
+        return None
+    parts = [p for p in path.split("/") if p]
+    # /app/task/{id}/edit → [app, task, {id}, edit]
+    if len(parts) < 3 or parts[-1] != "edit":
+        return None
+    slug = parts[-3]
+    for entity_name in entity_access_specs:
+        if entity_slug(entity_name) == slug:
+            return entity_name
+    return None
+
+
+def gate_edit_path_drill_for_principal(
+    url: str,
+    entity_access_specs: dict[str, Any] | None,
+    auth_ctx: Any,
+) -> str:
+    """Clear ``…/{id}/edit`` row drills when UPDATE is denied for the target.
+
+    Region ``action: task_edit`` resolves to an edit-path template (cycle
+    1403). VIEW/list drills stay. Read-only personas still painted clickable
+    rows into the edit form until the form 403'd (cycle 1406 — parity with
+    action_grid CREATE@1397, confirm UPDATE@1397, list row edit hide@1390).
+    Non-edit URLs and unmapped slugs pass through (write path still enforces).
+    """
+    if not url:
+        return url
+    entity_name = _entity_name_for_edit_url(url, entity_access_specs)
+    if entity_name is None:
+        return url
+    cedar = (entity_access_specs or {}).get(entity_name)
+    if _principal_can_op(
+        cedar,
+        AccessOperationKind.UPDATE,
+        auth_ctx,
+        entity_name=entity_name,
+    ):
+        return url
+    return ""
+
+
 def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) -> DataTable:
     """Map an http/ HTMX-refresh ``table_dict`` (+ its row items) into the typed
     render/ ``DataTable`` primitive (#1505 P2).

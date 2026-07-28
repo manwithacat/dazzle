@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from dazzle.core.ir import BucketRef as _BucketRef
+from dazzle.http.runtime.handlers.list_handlers import gate_edit_path_drill_for_principal
 from dazzle.http.runtime.workspace_card_data import (
     _build_cohort_cells,
     _build_day_timeline_slots,
@@ -429,9 +430,26 @@ def _set_display_key(adapter_ctx: dict[str, Any], inputs: Any, ctx: Any) -> None
     )
 
 
-def _set_detail_url_template(adapter_ctx: dict[str, Any], ctx: Any) -> None:
-    """#1303 hub drill template (``/app/<slug>/{id}``) when VIEW surface exists."""
-    adapter_ctx["detail_url_template"] = getattr(ctx, "detail_url_template", "") or ""
+def _set_detail_url_template(
+    adapter_ctx: dict[str, Any],
+    ctx: Any,
+    user_ctx: Any | None = None,
+) -> None:
+    """#1303 hub drill template (``/app/<slug>/{id}``) when VIEW/EDIT action set.
+
+    Cycle 1406: EDIT-path templates (``…/{id}/edit``) clear when UPDATE is
+    denied for the target entity — same class of mutation-chrome leak as
+    confirm panel / action_grid CREATE gates.
+    """
+    tmpl = getattr(ctx, "detail_url_template", "") or ""
+    auth = getattr(user_ctx, "auth_ctx_for_filters", None) if user_ctx is not None else None
+    if tmpl and auth is not None:
+        tmpl = gate_edit_path_drill_for_principal(
+            tmpl,
+            getattr(ctx, "entity_access_specs", None) or None,
+            auth,
+        )
+    adapter_ctx["detail_url_template"] = tmpl
 
 
 def _active_list_search(request: Any) -> str:
@@ -485,7 +503,7 @@ def _build_list_adapter_ctx(
         adapter_ctx["empty_message"] = ctx.surface_empty_message or ctx_region.empty_message
         # #1233 — action_id → POST URL map for row_action buttons.
         adapter_ctx["row_action_routes"] = getattr(ctx, "row_action_routes", None) or {}
-        _set_detail_url_template(adapter_ctx, ctx)
+        _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
         # dual_pane master-detail: pane-target drill instead of body swap.
         adapter_ctx["master_detail_pane"] = bool(getattr(ctx, "master_detail_pane", False))
         adapter_ctx["master_detail_target"] = str(getattr(ctx, "master_detail_target", "") or "")
@@ -507,7 +525,7 @@ def _build_list_adapter_ctx(
         adapter_ctx["queue_api_endpoint"] = inputs.queue_api_endpoint
         # Prefer entity display_field; thread hub drill (not API plurals).
         _set_display_key(adapter_ctx, inputs, ctx)
-        _set_detail_url_template(adapter_ctx, ctx)
+        _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
     elif display_upper == "TIMELINE":
         adapter_ctx["items"] = inputs.items
         adapter_ctx["columns"] = inputs.columns
@@ -517,7 +535,7 @@ def _build_list_adapter_ctx(
         adapter_ctx["columns"] = inputs.columns
         _set_display_key(adapter_ctx, inputs, ctx)
         adapter_ctx["entity_name"] = ctx.source
-        _set_detail_url_template(adapter_ctx, ctx)
+        _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
     elif display_upper == "TREE":
         adapter_ctx["tree_items"] = inputs.tree_items
         adapter_ctx["items"] = inputs.items
