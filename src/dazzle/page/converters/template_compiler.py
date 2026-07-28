@@ -20,6 +20,7 @@ from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
 from dazzle.core.ir.triples import WidgetKind, resolve_widget
 from dazzle.core.strings import to_api_plural
 from dazzle.page import app_paths
+from dazzle.page.app_paths import detail_path, entity_slug
 from dazzle.page.open_via import (
     resolve_list_detail_url_candidates,
     resolve_list_detail_url_template,
@@ -47,6 +48,24 @@ from dazzle.render.context import (
 )
 from dazzle.render.filters import status_tone_map
 from dazzle.render.fragment.state_affordance import transition_action_label
+
+
+def _ref_column_meta(field_spec: ir.FieldSpec | None) -> tuple[str, str, str]:
+    """``(ref_entity, filter_ref_api, ref_route)`` for REF/BELONGS_TO columns.
+
+    ``ref_route`` is the typed VIEW hub (``/app/<slug>/{id}``), matching
+    workspace columns — not the JSON API plural.
+    """
+    if (
+        field_spec
+        and field_spec.type
+        and field_spec.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO)
+        and field_spec.type.ref_entity
+    ):
+        ent = str(field_spec.type.ref_entity)
+        return ent, f"/{to_api_plural(ent)}", detail_path("/app", entity_slug(ent))
+    return "", "", ""
+
 
 if TYPE_CHECKING:
     pass
@@ -364,16 +383,8 @@ def _build_columns(
                 # Element visible: takes precedence; fall back to section visible (#585)
                 _el_vis = getattr(element, "visible", None)
                 _col_vis = _el_vis.model_dump() if _el_vis else _section_vis_cond
-                # Ref entity name for ref/belongs_to filter dropdowns
-                _ref_ent = (
-                    field_spec.type.ref_entity
-                    if field_spec
-                    and field_spec.type
-                    and field_spec.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO)
-                    and field_spec.type.ref_entity
-                    else ""
-                )
-                _ref_api = f"/{to_api_plural(_ref_ent)}" if _ref_ent else ""
+                # Ref entity + VIEW hub route for filters, Avatar chips, chip links
+                _ref_ent, _ref_api, _ref_route = _ref_column_meta(field_spec)
                 columns.append(
                     ColumnContext(
                         key=col_key,
@@ -385,6 +396,8 @@ def _build_columns(
                         filter_options=filter_options,
                         filter_ref_entity=_ref_ent,
                         filter_ref_api=_ref_api,
+                        ref_entity=_ref_ent,
+                        ref_route=_ref_route,
                         currency_code=col_currency,
                         visible_condition=_col_vis,
                         semantic_map=_enum_semantic_map(
@@ -417,14 +430,7 @@ def _build_columns(
                 col_type = (
                     "sensitive" if is_sensitive else _field_type_to_column_type(field, field.name)
                 )
-                _ref_ent = (
-                    field.type.ref_entity
-                    if field.type
-                    and field.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO)
-                    and field.type.ref_entity
-                    else ""
-                )
-                _ref_api = f"/{to_api_plural(_ref_ent)}" if _ref_ent else ""
+                _ref_ent, _ref_api, _ref_route = _ref_column_meta(field)
                 columns.append(
                     ColumnContext(
                         key=col_key,
@@ -436,6 +442,8 @@ def _build_columns(
                         filter_options=filter_options,
                         filter_ref_entity=_ref_ent,
                         filter_ref_api=_ref_api,
+                        ref_entity=_ref_ent,
+                        ref_route=_ref_route,
                         currency_code=col_currency,
                         semantic_map=_enum_semantic_map(
                             field, enums, entity.state_machine if entity else None
@@ -1215,12 +1223,17 @@ def _build_entity_columns(entity: ir.EntitySpec) -> list[ColumnContext]:
             col_currency = field.type.currency_code or "GBP"
         elif field.type and field.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO):
             col_key = field.name[:-3] if field.name.endswith("_id") else field.name
+        _ref_ent, _ref_api, _ref_route = _ref_column_meta(field)
         columns.append(
             ColumnContext(
                 key=col_key,
                 label=col_key.replace("_", " ").title(),
                 type=_field_type_to_column_type(field, field.name),
                 currency_code=col_currency,
+                filter_ref_entity=_ref_ent,
+                filter_ref_api=_ref_api,
+                ref_entity=_ref_ent,
+                ref_route=_ref_route,
                 # No shared-enum registry here (related-tab columns); inline
                 # `enum[...]` bindings still resolve via FieldType.enum_semantics,
                 # plus SM-terminal inference from the related entity's machine.

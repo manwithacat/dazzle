@@ -34,6 +34,11 @@ class ColumnContext(BaseModel):
     filter_options: list[dict[str, str]] = Field(default_factory=list)
     filter_ref_entity: str = ""  # referenced entity name for ref/belongs_to filters
     filter_ref_api: str = ""  # API list endpoint for ref entity (e.g. /clients)
+    # Avatar chip + link (cycle 1365): target entity and VIEW hub template so
+    # list/detail cells can emit ``a.dz-user-chip-link`` (workspace columns already
+    # carried these; list TableContext columns did not).
+    ref_entity: str = ""  # e.g. "User" — same target as filter_ref_entity for refs
+    ref_route: str = ""  # e.g. "/app/user/{id}" via detail_path
     hidden: bool = False
     currency_code: str = ""
     visible_condition: dict[str, Any] | None = None  # Role-based visibility (#585)

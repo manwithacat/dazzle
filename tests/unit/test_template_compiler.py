@@ -1211,6 +1211,9 @@ class TestRefFilterType:
         assert assignee_col.filter_type == "select"
         assert assignee_col.filter_ref_entity == "User"
         assert assignee_col.filter_ref_api == "/users"
+        # cycle 1365: list columns carry Avatar link meta (parity with workspace)
+        assert assignee_col.ref_entity == "User"
+        assert assignee_col.ref_route == "/app/user/{id}"
 
 
 class TestRelatedGroupValidation:

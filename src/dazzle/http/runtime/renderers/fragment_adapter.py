@@ -141,6 +141,7 @@ def _detail_field_value(f: dict[str, Any]) -> Fragment:
         "key": str(f.get("key", "") or ""),
         "ref_entity": str(f.get("ref_entity", "") or ""),
         "filter_ref_entity": str(f.get("ref_entity", "") or ""),
+        "ref_route": str(f.get("ref_route", "") or ""),
         "currency_code": str(f.get("currency_code", "") or ""),
         "semantic_map": dict(f.get("semantic_map", {}) or {}),
     }

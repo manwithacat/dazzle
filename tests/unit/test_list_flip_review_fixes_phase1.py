@@ -70,6 +70,9 @@ class TestDispatchCtxCompleteness:
         assert owner["filter_type"] == "text"
         assert client["filter_ref_entity"] == "Client"
         assert client["filter_ref_api"] == "/client"
+        # cycle 1365: dispatch derives ref_entity + VIEW hub route for chips
+        assert client["ref_entity"] == "Client"
+        assert client["ref_route"] == "/app/client/{id}"
 
     def test_ctx_threads_inline_refresh_pagination_searchfirst(self) -> None:
         tc = _tc(

@@ -145,6 +145,57 @@ class TestDataRowIntegration:
         assert "dz-avatar" in html
 
 
+class TestListColumnRefMetaPipeline:
+    """Entity/list columns must carry ref_entity + ref_route so chips link."""
+
+    def test_build_entity_columns_person_ref(self) -> None:
+        from dazzle.core import ir
+        from dazzle.core.ir import FieldTypeKind
+        from dazzle.page.converters.template_compiler import _build_entity_columns
+
+        entity = ir.EntitySpec(
+            name="Task",
+            fields=[
+                ir.FieldSpec(
+                    name="id", type=ir.FieldType(kind=FieldTypeKind.UUID), is_primary_key=True
+                ),
+                ir.FieldSpec(
+                    name="assigned_to",
+                    type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
+                ),
+            ],
+        )
+        cols = _build_entity_columns(entity)
+        col = next(c for c in cols if c.key == "assigned_to")
+        assert col.ref_entity == "User"
+        assert col.ref_route == "/app/user/{id}"
+        assert col.filter_ref_entity == "User"
+
+    def test_dispatch_derives_route_from_filter_ref(self) -> None:
+        from dazzle.http.runtime.dispatch_ctx import _dispatch_ctx_from_table
+        from dazzle.render.context import ColumnContext
+
+        class _Table:
+            columns = [
+                ColumnContext(
+                    key="assigned_to",
+                    label="Assigned",
+                    type="ref",
+                    filter_ref_entity="User",
+                )
+            ]
+            rows = []
+            api_endpoint = "/tasks"
+            total = 0
+            page = 1
+            page_size = 20
+
+        ctx = _dispatch_ctx_from_table(None, None, _Table())
+        col = ctx["columns"][0]
+        assert col["ref_entity"] == "User"
+        assert col["ref_route"] == "/app/user/{id}"
+
+
 class TestChipLinkHelpers:
     def test_wrap_without_route_is_identity(self) -> None:
         chip = render_user_chip_html(
