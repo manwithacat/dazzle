@@ -47,12 +47,24 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     """Map an IR field to a column rendering type for workspace templates.
 
     Args:
-        field: FieldSpec IR object.
+        field: FieldSpec IR object (core IR **or** runtime entity after
+            ``convert_entities``).
         entity: Optional EntitySpec — when provided, checks if this field
                 is the state-machine status field and returns ``"badge"``.
+
+    Core IR uses ``FieldTypeKind.BOOL`` / ``DATE`` / … as ``type.kind``.
+    Runtime entities from ``convert_entities`` collapse scalars to
+    ``kind=scalar`` + ``scalar_type=BOOL|DATE|…``. Workspace list chrome
+    must resolve both shapes or bool columns render as the Python
+    ``"True"``/``"False"`` strings (agent_acceptance / pilot friction).
     """
-    kind = field.type.kind
+    ft = getattr(field, "type", None)
+    kind = getattr(ft, "kind", None) if ft is not None else None
     kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
+    # Runtime convert_entities: kind=scalar + scalar_type carries the true type.
+    if kind_val == "scalar" and ft is not None:
+        st = getattr(ft, "scalar_type", None)
+        kind_val = st.value if hasattr(st, "value") else str(st or "") if st else ""
     if kind_val == "enum":
         return "badge"
     if kind_val == "bool":

@@ -153,7 +153,7 @@ def _render_typed_value(
             )
         )
 
-    if col_type == "bool":
+    if col_type == "bool" or isinstance(value, bool):
         from dazzle.render.filters import _bool_icon_filter
 
         # Use the legacy bool_icon filter directly so the typed-Fragment
@@ -161,6 +161,8 @@ def _render_typed_value(
         # → muted ✗ cross. Wrapped in RawHtml since the filter returns
         # a `Markup` HTML string with class attrs that don't map to a
         # general primitive (Phase 4B.4 wave 1).
+        # Also treat bare Python bools as bool cells even when column
+        # metadata lost type (convert_entities scalar-kind mismatch).
         return RawHTML(str(_bool_icon_filter(value)))
 
     if value is None or value == "":

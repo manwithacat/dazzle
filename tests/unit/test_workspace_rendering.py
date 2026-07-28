@@ -94,6 +94,32 @@ class TestFieldKindToColType:
         entity = _make_entity("Task", [f], state_machine=sm)
         assert _field_kind_to_col_type(f, entity) == expected
 
+    def test_runtime_convert_entities_scalar_bool_is_bool(self) -> None:
+        """``convert_entities`` flattens BOOL → kind=scalar + scalar_type=bool.
+
+        Workspace list chrome must still project type=bool (✓/✗), not the
+        Python ``True``/``False`` string dump that agents score as broken.
+        """
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.http.converters.entity_converter import convert_entities
+        from dazzle.http.runtime.workspace_columns import (
+            build_surface_columns,
+            field_kind_to_col_type,
+        )
+
+        appspec = load_project_appspec(Path("examples/contact_manager"))
+        ent = next(e for e in convert_entities(appspec.domain.entities) if e.name == "Contact")
+        fav = next(f for f in ent.fields if f.name == "is_favorite")
+        assert fav.type.kind == "scalar"
+        assert field_kind_to_col_type(fav, ent) == "bool"
+        surf = next(s for s in appspec.surfaces if s.name == "contact_list")
+        cols = build_surface_columns(ent, surf, appspec.enums)
+        fav_col = next(c for c in cols if c["key"] == "is_favorite")
+        assert fav_col["type"] == "bool"
+        assert fav_col.get("filterable") is True
+
 
 class TestSsrFieldTypeToColumnType1597:
     """SSR template_compiler mapper must match HTMX datetime vocabulary (#1597)."""
