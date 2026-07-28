@@ -26,6 +26,7 @@ from typing import Any
 from dazzle.core.access import AccessOperationKind
 from dazzle.core.ir import BucketRef as _BucketRef
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec
+from dazzle.core.strings import entity_slug
 from dazzle.http.runtime.handlers.list_handlers import _principal_can_op
 from dazzle.http.runtime.insight_store import get_stored_insight
 from dazzle.http.runtime.workspace_aggregation import (
@@ -126,9 +127,9 @@ def _entity_name_for_create_url(
 ) -> str | None:
     """Map a create-path URL (``…/{slug}/create``) to an entity name.
 
-    Returns the first entity whose ``app_paths.entity_slug`` matches the
-    path segment before ``/create``. Unknown / non-create URLs → None
-    (caller leaves the card — list/filter CTAs are read navigation).
+    Returns the first entity whose ``entity_slug`` matches the path segment
+    before ``/create``. Unknown / non-create URLs → None (caller leaves the
+    card — list/filter CTAs are read navigation).
     """
     if not url or not entity_access_specs:
         return None
@@ -139,10 +140,8 @@ def _entity_name_for_create_url(
     if len(parts) < 2 or parts[-1] != "create":
         return None
     slug = parts[-2]
-    from dazzle.page import app_paths
-
     for entity_name in entity_access_specs:
-        if app_paths.entity_slug(entity_name) == slug:
+        if entity_slug(entity_name) == slug:
             return entity_name
     return None
 
