@@ -117,11 +117,55 @@ def _avatar_markup(*, name: str, avatar_url: str, initials: str) -> str:
     )
 
 
+def _ref_id_from_value(value: Any) -> str:
+    """FK id for building a ref_route URL."""
+    if isinstance(value, dict):
+        return str(value.get("id") or "")
+    if value in (None, "", "—"):
+        return ""
+    return str(value)
+
+
+def ref_route_url(value: Any, col: dict[str, Any] | None = None) -> str:
+    """Resolve ``col['ref_route']`` against *value*'s id, or empty if unusable."""
+    col = col or {}
+    ref_route = str(col.get("ref_route") or "")
+    if not ref_route:
+        return ""
+    id_value = _ref_id_from_value(value)
+    if not id_value:
+        return ""
+    if "{id}" in ref_route:
+        return ref_route.replace("{id}", id_value)
+    if ref_route.endswith("/"):
+        return f"{ref_route}{id_value}"
+    return f"{ref_route}/{id_value}"
+
+
+def wrap_user_chip_link(chip_html: str, value: Any, col: dict[str, Any] | None = None) -> str:
+    """Wrap a chip in ``a.dz-user-chip-link`` when ``ref_route`` resolves.
+
+    List rows, detail cells, and workspace regions share this seam so person
+    chips stay clickable wherever they appear (cycle 1364 parity with region).
+    """
+    if not chip_html or chip_html == "—":
+        return chip_html
+    url = ref_route_url(value, col)
+    if not url:
+        return chip_html
+    href = _html_mod.escape(url, quote=True)
+    return f'<a href="{href}" class="dz-user-chip-link">{chip_html}</a>'
+
+
 def render_user_chip_html(value: Any, col: dict[str, Any] | None = None) -> str:
     """HTML for a person ref: ``.dz-user-chip`` wrapping ``.dz-avatar`` + name.
 
     Returns empty string when *value* is empty; callers should not use this
     for non-person refs (use plain ``_ref_display_name`` instead).
+
+    Does **not** wrap the chip in a navigation link — call
+    :func:`wrap_user_chip_link` (or use :func:`render_user_chip_linked_html`)
+    when ``ref_route`` should produce ``a.dz-user-chip-link``.
     """
     if value in (None, "", "—"):
         return "—"
@@ -149,3 +193,9 @@ def render_user_chip_html(value: Any, col: dict[str, Any] | None = None) -> str:
         f'<span class="dz-user-chip__name">{name_esc}</span>'
         f"</span>"
     )
+
+
+def render_user_chip_linked_html(value: Any, col: dict[str, Any] | None = None) -> str:
+    """Chip HTML, link-wrapped when ``ref_route`` is present on *col*."""
+    chip = render_user_chip_html(value, col)
+    return wrap_user_chip_link(chip, value, col)

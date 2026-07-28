@@ -25,5 +25,8 @@
   "homepage": "https://github.com/manwithacat/dazzle#readme",
   "devDependencies": {
     "eslint": "^10.1.0"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.8"
   }
 }

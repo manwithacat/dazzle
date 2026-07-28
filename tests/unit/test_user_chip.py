@@ -7,6 +7,8 @@ from dazzle.render.user_chip import (
     initials_from_display,
     looks_like_person_ref,
     render_user_chip_html,
+    render_user_chip_linked_html,
+    wrap_user_chip_link,
 )
 
 
@@ -100,6 +102,64 @@ class TestDataRowIntegration:
         )
         assert "dz-avatar" in out
         assert "Pat Lee" in out
+
+    def test_list_cell_chip_links_when_ref_route(self) -> None:
+        """List/detail cell core must wrap chips in dz-user-chip-link (cycle 1364)."""
+        out = _render_cell_display(
+            {
+                "type": "ref",
+                "key": "assigned_to",
+                "ref_entity": "User",
+                "ref_route": "/app/user/{id}",
+            },
+            {"name": "Maya Chen", "id": "u9"},
+        )
+        assert "dz-user-chip-link" in out
+        assert "/app/user/u9" in out
+        assert "dz-avatar" in out
+
+    def test_list_row_chip_links_with_display_sibling(self) -> None:
+        from dazzle.render.fragment.primitives import RowCapabilities
+        from dazzle.render.fragment.renderer._data_row import render_data_row
+
+        html = render_data_row(
+            (
+                {
+                    "key": "assigned_to",
+                    "type": "ref",
+                    "ref_entity": "User",
+                    "ref_route": "/users/{id}",
+                    "label": "Assigned",
+                },
+            ),
+            {
+                "id": "t1",
+                "assigned_to": {"id": "u9", "__display__": "Maya Chen"},
+                "assigned_to_display": "Maya Chen",
+            },
+            RowCapabilities(),
+            entity_name="Task",
+        )
+        assert "dz-user-chip-link" in html
+        assert "/users/u9" in html
+        assert "dz-avatar" in html
+
+
+class TestChipLinkHelpers:
+    def test_wrap_without_route_is_identity(self) -> None:
+        chip = render_user_chip_html(
+            {"name": "Ada", "id": "u1"},
+            {"key": "author", "ref_entity": "User"},
+        )
+        assert wrap_user_chip_link(chip, {"name": "Ada", "id": "u1"}, {"key": "author"}) == chip
+
+    def test_linked_html_builds_href(self) -> None:
+        html = render_user_chip_linked_html(
+            {"name": "Ada", "id": "u1"},
+            {"key": "author", "ref_entity": "User", "ref_route": "/people/{id}"},
+        )
+        assert 'href="/people/u1"' in html
+        assert "dz-user-chip-link" in html
 
 
 class TestRegionPersonRef:
