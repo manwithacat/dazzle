@@ -24,21 +24,21 @@
 
 ## Nouns (domain types)
 
-- **Slack** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **View** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Delete** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Created** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Edit** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Reassign** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Move** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Everyone** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Priority** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Change** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Slack** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Timestamp** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Back** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Move** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Click** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Support** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **View** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Change** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Comment** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Back** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Reassign** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Edit** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Delete** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Created** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
@@ -58,21 +58,20 @@
 
 ## Demo spine (seed stories)
 
-- `manager`: Manager has seeded Slack rows for their desk (min_rows=1, entity≈Slack)
-- `agent`: Agent has seeded Slack rows for their desk (min_rows=1, entity≈Slack)
-- `customer`: Customer has seeded Slack rows for their desk (min_rows=1, entity≈Slack)
-- `admin`: Admin has seeded Slack rows for their desk (min_rows=1, entity≈Slack)
-- `requester`: Requester has seeded Slack rows for their desk (min_rows=1, entity≈Slack)
-- `owner`: Owner has seeded Slack rows for their desk (min_rows=1, entity≈Slack)
-- `staff`: Staff has seeded Slack rows for their desk (min_rows=1, entity≈Slack)
-- `user`: User has seeded Slack rows for their desk (min_rows=1, entity≈Slack)
-- `member`: Member has seeded Slack rows for their desk (min_rows=1, entity≈Slack)
+- `manager`: Manager has seeded Move rows for their desk (min_rows=1, entity≈Move)
+- `agent`: Agent has seeded Move rows for their desk (min_rows=1, entity≈Move)
+- `customer`: Customer has seeded Move rows for their desk (min_rows=1, entity≈Move)
+- `admin`: Admin has seeded Move rows for their desk (min_rows=1, entity≈Move)
+- `requester`: Requester has seeded Move rows for their desk (min_rows=1, entity≈Move)
+- `owner`: Owner has seeded Move rows for their desk (min_rows=1, entity≈Move)
+- `staff`: Staff has seeded Move rows for their desk (min_rows=1, entity≈Move)
+- `user`: User has seeded Move rows for their desk (min_rows=1, entity≈Move)
+- `member`: Member has seeded Move rows for their desk (min_rows=1, entity≈Move)
 
 ## Open questions
 
 - `q1`: Can a customer have multiple teams, or just one?
-- `q4`: Can a statu have multiple prioritys, or just one?
-- `q6`: Can a ticket have multiple justs, or just one?
+- `q3`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -174,42 +173,7 @@
   ],
   "nouns": [
     {
-      "name": "Slack",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "View",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Delete",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Created",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Edit",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Reassign",
+      "name": "Move",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -230,7 +194,7 @@
       "owner_field_hint": "requester"
     },
     {
-      "name": "Change",
+      "name": "Slack",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -238,20 +202,6 @@
     },
     {
       "name": "Timestamp",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Back",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Move",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -272,7 +222,56 @@
       "owner_field_hint": "requester"
     },
     {
+      "name": "View",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Change",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
       "name": "Comment",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Back",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Reassign",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Edit",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Delete",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
+      "name": "Created",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -347,57 +346,57 @@
   "demo_spine": [
     {
       "persona": "manager",
-      "story": "Manager has seeded Slack rows for their desk",
+      "story": "Manager has seeded Move rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Slack"
+      "entity_hint": "Move"
     },
     {
       "persona": "agent",
-      "story": "Agent has seeded Slack rows for their desk",
+      "story": "Agent has seeded Move rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Slack"
+      "entity_hint": "Move"
     },
     {
       "persona": "customer",
-      "story": "Customer has seeded Slack rows for their desk",
+      "story": "Customer has seeded Move rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Slack"
+      "entity_hint": "Move"
     },
     {
       "persona": "admin",
-      "story": "Admin has seeded Slack rows for their desk",
+      "story": "Admin has seeded Move rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Slack"
+      "entity_hint": "Move"
     },
     {
       "persona": "requester",
-      "story": "Requester has seeded Slack rows for their desk",
+      "story": "Requester has seeded Move rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Slack"
+      "entity_hint": "Move"
     },
     {
       "persona": "owner",
-      "story": "Owner has seeded Slack rows for their desk",
+      "story": "Owner has seeded Move rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Slack"
+      "entity_hint": "Move"
     },
     {
       "persona": "staff",
-      "story": "Staff has seeded Slack rows for their desk",
+      "story": "Staff has seeded Move rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Slack"
+      "entity_hint": "Move"
     },
     {
       "persona": "user",
-      "story": "User has seeded Slack rows for their desk",
+      "story": "User has seeded Move rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Slack"
+      "entity_hint": "Move"
     },
     {
       "persona": "member",
-      "story": "Member has seeded Slack rows for their desk",
+      "story": "Member has seeded Move rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Slack"
+      "entity_hint": "Move"
     }
   ],
   "open_questions": [
@@ -407,13 +406,8 @@
       "blocks_promote": false
     },
     {
-      "id": "q4",
-      "text": "Can a statu have multiple prioritys, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q6",
-      "text": "Can a ticket have multiple justs, or just one?",
+      "id": "q3",
+      "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }
   ],

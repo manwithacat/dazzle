@@ -43,10 +43,9 @@
 ## Open questions
 
 - `q1`: Can a task have multiple teams, or just one?
+- `q2`: Can a task have multiple assignments, or just one?
 - `q3`: Can a task have multiple tracks, or just one?
-- `q4`: Can a member have multiple 7s, or just one?
-- `q5`: Can a indicator have multiple overdues, or just one?
-- `q6`: Can a progres have multiple workloads, or just one?
+- `q6`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -192,23 +191,18 @@
       "blocks_promote": false
     },
     {
+      "id": "q2",
+      "text": "Can a task have multiple assignments, or just one?",
+      "blocks_promote": false
+    },
+    {
       "id": "q3",
       "text": "Can a task have multiple tracks, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q4",
-      "text": "Can a member have multiple 7s, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q5",
-      "text": "Can a indicator have multiple overdues, or just one?",
-      "blocks_promote": false
-    },
-    {
       "id": "q6",
-      "text": "Can a progres have multiple workloads, or just one?",
+      "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }
   ],

@@ -58,6 +58,13 @@
       "owner_field_hint": "owner"
     },
     {
+      "name": "Project",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
       "name": "Comment",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -66,13 +73,6 @@
     },
     {
       "name": "Attachment",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Project",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -135,7 +135,38 @@
       "entity_hint": "EveryAttachment"
     }
   ],
-  "open_questions": [],
+  "open_questions": [
+    {
+      "id": "q1",
+      "text": "Can a milestone have multiple tasks, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q2",
+      "text": "Can a comment have multiple attachments, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q3",
+      "text": "Can a project have multiple tasks, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q4",
+      "text": "Can a milestone have multiple comments, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q5",
+      "text": "Can a project have multiple milestones, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q6",
+      "text": "Can a task have multiple attachments, or just one?",
+      "blocks_promote": false
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",

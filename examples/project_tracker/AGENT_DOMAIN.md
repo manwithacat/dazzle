@@ -21,9 +21,9 @@ Project Tracker is a team project-management product. It organises work as Proje
 
 - **EveryAttachment** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **EveryComment** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Project** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Comment** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Attachment** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Project** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
@@ -45,7 +45,12 @@ Project Tracker is a team project-management product. It organises work as Proje
 
 ## Open questions
 
-_None blocking._
+- `q1`: Can a milestone have multiple tasks, or just one?
+- `q2`: Can a comment have multiple attachments, or just one?
+- `q3`: Can a project have multiple tasks, or just one?
+- `q4`: Can a milestone have multiple comments, or just one?
+- `q5`: Can a project have multiple milestones, or just one?
+- `q6`: Can a task have multiple attachments, or just one?
 
 ## Research notes
 
@@ -116,6 +121,13 @@ _None blocking._
       "owner_field_hint": "owner"
     },
     {
+      "name": "Project",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
       "name": "Comment",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -124,13 +136,6 @@ _None blocking._
     },
     {
       "name": "Attachment",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Project",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -193,7 +198,38 @@ _None blocking._
       "entity_hint": "EveryAttachment"
     }
   ],
-  "open_questions": [],
+  "open_questions": [
+    {
+      "id": "q1",
+      "text": "Can a milestone have multiple tasks, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q2",
+      "text": "Can a comment have multiple attachments, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q3",
+      "text": "Can a project have multiple tasks, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q4",
+      "text": "Can a milestone have multiple comments, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q5",
+      "text": "Can a project have multiple milestones, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q6",
+      "text": "Can a task have multiple attachments, or just one?",
+      "blocks_promote": false
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",

@@ -23,10 +23,10 @@
 
 ## Nouns (domain types)
 
-- **ManagerLink** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Phase** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Frontend** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Pattern** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **ManagerLink** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Phase** (grounded) owner≈`person` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
@@ -45,20 +45,18 @@
 
 ## Demo spine (seed stories)
 
-- `admin`: Admin has seeded ManagerLink rows for their desk (min_rows=1, entity≈ManagerLink)
-- `manager`: Manager has seeded ManagerLink rows for their desk (min_rows=1, entity≈ManagerLink)
-- `finance`: Finance has seeded ManagerLink rows for their desk (min_rows=1, entity≈ManagerLink)
-- `employee`: Employee has seeded ManagerLink rows for their desk (min_rows=1, entity≈ManagerLink)
-- `engineer`: Engineer has seeded ManagerLink rows for their desk (min_rows=1, entity≈ManagerLink)
-- `staff`: Staff has seeded ManagerLink rows for their desk (min_rows=1, entity≈ManagerLink)
-- `user`: User has seeded ManagerLink rows for their desk (min_rows=1, entity≈ManagerLink)
-- `member`: Member has seeded ManagerLink rows for their desk (min_rows=1, entity≈ManagerLink)
+- `admin`: Admin has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
+- `manager`: Manager has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
+- `finance`: Finance has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
+- `employee`: Employee has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
+- `engineer`: Engineer has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
+- `staff`: Staff has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
+- `user`: User has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
+- `member`: Member has seeded Frontend rows for their desk (min_rows=1, entity≈Frontend)
 
 ## Open questions
 
-- `q1`: Can a sale have multiple channels, or just one?
-- `q2`: Can a org have multiple managers, or just one?
-- `q5`: Can both parties leave reviews, or just one side?
+- `q3`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -151,20 +149,6 @@
   ],
   "nouns": [
     {
-      "name": "ManagerLink",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "person"
-    },
-    {
-      "name": "Phase",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "person"
-    },
-    {
       "name": "Frontend",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -173,6 +157,20 @@
     },
     {
       "name": "Pattern",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "person"
+    },
+    {
+      "name": "ManagerLink",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "person"
+    },
+    {
+      "name": "Phase",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -240,66 +238,56 @@
   "demo_spine": [
     {
       "persona": "admin",
-      "story": "Admin has seeded ManagerLink rows for their desk",
+      "story": "Admin has seeded Frontend rows for their desk",
       "min_rows": 1,
-      "entity_hint": "ManagerLink"
+      "entity_hint": "Frontend"
     },
     {
       "persona": "manager",
-      "story": "Manager has seeded ManagerLink rows for their desk",
+      "story": "Manager has seeded Frontend rows for their desk",
       "min_rows": 1,
-      "entity_hint": "ManagerLink"
+      "entity_hint": "Frontend"
     },
     {
       "persona": "finance",
-      "story": "Finance has seeded ManagerLink rows for their desk",
+      "story": "Finance has seeded Frontend rows for their desk",
       "min_rows": 1,
-      "entity_hint": "ManagerLink"
+      "entity_hint": "Frontend"
     },
     {
       "persona": "employee",
-      "story": "Employee has seeded ManagerLink rows for their desk",
+      "story": "Employee has seeded Frontend rows for their desk",
       "min_rows": 1,
-      "entity_hint": "ManagerLink"
+      "entity_hint": "Frontend"
     },
     {
       "persona": "engineer",
-      "story": "Engineer has seeded ManagerLink rows for their desk",
+      "story": "Engineer has seeded Frontend rows for their desk",
       "min_rows": 1,
-      "entity_hint": "ManagerLink"
+      "entity_hint": "Frontend"
     },
     {
       "persona": "staff",
-      "story": "Staff has seeded ManagerLink rows for their desk",
+      "story": "Staff has seeded Frontend rows for their desk",
       "min_rows": 1,
-      "entity_hint": "ManagerLink"
+      "entity_hint": "Frontend"
     },
     {
       "persona": "user",
-      "story": "User has seeded ManagerLink rows for their desk",
+      "story": "User has seeded Frontend rows for their desk",
       "min_rows": 1,
-      "entity_hint": "ManagerLink"
+      "entity_hint": "Frontend"
     },
     {
       "persona": "member",
-      "story": "Member has seeded ManagerLink rows for their desk",
+      "story": "Member has seeded Frontend rows for their desk",
       "min_rows": 1,
-      "entity_hint": "ManagerLink"
+      "entity_hint": "Frontend"
     }
   ],
   "open_questions": [
     {
-      "id": "q1",
-      "text": "Can a sale have multiple channels, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
-      "text": "Can a org have multiple managers, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q5",
+      "id": "q3",
       "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }

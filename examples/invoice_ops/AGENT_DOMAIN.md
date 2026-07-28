@@ -60,10 +60,9 @@
 
 ## Open questions
 
-- `q1`: Can a tenant have multiple theirs, or just one?
-- `q2`: Can a invoice have multiple theirs, or just one?
-- `q5`: Can a supplier have multiple theirs, or just one?
-- `q6`: Can a invoice have multiple payments, or just one?
+- `q4`: Can a invoice have multiple payments, or just one?
+- `q5`: Can a payment have multiple audits, or just one?
+- `q6`: Can a role have multiple quorums, or just one?
 
 ## Research notes
 
@@ -323,23 +322,18 @@
   ],
   "open_questions": [
     {
-      "id": "q1",
-      "text": "Can a tenant have multiple theirs, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
-      "text": "Can a invoice have multiple theirs, or just one?",
+      "id": "q4",
+      "text": "Can a invoice have multiple payments, or just one?",
       "blocks_promote": false
     },
     {
       "id": "q5",
-      "text": "Can a supplier have multiple theirs, or just one?",
+      "text": "Can a payment have multiple audits, or just one?",
       "blocks_promote": false
     },
     {
       "id": "q6",
-      "text": "Can a invoice have multiple payments, or just one?",
+      "text": "Can a role have multiple quorums, or just one?",
       "blocks_promote": false
     }
   ],

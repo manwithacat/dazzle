@@ -17,11 +17,11 @@
 
 ## Nouns (domain types)
 
-- **WebSocket** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Persona** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Quick** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Style** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Criteria** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Style** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Quick** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Persona** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **WebSocket** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Acceptance** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Alert** (grounded) owner≈`acknowledged_by` lifecycle: — — appears in founder brief (source=article_noun)
 
@@ -36,14 +36,14 @@
 
 ## Demo spine (seed stories)
 
-- `engineer`: Engineer has seeded WebSocket rows for their desk (min_rows=1, entity≈WebSocket)
-- `user`: User has seeded WebSocket rows for their desk (min_rows=1, entity≈WebSocket)
+- `engineer`: Engineer has seeded Criteria rows for their desk (min_rows=1, entity≈Criteria)
+- `user`: User has seeded Criteria rows for their desk (min_rows=1, entity≈Criteria)
 
 ## Open questions
 
-- `q1`: Can a devop have multiple sres, or just one?
-- `q3`: Should users receive email/push notifications for key events?
-- `q4`: Can both parties leave reviews, or just one side?
+- `q1`: Can a system have multiple alerts, or just one?
+- `q2`: Should users receive email/push notifications for key events?
+- `q3`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -82,21 +82,7 @@
   ],
   "nouns": [
     {
-      "name": "WebSocket",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
-      "name": "Persona",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
-      "name": "Quick",
+      "name": "Criteria",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -110,7 +96,21 @@
       "owner_field_hint": "acknowledged_by"
     },
     {
-      "name": "Criteria",
+      "name": "Quick",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Persona",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "WebSocket",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -150,30 +150,30 @@
   "demo_spine": [
     {
       "persona": "engineer",
-      "story": "Engineer has seeded WebSocket rows for their desk",
+      "story": "Engineer has seeded Criteria rows for their desk",
       "min_rows": 1,
-      "entity_hint": "WebSocket"
+      "entity_hint": "Criteria"
     },
     {
       "persona": "user",
-      "story": "User has seeded WebSocket rows for their desk",
+      "story": "User has seeded Criteria rows for their desk",
       "min_rows": 1,
-      "entity_hint": "WebSocket"
+      "entity_hint": "Criteria"
     }
   ],
   "open_questions": [
     {
       "id": "q1",
-      "text": "Can a devop have multiple sres, or just one?",
+      "text": "Can a system have multiple alerts, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q3",
+      "id": "q2",
       "text": "Should users receive email/push notifications for key events?",
       "blocks_promote": false
     },
     {
-      "id": "q4",
+      "id": "q3",
       "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }

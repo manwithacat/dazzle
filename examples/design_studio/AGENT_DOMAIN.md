@@ -7,8 +7,8 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from
 
-**Source:** `examples/design_studio/SPECIFICATION.md`
-**Fingerprint:** `82205592939831a0`
+**Source:** `/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md`
+**Fingerprint:** `062732b3598f8ba3`
 
 ## Personas (jobs)
 
@@ -44,16 +44,15 @@
 
 ## Open questions
 
-_None blocking._
+- `q2`: Can a brand have multiple assets, or just one?
+- `q3`: Can a admin have multiple designers, or just one?
+- `q5`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
 - Prefer knowledge concepts before inventing structure.
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
-- Core nouns from SPEC definitions: Brand, DesignAsset, Campaign, DesignFeedback.
-- owner_field_hint=created_by matches design_studio DSL User refs.
-- Personas: Admin, Designer, Reviewer (+ User entity).
 
 ## Machine twin
 
@@ -62,8 +61,8 @@ _None blocking._
   "version": 1,
   "title": "Design Studio \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from",
-  "source_path": "examples/design_studio/SPECIFICATION.md",
-  "source_sha256": "82205592939831a0",
+  "source_path": "/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md",
+  "source_sha256": "062732b3598f8ba3",
   "personas": [
     {
       "id_hint": "admin",
@@ -188,14 +187,27 @@ _None blocking._
       "entity_hint": "Brand"
     }
   ],
-  "open_questions": [],
+  "open_questions": [
+    {
+      "id": "q2",
+      "text": "Can a brand have multiple assets, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q3",
+      "text": "Can a admin have multiple designers, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q5",
+      "text": "Can both parties leave reviews, or just one side?",
+      "blocks_promote": false
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
-    "Core nouns from SPEC definitions: Brand, DesignAsset, Campaign, DesignFeedback.",
-    "owner_field_hint=created_by matches design_studio DSL User refs.",
-    "Personas: Admin, Designer, Reviewer (+ User entity)."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
     "Beyond",

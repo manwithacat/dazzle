@@ -101,6 +101,29 @@ Engineer and User roles use the command center.
     assert not any(q.id == "q_owner" and q.blocks_promote for q in d.open_questions)
 
 
+def test_extract_owner_hint_from_designer_draft_prose() -> None:
+    """Creative-ops briefs bind via created_by when designers draft assets.
+
+    Regression: design_studio SPECIFICATION uses \"designers draft assets\" /
+    \"creates and manages design\" without bare ``created_by`` token; re-extract
+    dropped desk owner_field_hint and re-opened q_owner (cycle 1372).
+    """
+    brief = """
+# Design Studio
+
+Design Studio is a creative-operations system. A Brand is a product line.
+A Design Asset is creative work. Designers draft assets for a brand.
+Designer — creates and manages design assets.
+Admin and Designer and Reviewer roles use the studio.
+"""
+    d = extract_from_text(brief, source_path="inline")
+    assert any(desk.owner_field_hint == "created_by" for desk in d.desks), (
+        f"expected created_by owner_field_hint on desks, "
+        f"got {[d.owner_field_hint for d in d.desks]}"
+    )
+    assert not any(q.id == "q_owner" and q.blocks_promote for q in d.open_questions)
+
+
 def test_extract_prefers_core_entity_headers() -> None:
     brief = """
 # App
@@ -184,6 +207,8 @@ def test_broken_cardinality_questions_filtered() -> None:
 
     Regression: domain_join_co SPECIFICATION.md open_qs included
     \"Can a operate have multiple wheres\" / \"multiple theirs\" (cycle 1370).
+    Cycle 1372: \"members and 7 tasks\" → multiple 7s; progress → progres;
+    indicators and overdue → overdues.
     """
     from dazzle.domain_brief.extract import _is_noise_or_broken_question
 
@@ -195,12 +220,49 @@ def test_broken_cardinality_questions_filtered() -> None:
         "Can a operate have multiple wheres, or just one?",
         "Can a member have multiple theirs, or just one?",
         "Can a operate have multiple thes, or just one?",
+        "Can a member have multiple 7s, or just one?",
+        "Can a progres have multiple workloads, or just one?",
+        "Can a indicator have multiple overdues, or just one?",
+        "Can a task have multiple assignmentss, or just one?",
     ]
     for q in broken:
         assert _is_noise_or_broken_question(q, brief), q
     # Real cardinality questions must still pass the filter
     ok = "Can a Workspace have multiple Announcements, or just one?"
     assert not _is_noise_or_broken_question(ok, brief), ok
+
+
+def test_generate_questions_skips_digit_and_prose_cardinality() -> None:
+    """Cardinality pairs must be letter-only and entity-grounded when entities given."""
+    import json
+
+    from dazzle.mcp.server.handlers.spec_analyze import _generate_questions
+
+    # "members and 7 tasks" must not yield "multiple 7s"
+    # "progress and workload" must not yield "progres" / "workloads"
+    spec = (
+        "Pre-populated with 5 team members and 7 tasks. "
+        "Managers track progress and workload. "
+        "Warning indicators and overdue filtering. "
+        "Oversee team tasks and assignments. "
+        "A Task is a unit of work. A User is a person.\n"
+    )
+    data = json.loads(
+        _generate_questions(
+            {
+                "spec_text": spec,
+                "entities": ["Task", "User"],
+            }
+        )
+    )
+    texts = [q.get("question", "") for q in data.get("questions", [])]
+    card = [t for t in texts if "multiple" in t.lower()]
+    joined = " | ".join(card)
+    assert "7s" not in joined, card
+    assert "progres" not in joined.lower(), card
+    assert "overdue" not in joined.lower(), card
+    # Entity-grounded real pair from "tasks and assignments"
+    assert any("task" in t.lower() and "assignment" in t.lower() for t in card), card
 
 
 def test_extract_an_article_and_product_title_not_fused() -> None:

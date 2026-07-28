@@ -7,8 +7,8 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Acme Billing is a multi-organization billing system. It manages organizations, the users who belong to them, the projects each organization runs, the invoices
 
-**Source:** `SPECIFICATION.md`
-**Fingerprint:** `a68d03bb8d97ad20`
+**Source:** `/Volumes/SSD/Dazzle/examples/acme_billing/SPECIFICATION.md`
+**Fingerprint:** `d179e4aceb2e6883`
 
 ## Personas (jobs)
 
@@ -46,8 +46,10 @@
 
 ## Open questions
 
-- `q1`: Can a organization have multiple theirs, or just one?
-- `q6`: Can a organization have multiple audits, or just one?
+- `q2`: Can a organization have multiple audits, or just one?
+- `q3`: Can a project have multiple reviews, or just one?
+- `q4`: Can a invoice have multiple projects, or just one?
+- `q6`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -62,8 +64,8 @@
   "version": 1,
   "title": "Acme Billing \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Acme Billing is a multi-organization billing system. It manages organizations, the users who belong to them, the projects each organization runs, the invoices",
-  "source_path": "SPECIFICATION.md",
-  "source_sha256": "a68d03bb8d97ad20",
+  "source_path": "/Volumes/SSD/Dazzle/examples/acme_billing/SPECIFICATION.md",
+  "source_sha256": "d179e4aceb2e6883",
   "personas": [
     {
       "id_hint": "auditor",
@@ -205,13 +207,23 @@
   ],
   "open_questions": [
     {
-      "id": "q1",
-      "text": "Can a organization have multiple theirs, or just one?",
+      "id": "q2",
+      "text": "Can a organization have multiple audits, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q3",
+      "text": "Can a project have multiple reviews, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q4",
+      "text": "Can a invoice have multiple projects, or just one?",
       "blocks_promote": false
     },
     {
       "id": "q6",
-      "text": "Can a organization have multiple audits, or just one?",
+      "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }
   ],

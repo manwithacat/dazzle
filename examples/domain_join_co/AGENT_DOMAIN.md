@@ -43,7 +43,8 @@
 
 ## Open questions
 
-_None blocking._
+- `q2`: Can a admin have multiple members, or just one?
+- `q4`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -177,7 +178,18 @@ _None blocking._
       "entity_hint": "JoinCo"
     }
   ],
-  "open_questions": [],
+  "open_questions": [
+    {
+      "id": "q2",
+      "text": "Can a admin have multiple members, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q4",
+      "text": "Can both parties leave reviews, or just one side?",
+      "blocks_promote": false
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",

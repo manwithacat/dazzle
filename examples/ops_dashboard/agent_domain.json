@@ -26,21 +26,7 @@
   ],
   "nouns": [
     {
-      "name": "WebSocket",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
-      "name": "Persona",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "acknowledged_by"
-    },
-    {
-      "name": "Quick",
+      "name": "Criteria",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -54,7 +40,21 @@
       "owner_field_hint": "acknowledged_by"
     },
     {
-      "name": "Criteria",
+      "name": "Quick",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Persona",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "WebSocket",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -94,30 +94,30 @@
   "demo_spine": [
     {
       "persona": "engineer",
-      "story": "Engineer has seeded WebSocket rows for their desk",
+      "story": "Engineer has seeded Criteria rows for their desk",
       "min_rows": 1,
-      "entity_hint": "WebSocket"
+      "entity_hint": "Criteria"
     },
     {
       "persona": "user",
-      "story": "User has seeded WebSocket rows for their desk",
+      "story": "User has seeded Criteria rows for their desk",
       "min_rows": 1,
-      "entity_hint": "WebSocket"
+      "entity_hint": "Criteria"
     }
   ],
   "open_questions": [
     {
       "id": "q1",
-      "text": "Can a devop have multiple sres, or just one?",
+      "text": "Can a system have multiple alerts, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q3",
+      "id": "q2",
       "text": "Should users receive email/push notifications for key events?",
       "blocks_promote": false
     },
     {
-      "id": "q4",
+      "id": "q3",
       "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }

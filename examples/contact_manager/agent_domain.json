@@ -35,42 +35,7 @@
   ],
   "nouns": [
     {
-      "name": "Search",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
       "name": "Click",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Contact",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Star",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Edit",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Acceptance",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -84,7 +49,42 @@
       "owner_field_hint": "owner"
     },
     {
+      "name": "Star",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Search",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Contact",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Edit",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
       "name": "Flow",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Acceptance",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -117,30 +117,24 @@
   "demo_spine": [
     {
       "persona": "manager",
-      "story": "Manager has seeded Search rows for their desk",
+      "story": "Manager has seeded Click rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Search"
+      "entity_hint": "Click"
     },
     {
       "persona": "owner",
-      "story": "Owner has seeded Search rows for their desk",
+      "story": "Owner has seeded Click rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Search"
+      "entity_hint": "Click"
     },
     {
       "persona": "user",
-      "story": "User has seeded Search rows for their desk",
+      "story": "User has seeded Click rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Search"
+      "entity_hint": "Click"
     }
   ],
-  "open_questions": [
-    {
-      "id": "q2",
-      "text": "Can a contact have multiple views, or just one?",
-      "blocks_promote": false
-    }
-  ],
+  "open_questions": [],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",

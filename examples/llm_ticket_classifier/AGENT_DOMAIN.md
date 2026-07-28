@@ -20,10 +20,10 @@
 
 - **SupportTicket** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **TicketClassification** (grounded) owner≈`—` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Agent** (grounded) owner≈`—` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Ticket** (grounded) owner≈`assigned_to` lifecycle: open → in_progress → resolved → closed → reopened — appears in founder brief (source=capitalized_noun)
-- **Support** (grounded) owner≈`—` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Supervisor** (grounded) owner≈`—` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Agent** (grounded) owner≈`—` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Support** (grounded) owner≈`—` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Ticket** (grounded) owner≈`assigned_to` lifecycle: open → in_progress → resolved → closed → reopened — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
@@ -43,7 +43,7 @@
 
 ## Open questions
 
-- `q3`: Can both parties leave reviews, or just one side?
+- `q2`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -105,7 +105,21 @@
       "owner_field_hint": null
     },
     {
+      "name": "Supervisor",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": null
+    },
+    {
       "name": "Agent",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": null
+    },
+    {
+      "name": "Support",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -123,20 +137,6 @@
         "reopened"
       ],
       "owner_field_hint": "assigned_to"
-    },
-    {
-      "name": "Support",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": null
-    },
-    {
-      "name": "Supervisor",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": null
     }
   ],
   "desks": [
@@ -184,7 +184,7 @@
   ],
   "open_questions": [
     {
-      "id": "q3",
+      "id": "q2",
       "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }

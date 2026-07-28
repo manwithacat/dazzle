@@ -111,7 +111,17 @@ def _default_owner_from_brief(text: str) -> str | None:
         return "owner"
     if re.search(r"\bassign(ed|ee|ees|ment|s)?\b", text, re.I):
         return "assigned_to"
-    if re.search(r"\bcreated\s+by\b|\bauthors?\b|\buploaders?\b", text, re.I):
+    if re.search(
+        r"\bcreated\s+by\b"
+        r"|\bauthors?\b"
+        r"|\buploaders?\b"
+        # Creative-ops briefs: "designers draft assets" / "creates and manages design"
+        r"|\bdesigners?\s+draft\b"
+        r"|\bdraft(?:s|ed|ing)?\s+(?:assets?|designs?)\b"
+        r"|\bcreates?\s+and\s+manages?\s+design\b",
+        text,
+        re.I,
+    ):
         return "created_by"
     if re.search(r"\bsubmitted\s+by\b|\brequesters?\b", text, re.I):
         return "requester"
@@ -715,6 +725,14 @@ def _is_noise_or_broken_question(text_q: str, brief: str) -> bool:
         return True
     if _BROKEN_Q_RE.search(text_q):
         return True
+    # Digits in cardinality objects ("multiple 7s" from "members and 7 tasks")
+    if re.search(r"\bmultiple\s+\d+\w*\b", text_q, re.I):
+        return True
+    if re.search(r"\bcan\s+a\s+\d+", text_q, re.I):
+        return True
+    # Double-s plurals from template adding ``s`` to an already-plural capture
+    if re.search(r"\bmultiple\s+\w+ss\b", text_q, re.I):
+        return True
     # Short "multiple <token>" + nearby determiners (legacy broken generator)
     if re.search(r"\bmultiple\s+\w{1,4}s?\b", text_q, re.I) and re.search(
         r"\b(the|to|create|review|admin)\b", text_q, re.I
@@ -726,8 +744,11 @@ def _is_noise_or_broken_question(text_q: str, brief: str) -> bool:
         text_q,
         re.I,
     ) and re.search(
-        r"\bmultiple\s+(theirs|wheres|theres|whats|whiches|ops|tos|thes|ones)\b"
-        r"|\bcan\s+a\s+(operate|create|review|approve|manage)\b",
+        r"\bmultiple\s+(theirs|wheres|theres|whats|whiches|ops|tos|thes|ones|"
+        r"overdues|workloads|filterings|justs|assigns|approves|handles|views|"
+        r"settings|sres)\b"
+        r"|\bcan\s+a\s+(operate|create|review|approve|manage|progres|indicator|"
+        r"warning|assign|send|submit|batche|update|sale|org|owner|devop)\b",
         text_q,
         re.I,
     ):

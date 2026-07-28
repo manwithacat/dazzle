@@ -1043,6 +1043,107 @@ def _surface_rules(arguments: dict[str, Any]) -> str:
     )
 
 
+# Stems the naive "strip trailing s" plural split invents from mass/non-count
+# English or from prose that is not a domain noun pair (cycle 1372).
+_CARDINALITY_BAD_LEFT = frozenset(
+    {
+        "progres",  # progress
+        "acces",  # access
+        "proces",  # process
+        "statu",  # status
+        "busines",  # business
+        "succes",  # success
+        "addres",  # address
+        "analy",  # analysis (if matched oddly)
+        "approve",
+        "create",
+        "review",
+        "manage",
+        "assign",
+        "operate",
+        "send",
+        "submit",
+        "require",
+        "provide",
+        "include",
+        "ensure",
+        "indicator",  # "warning indicators and overdue …" prose noise
+        "warning",
+        "setting",
+        "metric",
+        "signal",
+        "batche",  # batches → naive strip
+        "update",  # "updates and comments" prose
+        "sale",
+        "org",
+        "owner",
+        "devop",  # DevOps
+        "sre",
+    }
+)
+_CARDINALITY_BAD_RIGHT = frozenset(
+    {
+        "theirs",
+        "wheres",
+        "theres",
+        "whats",
+        "whiches",
+        "whoms",
+        "thens",
+        "ones",
+        "tos",
+        "thes",
+        "ops",
+        "overdue",  # adjective / filter language, not an entity
+        "workload",  # metric prose next to "progress"
+        "filtering",
+        "personal",
+        "just",  # "… just and …" / "justs" prose fragment
+        "assign",  # verb stem → "assigns"
+        "approve",  # verb stem → "approves"
+        "handle",  # verb stem → "handles"
+        "manage",  # "projects and manages" verb fragment
+        "send",
+        "view",  # UI chrome, not domain noun
+        "setting",
+        "sre",
+        "external",  # "members and externals" tenancy prose
+        "auditor",  # role prose, not usually a ref target of "owner"
+        "contractor",
+    }
+)
+
+
+def _entity_stems(entities: list[Any]) -> set[str]:
+    """Lowercase singular-ish stems of discovered entity names for grounding."""
+    stems: set[str] = set()
+    for e in entities:
+        if not isinstance(e, str):
+            continue
+        low = e.strip().lower()
+        if not low:
+            continue
+        stems.add(low)
+        # Compact multiword ("DesignAsset" already one token from discover)
+        if low.endswith("s") and len(low) > 3 and not low.endswith("ss"):
+            stems.add(low[:-1])
+        else:
+            stems.add(low + "s")
+    return stems
+
+
+def _plausible_cardinality_token(word: str) -> bool:
+    """Letter-only domain-ish token; reject digits and ultra-short stems."""
+    return bool(re.fullmatch(r"[a-z]{3,24}", word))
+
+
+def _plural_obj(word2: str) -> str:
+    """Avoid ``assignments`` → ``assignmentss`` when the capture already ends in s."""
+    if word2.endswith("s"):
+        return word2
+    return f"{word2}s"
+
+
 def _generate_questions(arguments: dict[str, Any]) -> str:
     """
     Generate clarification questions for ambiguities.
@@ -1059,14 +1160,41 @@ def _generate_questions(arguments: dict[str, Any]) -> str:
         return error_response("spec_text is required")
 
     questions = []
+    ent_stems = _entity_stems(entities if isinstance(entities, list) else [])
 
-    # Check for plural ambiguity (one-to-many vs one-to-one)
-    plurals = re.findall(r"\b(\w+)s\s+(?:and|or)\s+(\w+)s?\b", spec_text.lower())
+    # Check for plural ambiguity (one-to-many vs one-to-one).
+    # Require letter-only tokens so "members and 7 tasks" never yields
+    # "multiple 7s". Prefer pairs grounded in discovered entities when present.
+    plurals = re.findall(r"\b([a-z]{3,24})s\s+(?:and|or)\s+([a-z]{3,24})s?\b", spec_text.lower())
+    seen_card: set[tuple[str, str]] = set()
     for word1, word2 in plurals:
+        if not _plausible_cardinality_token(word1) or not _plausible_cardinality_token(word2):
+            continue
+        w2_stem = (
+            word2[:-1]
+            if word2.endswith("s") and not word2.endswith("ss") and len(word2) > 3
+            else word2
+        )
+        if (
+            word1 in _CARDINALITY_BAD_LEFT
+            or word2 in _CARDINALITY_BAD_RIGHT
+            or w2_stem in _CARDINALITY_BAD_RIGHT
+            or word1 in _CARDINALITY_BAD_RIGHT
+        ):
+            continue
+        # When discover_entities ran, require the *subject* (left) to match an
+        # entity stem — "tasks and tracks" keeps; "members and contractors" /
+        # "updates and comments" drop unless Member/Update are entities.
+        if ent_stems and word1 not in ent_stems:
+            continue
+        key = (word1, word2)
+        if key in seen_card:
+            continue
+        seen_card.add(key)
         questions.append(
             {
                 "topic": "cardinality",
-                "question": f"Can a {word1} have multiple {word2}s, or just one?",
+                "question": (f"Can a {word1} have multiple {_plural_obj(word2)}, or just one?"),
                 "impact": "Affects whether to use ref() or list of refs",
             }
         )

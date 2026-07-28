@@ -19,17 +19,15 @@
 
 ## Nouns (domain types)
 
-- **Device** (grounded) owner≈`—` lifecycle: — — entity section header in founder brief
-- **FirmwareRelease** (grounded) owner≈`—` lifecycle: — — entity section header in founder brief
-- **IssueReport** (grounded) owner≈`—` lifecycle: — — entity section header in founder brief
+- **Device** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
+- **FirmwareRelease** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
+- **IssueReport** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
 - **Task** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
-- **TestSession** (grounded) owner≈`—` lifecycle: — — entity section header in founder brief
-- **Issue** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Firmware** (grounded) owner≈`—` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **TestSession** (grounded) owner≈`assigned_to` lifecycle: — — entity section header in founder brief
 
 ## Rejected chrome (not domain)
 
-`Assign`, `Assigned`, `Auto`, `Automated`, `Batch`, `Board`, `Cancelled`, `Capture`, `Casual`, `Cluster`, `Completed`, `Connectivity`, `Crash`, `Critical`, `Dashboard`, `Date`, `Deprecated`, `Detail`, `Detect`, `Directory`, `Draft`, `Engineer`, `Enthusiast`, `File`, `Filter`, `Fixed`, `Fleet`, `Form`, `Full`, `Geo`, `Hardware`, `High`, `Identify`, `Indoor`, `Industrial`, `Kanban`, `Know`, `Latch`, `Level`, `List`, `Low`, `Mark`, `Medium`, `Non`, `Notification`, `Number`, `Outdoor`, `Page`, `Personal`, `Problem`, `Progre`, `Prototype`, `Queue`, `Recall`, `Recalled`, `Release`, `Released`, `Report`, `Reproduce`, `Request`, `Result`, `Retired`, `Robotic`, `Role`, `Scenario`, `Session`, `Slack`, `Specific`, `Spreadsheet`, `Team`, `Test`, `Tester`, `Timeline`, `Triage`, `Triaged`, `Update`, `Vehicle`, `Verified`, `Version`, `Wearable`
+`Assigned`, `Auto`, `Automated`, `Batch`, `Board`, `Cancelled`, `Capture`, `Casual`, `Completed`, `Connectivity`, `Crash`, `Dashboard`, `Date`, `Deprecated`, `Detect`, `Draft`, `Engineer`, `Enthusiast`, `File`, `Filter`, `Fixed`, `Fleet`, `Form`, `Full`, `Geo`, `Hardware`, `High`, `Identify`, `Indoor`, `Industrial`, `Issue`, `Know`, `Level`, `List`, `Low`, `Mark`, `Medium`, `Non`, `Notification`, `Number`, `Outdoor`, `Page`, `Personal`, `Progre`, `Prototype`, `Recall`, `Recalled`, `Release`, `Released`, `Report`, `Reproduce`, `Request`, `Retired`, `Robotic`, `Role`, `Scenario`, `Session`, `Slack`, `Spreadsheet`, `Test`, `Tester`, `Timeline`, `Triaged`, `Update`, `Vehicle`, `Verified`, `Version`, `Wearable`, `assign`, `cluster`, `critical`, `detail`, `directory`, `firmware`, `kanban`, `latch`, `problem`, `queue`, `result`, `specific`, `team`, `triage`
 
 ## Desks
 
@@ -47,9 +45,7 @@
 
 ## Open questions
 
-- `q1`: Can a startup have multiple hardwares, or just one?
-- `q2`: Can a batche have multiple firmwares, or just one?
-- `q5`: Can both parties leave reviews, or just one side?
+- `q3`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -110,21 +106,21 @@
       "status": "grounded",
       "evidence": "entity section header in founder brief",
       "lifecycle_hint": [],
-      "owner_field_hint": null
+      "owner_field_hint": "assigned_to"
     },
     {
       "name": "FirmwareRelease",
       "status": "grounded",
       "evidence": "entity section header in founder brief",
       "lifecycle_hint": [],
-      "owner_field_hint": null
+      "owner_field_hint": "assigned_to"
     },
     {
       "name": "IssueReport",
       "status": "grounded",
       "evidence": "entity section header in founder brief",
       "lifecycle_hint": [],
-      "owner_field_hint": null
+      "owner_field_hint": "assigned_to"
     },
     {
       "name": "Task",
@@ -138,21 +134,7 @@
       "status": "grounded",
       "evidence": "entity section header in founder brief",
       "lifecycle_hint": [],
-      "owner_field_hint": null
-    },
-    {
-      "name": "Issue",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
       "owner_field_hint": "assigned_to"
-    },
-    {
-      "name": "Firmware",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": null
     }
   ],
   "desks": [
@@ -213,17 +195,7 @@
   ],
   "open_questions": [
     {
-      "id": "q1",
-      "text": "Can a startup have multiple hardwares, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
-      "text": "Can a batche have multiple firmwares, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q5",
+      "id": "q3",
       "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }
@@ -234,7 +206,6 @@
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
   ],
   "rejected_chrome": [
-    "Assign",
     "Assigned",
     "Auto",
     "Automated",
@@ -243,17 +214,13 @@
     "Cancelled",
     "Capture",
     "Casual",
-    "Cluster",
     "Completed",
     "Connectivity",
     "Crash",
-    "Critical",
     "Dashboard",
     "Date",
     "Deprecated",
-    "Detail",
     "Detect",
-    "Directory",
     "Draft",
     "Engineer",
     "Enthusiast",
@@ -269,9 +236,8 @@
     "Identify",
     "Indoor",
     "Industrial",
-    "Kanban",
+    "Issue",
     "Know",
-    "Latch",
     "Level",
     "List",
     "Low",
@@ -283,10 +249,8 @@
     "Outdoor",
     "Page",
     "Personal",
-    "Problem",
     "Progre",
     "Prototype",
-    "Queue",
     "Recall",
     "Recalled",
     "Release",
@@ -294,26 +258,36 @@
     "Report",
     "Reproduce",
     "Request",
-    "Result",
     "Retired",
     "Robotic",
     "Role",
     "Scenario",
     "Session",
     "Slack",
-    "Specific",
     "Spreadsheet",
-    "Team",
     "Test",
     "Tester",
     "Timeline",
-    "Triage",
     "Triaged",
     "Update",
     "Vehicle",
     "Verified",
     "Version",
-    "Wearable"
+    "Wearable",
+    "assign",
+    "cluster",
+    "critical",
+    "detail",
+    "directory",
+    "firmware",
+    "kanban",
+    "latch",
+    "problem",
+    "queue",
+    "result",
+    "specific",
+    "team",
+    "triage"
   ]
 }
 ```

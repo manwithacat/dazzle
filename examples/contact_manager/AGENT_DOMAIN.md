@@ -18,14 +18,14 @@
 
 ## Nouns (domain types)
 
-- **Search** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Click** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Contact** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Star** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Edit** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
-- **Acceptance** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Criteria** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Star** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Search** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Contact** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Edit** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 - **Flow** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Acceptance** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
@@ -39,13 +39,13 @@
 
 ## Demo spine (seed stories)
 
-- `manager`: Manager has seeded Search rows for their desk (min_rows=1, entity≈Search)
-- `owner`: Owner has seeded Search rows for their desk (min_rows=1, entity≈Search)
-- `user`: User has seeded Search rows for their desk (min_rows=1, entity≈Search)
+- `manager`: Manager has seeded Click rows for their desk (min_rows=1, entity≈Click)
+- `owner`: Owner has seeded Click rows for their desk (min_rows=1, entity≈Click)
+- `user`: User has seeded Click rows for their desk (min_rows=1, entity≈Click)
 
 ## Open questions
 
-- `q2`: Can a contact have multiple views, or just one?
+_None blocking._
 
 ## Research notes
 
@@ -93,42 +93,7 @@
   ],
   "nouns": [
     {
-      "name": "Search",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
       "name": "Click",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Contact",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Star",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Edit",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
-      "owner_field_hint": "owner"
-    },
-    {
-      "name": "Acceptance",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -142,7 +107,42 @@
       "owner_field_hint": "owner"
     },
     {
+      "name": "Star",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Search",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Contact",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Edit",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
       "name": "Flow",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "owner"
+    },
+    {
+      "name": "Acceptance",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
       "lifecycle_hint": [],
@@ -175,30 +175,24 @@
   "demo_spine": [
     {
       "persona": "manager",
-      "story": "Manager has seeded Search rows for their desk",
+      "story": "Manager has seeded Click rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Search"
+      "entity_hint": "Click"
     },
     {
       "persona": "owner",
-      "story": "Owner has seeded Search rows for their desk",
+      "story": "Owner has seeded Click rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Search"
+      "entity_hint": "Click"
     },
     {
       "persona": "user",
-      "story": "User has seeded Search rows for their desk",
+      "story": "User has seeded Click rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Search"
+      "entity_hint": "Click"
     }
   ],
-  "open_questions": [
-    {
-      "id": "q2",
-      "text": "Can a contact have multiple views, or just one?",
-      "blocks_promote": false
-    }
-  ],
+  "open_questions": [],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
