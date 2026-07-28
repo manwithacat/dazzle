@@ -2144,6 +2144,49 @@ def test_activity_feed_accepts_comment_content_field() -> None:
     assert "Alex Agent" in html or "Sam Manager" in html
 
 
+def test_activity_feed_detail_url_template_drill() -> None:
+    """#1303 / cycle 1415: activity_feed honors detail_url_template hub drills."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {
+                "id": "evt-1",
+                "title": "Ticket reopened",
+                "created_at": "2026-05-07T09:00:00",
+                "actor": "Ada",
+            },
+            {
+                "id": "evt-2",
+                "description": "Status changed",
+                "created_at": "2026-05-07T09:01:00",
+            },
+        ],
+        "detail_url_template": "/app/ticket/{id}",
+    }
+    fragment = adapter.build(_FakeRegion("feed", display="activity_feed"), ctx)
+    html = _render(fragment)
+    assert 'href="/app/ticket/evt-1"' in html
+    assert 'href="/app/ticket/evt-2"' in html
+    assert "data-dz-activity-drill" in html
+    assert "Ticket reopened" in html
+    assert "Status changed" in html
+
+
+def test_activity_feed_without_drill_stays_plain_text() -> None:
+    """Empty detail_url_template must stay byte-stable (no empty anchors)."""
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [
+            {"title": "Logged in", "created_at": "2026-05-07T09:00:00", "actor": "Ada"},
+        ],
+    }
+    fragment = adapter.build(_FakeRegion("feed", display="activity_feed"), ctx)
+    html = _render(fragment)
+    assert "data-dz-activity-drill" not in html
+    assert "Logged in" in html
+    assert "<a " not in html or "data-dz-activity-drill" not in html
+
+
 # ───────────────── CohortStrip (#1018, v0.67.7) ───────────────────
 
 

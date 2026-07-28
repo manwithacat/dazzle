@@ -97,7 +97,7 @@ apply map patches with `{"apply":true}`.
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1412 | USED |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1415 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1414 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1414 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1415 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1415 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -120,6 +120,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1415 (2026-07-28).** **framework-ux edge** activity_feed #1303 hub drill — `ActivityRow.drill_url` + ACTIVITY_FEED `detail_url_template` with EDIT demote (parity list/queue/grid/kanban/inbox/timeline). Host `_set_detail_url_template`; empty drill stays byte-stable plain text. HM contract+site+CONTRACT_SURFACE regenerated; CC helpers under ratchet. Stamped rbac + CodeQL/inbox **USED@1415**. budget 1. Explore **58/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
 > **Cycle 1414 (2026-07-28).** **cimonitor** — main red tip f0d8e4d2d (run 30385462303): `test_preflight_surface::test_surface_modules_exist_and_are_gate_marked` treated nodeid `path::test` as a filesystem path after 1413 promote. Strip `::` like preflight_surface._check_paths_exist. HM standalone already green (d4fa19fe) after 1413 gallery rebuild sync. CodeQL+inbox **USED@1414**. budget 0. Explore **57/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 

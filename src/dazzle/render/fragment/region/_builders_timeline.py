@@ -84,6 +84,51 @@ def _activity_actor_label(item: dict[str, Any]) -> str:
     return ""
 
 
+def _activity_empty_message(region: Any, ctx: RegionContext) -> str:
+    return str(
+        ctx.get("empty_message") or getattr(region, "empty_message", None) or "No activity yet"
+    )
+
+
+def _activity_drill_by_id(items: list[dict[str, Any]], detail_url_template: str) -> dict[int, str]:
+    """#1303 map of ``id(row)`` → resolved hub URL (empty template → {})."""
+    if not detail_url_template:
+        return {}
+    row_links = _resolve_row_links(items, detail_url_template)
+    out: dict[int, str] = {}
+    for item, link in zip(items, row_links, strict=False):
+        if link:
+            out[id(item)] = str(link)
+    return out
+
+
+def _activity_feed_rows(
+    items: list[Any],
+    drill_by_id: dict[int, str],
+    *,
+    timeago,
+) -> list[tuple[str, str, str] | tuple[str, str, str, str]]:
+    """Build ActivityFeed item tuples (optional 4th drill_url)."""
+    rows: list[tuple[str, str, str] | tuple[str, str, str, str]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        created = item.get("created_at")
+        time_str = timeago(created) if created else ""
+        actor = _activity_actor_label(item)
+        description = _activity_description(item)
+        if not description:
+            # ActivityRow forbids empty description — skip rather than
+            # crash the whole region (TR-8 comment_activity / Comment.content).
+            continue
+        drill = drill_by_id.get(id(item), "")
+        if drill:
+            rows.append((time_str, actor, description, drill))
+        else:
+            rows.append((time_str, actor, description))
+    return rows
+
+
 class _BuildersTimelineMixin:
     """Mixin adding the 4 timeline-family `_build_*` methods to
     `WorkspaceRegionAdapter`. Same pattern as `_BuildersChartsMixin`.
@@ -192,49 +237,33 @@ class _BuildersTimelineMixin:
         strings are formatted via the legacy `timeago` filter so both
         paths produce the same relative-time labels.
 
+        #1303 / cycle 1415: optional ``detail_url_template`` resolves to
+        per-row ``drill_url`` (description hub link). Host request-time
+        gates EDIT paths when UPDATE is denied (same as TIMELINE/LIST).
+
         ctx shape:
             items: list of entity/row dicts. Description is resolved from
               description | action | title | content | body | message | text |
               summary (first non-empty string). Actor from actor | user |
               author (string or nested display). created_at via timeago.
+            detail_url_template: optional #1303 hub drill
         """
         from dazzle.render.filters import _timeago_filter
 
         title = _region_title(region)
-        items: list[dict[str, Any]] = ctx.get("items", []) or []
-
-        body: Fragment
+        items: list[Any] = list(ctx.get("items", []) or [])
+        empty_msg = _activity_empty_message(region, ctx)
         if not items:
-            empty_msg = (
-                ctx.get("empty_message")
-                or getattr(region, "empty_message", None)
-                or "No activity yet"
-            )
-            body = ActivityFeed(items=(), empty_message=str(empty_msg))
-        else:
-            rows: list[tuple[str, str, str]] = []
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                created = item.get("created_at")
-                time_str = _timeago_filter(created) if created else ""
-                actor = _activity_actor_label(item)
-                description = _activity_description(item)
-                if not description:
-                    # ActivityRow forbids empty description — skip rather than
-                    # crash the whole region (TR-8 comment_activity / Comment.content).
-                    continue
-                rows.append((time_str, actor, description))
-            if not rows:
-                empty_msg = (
-                    ctx.get("empty_message")
-                    or getattr(region, "empty_message", None)
-                    or "No activity yet"
-                )
-                body = ActivityFeed(items=(), empty_message=str(empty_msg))
-            else:
-                body = ActivityFeed(items=tuple(rows))
+            return _wrap_surface(title, "report", ActivityFeed(items=(), empty_message=empty_msg))
 
+        dict_items = [i for i in items if isinstance(i, dict)]
+        drill_by_id = _activity_drill_by_id(dict_items, str(ctx.get("detail_url_template") or ""))
+        rows = _activity_feed_rows(items, drill_by_id, timeago=_timeago_filter)
+        body: Fragment = (
+            ActivityFeed(items=tuple(rows), empty_message=empty_msg)
+            if rows
+            else ActivityFeed(items=(), empty_message=empty_msg)
+        )
         return _wrap_surface(title, "report", body)
 
     def _build_day_timeline(self, region: Any, ctx: RegionContext) -> Surface:

@@ -302,6 +302,7 @@ class ActivityRow(BaseModel):
     time_str: str
     description: str
     actor: str = ""
+    drill_url: str = ""
 
     @field_validator("description")
     @classmethod

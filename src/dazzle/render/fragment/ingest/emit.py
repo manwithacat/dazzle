@@ -490,6 +490,13 @@ def render_activity_row(row: ActivityRow) -> str:
     actor_html = ""
     if row.actor:
         actor_html = f'<span class="dz-activity-actor">{_html.escape(row.actor)}</span> '
+    desc = _html.escape(row.description)
+    drill = getattr(row, "drill_url", "") or ""
+    if drill:
+        href = _html.escape(drill, quote=True)
+        desc_html = f'<a href="{href}" data-dz-activity-drill>{desc}</a>'
+    else:
+        desc_html = desc
     root_attrs = activity_row_root_attrs(row)
     return (
         f'<li class="dz-activity-row" {root_attrs}>'
@@ -497,7 +504,7 @@ def render_activity_row(row: ActivityRow) -> str:
         f'<div class="dz-activity-row-inner">'
         f'<div class="dz-activity-time">{time_s}</div>'
         f'<div class="dz-activity-bubble" >'
-        f"{actor_html}{_html.escape(row.description)}"
+        f"{actor_html}{desc_html}"
         f"</div>"
         f"</div>"
         f"</li>"

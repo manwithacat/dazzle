@@ -682,12 +682,22 @@ class _RenderTablesMixin:
         """
         if not a.items:
             return f'<div class="dz-activity-empty">{ctx.escape(a.empty_message)}</div>'
-        rows = [
-            render_activity_row(
-                ActivityRowSeam(time_str=time_str, actor=actor, description=description)
+        rows: list[str] = []
+        for entry in a.items:
+            time_str = entry[0]
+            actor = entry[1]
+            description = entry[2]
+            drill_url = entry[3] if len(entry) > 3 else ""
+            rows.append(
+                render_activity_row(
+                    ActivityRowSeam(
+                        time_str=time_str,
+                        actor=actor,
+                        description=description,
+                        drill_url=str(drill_url or ""),
+                    )
+                )
             )
-            for time_str, actor, description in a.items
-        ]
         return f'<ul class="dz-activity-feed">{"".join(rows)}</ul>'
 
     def _emit_action_grid(self, g: ActionGrid, ctx: RenderContext) -> str:

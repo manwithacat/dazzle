@@ -4,14 +4,15 @@ One row is the dual-lock unit. The feed list is layout furniture; validate
 rows with ``require_root`` on the row root.
 
 ``description`` is plain text (escaped). Optional ``actor`` renders a leading
-span inside the bubble.
+span inside the bubble. Optional ``drill_url`` wraps description in a hub
+link (same #1303 class as timeline title / list row).
 """
 
 from __future__ import annotations
 
 import html
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from contracts._kit import DomContract, Node, Present
 
@@ -39,11 +40,17 @@ class ActivityRow(BaseModel):
     - ``time_str`` → already-formatted relative/absolute time
     - ``actor`` → optional who-did-it span (empty = omit)
     - ``description`` → action text
+    - ``drill_url`` → when set, description becomes an ``<a href>`` hub drill
+      (host gates EDIT paths when UPDATE denied)
     """
 
     time_str: str
     description: str
     actor: str = ""
+    drill_url: str = Field(
+        default="",
+        description="Optional hub URL; description becomes a link when set.",
+    )
 
     @field_validator("description")
     @classmethod
@@ -70,6 +77,13 @@ def render(row: ActivityRow) -> str:
     actor_html = ""
     if row.actor:
         actor_html = f'<span class="dz-activity-actor">{html.escape(row.actor)}</span> '
+    desc = html.escape(row.description)
+    if row.drill_url:
+        href = html.escape(row.drill_url, quote=True)
+        # Empty drill_url stays byte-stable plain text (no anchor).
+        desc_html = f'<a href="{href}" data-dz-activity-drill>{desc}</a>'
+    else:
+        desc_html = desc
     # Trailing space after bubble open class mirrors Dazzle emitter legacy.
     return (
         f'<li class="dz-activity-row" data-dz-activity-row>'
@@ -77,7 +91,7 @@ def render(row: ActivityRow) -> str:
         f'<div class="dz-activity-row-inner">'
         f'<div class="dz-activity-time">{time_s}</div>'
         f'<div class="dz-activity-bubble" >'
-        f"{actor_html}{html.escape(row.description)}"
+        f"{actor_html}{desc_html}"
         f"</div>"
         f"</div>"
         f"</li>"
