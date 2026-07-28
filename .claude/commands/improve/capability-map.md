@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1403 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1403 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1404 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1404 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -120,6 +120,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1404 (2026-07-28).** **self-audit** window e50f85dd8..88bc3fc67 (+ hoist repair) — 4 CLEAN (c1397 confirm/grid CREATE gate; c1399 primary_actions CREATE/EDIT gate; c1401 CREATE path; c1402 confirm row-aware URLs); 1 DISCREPANCY c1403 function-level `region_row_drill_url` import broke deferred-import ratchet (12>11) — AUD-005 DONE via module-top hoist same cycle. Tests 52 green. CodeQL+inbox **USED@1404**. budget 0. Explore **52/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
 > **Cycle 1403 (2026-07-28).** **framework-ux edge** region row `action:` mode-aware drill — `region_row_drill_url` + substrate `detail_url_template` honor EDIT/VIEW/CREATE (was always VIEW detail). simple_task `task_edit` → `/app/task/{id}/edit`; ops `system_edit`/`alert_ack` → edit; live fleet compile verified. Stamped product_quality/demo quality + rbac + CodeQL/inbox **USED@1403**. budget 1. Explore **52/100**. Next **self-audit due ~1404**; capability-sweep@1400 next~1420.
 

@@ -27,6 +27,7 @@ from dazzle.http.runtime.workspace_handlers import (
 )
 from dazzle.http.runtime.workspace_region_handler import _workspace_region_handler
 from dazzle.page import app_paths
+from dazzle.page.runtime.action_urls import region_row_drill_url
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +135,7 @@ class WorkspaceRouteBuilder:
             # Cycle 1403: when the region authors `action: <surface|workspace>`,
             # prefer that target's mode-aware path (EDIT → `…/{id}/edit`) over
             # the default VIEW map so `action: task_edit` actually opens edit.
-            from dazzle.page.runtime.action_urls import region_row_drill_url
+            # (region_row_drill_url imported at module top — #1438 ratchet.)
 
             _entity_detail_url_map = {
                 _surf.entity_ref: app_paths.detail_path(
