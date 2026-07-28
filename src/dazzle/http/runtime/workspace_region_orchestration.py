@@ -26,8 +26,10 @@ from typing import Any
 from dazzle.core.access import AccessOperationKind
 from dazzle.core.ir import BucketRef as _BucketRef
 from dazzle.core.ir.workspaces import ComparisonOutlierSpec
-from dazzle.core.strings import entity_slug
-from dazzle.http.runtime.handlers.list_handlers import _principal_can_op
+from dazzle.http.runtime.handlers.list_handlers import (
+    _principal_can_op,
+    entity_name_for_app_path,
+)
 from dazzle.http.runtime.insight_store import get_stored_insight
 from dazzle.http.runtime.workspace_aggregation import (
     _compute_aggregate_metrics,
@@ -122,31 +124,6 @@ def gate_confirm_action_urls_for_principal(
     return "", "", ""
 
 
-def _entity_name_for_create_url(
-    url: str,
-    entity_access_specs: dict[str, Any] | None,
-) -> str | None:
-    """Map a create-path URL (``…/{slug}/create``) to an entity name.
-
-    Returns the first entity whose ``entity_slug`` matches the path segment
-    before ``/create``. Unknown / non-create URLs → None (caller leaves the
-    card — list/filter CTAs are read navigation).
-    """
-    if not url or not entity_access_specs:
-        return None
-    path = str(url).split("?", 1)[0].rstrip("/")
-    if not path.endswith("/create"):
-        return None
-    parts = [p for p in path.split("/") if p]
-    if len(parts) < 2 or parts[-1] != "create":
-        return None
-    slug = parts[-2]
-    for entity_name in entity_access_specs:
-        if entity_slug(entity_name) == slug:
-            return entity_name
-    return None
-
-
 def gate_action_grid_cards_for_principal(
     cards: list[dict[str, Any]],
     entity_access_specs: dict[str, Any] | None,
@@ -160,13 +137,16 @@ def gate_action_grid_cards_for_principal(
     who can only list/read Systems (cycle 1397). Read/list card targets are
     left intact. Cards whose create URL cannot be mapped to a known entity
     stay (permissive; write path still enforces).
+
+    Entity mapping reuses :func:`entity_name_for_app_path` (EDIT drills too —
+    cycle 1408 clone-ratchet).
     """
     if not cards:
         return cards
     out: list[dict[str, Any]] = []
     for card in cards:
         url = str(card.get("url") or "")
-        entity_name = _entity_name_for_create_url(url, entity_access_specs)
+        entity_name = entity_name_for_app_path(url, entity_access_specs, terminal="create")
         if entity_name is None:
             out.append(card)
             continue

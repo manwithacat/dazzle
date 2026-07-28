@@ -123,6 +123,8 @@ apply map patches with `{"apply":true}`.
 
 > **Cycle 1407 (2026-07-28).** **framework-ux edge** EDIT-path drill demote-to-detail — when UPDATE denied, `gate_edit_path_drill_for_principal` demotes `…/{id}/edit` → `…/{id}` (query preserved) instead of blanking so read-only personas keep row navigation. Stamped rbac + CodeQL/inbox **USED@1407**. budget 1. Explore **54/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
+> **Cycle 1408 (2026-07-28).** **cimonitor** — tip clone-ratchet red from c1406 (`_entity_name_for_edit_url` ≈ `_entity_name_for_create_url`). Unified `entity_name_for_app_path(terminal=create|edit)` in list_handlers; create gate wraps it. Pack 16 green. CodeQL+inbox **USED@1408**. budget 0. Explore **54/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
+
 > **Cycle 1406 (2026-07-28).** **framework-ux edge** EDIT-path region row drill UPDATE gate — `gate_edit_path_drill_for_principal` clears `…/{id}/edit` detail_url_template when UPDATE denied (action: task_edit series after 1403 mode-aware path). VIEW drills stay. budget 1. Explore **53/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
 > **Cycle 1405 (2026-07-28).** **cimonitor** — main red tip 4f3ae822c (run 30372933396): `TestCrossEntityAction::test_action_url_resolution` expected `/app/task/{id}` but row path defaulted unknown mode → list. `surface_entity_path_for_row` now defaults missing/CUSTOM/VIEW to detail; only explicit LIST demotes. Pack 14 green. CodeQL+inbox **USED@1405**. budget 0. Explore **52/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.

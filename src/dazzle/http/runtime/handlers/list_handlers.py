@@ -127,25 +127,39 @@ def _principal_can_op(
     return bool(decision.allowed)
 
 
-def _entity_name_for_edit_url(
+def entity_name_for_app_path(
     url: str,
     entity_access_specs: dict[str, Any] | None,
+    *,
+    terminal: str,
 ) -> str | None:
-    """Map an edit-path URL (``…/{slug}/{id}/edit``) to an entity name.
+    """Map an app-shell mutation path to an entity name via ``entity_slug``.
 
-    Path shape from surface EDIT mode: ``/app/{slug}/{id}/edit``.
-    Unknown / non-edit URLs → None.
+    Shared by CREATE chrome (``…/{slug}/create``) and EDIT drills
+    (``…/{slug}/{id}/edit``) so clone-ratchet stays green (cycle 1408).
+
+    * ``terminal="create"`` — slug is the segment before ``/create``
+    * ``terminal="edit"`` — slug is the segment before ``/{id}/edit``
     """
-    if not url or not entity_access_specs:
+    if not url or not entity_access_specs or not terminal:
         return None
     path = str(url).split("?", 1)[0].rstrip("/")
-    if not path.endswith("/edit"):
+    if not path.endswith(f"/{terminal}"):
         return None
     parts = [p for p in path.split("/") if p]
-    # /app/task/{id}/edit → [app, task, {id}, edit]
-    if len(parts) < 3 or parts[-1] != "edit":
+    if not parts or parts[-1] != terminal:
         return None
-    slug = parts[-3]
+    if terminal == "create":
+        if len(parts) < 2:
+            return None
+        slug = parts[-2]
+    elif terminal == "edit":
+        # /app/task/{id}/edit → slug at -3
+        if len(parts) < 3:
+            return None
+        slug = parts[-3]
+    else:
+        return None
     for entity_name in entity_access_specs:
         if entity_slug(entity_name) == slug:
             return entity_name
@@ -188,7 +202,7 @@ def gate_edit_path_drill_for_principal(
     """
     if not url:
         return url
-    entity_name = _entity_name_for_edit_url(url, entity_access_specs)
+    entity_name = entity_name_for_app_path(url, entity_access_specs, terminal="edit")
     if entity_name is None:
         return url
     cedar = (entity_access_specs or {}).get(entity_name)
