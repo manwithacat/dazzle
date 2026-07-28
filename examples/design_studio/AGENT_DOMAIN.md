@@ -45,7 +45,7 @@
 ## Open questions
 
 - `q2`: Can a brand have multiple assets, or just one?
-- `q3`: Can a admin have multiple designers, or just one?
+- `q3`: Can an admin have multiple designers, or just one?
 - `q5`: Can both parties leave reviews, or just one side?
 
 ## Research notes
@@ -195,7 +195,7 @@
     },
     {
       "id": "q3",
-      "text": "Can a admin have multiple designers, or just one?",
+      "text": "Can an admin have multiple designers, or just one?",
       "blocks_promote": false
     },
     {

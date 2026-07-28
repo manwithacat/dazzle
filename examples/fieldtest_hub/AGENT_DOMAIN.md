@@ -45,7 +45,7 @@
 
 ## Open questions
 
-- `q3`: Can both parties leave reviews, or just one side?
+_None blocking._
 
 ## Research notes
 
@@ -193,13 +193,7 @@
       "entity_hint": "Device"
     }
   ],
-  "open_questions": [
-    {
-      "id": "q3",
-      "text": "Can both parties leave reviews, or just one side?",
-      "blocks_promote": false
-    }
-  ],
+  "open_questions": [],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",

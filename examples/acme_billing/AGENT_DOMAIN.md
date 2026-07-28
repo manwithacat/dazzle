@@ -46,10 +46,8 @@
 
 ## Open questions
 
-- `q2`: Can a organization have multiple audits, or just one?
-- `q3`: Can a project have multiple reviews, or just one?
-- `q4`: Can a invoice have multiple projects, or just one?
-- `q6`: Can both parties leave reviews, or just one side?
+- `q2`: Can an organization have multiple audits, or just one?
+- `q3`: Can an invoice have multiple projects, or just one?
 
 ## Research notes
 
@@ -208,22 +206,12 @@
   "open_questions": [
     {
       "id": "q2",
-      "text": "Can a organization have multiple audits, or just one?",
+      "text": "Can an organization have multiple audits, or just one?",
       "blocks_promote": false
     },
     {
       "id": "q3",
-      "text": "Can a project have multiple reviews, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q4",
-      "text": "Can a invoice have multiple projects, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q6",
-      "text": "Can both parties leave reviews, or just one side?",
+      "text": "Can an invoice have multiple projects, or just one?",
       "blocks_promote": false
     }
   ],

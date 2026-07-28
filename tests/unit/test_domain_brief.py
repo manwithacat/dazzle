@@ -224,12 +224,18 @@ def test_broken_cardinality_questions_filtered() -> None:
         "Can a progres have multiple workloads, or just one?",
         "Can a indicator have multiple overdues, or just one?",
         "Can a task have multiple assignmentss, or just one?",
+        # Cycle 1375: wrong indefinite article before vowel-onset subjects
+        "Can a organization have multiple audits, or just one?",
+        "Can a invoice have multiple payments, or just one?",
+        "Can a admin have multiple designers, or just one?",
     ]
     for q in broken:
         assert _is_noise_or_broken_question(q, brief), q
     # Real cardinality questions must still pass the filter
     ok = "Can a Workspace have multiple Announcements, or just one?"
     assert not _is_noise_or_broken_question(ok, brief), ok
+    ok_an = "Can an Organization have multiple Audits, or just one?"
+    assert not _is_noise_or_broken_question(ok_an, brief), ok_an
 
 
 def test_generate_questions_skips_digit_and_prose_cardinality() -> None:
@@ -263,6 +269,76 @@ def test_generate_questions_skips_digit_and_prose_cardinality() -> None:
     assert "overdue" not in joined.lower(), card
     # Entity-grounded real pair from "tasks and assignments"
     assert any("task" in t.lower() and "assignment" in t.lower() for t in card), card
+
+
+def test_generate_questions_indefinite_article_and_review_signal() -> None:
+    """Vowel-onset subjects use *an*; lifecycle 'review' is not bilateral ratings.
+
+    Cycle 1375: fleet open_qs had \"Can a organization\" / \"Can a invoice\" /
+    \"Can a admin\", and bilateral-review fired on todo→review→done SPECs.
+    """
+    import json
+    import re
+
+    from dazzle.mcp.server.handlers.spec_analyze import (
+        _bilateral_review_signal,
+        _generate_questions,
+        _indefinite_article,
+    )
+
+    assert _indefinite_article("organization") == "an"
+    assert _indefinite_article("invoice") == "an"
+    assert _indefinite_article("admin") == "an"
+    assert _indefinite_article("task") == "a"
+    assert _indefinite_article("user") == "a"  # /juː/ consonant sound
+    assert _indefinite_article("User") == "a"
+
+    # Lifecycle / permission "review" alone must not ask bilateral ratings
+    assert not _bilateral_review_signal(
+        "tasks move todo through review to done; permission review is audited"
+    )
+    # Bare "feedback is scattered" is ops pain, not a Review entity
+    assert not _bilateral_review_signal("currently feedback is scattered across slack and email")
+    assert _bilateral_review_signal("buyers leave a review after the job")
+    assert _bilateral_review_signal("collect star ratings from buyers")
+    assert _bilateral_review_signal("design feedback moves assets to approval")
+
+    spec = (
+        "Organizations and audits form the tenancy model. "
+        "Invoices and payments settle bills. "
+        "Admins and designers collaborate on assets. "
+        "A Task moves todo through review to done. "
+        "An Organization is tenancy. An Invoice is a bill. "
+        "An Admin is staff. A Designer is creative. "
+        "A Payment is settlement. An Audit is a check.\n"
+    )
+    data = json.loads(
+        _generate_questions(
+            {
+                "spec_text": spec,
+                "entities": [
+                    "Organization",
+                    "Invoice",
+                    "Admin",
+                    "Designer",
+                    "Payment",
+                    "Audit",
+                ],
+            }
+        )
+    )
+    texts = [q.get("question", "") for q in data.get("questions", [])]
+    card = [t for t in texts if "multiple" in t.lower()]
+    joined = " | ".join(texts)
+    # No wrong article before vowel-onset subjects
+    assert not re.search(r"\bCan a (organization|invoice|admin)\b", joined, re.I), texts
+    assert any(re.search(r"\bCan an organization\b", t, re.I) for t in card), card
+    assert any(re.search(r"\bCan an invoice\b", t, re.I) for t in card), card
+    assert any(re.search(r"\bCan an admin\b", t, re.I) for t in card), card
+    # No bilateral-review topic from lifecycle prose
+    assert not any("both parties leave reviews" in t.lower() for t in texts), texts
+    # Lifecycle "projects and reviews" style must not emit review cardinality
+    assert not any(re.search(r"\bmultiple reviews\b", t, re.I) for t in card), card
 
 
 def test_extract_an_article_and_product_title_not_fused() -> None:

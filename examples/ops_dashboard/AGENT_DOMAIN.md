@@ -43,7 +43,6 @@
 
 - `q1`: Can a system have multiple alerts, or just one?
 - `q2`: Should users receive email/push notifications for key events?
-- `q3`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -170,11 +169,6 @@
     {
       "id": "q2",
       "text": "Should users receive email/push notifications for key events?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q3",
-      "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }
   ],

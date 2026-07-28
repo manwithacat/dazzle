@@ -60,7 +60,7 @@
 
 ## Open questions
 
-- `q4`: Can a invoice have multiple payments, or just one?
+- `q4`: Can an invoice have multiple payments, or just one?
 - `q5`: Can a payment have multiple audits, or just one?
 - `q6`: Can a role have multiple quorums, or just one?
 
@@ -323,7 +323,7 @@
   "open_questions": [
     {
       "id": "q4",
-      "text": "Can a invoice have multiple payments, or just one?",
+      "text": "Can an invoice have multiple payments, or just one?",
       "blocks_promote": false
     },
     {

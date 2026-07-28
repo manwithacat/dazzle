@@ -30,19 +30,32 @@ def _import_spec_analyze():
     mock_state = MagicMock()
     install_handlers_common_mock = _load_conftest_helper("install_handlers_common_mock")
 
-    sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
+    handlers_pkg = MagicMock(pytest_plugins=[])
+    sys.modules["dazzle.mcp.server.handlers"] = handlers_pkg
     install_handlers_common_mock()
     sys.modules["dazzle.mcp.server.state"] = mock_state
 
-    module_path = (
+    handlers_dir = (
         Path(__file__).parent.parent.parent.parent
         / "src"
         / "dazzle"
         / "mcp"
         / "server"
         / "handlers"
-        / "spec_analyze.py"
     )
+    # Preload sibling module used by spec_analyze (relative import; package is mocked).
+    sq_path = handlers_dir / "spec_questions.py"
+    sq_spec = importlib.util.spec_from_file_location(
+        "dazzle.mcp.server.handlers.spec_questions",
+        sq_path,
+    )
+    assert sq_spec and sq_spec.loader
+    sq_mod = importlib.util.module_from_spec(sq_spec)
+    sys.modules["dazzle.mcp.server.handlers.spec_questions"] = sq_mod
+    handlers_pkg.spec_questions = sq_mod
+    sq_spec.loader.exec_module(sq_mod)
+
+    module_path = handlers_dir / "spec_analyze.py"
     spec = importlib.util.spec_from_file_location(
         "dazzle.mcp.server.handlers.spec_analyze",
         module_path,

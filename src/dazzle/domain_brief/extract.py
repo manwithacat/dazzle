@@ -733,6 +733,9 @@ def _is_noise_or_broken_question(text_q: str, brief: str) -> bool:
     # Double-s plurals from template adding ``s`` to an already-plural capture
     if re.search(r"\bmultiple\s+\w+ss\b", text_q, re.I):
         return True
+    # Wrong indefinite article before vowel-onset subjects (cycle 1375)
+    if re.search(r"\bcan\s+a\s+[aeiou]\w+\b", text_q, re.I):
+        return True
     # Short "multiple <token>" + nearby determiners (legacy broken generator)
     if re.search(r"\bmultiple\s+\w{1,4}s?\b", text_q, re.I) and re.search(
         r"\b(the|to|create|review|admin)\b", text_q, re.I

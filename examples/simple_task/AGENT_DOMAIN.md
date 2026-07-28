@@ -45,7 +45,6 @@
 - `q1`: Can a task have multiple teams, or just one?
 - `q2`: Can a task have multiple assignments, or just one?
 - `q3`: Can a task have multiple tracks, or just one?
-- `q6`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -198,11 +197,6 @@
     {
       "id": "q3",
       "text": "Can a task have multiple tracks, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q6",
-      "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }
   ],

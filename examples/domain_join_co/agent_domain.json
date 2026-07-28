@@ -124,12 +124,7 @@
   "open_questions": [
     {
       "id": "q2",
-      "text": "Can a admin have multiple members, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q4",
-      "text": "Can both parties leave reviews, or just one side?",
+      "text": "Can an admin have multiple members, or just one?",
       "blocks_promote": false
     }
   ],

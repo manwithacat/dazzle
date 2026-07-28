@@ -248,7 +248,7 @@
   "open_questions": [
     {
       "id": "q4",
-      "text": "Can a invoice have multiple payments, or just one?",
+      "text": "Can an invoice have multiple payments, or just one?",
       "blocks_promote": false
     },
     {

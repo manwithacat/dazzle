@@ -71,7 +71,6 @@
 ## Open questions
 
 - `q1`: Can a customer have multiple teams, or just one?
-- `q3`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -403,11 +402,6 @@
     {
       "id": "q1",
       "text": "Can a customer have multiple teams, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q3",
-      "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }
   ],
