@@ -49,11 +49,13 @@ def test_surface_modules_exist_and_are_gate_marked() -> None:
     modules = _surface_tests_from_script()
     assert modules, "SURFACE_TESTS must not be empty"
     for rel in modules:
-        path = REPO / rel
+        # Allow pytest nodeids (path::test) — same split as preflight_surface._check_paths_exist
+        file_rel = rel.split("::", 1)[0]
+        path = REPO / file_rel
         assert path.is_file(), f"missing surface test module: {rel}"
         text = path.read_text(encoding="utf-8")
         assert "pytest.mark.gate" in text or "mark.gate" in text, (
-            f"{rel} must carry pytest.mark.gate so preflight-surface stays in the gate suite"
+            f"{file_rel} must carry pytest.mark.gate so preflight-surface stays in the gate suite"
         )
 
 

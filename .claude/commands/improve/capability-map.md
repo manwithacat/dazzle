@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1413 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1413 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1414 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1414 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -120,6 +120,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1414 (2026-07-28).** **cimonitor** — main red tip f0d8e4d2d (run 30385462303): `test_preflight_surface::test_surface_modules_exist_and_are_gate_marked` treated nodeid `path::test` as a filesystem path after 1413 promote. Strip `::` like preflight_surface._check_paths_exist. HM standalone already green (d4fa19fe) after 1413 gallery rebuild sync. CodeQL+inbox **USED@1414**. budget 0. Explore **57/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
 > **Cycle 1413 (2026-07-28).** **cimonitor** — main red tip 34960090a (run 30384328511): (1) `test_package_references_confined_to_sanctioned_seams` — cycle 1411 ship_surface REMEDIATION named `packages/hatchi-maxchi` without SANCTIONED; (2) HM gallery stale — cycle 1412 timeline site hand-form diverged from `build_site.py`. Fixed: SANCTIONED ship_surface; rebuild timeline site; promote boundary seam nodeid into preflight-surface (nodeid path check). CodeQL+inbox **USED@1413**. budget 0. Explore **57/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
