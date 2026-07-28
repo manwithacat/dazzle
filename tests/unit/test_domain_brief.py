@@ -57,6 +57,26 @@ Admin and Manager and Member roles share the work.
     assert not any(q.id == "q_owner" and q.blocks_promote for q in d.open_questions)
 
 
+def test_extract_owner_hint_from_self_scope_prose() -> None:
+    """HR-style self-scope prose must bind desks via ``person`` — not leave q_owner open.
+
+    Regression: hr_records SPEC says "self only / own employment / direct reports"
+    with no owner/assignee token; promote was blocked on q_owner (cycle 1367).
+    """
+    brief = """
+# HR Records
+
+A personnel system for staff. Line Manager sees direct reports.
+Employee scope: Read self only — own employment history and own salary history.
+Admin and Manager and Finance and Employee roles use the system.
+"""
+    d = extract_from_text(brief, source_path="inline")
+    assert any(desk.owner_field_hint == "person" for desk in d.desks), (
+        f"expected person owner_field_hint on desks, got {[d.owner_field_hint for d in d.desks]}"
+    )
+    assert not any(q.id == "q_owner" and q.blocks_promote for q in d.open_questions)
+
+
 def test_extract_prefers_core_entity_headers() -> None:
     brief = """
 # App

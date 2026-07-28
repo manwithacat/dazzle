@@ -94,6 +94,10 @@ def _default_owner_from_brief(text: str) -> str | None:
     field name. Matching only bare ``owner`` / ``assigned_to`` tokens left
     desks without ``owner_field_hint`` and blocked promote with ``q_owner``
     (project_tracker cycle 1366).
+
+    HR / personnel briefs often use self-scope language ("self only",
+    "own employment history", ``current_user.person``) with no owner/assignee
+    field — those bind desks via a ``person`` ref (hr_records cycle 1367).
     """
     for h in _OWNER_HINTS:
         if re.search(rf"\b{re.escape(h)}\b", text, re.I):
@@ -107,6 +111,18 @@ def _default_owner_from_brief(text: str) -> str | None:
         return "created_by"
     if re.search(r"\bsubmitted\s+by\b|\brequesters?\b", text, re.I):
         return "requester"
+    # Self-scope / person-record binds (personnel, career, self-service).
+    if re.search(
+        r"\bself\s+only\b"
+        r"|\bread\s+self\b"
+        r"|\bown\s+(employment|record|history|salary|profile|data|compensation)\b"
+        r"|\bcurrent_user(?:\.person)?\b"
+        r"|\btheir\s+own\b"
+        r"|\bdirect\s+reports?\b",
+        text,
+        re.I,
+    ):
+        return "person"
     return None
 
 

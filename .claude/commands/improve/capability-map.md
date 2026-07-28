@@ -47,9 +47,9 @@ apply map patches with `{"apply":true}`.
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1366 | USED |
-| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1366 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1366 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1368 | USED |
+| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1368 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1368 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1367 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
@@ -123,6 +123,8 @@ apply map patches with `{"apply":true}`.
 
 > **Cycle 1363 (2026-07-28).** **framework-ux** Avatar default completion — `{key}_display` no longer skips chips; workspace_columns `ref_entity`; region `_render_typed_value` person chips + link; detail field keeps FK dict + ref_entity. densify_allowed=0 residual=0. Stamped hyperpart-opportunities **USED@1363**. budget 1. Explore **22/100**.
 > **Cycle 1361 (2026-07-28).** **framework-ux** quality dig — restore `dazzle qa hyperpart-opportunities` (CLI + scan) + Avatar default emit for person refs (`user_chip` → `_data_row` ref cells) + HM CSS `dz-user-chip`/`data-dz-hue`. Closed map debt "CLI absent on main". simple_task 5/0 + project_tracker 7/0 auto_seed. densify_allowed=0 residual=0. Stamped hyperpart-opportunities + agent_qa_smoke **USED@1361**. budget 1. Explore **21/100**.
+> **Cycle 1368 (2026-07-28).** **example-apps COGNITION** domain self-scope owner-hint — HR prose (`self only` / `own employment` / `direct reports` / `current_user.person`) → desk `owner_field_hint=person`; hr_records ready_to_promote False→True + AGENT_DOMAIN artifacts. CI green on 1366; 1367 in_progress. budget 1. Explore **27/100**.
+
 > **Cycle 1367 (2026-07-28).** **example-apps COGNITION** demo reset-and-load — clear auth sessions/password_reset/user_preferences before users (FK); live simple_task chip links verified (9× dz-user-chip-link). CI green on 1366. budget 1. Explore **26/100**.
 
 > **Cycle 1366 (2026-07-28).** **example-apps COGNITION** domain extract owner-hint fix — `owned by`/`assigned to` prose → desk `owner_field_hint`; project_tracker ready_to_promote False→True; re-extract + domain artifacts. CI green on 1365. budget 1. Explore **25/100**.
