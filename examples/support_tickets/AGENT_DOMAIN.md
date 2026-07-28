@@ -19,6 +19,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
 
 ## Nouns (domain types)
 
+- **SLAWaiver** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **SupportTicket** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Comment** (grounded) owner≈`assigned_to` lifecycle: — — appears in founder brief (source=comma_list)
 
@@ -98,6 +99,13 @@ Support Tickets is a customer-support system that tracks customer issues from fi
     }
   ],
   "nouns": [
+    {
+      "name": "SLAWaiver",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "assigned_to"
+    },
     {
       "name": "SupportTicket",
       "status": "grounded",

@@ -106,6 +106,23 @@ def type_evidence_capitalized(cap: str, text: str) -> bool:
     return False
 
 
+def split_camel_tokens(name: str) -> list[str]:
+    """Split CamelCase including leading acronyms.
+
+    ``SupportTicket`` → ``Support``, ``Ticket`` (lower→Upper).
+    ``SLAWaiver`` → ``SLA``, ``Waiver`` (ACRONYM + Capitalized — cycle 1385).
+    Plain words and spaced labels pass through.
+    """
+    if not name:
+        return []
+    if " " in name:
+        return name.split()
+    # ACRONYMRest → ACRONYM Rest, then lowerUpper → lower Upper
+    spaced = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", name)
+    spaced = re.sub(r"([a-z\d])([A-Z])", r"\1 \2", spaced)
+    return spaced.split()
+
+
 def canonical_case(name: str, text: str) -> str:
     """Recover brief casing when offline discover emits lowercased types.
 

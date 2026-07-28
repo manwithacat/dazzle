@@ -22,6 +22,9 @@ from dazzle.domain_brief.noun_signals import (
 from dazzle.domain_brief.noun_signals import (
     canonical_case as _canonical_case_impl,
 )
+from dazzle.domain_brief.noun_signals import (
+    split_camel_tokens as _split_camel_tokens,
+)
 
 _STABLE_ALIASES: dict[str, str] = {
     "employee": "employee",
@@ -450,19 +453,24 @@ _ENTITY_HEADER_RE = re.compile(
 # "A Brand is …" / "An Invoice is …" / "A Design Asset is …" / "A Task has …"
 # Optional markdown bold (**Support Ticket**) and definitional verbs
 # (cycle 1379 — support_tickets SPECIFICATION uses bold + tracks;
-#  cycle 1383 — project_tracker "A Task moves from backlog…").
-# Use [ \t] (not \\s) between tokens so multiword never fuses across newlines
-# (Task\\nComment / Engagement\\nLetter regression).
+#  cycle 1383 — project_tracker "A Task moves from backlog…";
+#  cycle 1385 — soft-wrap before verb: An **SLA Waiver**\nis a signed…).
+# Use [ \t] (not \\s) *inside* multiword labels so types never fuse across
+# newlines (Task\\nComment / Engagement\\nLetter regression). Between the
+# noun (and optional closing bold) and the verb, allow same-line spaces OR a
+# single soft-wrapped newline + indent — real founder briefs wrap there.
 _DEF_VERBS = r"(?:is|also|has|tracks|moves|belongs|travels|records|organises|organizes)"
+_DEF_GAP = r"(?:[ \t]+|\n[ \t]*)"  # same-line space(s) or one soft-wrap line
 # Brace-escape quantifiers in rf-strings so {0,2} is not an f-expression.
 _DEFINITION_NOUN_RE = re.compile(
-    rf"\b(?:A|An)[ \t]+\*{{0,2}}([A-Z][A-Za-z0-9]+(?:[ \t]+[A-Z][A-Za-z0-9]+)?)\*{{0,2}}[ \t]+"
-    rf"{_DEF_VERBS}\b"
+    rf"\b(?:A|An)[ \t]+\*{{0,2}}([A-Z][A-Za-z0-9]+(?:[ \t]+[A-Z][A-Za-z0-9]+)?)\*{{0,2}}"
+    rf"{_DEF_GAP}{_DEF_VERBS}\b"
 )
 # Multi-word without leading article: "Design Feedback is always tied…"
 # (must not capture "An Invoice" / "Acme Billing" product titles — filtered below)
 _MULTIWORD_DEF_RE = re.compile(
-    rf"\b\*{{0,2}}([A-Z][A-Za-z0-9]+[ \t]+[A-Z][A-Za-z0-9]+)\*{{0,2}}[ \t]+{_DEF_VERBS}\b"
+    rf"\b\*{{0,2}}([A-Z][A-Za-z0-9]+[ \t]+[A-Z][A-Za-z0-9]+)\*{{0,2}}"
+    rf"{_DEF_GAP}{_DEF_VERBS}\b"
 )
 # Broken generate_questions output ("multiple thes", "assetss", "managess",
 # "multiple theirs/wheres", "Can a operate have…") — domain_join_co cycle 1370.
@@ -613,15 +621,18 @@ def _try_add_header_noun(
         or _is_every_fused_prose(candidate)
     ):
         return
-    spaced = re.sub(r"([a-z])([A-Z])", r"\1 \2", candidate)
-    if not _grounded_in_brief(candidate, text) and not any(
-        _grounded_in_brief(tok, text) for tok in spaced.split()
-    ):
-        # multi-word definition: ground on full phrase tokens
-        if " " in name and all(_grounded_in_brief(tok, text) for tok in name.split()):
-            pass
-        else:
-            return
+    # Ground on compact, spaced phrase, or CamelCase tokens (SLAWaiver →
+    # "SLA"+"Waiver" — cycle 1385; SupportTicket → Support+Ticket).
+    tokens = _split_camel_tokens(candidate)
+    spaced_phrase = " ".join(tokens)
+    grounded = (
+        _grounded_in_brief(candidate, text)
+        or (spaced_phrase != candidate and _grounded_in_brief(spaced_phrase, text))
+        or any(_grounded_in_brief(tok, text) for tok in tokens)
+        or (" " in name and all(_grounded_in_brief(tok, text) for tok in name.split()))
+    )
+    if not grounded:
+        return
     seen.add(candidate)
     nouns.append(
         DomainNoun(
@@ -753,6 +764,36 @@ def _extract_nouns(
     return nouns, rejected
 
 
+def _primary_spine_noun(nouns: list[DomainNoun], text: str) -> DomainNoun | None:
+    """Core product type for demo spine — not alphabetical first (cycle 1385).
+
+    Recovering satellite types (``SLAWaiver``) must not steal desk seed hints
+    from the high-frequency core (``SupportTicket`` / ``Project`` / …).
+    Prefer definitional / header evidence, then mention count of compact +
+    spaced forms (so discover-only ``Comment`` does not beat ``SupportTicket``).
+    """
+    if not nouns:
+        return None
+
+    def _hits(name: str) -> int:
+        n = len(re.findall(rf"\b{re.escape(name)}\b", text, re.I))
+        spaced = " ".join(_split_camel_tokens(name))
+        if spaced != name:
+            n += len(re.findall(rf"\b{re.escape(spaced)}\b", text, re.I))
+        return n
+
+    def _score(n: DomainNoun) -> tuple[int, int, int]:
+        ev = (n.evidence or "").lower()
+        signal = 0
+        if "definitional" in ev:
+            signal += 1000
+        if "header" in ev or "entity section" in ev:
+            signal += 500
+        return (signal, _hits(n.name), len(n.name))
+
+    return max(nouns, key=_score)
+
+
 def _build_personas_desks_spine(
     text: str,
     personas_raw: dict[str, Any],
@@ -766,6 +807,7 @@ def _build_personas_desks_spine(
     if not default_owner:
         # Brief-level bind even when no noun carried a hint (cycle 1366).
         default_owner = _default_owner_from_brief(text)
+    primary = _primary_spine_noun(nouns, text)
 
     def add(label: str, *, job: str = "", evidence: str = "") -> None:
         if not label or not _grounded_in_brief(label, text):
@@ -795,13 +837,13 @@ def _build_personas_desks_spine(
                 status="hypothesis",
             )
         )
-        if nouns:
+        if primary is not None:
             spine.append(
                 DemoSpineRow(
                     persona=pid,
-                    story=f"{label} has seeded {nouns[0].name} rows for their desk",
+                    story=f"{label} has seeded {primary.name} rows for their desk",
                     min_rows=1,
-                    entity_hint=nouns[0].name,
+                    entity_hint=primary.name,
                 )
             )
 

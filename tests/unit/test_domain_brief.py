@@ -722,6 +722,48 @@ def test_find_founder_brief_prefers_definition_rich_specification(tmp_path) -> N
     assert picked.name == "SPECIFICATION.md"
 
 
+def test_extract_definitional_soft_wrap_sla_waiver() -> None:
+    """Markdown soft-wrap before the definitional verb still grounds multiword types.
+
+    Cycle 1385: support_tickets SPECIFICATION wraps ``An **SLA Waiver**`` onto
+    the next line before ``is a signed…``. Same-line-only ``[ \\t]+`` never
+    matched, so SLAWaiver was lost while bare ``Waiver`` stayed deny-list chrome.
+    Multiword labels still refuse internal newlines (Task\\nComment safety).
+    """
+    brief = """
+# Support Tickets
+
+The system manages four kinds of things. A **User** is an authenticated
+person. A **Support Ticket** tracks a customer issue through resolution.
+A **Comment** is threaded communication on a ticket. An **SLA Waiver**
+is a signed acknowledgement of a response-time breach and its waiver terms,
+tied to the ticket it concerns.
+
+Click Edit Delete View. Everyone uses Slack.
+"""
+    d = extract_from_text(brief, source_path="SPECIFICATION.md")
+    names = {n.name for n in d.nouns}
+    assert "SLAWaiver" in names, names
+    assert "SupportTicket" in names, names
+    assert "Comment" in names, names
+    assert "Waiver" not in names
+    # Internal newline must not fuse two types into one multiword token
+    fused = """
+# Fusion guard
+
+A Task
+Comment is attached. An Engagement
+Letter is noise.
+"""
+    fused_names = {n.name for n in extract_from_text(fused, source_path="inline").nouns}
+    assert "TaskComment" not in fused_names
+    assert "EngagementLetter" not in fused_names
+    # Demo spine stays on the high-frequency core type, not alphabetical SLAWaiver
+    assert all(row.entity_hint == "SupportTicket" for row in d.demo_spine), [
+        (row.persona, row.entity_hint) for row in d.demo_spine
+    ]
+
+
 def test_topic_questions_invoice_settlement_not_booking_marketplace() -> None:
     """Invoice/AP SPECs must not get marketplace booking payment probes.
 
