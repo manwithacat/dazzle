@@ -10,6 +10,13 @@ This script queries the public Actions API for the standalone ``CI``
 workflow on ``main`` and exits non-zero when the latest relevant run is
 not successful — so Dazzle CI can fail transitively.
 
+**Fast-fail (2026-07-28):** while a run is still ``in_progress``, poll the
+run's *jobs*. If any job has already concluded ``failure`` / ``timed_out`` /
+``cancelled``, exit red immediately — do not wait for sibling jobs (or
+fail-fast cancel propagation) to finish the run. That is what made
+"Wait for hatchi-maxchi CI" look stalled when Visual was red but Behaviour
+kept running for another 10+ minutes.
+
 Usage (from monorepo root)::
 
     python scripts/hm_standalone_ci_status.py
@@ -34,6 +41,9 @@ from typing import Any
 REPO = "manwithacat/hatchi-maxchi"
 WORKFLOW = "ci.yml"  # path under .github/workflows
 API = f"https://api.github.com/repos/{REPO}/actions/workflows/{WORKFLOW}/runs"
+# Job conclusions that mean the tip is already red (run may still be
+# "in_progress" while siblings wind down or fail-fast cancels them).
+_EARLY_FAIL_CONCLUSIONS = frozenset({"failure", "timed_out", "cancelled"})
 
 
 def _headers() -> dict[str, str]:
@@ -97,6 +107,20 @@ def format_run(run: dict[str, Any]) -> str:
     )
 
 
+def first_failed_job(run_id: int | str) -> dict[str, Any] | None:
+    """Return the first job on *run_id* that has already failed (if any).
+
+    Used for early-exit while the workflow run is still ``in_progress``.
+    """
+    url = f"https://api.github.com/repos/{REPO}/actions/runs/{run_id}/jobs?per_page=50"
+    data = _get(url)
+    for job in data.get("jobs") or []:
+        conclusion = job.get("conclusion")
+        if conclusion in _EARLY_FAIL_CONCLUSIONS:
+            return job
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
@@ -133,6 +157,14 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "select the newest *completed* main run (skip in-flight tips). "
             "Default for Dazzle CI mirror so concurrent HM syncs do not flake."
+        ),
+    )
+    p.add_argument(
+        "--no-early-fail",
+        action="store_true",
+        help=(
+            "disable fast-fail on individual job failure while the run is still "
+            "in_progress (wait for full run conclusion only)"
         ),
     )
     args = p.parse_args(argv)
@@ -178,7 +210,25 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {run.get('html_url')}", file=sys.stderr)
             return 1
 
-        # queued / in_progress / waiting
+        # queued / in_progress / waiting — fast-fail if any job already red
+        if not args.no_early_fail and status in ("in_progress", "queued", "waiting"):
+            run_id = run.get("id")
+            if run_id is not None:
+                try:
+                    bad = first_failed_job(run_id)
+                except RuntimeError as e:
+                    print(f"warn: job poll failed ({e}); continuing", flush=True)
+                    bad = None
+                if bad is not None:
+                    print(
+                        f"FAIL: hatchi-maxchi CI job already red "
+                        f"(job={bad.get('name')!r} conclusion={bad.get('conclusion')!r}) "
+                        f"— early exit, not waiting for siblings",
+                        file=sys.stderr,
+                    )
+                    print(f"  {run.get('html_url')}", file=sys.stderr)
+                    return 1
+
         if args.wait and time.monotonic() < deadline:
             print(f"waiting for completion ({status})…", flush=True)
             time.sleep(max(5, args.poll))
