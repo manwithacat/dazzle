@@ -202,18 +202,22 @@ def _should_suppress_mutations(
     return False
 
 
-def _user_can_mutate(
+def _entity_can_mutate(
     deps: "_PageRouterConfig",
-    surface_name: str | None,
+    entity_name: str | None,
     operation: str,
     auth_ctx: Any,
 ) -> bool:
-    """Check if user can perform a mutation (create/update/delete) on the entity."""
-    if not surface_name or not deps.entity_cedar_specs or auth_ctx is None:
+    """Check if user can create/update/delete on an entity by name.
+
+    Related-tab "+ New X" CTAs know the *related* entity, not the parent
+    surface — so chrome gates must evaluate Cedar on ``entity_name``
+    directly (cycle 1394). Surface-keyed callers use ``_user_can_mutate``.
+    """
+    if not entity_name or not deps.entity_cedar_specs or auth_ctx is None:
         return True  # No access control configured
 
-    _entity_name = deps.surface_entity.get(surface_name)
-    _cedar_spec = deps.entity_cedar_specs.get(_entity_name) if _entity_name else None
+    _cedar_spec = deps.entity_cedar_specs.get(entity_name)
     if _cedar_spec is None:
         return True  # No access rules for this entity
 
@@ -247,9 +251,48 @@ def _user_can_mutate(
         _op,
         None,
         _runtime_ctx,
-        entity_name=_entity_name or "",
+        entity_name=entity_name or "",
     )
     return bool(_decision.allowed)
+
+
+def _user_can_mutate(
+    deps: "_PageRouterConfig",
+    surface_name: str | None,
+    operation: str,
+    auth_ctx: Any,
+) -> bool:
+    """Check if user can perform a mutation (create/update/delete) on the entity."""
+    if not surface_name or not deps.entity_cedar_specs or auth_ctx is None:
+        return True  # No access control configured
+
+    return _entity_can_mutate(deps, deps.surface_entity.get(surface_name), operation, auth_ctx)
+
+
+def _gate_related_tab_create_urls(
+    req_detail: Any,
+    deps: "_PageRouterConfig",
+    surface_name: str | None,
+    auth_ctx: Any,
+    user_roles: list[str] | None,
+) -> None:
+    """Clear related-tab create CTAs when CREATE is denied (or workspace read_only).
+
+    Compile-time always stamps ``RelatedTabContext.create_url`` for reverse-ref
+    entities. List pages already suppress ``table.create_url`` (#582) and create
+    forms gate Cedar CREATE (#581); detail related tabs still painted "+ New X"
+    for read-only personas until the create form 403'd. Parity with the 1390–
+    1393 mutation-chrome series (cycle 1394).
+    """
+    if user_roles is None or not getattr(req_detail, "related_groups", None):
+        return
+    suppress_all = _should_suppress_mutations(deps, surface_name, auth_ctx, user_roles)
+    for group in req_detail.related_groups:
+        for tab in group.tabs:
+            if not tab.create_url:
+                continue
+            if suppress_all or not _entity_can_mutate(deps, tab.entity_name, "create", auth_ctx):
+                tab.create_url = None
 
 
 def _suppress_inaccessible_cta(step: Any, prc: "_PageRequestContext", appspec: Any) -> Any:
@@ -1444,6 +1487,18 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
                 prc.deps, prc.surface_name, "delete", prc.auth_ctx
             ):
                 req_detail.delete_url = None
+
+    # Related-tab "+ New X" is CREATE on the *related* entity (not parent
+    # UPDATE). Compile-time always stamps create_url; request-time must clear
+    # when denied — same class of leak as list create_url (#582) / edit form
+    # deep-link (cycle 1393).
+    _gate_related_tab_create_urls(
+        req_detail,
+        prc.deps,
+        prc.surface_name,
+        prc.auth_ctx,
+        prc.ctx.user_roles,
+    )
 
     # Substitute {id} in the per-request copy only
     if req_detail.edit_url:

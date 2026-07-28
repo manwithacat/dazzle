@@ -240,6 +240,148 @@ class TestEditFormPermissionCheck:
 
 
 # ---------------------------------------------------------------------------
+# Cycle 1394 — Related-tab create CTA uses CREATE on related entity
+# ---------------------------------------------------------------------------
+class TestRelatedTabCreatePermission:
+    """Detail related-tab "+ New X" must clear create_url when CREATE denied.
+
+    Parity with list create_url (#582), create-form page gate (#581), and the
+    1390–1393 mutation-chrome series. Compile-time always stamps create_url.
+    """
+
+    def _contact_create_cedar(self) -> Any:
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        return EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.CREATE,
+                    personas=["admin"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.READ,
+                    personas=["admin", "viewer"],
+                ),
+            ],
+        )
+
+    def _detail_with_related_create(self, create_url: str = "/contacts/create") -> Any:
+        from dazzle.render.context import (
+            DetailContext,
+            RelatedGroupContext,
+            RelatedTabContext,
+        )
+
+        tab = RelatedTabContext(
+            tab_id="tab-contacts",
+            label="Contacts",
+            entity_name="Contact",
+            api_endpoint="/contacts",
+            filter_field="company",
+            columns=[],
+            create_url=create_url,
+        )
+        return DetailContext(
+            entity_name="Company",
+            title="Company",
+            fields=[],
+            related_groups=[
+                RelatedGroupContext(
+                    group_id="group-people",
+                    label="People",
+                    display="table",
+                    tabs=[tab],
+                )
+            ],
+        )
+
+    def test_entity_can_mutate_create_deny_viewer(self) -> None:
+        from dazzle.http.runtime.page_routes import _entity_can_mutate
+
+        deps = _make_deps(
+            _make_appspec(),
+            entity_cedar_specs={"Contact": self._contact_create_cedar()},
+        )
+        assert not _entity_can_mutate(deps, "Contact", "create", _make_auth_ctx(["role_viewer"]))
+        assert _entity_can_mutate(deps, "Contact", "create", _make_auth_ctx(["role_admin"]))
+
+    def test_related_create_cleared_when_create_denied(self) -> None:
+        from dazzle.http.runtime.page_routes import _gate_related_tab_create_urls
+
+        deps = _make_deps(
+            _make_appspec(),
+            entity_cedar_specs={"Contact": self._contact_create_cedar()},
+            surface_entity={"company_view": "Company"},
+            surface_mode={"company_view": "view"},
+        )
+        detail = self._detail_with_related_create()
+        _gate_related_tab_create_urls(
+            detail,
+            deps,
+            "company_view",
+            _make_auth_ctx(["role_viewer"]),
+            ["role_viewer"],
+        )
+        assert detail.related_groups[0].tabs[0].create_url is None
+
+    def test_related_create_kept_when_create_allowed(self) -> None:
+        from dazzle.http.runtime.page_routes import _gate_related_tab_create_urls
+
+        deps = _make_deps(
+            _make_appspec(),
+            entity_cedar_specs={"Contact": self._contact_create_cedar()},
+            surface_entity={"company_view": "Company"},
+            surface_mode={"company_view": "view"},
+        )
+        detail = self._detail_with_related_create()
+        _gate_related_tab_create_urls(
+            detail,
+            deps,
+            "company_view",
+            _make_auth_ctx(["role_admin"]),
+            ["role_admin"],
+        )
+        assert detail.related_groups[0].tabs[0].create_url == "/contacts/create"
+
+    def test_workspace_read_only_clears_related_create(self) -> None:
+        from dazzle.http.runtime.page_routes import _gate_related_tab_create_urls
+
+        appspec = _make_appspec(
+            workspaces=[
+                ir.WorkspaceSpec(
+                    name="ws",
+                    title="WS",
+                    regions=[],
+                    ux=ir.UXSpec(
+                        persona_variants=[ir.PersonaVariant(persona="viewer", read_only=True)]
+                    ),
+                )
+            ],
+        )
+        # No CREATE rules → entity_can_mutate would allow; read_only wins.
+        deps = _make_deps(
+            appspec,
+            surface_workspace={"company_view": "ws"},
+            surface_entity={"company_view": "Company"},
+            surface_mode={"company_view": "view"},
+        )
+        detail = self._detail_with_related_create()
+        _gate_related_tab_create_urls(
+            detail,
+            deps,
+            "company_view",
+            _make_auth_ctx(["role_viewer"]),
+            ["role_viewer"],
+        )
+        assert detail.related_groups[0].tabs[0].create_url is None
+
+
+# ---------------------------------------------------------------------------
 # #583 — Sidebar nav filtering by entity access
 # ---------------------------------------------------------------------------
 class TestNavEntityFiltering:
