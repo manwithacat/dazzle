@@ -379,6 +379,8 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
         if normalised in persona_read_only:
             req_table.create_url = None
             req_table.bulk_actions = False
+            req_table.bulk_action_names = []
+            req_table.bulk_include_delete = False
             req_table.inline_editable = []
             matched = True
 
@@ -1539,20 +1541,28 @@ async def _handle_table(prc: _PageRequestContext) -> None:
         ) or not _user_can_mutate(prc.deps, prc.surface_name, "create", prc.auth_ctx):
             req_table.create_url = None
 
-    # Suppress the bulk-action-bar "Delete X items" affordance when the
-    # current persona cannot delete this entity. Closes EX-040 (cycle
-    # 223 observation: bulk-action bar shown to fieldtest_hub/tester
-    # on 4 entity lists despite delete being engineer-only per DSL).
-    # Compile-time bulk_actions is derived from surface `ux.bulk_actions`
-    # (#1593); we still resolve per-persona here so delete-gated roles
-    # lose the chrome. ``_user_can_mutate`` correctly distinguishes
-    # "no rules / field-conditioned rules" (allow -- record-level) from
-    # "role-gate denies mutation" (suppress).
+    # Bulk chrome: checkboxes + toolbar. Built-in Delete needs DELETE;
+    # DSL field-transition actions need UPDATE. Suppress the whole bar
+    # only when the persona can do neither (or workspace is read_only).
+    # Pre-cycle-1391 gated solely on delete, which hid mark_sensitive /
+    # mark_public (acme invoices) from update-capable roles that lack
+    # delete — EX-040 was right for pure-delete lists but over-reached.
+    # Compile-time bulk_actions comes from surface `ux.bulk_actions`
+    # (#1593). ``_user_can_mutate`` distinguishes pure role deny from
+    # field-conditioned / no-rules (allow chrome; write path still enforces).
     if prc.ctx.user_roles is not None and req_table.bulk_actions:
-        if _should_suppress_mutations(
-            prc.deps, prc.surface_name, prc.auth_ctx, prc.ctx.user_roles
-        ) or not _user_can_mutate(prc.deps, prc.surface_name, "delete", prc.auth_ctx):
+        if _should_suppress_mutations(prc.deps, prc.surface_name, prc.auth_ctx, prc.ctx.user_roles):
             req_table.bulk_actions = False
+            req_table.bulk_include_delete = False
+        else:
+            _can_del = _user_can_mutate(prc.deps, prc.surface_name, "delete", prc.auth_ctx)
+            _can_upd = _user_can_mutate(prc.deps, prc.surface_name, "update", prc.auth_ctx)
+            req_table.bulk_include_delete = bool(_can_del)
+            if not _can_del and not _can_upd:
+                req_table.bulk_actions = False
+            elif not _can_upd:
+                # Keep bar for built-in delete only — drop named transitions.
+                req_table.bulk_action_names = []
 
     # Apply per-persona PersonaVariant overrides to the per-request
     # table copy. Extracted to a helper in cycle 243 so the resolver

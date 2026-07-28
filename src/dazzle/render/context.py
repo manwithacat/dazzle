@@ -116,6 +116,14 @@ class TableContext(BaseModel):
     page: int = 1
     page_size: int = 20
     bulk_actions: bool = False
+    # Ordered DSL bulk action names from `ux: bulk_actions:` (field
+    # transitions). Empty when the surface only enables bulk for the
+    # built-in delete flow, or when bulk is off.
+    bulk_action_names: list[str] = Field(default_factory=list)
+    # When False, BulkActionToolbar omits the built-in Delete button
+    # (principal cannot DELETE / workspace read_only). Named transitions
+    # may still show when UPDATE is allowed.
+    bulk_include_delete: bool = True
     inline_editable: list[str] = Field(default_factory=list)
     slide_over: bool = False
     sort_field: str = ""

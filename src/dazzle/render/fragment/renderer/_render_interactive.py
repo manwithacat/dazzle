@@ -222,29 +222,54 @@ class _RenderInteractiveMixin:
         """Render the bulk toolbar on the HM grid controller's seams
         (convergence C1.1) — see the primitive's docstring for the contract."""
         endpoint = ctx.escape_attr(b.endpoint)
-        return (
-            '<div class="dz-bulk-actions">'
+        parts: list[str] = [
+            '<div class="dz-bulk-actions">',
             '<button type="button" class="dz-bulk-matching" data-dz-grid-select-all-matching '
             'title="Select every row that matches the current search and filters '
             '(including other pages) — not only the rows on this page" '
             'aria-label="Select all results matching current search and filters">'
-            "Select all <span data-dz-grid-matching-total>…</span> results</button>"
-            '<button type="button" class="dz-bulk-delete" '
-            'data-dz-grid-bulk-action="delete" data-dz-grid-bulk-refresh '
+            "Select all <span data-dz-grid-matching-total>…</span> results</button>",
+        ]
+        # DSL field-transition actions first (mark_sensitive, accept, …).
+        for raw_name, raw_label in b.actions:
+            name = (raw_name or "").strip()
+            if not name or name == "delete":
+                # delete is the built-in destructive button below
+                continue
+            name_attr = ctx.escape_attr(name)
+            label = (raw_label or "").strip() or name.replace("_", " ").title()
+            label_esc = ctx.escape(label)
+            confirm = ctx.escape_attr(f"Apply “{label}” to the selected items?")
+            parts.append(
+                f'<button type="button" class="dz-bulk-action" '
+                f'data-dz-grid-bulk-action="{name_attr}" data-dz-grid-bulk-refresh '
+                f'hx-swap="none" hx-post="{endpoint}/bulk" '
+                f'hx-confirm="{confirm}">'
+                f"<span>{label_esc} "
+                f"<span data-dz-bulk-count-target>0</span></span>"
+                f"</button>"
+            )
+        if b.include_delete:
             # hx-swap=none: the two-request pattern swaps NOTHING on the POST
             # (without it htmx-4 swaps the JSON response into the button).
-            'hx-swap="none" '
-            f'hx-post="{endpoint}/bulk" '
-            'hx-confirm="Delete the selected items? This cannot be undone.">'
-            f"{_BULK_DELETE_SVG}"
-            "<span>Delete <span data-dz-bulk-count-target>0</span> "
-            'item<span class="dz-bulk-plural">s</span></span>'
-            "</button>"
+            parts.append(
+                '<button type="button" class="dz-bulk-delete" '
+                'data-dz-grid-bulk-action="delete" data-dz-grid-bulk-refresh '
+                'hx-swap="none" '
+                f'hx-post="{endpoint}/bulk" '
+                'hx-confirm="Delete the selected items? This cannot be undone.">'
+                f"{_BULK_DELETE_SVG}"
+                "<span>Delete <span data-dz-bulk-count-target>0</span> "
+                'item<span class="dz-bulk-plural">s</span></span>'
+                "</button>"
+            )
+        parts.append(
             '<button type="button" class="dz-bulk-clear" data-dz-grid-clear>'
             "Clear selection"
             "</button>"
             "</div>"
         )
+        return "".join(parts)
 
     def _emit_pagination(self, p: Pagination, ctx: RenderContext) -> str:
         """Render Pagination via HM dual-lock Pagination seam.

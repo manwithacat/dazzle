@@ -117,6 +117,75 @@ def test_bulk_action_toolbar_emits_trash_icon_svg() -> None:
     assert '<polyline points="3 6 5 6 21 6">' in html
 
 
+def test_bulk_action_toolbar_emits_named_dsl_actions() -> None:
+    """DSL bulk_actions names become toolbar buttons (not only Delete)."""
+    html = FragmentRenderer().render(
+        BulkActionToolbar(
+            endpoint="/api/invoices",
+            actions=(
+                ("mark_sensitive", "Mark Sensitive"),
+                ("mark_public", "Mark Public"),
+            ),
+        )
+    )
+    assert 'data-dz-grid-bulk-action="mark_sensitive"' in html
+    assert 'data-dz-grid-bulk-action="mark_public"' in html
+    assert "Mark Sensitive" in html
+    assert "Mark Public" in html
+    assert 'data-dz-grid-bulk-action="delete"' in html  # built-in still present
+
+
+def test_bulk_action_toolbar_can_omit_delete() -> None:
+    """When principal cannot DELETE, drop built-in trash but keep transitions."""
+    html = FragmentRenderer().render(
+        BulkActionToolbar(
+            endpoint="/api/invoices",
+            actions=(("mark_sensitive", "Mark Sensitive"),),
+            include_delete=False,
+        )
+    )
+    assert 'data-dz-grid-bulk-action="mark_sensitive"' in html
+    assert 'data-dz-grid-bulk-action="delete"' not in html
+    assert "dz-bulk-delete" not in html
+
+
+def test_dispatch_ctx_threads_bulk_action_names() -> None:
+    table = _table(
+        bulk_actions=True,
+        bulk_action_names=["mark_sensitive", "mark_public"],
+        bulk_include_delete=False,
+    )
+    ctx = _build_dispatch_ctx(_RC(table), object())
+    assert ctx["bulk_action_names"] == ["mark_sensitive", "mark_public"]
+    assert ctx["bulk_include_delete"] is False
+
+
+def test_list_adapter_emits_named_bulk_actions_in_shell() -> None:
+    """Full list shell surfaces mark_sensitive + built-in delete.
+
+    Adapter takes entity_ref from the surface (Contact in this suite's
+    fixture), so the bulk POST path is /api/contacts/bulk.
+    """
+    html = _render_list(
+        {
+            "title": "Contacts",
+            "entity_name": "Contact",
+            "entity_title": "Contact",
+            "columns": [{"key": "name", "label": "Name"}],
+            "endpoint": "/contacts",
+            "region_name": "contact_list",
+            "bulk_actions": True,
+            "bulk_action_names": ["mark_sensitive", "mark_public"],
+            "bulk_include_delete": True,
+            "page_size": 20,
+        }
+    )
+    assert 'data-dz-grid-bulk-action="mark_sensitive"' in html
+    assert 'data-dz-grid-bulk-action="mark_public"' in html
+    assert 'data-dz-grid-bulk-action="delete"' in html
+    assert 'hx-post="/api/contacts/bulk"' in html
+
+
 # ── Table primitive bulk_select ──
 
 

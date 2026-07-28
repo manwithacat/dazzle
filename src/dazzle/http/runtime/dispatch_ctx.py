@@ -80,6 +80,8 @@ def _dispatch_ctx_from_table(
         "sort_field": str(getattr(table, "sort_field", "") or ""),
         "sort_dir": str(getattr(table, "sort_dir", "asc") or "asc"),
         "bulk_actions": bool(getattr(table, "bulk_actions", False)),
+        "bulk_action_names": list(getattr(table, "bulk_action_names", None) or []),
+        "bulk_include_delete": bool(getattr(table, "bulk_include_delete", True)),
         "inline_editable": list(getattr(table, "inline_editable", []) or []),
         "refresh_interval": getattr(table, "refresh_interval", None),
         "pagination_mode": str(getattr(table, "pagination_mode", "pages") or "pages"),

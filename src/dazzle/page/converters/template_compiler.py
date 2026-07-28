@@ -1087,6 +1087,15 @@ def _compile_list_surface(
             # server.py entity_htmx_meta). Unconditional True left a lonely
             # header checkbox with zero row boxes.
             bulk_actions=bool(ux and getattr(ux, "bulk_actions", None)),
+            # Names for toolbar buttons (field transitions); delete is built-in.
+            bulk_action_names=[
+                str(a.name)
+                for a in (getattr(ux, "bulk_actions", None) or [])
+                if getattr(a, "name", None)
+            ]
+            if ux
+            else [],
+            bulk_include_delete=True,
         ),
     )
 

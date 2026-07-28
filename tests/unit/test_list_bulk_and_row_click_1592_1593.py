@@ -65,6 +65,9 @@ def test_compiler_bulk_actions_on_when_ux_declares() -> None:
     ctx = compile_surface_to_context(_list_surface(bulk=True), _task_entity())
     assert ctx.table is not None
     assert ctx.table.bulk_actions is True
+    # Named actions thread through for toolbar buttons (cycle 1391).
+    assert ctx.table.bulk_action_names == ["delete"]
+    assert ctx.table.bulk_include_delete is True
 
 
 def test_row_plain_cell_does_not_stop_propagation() -> None:

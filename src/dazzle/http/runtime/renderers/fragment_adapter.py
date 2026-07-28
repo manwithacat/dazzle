@@ -189,6 +189,10 @@ class FragmentSurfaceAdapter:
         search_fields = list(ctx.get("search_fields", []) or [])
         filter_values = dict(ctx.get("filter_values", {}) or {})
         bulk_actions = bool(ctx.get("bulk_actions", False))
+        bulk_action_names = tuple(
+            str(n).strip() for n in (ctx.get("bulk_action_names") or []) if str(n).strip()
+        )
+        bulk_include_delete = bool(ctx.get("bulk_include_delete", True))
         inline_editable = tuple(ctx.get("inline_editable", []) or ())
         sort_field = str(ctx.get("sort_field", "") or "")
         sort_dir = "desc" if str(ctx.get("sort_dir", "asc") or "asc").lower() == "desc" else "asc"
@@ -301,7 +305,18 @@ class FragmentSurfaceAdapter:
             # The bulk route mounts at /api/{plural}/bulk (bulk_routes.py) —
             # NOT under the list endpoint (which is mounted un-prefixed, e.g.
             # /invoices). Compute the base the same way the route does.
-            body_children.append(BulkActionToolbar(endpoint=f"/api/{to_api_plural(entity_name)}"))
+            # Named DSL actions get buttons; built-in delete is optional
+            # (include_delete False when principal cannot DELETE).
+            named = tuple(
+                (n, n.replace("_", " ").title()) for n in bulk_action_names if n != "delete"
+            )
+            body_children.append(
+                BulkActionToolbar(
+                    endpoint=f"/api/{to_api_plural(entity_name)}",
+                    actions=named,
+                    include_delete=bulk_include_delete,
+                )
+            )
         body_children.extend(toolbar)
         if len(visible) > 3:
             # Inside the region = inside the dzTable Alpine scope (see the

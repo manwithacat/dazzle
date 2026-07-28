@@ -1820,22 +1820,35 @@ class BulkActionToolbar:
     """Bulk-selection toolbar for list surfaces (Phase 7 of #1029).
 
     Convergence C1.1: the toolbar rides the HM grid controller's seams —
-    Delete is `[data-dz-grid-bulk-action="delete"]` posting form-encoded to
-    ``{endpoint}/bulk`` (behind an `hx-confirm` dialog; the controller
-    injects action + selected/excluded ids + all-matching + the query echo
-    on config-request, and `data-dz-grid-bulk-refresh` re-fetches rows +
-    footer after the POST settles); Clear is `[data-dz-grid-clear]`; the
-    "Select all N results" escalation rides `[data-dz-grid-select-all-matching]`
-    with the total mirrored from the footer's `data-dz-grid-total`.
-    Visibility stays CSS-driven via `[data-dz-bulk-count]` on the grid root
-    (written by dz-grid.js's sync()); the count text is mirrored to
-    `[data-dz-bulk-count-target]` (#978 / ADR-0022 — no bindings idiomorph
-    could re-evaluate).
+    each action is ``[data-dz-grid-bulk-action="<name>"]`` posting
+    form-encoded to ``{endpoint}/bulk`` (behind an `hx-confirm` dialog; the
+    controller injects action + selected/excluded ids + all-matching + the
+    query echo on config-request, and `data-dz-grid-bulk-refresh` re-fetches
+    rows + footer after the POST settles); Clear is `[data-dz-grid-clear]`;
+    the "Select all N results" escalation rides
+    `[data-dz-grid-select-all-matching]` with the total mirrored from the
+    footer's `data-dz-grid-total`. Visibility stays CSS-driven via
+    `[data-dz-bulk-count]` on the grid root (written by dz-grid.js's
+    sync()); the count text is mirrored to `[data-dz-bulk-count-target]`
+    (#978 / ADR-0022 — no bindings idiomorph could re-evaluate).
 
     ``endpoint`` is the entity's API base (e.g. ``/api/contacts``) — the
-    bulk POST goes to ``{endpoint}/bulk`` (the C0b route)."""
+    bulk POST goes to ``{endpoint}/bulk`` (the C0b route).
+
+    ``actions`` are DSL ``ux: bulk_actions:`` names (field transitions;
+    #785) — each gets a toolbar button so the chrome matches the mounted
+    bulk endpoint (humanqa: acme invoices declared mark_sensitive /
+    mark_public but the bar only painted Delete). Built-in ``delete`` is
+    separate (``include_delete``) — always available on the route when the
+    surface opts into bulk unless the surface declares its own ``delete``
+    transition. Gate ``include_delete`` False when the principal cannot
+    DELETE so RBAC chrome matches row trash (cycle 1390).
+    """
 
     endpoint: str = ""
+    # Ordered (name, label) pairs from surface ux.bulk_actions.
+    actions: tuple[tuple[str, str], ...] = ()
+    include_delete: bool = True
 
 
 @dataclass(frozen=True, slots=True)
