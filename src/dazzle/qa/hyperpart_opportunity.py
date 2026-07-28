@@ -17,10 +17,16 @@ Emits opportunity rows + trial-friction-compatible ``auto_seed`` candidates
 
 from __future__ import annotations
 
+import json
 import re
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
+from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.qa.trial_friction import is_auto_seed_eligible, normalize_friction_entry
 from dazzle.render.user_chip import looks_like_person_ref
 
 # Workspace display modes that already pull rich hyperparts.
@@ -28,6 +34,11 @@ _QUEUE_ISH_NAME = re.compile(
     r"(overdue|inbox|queue|backlog|urgent|assigned.?to.?me|my.?work)",
     re.I,
 )
+_FORM_MODES = ("create", "edit", "form")
+_LISTISH_MODES = ("list", "view", "detail", "")
+_QUEUE_DISPLAYS = ("queue", "kanban", "task_inbox")
+_PLAIN_DISPLAYS = ("", "list", "table", "none")
+_REF_KINDS = frozenset({"ref", "belongs_to"})
 
 
 @dataclass
@@ -81,12 +92,75 @@ def _is_person_ref(field_name: str, ref_entity: str) -> bool:
     return looks_like_person_ref({"name": "probe"}, col)
 
 
+def _surface_mode(surface: Any) -> str:
+    return str(
+        getattr(getattr(surface, "mode", None), "value", getattr(surface, "mode", "")) or ""
+    ).lower()
+
+
+def _section_field_names(surface: Any) -> list[str]:
+    names: list[str] = []
+    for section in list(getattr(surface, "sections", None) or []):
+        for el in list(getattr(section, "elements", None) or []):
+            fn = str(getattr(el, "field_name", "") or "")
+            if fn:
+                names.append(fn)
+    return names
+
+
+def _entity_by_name(appspec: Any) -> dict[str, Any]:
+    domain = getattr(appspec, "domain", None)
+    entities = list(getattr(domain, "entities", None) or []) if domain else []
+    return {str(getattr(e, "name", "") or ""): e for e in entities}
+
+
+def _person_ref_for_field(
+    *,
+    fn: str,
+    field_map: dict[str, Any],
+    ent_name: str,
+    sname: str,
+) -> HyperpartOpportunity | None:
+    fspec = field_map.get(fn)
+    if not fspec:
+        return None
+    ft = getattr(fspec, "type", None)
+    if _field_type_kind(ft) not in _REF_KINDS:
+        return None
+    ref_ent = _ref_entity(ft)
+    if not _is_person_ref(fn, ref_ent):
+        return None
+    return HyperpartOpportunity(
+        hyperpart="avatar",
+        kind="person_ref",
+        entity=ent_name,
+        field=fn,
+        surface=sname,
+        location=f"surface:{sname}.field:{fn}",
+        status="default_emit",
+        severity="low",
+        description=(
+            f"{ent_name}.{fn} is a person ref ({ref_ent or 'heuristic'}) — "
+            f"framework emits Avatar chip (dz-avatar) by default in list/detail cells."
+        ),
+        ownership="framework",
+        notes="user_chip default; opt-out via column avatar:false",
+    )
+
+
+def _field_names_for_surface(surface: Any, field_map: dict[str, Any], mode: str) -> list[str]:
+    names = _section_field_names(surface)
+    if names:
+        return names
+    if any(token in mode for token in _LISTISH_MODES if token) or mode == "":
+        return [str(f.name) for f in field_map.values()]
+    return names
+
+
 def scan_person_ref_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
     """Every person-like ref on a list/detail surface field."""
     out: list[HyperpartOpportunity] = []
-    domain = getattr(appspec, "domain", None)
-    entities = list(getattr(domain, "entities", None) or []) if domain else []
-    entity_by_name = {str(getattr(e, "name", "") or ""): e for e in entities}
+    entity_by_name = _entity_by_name(appspec)
 
     for surface in list(getattr(appspec, "surfaces", None) or []):
         sname = str(getattr(surface, "name", "") or "")
@@ -96,59 +170,57 @@ def scan_person_ref_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
         entity = entity_by_name.get(ent_name)
         if not entity:
             continue
-        field_map = {str(f.name): f for f in list(getattr(entity, "fields", None) or [])}
-        mode = str(
-            getattr(getattr(surface, "mode", None), "value", getattr(surface, "mode", "")) or ""
-        ).lower()
-        # Walk declared sections/elements; fall back to all entity fields for list/view.
-        names: list[str] = []
-        for section in list(getattr(surface, "sections", None) or []):
-            for el in list(getattr(section, "elements", None) or []):
-                fn = str(getattr(el, "field_name", "") or "")
-                if fn:
-                    names.append(fn)
-        # Avatar chip is a list/detail cell default — skip create/edit form fields
-        # (those stay search-select widgets).
-        if any(x in mode for x in ("create", "edit", "form")):
+        mode = _surface_mode(surface)
+        # Avatar chip is a list/detail cell default — skip create/edit form fields.
+        if any(x in mode for x in _FORM_MODES):
             continue
-        if not names and ("list" in mode or "view" in mode or "detail" in mode or mode == ""):
-            names = [str(f.name) for f in field_map.values()]
-
+        field_map = {str(f.name): f for f in list(getattr(entity, "fields", None) or [])}
+        names = _field_names_for_surface(surface, field_map, mode)
         seen: set[str] = set()
         for fn in names:
             if fn in seen:
                 continue
             seen.add(fn)
-            fspec = field_map.get(fn)
-            if not fspec:
-                continue
-            ft = getattr(fspec, "type", None)
-            kind = _field_type_kind(ft)
-            if kind not in ("ref", "belongs_to"):
-                continue
-            ref_ent = _ref_entity(ft)
-            if not _is_person_ref(fn, ref_ent):
-                continue
-            loc = f"surface:{sname}.field:{fn}"
-            out.append(
-                HyperpartOpportunity(
-                    hyperpart="avatar",
-                    kind="person_ref",
-                    entity=ent_name,
-                    field=fn,
-                    surface=sname,
-                    location=loc,
-                    status="default_emit",
-                    severity="low",
-                    description=(
-                        f"{ent_name}.{fn} is a person ref ({ref_ent or 'heuristic'}) — "
-                        f"framework emits Avatar chip (dz-avatar) by default in list/detail cells."
-                    ),
-                    ownership="framework",
-                    notes="user_chip default; opt-out via column avatar:false",
-                )
-            )
+            row = _person_ref_for_field(fn=fn, field_map=field_map, ent_name=ent_name, sname=sname)
+            if row is not None:
+                out.append(row)
     return out
+
+
+def _region_display(region: Any) -> str:
+    return str(
+        getattr(getattr(region, "display", None), "value", getattr(region, "display", "")) or ""
+    ).lower()
+
+
+def _queue_opportunity(
+    *, wname: str, region: Any, rname: str, display: str
+) -> HyperpartOpportunity | None:
+    title = str(getattr(region, "title", "") or "")
+    # Match region name/title only — not the parent workspace name
+    # (my_work/* was falsely flagging every region as a work queue).
+    if not _QUEUE_ISH_NAME.search(f"{rname} {title}"):
+        return None
+    if any(token in display for token in _QUEUE_DISPLAYS):
+        return None
+    if display not in _PLAIN_DISPLAYS:
+        return None
+    return HyperpartOpportunity(
+        hyperpart="queue",
+        kind="work_queue",
+        entity=str(getattr(region, "source", "") or ""),
+        field=rname,
+        surface=wname,
+        location=f"workspace:{wname}.region:{rname}",
+        status="author_action",
+        severity="medium",
+        description=(
+            f"Region {wname}/{rname} looks like a work queue "
+            f"(display={display or 'list'}) — consider display: queue."
+        ),
+        ownership="product",
+        notes="semantic opportunity; not auto-emitted",
+    )
 
 
 def scan_queue_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
@@ -158,37 +230,11 @@ def scan_queue_opportunities(appspec: Any) -> list[HyperpartOpportunity]:
         wname = str(getattr(ws, "name", "") or "")
         for region in list(getattr(ws, "regions", None) or []):
             rname = str(getattr(region, "name", "") or "")
-            title = str(getattr(region, "title", "") or "")
-            display = str(
-                getattr(getattr(region, "display", None), "value", getattr(region, "display", ""))
-                or ""
-            ).lower()
-            # Match region name/title only — not the parent workspace name
-            # (my_work/* was falsely flagging every region as a work queue).
-            blob = f"{rname} {title}"
-            if not _QUEUE_ISH_NAME.search(blob):
-                continue
-            if "queue" in display or "kanban" in display or "task_inbox" in display:
-                continue
-            if display in ("", "list", "table", "none"):
-                out.append(
-                    HyperpartOpportunity(
-                        hyperpart="queue",
-                        kind="work_queue",
-                        entity=str(getattr(region, "source", "") or ""),
-                        field=rname,
-                        surface=wname,
-                        location=f"workspace:{wname}.region:{rname}",
-                        status="author_action",
-                        severity="medium",
-                        description=(
-                            f"Region {wname}/{rname} looks like a work queue "
-                            f"(display={display or 'list'}) — consider display: queue."
-                        ),
-                        ownership="product",
-                        notes="semantic opportunity; not auto-emitted",
-                    )
-                )
+            row = _queue_opportunity(
+                wname=wname, region=region, rname=rname, display=_region_display(region)
+            )
+            if row is not None:
+                out.append(row)
     return out
 
 
@@ -199,13 +245,23 @@ def scan_appspec(appspec: Any) -> list[HyperpartOpportunity]:
     return rows
 
 
+_GUIDANCE = {
+    "avatar": (
+        "If displaying a reference to a real person who is a system user "
+        "(or Contact/assignee-like entity), use the Avatar hyperpart chip. "
+        "Framework default: list/detail ref cells emit .dz-avatar + name."
+    ),
+    "queue": "Urgency-ordered work of the same type → display: queue, not a plain list.",
+    "badge": "Lifecycle / status enums already map to badge cells by default.",
+    "money": "Money fields map to currency cells by default.",
+}
+
+
 def build_opportunity_report(
     *,
     app: str,
     opportunities: list[HyperpartOpportunity],
 ) -> dict[str, Any]:
-    from dazzle.qa.trial_friction import is_auto_seed_eligible, normalize_friction_entry
-
     frictions = [normalize_friction_entry(o.to_friction()) for o in opportunities]
     # Only author_action product rows seed improve PENDING.
     auto_seed = [
@@ -225,14 +281,100 @@ def build_opportunity_report(
         "opportunities": [o.to_json() for o in opportunities],
         "friction": frictions,
         "auto_seed": auto_seed,
-        "guidance": {
-            "avatar": (
-                "If displaying a reference to a real person who is a system user "
-                "(or Contact/assignee-like entity), use the Avatar hyperpart chip. "
-                "Framework default: list/detail ref cells emit .dz-avatar + name."
-            ),
-            "queue": ("Urgency-ordered work of the same type → display: queue, not a plain list."),
-            "badge": "Lifecycle / status enums already map to badge cells by default.",
-            "money": "Money fields map to currency cells by default.",
-        },
+        "guidance": dict(_GUIDANCE),
     }
+
+
+def _write_opportunity_report(
+    report: dict[str, Any],
+    project_dir: Path,
+    *,
+    output: Path | None,
+    stdout_only: bool,
+    echo: Callable[..., Any],
+) -> None:
+    payload = json.dumps(report, indent=2, default=str) + "\n"
+    if stdout_only:
+        echo(payload, nl=False)
+        return
+    out = Path(output) if output is not None else None
+    if out is None:
+        ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+        docs = project_dir / "dev_docs"
+        docs.mkdir(parents=True, exist_ok=True)
+        out = docs / f"qa-hyperpart-opportunities-{ts}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(payload, encoding="utf-8")
+    rel: Path | str = out
+    try:
+        rel = out.resolve().relative_to(Path.cwd().resolve())
+    except ValueError:
+        pass
+    echo(f"Wrote {rel}")
+
+
+def _echo_opportunity_summary(
+    report: dict[str, Any],
+    opportunities: list[HyperpartOpportunity],
+    *,
+    app_name: str,
+    as_table: bool,
+    stdout_only: bool,
+    echo: Callable[..., Any],
+) -> None:
+    n = int(report.get("count") or 0)
+    n_seed = len(report.get("auto_seed") or [])
+    by_hp = report.get("by_hyperpart") or {}
+    hp_bits = " ".join(f"{k}={v}" for k, v in sorted(by_hp.items()))
+    summary = f"hyperpart-opportunities app={app_name} count={n} auto_seed={n_seed}"
+    if hp_bits:
+        summary = f"{summary} {hp_bits}"
+    if as_table:
+        echo(summary)
+        for o in opportunities:
+            echo(f"  [{o.status}/{o.severity}] {o.hyperpart} {o.location} — {o.description[:100]}")
+        return
+    echo(summary, err=stdout_only)
+
+
+def run_hyperpart_opportunities(
+    project_dir: Path | str,
+    *,
+    as_table: bool = False,
+    output: Path | str | None = None,
+    stdout_only: bool = False,
+    fail_on_product: bool = False,
+    echo: Callable[..., Any] = print,
+    exit_fn: Callable[[int], None] | None = None,
+) -> dict[str, Any]:
+    """CLI body for ``dazzle qa hyperpart-opportunities`` (kept out of qa.py for MI)."""
+    project_dir = Path(project_dir)
+    try:
+        appspec = load_project_appspec(project_dir)
+    except Exception as exc:
+        echo(f"Failed to load AppSpec: {exc}", err=True)
+        if exit_fn is not None:
+            exit_fn(1)
+        raise
+
+    app_name = str(getattr(appspec, "name", None) or project_dir.name)
+    opportunities = scan_appspec(appspec)
+    report = build_opportunity_report(app=app_name, opportunities=opportunities)
+    _write_opportunity_report(
+        report,
+        project_dir,
+        output=Path(output) if output is not None else None,
+        stdout_only=stdout_only,
+        echo=echo,
+    )
+    _echo_opportunity_summary(
+        report,
+        opportunities,
+        app_name=app_name,
+        as_table=as_table,
+        stdout_only=stdout_only,
+        echo=echo,
+    )
+    if fail_on_product and report.get("auto_seed") and exit_fn is not None:
+        exit_fn(1)
+    return report

@@ -22,6 +22,7 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.model_defaults import DEFAULT_JUDGMENT_MODEL
 from dazzle.log_setup import ensure_dazzle_logging_configured
 from dazzle.qa.capture import build_capture_plan, capture_screenshots, write_manifest
+from dazzle.qa.hyperpart_opportunity import run_hyperpart_opportunities
 from dazzle.qa.signing_seed import (
     SeededDoc,
     SigningSeedContext,
@@ -1931,56 +1932,16 @@ def qa_hyperpart_opportunities(
     No browser. Loads AppSpec + walks person-like refs and queue-ish regions.
     Writes ``dev_docs/qa-hyperpart-opportunities-*.json`` for ``qa_smoke_bar``.
     """
-    from datetime import UTC, datetime
 
-    from dazzle.cli.utils import load_project_appspec
-    from dazzle.qa.hyperpart_opportunity import build_opportunity_report, scan_appspec
+    def _exit(code: int) -> None:
+        raise typer.Exit(code=code)
 
-    project_dir = _resolve_project_dir(app)
-    try:
-        appspec = load_project_appspec(project_dir)
-    except Exception as exc:
-        typer.echo(f"Failed to load AppSpec: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    app_name = str(getattr(appspec, "name", None) or project_dir.name)
-    opportunities = scan_appspec(appspec)
-    report = build_opportunity_report(app=app_name, opportunities=opportunities)
-    payload = json.dumps(report, indent=2, default=str) + "\n"
-
-    if stdout_only:
-        typer.echo(payload, nl=False)
-    else:
-        out = output
-        if out is None:
-            ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
-            docs = project_dir / "dev_docs"
-            docs.mkdir(parents=True, exist_ok=True)
-            out = docs / f"qa-hyperpart-opportunities-{ts}.json"
-        out = Path(out)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(payload, encoding="utf-8")
-        rel = out
-        with suppress(ValueError):
-            rel = out.resolve().relative_to(Path.cwd().resolve())
-        typer.echo(f"Wrote {rel}")
-
-    n = int(report.get("count") or 0)
-    n_seed = len(report.get("auto_seed") or [])
-    by_hp = report.get("by_hyperpart") or {}
-    hp_bits = " ".join(f"{k}={v}" for k, v in sorted(by_hp.items()))
-    if as_table:
-        typer.echo(f"hyperpart-opportunities app={app_name} count={n} auto_seed={n_seed} {hp_bits}")
-        for o in opportunities:
-            typer.echo(
-                f"  [{o.status}/{o.severity}] {o.hyperpart} {o.location} — {o.description[:100]}"
-            )
-    else:
-        typer.echo(
-            f"hyperpart-opportunities app={app_name} count={n} auto_seed={n_seed}"
-            + (f" {hp_bits}" if hp_bits else ""),
-            err=stdout_only,
-        )
-
-    if fail_on_product and n_seed:
-        raise typer.Exit(code=1)
+    run_hyperpart_opportunities(
+        _resolve_project_dir(app),
+        as_table=as_table,
+        output=output,
+        stdout_only=stdout_only,
+        fail_on_product=fail_on_product,
+        echo=typer.echo,
+        exit_fn=_exit,
+    )

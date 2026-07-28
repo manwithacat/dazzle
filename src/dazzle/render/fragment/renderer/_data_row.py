@@ -34,6 +34,7 @@ from dazzle.render.fragment.ingest import GridEditCell, edit_span_attrs
 from dazzle.render.fragment.primitives import DataTable, RowCapabilities
 from dazzle.render.fragment.region._row_links import _resolve_row_links
 from dazzle.render.fragment.state_affordance import gated_row_transitions
+from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_html
 
 # Raw ISO / Postgres timestamptz leak detector for the text fallback path.
 _ISO_DT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$")
@@ -292,8 +293,6 @@ def _render_cell_display(
         # The caller supplies the row item; the column-level display
         # column key is `<col.key>_display` per legacy convention. Look
         # up the original `value` and the explicit pair.
-        from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_html
-
         if looks_like_person_ref(value if value is not None else {}, col):
             chip = render_user_chip_html(value, col)
             if chip:

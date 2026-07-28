@@ -40,6 +40,8 @@ _PERSON_FIELD_RE = re.compile(
     r"reviewer|approver|manager)",
     re.I,
 )
+_AVATAR_URL_KEYS = ("avatar_url", "picture_url", "photo_url")
+_NAME_KEYS = ("name", "first_name", "__display__")
 
 
 def _col_ref_entity(col: dict[str, Any]) -> str:
@@ -61,6 +63,14 @@ def _col_ref_entity(col: dict[str, Any]) -> str:
     return ""
 
 
+def _value_looks_like_person(value: dict[str, Any]) -> bool:
+    if any(value.get(k) for k in _AVATAR_URL_KEYS):
+        return True
+    if value.get("email") and any(value.get(k) for k in _NAME_KEYS):
+        return True
+    return bool(value.get("first_name") or value.get("last_name") or value.get("forename"))
+
+
 def looks_like_person_ref(value: Any, col: dict[str, Any] | None = None) -> bool:
     """True when this ref cell should render as an avatar chip."""
     col = col or {}
@@ -69,20 +79,11 @@ def looks_like_person_ref(value: Any, col: dict[str, Any] | None = None) -> bool
     entity = _col_ref_entity(col).lower()
     if entity in _PERSON_ENTITIES or entity.endswith("user"):
         return True
-    key = str(col.get("key") or "")
-    if _PERSON_FIELD_RE.search(key):
+    if _PERSON_FIELD_RE.search(str(col.get("key") or "")):
         return True
     if not isinstance(value, dict):
         return False
-    if value.get("avatar_url") or value.get("picture_url") or value.get("photo_url"):
-        return True
-    if value.get("email") and (
-        value.get("name") or value.get("first_name") or value.get("__display__")
-    ):
-        return True
-    if value.get("first_name") or value.get("last_name") or value.get("forename"):
-        return True
-    return False
+    return _value_looks_like_person(value)
 
 
 def initials_from_display(name: str) -> str:
@@ -102,6 +103,18 @@ def _hue_for_name(name: str) -> int:
     for ch in name:
         h = (h * 31 + ord(ch)) % 360
     return h
+
+
+def _avatar_markup(*, name: str, avatar_url: str, initials: str) -> str:
+    if avatar_url:
+        avatar_inner = f'<img src="{_html_mod.escape(avatar_url, quote=True)}" alt="" />'
+        return f'<span class="dz-avatar" data-dz-size="sm" aria-hidden="true">{avatar_inner}</span>'
+    hue = _hue_for_name(name)
+    return (
+        f'<span class="dz-avatar" data-dz-size="sm" data-dz-hue="{hue}" '
+        f'style="--dz-avatar-hue:{hue}" '
+        f'aria-hidden="true">{initials}</span>'
+    )
 
 
 def render_user_chip_html(value: Any, col: dict[str, Any] | None = None) -> str:
@@ -129,18 +142,7 @@ def render_user_chip_html(value: Any, col: dict[str, Any] | None = None) -> str:
     name_esc = _html_mod.escape(name, quote=False)
     name_attr = _html_mod.escape(name, quote=True)
     initials = _html_mod.escape(initials_from_display(name), quote=False)
-    if avatar_url:
-        avatar_inner = f'<img src="{_html_mod.escape(avatar_url, quote=True)}" alt="" />'
-        avatar = (
-            f'<span class="dz-avatar" data-dz-size="sm" aria-hidden="true">{avatar_inner}</span>'
-        )
-    else:
-        hue = _hue_for_name(name)
-        avatar = (
-            f'<span class="dz-avatar" data-dz-size="sm" data-dz-hue="{hue}" '
-            f'style="--dz-avatar-hue:{hue}" '
-            f'aria-hidden="true">{initials}</span>'
-        )
+    avatar = _avatar_markup(name=name, avatar_url=avatar_url, initials=initials)
     return (
         f'<span class="dz-user-chip" title="{name_attr}">'
         f"{avatar}"
