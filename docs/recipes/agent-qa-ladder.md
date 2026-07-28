@@ -92,6 +92,10 @@ dazzle qa trial --scenario manager_evaluation --mode journey --fresh-db
 
 # Domain-theory hook
 dazzle qa trial-hypotheses --app support_tickets
+
+# Static hyperpart opportunities (Avatar person-refs / queue-ish regions)
+dazzle qa hyperpart-opportunities --app simple_task --table
+# → examples/<app>/dev_docs/qa-hyperpart-opportunities-*.json
 ```
 
 ## Closed loop (KPI)

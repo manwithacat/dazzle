@@ -1,0 +1,105 @@
+"""Static hyperpart opportunity scan."""
+
+from __future__ import annotations
+
+from types import SimpleNamespace
+
+from dazzle.qa.hyperpart_opportunity import (
+    build_opportunity_report,
+    scan_appspec,
+    scan_person_ref_opportunities,
+)
+
+
+def _field(name: str, kind: str, ref_entity: str = "") -> SimpleNamespace:
+    return SimpleNamespace(
+        name=name,
+        type=SimpleNamespace(kind=kind, ref_entity=ref_entity or None),
+    )
+
+
+def _surface(name: str, entity: str, fields: list[str], mode: str = "list") -> SimpleNamespace:
+    elements = [SimpleNamespace(field_name=f) for f in fields]
+    return SimpleNamespace(
+        name=name,
+        entity_ref=entity,
+        mode=SimpleNamespace(value=mode),
+        sections=[SimpleNamespace(elements=elements)],
+    )
+
+
+def _appspec() -> SimpleNamespace:
+    entity = SimpleNamespace(
+        name="Task",
+        fields=[
+            _field("title", "str"),
+            _field("assigned_to", "ref", "User"),
+            _field("client", "ref", "Client"),
+            _field("status", "enum"),
+        ],
+    )
+    return SimpleNamespace(
+        domain=SimpleNamespace(entities=[entity]),
+        surfaces=[
+            _surface("TaskList", "Task", ["title", "assigned_to", "client", "status"]),
+        ],
+        workspaces=[
+            SimpleNamespace(
+                name="lead",
+                regions=[
+                    SimpleNamespace(
+                        name="overdue_tasks",
+                        title="Overdue",
+                        source="Task",
+                        display=SimpleNamespace(value="list"),
+                    ),
+                    SimpleNamespace(
+                        name="done_queue",
+                        title="Done",
+                        source="Task",
+                        display=SimpleNamespace(value="queue"),
+                    ),
+                ],
+            )
+        ],
+    )
+
+
+class TestScan:
+    def test_person_ref_found(self) -> None:
+        opps = scan_person_ref_opportunities(_appspec())
+        fields = {(o.field, o.hyperpart) for o in opps}
+        assert ("assigned_to", "avatar") in fields
+        assert all(o.status == "default_emit" for o in opps if o.field == "assigned_to")
+        # Client is not person
+        assert not any(o.field == "client" for o in opps)
+
+    def test_queue_opportunity(self) -> None:
+        report = build_opportunity_report(app="simple_task", opportunities=scan_appspec(_appspec()))
+        kinds = {o["kind"] for o in report["opportunities"]}
+        assert "person_ref" in kinds
+        assert "work_queue" in kinds
+        # overdue_tasks region (not parent workspace name) drives the queue flag
+        locs = {o["location"] for o in report["opportunities"] if o["kind"] == "work_queue"}
+        assert any("overdue_tasks" in loc for loc in locs)
+        # Queue author_action can auto_seed when medium product missing
+        assert report["count"] >= 2
+
+    def test_workspace_name_not_false_queue(self) -> None:
+        """my_work/* regions must not all flag as queues via workspace name."""
+        appspec = _appspec()
+        appspec.workspaces = [
+            SimpleNamespace(
+                name="my_work",
+                regions=[
+                    SimpleNamespace(
+                        name="my_discussion",
+                        title="Comments",
+                        source="TaskComment",
+                        display=SimpleNamespace(value="list"),
+                    ),
+                ],
+            )
+        ]
+        opps = scan_appspec(appspec)
+        assert not any(o.kind == "work_queue" for o in opps)

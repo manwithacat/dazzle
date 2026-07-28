@@ -3061,6 +3061,26 @@ border: 2px solid var(--colour-surface);
 .dz-avatar-group .dz-avatar + .dz-avatar {
 margin-inline-start: -0.5rem;
 }
+.dz-avatar[data-dz-hue] {
+background: hsl(var(--dz-avatar-hue, 210) 45% 42% / 0.18);
+color: hsl(var(--dz-avatar-hue, 210) 40% 28%);
+}
+.dz-user-chip {
+display: inline-flex;
+align-items: center;
+gap: 0.4rem;
+min-width: 0;
+max-width: 100%;
+vertical-align: middle;
+line-height: 1.2;
+}
+.dz-user-chip__name {
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+font-size: var(--text-sm);
+color: var(--colour-text);
+}
 .dz-breadcrumb ol {
 display: flex;
 align-items: center;

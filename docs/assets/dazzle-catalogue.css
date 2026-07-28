@@ -7248,6 +7248,36 @@ input.dz-switch:checked::before {
   margin-inline-start: -0.5rem;
 }
 
+/* Deterministic initials wash when emitter sets --dz-avatar-hue (0–359)
+   via inline style (and data-dz-hue for tests/DOM inspection). */
+.dz-avatar[data-dz-hue] {
+  background: hsl(var(--dz-avatar-hue, 210) 45% 42% / 0.18);
+  color: hsl(var(--dz-avatar-hue, 210) 40% 28%);
+}
+
+/* ── dz-user-chip ────────────────────────────────────────────────────
+ * Person-ref cell: avatar + name. Emitted by ``render_user_chip_html``.
+ * <span class="dz-user-chip"><span class="dz-avatar" data-dz-size="sm">…</span>
+ *   <span class="dz-user-chip__name">Ada Lovelace</span></span>
+ */
+.dz-user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+.dz-user-chip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  color: var(--colour-text);
+}
+
 /* ── dz-breadcrumb ───────────────────────────────────────────────────
  * <nav class="dz-breadcrumb" aria-label="Breadcrumb"><ol>
  *   <li><a href="/app">Home</a></li>

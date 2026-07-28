@@ -286,10 +286,18 @@ def _render_cell_display(
         return ""
     if col_type == "ref":
         # Prefer explicit `_display` column; otherwise resolve the dict.
+        # Person-like refs (User, assigned_to, …) emit Avatar hyperpart chip
+        # by default (``dazzle.render.user_chip``); opt-out via avatar:false.
         explicit = ""
         # The caller supplies the row item; the column-level display
         # column key is `<col.key>_display` per legacy convention. Look
         # up the original `value` and the explicit pair.
+        from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_html
+
+        if looks_like_person_ref(value if value is not None else {}, col):
+            chip = render_user_chip_html(value, col)
+            if chip:
+                return chip
         if isinstance(value, dict):
             return _html_mod.escape(_ref_display_name(value), quote=False)
         return _html_mod.escape(explicit or str(value or ""), quote=False)

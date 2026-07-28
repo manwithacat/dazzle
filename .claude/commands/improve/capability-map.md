@@ -60,10 +60,10 @@ apply map patches with `{"apply":true}`.
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1347 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1330 | STALE |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1350 | USED |
-| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1328 | STALE |
+| **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1361 | USED |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
-| `dazzle qa hyperpart-opportunities` | COGNITION | CLI (not on main — map debt; reports under examples/*/dev_docs only) | **example-apps** + trials | 1332 | STALE |
+| `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1361 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1348 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1348 | USED |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1348 | USED |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1361 (2026-07-28).** **framework-ux** quality dig — restore `dazzle qa hyperpart-opportunities` (CLI + scan) + Avatar default emit for person refs (`user_chip` → `_data_row` ref cells) + HM CSS `dz-user-chip`/`data-dz-hue`. Closed map debt "CLI absent on main". simple_task 5/0 + project_tracker 7/0 auto_seed. densify_allowed=0 residual=0. Stamped hyperpart-opportunities + agent_qa_smoke **USED@1361**. budget 1. Explore **21/100**.
 > **Cycle 1360 (2026-07-28).** **capability-sweep** (cadence ≥20 since 1340) — inventory reconcile vs tip `8aef15731`. **UNOWNED=0** **COGNITION_STALE_eff=16** (3 metered vision → free substitutes only; `qa-trial` skill lag102; agent_qa_smoke/smoke-crawl/smoke-dig lag32 — suppress residual=0; domain/product_quality/demo_world/db lag29–30; product_maturity/demo_fleet/unified probes lag30; hyperpart-opportunities lag28) **HYGIENE_STALE_eff=32** (discovery/compliance lag144; sentinel/sweep 131; deploy/rhythm/story/coverage/scaffold ~130). Map: flipped lag≥20 USED→STALE; DRIVER CodeQL+inbox **USED@1360**. Next digs (aggressive, densify_allowed=0): **framework-ux** mutation OR **domain/demo_world** COGNITION re-exercise OR acceptance/journey real product ship — **not** dual_lock (queue=0) / smoke stamp / WI densify. budget 0. Explore **20/100**. Next self-audit ~1374.
 > **Cycle 1359 (2026-07-27).** **self-audit** window 5d93f8f48..21f6be711 — 5+ CLEAN (c1349 #1426 uuid link match, c1350 role poison + people_desk, c1345 ref_route /app, c1353 list-without-read #303, c1355 task-inbox CSS; dig contracts 1347/1348/1352 PASS). 0 DISCREPANCY. densify_allowed=0 residual=0. CodeQL+inbox **USED@1359**. budget 0. Explore **20/100**. Next self-audit ~1374; capability-sweep due ~1360 (last@1340); aggressive → journey_dogfood product dig (residual=0 → real mutation or PENDING).
 > **Cycle 1353 (2026-07-27).** **framework-ux** (#303 list-without-read validator + repository.read soft-skip ValidationError parity with list). Aggressive require_mutation=1. densify_allowed=0. Stamped dazzle validate/rbac **USED@1353**. budget 1. Explore **19/100**.
