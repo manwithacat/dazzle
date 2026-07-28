@@ -21,19 +21,29 @@ from dazzle.core.capabilities.cognition import enable_suggestion
 
 from .common import error_response, extract_progress, unknown_op_response
 from .spec_questions import (
+    bilateral_review_signal,
     build_clarification_questions,
+    cardinality_questions,
+    indefinite_article,
+    topic_questions,
 )
 
 logger = logging.getLogger(__name__)
 
-# Re-exports used by unit tests (stable import path via this module).
-__all_question_helpers__ = (
+# Stable underscore aliases for unit tests (import path via this module).
+_bilateral_review_signal = bilateral_review_signal
+_cardinality_questions = cardinality_questions
+_indefinite_article = indefinite_article
+_topic_questions = topic_questions
+
+__all__ = (
     "_bilateral_review_signal",
     "_cardinality_questions",
     "_generate_questions",
     "_indefinite_article",
     "_topic_questions",
     "build_clarification_questions",
+    "handle_spec_analyze",
 )
 
 
