@@ -3452,13 +3452,18 @@ def select(source: str, id: str) -> str:
             '<label><input type="radio" name="tb-view" checked><span>List</span></label>'
             '<label><input type="radio" name="tb-view"><span>Grid</span></label>'
             "</div>"
-            '<details class="dz-menu"><summary class="dz-button" data-dz-variant="outline">More ▾</summary>'
+            # Label is plain text only — open-panel chevron is CSS ::after on
+            # .dz-menu > summary (see components/alert.css). A literal ▾ here
+            # doubles the affordance and looks like a rogue glyph.
+            '<details class="dz-menu"><summary class="dz-button" data-dz-variant="outline">More</summary>'
             '<div class="dz-menu__panel">'
             '<button class="dz-menu__item">{icon:copy} Duplicate</button>'
             '<button class="dz-menu__item" data-dz-tone="destructive">{icon:trash-2} Delete</button>'
             "</div></details></div>",
             notes="The dependency chips aggregate what the children need (here: Sprite, "
-            "from the menu/button icons). Copy the whole thing — it is just nested markup.",
+            "from the menu/button icons). Copy the whole thing — it is just nested markup. "
+            "Menu trigger labels stay plain text; the open-panel chevron is CSS "
+            "<code>::after</code> (do not append ▾ / ▼ in the summary).",
             tags=("composite",),
             composes=("button", "toggle-group", "menu"),
             contracts=("contracts/toolbar.py",),

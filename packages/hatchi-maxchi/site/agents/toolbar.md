@@ -20,7 +20,7 @@ Inline composition — real button, toggle-group and menu markup nested in a rol
     <label><input type="radio" name="tb-view"><span>Grid</span></label>
   </div>
   <details class="menu">
-    <summary class="button" data-variant="outline">More ▾</summary>
+    <summary class="button" data-variant="outline">More</summary>
     <div class="menu__panel"><button class="menu__item"><svg class="icon icon--size-sm" aria-hidden="true"><use href="#i-copy"/></svg> Duplicate</button><button class="menu__item" data-tone="destructive"><svg class="icon icon--size-sm" aria-hidden="true"><use href="#i-trash-2"/></svg> Delete</button></div>
   </details>
 </div>
@@ -102,7 +102,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-The dependency chips aggregate what the children need (here: Sprite, from the menu/button icons). Copy the whole thing — it is just nested markup.
+The dependency chips aggregate what the children need (here: Sprite, from the menu/button icons). Copy the whole thing — it is just nested markup. Menu trigger labels stay plain text; the open-panel chevron is CSS ::after (do not append ▾ / ▼ in the summary).
 
 ## Source files
 
