@@ -35,6 +35,11 @@ class WorkspaceRegionContext:
     # Surface UX metadata (#362)
     surface_default_sort: list[Any] = field(default_factory=list)
     surface_empty_message: str = ""
+    # Free-text list search fields (surface ux.search / search_fields / FTS
+    # SearchSpec fields). When non-empty, region GET honors ?q= / ?search=
+    # via repo.list LIKE search and list chrome emits a filter input so
+    # dual-pane directories filter in place (agent_acceptance find-by-name).
+    search_fields: list[str] = field(default_factory=list)
     # Runtime parameter resolution (#572)
     param_resolver: Any = None  # ParamResolver | None
     tenant_id: str | None = None

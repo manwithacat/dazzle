@@ -207,6 +207,41 @@ class _BuildersTablesMixin:
         # Build chrome elements in declared order.
         chrome_parts: list[Fragment] = []
 
+        # Free-text list search (?q=) — filters the table via region reload.
+        # Distinct from display:search_box FTS results panel (agent panels and
+        # pilots expect the directory list to shrink when finding a name).
+        search_fields_raw = ctx.get("search_fields") or []
+        active_search = str(ctx.get("active_search") or "").strip()
+        if endpoint and isinstance(search_fields_raw, list) and search_fields_raw:
+            import html as _html
+
+            ep = _html.escape(str(endpoint), quote=True)
+            val = _html.escape(active_search, quote=True)
+            # Prefer source entity title when present for pilot-facing copy.
+            source_label = str(
+                ctx.get("entity_title") or getattr(region, "source", "") or "list"
+            ).replace("_", " ")
+            placeholder = _html.escape(f"Find {source_label.lower()}…", quote=True)
+            # Same hx-include pattern as FilterBar so search + filters co-ride.
+            chrome_parts.append(
+                RawHTML(
+                    f'<div class="filter-bar dz-list-search-chrome" data-dz-list-search>'
+                    f'<label class="visually-hidden" for="dz-list-q-{_html.escape(region_name, quote=True)}">'
+                    f"Find in list</label>"
+                    f'<input id="dz-list-q-{_html.escape(region_name, quote=True)}" '
+                    f'type="search" name="q" '
+                    f'class="dz-list-search-input dz-filter-input" '
+                    f'placeholder="{placeholder}" value="{val}" autocomplete="off" '
+                    f"data-dz-list-search-input "
+                    f'hx-get="{ep}" '
+                    f'hx-target="closest [data-dz-region]" '
+                    f'hx-swap="innerHTML" '
+                    f'hx-trigger="input changed delay:250ms, search" '
+                    f'hx-include="closest .filter-bar">'
+                    f"</div>"
+                )
+            )
+
         # FilterBar — when filter_columns is supplied
         filter_columns_raw = ctx.get("filter_columns") or []
         active_filters = ctx.get("active_filters") or {}

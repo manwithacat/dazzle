@@ -225,14 +225,25 @@ async def fetch_region_items(
         if scope_denied:
             result: dict[str, Any] = {"items": [], "total": 0}
         else:
-            result = await repo.list(
-                page=page,
-                page_size=limit,
-                filters=filters,
-                sort=sort_list,
-                include=include_rels or None,
-                fk_display_only=True,
-            )
+            # Free-text find-by-name (?q= / ?search=) when surface/FTS declares
+            # search_fields — filters the list in place (ILIKE). Distinct from
+            # display:search_box FTS results panel under the input.
+            search_q = (
+                request.query_params.get("q") or request.query_params.get("search") or ""
+            ).strip()
+            search_fields = list(getattr(ctx, "search_fields", None) or [])
+            list_kwargs: dict[str, Any] = {
+                "page": page,
+                "page_size": limit,
+                "filters": filters,
+                "sort": sort_list,
+                "include": include_rels or None,
+                "fk_display_only": True,
+            }
+            if search_q and search_fields:
+                list_kwargs["search"] = search_q
+                list_kwargs["search_fields"] = search_fields
+            result = await repo.list(**list_kwargs)
 
         # Step 7: inject display names; use item count as total (#573).
         items: list[dict[str, Any]] = []

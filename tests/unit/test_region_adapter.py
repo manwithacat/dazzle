@@ -255,6 +255,32 @@ def test_list_with_filter_columns_renders_filter_bar() -> None:
     assert "<table" in html
 
 
+def test_list_with_search_fields_renders_q_input() -> None:
+    """Workspace list free-text search filters the table via ?q= (not FTS panel).
+
+    dual_pane directories declare surface ux.search but previously only offered
+    display:search_box results panels; agent acceptance scored find-by-name
+    as broken when the A–Z list never shrank.
+    """
+    adapter = WorkspaceRegionAdapter()
+    ctx = {
+        "items": [{"name": "Ruth Griffiths"}, {"name": "Ada Lovelace"}],
+        "columns": [{"key": "name", "label": "Name"}],
+        "endpoint": "/api/workspaces/contacts/regions/contact_list",
+        "region_name": "contact_list",
+        "search_fields": ["first_name", "last_name", "email", "company"],
+        "active_search": "Griff",
+    }
+    html = _render(adapter.build(_FakeRegion("contact_list", display="list"), ctx))
+    assert 'name="q"' in html
+    assert "dz-list-q-contact_list" in html
+    assert 'value="Griff"' in html
+    assert "data-dz-list-search" in html
+    assert 'hx-get="/api/workspaces/contacts/regions/contact_list"' in html
+    # Must not be the FTS results-panel search_box path.
+    assert "dz-search-results-contact_list" not in html
+
+
 def test_list_with_date_range_renders_picker() -> None:
     adapter = WorkspaceRegionAdapter()
     ctx = {

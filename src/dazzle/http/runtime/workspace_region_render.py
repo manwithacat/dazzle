@@ -430,6 +430,17 @@ def _set_detail_url_template(adapter_ctx: dict[str, Any], ctx: Any) -> None:
     adapter_ctx["detail_url_template"] = getattr(ctx, "detail_url_template", "") or ""
 
 
+def _active_list_search(request: Any) -> str:
+    """``?q=`` / ``?search=`` free-text value for workspace list chrome."""
+    return (request.query_params.get("q") or request.query_params.get("search") or "").strip()
+
+
+def _apply_list_search_chrome(adapter_ctx: dict[str, Any], ctx: Any, request: Any) -> None:
+    """Wire surface/FTS search_fields + active query into list adapter_ctx."""
+    adapter_ctx["search_fields"] = list(getattr(ctx, "search_fields", None) or [])
+    adapter_ctx["active_search"] = _active_list_search(request)
+
+
 def _build_list_adapter_ctx(
     display_upper: str,
     env: RenderEnv,
@@ -454,6 +465,7 @@ def _build_list_adapter_ctx(
         adapter_ctx["region_name"] = getattr(ctx_region, "name", "")
         adapter_ctx["filter_columns"] = inputs.filter_columns
         adapter_ctx["active_filters"] = inputs.active_filters
+        _apply_list_search_chrome(adapter_ctx, ctx, env.request)
         adapter_ctx["date_range"] = getattr(ctx_region, "date_range", False)
         adapter_ctx["date_field"] = getattr(ctx_region, "date_field", "")
         adapter_ctx["date_from"] = env.request.query_params.get("date_from", "")

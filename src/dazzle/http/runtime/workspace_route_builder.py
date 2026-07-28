@@ -354,8 +354,13 @@ class WorkspaceRouteBuilder:
                     _attention_signals: list[Any] = []
                     _surface_default_sort: list[Any] = []
                     _surface_empty_message = ""
+                    _search_fields: list[str] = []
                     for _surf in appspec.surfaces:
                         if _surf.entity_ref == _source:
+                            # Surface search_fields (legacy top-level) then ux.search.
+                            _sf = list(getattr(_surf, "search_fields", None) or [])
+                            if _sf and not _search_fields:
+                                _search_fields = [str(x) for x in _sf if x]
                             ux = getattr(_surf, "ux", None)
                             if ux:
                                 if getattr(ux, "attention_signals", None):
@@ -364,6 +369,22 @@ class WorkspaceRouteBuilder:
                                     _surface_default_sort = list(ux.sort)
                                 if getattr(ux, "empty_message", None):
                                     _surface_empty_message = ux.empty_message
+                                _ux_search = list(getattr(ux, "search", None) or [])
+                                if _ux_search and not _search_fields:
+                                    _search_fields = [str(x) for x in _ux_search if x]
+                    # FTS SearchSpec fields as last fallback (search on Entity).
+                    if not _search_fields:
+                        for _ss in getattr(appspec, "searches", None) or []:
+                            if str(getattr(_ss, "entity", "") or "") == _source:
+                                _paths: list[str] = []
+                                for f in getattr(_ss, "fields", None) or []:
+                                    # SearchField.path; ignore dotted FK paths for
+                                    # simple LIKE list search (root columns only).
+                                    p = str(getattr(f, "path", f) or "")
+                                    if p and "." not in p:
+                                        _paths.append(p)
+                                _search_fields = _paths
+                                break
 
                     _columns = _columns_for_entity(_entity_spec, _source)
 
@@ -381,6 +402,7 @@ class WorkspaceRouteBuilder:
                         auto_include=entity_auto_includes.get(_source, []),
                         surface_default_sort=_surface_default_sort,
                         surface_empty_message=_surface_empty_message,
+                        search_fields=_search_fields,
                         cedar_access_spec=getattr(_entity_spec, "access", None),
                         fk_graph=self._fk_graph,
                         user_entity_name=self._user_entity_name,
