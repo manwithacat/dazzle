@@ -701,6 +701,10 @@ async def _build_dashboard_adapter_ctx(
     elif display_upper == "DAY_TIMELINE":
         day_cfg = getattr(ir_region, "day_timeline_config", None)
         if day_cfg is not None:
+            # #1303 / cycle 1416 — slot hub drill via detail_url_template
+            # (EDIT → demote when UPDATE denied, same as LIST/TIMELINE).
+            day_drill: dict[str, Any] = {}
+            _set_detail_url_template(day_drill, ctx, env.user_ctx)
             adapter_ctx["day_timeline_slots"] = _build_day_timeline_slots(
                 items=inputs.items,
                 config=day_cfg,
@@ -710,6 +714,7 @@ async def _build_dashboard_adapter_ctx(
                 row_action=getattr(ir_region, "row_action", None),
                 # #1233 — action_id → POST URL map.
                 row_action_routes=getattr(env.ctx, "row_action_routes", None),
+                detail_url_template=str(day_drill.get("detail_url_template") or ""),
             )
     elif display_upper == "TASK_INBOX":
         inbox_cfg = getattr(ir_region, "task_inbox_config", None)

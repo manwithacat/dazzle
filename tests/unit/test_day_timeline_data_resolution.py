@@ -223,3 +223,63 @@ def test_label_fallback(extra: dict, expected: str) -> None:
     ]
     slots = _build_day_timeline_slots(items=items, config=_config(), now=_NOW)
     assert slots[0]["label"] == expected
+
+
+# ── #1303 / cycle 1416 hub drill ──
+
+
+def test_detail_url_template_populates_slot_drill_url() -> None:
+    items = [
+        _item(
+            "p1",
+            _dt.datetime(2026, 5, 10, 9, 0, tzinfo=_dt.UTC),
+            _dt.datetime(2026, 5, 10, 10, 0, tzinfo=_dt.UTC),
+            name="Morning",
+        ),
+        _item(
+            "p2",
+            _dt.datetime(2026, 5, 10, 11, 0, tzinfo=_dt.UTC),
+            _dt.datetime(2026, 5, 10, 12, 0, tzinfo=_dt.UTC),
+            name="Midday",
+        ),
+    ]
+    slots = _build_day_timeline_slots(
+        items=items,
+        config=_config(),
+        now=_NOW,
+        detail_url_template="/app/alert/{id}",
+    )
+    by_id = {s["slot_id"]: s for s in slots}
+    assert by_id["p1"]["drill_url"] == "/app/alert/p1"
+    assert by_id["p2"]["drill_url"] == "/app/alert/p2"
+
+
+def test_empty_detail_url_template_leaves_drill_blank() -> None:
+    """No template → byte-stable empty drill_url (no accidental anchors)."""
+    items = [
+        _item(
+            "p1",
+            _dt.datetime(2026, 5, 10, 9, 0, tzinfo=_dt.UTC),
+            _dt.datetime(2026, 5, 10, 10, 0, tzinfo=_dt.UTC),
+        ),
+    ]
+    slots = _build_day_timeline_slots(items=items, config=_config(), now=_NOW)
+    assert slots[0]["drill_url"] == ""
+
+
+def test_unresolvable_detail_url_template_yields_empty_drill() -> None:
+    """Template keys missing from the row → no link, no crash."""
+    items = [
+        _item(
+            "p1",
+            _dt.datetime(2026, 5, 10, 9, 0, tzinfo=_dt.UTC),
+            _dt.datetime(2026, 5, 10, 10, 0, tzinfo=_dt.UTC),
+        ),
+    ]
+    slots = _build_day_timeline_slots(
+        items=items,
+        config=_config(),
+        now=_NOW,
+        detail_url_template="/app/alert/{missing_key}",
+    )
+    assert slots[0]["drill_url"] == ""

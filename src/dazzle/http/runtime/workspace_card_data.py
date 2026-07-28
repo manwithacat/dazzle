@@ -464,6 +464,7 @@ def _build_day_timeline_slots(
     now: _dt.datetime,
     row_action: Any = None,
     row_action_routes: dict[str, str] | None = None,
+    detail_url_template: str = "",
 ) -> list[dict[str, Any]]:
     """Build day_timeline slot dicts from already-scoped source rows (#1016).
 
@@ -483,6 +484,12 @@ def _build_day_timeline_slots(
     the row dict — same ``{{ field }}`` / ``{{ field.path }}`` grammar
     as ``profile_card`` / ``task_inbox`` use (#1146 part 1). Empty
     ``config.card`` keeps the body empty (minimal slot rendering).
+
+    #1303 / cycle 1416: ``detail_url_template`` (e.g. ``/app/alert/{id}`` or
+    ``…/{id}/edit``) populates each slot's ``drill_url`` so the day-timeline
+    renderer wraps the slot in ``<a href>``. Host request-time gates EDIT
+    paths when UPDATE is denied (same as LIST/TIMELINE). Unresolvable
+    templates yield empty drill (no link) rather than crashing.
 
     Defensive paths: rows missing the configured starts_at field
     are skipped; rows whose timestamps don't parse as datetime are
@@ -621,13 +628,19 @@ def _build_day_timeline_slots(
                     extra_class="dz-day-timeline-slot-action-btn",
                     action_url=(row_action_routes or {}).get(_aid, ""),
                 )
+        drill_url = ""
+        if detail_url_template:
+            try:
+                drill_url = detail_url_template.format(**item)
+            except (KeyError, IndexError, ValueError):
+                drill_url = ""  # row missing the template key — no link
         slots.append(
             {
                 "slot_id": slot_id,
                 "label": label,
                 "position": position,
                 "body": body,
-                "drill_url": "",
+                "drill_url": drill_url,
                 "action_html": action_html,
             }
         )
