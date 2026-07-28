@@ -47,9 +47,9 @@ apply map patches with `{"apply":true}`.
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1370 | USED |
-| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1368 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1368 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1371 | USED |
+| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1370 | USED |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1370 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1367 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | USED |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
@@ -120,6 +120,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1371 (2026-07-28).** **example-apps COGNITION** domain open_q quality + first AGENT_DOMAIN for domain_join_co + llm_ticket_classifier (ready_to_promote=True); broken cardinality filter (multiple theirs/wheres, a operate) landed with tip 1370 extract.py. budget 1. Explore **29/100**.
 
 > **Cycle 1370 (2026-07-28).** **example-apps COGNITION** domain ack owner-hint — ops/SRE briefs (`acknowledged_by` / ack_queue / "what needs me" / Alert noun) → desk `owner_field_hint=acknowledged_by`; ops_dashboard ready_to_promote False→True + AGENT_DOMAIN for ops_dashboard/support_tickets/invoice_ops. CI green on e61ff3912 (1369 repair). budget 1. Explore **28/100**.
 
