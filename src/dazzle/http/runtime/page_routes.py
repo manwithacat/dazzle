@@ -202,6 +202,40 @@ def _should_suppress_mutations(
     return False
 
 
+def _mutation_access_op(operation: str) -> AccessOperationKind | None:
+    """Map chrome mutation verbs to AccessOperationKind (create/update/delete)."""
+    return {
+        "create": AccessOperationKind.CREATE,
+        "update": AccessOperationKind.UPDATE,
+        "delete": AccessOperationKind.DELETE,
+    }.get(operation)
+
+
+def _cedar_mutation_needs_record(cedar_spec: Any, op: AccessOperationKind) -> bool:
+    """True when chrome cannot decide without a record (no pure role rules).
+
+    No matching rules or field-conditioned rules → leave the button; form/API
+    still enforce. Scopes alone still allow role evaluation at chrome time.
+    """
+    op_rules = [r for r in cedar_spec.permissions if r.operation == op]
+    if not op_rules:
+        return True
+    if getattr(cedar_spec, "scopes", None):
+        return False
+    return any(_is_field_cond(r.condition) for r in op_rules)
+
+
+def _access_runtime_from_auth(auth_ctx: Any) -> AccessRuntimeContext:
+    """Build AccessRuntimeContext from request auth (unauthenticated → empty)."""
+    user = auth_ctx.user if auth_ctx.is_authenticated else None
+    raw_roles = list(getattr(user, "roles", [])) if user else []
+    return AccessRuntimeContext(
+        user_id=str(user.id) if user else None,
+        roles=[r.removeprefix("role_") for r in raw_roles],
+        is_superuser=getattr(user, "is_superuser", False) if user else False,
+    )
+
+
 def _entity_can_mutate(
     deps: "_PageRouterConfig",
     entity_name: str | None,
@@ -213,47 +247,29 @@ def _entity_can_mutate(
     Related-tab "+ New X" CTAs know the *related* entity, not the parent
     surface — so chrome gates must evaluate Cedar on ``entity_name``
     directly (cycle 1394). Surface-keyed callers use ``_user_can_mutate``.
+
+    Helpers keep this under the new-function CC ceiling (cycle 1395 repair:
+    rename of grandfathered ``_user_can_mutate``@19 regressed as a new symbol).
     """
     if not entity_name or not deps.entity_cedar_specs or auth_ctx is None:
         return True  # No access control configured
 
-    _cedar_spec = deps.entity_cedar_specs.get(entity_name)
-    if _cedar_spec is None:
+    cedar_spec = deps.entity_cedar_specs.get(entity_name)
+    if cedar_spec is None:
         return True  # No access rules for this entity
 
-    op_map = {
-        "create": AccessOperationKind.CREATE,
-        "update": AccessOperationKind.UPDATE,
-        "delete": AccessOperationKind.DELETE,
-    }
-    _op = op_map.get(operation)
-    if _op is None:
-        return True
+    op = _mutation_access_op(operation)
+    if op is None or _cedar_mutation_needs_record(cedar_spec, op):
+        return True  # Unknown verb, no rules, or needs record context
 
-    # Only evaluate when rules are pure role checks (no field conditions)
-    _op_rules = [r for r in _cedar_spec.permissions if r.operation == _op]
-    _has_scopes = bool(getattr(_cedar_spec, "scopes", None))
-    _has_field_conditions = (
-        False if _has_scopes else any(_is_field_cond(r.condition) for r in _op_rules)
-    )
-    if not _op_rules or _has_field_conditions:
-        return True  # No rules or needs record context — allow UI button
-
-    _user = auth_ctx.user if auth_ctx.is_authenticated else None
-    _raw_roles = list(getattr(_user, "roles", [])) if _user else []
-    _runtime_ctx = AccessRuntimeContext(
-        user_id=str(_user.id) if _user else None,
-        roles=[r.removeprefix("role_") for r in _raw_roles],
-        is_superuser=getattr(_user, "is_superuser", False) if _user else False,
-    )
-    _decision = evaluate_permission(
-        _cedar_spec,
-        _op,
+    decision = evaluate_permission(
+        cedar_spec,
+        op,
         None,
-        _runtime_ctx,
+        _access_runtime_from_auth(auth_ctx),
         entity_name=entity_name or "",
     )
-    return bool(_decision.allowed)
+    return bool(decision.allowed)
 
 
 def _user_can_mutate(
