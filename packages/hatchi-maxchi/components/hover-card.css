@@ -2,9 +2,18 @@
 /*
  * Rich preview on hover/focus — CSS-only progressive enhancement.
  * Trigger + floating panel; panel appears on :hover / :focus-within.
- * Touch users get the panel via focus (tab) or a follow-up click controller.
+ * Touch users get the panel via focus (tab) — hover is a desktop affordance.
  *
- * PLACEHOLDER — shadcn parity (HMC-035). Distinct from popover (explicit open).
+ * Anatomy (canonical):
+ *   .dz-hover-card
+ *     .dz-hover-card__trigger
+ *     .dz-hover-card__content   (alias: .dz-hover-card__panel — legacy)
+ *
+ * Hit-target: a transparent ::before bridge above the panel covers the
+ * visual gap so the cursor can move trigger → panel without leaving
+ * :hover on the root (classic "death zone" bug when top > 100%).
+ *
+ * shadcn parity (HMC-035). Distinct from popover (explicit open).
  */
 
 .dz-hover-card {
@@ -29,11 +38,15 @@
   border-radius: var(--radius-sm);
 }
 
-.dz-hover-card__content {
+/* Content + legacy __panel alias (hm-core stub used __panel) */
+.dz-hover-card__content,
+.dz-hover-card__panel {
   position: absolute;
   z-index: var(--z-popover, 40);
-  top: calc(100% + var(--space-xs));
+  /* Sit just below the trigger; visual gap via margin, hit bridge via ::before */
+  top: 100%;
   left: 0;
+  margin-top: var(--space-xs);
   min-width: 14rem;
   max-width: 18rem;
   padding: var(--space-md);
@@ -53,8 +66,22 @@
     visibility var(--duration-fast) var(--ease-out);
 }
 
+/* Bridge the visual gap so moving the pointer into the panel keeps :hover */
+.dz-hover-card__content::before,
+.dz-hover-card__panel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Cover margin-top gap + a little extra for diagonal mouse paths */
+  bottom: 100%;
+  height: calc(var(--space-xs) + 0.25rem);
+}
+
 .dz-hover-card:hover .dz-hover-card__content,
-.dz-hover-card:focus-within .dz-hover-card__content {
+.dz-hover-card:hover .dz-hover-card__panel,
+.dz-hover-card:focus-within .dz-hover-card__content,
+.dz-hover-card:focus-within .dz-hover-card__panel {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -74,19 +101,22 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dz-hover-card__content {
+  .dz-hover-card__content,
+  .dz-hover-card__panel {
     transition: none;
   }
 }
 
-/* Prefer click/focus on coarse pointers — hover-only is a desktop affordance */
+/* Prefer focus on coarse pointers — hover-only is a desktop affordance */
 @media (hover: none) {
-  .dz-hover-card:hover .dz-hover-card__content {
+  .dz-hover-card:hover .dz-hover-card__content,
+  .dz-hover-card:hover .dz-hover-card__panel {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
   }
-  .dz-hover-card:focus-within .dz-hover-card__content {
+  .dz-hover-card:focus-within .dz-hover-card__content,
+  .dz-hover-card:focus-within .dz-hover-card__panel {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;

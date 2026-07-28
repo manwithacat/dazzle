@@ -2669,13 +2669,14 @@ def select(source: str, id: str) -> str:
             '<button type="button" class="dz-hover-card__trigger">@maya</button>'
             '<div class="dz-hover-card__content" role="tooltip">'
             '<p class="dz-hover-card__title">Maya Reyes</p>'
-            '<p class="dz-hover-card__description">Operations lead · Online now. '
-            "Hover or tab-focus the trigger to keep this open.</p>"
+            '<p class="dz-hover-card__description">Operations lead · Online now</p>'
             "</div></div>",
-            notes="PLACEHOLDER — shadcn parity (HMC-035). Opens on :hover / "
-            ":focus-within; coarse pointers rely on focus. Distinct from "
-            "popover (explicit open). Dual-lock root .dz-hover-card (HMC-133). "
-            "No JS controller.",
+            notes="shadcn parity (HMC-035). Opens on :hover / :focus-within; "
+            "coarse pointers use focus (tab). Transparent ::before bridge "
+            "covers the visual gap so the cursor can move into the panel "
+            "without dropping :hover. Distinct from popover (explicit open). "
+            "Dual-lock root .dz-hover-card (HMC-133). No JS controller. "
+            "Canonical panel class is __content (__panel is a legacy alias).",
             tags=("overlay",),
             contracts=("contracts/hover_card.py",),
         ),

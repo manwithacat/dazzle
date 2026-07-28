@@ -3307,34 +3307,6 @@ text-align: center;
 color: var(--colour-text-muted);
 font-size: var(--text-sm);
 }
-.dz-hover-card {
-position: relative;
-display: inline-block;
-}
-.dz-hover-card__panel {
-position: absolute;
-inset-block-start: calc(100% + 0.375rem);
-inset-inline-start: 0;
-width: 18rem;
-padding: var(--space-lg);
-background: var(--colour-surface);
-border: 1px solid var(--colour-border);
-border-radius: var(--radius-md);
-box-shadow: var(--shadow-md);
-opacity: 0;
-visibility: hidden;
-transition: opacity var(--duration-fast) var(--ease-out);
-z-index: 45;
-}
-.dz-hover-card:hover .dz-hover-card__panel,
-.dz-hover-card:focus-within .dz-hover-card__panel {
-opacity: 1;
-visibility: visible;
-transition-delay: 400ms;
-}
-@media (prefers-reduced-motion: reduce) {
-.dz-hover-card__panel { transition: none; }
-}
 .dz-scroll-area {
 overflow: auto;
 scrollbar-width: thin;
@@ -3944,11 +3916,13 @@ outline: 2px solid var(--colour-brand);
 outline-offset: 2px;
 border-radius: var(--radius-sm);
 }
-.dz-hover-card__content {
+.dz-hover-card__content,
+.dz-hover-card__panel {
 position: absolute;
 z-index: var(--z-popover, 40);
-top: calc(100% + var(--space-xs));
+top: 100%;
 left: 0;
+margin-top: var(--space-xs);
 min-width: 14rem;
 max-width: 18rem;
 padding: var(--space-md);
@@ -3967,8 +3941,19 @@ opacity var(--duration-fast) var(--ease-out),
 transform var(--duration-fast) var(--ease-out),
 visibility var(--duration-fast) var(--ease-out);
 }
+.dz-hover-card__content::before,
+.dz-hover-card__panel::before {
+content: "";
+position: absolute;
+left: 0;
+right: 0;
+bottom: 100%;
+height: calc(var(--space-xs) + 0.25rem);
+}
 .dz-hover-card:hover .dz-hover-card__content,
-.dz-hover-card:focus-within .dz-hover-card__content {
+.dz-hover-card:hover .dz-hover-card__panel,
+.dz-hover-card:focus-within .dz-hover-card__content,
+.dz-hover-card:focus-within .dz-hover-card__panel {
 opacity: 1;
 visibility: visible;
 transform: translateY(0);
@@ -3985,17 +3970,20 @@ font-size: var(--text-xs);
 line-height: 1.4;
 }
 @media (prefers-reduced-motion: reduce) {
-.dz-hover-card__content {
+.dz-hover-card__content,
+.dz-hover-card__panel {
 transition: none;
 }
 }
 @media (hover: none) {
-.dz-hover-card:hover .dz-hover-card__content {
+.dz-hover-card:hover .dz-hover-card__content,
+.dz-hover-card:hover .dz-hover-card__panel {
 opacity: 0;
 visibility: hidden;
 pointer-events: none;
 }
-.dz-hover-card:focus-within .dz-hover-card__content {
+.dz-hover-card:focus-within .dz-hover-card__content,
+.dz-hover-card:focus-within .dz-hover-card__panel {
 opacity: 1;
 visibility: visible;
 pointer-events: auto;
