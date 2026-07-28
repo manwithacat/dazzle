@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1412 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1412 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1413 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1413 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -120,6 +120,10 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1413 (2026-07-28).** **cimonitor** — main red tip 34960090a (run 30384328511): (1) `test_package_references_confined_to_sanctioned_seams` — cycle 1411 ship_surface REMEDIATION named `packages/hatchi-maxchi` without SANCTIONED; (2) HM gallery stale — cycle 1412 timeline site hand-form diverged from `build_site.py`. Fixed: SANCTIONED ship_surface; rebuild timeline site; promote boundary seam nodeid into preflight-surface (nodeid path check). CodeQL+inbox **USED@1413**. budget 0. Explore **57/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
+
+> **Cycle 1412 (2026-07-28).** **framework-ux edge** timeline #1303 hub drill — `TimelineEvent.drill_url` + TIMELINE `detail_url_template` with EDIT demote (parity list/queue/grid/kanban/inbox). CodeQL+inbox **USED@1412**. budget 1. Explore **57/100**.
 
 > **Cycle 1411 (2026-07-28).** **cimonitor** — main red tip a3826959b (run 30379263283): `test_committed_contract_surface_matches_generator` — cycle 1410 added `KanbanCard.drill_url` without regenerating `CONTRACT_SURFACE.md`. Regenerated map; promoted nodeid into ship-surface (106→107). CodeQL+inbox **USED@1411**. budget 0. Explore **56/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 

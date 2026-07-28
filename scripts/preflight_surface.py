@@ -48,6 +48,9 @@ SURFACE_TESTS: tuple[str, ...] = (
     "tests/unit/test_ux_catalogue.py",
     "tests/unit/test_complexity_ratchet.py",
     "tests/unit/test_hm_package_suite_gate.py",
+    # HM package path references confined to SANCTIONED seams (CI red 2026-07-28
+    # after ship_surface REMEDIATION named the monorepo package path without allowlist).
+    "tests/unit/test_hm_boundary.py::test_package_references_confined_to_sanctioned_seams",
 )
 
 REMEDIATION = """
@@ -95,6 +98,12 @@ Remediation by class (run from repo root, commit the regenerated files):
   Design-system gallery (stale site assets — HM package suite gate)
     cd packages/hatchi* && python site/build_site.py
     # commit regenerated site CSS/JS/index under that package
+    # (after Hyperpart emit/docs changes — do not hand-edit site/*)
+
+  HM boundary — unsanctioned design-system package path references
+    # Prefer published seams; if a scripts/ governance tool must name the
+    # HM monorepo package path, add it to SANCTIONED in
+    # tests/unit/test_hm_boundary.py with a rationale (cycle 1413: ship_surface).
 
 Re-run:
   make preflight-surface
@@ -112,7 +121,12 @@ def _python() -> str:
 
 
 def _check_paths_exist() -> list[str]:
-    missing = [p for p in SURFACE_TESTS if not (REPO / p).is_file()]
+    # Allow pytest nodeids (path::test) like ship_surface.
+    missing = []
+    for p in SURFACE_TESTS:
+        path = p.split("::", 1)[0]
+        if not (REPO / path).is_file():
+            missing.append(p)
     return missing
 
 

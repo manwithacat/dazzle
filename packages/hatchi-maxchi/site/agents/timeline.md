@@ -109,9 +109,7 @@ def render(evt: TimelineEvent) -> str:
         # Keep p + class for dual-lock/CSS; wrap title text in hub drill
         # (queue/kanban pattern; empty drill_url stays byte-stable plain p).
         title_html = (
-            f'<p class="dz-timeline-title">'
-            f'<a href="{href}" data-dz-timeline-drill>{title}</a>'
-            f"</p>"
+            f'<p class="dz-timeline-title"><a href="{href}" data-dz-timeline-drill>{title}</a></p>'
         )
     else:
         title_html = f'<p class="dz-timeline-title">{title}</p>'

@@ -69,6 +69,11 @@ SANCTIONED = {
     # packages/hatchi-maxchi/DUAL_LOCK_QUEUE.md (or invoking the queue tool). Governance
     # only — not runtime HM consumption.
     "scripts/improve_policy.py",
+    # Ship-surface remediation playbook documents regenerating
+    # packages/hatchi-maxchi/CONTRACT_SURFACE.md via the package tool (operator
+    # governance docs in REMEDIATION string — not runtime consumption).
+    # CI red 2026-07-28 after cycle 1411 promoted the CONTRACT_SURFACE gate.
+    "scripts/ship_surface.py",
     # Cross-repo CI mirror: public Actions API for hatchi-maxchi main (governance).
     "scripts/hm_standalone_ci_status.py",
     # Design-context facade names the HM families path in *generated doc prose*

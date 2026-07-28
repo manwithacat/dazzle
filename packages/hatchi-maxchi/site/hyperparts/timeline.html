@@ -352,9 +352,7 @@ body { background: var(--colour-bg); color: var(--colour-text);
         <span class="code__tok--cmt"># Keep p + class for dual-lock/CSS; wrap title text in hub drill</span>
         <span class="code__tok--cmt"># (queue/kanban pattern; empty drill_url stays byte-stable plain p).</span>
         <span class="code__tok--name">title_html</span> <span class="code__tok--op">=</span> <span class="code__tok--op">(</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;p class=&quot;dz-timeline-title&quot;&gt;&#x27;</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;a href=&quot;{href}&quot; data-dz-timeline-drill&gt;{title}&lt;/a&gt;&#x27;</span>
-            <span class="code__tok--name">f</span><span class="code__tok--str">&quot;&lt;/p&gt;&quot;</span>
+            <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;p class=&quot;dz-timeline-title&quot;&gt;&lt;a href=&quot;{href}&quot; data-dz-timeline-drill&gt;{title}&lt;/a&gt;&lt;/p&gt;&#x27;</span>
         <span class="code__tok--op">)</span>
     <span class="code__tok--kw">else</span><span class="code__tok--op">:</span>
         <span class="code__tok--name">title_html</span> <span class="code__tok--op">=</span> <span class="code__tok--name">f</span><span class="code__tok--str">&#x27;&lt;p class=&quot;dz-timeline-title&quot;&gt;{title}&lt;/p&gt;&#x27;</span>
