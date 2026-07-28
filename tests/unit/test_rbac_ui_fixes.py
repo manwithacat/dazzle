@@ -552,6 +552,143 @@ class TestQueueTransitionPermission:
         assert out == transitions
 
 
+class TestConfirmActionPanelPermission:
+    """confirm_action_panel commit/revoke URLs clear when UPDATE denied (cycle 1397)."""
+
+    def _integration_update_cedar(self) -> Any:
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        return EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.UPDATE,
+                    personas=["admin"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.READ,
+                    personas=["admin", "ops_engineer"],
+                ),
+            ],
+        )
+
+    def test_urls_cleared_when_update_denied(self) -> None:
+        from dazzle.http.runtime.workspace_region_orchestration import (
+            gate_confirm_action_urls_for_principal,
+        )
+
+        primary, secondary, revoke = gate_confirm_action_urls_for_principal(
+            primary_url="/app/integration/enable",
+            secondary_url="/app/integration/draft",
+            revoke_url="/app/integration/revoke",
+            cedar_access_spec=self._integration_update_cedar(),
+            auth_ctx=_make_auth_ctx(["role_ops_engineer"]),
+            entity_name="Integration",
+        )
+        assert (primary, secondary, revoke) == ("", "", "")
+
+    def test_urls_kept_when_update_allowed(self) -> None:
+        from dazzle.http.runtime.workspace_region_orchestration import (
+            gate_confirm_action_urls_for_principal,
+        )
+
+        primary, secondary, revoke = gate_confirm_action_urls_for_principal(
+            primary_url="/app/integration/enable",
+            secondary_url="/app/integration/draft",
+            revoke_url="/app/integration/revoke",
+            cedar_access_spec=self._integration_update_cedar(),
+            auth_ctx=_make_auth_ctx(["role_admin"]),
+            entity_name="Integration",
+        )
+        assert primary == "/app/integration/enable"
+        assert secondary == "/app/integration/draft"
+        assert revoke == "/app/integration/revoke"
+
+    def test_no_cedar_leaves_urls(self) -> None:
+        from dazzle.http.runtime.workspace_region_orchestration import (
+            gate_confirm_action_urls_for_principal,
+        )
+
+        primary, secondary, revoke = gate_confirm_action_urls_for_principal(
+            primary_url="/p",
+            secondary_url="/s",
+            revoke_url="/r",
+            cedar_access_spec=None,
+            auth_ctx=_make_auth_ctx(["role_viewer"]),
+            entity_name="Integration",
+        )
+        assert (primary, secondary, revoke) == ("/p", "/s", "/r")
+
+
+class TestActionGridCreatePermission:
+    """action_grid create CTAs must drop when CREATE denied (cycle 1397)."""
+
+    def _system_create_cedar(self) -> Any:
+        pytest.importorskip("dazzle.render.access_evaluator")
+        from dazzle.http.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        return EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.CREATE,
+                    personas=["admin"],
+                ),
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    personas=["admin", "ops_engineer"],
+                ),
+            ],
+        )
+
+    def test_create_card_dropped_when_create_denied(self) -> None:
+        from dazzle.http.runtime.workspace_region_orchestration import (
+            gate_action_grid_cards_for_principal,
+        )
+
+        cards = [
+            {"label": "Active alerts", "url": "/app/alert", "tone": "warning"},
+            {"label": "Add system", "url": "/app/system/create", "tone": "positive"},
+        ]
+        specs = {"System": self._system_create_cedar()}
+        out = gate_action_grid_cards_for_principal(
+            cards, specs, _make_auth_ctx(["role_ops_engineer"])
+        )
+        assert len(out) == 1
+        assert out[0]["label"] == "Active alerts"
+
+    def test_create_card_kept_when_create_allowed(self) -> None:
+        from dazzle.http.runtime.workspace_region_orchestration import (
+            gate_action_grid_cards_for_principal,
+        )
+
+        cards = [
+            {"label": "Add system", "url": "/app/system/create", "tone": "positive"},
+        ]
+        specs = {"System": self._system_create_cedar()}
+        out = gate_action_grid_cards_for_principal(cards, specs, _make_auth_ctx(["role_admin"]))
+        assert len(out) == 1
+        assert out[0]["url"] == "/app/system/create"
+
+    def test_list_cards_always_kept(self) -> None:
+        from dazzle.http.runtime.workspace_region_orchestration import (
+            gate_action_grid_cards_for_principal,
+        )
+
+        cards = [{"label": "Alerts", "url": "/app/alert?status=active"}]
+        out = gate_action_grid_cards_for_principal(
+            cards, {"System": self._system_create_cedar()}, _make_auth_ctx(["role_ops_engineer"])
+        )
+        assert out == cards
+
+
 # ---------------------------------------------------------------------------
 # #583 — Sidebar nav filtering by entity access
 # ---------------------------------------------------------------------------

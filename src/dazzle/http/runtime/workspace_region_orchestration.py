@@ -91,6 +91,97 @@ def gate_queue_transitions_for_principal(
     return []
 
 
+def gate_confirm_action_urls_for_principal(
+    *,
+    primary_url: str,
+    secondary_url: str,
+    revoke_url: str,
+    cedar_access_spec: Any,
+    auth_ctx: Any,
+    entity_name: str = "",
+) -> tuple[str, str, str]:
+    """Clear confirm_action_panel commit/revoke chrome when UPDATE is denied.
+
+    Compile-time stamps ``primary_action_url`` / ``secondary_action_url`` /
+    ``revoke_url`` from surface names. Queue transitions already gate on
+    UPDATE (cycle 1396); the consent panel still painted Enable / Save draft /
+    Revoke for read-only personas until the mutation surface 403'd
+    (cycle 1397 — same class of workspace chrome leak).
+    """
+    if not (primary_url or secondary_url or revoke_url):
+        return primary_url, secondary_url, revoke_url
+    if _principal_can_op(
+        cedar_access_spec,
+        AccessOperationKind.UPDATE,
+        auth_ctx,
+        entity_name=entity_name,
+    ):
+        return primary_url, secondary_url, revoke_url
+    return "", "", ""
+
+
+def _entity_name_for_create_url(
+    url: str,
+    entity_access_specs: dict[str, Any] | None,
+) -> str | None:
+    """Map a create-path URL (``…/{slug}/create``) to an entity name.
+
+    Returns the first entity whose ``app_paths.entity_slug`` matches the
+    path segment before ``/create``. Unknown / non-create URLs → None
+    (caller leaves the card — list/filter CTAs are read navigation).
+    """
+    if not url or not entity_access_specs:
+        return None
+    path = str(url).split("?", 1)[0].rstrip("/")
+    if not path.endswith("/create"):
+        return None
+    parts = [p for p in path.split("/") if p]
+    if len(parts) < 2 or parts[-1] != "create":
+        return None
+    slug = parts[-2]
+    from dazzle.page import app_paths
+
+    for entity_name in entity_access_specs:
+        if app_paths.entity_slug(entity_name) == slug:
+            return entity_name
+    return None
+
+
+def gate_action_grid_cards_for_principal(
+    cards: list[dict[str, Any]],
+    entity_access_specs: dict[str, Any] | None,
+    auth_ctx: Any,
+) -> list[dict[str, Any]]:
+    """Drop action_grid create CTAs when CREATE is denied for the target entity.
+
+    ``action: system_create`` compiles to ``/app/system/create``. List create
+    buttons and workspace heading New X already suppress when CREATE is denied
+    (#582 / #827); action_grid still painted \"Add system\" for ops engineers
+    who can only list/read Systems (cycle 1397). Read/list card targets are
+    left intact. Cards whose create URL cannot be mapped to a known entity
+    stay (permissive; write path still enforces).
+    """
+    if not cards:
+        return cards
+    out: list[dict[str, Any]] = []
+    for card in cards:
+        url = str(card.get("url") or "")
+        entity_name = _entity_name_for_create_url(url, entity_access_specs)
+        if entity_name is None:
+            out.append(card)
+            continue
+        cedar = (entity_access_specs or {}).get(entity_name)
+        if _principal_can_op(
+            cedar,
+            AccessOperationKind.CREATE,
+            auth_ctx,
+            entity_name=entity_name,
+        ):
+            out.append(card)
+        # else: omit create CTA for denied principal
+    return out
+
+
 def _read_stored_insight(region_name: str) -> Any:
     """Read the stored narrative for a region; a provider error → None (fallback)."""
     try:
@@ -352,6 +443,7 @@ async def compute_region_render_inputs(
         rag_on = ""
 
     # Action grid (#891): async per-card count fan-out.
+    # Create-target cards are CREATE chrome — drop when denied (cycle 1397).
     action_card_data: list[dict[str, Any]] = []
     if display == "ACTION_GRID":
         action_card_data = await compute_action_grid(
@@ -360,6 +452,11 @@ async def compute_region_render_inputs(
             ctx.source,
             agg_scope_filters,  # #1305: scope + context selector
             scope_denied,
+        )
+        action_card_data = gate_action_grid_cards_for_principal(
+            action_card_data,
+            getattr(ctx, "entity_access_specs", None) or None,
+            user_ctx.auth_ctx_for_filters,
         )
 
     # Pipeline steps (#890): async per-stage aggregate.
@@ -378,11 +475,28 @@ async def compute_region_render_inputs(
     if display == "PROFILE_CARD":
         profile_card_data = compute_profile_card(items, ctx_region)
 
-    # Confirm action panel (v0.61.72): state_field read.
+    # Confirm action panel (v0.61.72): state_field read + UPDATE chrome gate.
+    # primary/secondary/revoke are mutation affordances — clear when denied
+    # (parity with queue transitions, cycle 1397).
     confirm_state_value: str = ""
+    confirm_primary_action_url = ""
+    confirm_secondary_action_url = ""
+    confirm_revoke_url = ""
     if display == "CONFIRM_ACTION_PANEL":
         confirm_state_value = compute_confirm_action_state(
             items, getattr(ctx_region, "state_field", None)
+        )
+        (
+            confirm_primary_action_url,
+            confirm_secondary_action_url,
+            confirm_revoke_url,
+        ) = gate_confirm_action_urls_for_principal(
+            primary_url=str(getattr(ctx_region, "primary_action_url", "") or ""),
+            secondary_url=str(getattr(ctx_region, "secondary_action_url", "") or ""),
+            revoke_url=str(getattr(ctx_region, "revoke_url", "") or ""),
+            cedar_access_spec=ctx.cedar_access_spec,
+            auth_ctx=user_ctx.auth_ctx_for_filters,
+            entity_name=ctx.source or "",
         )
 
     # Multi-dim pivot (cycle 25, cycle 28). #887: scope-gated.
@@ -545,6 +659,9 @@ async def compute_region_render_inputs(
         pipeline_stage_data=pipeline_stage_data,
         profile_card_data=profile_card_data,
         confirm_state_value=confirm_state_value,
+        confirm_primary_action_url=confirm_primary_action_url,
+        confirm_secondary_action_url=confirm_secondary_action_url,
+        confirm_revoke_url=confirm_revoke_url,
         queue_transitions=queue_transitions,
         queue_status_field=queue_status_field,
         queue_api_endpoint=queue_api_endpoint,

@@ -107,6 +107,10 @@ class RegionRenderInputs:
     pipeline_stage_data: list[dict[str, Any]] = field(default_factory=list)
     profile_card_data: dict[str, Any] = field(default_factory=dict)
     confirm_state_value: str = ""
+    # Gated per-request (cycle 1397): empty when UPDATE denied for source entity.
+    confirm_primary_action_url: str = ""
+    confirm_secondary_action_url: str = ""
+    confirm_revoke_url: str = ""
     queue_transitions: list[dict[str, str]] = field(default_factory=list)
     queue_status_field: str = ""
     queue_api_endpoint: str = ""
@@ -552,9 +556,10 @@ async def _build_card_adapter_ctx(
     elif display_upper == "CONFIRM_ACTION_PANEL":
         adapter_ctx["state_value"] = inputs.confirm_state_value
         adapter_ctx["confirmations"] = getattr(ctx_region, "confirmations", [])
-        adapter_ctx["primary_action_url"] = getattr(ctx_region, "primary_action_url", "")
-        adapter_ctx["secondary_action_url"] = getattr(ctx_region, "secondary_action_url", "")
-        adapter_ctx["revoke_url"] = getattr(ctx_region, "revoke_url", "")
+        # Request-time gated URLs (UPDATE chrome) — not compile-time stamps.
+        adapter_ctx["primary_action_url"] = inputs.confirm_primary_action_url
+        adapter_ctx["secondary_action_url"] = inputs.confirm_secondary_action_url
+        adapter_ctx["revoke_url"] = inputs.confirm_revoke_url
         adapter_ctx["audit_enabled"] = getattr(ctx_region, "audit_enabled", False)
     elif display_upper in ("METRICS", "SUMMARY"):
         # `summary` aliases to `metrics` in the adapter (#1058 follow-up).
