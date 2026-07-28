@@ -21,7 +21,11 @@ from typing import Any
 
 import pytest
 
-from dazzle.page.runtime.workspace_renderer import _action_to_url
+from dazzle.page.runtime.action_urls import (
+    _action_to_url,
+    _confirm_action_to_url,
+    fill_row_id_in_url,
+)
 
 pytestmark = pytest.mark.gate
 
@@ -145,3 +149,65 @@ def test_unknown_action_falls_back_to_slugify() -> None:
     assert _action_to_url("parents_evening_create", spec) == "/app/parents-evening-create"
     # Same fallback when app_spec is None entirely.
     assert _action_to_url("parents_evening_create", None) == "/app/parents-evening-create"
+
+
+def test_confirm_action_edit_view_keep_id_template() -> None:
+    """confirm_action_panel has a source row — EDIT/VIEW keep ``{id}`` (cycle 1402).
+
+    action_grid still demotes EDIT to list (no row id on dashboard cards).
+    """
+    from dazzle.core import ir
+
+    spec = _stub_app_spec(
+        [
+            SimpleNamespace(
+                name="system_edit",
+                entity_ref="System",
+                mode=ir.SurfaceMode.EDIT,
+            ),
+            SimpleNamespace(
+                name="system_detail",
+                entity_ref="System",
+                mode=ir.SurfaceMode.VIEW,
+            ),
+            SimpleNamespace(
+                name="system_create",
+                entity_ref="System",
+                mode=ir.SurfaceMode.CREATE,
+            ),
+        ]
+    )
+    assert _confirm_action_to_url("system_edit", spec) == "/app/system/{id}/edit"
+    assert _confirm_action_to_url("system_detail", spec) == "/app/system/{id}"
+    assert _confirm_action_to_url("system_create", spec) == "/app/system/create"
+    # action_grid path unchanged
+    assert _action_to_url("system_edit", spec) == "/app/system"
+
+
+def test_confirm_action_unknown_falls_back_to_source_edit() -> None:
+    """ops_dashboard ``integration_enable`` had no surface → dead slugify path.
+
+    With ``source_entity``, fall back to that entity's edit template so the
+    consent CTA lands on a real form after ``{id}`` fill (cycle 1402).
+    """
+    spec = _stub_app_spec([])
+    assert (
+        _confirm_action_to_url("integration_enable", spec, source_entity="Integration")
+        == "/app/integration/{id}/edit"
+    )
+    assert (
+        _confirm_action_to_url(
+            "integration_revoke?reason=off",
+            spec,
+            source_entity="Integration",
+        )
+        == "/app/integration/{id}/edit?reason=off"
+    )
+
+
+def test_fill_row_id_in_url() -> None:
+    rid = "b2000000-0000-4000-8000-000000000099"
+    assert fill_row_id_in_url("/app/integration/{id}/edit", rid) == f"/app/integration/{rid}/edit"
+    assert fill_row_id_in_url("/app/system/create", rid) == "/app/system/create"
+    # Missing row → omit CTA rather than leave a literal ``{id}`` path
+    assert fill_row_id_in_url("/app/integration/{id}/edit", "") == ""

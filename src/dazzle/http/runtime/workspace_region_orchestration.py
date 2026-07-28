@@ -59,6 +59,7 @@ from dazzle.http.runtime.workspace_region_computes import (
 from dazzle.http.runtime.workspace_region_fetch import RegionItemsResult
 from dazzle.http.runtime.workspace_region_prelude import RequestUserContext
 from dazzle.http.runtime.workspace_region_render import RegionRenderInputs
+from dazzle.page.runtime.action_urls import fill_row_id_in_url
 
 logger = logging.getLogger(__name__)
 
@@ -476,7 +477,9 @@ async def compute_region_render_inputs(
 
     # Confirm action panel (v0.61.72): state_field read + UPDATE chrome gate.
     # primary/secondary/revoke are mutation affordances — clear when denied
-    # (parity with queue transitions, cycle 1397).
+    # (parity with queue transitions, cycle 1397). Cycle 1402: fill ``{id}``
+    # from the fetched source row before gating so EDIT-path CTAs land on a
+    # real form instead of a literal ``{id}`` path segment.
     confirm_state_value: str = ""
     confirm_primary_action_url = ""
     confirm_secondary_action_url = ""
@@ -485,14 +488,22 @@ async def compute_region_render_inputs(
         confirm_state_value = compute_confirm_action_state(
             items, getattr(ctx_region, "state_field", None)
         )
+        row_id = ""
+        if items:
+            first = items[0] if isinstance(items[0], dict) else {}
+            row_id = str(first.get("id") or "")
         (
             confirm_primary_action_url,
             confirm_secondary_action_url,
             confirm_revoke_url,
         ) = gate_confirm_action_urls_for_principal(
-            primary_url=str(getattr(ctx_region, "primary_action_url", "") or ""),
-            secondary_url=str(getattr(ctx_region, "secondary_action_url", "") or ""),
-            revoke_url=str(getattr(ctx_region, "revoke_url", "") or ""),
+            primary_url=fill_row_id_in_url(
+                str(getattr(ctx_region, "primary_action_url", "") or ""), row_id
+            ),
+            secondary_url=fill_row_id_in_url(
+                str(getattr(ctx_region, "secondary_action_url", "") or ""), row_id
+            ),
+            revoke_url=fill_row_id_in_url(str(getattr(ctx_region, "revoke_url", "") or ""), row_id),
             cedar_access_spec=ctx.cedar_access_spec,
             auth_ctx=user_ctx.auth_ctx_for_filters,
             entity_name=ctx.source or "",

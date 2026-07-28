@@ -20,88 +20,22 @@ from pydantic import BaseModel, Field
 
 from dazzle.core import ir
 from dazzle.page import app_paths
+from dazzle.page.runtime.action_urls import (
+    action_to_url as _action_to_url,
+)
+from dazzle.page.runtime.action_urls import (
+    confirm_action_to_url as _confirm_action_to_url,
+)
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
+
+# Action URL helpers live in action_urls.py (MI leaf). Tests may import
+# `_action_to_url` from this module or from action_urls directly.
 
 
 def _entity_to_app_url(entity_name: str) -> str:
     """Build the /app/ detail URL pattern for an entity (``/app/{slug}/{id}``)
     via the shared #1426 path SSOT (``dazzle.page.app_paths``)."""
     return app_paths.detail_path("/app", app_paths.entity_slug(entity_name))
-
-
-def _surface_entity_path(entity_ref: str, mode: Any) -> str:
-    """Map a surface's entity + mode to an app-shell path (#1426 SSOT).
-
-    CREATE → ``/app/{slug}/create`` so action_grid ``action: system_create``
-    lands on the create form (and the cycle-1397 CREATE RBAC gate can see
-    the ``/create`` suffix). LIST / VIEW / EDIT / CUSTOM / unknown → list
-    path: dashboard CTAs lack a row id, so edit/detail templates are not
-    usable as card hrefs.
-    """
-    slug = app_paths.entity_slug(entity_ref)
-    mode_val = getattr(mode, "value", mode)
-    if str(mode_val or "").lower() == "create":
-        return app_paths.create_path("/app", slug)
-    return app_paths.list_path("/app", slug)
-
-
-def _action_to_url(action: str, app_spec: Any | None = None) -> str:
-    """Resolve an ``action_grid`` card target to a URL (#891, #979).
-
-    Three forms accepted, in priority order:
-
-      1. **Literal URL** prefixed with `/` (e.g.
-         ``"/app/marking-result?status=flagged"``) — used as-is.
-         Authors who need query strings, anchors, or explicit paths
-         choose this form.
-
-      2. **Surface name** registered in ``app_spec.surfaces`` (e.g.
-         ``cohort_analysis_list`` → ``/app/cohortanalysis``; CREATE-mode
-         ``system_create`` → ``/app/system/create``). The slug derives from
-         the *entity*, not the surface name, via ``app_paths`` SSOT (#1426).
-         Pre-#979 we slugified the surface name directly
-         (``/app/cohort-analysis-list``), which does not exist. Pre-cycle
-         1401 every mode used the list path, so CREATE action_grid cards
-         never hit the create form or the CREATE RBAC gate.
-
-      3. **Bare slugified fallback** for legacy / literal-path action
-         strings (no matching surface, no matching entity). Same
-         ``app_paths.entity_slug`` transform on the action string.
-         Preserves backward-compat for action targets that mean
-         "send the user to /app/<whatever-this-is>".
-
-    Empty input returns empty string (informational card with no
-    click-through).
-    """
-    if not action:
-        return ""
-    if action.startswith("/"):
-        return action
-
-    # Split optional `?query` suffix so the surface lookup matches
-    # against the bare name without dragging the query string through.
-    name, query = action, ""
-    if "?" in action:
-        name, query = action.split("?", 1)
-
-    # Form 2: surface lookup. Resolve to the surface's entity_ref
-    # slug (+ CREATE mode path when applicable).
-    if app_spec is not None:
-        surfaces = getattr(app_spec, "surfaces", None) or []
-        for s in surfaces:
-            if getattr(s, "name", None) == name:
-                entity_ref = getattr(s, "entity_ref", None) or ""
-                if entity_ref:
-                    base = _surface_entity_path(entity_ref, getattr(s, "mode", None))
-                    return f"{base}?{query}" if query else base
-                # Surface exists but has no entity_ref — fall through
-                # to the legacy slugify path on the surface name.
-                break
-
-    # Form 3: legacy slugify fallback. Surface not found — treat the
-    # action string as a literal URL fragment to slugify.
-    base = app_paths.list_path("/app", app_paths.entity_slug(name))
-    return f"{base}?{query}" if query else base
 
 
 def _flatten_group_by(value: Any) -> str:
@@ -714,14 +648,23 @@ def build_workspace_context(
                     for c in (getattr(region, "confirmations", None) or [])
                 ],  # v0.61.72 #6
                 state_field=getattr(region, "state_field", None) or "",
-                # #979: surface-aware URL resolution — resolve to entity slug
-                # when the action string matches a surface name in app_spec.
-                revoke_url=_action_to_url(getattr(region, "revoke", None) or "", app_spec),
-                primary_action_url=_action_to_url(
-                    getattr(region, "primary_action", None) or "", app_spec
+                # #979 + cycle 1402: surface-aware URLs with row-id templates
+                # for EDIT/VIEW; unknown action names fall back to source
+                # entity edit path (not a dead slugified action name).
+                revoke_url=_confirm_action_to_url(
+                    getattr(region, "revoke", None) or "",
+                    app_spec,
+                    source_entity=source_name,
                 ),
-                secondary_action_url=_action_to_url(
-                    getattr(region, "secondary_action", None) or "", app_spec
+                primary_action_url=_confirm_action_to_url(
+                    getattr(region, "primary_action", None) or "",
+                    app_spec,
+                    source_entity=source_name,
+                ),
+                secondary_action_url=_confirm_action_to_url(
+                    getattr(region, "secondary_action", None) or "",
+                    app_spec,
+                    source_entity=source_name,
                 ),
                 audit_enabled=(
                     getattr(_entities_by_name.get(source_name or ""), "audit", None) is not None
