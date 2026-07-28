@@ -379,6 +379,30 @@ def _rollback_created(deps: _TestDeps, created_ids: list[tuple[str, str]]) -> No
             logger.debug("Rollback delete failed for %s/%s", entity_name, entity_id)
 
 
+# Auth children of users(id) without ON DELETE CASCADE (see db.excision).
+_AUTH_USER_CHILD_TABLES = ("sessions", "password_reset_tokens", "user_preferences")
+
+
+def _clear_auth_users_for_reset(deps: _TestDeps) -> None:
+    """Delete auth users after clearing non-cascading child rows.
+
+    Bare ``DELETE FROM users`` FK-violates when sessions remain (demo
+    reset-and-load noise, cycle 1367).
+    """
+    if deps.auth_store is None:
+        return
+    try:
+        with deps.db_manager.connection() as conn:
+            for child in _AUTH_USER_CHILD_TABLES:
+                try:
+                    conn.execute(f'DELETE FROM "{child}"')  # noqa: S608 — fixed identifiers
+                except Exception:
+                    logger.debug("auth child table %s clear skipped", child, exc_info=True)
+            conn.execute('DELETE FROM "users"')
+    except Exception:
+        logger.warning("Could not clear auth users table", exc_info=True)
+
+
 async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
     """
     Clear all data from the database and recreate demo auth users.
@@ -400,14 +424,7 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
         except Exception:
             logger.debug("Table %s might not exist yet", sql.name, exc_info=True)
 
-    # Also clear the auth store's users table (not the entity table) so
-    # fixture-created auth users from previous runs don't block re-seeding.
-    if deps.auth_store is not None:
-        try:
-            with deps.db_manager.connection() as conn:
-                conn.execute('DELETE FROM "users"')
-        except Exception:
-            logger.warning("Could not clear auth users table", exc_info=True)
+    _clear_auth_users_for_reset(deps)
 
     # Load project-specific credentials if available (#688)
     creds_personas: dict[str, dict[str, str]] = {}

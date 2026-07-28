@@ -23,6 +23,7 @@ from dazzle.http.runtime.test_routes import (
     SeedRequest,
     SeedResponse,
     SnapshotResponse,
+    _clear_auth_users_for_reset,
     _mirror_auth_user_to_domain,
 )
 
@@ -39,11 +40,31 @@ class _CaptureConn:
     def __exit__(self, *a: object) -> None:
         return None
 
-    def execute(self, sql: str, params: tuple = ()) -> None:
-        self.executed.append((sql, params))
+    def execute(self, sql: str, params: tuple | None = None) -> None:
+        self.executed.append((sql, params or ()))
 
     def commit(self) -> None:
         return None
+
+
+def test_clear_auth_users_deletes_children_before_users() -> None:
+    """sessions (etc.) must go before users — no ON DELETE CASCADE (cycle 1367)."""
+    from types import SimpleNamespace
+
+    conn = _CaptureConn()
+
+    class _DB:
+        def connection(self) -> _CaptureConn:
+            return conn
+
+    deps = SimpleNamespace(auth_store=object(), db_manager=_DB())
+    _clear_auth_users_for_reset(deps)  # type: ignore[arg-type]
+    sqls = [s for s, _ in conn.executed]
+    assert 'DELETE FROM "sessions"' in sqls
+    assert 'DELETE FROM "password_reset_tokens"' in sqls
+    assert 'DELETE FROM "user_preferences"' in sqls
+    assert 'DELETE FROM "users"' in sqls
+    assert sqls.index('DELETE FROM "sessions"') < sqls.index('DELETE FROM "users"')
 
 
 class TestMirrorAuthUserSchemaDerived:
