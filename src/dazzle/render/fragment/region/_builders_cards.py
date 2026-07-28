@@ -100,6 +100,7 @@ class _BuildersCardsMixin:
         status_field = str(ctx.get("kanban_status_field") or group_by or "")
         api_endpoint = str(ctx.get("kanban_api_endpoint") or "")
         refresh_src = str(ctx.get("kanban_refresh_src") or endpoint or "")
+        rank_field = str(ctx.get("kanban_rank_field") or "")
         # per-id allowed targets: {id: [to_state, ...]} from orchestration
         allowed_by_id: dict[str, tuple[str, ...]] = ctx.get("kanban_allowed_by_id") or {}
 
@@ -165,9 +166,29 @@ class _BuildersCardsMixin:
             if link:
                 drill_by_id[id(item)] = str(link)
 
+        def _item_rank(it: dict[str, Any], fallback: float) -> float:
+            if not rank_field:
+                return fallback
+            raw = it.get(rank_field)
+            if raw is None or raw == "":
+                return fallback
+            try:
+                return float(raw)
+            except (TypeError, ValueError):
+                return fallback
+
         for col_key in column_keys:
             cards: list[KanbanCard] = []
-            for item in buckets.get(col_key, []):
+            bucket_items = list(buckets.get(col_key, []))
+            if rank_field and rearrange == "status":
+                # Index fallback so unranked rows keep stable relative order.
+                bucket_items.sort(
+                    key=lambda it: (
+                        _item_rank(it, float(bucket_items.index(it) * 1000)),
+                        str(it.get("id") or ""),
+                    )
+                )
+            for idx, item in enumerate(bucket_items):
                 # Per-cell type-aware rendering for secondary fields.
                 fields: list[tuple[str, object]] = []
                 for col in meta_columns:
@@ -197,6 +218,9 @@ class _BuildersCardsMixin:
                     else:
                         # Free enum board (no SM graph): any other column.
                         allowed = tuple(k for k in column_keys if k != col_key)
+                card_rank: float | int | None = None
+                if rearrange == "status" and rank_field:
+                    card_rank = _item_rank(item, float((idx + 1) * 1000))
                 cards.append(
                     KanbanCard(
                         title=_card_title(item),
@@ -207,6 +231,7 @@ class _BuildersCardsMixin:
                         row_id=row_id,
                         from_state=from_state,
                         allowed_to=allowed,
+                        rank=card_rank,
                     )
                 )
             kanban_cols.append(KanbanColumn(label=col_key, cards=tuple(cards)))
@@ -223,6 +248,7 @@ class _BuildersCardsMixin:
             status_field=status_field if rearrange == "status" else "",
             api_endpoint=api_endpoint if rearrange == "status" else "",
             refresh_src=refresh_src if rearrange == "status" else "",
+            rank_field=rank_field if rearrange == "status" else "",
         )
         return _wrap_surface(title, "kanban", body)
 

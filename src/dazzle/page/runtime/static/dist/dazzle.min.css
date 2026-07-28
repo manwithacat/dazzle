@@ -6372,8 +6372,14 @@ touch-action: none;
 .dz-kanban-card[draggable="true"]:active,
 .dz-kanban-card.is-dragging {
 cursor: grabbing;
-opacity: 0.72;
-box-shadow: 0 8px 24px oklch(0% 0 0 / 0.12);
+opacity: 0.35;
+box-shadow: none;
+}
+.dz-kanban-card.is-drag-ghost {
+opacity: 1;
+box-shadow: 0 12px 28px oklch(0% 0 0 / 0.18);
+transform: rotate(1.5deg);
+cursor: grabbing;
 }
 .dz-kanban-card.is-moving {
 opacity: 0.5;
@@ -6433,16 +6439,21 @@ var(--colour-destructive, oklch(55% 0.2 25)) 10%,
 transparent
 );
 }
-.dz-kanban-stack.is-drop-target::after {
+.dz-kanban-stack.is-drop-target:not(:has(.is-drop-before))::after {
 content: "";
 display: block;
-flex: 1 1 2.5rem;
+flex: 0 0 2.5rem;
 min-height: 2.5rem;
 margin-block-start: var(--space-xs);
 border-radius: var(--radius-sm);
 border: 1px dashed color-mix(in oklch, var(--colour-brand) 55%, var(--colour-border));
 background: color-mix(in oklch, var(--colour-brand) 6%, transparent);
 pointer-events: none;
+}
+.dz-kanban-card.is-drop-before {
+box-shadow: 0 -3px 0 0 var(--colour-brand);
+border-top-left-radius: 0;
+border-top-right-radius: 0;
 }
 .dz-kanban-card-move {
 display: flex;

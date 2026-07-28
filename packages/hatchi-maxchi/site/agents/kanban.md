@@ -13,12 +13,12 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
 
 ```html
 <!-- icons: include the icon sheet once per page (see the Setup section, #setup) -->
-<div class="kanban-board" role="region" aria-label="Kanban board" tabindex="0" data-kanban-board data-kanban-rearrange="status" data-kanban-status-field="status" data-kanban-api="/mock/kanban" data-kanban-src="/mock/kanban/board">
+<div class="kanban-board" role="region" aria-label="Kanban board" tabindex="0" data-kanban-board data-kanban-rearrange="status" data-kanban-status-field="status" data-kanban-api="/mock/kanban" data-kanban-src="/mock/kanban/board" data-kanban-rank-field="rank">
   <div class="kanban-announce" data-kanban-announce aria-live="polite" aria-atomic="true"></div>
   <div class="kanban-column">
     <div class="kanban-column-head"><span class="badge" data-tone="neutral">Open</span><span class="kanban-column-count">2</span></div>
     <div class="kanban-stack" data-kanban-stack data-to-state="open">
-      <div class="kanban-card" data-kanban-card id="kanban-card-k1" data-entity-id="k1" data-from-state="open" data-allowed-to="in_progress done" draggable="true">
+      <div class="kanban-card" data-kanban-card id="kanban-card-k1" data-entity-id="k1" data-from-state="open" data-rank="1000" data-allowed-to="in_progress done" draggable="true">
         <div class="kanban-card-body">
           <h4 class="kanban-card-title">Refund request — Acme</h4>
           <p class="kanban-card-field">£1,250 · assigned to Ada</p>
@@ -35,7 +35,7 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
           </div>
         </div>
       </div>
-      <div class="kanban-card" data-kanban-card id="kanban-card-k2" data-entity-id="k2" data-from-state="open" data-allowed-to="in_progress" draggable="true">
+      <div class="kanban-card" data-kanban-card id="kanban-card-k2" data-entity-id="k2" data-from-state="open" data-rank="2000" data-allowed-to="in_progress" draggable="true">
         <div class="kanban-card-body">
           <h4 class="kanban-card-title">KYC review — Globex</h4>
           <p class="kanban-card-field">due tomorrow</p>
@@ -55,7 +55,7 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
   <div class="kanban-column">
     <div class="kanban-column-head"><span class="badge" data-tone="info">In progress</span><span class="kanban-column-count">1</span></div>
     <div class="kanban-stack" data-kanban-stack data-to-state="in_progress">
-      <div class="kanban-card" data-kanban-card id="kanban-card-k3" data-entity-id="k3" data-from-state="in_progress" data-allowed-to="done open" draggable="true">
+      <div class="kanban-card" data-kanban-card id="kanban-card-k3" data-entity-id="k3" data-from-state="in_progress" data-rank="1000" data-allowed-to="done open" draggable="true">
         <div class="kanban-card-body">
           <h4 class="kanban-card-title">Chargeback — Initech</h4>
           <p class="kanban-card-field">evidence uploaded</p>
@@ -168,6 +168,7 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 | `row_id` | `string` | no |
 | `from_state` | `string` | no |
 | `allowed_to` | `array` | no |
+| `rank` | `number | integer | string | null` | no |
 
 #### Exemplar `render()`
 
@@ -205,6 +206,9 @@ def render(card: KanbanCard) -> str:
     if card.allowed_to:
         allowed = html.escape(" ".join(card.allowed_to), quote=True)
         root_bits.append(f'data-dz-allowed-to="{allowed}"')
+    if card.rank is not None and card.rank != "":
+        root_bits.append(f'data-dz-rank="{html.escape(str(card.rank), quote=True)}"')
+    if card.row_id:
         root_bits.append('draggable="true"')
     root_attrs = " ".join(root_bits)
 

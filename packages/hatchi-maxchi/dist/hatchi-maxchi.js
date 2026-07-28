@@ -3313,7 +3313,7 @@
  *   1. SSR stamps capability in the DOM (rearrange attrs only when UPDATE
  *      is permitted; per-card data-allowed-to from the state machine).
  *   2. Controller validates the drop against those attrs (hint only).
- *   3. PUT the existing entity update endpoint with {status_field: to}.
+ *   3. PUT the existing entity update endpoint with {status_field, rank?}.
  *   4. GET-refresh the workspace region (data-kanban-src) so the server
  *      owns the new board HTML — grid bulk-refresh pattern, morph-safe.
  *
@@ -3321,19 +3321,23 @@
  *   - board:  [data-kanban-board][data-kanban-rearrange="status"]
  *             data-kanban-status-field, data-kanban-api,
  *             data-kanban-src (region refresh URL)
+ *             data-kanban-rank-field (optional — enables in-column order)
  *   - card:   [data-kanban-card][data-entity-id][data-from-state]
- *             [data-allowed-to="a b c"]  (space-separated; empty = inert)
- *             draggable="true" when allowed_to non-empty
+ *             [data-allowed-to="a b c"]  (space-separated; empty = inert
+ *             for *cross-column* only — same-column reorder still works when
+ *             rank-field is set and the card is draggable)
+ *             [data-rank] optional numeric order key
+ *             draggable="true" when rearrange-capable
  *   - stack:  [data-kanban-stack][data-to-state]
- *   - move:   [data-kanban-move] <select> keyboard parity
+ *   - move:   [data-kanban-move] <select> keyboard parity (column only)
  *
  * No Alpine. Document-delegated. Survives morph (re-reads attrs each event).
  */
 (function () {
   "use strict";
 
-  var DRAG_THRESHOLD_PX = 6;
   var MIME = "application/x-kanban-card";
+  var _ghostEl = null;
 
   function boardOf(el) {
     return el && el.closest
@@ -3347,17 +3351,30 @@
     return raw.split(/\s+/).filter(Boolean);
   }
 
-  function canDrop(card, toState) {
+  function rankFieldOf(board) {
+    return (board.getAttribute("data-kanban-rank-field") || "").trim();
+  }
+
+  /** Cross-column legal? Same-column is always legal when rank is on. */
+  function canCross(card, toState) {
     if (!toState) return false;
     var from = card.getAttribute("data-from-state") || "";
     if (toState === from) return false;
     return parseAllowed(card).indexOf(toState) !== -1;
   }
 
+  function canAccept(card, toState, board) {
+    var from = card.getAttribute("data-from-state") || "";
+    if (toState === from) {
+      // In-column: only when rank field is declared (persistable reorder).
+      return !!rankFieldOf(board);
+    }
+    return canCross(card, toState);
+  }
+
   /**
-   * Resolve the drop stack under the pointer. Cards fill the stack, so
-   * populated columns used to feel like you had to aim at a card — we
-   * accept the whole column (header + padding + cards) as the drop surface.
+   * Resolve the drop stack under the pointer. Whole column is the surface
+   * (header + padding + cards), not just the stack element itself.
    */
   function dropStackFrom(el, board) {
     if (!el || !el.closest || !board) return null;
@@ -3369,23 +3386,47 @@
     return stack && board.contains(stack) ? stack : null;
   }
 
+  /** Cards in stack excluding the dragged card, document order. */
+  function siblingCards(stack, dragged) {
+    return Array.prototype.slice
+      .call(stack.querySelectorAll("[data-kanban-card]"))
+      .filter(function (c) {
+        return c !== dragged;
+      });
+  }
+
+  /**
+   * Insert slot under the pointer: before which sibling (or null = append).
+   * Half-height split — same grammar as Trello / Linear lists.
+   */
+  function insertBeforeCard(stack, clientY, dragged) {
+    var cards = siblingCards(stack, dragged);
+    for (var i = 0; i < cards.length; i++) {
+      var r = cards[i].getBoundingClientRect();
+      if (clientY < r.top + r.height / 2) return cards[i];
+    }
+    return null;
+  }
+
   function clearDropHints(board) {
     board
       .querySelectorAll(
-        ".is-drop-target, .is-drop-deny, .is-drop-column, .is-drop-column-deny",
+        ".is-drop-target, .is-drop-deny, .is-drop-column, .is-drop-column-deny, .is-drop-before",
       )
       .forEach(function (el) {
         el.classList.remove("is-drop-target");
         el.classList.remove("is-drop-deny");
         el.classList.remove("is-drop-column");
         el.classList.remove("is-drop-column-deny");
+        el.classList.remove("is-drop-before");
       });
   }
 
-  function markDropHint(stack, ok) {
+  function markDropHint(stack, ok, beforeCard) {
     var col = stack.closest(".kanban-column");
     stack.classList.add(ok ? "is-drop-target" : "is-drop-deny");
     if (col) col.classList.add(ok ? "is-drop-column" : "is-drop-column-deny");
+    if (ok && beforeCard) beforeCard.classList.add("is-drop-before");
   }
 
   function csrfHeaders() {
@@ -3393,7 +3434,6 @@
       "Content-Type": "application/json",
       Accept: "application/json",
     };
-    // Prefer dazzle csrf helper when present (csrf / window.dz).
     try {
       var meta = document.querySelector('meta[name="csrf-token"]');
       if (meta && meta.content) headers["X-CSRF-Token"] = meta.content;
@@ -3417,14 +3457,11 @@
   function refreshBoard(board) {
     var src = board.getAttribute("data-kanban-src") || "";
     if (!src) {
-      // Fallback: full page reload if host forgot src (still better than silent).
       if (typeof window !== "undefined" && window.location)
         window.location.reload();
       return;
     }
     var target = regionTarget(board);
-    // Prefer outerHTML when replacing the board or a region shell so we
-    // never nest a board inside itself (gallery mock has no htmx.ajax).
     var useOuter =
       target === board ||
       target.hasAttribute("data-region") ||
@@ -3437,7 +3474,6 @@
       });
       return;
     }
-    // No htmx: fetch + replace (gallery / tests).
     fetch(src, {
       headers: { "HX-Request": "true", Accept: "text/html" },
       credentials: "same-origin",
@@ -3458,19 +3494,77 @@
       });
   }
 
-  function putStatus(board, card, toState) {
+  function readRank(el) {
+    if (!el) return null;
+    var n = Number(el.getAttribute("data-rank"));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  /**
+   * Rank between prev/next siblings (or ends). Float midpoints so we only
+   * need one PUT for the moved card.
+   */
+  function rankBetween(prev, next) {
+    var p = readRank(prev);
+    var n = readRank(next);
+    if (p == null && n == null) return 1000;
+    if (p == null) return n / 2;
+    if (n == null) return p + 1000;
+    if (n > p) return (p + n) / 2;
+    // Degenerate: re-space after prev.
+    return p + 1000;
+  }
+
+  /**
+   * Persist column change and/or in-column rank. `beforeCard` is the sibling
+   * the moved card should land *before* (null = append).
+   */
+  function putMove(board, card, toState, beforeCard) {
     var api = (board.getAttribute("data-kanban-api") || "").replace(
       /\/$/,
       "",
     );
-    var field = board.getAttribute("data-kanban-status-field") || "status";
+    var statusField =
+      board.getAttribute("data-kanban-status-field") || "status";
+    var rankField = rankFieldOf(board);
     var id = card.getAttribute("data-entity-id") || "";
     if (!api || !id) return Promise.reject(new Error("missing api/id"));
+
+    var from = card.getAttribute("data-from-state") || "";
     var body = {};
-    body[field] = toState;
+    if (toState !== from) body[statusField] = toState;
+
+    if (rankField) {
+      var destStack = null;
+      if (beforeCard) {
+        destStack = beforeCard.closest("[data-kanban-stack]");
+      }
+      if (!destStack) {
+        board
+          .querySelectorAll("[data-kanban-stack][data-to-state]")
+          .forEach(function (s) {
+            if (s.getAttribute("data-to-state") === toState) destStack = s;
+          });
+      }
+      var prev = null;
+      if (destStack && beforeCard) {
+        var sibs = siblingCards(destStack, card);
+        var idx = sibs.indexOf(beforeCard);
+        prev = idx > 0 ? sibs[idx - 1] : null;
+      } else if (destStack) {
+        var all = siblingCards(destStack, card);
+        prev = all.length ? all[all.length - 1] : null;
+      }
+      body[rankField] = rankBetween(prev, beforeCard);
+    }
+
+    if (!Object.keys(body).length) {
+      return Promise.resolve();
+    }
+
     card.classList.add("is-moving");
     board.classList.add("is-busy");
-    announce(board, "Moving card…");
+    announce(board, toState === from ? "Reordering…" : "Moving card…");
     return fetch(api + "/" + encodeURIComponent(id), {
       method: "PUT",
       headers: csrfHeaders(),
@@ -3483,12 +3577,50 @@
         announce(board, "Move failed (" + r.status + ")");
         throw new Error("put " + r.status);
       }
-      announce(board, "Moved to " + toState.replace(/_/g, " "));
+      announce(
+        board,
+        toState === from
+          ? "Reordered"
+          : "Moved to " + toState.replace(/_/g, " "),
+      );
       refreshBoard(board);
     });
   }
 
-  // ── Drag (HTML5 DnD — progressive enhancement; keyboard uses <select>) ──
+  /** Ghost image anchored under the cursor at the card's pick-up point. */
+  function setCardDragImage(e, card) {
+    try {
+      var rect = card.getBoundingClientRect();
+      var ox = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      var oy = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+      // Clone so the ghost is independent of is-dragging opacity / transforms.
+      var ghost = card.cloneNode(true);
+      ghost.removeAttribute("id");
+      ghost.classList.remove("is-dragging");
+      ghost.classList.add("is-drag-ghost");
+      ghost.setAttribute("aria-hidden", "true");
+      ghost.style.position = "fixed";
+      ghost.style.top = "-10000px";
+      ghost.style.left = "-10000px";
+      ghost.style.width = rect.width + "px";
+      ghost.style.boxSizing = "border-box";
+      ghost.style.pointerEvents = "none";
+      ghost.style.margin = "0";
+      document.body.appendChild(ghost);
+      _ghostEl = ghost;
+      e.dataTransfer.setDragImage(ghost, ox, oy);
+      // Remove after the browser has snapshotted the image.
+      window.setTimeout(function () {
+        if (_ghostEl && _ghostEl.parentNode)
+          _ghostEl.parentNode.removeChild(_ghostEl);
+        _ghostEl = null;
+      }, 0);
+    } catch (_) {
+      /* setDragImage unsupported — browser default */
+    }
+  }
+
+  // ── Drag ────────────────────────────────────────────────────────────
 
   var dragState = null;
 
@@ -3498,7 +3630,6 @@
         ? e.target.closest("[data-kanban-card][draggable='true']")
         : null;
     if (!card) return;
-    // Don't start drag from hub drill links.
     if (
       e.target.closest &&
       e.target.closest(
@@ -3510,15 +3641,19 @@
     }
     var board = boardOf(card);
     if (!board) return;
-    if (!parseAllowed(card).length) {
+    // Need either a legal cross-column edge or rank reorder capability.
+    var hasCross = parseAllowed(card).length > 0;
+    var hasRank = !!rankFieldOf(board);
+    if (!hasCross && !hasRank) {
       e.preventDefault();
       return;
     }
+    // Capture drag image BEFORE is-dragging opacity mutates the card.
+    setCardDragImage(e, card);
     dragState = {
       card: card,
       board: board,
-      startX: e.clientX,
-      startY: e.clientY,
+      fromState: card.getAttribute("data-from-state") || "",
     };
     card.classList.add("is-dragging");
     board.classList.add("is-dragging");
@@ -3533,7 +3668,7 @@
         card.getAttribute("data-entity-id") || "",
       );
     } catch (_) {
-      /* IE / locked DT */
+      /* ignore */
     }
   });
 
@@ -3543,19 +3678,21 @@
     dragState.board.classList.remove("is-dragging");
     clearDropHints(dragState.board);
     dragState = null;
+    if (_ghostEl && _ghostEl.parentNode) {
+      _ghostEl.parentNode.removeChild(_ghostEl);
+      _ghostEl = null;
+    }
   });
 
   document.addEventListener("dragover", function (e) {
     if (!dragState) return;
     var stack = dropStackFrom(e.target, dragState.board);
     if (!stack) {
-      // Leaving columns: clear highlight so only the hovered column glows.
       clearDropHints(dragState.board);
       return;
     }
     var to = stack.getAttribute("data-to-state") || "";
-    var ok = canDrop(dragState.card, to);
-    // Required so the browser fires `drop` on this surface.
+    var ok = canAccept(dragState.card, to, dragState.board);
     e.preventDefault();
     try {
       e.dataTransfer.dropEffect = ok ? "move" : "none";
@@ -3563,7 +3700,9 @@
       /* ignore */
     }
     clearDropHints(dragState.board);
-    markDropHint(stack, ok);
+    var before = ok ? insertBeforeCard(stack, e.clientY, dragState.card) : null;
+    // Same position no-op highlight still ok (shows intent).
+    markDropHint(stack, ok, before);
   });
 
   document.addEventListener("drop", function (e) {
@@ -3574,17 +3713,35 @@
     var to = stack.getAttribute("data-to-state") || "";
     var card = dragState.card;
     var board = dragState.board;
+    var before = insertBeforeCard(stack, e.clientY, card);
     clearDropHints(board);
-    if (!canDrop(card, to)) {
+    if (!canAccept(card, to, board)) {
       announce(board, "That move is not allowed");
       return;
     }
-    putStatus(board, card, to).catch(function () {
+    // No-op when same column and insert slot is already our position.
+    var from = card.getAttribute("data-from-state") || "";
+    if (to === from) {
+      var nextCard = card.nextElementSibling;
+      while (
+        nextCard &&
+        !(nextCard.matches && nextCard.matches("[data-kanban-card]"))
+      ) {
+        nextCard = nextCard.nextElementSibling;
+      }
+      if (before) {
+        if (before === nextCard) return;
+      } else if (!nextCard) {
+        // Append and already last among cards.
+        return;
+      }
+    }
+    putMove(board, card, to, before).catch(function () {
       /* announced */
     });
   });
 
-  // ── Keyboard / pointer-free: native select ──
+  // ── Keyboard / pointer-free: native select (column only) ──
 
   document.addEventListener("change", function (e) {
     var sel = e.target;
@@ -3595,12 +3752,16 @@
     if (!card || !board) return;
     var to = sel.value;
     if (!to) return;
-    if (!canDrop(card, to)) {
+    if (
+      !canCross(card, to) &&
+      to !== (card.getAttribute("data-from-state") || "")
+    ) {
       announce(board, "That move is not allowed");
       sel.value = "";
       return;
     }
-    putStatus(board, card, to).catch(function () {
+    // Keyboard column move: append to destination.
+    putMove(board, card, to, null).catch(function () {
       sel.value = "";
     });
   });

@@ -133,6 +133,7 @@ class RegionContext(TypedDict, total=False):
     kanban_status_field: str
     kanban_api_endpoint: str
     kanban_allowed_by_id: Any
+    kanban_rank_field: str
     kanban_refresh_src: str
     queue_api_endpoint: str
     queue_status_field: str

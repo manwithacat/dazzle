@@ -359,22 +359,26 @@ def kanban_card_root_attrs(card: KanbanCard) -> str:
     """Assemble kanban-card dual-lock root — sole emitter site.
 
     Always stamps ``data-dz-kanban-card``. When the host enables rearrange
-    (row_id + allowed_to), also stamps entity id / from_state / allowed_to
-    / draggable so dz-kanban.js can offer Linear-class moves only where
-    the persona may mutate.
+    (``row_id`` set), stamps entity id / from_state / allowed_to / rank /
+    draggable so dz-kanban.js can offer Linear-class moves. ``draggable``
+    is set whenever ``row_id`` is present so in-column reorder works even
+    when a card has no legal cross-column edges.
     """
     bits = ["data-dz-kanban-card"]
     row_id = getattr(card, "row_id", "") or ""
     from_state = getattr(card, "from_state", "") or ""
     allowed = getattr(card, "allowed_to", ()) or ()
+    rank = getattr(card, "rank", None)
     if row_id:
         bits.append(f'data-dz-entity-id="{_html.escape(str(row_id), quote=True)}"')
+        bits.append('draggable="true"')
     if from_state:
         bits.append(f'data-dz-from-state="{_html.escape(str(from_state), quote=True)}"')
     if allowed:
         joined = _html.escape(" ".join(str(s) for s in allowed), quote=True)
         bits.append(f'data-dz-allowed-to="{joined}"')
-        bits.append('draggable="true"')
+    if rank is not None and rank != "":
+        bits.append(f'data-dz-rank="{_html.escape(str(rank), quote=True)}"')
     return " ".join(bits)
 
 

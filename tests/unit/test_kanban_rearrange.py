@@ -64,23 +64,27 @@ def test_compute_rearrange_manual_sm_edges_only() -> None:
     )
     entity = SimpleNamespace(state_machine=sm)
     items = [{"id": "t1", "status": "todo"}]
-    mode, field, api, allowed = compute_kanban_rearrange(entity, "status", "Task", items)
+    mode, field, api, allowed, rank_field = compute_kanban_rearrange(
+        entity, "status", "Task", items
+    )
     assert mode == "status"
     assert field == "status"
     assert api == "/tasks"
     assert allowed["t1"] == ("in_progress",)
+    assert rank_field == "rank"
 
 
 def test_compute_rearrange_free_enum_empty_map() -> None:
     """No SM → rearrange mode on, empty map (builder fills any-other-column)."""
     entity = SimpleNamespace(state_machine=None, fields=[])
-    mode, field, api, allowed = compute_kanban_rearrange(
+    mode, field, api, allowed, rank_field = compute_kanban_rearrange(
         entity, "stage", "Deal", [{"id": "1", "stage": "a"}]
     )
     assert mode == "status"
     assert field == "stage"
     assert api == "/deals"
     assert allowed == {}
+    assert rank_field == "rank"
 
 
 def test_card_render_read_only_no_rearrange_attrs() -> None:

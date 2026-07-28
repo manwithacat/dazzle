@@ -288,6 +288,7 @@ class KanbanCard(BaseModel):
     row_id: str = ""
     from_state: str = ""
     allowed_to: tuple[str, ...] = ()
+    rank: float | int | str | None = None
 
     @field_validator("title")
     @classmethod

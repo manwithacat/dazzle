@@ -706,8 +706,9 @@ class KanbanCard:
     do. Host request-time gates EDIT paths when UPDATE is denied.
 
     Rearrange fields (Linear-class / 2026-07-28): ``row_id``,
-    ``from_state``, ``allowed_to`` are stamped only when the host enables
-    status rearrange for the principal; empty means presentation-only.
+    ``from_state``, ``allowed_to``, ``rank`` are stamped only when the host
+    enables rearrange for the principal; empty means presentation-only.
+    ``rank`` enables in-column reorder (midpoint ranks on drop).
     """
 
     title: str
@@ -718,6 +719,7 @@ class KanbanCard:
     row_id: str = ""
     from_state: str = ""
     allowed_to: tuple[str, ...] = ()
+    rank: float | int | str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -756,6 +758,8 @@ class KanbanRegion:
     api_endpoint: str = ""
     # Workspace region refresh URL (PUT-then-GET morph target src)
     refresh_src: str = ""
+    # Optional order field (rank / position / sort_order) for in-column DnD
+    rank_field: str = ""
 
 
 @dataclass(frozen=True, slots=True)

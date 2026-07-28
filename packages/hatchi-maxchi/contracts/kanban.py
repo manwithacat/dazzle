@@ -69,6 +69,10 @@ class KanbanCard(BaseModel):
         default=(),
         description="Legal destination states for this card (manual SM edges).",
     )
+    rank: float | int | str | None = Field(
+        default=None,
+        description="Optional order key for in-column reorder (data-dz-rank).",
+    )
 
     @field_validator("title")
     @classmethod
@@ -87,6 +91,7 @@ EXEMPLARS: list[KanbanCard] = [
         row_id="card-1",
         from_state="open",
         allowed_to=("in_progress", "done"),
+        rank=1000,
     ),
     KanbanCard(
         title="KYC review — Globex",
@@ -94,6 +99,7 @@ EXEMPLARS: list[KanbanCard] = [
         row_id="card-2",
         from_state="in_progress",
         allowed_to=("done",),
+        rank=2000,
     ),
     # Read-only exemplar — no rearrange attrs stamped for dual-lock baseline.
     KanbanCard(
@@ -155,6 +161,9 @@ def render(card: KanbanCard) -> str:
     if card.allowed_to:
         allowed = html.escape(" ".join(card.allowed_to), quote=True)
         root_bits.append(f'data-dz-allowed-to="{allowed}"')
+    if card.rank is not None and card.rank != "":
+        root_bits.append(f'data-dz-rank="{html.escape(str(card.rank), quote=True)}"')
+    if card.row_id:
         root_bits.append('draggable="true"')
     root_attrs = " ".join(root_bits)
 

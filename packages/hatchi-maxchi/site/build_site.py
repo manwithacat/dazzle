@@ -2712,13 +2712,13 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
   // then GET /mock/kanban/board for board refresh (Linear-class PUT-then-GET).
   var KANBAN_CARDS = [
     { id: "k1", title: "Refund request — Acme", field: "£1,250 · assigned to Ada",
-      attn: "SLA breaches at 16:00", status: "open",
+      attn: "SLA breaches at 16:00", status: "open", rank: 1000,
       allowed: { open: ["in_progress", "done"], in_progress: ["done", "open"], done: ["open"] } },
     { id: "k2", title: "KYC review — Globex", field: "due tomorrow",
-      attn: "", status: "open",
+      attn: "", status: "open", rank: 2000,
       allowed: { open: ["in_progress"], in_progress: ["done"], done: ["open"] } },
     { id: "k3", title: "Chargeback — Initech", field: "evidence uploaded",
-      attn: "", status: "in_progress",
+      attn: "", status: "in_progress", rank: 1000,
       allowed: { open: ["in_progress", "done"], in_progress: ["done", "open"], done: ["open"] } }
   ];
   var KANBAN_COLS = [
@@ -2734,11 +2734,12 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
     var html = '<div class="dz-kanban-board" role="region" aria-label="Kanban board" '
       + 'tabindex="0" data-dz-kanban-board data-dz-kanban-rearrange="status" '
       + 'data-dz-kanban-status-field="status" data-dz-kanban-api="/mock/kanban" '
-      + 'data-dz-kanban-src="/mock/kanban/board">'
+      + 'data-dz-kanban-src="/mock/kanban/board" data-dz-kanban-rank-field="rank">'
       + '<div class="dz-kanban-announce" data-dz-kanban-announce '
       + 'aria-live="polite" aria-atomic="true"></div>';
     KANBAN_COLS.forEach(function (col) {
-      var cards = KANBAN_CARDS.filter(function (c) { return c.status === col.key; });
+      var cards = KANBAN_CARDS.filter(function (c) { return c.status === col.key; })
+        .slice().sort(function (a, b) { return (a.rank || 0) - (b.rank || 0); });
       html += '<div class="dz-kanban-column"><div class="dz-kanban-column-head">'
         + '<span class="dz-badge" data-dz-tone="' + col.tone + '">' + escKanban(col.label)
         + '</span><span class="dz-kanban-column-count">' + cards.length + '</span></div>'
@@ -2758,9 +2759,9 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
           html += '<div class="dz-kanban-card" data-dz-kanban-card id="dz-kanban-card-'
             + escKanban(c.id) + '" data-dz-entity-id="' + escKanban(c.id) + '" '
             + 'data-dz-from-state="' + escKanban(c.status) + '" '
-            + (allowedAttr
-              ? 'data-dz-allowed-to="' + escKanban(allowedAttr) + '" draggable="true"'
-              : '')
+            + 'data-dz-rank="' + escKanban(String(c.rank != null ? c.rank : 0)) + '" '
+            + 'draggable="true" '
+            + (allowedAttr ? 'data-dz-allowed-to="' + escKanban(allowedAttr) + '" ' : '')
             + '><div class="dz-kanban-card-body">'
             + '<h4 class="dz-kanban-card-title">' + escKanban(c.title) + '</h4>'
             + '<p class="dz-kanban-card-field">' + escKanban(c.field) + '</p>'
@@ -2811,15 +2812,24 @@ MOCK_HTMX = """/* Minimal htmx4 mock — enough for the static gallery demos.
       var card = null;
       KANBAN_CARDS.forEach(function (c) { if (c.id === kid) card = c; });
       if (!card) return Promise.resolve(new Response("{}", { status: 404 }));
-      var next = body.status != null ? String(body.status) : "";
-      var legal = card.allowed[card.status] || [];
-      if (!next || legal.indexOf(next) < 0) {
-        return Promise.resolve(new Response(JSON.stringify({ detail: "illegal transition" }), {
-          status: 422, headers: { "Content-Type": "application/json" }
-        }));
+      // Status change (optional) + rank (in-column reorder).
+      if (body.status != null) {
+        var next = String(body.status);
+        var legal = card.allowed[card.status] || [];
+        if (next !== card.status && legal.indexOf(next) < 0) {
+          return Promise.resolve(new Response(JSON.stringify({ detail: "illegal transition" }), {
+            status: 422, headers: { "Content-Type": "application/json" }
+          }));
+        }
+        card.status = next;
       }
-      card.status = next;
-      return Promise.resolve(new Response(JSON.stringify({ id: card.id, status: card.status }), {
+      if (body.rank != null && body.rank !== "") {
+        var rn = Number(body.rank);
+        if (Number.isFinite(rn)) card.rank = rn;
+      }
+      return Promise.resolve(new Response(JSON.stringify({
+        id: card.id, status: card.status, rank: card.rank
+      }), {
         status: 200, headers: { "Content-Type": "application/json" }
       }));
     }

@@ -567,6 +567,7 @@ class _RenderChartsMixin:
                 row_id=getattr(card, "row_id", "") or "",
                 from_state=getattr(card, "from_state", "") or "",
                 allowed_to=tuple(getattr(card, "allowed_to", ()) or ()),
+                rank=getattr(card, "rank", None),
             )
         )
 
@@ -578,12 +579,15 @@ class _RenderChartsMixin:
         api = ctx.escape_attr(getattr(k, "api_endpoint", "") or "")
         field = ctx.escape_attr(getattr(k, "status_field", "") or "")
         src = ctx.escape_attr(getattr(k, "refresh_src", "") or k.endpoint or "")
+        rank_field = ctx.escape_attr(getattr(k, "rank_field", "") or "")
+        rank_attr = f' data-dz-kanban-rank-field="{rank_field}"' if rank_field else ""
         return (
             f"{attrs} data-dz-kanban-board "
             f'data-dz-kanban-rearrange="status" '
             f'data-dz-kanban-status-field="{field}" '
             f'data-dz-kanban-api="{api}" '
             f'data-dz-kanban-src="{src}"'
+            f"{rank_attr}"
         )
 
     def _emit_kanban_region(self, k: KanbanRegion, ctx: RenderContext) -> str:

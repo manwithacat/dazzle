@@ -561,12 +561,14 @@ async def compute_region_render_inputs(
     kanban_status_field = ""
     kanban_api_endpoint = ""
     kanban_allowed_by_id: dict[str, tuple[str, ...]] = {}
+    kanban_rank_field = ""
     if display == "KANBAN" and ctx.entity_spec and group_by and not gb_is_bucket:
         (
             kanban_rearrange,
             kanban_status_field,
             kanban_api_endpoint,
             kanban_allowed_by_id,
+            kanban_rank_field,
         ) = compute_kanban_rearrange(
             ctx.entity_spec,
             str(group_by),
@@ -583,6 +585,7 @@ async def compute_region_render_inputs(
             kanban_status_field = ""
             kanban_api_endpoint = ""
             kanban_allowed_by_id = {}
+            kanban_rank_field = ""
 
     # Multi-source tabbed regions.
     source_tabs = ctx_region.source_tabs or []
@@ -715,6 +718,7 @@ async def compute_region_render_inputs(
         kanban_status_field=kanban_status_field,
         kanban_api_endpoint=kanban_api_endpoint,
         kanban_allowed_by_id=kanban_allowed_by_id,
+        kanban_rank_field=kanban_rank_field,
         overlay_series_data=overlay_series_data,
         group_by=group_by,
         filter_columns=filter_columns,

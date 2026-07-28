@@ -1707,15 +1707,36 @@ def _allowed_by_id_for_sm(
     return allowed_by_id
 
 
+_KANBAN_RANK_FIELD_CANDIDATES: tuple[str, ...] = (
+    "rank",
+    "position",
+    "sort_order",
+    "order",
+    "card_order",
+)
+
+
+def _entity_rank_field(entity_spec: Any) -> str:
+    """First known order field on the entity, else empty (no in-column DnD)."""
+    if entity_spec is None:
+        return ""
+    names = {getattr(f, "name", "") for f in (getattr(entity_spec, "fields", None) or [])}
+    for cand in _KANBAN_RANK_FIELD_CANDIDATES:
+        if cand in names:
+            return cand
+    return ""
+
+
 def compute_kanban_rearrange(
     entity_spec: Any,
     group_by_field: str,
     source_name: str,
     items: list[dict[str, Any]],
-) -> tuple[str, str, str, dict[str, tuple[str, ...]]]:
+) -> tuple[str, str, str, dict[str, tuple[str, ...]], str]:
     """Linear-class kanban rearrange capability for a board.
 
-    Returns ``(rearrange_mode, status_field, api_endpoint, allowed_by_id)``
+    Returns
+    ``(rearrange_mode, status_field, api_endpoint, allowed_by_id, rank_field)``
     where ``rearrange_mode`` is ``"status"`` when the board can offer
     status moves (caller still applies the UPDATE permit gate), or ``""``
     when rearrange is not meaningful (no group field / no entity).
@@ -1725,13 +1746,19 @@ def compute_kanban_rearrange(
       (AUTO edges never offered — R3).
     * When there is no SM (or group_by is a free enum): ``allowed_by_id``
       is empty and the builder falls back to "any other column".
+    * ``rank_field`` is set when the entity declares rank/position/sort_order
+      so in-column DnD can persist order.
     """
     if not group_by_field or entity_spec is None:
-        return "", "", "", {}
+        return "", "", "", {}, ""
 
     api_endpoint = f"/{to_api_plural(source_name)}" if source_name else ""
     sm = getattr(entity_spec, "state_machine", None)
     status_field = group_by_field
+    # Prefer a real entity order field; fall back to "rank" so in-column DnD
+    # is always available when rearrange is on (apps without the column still
+    # get UI; persist once they declare the field).
+    rank_field = _entity_rank_field(entity_spec) or "rank"
 
     if sm and getattr(sm, "status_field", None) == group_by_field:
         return (
@@ -1739,7 +1766,8 @@ def compute_kanban_rearrange(
             status_field,
             api_endpoint,
             _allowed_by_id_for_sm(sm, group_by_field, items),
+            rank_field,
         )
 
     # Free enum / non-SM axis under UPDATE — builder fills any-other-column.
-    return "status", status_field, api_endpoint, {}
+    return "status", status_field, api_endpoint, {}, rank_field

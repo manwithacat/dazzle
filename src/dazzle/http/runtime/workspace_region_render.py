@@ -123,6 +123,7 @@ class RegionRenderInputs:
     kanban_status_field: str = ""
     kanban_api_endpoint: str = ""
     kanban_allowed_by_id: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    kanban_rank_field: str = ""
     overlay_series_data: list[dict[str, Any]] = field(default_factory=list)
     group_by: Any = None  # str | BucketRef | None
     filter_columns: list[dict[str, Any]] = field(default_factory=list)
@@ -554,6 +555,7 @@ def _build_list_adapter_ctx(
         adapter_ctx["kanban_status_field"] = inputs.kanban_status_field
         adapter_ctx["kanban_api_endpoint"] = inputs.kanban_api_endpoint
         adapter_ctx["kanban_allowed_by_id"] = inputs.kanban_allowed_by_id
+        adapter_ctx["kanban_rank_field"] = inputs.kanban_rank_field
         adapter_ctx["kanban_refresh_src"] = ctx_region.endpoint
     elif display_upper == "QUEUE":
         adapter_ctx["items"] = inputs.items
