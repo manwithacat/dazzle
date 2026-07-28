@@ -720,7 +720,7 @@ class TestEditPathRowDrillGate:
             ],
         )
 
-    def test_edit_drill_cleared_when_update_denied(self) -> None:
+    def test_edit_drill_demoted_to_detail_when_update_denied(self) -> None:
         from dazzle.http.runtime.handlers.list_handlers import (
             gate_edit_path_drill_for_principal,
         )
@@ -731,7 +731,25 @@ class TestEditPathRowDrillGate:
             specs,
             _make_auth_ctx(["role_viewer"]),
         )
-        assert out == ""
+        # Cycle 1407: demote to VIEW detail (not blank — rows stay navigable)
+        assert out == "/app/task/{id}"
+
+    def test_edit_drill_demote_preserves_query(self) -> None:
+        from dazzle.http.runtime.handlers.list_handlers import (
+            _demote_edit_path_to_detail,
+            gate_edit_path_drill_for_principal,
+        )
+
+        assert (
+            _demote_edit_path_to_detail("/app/task/{id}/edit?tab=meta") == "/app/task/{id}?tab=meta"
+        )
+        specs = {"Task": self._task_update_cedar()}
+        out = gate_edit_path_drill_for_principal(
+            "/app/task/{id}/edit?tab=meta",
+            specs,
+            _make_auth_ctx(["role_viewer"]),
+        )
+        assert out == "/app/task/{id}?tab=meta"
 
     def test_edit_drill_kept_when_update_allowed(self) -> None:
         from dazzle.http.runtime.handlers.list_handlers import (

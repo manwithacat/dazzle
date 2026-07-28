@@ -437,9 +437,10 @@ def _set_detail_url_template(
 ) -> None:
     """#1303 hub drill template (``/app/<slug>/{id}``) when VIEW/EDIT action set.
 
-    Cycle 1406: EDIT-path templates (``…/{id}/edit``) clear when UPDATE is
-    denied for the target entity — same class of mutation-chrome leak as
-    confirm panel / action_grid CREATE gates.
+    Cycle 1406/1407: EDIT-path templates (``…/{id}/edit``) demote to VIEW
+    detail when UPDATE is denied for the target entity — same class of
+    mutation-chrome leak as confirm panel / action_grid CREATE gates, without
+    blanking row navigation for read-only personas.
     """
     tmpl = getattr(ctx, "detail_url_template", "") or ""
     auth = getattr(user_ctx, "auth_ctx_for_filters", None) if user_ctx is not None else None

@@ -152,17 +152,38 @@ def _entity_name_for_edit_url(
     return None
 
 
+def _demote_edit_path_to_detail(url: str) -> str:
+    """Strip trailing ``/edit`` so a denied UPDATE still lands on VIEW detail.
+
+    ``/app/task/{id}/edit`` → ``/app/task/{id}``; query string preserved.
+    Non-edit URLs pass through unchanged.
+    """
+    if not url:
+        return url
+    path, sep, query = str(url).partition("?")
+    path = path.rstrip("/")
+    if not path.endswith("/edit"):
+        return url
+    path = path[: -len("/edit")]
+    if not path:
+        return url
+    return f"{path}?{query}" if sep else path
+
+
 def gate_edit_path_drill_for_principal(
     url: str,
     entity_access_specs: dict[str, Any] | None,
     auth_ctx: Any,
 ) -> str:
-    """Clear ``…/{id}/edit`` row drills when UPDATE is denied for the target.
+    """Demote ``…/{id}/edit`` row drills to VIEW detail when UPDATE is denied.
 
     Region ``action: task_edit`` resolves to an edit-path template (cycle
     1403). VIEW/list drills stay. Read-only personas still painted clickable
     rows into the edit form until the form 403'd (cycle 1406 — parity with
     action_grid CREATE@1397, confirm UPDATE@1397, list row edit hide@1390).
+
+    Cycle 1407: blanking the template made list rows non-navigable for
+    viewers who still have READ — demote to detail instead of ``""``.
     Non-edit URLs and unmapped slugs pass through (write path still enforces).
     """
     if not url:
@@ -178,7 +199,7 @@ def gate_edit_path_drill_for_principal(
         entity_name=entity_name,
     ):
         return url
-    return ""
+    return _demote_edit_path_to_detail(url)
 
 
 def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) -> DataTable:
