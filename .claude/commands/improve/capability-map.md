@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1382 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1382 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1389 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1389 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -124,6 +124,8 @@ apply map patches with `{"apply":true}`.
 > **Cycle 1383 (2026-07-28).** **example-apps COGNITION** domain noun recovery — type-evidence canonical_case + domain-section bullet inventory; project_tracker gains Task/Milestone/TeamMember without Email/Phone chrome; fleet re-extract. budget 1. Explore **37/100**.
 > **Cycle 1382 (2026-07-28).** **example-apps COGNITION** domain topic probes — invoice settlement ≠ booking payment; notify/message gated; gallery_probes 6/6 PASS (hyperpart queue=0 fall-through). budget 1. Explore **36/100**.
 > **Cycle 1381 (2026-07-28).** **example-apps COGNITION** domain open_q status/right-ground — BAD_LEFT/RIGHT lifecycle+severity status words + `audit`; cardinality requires **both** sides ∈ entity stems; noise filter opens/audits/status subjects; fleet re-extract drops fieldtest "multiple opens" + acme/invoice audit qs. budget 1. Explore **35/100**.
+> **Cycle 1389 (2026-07-28).** **self-audit** window f3803f5e1..e50f85dd8 — 6 CLEAN (c1375/1379/1382/1383 domain; c1386/1387 list q= + contacts single search + dig receipt); 1 DISCREPANCY c1388 claimed complexity green but field_kind_to_col_type cc=17 (AUD-004 DONE via e50f85dd8 extract). CodeQL+inbox **USED@1389**. budget 0. Explore **41/100**. Next self-audit ~1404; capability-sweep@1380 next~1400.
+
 > **Cycle 1380 (2026-07-28).** **capability-sweep** (cadence ≥20 since 1360) — inventory reconcile vs tip `6b3a26af2`. **UNOWNED=0** **COGNITION_STALE_eff=17** **HYGIENE_STALE_eff=38**. Flipped lag≥20 USED→STALE: 13. DRIVER CodeQL+inbox **USED@1380**. Top COGNITION digs (aggressive, densify_allowed=0): acceptance panel / story_walk re-touch with real friction fix OR framework-ux edge — **not** dual_lock (queue=0) / smoke stamp / WI densify. Metered vision STALE → subscription substitutes only. budget 0. Explore **34/100**. Next self-audit ~1389; capability-sweep@1380 next~1400.
 > **Cycle 1379 (2026-07-28).** **example-apps COGNITION** domain noun quality — UI-verb deny + Every* reject + brief domain-density pick (SPECIFICATION over chrome SPEC) + bold/tracks definitions; fleet re-extract (support Click→SupportTicket). budget 1. Explore **34/100**.
 > **Cycle 1378 (2026-07-28).** **example-apps COGNITION** domain open_q persona/det/team noise — BAD_LEFT+=admin/manager/agent/designer/reviewer/auditor; BAD_RIGHT+=their/the/team/can; noise filter `can a|an` + persona subjects; fleet drop admin/* teams payment/audits. budget 1. Explore **33/100**.
