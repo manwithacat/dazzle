@@ -55,6 +55,8 @@ SHIP_TESTS: tuple[str, ...] = (
     # #1629 G6 compact status.mcp changelog (CI red 2026-07-18 after world-model ship)
     "tests/unit/mcp/test_status_handlers.py::TestNewSinceLastCheck",
     "tests/unit/test_mcp_agent_cognition_1629.py::test_mcp_status_changelog_compact_by_default",
+    # HM CONTRACT_SURFACE.md drift (CI red 2026-07-28 after KanbanCard.drill_url)
+    "tests/unit/test_contract_surface_tool.py::test_committed_contract_surface_matches_generator",
 )
 
 REMEDIATION = """
@@ -116,6 +118,11 @@ Remediation by class (run from repo root):
     # selector must match AppShell chrome (chrome + rail toggles when open).
     # See tests/unit/test_viewport.py::_render_app_shell_chrome
     pytest tests/unit/test_viewport.py::test_drawer_pattern_selectors_match_current_markup -q
+
+  HM CONTRACT_SURFACE.md stale (KanbanCard / model field adds)
+    uv run python packages/hatchi-maxchi/tools/contract_surface.py --write
+    # review packages/hatchi-maxchi/CONTRACT_SURFACE.md; commit with the field ship
+    pytest tests/unit/test_contract_surface_tool.py::test_committed_contract_surface_matches_generator -q
 
 Re-run:
   make ship-surface

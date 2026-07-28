@@ -83,7 +83,7 @@ blast radius (who embeds / refuses this part).
 | `inline_edit` | `inline-edit` | `.dz-inline-edit` | .dz-inline-edit[] | — |
 | `interactive` | `interactive` | `.dz-interactive` | .dz-interactive[] | — |
 | `item` | `item` | `.dz-item` | .dz-item[] | — |
-| `kanban` | `kanban` | `[data-dz-kanban-card]` | [data-dz-kanban-card][data-dz-kanban-card=present] | KanbanCard(attention_level:str:opt; attention_message:str:opt; fields_html:str:opt; title:str:req) |
+| `kanban` | `kanban` | `[data-dz-kanban-card]` | [data-dz-kanban-card][data-dz-kanban-card=present] | KanbanCard(attention_level:str:opt; attention_message:str:opt; drill_url:str:opt; fields_html:str:opt; title:str:req) |
 | `kanban_board` | `kanban-board` | `.dz-kanban` | .dz-kanban[] | — |
 | `kanban_region` | `kanban-region` | `.dz-kanban-board` | .dz-kanban-board[] | — |
 | `kbd` | `kbd` | `.dz-kbd` | .dz-kbd[] | — |

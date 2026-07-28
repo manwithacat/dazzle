@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1410 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1410 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1411 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1411 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -120,6 +120,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1411 (2026-07-28).** **cimonitor** — main red tip a3826959b (run 30379263283): `test_committed_contract_surface_matches_generator` — cycle 1410 added `KanbanCard.drill_url` without regenerating `CONTRACT_SURFACE.md`. Regenerated map; promoted nodeid into ship-surface (106→107). CodeQL+inbox **USED@1411**. budget 0. Explore **56/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
 > **Cycle 1410 (2026-07-28).** **framework-ux edge** kanban #1303 hub drill — `KanbanCard.drill_url` + `detail_url_template` on KANBAN (action: task_edit boards) with request-time EDIT demote via `_set_detail_url_template` (parity LIST/QUEUE/GRID). HM contract+site regenerated. Stamped rbac + CodeQL/inbox **USED@1410**. budget 1. Explore **56/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
