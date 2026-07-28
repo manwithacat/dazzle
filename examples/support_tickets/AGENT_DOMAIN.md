@@ -7,7 +7,7 @@
 
 Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an
 
-**Source:** `/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md`
+**Source:** `examples/support_tickets/SPECIFICATION.md`
 **Fingerprint:** `b6a4daae03f88387`
 
 ## Personas (jobs)
@@ -57,7 +57,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
   "version": 1,
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
-  "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
+  "source_path": "examples/support_tickets/SPECIFICATION.md",
   "source_sha256": "b6a4daae03f88387",
   "personas": [
     {

@@ -47,7 +47,7 @@ apply map patches with `{"apply":true}`.
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1381 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1382 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1370 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1370 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1367 | USED |
@@ -71,12 +71,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1355 | STALE |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1349 | STALE |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1382 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1353 | STALE |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1302 | STALE |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1349 | STALE |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1382 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1380 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1380 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1382 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1382 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1382 (2026-07-28).** **example-apps COGNITION** domain topic probes — invoice settlement ≠ booking payment; notify/message gated; gallery_probes 6/6 PASS (hyperpart queue=0 fall-through). budget 1. Explore **36/100**.
 > **Cycle 1381 (2026-07-28).** **example-apps COGNITION** domain open_q status/right-ground — BAD_LEFT/RIGHT lifecycle+severity status words + `audit`; cardinality requires **both** sides ∈ entity stems; noise filter opens/audits/status subjects; fleet re-extract drops fieldtest "multiple opens" + acme/invoice audit qs. budget 1. Explore **35/100**.
 > **Cycle 1380 (2026-07-28).** **capability-sweep** (cadence ≥20 since 1360) — inventory reconcile vs tip `6b3a26af2`. **UNOWNED=0** **COGNITION_STALE_eff=17** **HYGIENE_STALE_eff=38**. Flipped lag≥20 USED→STALE: 13. DRIVER CodeQL+inbox **USED@1380**. Top COGNITION digs (aggressive, densify_allowed=0): acceptance panel / story_walk re-touch with real friction fix OR framework-ux edge — **not** dual_lock (queue=0) / smoke stamp / WI densify. Metered vision STALE → subscription substitutes only. budget 0. Explore **34/100**. Next self-audit ~1389; capability-sweep@1380 next~1400.
 > **Cycle 1379 (2026-07-28).** **example-apps COGNITION** domain noun quality — UI-verb deny + Every* reject + brief domain-density pick (SPECIFICATION over chrome SPEC) + bold/tracks definitions; fleet re-extract (support Click→SupportTicket). budget 1. Explore **34/100**.

@@ -720,3 +720,52 @@ def test_find_founder_brief_prefers_definition_rich_specification(tmp_path) -> N
     picked = find_founder_brief(tmp_path)
     assert picked is not None
     assert picked.name == "SPECIFICATION.md"
+
+
+def test_topic_questions_invoice_settlement_not_booking_marketplace() -> None:
+    """Invoice/AP SPECs must not get marketplace booking payment probes.
+
+    Cycle 1382: invoice_ops open_qs had \"When is payment collected - at booking\"
+    and blanket notify/message probes despite comments already covering chat.
+    """
+    import json
+
+    from dazzle.mcp.server.handlers.spec_analyze import _generate_questions
+
+    invoice_spec = (
+        "Invoice Ops settles supplier invoices. "
+        "Payment attempts record ACH settlement after approval. "
+        "A Tenant is a customer org. An Invoice is a bill. "
+        "A PaymentAttempt is a settle try. Comments thread on invoices.\n"
+    )
+    data = json.loads(
+        _generate_questions(
+            {
+                "spec_text": invoice_spec,
+                "entities": ["Tenant", "Invoice", "PaymentAttempt"],
+            }
+        )
+    )
+    texts = [q.get("question", "") for q in data.get("questions", [])]
+    joined = " | ".join(texts).lower()
+    assert "booking" not in joined, texts
+    assert "start of service" not in joined, texts
+    # Settlement-shaped probe is OK
+    assert any("settled" in t.lower() or "payment attempt" in t.lower() for t in texts), texts
+    # Comments already cover communication — no "message each other"
+    assert "message each other" not in joined, texts
+
+    booking_spec = (
+        "Customers book appointments and pay for services. "
+        "A Booking holds a slot. A Payment collects fees.\n"
+    )
+    data_b = json.loads(
+        _generate_questions(
+            {
+                "spec_text": booking_spec,
+                "entities": ["Booking", "Payment"],
+            }
+        )
+    )
+    texts_b = [q.get("question", "") for q in data_b.get("questions", [])]
+    assert any("booking" in t.lower() for t in texts_b), texts_b

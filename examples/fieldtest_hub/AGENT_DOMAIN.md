@@ -7,7 +7,7 @@
 
 FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k
 
-**Source:** `/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md`
+**Source:** `examples/fieldtest_hub/SPECIFICATION.md`
 **Fingerprint:** `f1955f72605c3e98`
 
 ## Personas (jobs)
@@ -62,7 +62,7 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
   "version": 1,
   "title": "FieldTest Hub \u2014 Specification",
   "summary": "FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k",
-  "source_path": "/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md",
+  "source_path": "examples/fieldtest_hub/SPECIFICATION.md",
   "source_sha256": "f1955f72605c3e98",
   "personas": [
     {

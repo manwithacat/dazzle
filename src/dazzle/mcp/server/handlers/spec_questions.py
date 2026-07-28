@@ -285,23 +285,100 @@ def bilateral_review_signal(low: str) -> bool:
     return False
 
 
-def topic_questions(spec_text: str, entities: list[Any]) -> list[dict[str, str]]:
-    """Payment / cancel / notify / review / messaging topic probes (non-cardinality)."""
-    low = spec_text.lower()
-    questions: list[dict[str, str]] = []
-    if re.search(r"\b(pay|payment)\b", low) and not re.search(
-        r"\b(escrow|upfront|completion|booking)\b", low
-    ):
-        questions.append(
+def _payment_topic_questions(low: str) -> list[dict[str, str]]:
+    """Invoice settlement vs marketplace booking payment probes (cycle 1382)."""
+    if not re.search(r"\b(pay|payment)\b", low):
+        return []
+    invoice_settlement = bool(
+        re.search(
+            r"\b(invoice|supplier|accounts?\s+payable|payment\s+attempt|"
+            r"settle(?:ment|d)?|ach|wire)\b",
+            low,
+        )
+    )
+    marketplace_service = bool(
+        re.search(r"\b(booking|appointment|service\s+request|escrow|upfront)\b", low)
+    )
+    if invoice_settlement and not marketplace_service:
+        if re.search(
+            r"\b(settled?\s+on\s+approval|pay\s+on\s+approval|"
+            r"auto[- ]settle|scheduled\s+payment)\b",
+            low,
+        ):
+            return []
+        return [
             {
                 "topic": "payment_flow",
                 "question": (
-                    "When is payment collected - at booking, at start of service, or at completion?"
+                    "When is an invoice settled — on approval, on a schedule, "
+                    "or only after a successful payment attempt?"
                 ),
                 "impact": "Affects payment state machine and process flow",
             }
+        ]
+    if invoice_settlement:
+        return []
+    if re.search(r"\b(pay\s+at\s+(booking|start|completion)|escrow|upfront)\b", low):
+        return []
+    return [
+        {
+            "topic": "payment_flow",
+            "question": (
+                "When is payment collected - at booking, at start of service, or at completion?"
+            ),
+            "impact": "Affects payment state machine and process flow",
+        }
+    ]
+
+
+def _notify_and_comm_topic_questions(low: str, entities: list[Any]) -> list[dict[str, str]]:
+    """Notify + messaging probes with multi-party / event gates (cycle 1382)."""
+    out: list[dict[str, str]] = []
+    if (
+        re.search(r"\b(alert|escalat|assign|approv|status\s+change|key\s+event)\b", low)
+        and not re.search(r"\b(email|push|notif(?:y|ication)|slack\s+notif)\b", low)
+        and isinstance(entities, list)
+        and len(entities) >= 2
+    ):
+        out.append(
+            {
+                "topic": "notifications",
+                "question": "Should users receive email/push notifications for key events?",
+                "impact": "Affects whether to add notification triggers",
+            }
         )
-    if re.search(r"\b(book|request|order)\b", low) and not re.search(r"\b(cancel|refund)\b", low):
+    multi_party = bool(
+        re.search(
+            r"\b(customer|buyer|seller|client|vendor|member|agent)\b.*\b"
+            r"(customer|buyer|seller|client|vendor|member|agent)\b"
+            r"|\b(between\s+(users|parties|people)|peer.?to.?peer)\b",
+            low,
+        )
+    )
+    if multi_party and not re.search(r"\b(message|chat|communicate|comment|thread)\b", low):
+        out.append(
+            {
+                "topic": "communication",
+                "question": "Do users need to message each other within the app?",
+                "impact": "Major feature decision - adds Message entity and real-time requirements",
+            }
+        )
+    return out
+
+
+def topic_questions(spec_text: str, entities: list[Any]) -> list[dict[str, str]]:
+    """Payment / cancel / notify / review / messaging topic probes (non-cardinality).
+
+    Cycle 1382: avoid marketplace/booking templates on B2B invoice SPECs, and
+    do not fire blanket notify/message probes just because ≥2 entities exist.
+    """
+    low = spec_text.lower()
+    questions: list[dict[str, str]] = []
+    questions.extend(_payment_topic_questions(low))
+    # Cancellation/refund only for bookable/order flows — not every "request" word.
+    if re.search(r"\b(book(?:ing)?|appointment|order|reservation)\b", low) and not re.search(
+        r"\b(cancel|refund)\b", low
+    ):
         questions.append(
             {
                 "topic": "cancellation",
@@ -309,28 +386,13 @@ def topic_questions(spec_text: str, entities: list[Any]) -> list[dict[str, str]]
                 "impact": "Affects state machine transitions and financial rules",
             }
         )
-    if isinstance(entities, list) and len(entities) >= 2:
-        questions.append(
-            {
-                "topic": "notifications",
-                "question": "Should users receive email/push notifications for key events?",
-                "impact": "Affects whether to add notification triggers",
-            }
-        )
+    questions.extend(_notify_and_comm_topic_questions(low, entities))
     if bilateral_review_signal(low):
         questions.append(
             {
                 "topic": "reviews",
                 "question": "Can both parties leave reviews, or just one side?",
                 "impact": "Affects Review entity design and who can create",
-            }
-        )
-    if not re.search(r"\b(message|chat|communicate)\b", low):
-        questions.append(
-            {
-                "topic": "communication",
-                "question": "Do users need to message each other within the app?",
-                "impact": "Major feature decision - adds Message entity and real-time requirements",
             }
         )
     return questions

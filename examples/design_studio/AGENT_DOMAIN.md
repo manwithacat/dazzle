@@ -7,7 +7,7 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from
 
-**Source:** `/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md`
+**Source:** `examples/design_studio/SPECIFICATION.md`
 **Fingerprint:** `062732b3598f8ba3`
 
 ## Personas (jobs)
@@ -45,7 +45,7 @@
 ## Open questions
 
 - `q1`: Can a brand have multiple assets, or just one?
-- `q3`: Can both parties leave reviews, or just one side?
+- `q2`: Can both parties leave reviews, or just one side?
 
 ## Research notes
 
@@ -60,7 +60,7 @@
   "version": 1,
   "title": "Design Studio \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Design Studio is a creative-operations system for teams that produce branded design work. It manages brands, the design assets created for them, the campaigns those assets serve, and the review feedback that moves an asset from",
-  "source_path": "/Volumes/SSD/Dazzle/examples/design_studio/SPECIFICATION.md",
+  "source_path": "examples/design_studio/SPECIFICATION.md",
   "source_sha256": "062732b3598f8ba3",
   "personas": [
     {
@@ -193,7 +193,7 @@
       "blocks_promote": false
     },
     {
-      "id": "q3",
+      "id": "q2",
       "text": "Can both parties leave reviews, or just one side?",
       "blocks_promote": false
     }
