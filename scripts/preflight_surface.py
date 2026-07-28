@@ -44,6 +44,7 @@ SURFACE_TESTS: tuple[str, ...] = (
     "tests/unit/test_deferred_imports_ratchet_1438.py",
     "tests/unit/test_import_contracts.py",
     "tests/unit/test_no_bare_except_pass.py",
+    "tests/unit/test_swallow_ratchet.py",  # debug_only/silent Exception swallows (cycle 1369 CI)
     "tests/unit/test_ux_catalogue.py",
     "tests/unit/test_complexity_ratchet.py",
     "tests/unit/test_hm_package_suite_gate.py",
@@ -81,7 +82,12 @@ Remediation by class (run from repo root, commit the regenerated files):
     # validation must use pack-ops registry, not import page/api_kb
 
   Bare except Exception
-    # logger.debug("...", exc_info=True) or narrow the exception type
+    # narrow the exception type; do not bare-pass
+
+  Broad-exception swallow ratchet (silent / debug_only)
+    # narrow exception type, log at warning/exception, or re-raise
+    # never raise the baseline in tests/unit/test_swallow_ratchet.py
+    # (cycle 1369: auth child clear used logger.debug → CI red)
 
   UX catalogue CSS
     .venv/bin/python scripts/gen_ux_catalogue.py

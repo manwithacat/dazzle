@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1360 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1360 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1369 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1369 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,8 +121,8 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
-> **Cycle 1363 (2026-07-28).** **framework-ux** Avatar default completion — `{key}_display` no longer skips chips; workspace_columns `ref_entity`; region `_render_typed_value` person chips + link; detail field keeps FK dict + ref_entity. densify_allowed=0 residual=0. Stamped hyperpart-opportunities **USED@1363**. budget 1. Explore **22/100**.
-> **Cycle 1361 (2026-07-28).** **framework-ux** quality dig — restore `dazzle qa hyperpart-opportunities` (CLI + scan) + Avatar default emit for person refs (`user_chip` → `_data_row` ref cells) + HM CSS `dz-user-chip`/`data-dz-hue`. Closed map debt "CLI absent on main". simple_task 5/0 + project_tracker 7/0 auto_seed. densify_allowed=0 residual=0. Stamped hyperpart-opportunities + agent_qa_smoke **USED@1361**. budget 1. Explore **21/100**.
+> **Cycle 1369 (2026-07-28).** **cimonitor** — main red run 30325614195 (tip a7ce8e0bd cycle 1368): `test_swallow_ratchet` debug_only 181→182 from cycle 1367 auth-child clear (`logger.debug`). Raised to `logger.warning`; promoted `test_swallow_ratchet` into preflight-surface pack. CodeQL+inbox **USED@1369**. budget 0. Explore **27/100**.
+
 > **Cycle 1368 (2026-07-28).** **example-apps COGNITION** domain self-scope owner-hint — HR prose (`self only` / `own employment` / `direct reports` / `current_user.person`) → desk `owner_field_hint=person`; hr_records ready_to_promote False→True + AGENT_DOMAIN artifacts. CI green on 1366; 1367 in_progress. budget 1. Explore **27/100**.
 
 > **Cycle 1367 (2026-07-28).** **example-apps COGNITION** demo reset-and-load — clear auth sessions/password_reset/user_preferences before users (FK); live simple_task chip links verified (9× dz-user-chip-link). CI green on 1366. budget 1. Explore **26/100**.

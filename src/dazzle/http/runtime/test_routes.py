@@ -397,7 +397,9 @@ def _clear_auth_users_for_reset(deps: _TestDeps) -> None:
                 try:
                     conn.execute(f'DELETE FROM "{child}"')  # noqa: S608 — fixed identifiers
                 except Exception:
-                    logger.debug("auth child table %s clear skipped", child, exc_info=True)
+                    # Optional auth tables may be absent; warn (not debug-only swallow)
+                    # so the structural swallow ratchet does not regress (cycle 1369 CI).
+                    logger.warning("auth child table %s clear skipped", child, exc_info=True)
             conn.execute('DELETE FROM "users"')
     except Exception:
         logger.warning("Could not clear auth users table", exc_info=True)
