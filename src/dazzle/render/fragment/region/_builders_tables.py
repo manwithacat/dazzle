@@ -217,20 +217,38 @@ class _BuildersTablesMixin:
 
             ep = _html.escape(str(endpoint), quote=True)
             val = _html.escape(active_search, quote=True)
-            # Prefer source entity title when present for pilot-facing copy.
-            source_label = str(
-                ctx.get("entity_title") or getattr(region, "source", "") or "list"
-            ).replace("_", " ")
-            placeholder = _html.escape(f"Find {source_label.lower()}…", quote=True)
-            # Same hx-include pattern as FilterBar so search + filters co-ride.
+            # Pilot-facing copy from declared search fields (name/email/…) so
+            # the single list filter is obvious when FTS search_box is absent.
+            field_labels: list[str] = []
+            for f in search_fields_raw[:4]:
+                s = str(f or "").strip()
+                if not s:
+                    continue
+                field_labels.append(s.replace("_", " "))
+            if field_labels:
+                hint = ", ".join(field_labels)
+                placeholder = _html.escape(f"Find by {hint}…", quote=True)
+                label_text = f"Find by {hint}"
+            else:
+                source_label = str(
+                    ctx.get("entity_title") or getattr(region, "source", "") or "list"
+                ).replace("_", " ")
+                placeholder = _html.escape(f"Find {source_label.lower()}…", quote=True)
+                label_text = f"Find {source_label.lower()}"
+            rid = _html.escape(region_name, quote=True)
+            label_esc = _html.escape(label_text)
+            # Visible filter-label (not only placeholder) — dual_pane pilots
+            # and agent panels need a clear find-by-name affordance above the
+            # list. Same hx-include + filter-bar layout as FilterBar.
             chrome_parts.append(
                 RawHTML(
                     f'<div class="filter-bar dz-list-search-chrome" data-dz-list-search>'
-                    f'<label class="visually-hidden" for="dz-list-q-{_html.escape(region_name, quote=True)}">'
-                    f"Find in list</label>"
-                    f'<input id="dz-list-q-{_html.escape(region_name, quote=True)}" '
+                    f'<div class="filter-cell dz-list-search-cell" style="width:min(24rem,100%)">'
+                    f'<label class="filter-label dz-list-search-label" '
+                    f'for="dz-list-q-{rid}">{label_esc}</label>'
+                    f'<input id="dz-list-q-{rid}" '
                     f'type="search" name="q" '
-                    f'class="dz-list-search-input dz-filter-input" '
+                    f'class="dz-list-search-input filter-input dz-filter-input" '
                     f'placeholder="{placeholder}" value="{val}" autocomplete="off" '
                     f"data-dz-list-search-input "
                     f'hx-get="{ep}" '
@@ -238,7 +256,7 @@ class _BuildersTablesMixin:
                     f'hx-swap="innerHTML" '
                     f'hx-trigger="input changed delay:250ms, search" '
                     f'hx-include="closest .filter-bar">'
-                    f"</div>"
+                    f"</div></div>"
                 )
             )
 
