@@ -74,6 +74,17 @@ def _detail_url_candidates(table_dict: dict[str, Any]) -> tuple[str, ...]:
     return tuple(raw)
 
 
+def bulk_actions_for_principal(declared: bool, *, can_delete: bool, can_update: bool) -> bool:
+    """Whether HTMX-hydrated rows should paint bulk select checkboxes.
+
+    Parity with ``page_routes`` shell gate (cycle 1391): keep the column when
+    the surface declares bulk **and** the principal can DELETE (built-in bulk
+    delete) **or** UPDATE (DSL field transitions). Deny both → no boxes so
+    hydrate cannot re-paint chrome the shell already suppressed.
+    """
+    return bool(declared) and (can_delete or can_update)
+
+
 def _principal_can_op(
     cedar_access_spec: "EntityAccessSpec | None",
     operation: AccessOperationKind,
@@ -718,10 +729,19 @@ async def _list_handler_body(
                 auth_context,
                 entity_name=entity_name or _entity_label,
             )
-            # No update → no SM chips / edit; no delete → no trash. Bulk chrome
-            # is already gated separately via htmx_bulk_actions.
+            # No update → no SM chips / edit; no delete → no trash.
+            # Bulk checkboxes: match page_routes shell gate (cycle 1391) —
+            # keep select column when UPDATE (DSL field transitions) OR
+            # DELETE (built-in bulk delete) is allowed. Compile-time
+            # htmx_bulk_actions alone re-painted boxes for denied personas
+            # after HTMX hydrate while the shell had suppressed the bar.
             if not _can_update:
                 _st_transitions = ()
+            _bulk_actions = bulk_actions_for_principal(
+                bool(getattr(request.state, "htmx_bulk_actions", False)),
+                can_delete=_can_delete,
+                can_update=_can_update,
+            )
             table_dict = {
                 "rows": items,
                 "columns": request.state.htmx_columns
@@ -738,7 +758,7 @@ async def _list_handler_body(
                 "state_transitions": _st_transitions,
                 "status_field": _st_field,
                 "transition_endpoint": _st_endpoint,
-                "bulk_actions": getattr(request.state, "htmx_bulk_actions", False),
+                "bulk_actions": _bulk_actions,
                 "inline_editable": (
                     getattr(request.state, "htmx_inline_editable", []) if _can_update else []
                 ),

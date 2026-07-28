@@ -1427,11 +1427,14 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
             req_detail.transitions = []
             req_detail.integration_actions = []
         else:
-            # Fine-grained: check UPDATE and DELETE individually
-            if req_detail.edit_url and not _user_can_mutate(
-                prc.deps, prc.surface_name, "update", prc.auth_ctx
-            ):
+            # Fine-grained: check UPDATE and DELETE individually.
+            # SM transitions + integration actions are UPDATE mutations —
+            # list rows already omit chips when can_update is False
+            # (cycle 1390); detail chrome must match (cycle 1392).
+            if not _user_can_mutate(prc.deps, prc.surface_name, "update", prc.auth_ctx):
                 req_detail.edit_url = None
+                req_detail.transitions = []
+                req_detail.integration_actions = []
             if req_detail.delete_url and not _user_can_mutate(
                 prc.deps, prc.surface_name, "delete", prc.auth_ctx
             ):

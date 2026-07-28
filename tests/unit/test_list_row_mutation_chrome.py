@@ -93,3 +93,46 @@ def test_build_data_table_threads_can_flags() -> None:
     )
     assert dt.capabilities.delete is False
     assert dt.capabilities.update is False
+
+
+def test_bulk_actions_for_principal_requires_mutation_permit() -> None:
+    """HTMX hydrate must not re-paint bulk boxes when shell suppressed them.
+
+    Cycle 1392: declared bulk + no update/delete → False (parity with
+    page_routes shell). Either permit keeps the column.
+    """
+    from dazzle.http.runtime.handlers.list_handlers import bulk_actions_for_principal
+
+    assert bulk_actions_for_principal(True, can_delete=False, can_update=False) is False
+    assert bulk_actions_for_principal(True, can_delete=True, can_update=False) is True
+    assert bulk_actions_for_principal(True, can_delete=False, can_update=True) is True
+    assert bulk_actions_for_principal(True, can_delete=True, can_update=True) is True
+    assert bulk_actions_for_principal(False, can_delete=True, can_update=True) is False
+
+
+def test_build_data_table_bulk_select_follows_bulk_actions_flag() -> None:
+    from dazzle.http.runtime.handlers.list_handlers import build_data_table
+
+    off = build_data_table(
+        {
+            "columns": [{"key": "title", "type": "str"}],
+            "entity_name": "Task",
+            "bulk_actions": False,
+            "can_delete": False,
+            "can_update": False,
+        },
+        [{"id": "1", "title": "x"}],
+    )
+    assert off.capabilities.bulk_select is False
+
+    on = build_data_table(
+        {
+            "columns": [{"key": "title", "type": "str"}],
+            "entity_name": "Task",
+            "bulk_actions": True,
+            "can_delete": True,
+            "can_update": False,
+        },
+        [{"id": "1", "title": "x"}],
+    )
+    assert on.capabilities.bulk_select is True
