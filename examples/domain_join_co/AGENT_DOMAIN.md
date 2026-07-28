@@ -7,7 +7,7 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Domain Join Co is a workspace system built around verified-domain membership: a company's workspace is anchored to its verified email domain, employees join
 
-**Source:** `examples/domain_join_co/SPECIFICATION.md`
+**Source:** `/Volumes/SSD/Dazzle/examples/domain_join_co/SPECIFICATION.md`
 **Fingerprint:** `bb61d69b83dfd7fd`
 
 ## Personas (jobs)
@@ -58,7 +58,7 @@ _None blocking._
   "version": 1,
   "title": "Domain Join Co \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Domain Join Co is a workspace system built around verified-domain membership: a company's workspace is anchored to its verified email domain, employees join",
-  "source_path": "examples/domain_join_co/SPECIFICATION.md",
+  "source_path": "/Volumes/SSD/Dazzle/examples/domain_join_co/SPECIFICATION.md",
   "source_sha256": "bb61d69b83dfd7fd",
   "personas": [
     {

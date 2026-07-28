@@ -7,7 +7,7 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Acme Billing is a multi-organization billing system. It manages organizations, the users who belong to them, the projects each organization runs, the invoices
 
-**Source:** `examples/acme_billing/SPECIFICATION.md`
+**Source:** `/Volumes/SSD/Dazzle/examples/acme_billing/SPECIFICATION.md`
 **Fingerprint:** `d179e4aceb2e6883`
 
 ## Personas (jobs)
@@ -46,8 +46,7 @@
 
 ## Open questions
 
-- `q1`: Can an organization have multiple audits, or just one?
-- `q2`: Can an invoice have multiple projects, or just one?
+- `q1`: Can an invoice have multiple projects, or just one?
 
 ## Research notes
 
@@ -62,7 +61,7 @@
   "version": 1,
   "title": "Acme Billing \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Acme Billing is a multi-organization billing system. It manages organizations, the users who belong to them, the projects each organization runs, the invoices",
-  "source_path": "examples/acme_billing/SPECIFICATION.md",
+  "source_path": "/Volumes/SSD/Dazzle/examples/acme_billing/SPECIFICATION.md",
   "source_sha256": "d179e4aceb2e6883",
   "personas": [
     {
@@ -206,11 +205,6 @@
   "open_questions": [
     {
       "id": "q1",
-      "text": "Can an organization have multiple audits, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
       "text": "Can an invoice have multiple projects, or just one?",
       "blocks_promote": false
     }

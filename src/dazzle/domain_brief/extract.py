@@ -833,10 +833,15 @@ def _is_noise_or_broken_question(text_q: str, brief: str) -> bool:
     ) and re.search(
         r"\bmultiple\s+(theirs|wheres|theres|whats|whiches|ops|tos|thes|ones|"
         r"overdues|workloads|filterings|justs|assigns|approves|handles|views|"
-        r"settings|sres|tracks|quorums|queues|readinesses|readiness|teams|cans)\b"
+        r"settings|sres|tracks|quorums|queues|readinesses|readiness|teams|cans|"
+        r"opens|closeds?|fixeds|verifieds|triageds|pendings|completeds|"
+        r"cancelleds?|canceleds?|actives|retireds|criticals|drafts|"
+        r"deprecateds|blockeds|highs|lows|mediums|audits)\b"
         r"|\bcan\s+(?:a|an)\s+(operate|create|review|approve|manage|progres|indicator|"
         r"warning|assign|send|submit|batche|update|sale|org|owner|devop|role|"
-        r"admin|administrator|manager|agent|designer|reviewer|auditor|system|card)\b",
+        r"admin|administrator|manager|agent|designer|reviewer|auditor|system|card|"
+        r"open|closed|fixed|verified|triaged|pending|completed|cancelled|canceled|"
+        r"active|retired|critical|draft|deprecated|blocked)\b",
         text_q,
         re.I,
     ):

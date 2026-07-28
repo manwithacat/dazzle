@@ -7,7 +7,7 @@
 
 Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an
 
-**Source:** `examples/support_tickets/SPECIFICATION.md`
+**Source:** `/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md`
 **Fingerprint:** `b6a4daae03f88387`
 
 ## Personas (jobs)
@@ -42,8 +42,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
 
 ## Open questions
 
-- `q1`: Can a ticket have multiple conversations, or just one?
-- `q2`: Can a ticket have multiple comments, or just one?
+- `q1`: Can a ticket have multiple comments, or just one?
 
 ## Research notes
 
@@ -58,7 +57,7 @@ Support Tickets is a customer-support system that tracks customer issues from fi
   "version": 1,
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
-  "source_path": "examples/support_tickets/SPECIFICATION.md",
+  "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
   "source_sha256": "b6a4daae03f88387",
   "personas": [
     {
@@ -173,11 +172,6 @@ Support Tickets is a customer-support system that tracks customer issues from fi
   "open_questions": [
     {
       "id": "q1",
-      "text": "Can a ticket have multiple conversations, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
       "text": "Can a ticket have multiple comments, or just one?",
       "blocks_promote": false
     }

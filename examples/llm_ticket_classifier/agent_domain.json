@@ -2,7 +2,7 @@
   "version": 1,
   "title": "Support Ticket Classifier \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,",
-  "source_path": "examples/llm_ticket_classifier/SPECIFICATION.md",
+  "source_path": "/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md",
   "source_sha256": "3b8fb00022056a7f",
   "personas": [
     {

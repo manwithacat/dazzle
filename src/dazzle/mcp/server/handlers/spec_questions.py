@@ -57,6 +57,23 @@ _CARDINALITY_BAD_LEFT = frozenset(
         "auditor",
         "system",  # meta prose ("the system manages…"), not a domain parent
         "card",  # UI chrome ("employment cards" / desk cards), not a domain parent
+        # Lifecycle / severity status words as parents (cycle 1381):
+        # "critical issues and open tasks" must not invent "an open" / "a critical".
+        "open",
+        "closed",
+        "fixed",
+        "verified",
+        "triaged",
+        "pending",
+        "completed",
+        "cancelled",
+        "canceled",
+        "active",
+        "retired",
+        "critical",
+        "draft",
+        "deprecated",
+        "blocked",
     }
 )
 _CARDINALITY_BAD_RIGHT = frozenset(
@@ -98,6 +115,27 @@ _CARDINALITY_BAD_RIGHT = frozenset(
         "readiness",  # metric prose ("metrics and readiness")
         "team",  # org chrome ("tasks and teams" / "customers and teams"), not multi-ref child
         "can",  # modal fragment ("alerts can …") → multiple cans
+        # Status adjectives as multi-ref children (cycle 1381):
+        # "issues and open tasks" → "multiple opens"; severity/lifecycle chrome.
+        "open",
+        "closed",
+        "fixed",
+        "verified",
+        "triaged",
+        "pending",
+        "completed",
+        "cancelled",
+        "canceled",
+        "active",
+        "retired",
+        "critical",
+        "draft",
+        "deprecated",
+        "blocked",
+        "high",
+        "low",
+        "medium",
+        "audit",  # "auditable …" / governance prose, not a multi-ref child
     }
 )
 
@@ -198,8 +236,15 @@ def cardinality_questions(spec_text: str, entities: list[Any]) -> list[dict[str,
             continue
         if is_bad_cardinality_pair(word1, word2):
             continue
-        if ent_stems and word1 not in ent_stems:
-            continue
+        # When entities are known, both sides must ground — left-only grounding
+        # still allowed "issues and open" → "multiple opens" once Issue is
+        # discovered (cycle 1381 fieldtest_hub).
+        if ent_stems:
+            w2 = right_stem(word2)
+            if word1 not in ent_stems:
+                continue
+            if word2 not in ent_stems and w2 not in ent_stems:
+                continue
         key = (word1, word2)
         if key in seen:
             continue

@@ -7,7 +7,7 @@
 
 Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces — a Dashboard for the overview and a Project Board for day-to-day task and milestone management.
 
-**Source:** `examples/project_tracker/SPECIFICATION.md`
+**Source:** `/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md`
 **Fingerprint:** `336597f66186a6ca`
 
 ## Personas (jobs)
@@ -63,7 +63,7 @@ Project Tracker is a team project-management product. It organises work as Proje
   "version": 1,
   "title": "Project Tracker \u2014 Specification",
   "summary": "Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces \u2014 a Dashboard for the overview and a Project Board for day-to-day task and milestone management.",
-  "source_path": "examples/project_tracker/SPECIFICATION.md",
+  "source_path": "/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md",
   "source_sha256": "336597f66186a6ca",
   "personas": [
     {

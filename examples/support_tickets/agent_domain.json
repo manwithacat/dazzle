@@ -2,7 +2,7 @@
   "version": 1,
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
-  "source_path": "examples/support_tickets/SPECIFICATION.md",
+  "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
   "source_sha256": "b6a4daae03f88387",
   "personas": [
     {
@@ -117,11 +117,6 @@
   "open_questions": [
     {
       "id": "q1",
-      "text": "Can a ticket have multiple conversations, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
       "text": "Can a ticket have multiple comments, or just one?",
       "blocks_promote": false
     }

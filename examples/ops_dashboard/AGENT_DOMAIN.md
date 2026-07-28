@@ -7,7 +7,7 @@
 
 Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services — each monitored System moves through healthy, degraded, critical, and offline states — and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex
 
-**Source:** `examples/ops_dashboard/SPECIFICATION.md`
+**Source:** `/Volumes/SSD/Dazzle/examples/ops_dashboard/SPECIFICATION.md`
 **Fingerprint:** `1bf315204ea846ce`
 
 ## Personas (jobs)
@@ -50,7 +50,7 @@ _None blocking._
   "version": 1,
   "title": "Operations Dashboard \u2014 Specification",
   "summary": "Operations Dashboard is a real-time monitoring and incident-response product. It tracks the operational health of backend services \u2014 each monitored System moves through healthy, degraded, critical, and offline states \u2014 and records every time-bound incident as an Alert against the System it occurred on, until an engineer acknowledges it. A PagerDuty integration connects the product to the team's ex",
-  "source_path": "examples/ops_dashboard/SPECIFICATION.md",
+  "source_path": "/Volumes/SSD/Dazzle/examples/ops_dashboard/SPECIFICATION.md",
   "source_sha256": "1bf315204ea846ce",
   "personas": [
     {

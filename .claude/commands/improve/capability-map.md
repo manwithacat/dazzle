@@ -47,7 +47,7 @@ apply map patches with `{"apply":true}`.
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1379 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1381 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1370 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1370 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1367 | USED |
@@ -121,6 +121,7 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1381 (2026-07-28).** **example-apps COGNITION** domain open_q status/right-ground — BAD_LEFT/RIGHT lifecycle+severity status words + `audit`; cardinality requires **both** sides ∈ entity stems; noise filter opens/audits/status subjects; fleet re-extract drops fieldtest "multiple opens" + acme/invoice audit qs. budget 1. Explore **35/100**.
 > **Cycle 1380 (2026-07-28).** **capability-sweep** (cadence ≥20 since 1360) — inventory reconcile vs tip `6b3a26af2`. **UNOWNED=0** **COGNITION_STALE_eff=17** **HYGIENE_STALE_eff=38**. Flipped lag≥20 USED→STALE: 13. DRIVER CodeQL+inbox **USED@1380**. Top COGNITION digs (aggressive, densify_allowed=0): acceptance panel / story_walk re-touch with real friction fix OR framework-ux edge — **not** dual_lock (queue=0) / smoke stamp / WI densify. Metered vision STALE → subscription substitutes only. budget 0. Explore **34/100**. Next self-audit ~1389; capability-sweep@1380 next~1400.
 > **Cycle 1379 (2026-07-28).** **example-apps COGNITION** domain noun quality — UI-verb deny + Every* reject + brief domain-density pick (SPECIFICATION over chrome SPEC) + bold/tracks definitions; fleet re-extract (support Click→SupportTicket). budget 1. Explore **34/100**.
 > **Cycle 1378 (2026-07-28).** **example-apps COGNITION** domain open_q persona/det/team noise — BAD_LEFT+=admin/manager/agent/designer/reviewer/auditor; BAD_RIGHT+=their/the/team/can; noise filter `can a|an` + persona subjects; fleet drop admin/* teams payment/audits. budget 1. Explore **33/100**.

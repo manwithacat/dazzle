@@ -7,7 +7,7 @@
 
 Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it — Administrators, Team Managers, and Team Members — each seeing exactly the work
 
-**Source:** `examples/simple_task/SPECIFICATION.md`
+**Source:** `/Volumes/SSD/Dazzle/examples/simple_task/SPECIFICATION.md`
 **Fingerprint:** `a2cdc96dd942fc9d`
 
 ## Personas (jobs)
@@ -43,10 +43,9 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
 
 ## Open questions
 
-- `q1`: Can a task have multiple assignments, or just one?
-- `q2`: Can a task have multiple users, or just one?
-- `q3`: Should users receive email/push notifications for key events?
-- `q4`: Do users need to message each other within the app?
+- `q1`: Can a task have multiple users, or just one?
+- `q2`: Should users receive email/push notifications for key events?
+- `q3`: Do users need to message each other within the app?
 
 ## Research notes
 
@@ -61,7 +60,7 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
   "version": 1,
   "title": "Team Task Manager \u2014 Specification",
   "summary": "Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it \u2014 Administrators, Team Managers, and Team Members \u2014 each seeing exactly the work",
-  "source_path": "examples/simple_task/SPECIFICATION.md",
+  "source_path": "/Volumes/SSD/Dazzle/examples/simple_task/SPECIFICATION.md",
   "source_sha256": "a2cdc96dd942fc9d",
   "personas": [
     {
@@ -189,21 +188,16 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
   "open_questions": [
     {
       "id": "q1",
-      "text": "Can a task have multiple assignments, or just one?",
-      "blocks_promote": false
-    },
-    {
-      "id": "q2",
       "text": "Can a task have multiple users, or just one?",
       "blocks_promote": false
     },
     {
-      "id": "q3",
+      "id": "q2",
       "text": "Should users receive email/push notifications for key events?",
       "blocks_promote": false
     },
     {
-      "id": "q4",
+      "id": "q3",
       "text": "Do users need to message each other within the app?",
       "blocks_promote": false
     }

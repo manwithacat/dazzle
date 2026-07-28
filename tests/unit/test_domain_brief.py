@@ -242,13 +242,18 @@ def test_broken_cardinality_questions_filtered() -> None:
         "Can a brand have multiple thes, or just one?",
         # Cycle 1379: meta "system" subject
         "Can a system have multiple alerts, or just one?",
+        # Cycle 1381: lifecycle/status adjectives as multi-ref children/subjects
+        "Can an issue have multiple opens, or just one?",
+        "Can a task have multiple closeds, or just one?",
+        "Can an open have multiple tasks, or just one?",
+        "Can a payment have multiple audits, or just one?",
     ]
     for q in broken:
         assert _is_noise_or_broken_question(q, brief), q
     # Real cardinality questions must still pass the filter
     ok = "Can a Workspace have multiple Announcements, or just one?"
     assert not _is_noise_or_broken_question(ok, brief), ok
-    ok_an = "Can an Organization have multiple Audits, or just one?"
+    ok_an = "Can an Organization have multiple Invoices, or just one?"
     assert not _is_noise_or_broken_question(ok_an, brief), ok_an
 
 
@@ -265,13 +270,14 @@ def test_generate_questions_skips_digit_and_prose_cardinality() -> None:
         "Managers track progress and workload. "
         "Warning indicators and overdue filtering. "
         "Oversee team tasks and assignments. "
-        "A Task is a unit of work. A User is a person.\n"
+        "A Task is a unit of work. A User is a person. "
+        "An Assignment links a person to a task.\n"
     )
     data = json.loads(
         _generate_questions(
             {
                 "spec_text": spec,
-                "entities": ["Task", "User"],
+                "entities": ["Task", "User", "Assignment"],
             }
         )
     )
@@ -281,7 +287,7 @@ def test_generate_questions_skips_digit_and_prose_cardinality() -> None:
     assert "7s" not in joined, card
     assert "progres" not in joined.lower(), card
     assert "overdue" not in joined.lower(), card
-    # Entity-grounded real pair from "tasks and assignments"
+    # Both sides entity-grounded from "tasks and assignments" (cycle 1381)
     assert any("task" in t.lower() and "assignment" in t.lower() for t in card), card
 
 
@@ -318,6 +324,45 @@ def test_generate_questions_skips_role_quorum_and_track_fragments() -> None:
     assert "queue" not in joined, card
     assert "track" not in joined, card
     assert "role" not in joined, card
+    assert any("task" in t.lower() and "assignment" in t.lower() for t in card), card
+
+
+def test_generate_questions_skips_status_adjective_objects() -> None:
+    """Lifecycle/severity adjectives must not become cardinality objects.
+
+    Cycle 1381: fieldtest_hub \"critical issues and open tasks\" →
+    \"Can an issue have multiple opens\"; payment/audit governance prose.
+    Both sides must also ground in discovered entities when provided.
+    """
+    import json
+
+    from dazzle.mcp.server.handlers.spec_analyze import _generate_questions
+
+    spec = (
+        "Critical issues and open tasks fill the triage queue. "
+        "Issues and open work items share a board. "
+        "Devices and issues link field findings. "
+        "Payments and audits form the compliance trail. "
+        "Tasks and assignments bind work. "
+        "A Device is hardware. An Issue is a field finding. "
+        "A Task is remediation. An Assignment links a person to a task.\n"
+    )
+    data = json.loads(
+        _generate_questions(
+            {
+                "spec_text": spec,
+                "entities": ["Device", "Issue", "Task", "Assignment"],
+            }
+        )
+    )
+    texts = [q.get("question", "") for q in data.get("questions", [])]
+    card = [t for t in texts if "multiple" in t.lower()]
+    joined = " | ".join(card).lower()
+    assert "open" not in joined, card
+    assert "audit" not in joined, card
+    assert "payment" not in joined, card
+    # Both sides grounded: device↔issue, task↔assignment
+    assert any("device" in t.lower() and "issue" in t.lower() for t in card), card
     assert any("task" in t.lower() and "assignment" in t.lower() for t in card), card
 
 
@@ -398,13 +443,13 @@ def test_generate_questions_indefinite_article_and_review_signal() -> None:
     assert _bilateral_review_signal("design feedback moves assets to approval")
 
     spec = (
-        "Organizations and audits form the tenancy model. "
+        "Organizations and invoices form the tenancy model. "
         "Invoices and payments settle bills. "
         "Admins and designers collaborate on assets. "
         "A Task moves todo through review to done. "
         "An Organization is tenancy. An Invoice is a bill. "
         "An Admin is staff. A Designer is creative. "
-        "A Payment is settlement. An Audit is a check.\n"
+        "A Payment is settlement.\n"
     )
     data = json.loads(
         _generate_questions(
@@ -416,7 +461,6 @@ def test_generate_questions_indefinite_article_and_review_signal() -> None:
                     "Admin",
                     "Designer",
                     "Payment",
-                    "Audit",
                 ],
             }
         )
@@ -432,6 +476,8 @@ def test_generate_questions_indefinite_article_and_review_signal() -> None:
     # still returns *an* for "admin", but cardinality no longer emits them.
     assert not any(re.search(r"\bCan an admin\b", t, re.I) for t in card), card
     assert "designer" not in " | ".join(card).lower(), card
+    # Cycle 1381: audit is BAD_RIGHT even if discovered
+    assert "audit" not in " | ".join(card).lower(), card
     # No bilateral-review topic from lifecycle prose
     assert not any("both parties leave reviews" in t.lower() for t in texts), texts
     # Lifecycle "projects and reviews" style must not emit review cardinality
