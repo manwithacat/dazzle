@@ -216,6 +216,28 @@ def gate_edit_path_drill_for_principal(
     return _demote_edit_path_to_detail(url)
 
 
+def gate_edit_path_drill_map_for_principal(
+    urls: dict[str, str] | None,
+    entity_access_specs: dict[str, Any] | None,
+    auth_ctx: Any,
+) -> dict[str, str]:
+    """Demote EDIT-path values in a multi-entity drill map (task_inbox).
+
+    List-family regions gate a single ``detail_url_template`` via
+    :func:`gate_edit_path_drill_for_principal` (cycles 1406–1407). Multi-source
+    ``task_inbox`` stamps ``entity_detail_urls`` at compile time and used the
+    map raw at request time — so ``action: task_edit`` still painted
+    ``…/{id}/edit`` for read-only personas (cycle 1409). VIEW paths pass
+    through; empty map stays empty.
+    """
+    if not urls:
+        return {}
+    return {
+        key: gate_edit_path_drill_for_principal(url, entity_access_specs, auth_ctx)
+        for key, url in urls.items()
+    }
+
+
 def build_data_table(table_dict: dict[str, Any], items: list[dict[str, Any]]) -> DataTable:
     """Map an http/ HTMX-refresh ``table_dict`` (+ its row items) into the typed
     render/ ``DataTable`` primitive (#1505 P2).

@@ -37,7 +37,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from dazzle.core.ir import BucketRef as _BucketRef
-from dazzle.http.runtime.handlers.list_handlers import gate_edit_path_drill_for_principal
+from dazzle.http.runtime.handlers.list_handlers import (
+    gate_edit_path_drill_for_principal,
+    gate_edit_path_drill_map_for_principal,
+)
 from dazzle.http.runtime.workspace_card_data import (
     _build_cohort_cells,
     _build_day_timeline_slots,
@@ -453,6 +456,25 @@ def _set_detail_url_template(
     adapter_ctx["detail_url_template"] = tmpl
 
 
+def _gated_entity_detail_urls(ctx: Any, user_ctx: Any | None = None) -> dict[str, str]:
+    """Request-time EDIT demote for multi-entity drill maps (task_inbox).
+
+    Compile-time ``entity_detail_urls`` may stamp ``…/{id}/edit`` when the
+    region authors ``action:`` an EDIT surface (cycle 1403). List-family
+    templates already demote via :func:`_set_detail_url_template`; task_inbox
+    needs the map form (cycle 1409).
+    """
+    raw = dict(getattr(ctx, "entity_detail_urls", None) or {})
+    auth = getattr(user_ctx, "auth_ctx_for_filters", None) if user_ctx is not None else None
+    if not raw or auth is None:
+        return raw
+    return gate_edit_path_drill_map_for_principal(
+        raw,
+        getattr(ctx, "entity_access_specs", None) or None,
+        auth,
+    )
+
+
 def _active_list_search(request: Any) -> str:
     """``?q=`` / ``?search=`` free-text value for workspace list chrome."""
     return (request.query_params.get("q") or request.query_params.get("search") or "").strip()
@@ -693,8 +715,8 @@ async def _build_dashboard_adapter_ctx(
                 items=inputs.items,
                 config=inbox_cfg,
                 items_per_source=items_per_source,
-                # #1303 — drill-gated entity→detail-URL map for per-item drill_url.
-                entity_detail_urls=getattr(ctx, "entity_detail_urls", None),
+                # #1303 / cycle 1409 — EDIT demote on multi-entity drill map.
+                entity_detail_urls=_gated_entity_detail_urls(ctx, env.user_ctx),
             )
             adapter_ctx["task_inbox_items"] = inbox_items
             adapter_ctx["task_inbox_chips"] = inbox_chips

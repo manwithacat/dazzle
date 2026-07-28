@@ -97,7 +97,7 @@ apply map patches with `{"apply":true}`.
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1407 | USED |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1409 | USED |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
@@ -109,8 +109,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1408 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1408 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1409 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1409 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,9 +121,11 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
-> **Cycle 1407 (2026-07-28).** **framework-ux edge** EDIT-path drill demote-to-detail — when UPDATE denied, `gate_edit_path_drill_for_principal` demotes `…/{id}/edit` → `…/{id}` (query preserved) instead of blanking so read-only personas keep row navigation. Stamped rbac + CodeQL/inbox **USED@1407**. budget 1. Explore **54/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
+> **Cycle 1409 (2026-07-28).** **framework-ux edge** task_inbox multi-entity EDIT drill demote — `gate_edit_path_drill_map_for_principal` + `_gated_entity_detail_urls` so `entity_detail_urls` with `…/{id}/edit` demote when UPDATE denied (list-family had 1406–1407; inbox map was raw). Stamped rbac + CodeQL/inbox **USED@1409**. budget 1. Explore **55/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
 > **Cycle 1408 (2026-07-28).** **cimonitor** — tip clone-ratchet red from c1406 (`_entity_name_for_edit_url` ≈ `_entity_name_for_create_url`). Unified `entity_name_for_app_path(terminal=create|edit)` in list_handlers; create gate wraps it. Pack 16 green. CodeQL+inbox **USED@1408**. budget 0. Explore **54/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
+
+> **Cycle 1407 (2026-07-28).** **framework-ux edge** EDIT-path drill demote-to-detail — when UPDATE denied, `gate_edit_path_drill_for_principal` demotes `…/{id}/edit` → `…/{id}` (query preserved) instead of blanking so read-only personas keep row navigation. Stamped rbac + CodeQL/inbox **USED@1407**. budget 1. Explore **54/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
 > **Cycle 1406 (2026-07-28).** **framework-ux edge** EDIT-path region row drill UPDATE gate — `gate_edit_path_drill_for_principal` clears `…/{id}/edit` detail_url_template when UPDATE denied (action: task_edit series after 1403 mode-aware path). VIEW drills stay. budget 1. Explore **53/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 

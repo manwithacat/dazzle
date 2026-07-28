@@ -771,6 +771,42 @@ class TestEditPathRowDrillGate:
         out = gate_edit_path_drill_for_principal(url, specs, _make_auth_ctx(["role_viewer"]))
         assert out == url
 
+    def test_edit_drill_map_demotes_per_entity(self) -> None:
+        """task_inbox multi-entity map: EDIT demotes, VIEW stays (cycle 1409)."""
+        from dazzle.http.runtime.handlers.list_handlers import (
+            gate_edit_path_drill_map_for_principal,
+        )
+
+        specs = {"Task": self._task_update_cedar()}
+        out = gate_edit_path_drill_map_for_principal(
+            {
+                "Task": "/app/task/{id}/edit",
+                "Note": "/app/note/{id}",
+            },
+            specs,
+            _make_auth_ctx(["role_viewer"]),
+        )
+        assert out["Task"] == "/app/task/{id}"
+        assert out["Note"] == "/app/note/{id}"
+
+    def test_edit_drill_map_kept_for_admin(self) -> None:
+        from dazzle.http.runtime.handlers.list_handlers import (
+            gate_edit_path_drill_map_for_principal,
+        )
+
+        specs = {"Task": self._task_update_cedar()}
+        urls = {"Task": "/app/task/{id}/edit"}
+        out = gate_edit_path_drill_map_for_principal(urls, specs, _make_auth_ctx(["role_admin"]))
+        assert out == urls
+
+    def test_edit_drill_map_empty(self) -> None:
+        from dazzle.http.runtime.handlers.list_handlers import (
+            gate_edit_path_drill_map_for_principal,
+        )
+
+        assert gate_edit_path_drill_map_for_principal(None, {}, None) == {}
+        assert gate_edit_path_drill_map_for_principal({}, {}, None) == {}
+
 
 # ---------------------------------------------------------------------------
 # #583 — Sidebar nav filtering by entity access
