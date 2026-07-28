@@ -6382,21 +6382,67 @@ pointer-events: none;
 .dz-kanban-board.is-busy {
 cursor: progress;
 }
+.dz-kanban-board.is-dragging .dz-kanban-column {
+display: flex;
+flex-direction: column;
+min-height: 12rem;
+transition: background var(--duration-fast) var(--ease-out),
+box-shadow var(--duration-fast) var(--ease-out),
+outline-color var(--duration-fast) var(--ease-out);
+}
 .dz-kanban-board.is-dragging .dz-kanban-stack[data-dz-to-state] {
+flex: 1 1 auto;
+min-height: 6rem;
 outline: 1px dashed color-mix(in oklch, var(--colour-border) 80%, transparent);
 outline-offset: 2px;
-min-height: 3rem;
 border-radius: var(--radius-sm);
+padding: var(--space-xs);
 transition: background var(--duration-fast) var(--ease-out),
-outline-color var(--duration-fast) var(--ease-out);
+outline-color var(--duration-fast) var(--ease-out),
+box-shadow var(--duration-fast) var(--ease-out);
+}
+.dz-kanban-board.is-dragging .dz-kanban-card:not(.is-dragging) {
+pointer-events: none;
+}
+.dz-kanban-column.is-drop-column {
+background: color-mix(in oklch, var(--colour-brand) 10%, var(--colour-bg));
+box-shadow: 0 0 0 2px var(--colour-brand);
+}
+.dz-kanban-column.is-drop-column-deny {
+background: color-mix(
+in oklch,
+var(--colour-destructive, oklch(55% 0.2 25)) 8%,
+var(--colour-bg)
+);
+box-shadow: 0 0 0 2px var(--colour-destructive, oklch(55% 0.2 25));
 }
 .dz-kanban-stack.is-drop-target {
 outline-color: var(--colour-brand);
-background: color-mix(in oklch, var(--colour-brand) 8%, transparent);
+outline-width: 2px;
+outline-style: solid;
+background: color-mix(in oklch, var(--colour-brand) 12%, transparent);
+box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--colour-brand) 40%, transparent);
 }
 .dz-kanban-stack.is-drop-deny {
 outline-color: var(--colour-destructive, oklch(55% 0.2 25));
-background: color-mix(in oklch, var(--colour-destructive, oklch(55% 0.2 25)) 6%, transparent);
+outline-width: 2px;
+outline-style: solid;
+background: color-mix(
+in oklch,
+var(--colour-destructive, oklch(55% 0.2 25)) 10%,
+transparent
+);
+}
+.dz-kanban-stack.is-drop-target::after {
+content: "";
+display: block;
+flex: 1 1 2.5rem;
+min-height: 2.5rem;
+margin-block-start: var(--space-xs);
+border-radius: var(--radius-sm);
+border: 1px dashed color-mix(in oklch, var(--colour-brand) 55%, var(--colour-border));
+background: color-mix(in oklch, var(--colour-brand) 6%, transparent);
+pointer-events: none;
 }
 .dz-kanban-card-move {
 display: flex;

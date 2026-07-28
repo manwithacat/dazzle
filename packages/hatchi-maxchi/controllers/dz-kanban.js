@@ -48,6 +48,40 @@
     return parseAllowed(card).indexOf(toState) !== -1;
   }
 
+  /**
+   * Resolve the drop stack under the pointer. Cards fill the stack, so
+   * populated columns used to feel like you had to aim at a card — we
+   * accept the whole column (header + padding + cards) as the drop surface.
+   */
+  function dropStackFrom(el, board) {
+    if (!el || !el.closest || !board) return null;
+    var stack = el.closest("[data-dz-kanban-stack][data-dz-to-state]");
+    if (stack && board.contains(stack)) return stack;
+    var col = el.closest(".dz-kanban-column");
+    if (!col || !board.contains(col)) return null;
+    stack = col.querySelector("[data-dz-kanban-stack][data-dz-to-state]");
+    return stack && board.contains(stack) ? stack : null;
+  }
+
+  function clearDropHints(board) {
+    board
+      .querySelectorAll(
+        ".is-drop-target, .is-drop-deny, .is-drop-column, .is-drop-column-deny",
+      )
+      .forEach(function (el) {
+        el.classList.remove("is-drop-target");
+        el.classList.remove("is-drop-deny");
+        el.classList.remove("is-drop-column");
+        el.classList.remove("is-drop-column-deny");
+      });
+  }
+
+  function markDropHint(stack, ok) {
+    var col = stack.closest(".dz-kanban-column");
+    stack.classList.add(ok ? "is-drop-target" : "is-drop-deny");
+    if (col) col.classList.add(ok ? "is-drop-column" : "is-drop-column-deny");
+  }
+
   function csrfHeaders() {
     var headers = {
       "Content-Type": "application/json",
@@ -201,46 +235,40 @@
     if (!dragState) return;
     dragState.card.classList.remove("is-dragging");
     dragState.board.classList.remove("is-dragging");
-    dragState.board.querySelectorAll(".is-drop-target").forEach(function (el) {
-      el.classList.remove("is-drop-target");
-      el.classList.remove("is-drop-deny");
-    });
+    clearDropHints(dragState.board);
     dragState = null;
   });
 
   document.addEventListener("dragover", function (e) {
     if (!dragState) return;
-    var stack = e.target.closest
-      ? e.target.closest("[data-dz-kanban-stack][data-dz-to-state]")
-      : null;
-    if (!stack || !dragState.board.contains(stack)) return;
+    var stack = dropStackFrom(e.target, dragState.board);
+    if (!stack) {
+      // Leaving columns: clear highlight so only the hovered column glows.
+      clearDropHints(dragState.board);
+      return;
+    }
     var to = stack.getAttribute("data-dz-to-state") || "";
     var ok = canDrop(dragState.card, to);
+    // Required so the browser fires `drop` on this surface.
     e.preventDefault();
     try {
       e.dataTransfer.dropEffect = ok ? "move" : "none";
     } catch (_) {
       /* ignore */
     }
-    dragState.board
-      .querySelectorAll(".is-drop-target, .is-drop-deny")
-      .forEach(function (el) {
-        el.classList.remove("is-drop-target");
-        el.classList.remove("is-drop-deny");
-      });
-    stack.classList.add(ok ? "is-drop-target" : "is-drop-deny");
+    clearDropHints(dragState.board);
+    markDropHint(stack, ok);
   });
 
   document.addEventListener("drop", function (e) {
     if (!dragState) return;
-    var stack = e.target.closest
-      ? e.target.closest("[data-dz-kanban-stack][data-dz-to-state]")
-      : null;
-    if (!stack || !dragState.board.contains(stack)) return;
+    var stack = dropStackFrom(e.target, dragState.board);
+    if (!stack) return;
     e.preventDefault();
     var to = stack.getAttribute("data-dz-to-state") || "";
     var card = dragState.card;
     var board = dragState.board;
+    clearDropHints(board);
     if (!canDrop(card, to)) {
       announce(board, "That move is not allowed");
       return;

@@ -8986,23 +8986,84 @@ a.action-card:hover {
   cursor: progress;
 }
 
+/*
+ * Drop affordance while rearranging (Linear/Trello grammar):
+ * - Whole column is the hit surface (not “land on a card”).
+ * - Populated stacks grow to fill the column so empty space under cards
+ *   is still a valid target.
+ * - Cards ignore pointer events so dragover always reaches the stack/column.
+ */
+.kanban-board.is-dragging .kanban-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 12rem;
+  transition: background var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    outline-color var(--duration-fast) var(--ease-out);
+}
+
 .kanban-board.is-dragging .kanban-stack[data-to-state] {
+  flex: 1 1 auto;
+  min-height: 6rem;
   outline: 1px dashed color-mix(in oklch, var(--colour-border) 80%, transparent);
   outline-offset: 2px;
-  min-height: 3rem;
   border-radius: var(--radius-sm);
+  padding: var(--space-xs);
   transition: background var(--duration-fast) var(--ease-out),
-    outline-color var(--duration-fast) var(--ease-out);
+    outline-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+/* Cards must not steal the drop hit-test from the stack. */
+.kanban-board.is-dragging .kanban-card:not(.is-dragging) {
+  pointer-events: none;
+}
+
+/* Column-level glow — clearer than a tight stack outline between cards. */
+.kanban-column.is-drop-column {
+  background: color-mix(in oklch, var(--colour-brand) 10%, var(--colour-bg));
+  box-shadow: 0 0 0 2px var(--colour-brand);
+}
+
+.kanban-column.is-drop-column-deny {
+  background: color-mix(
+    in oklch,
+    var(--colour-destructive, oklch(55% 0.2 25)) 8%,
+    var(--colour-bg)
+  );
+  box-shadow: 0 0 0 2px var(--colour-destructive, oklch(55% 0.2 25));
 }
 
 .kanban-stack.is-drop-target {
   outline-color: var(--colour-brand);
-  background: color-mix(in oklch, var(--colour-brand) 8%, transparent);
+  outline-width: 2px;
+  outline-style: solid;
+  background: color-mix(in oklch, var(--colour-brand) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--colour-brand) 40%, transparent);
 }
 
 .kanban-stack.is-drop-deny {
   outline-color: var(--colour-destructive, oklch(55% 0.2 25));
-  background: color-mix(in oklch, var(--colour-destructive, oklch(55% 0.2 25)) 6%, transparent);
+  outline-width: 2px;
+  outline-style: solid;
+  background: color-mix(
+    in oklch,
+    var(--colour-destructive, oklch(55% 0.2 25)) 10%,
+    transparent
+  );
+}
+
+/* Placeholder stripe at the end of a populated stack during a legal hover. */
+.kanban-stack.is-drop-target::after {
+  content: "";
+  display: block;
+  flex: 1 1 2.5rem;
+  min-height: 2.5rem;
+  margin-block-start: var(--space-xs);
+  border-radius: var(--radius-sm);
+  border: 1px dashed color-mix(in oklch, var(--colour-brand) 55%, var(--colour-border));
+  background: color-mix(in oklch, var(--colour-brand) 6%, transparent);
+  pointer-events: none;
 }
 
 .kanban-card-move {
