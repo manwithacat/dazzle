@@ -77,6 +77,30 @@ Admin and Manager and Finance and Employee roles use the system.
     assert not any(q.id == "q_owner" and q.blocks_promote for q in d.open_questions)
 
 
+def test_extract_owner_hint_from_ack_prose() -> None:
+    """Ops/SRE briefs bind desks via acknowledgment — not leave q_owner open.
+
+    Regression: ops_dashboard SPEC documents ``acknowledged_by`` + ack_queue /
+    "what needs me" with no owner/assignee token; promote was blocked on q_owner
+    (cycle 1370).
+    """
+    brief = """
+# Operations Dashboard
+
+Engineers monitor system health and respond to alerts.
+Acknowledgement queue (ack_queue) for unacked alerts by severity.
+Task inbox for multi-source "what needs me" ops work.
+Who acknowledged the alert is recorded on ``acknowledged_by``.
+Engineer and User roles use the command center.
+"""
+    d = extract_from_text(brief, source_path="inline")
+    assert any(desk.owner_field_hint == "acknowledged_by" for desk in d.desks), (
+        f"expected acknowledged_by owner_field_hint on desks, "
+        f"got {[d.owner_field_hint for d in d.desks]}"
+    )
+    assert not any(q.id == "q_owner" and q.blocks_promote for q in d.open_questions)
+
+
 def test_extract_prefers_core_entity_headers() -> None:
     brief = """
 # App
@@ -153,6 +177,30 @@ access matrix is available. A mature relational database stores data.
     for q in d.open_questions:
         assert "thes" not in q.text
         assert "assetss" not in q.text
+
+
+def test_broken_cardinality_questions_filtered() -> None:
+    """generate_questions sometimes emits function-word plurals / verb-as-noun.
+
+    Regression: domain_join_co SPECIFICATION.md open_qs included
+    \"Can a operate have multiple wheres\" / \"multiple theirs\" (cycle 1370).
+    """
+    from dazzle.domain_brief.extract import _is_noise_or_broken_question
+
+    brief = (
+        "# Domain Join Co\n\nA company proves its email domain; members join "
+        "a workspace. Admin and Member roles use the system.\n"
+    )
+    broken = [
+        "Can a operate have multiple wheres, or just one?",
+        "Can a member have multiple theirs, or just one?",
+        "Can a operate have multiple thes, or just one?",
+    ]
+    for q in broken:
+        assert _is_noise_or_broken_question(q, brief), q
+    # Real cardinality questions must still pass the filter
+    ok = "Can a Workspace have multiple Announcements, or just one?"
+    assert not _is_noise_or_broken_question(ok, brief), ok
 
 
 def test_extract_an_article_and_product_title_not_fused() -> None:

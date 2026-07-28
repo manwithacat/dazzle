@@ -47,7 +47,7 @@ apply map patches with `{"apply":true}`.
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1368 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1370 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1368 | USED |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1368 | USED |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1367 | USED |
@@ -120,6 +120,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1370 (2026-07-28).** **example-apps COGNITION** domain ack owner-hint — ops/SRE briefs (`acknowledged_by` / ack_queue / "what needs me" / Alert noun) → desk `owner_field_hint=acknowledged_by`; ops_dashboard ready_to_promote False→True + AGENT_DOMAIN for ops_dashboard/support_tickets/invoice_ops. CI green on e61ff3912 (1369 repair). budget 1. Explore **28/100**.
 
 > **Cycle 1369 (2026-07-28).** **cimonitor** — main red run 30325614195 (tip a7ce8e0bd cycle 1368): `test_swallow_ratchet` debug_only 181→182 from cycle 1367 auth-child clear (`logger.debug`). Raised to `logger.warning`; promoted `test_swallow_ratchet` into preflight-surface pack. CodeQL+inbox **USED@1369**. budget 0. Explore **27/100**.
 

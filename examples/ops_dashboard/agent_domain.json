@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "title": "Operations Dashboard - Product Specification",
+  "summary": "> **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Intermediate+ > **DSL Features Demonstrated**: Personas, COMMAND_CENTER archetype, engine hints, aggregations A real-time operations monitoring dashboard for DevOps and SRE teams. The command center interface enables engineers to monitor system health, respond to alerts, and maintain situational awareness",
+  "source_path": "/Volumes/SSD/Dazzle/examples/ops_dashboard/SPEC.md",
+  "source_sha256": "6c84f84c239ec519",
+  "personas": [
+    {
+      "id_hint": "engineer",
+      "label": "Engineer",
+      "job": "",
+      "desk": "engineer_desk",
+      "stable_id_candidate": "engineer",
+      "status": "grounded",
+      "evidence": "role word in founder brief"
+    },
+    {
+      "id_hint": "user",
+      "label": "User",
+      "job": "Generic system user",
+      "desk": "user_desk",
+      "stable_id_candidate": "user",
+      "status": "grounded",
+      "evidence": "extract_personas + brief"
+    }
+  ],
+  "nouns": [
+    {
+      "name": "WebSocket",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Persona",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Quick",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Style",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Criteria",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Acceptance",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    },
+    {
+      "name": "Alert",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=article_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "acknowledged_by"
+    }
+  ],
+  "desks": [
+    {
+      "persona": "engineer",
+      "name": "engineer_desk",
+      "purpose": "Job desk for Engineer",
+      "owner_field_hint": "acknowledged_by",
+      "status": "hypothesis"
+    },
+    {
+      "persona": "user",
+      "name": "user_desk",
+      "purpose": "Job desk for User",
+      "owner_field_hint": "acknowledged_by",
+      "status": "hypothesis"
+    }
+  ],
+  "demo_spine": [
+    {
+      "persona": "engineer",
+      "story": "Engineer has seeded WebSocket rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "WebSocket"
+    },
+    {
+      "persona": "user",
+      "story": "User has seeded WebSocket rows for their desk",
+      "min_rows": 1,
+      "entity_hint": "WebSocket"
+    }
+  ],
+  "open_questions": [
+    {
+      "id": "q1",
+      "text": "Can a devop have multiple sres, or just one?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q3",
+      "text": "Should users receive email/push notifications for key events?",
+      "blocks_promote": false
+    },
+    {
+      "id": "q4",
+      "text": "Can both parties leave reviews, or just one side?",
+      "blocks_promote": false
+    }
+  ],
+  "research_notes": [
+    "Prefer knowledge concepts before inventing structure.",
+    "Do not promote ungrounded nouns.",
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+  ],
+  "rejected_chrome": [
+    "Aggregation",
+    "Auto",
+    "Average",
+    "Color",
+    "DevOp",
+    "Explicit",
+    "External",
+    "Flow",
+    "Hint",
+    "Level",
+    "Live",
+    "Mobile",
+    "Multi",
+    "Operation",
+    "Point",
+    "Related",
+    "Review",
+    "Runbook",
+    "Unacknowledged",
+    "archetype",
+    "bare",
+    "click",
+    "command",
+    "dense",
+    "glance",
+    "health",
+    "healthy",
+    "high",
+    "implementation",
+    "incident",
+    "keyboard",
+    "monitored",
+    "real",
+    "response",
+    "sorted",
+    "specific",
+    "system",
+    "total"
+  ]
+}

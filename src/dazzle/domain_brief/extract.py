@@ -45,6 +45,7 @@ _OWNER_HINTS = (
     "created_by",
     "owner",
     "reported_by_id",
+    "acknowledged_by",
 )
 
 _ROLE_RE = re.compile(
@@ -98,6 +99,9 @@ def _default_owner_from_brief(text: str) -> str | None:
     HR / personnel briefs often use self-scope language ("self only",
     "own employment history", ``current_user.person``) with no owner/assignee
     field — those bind desks via a ``person`` ref (hr_records cycle 1367).
+
+    Ops / SRE briefs bind via acknowledgment ("acknowledged_by", ack_queue,
+    "what needs me") rather than owner/assignee (ops_dashboard cycle 1370).
     """
     for h in _OWNER_HINTS:
         if re.search(rf"\b{re.escape(h)}\b", text, re.I):
@@ -111,6 +115,16 @@ def _default_owner_from_brief(text: str) -> str | None:
         return "created_by"
     if re.search(r"\bsubmitted\s+by\b|\brequesters?\b", text, re.I):
         return "requester"
+    # Ops / incident acknowledgment bind (command-center, on-call desks).
+    if re.search(
+        r"\backnowledg(?:e|ed|es|ing|ement|ments)\b"
+        r"|\back_queue\b"
+        r"|\bwhat\s+needs\s+me\b"
+        r"|\bunack(?:ed|nowledged)?\b",
+        text,
+        re.I,
+    ):
+        return "acknowledged_by"
     # Self-scope / person-record binds (personnel, career, self-service).
     if re.search(
         r"\bself\s+only\b"
@@ -132,6 +146,9 @@ def _owner_for_noun(name: str, text: str) -> str | None:
         if re.search(r"request$", name, re.I):
             return "requester"
         return "assigned_to"
+    # Alert/incident-shaped nouns: acknowledgment bind is the product default.
+    if re.search(r"(alert|incident)$", name, re.I):
+        return "acknowledged_by"
     hinted = _default_owner_from_brief(text)
     if hinted:
         return hinted
@@ -371,10 +388,15 @@ _DEFINITION_NOUN_RE = re.compile(
 # Multi-word without leading article: "Design Feedback is always tied…"
 # (must not capture "An Invoice" / "Acme Billing" product titles — filtered below)
 _MULTIWORD_DEF_RE = re.compile(r"\b([A-Z][A-Za-z0-9]+\s+[A-Z][A-Za-z0-9]+)\s+(?:is|also)\b")
-# Broken generate_questions output ("multiple thes", "assetss", "managess")
+# Broken generate_questions output ("multiple thes", "assetss", "managess",
+# "multiple theirs/wheres", "Can a operate have…") — domain_join_co cycle 1370.
 _BROKEN_Q_RE = re.compile(
     r"\b(thes|tos|ss,|assetss|managess|approvess|designerss|multiple\s+\w{1,3}s,)\b"
-    r"|multiple\s+\w+ss\b",
+    r"|multiple\s+\w+ss\b"
+    # Function-word / non-noun plurals that slip past the short-token rule
+    r"|\bmultiple\s+(theirs|wheres|theres|whats|whiches|whoms|thens|tos|thes)\b"
+    # Article + bare infinitive/verb ("Can a operate have…")
+    r"|\b(?:a|an)\s+(?:operate|create|review|approve|manage|assign|submit)\b",
     re.I,
 )
 
@@ -693,8 +715,21 @@ def _is_noise_or_broken_question(text_q: str, brief: str) -> bool:
         return True
     if _BROKEN_Q_RE.search(text_q):
         return True
+    # Short "multiple <token>" + nearby determiners (legacy broken generator)
     if re.search(r"\bmultiple\s+\w{1,4}s?\b", text_q, re.I) and re.search(
         r"\b(the|to|create|review|admin)\b", text_q, re.I
+    ):
+        return True
+    # "Can a <non-noun> have multiple <non-noun>s" — not a real cardinality question
+    if re.search(
+        r"\bcan\s+a\s+\w+\s+have\s+multiple\s+\w+\b",
+        text_q,
+        re.I,
+    ) and re.search(
+        r"\bmultiple\s+(theirs|wheres|theres|whats|whiches|ops|tos|thes|ones)\b"
+        r"|\bcan\s+a\s+(operate|create|review|approve|manage)\b",
+        text_q,
+        re.I,
     ):
         return True
     return False
