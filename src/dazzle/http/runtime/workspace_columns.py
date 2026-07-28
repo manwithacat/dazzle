@@ -131,12 +131,16 @@ def build_surface_columns(
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
             ref_entity = getattr(ft, "ref_entity", None)
             ref_route = _ref_detail_route(ref_entity)
+            # ref_entity / filter_ref_entity: Avatar default (user_chip) + hyperpart
+            # opportunity scan need the target entity, not just ref_route.
             ref_col: dict[str, Any] = {
                 "key": rel_name,
                 "label": rel_name.replace("_", " ").title(),
                 "type": "ref",
                 "sortable": False,
                 "ref_route": ref_route,
+                "ref_entity": ref_entity or "",
+                "filter_ref_entity": ref_entity or "",
             }
             if _vis_cond:
                 ref_col["visible_condition"] = _vis_cond
@@ -220,6 +224,8 @@ def build_entity_columns_full(entity_spec: Any, enums: Any = None) -> list[dict[
                     "type": "ref",
                     "sortable": False,
                     "ref_route": ref_route,
+                    "ref_entity": ref_entity or "",
+                    "filter_ref_entity": ref_entity or "",
                 }
             )
             continue

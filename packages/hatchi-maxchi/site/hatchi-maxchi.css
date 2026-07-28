@@ -4472,6 +4472,19 @@ input.switch:checked::before {
   color: var(--colour-text);
 }
 
+/* Workspace region person-ref links wrap the chip (keep chip layout, no underline). */
+a.user-chip-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  max-width: 100%;
+}
+a.user-chip-link:hover .user-chip__name {
+  text-decoration: underline;
+  color: var(--colour-primary, var(--colour-text));
+}
+
 /* ── breadcrumb ───────────────────────────────────────────────────
  * <nav class="breadcrumb" aria-label="Breadcrumb"><ol>
  *   <li><a href="/app">Home</a></li>

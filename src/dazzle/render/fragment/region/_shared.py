@@ -32,6 +32,7 @@ from dazzle.render.fragment import (
     Surface,
 )
 from dazzle.render.fragment.format_cell import ResolvedFormat, format_cell
+from dazzle.render.user_chip import looks_like_person_ref, render_user_chip_html
 
 # Defensive ISO / Postgres timestamptz leak detector (parity with _data_row.py).
 _ISO_DT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$")
@@ -201,10 +202,37 @@ def _render_typed_value(
         display = item.get(f"{key}_display")
         if display is None:
             if isinstance(value, dict):
-                display = value.get("__display__") or value.get("id") or ""
+                display = value.get("__display__") or value.get("name") or value.get("id") or ""
             else:
                 display = value
-        display_str = str(display)
+        display_str = str(display if display is not None else "")
+
+        # Person-like refs: Avatar hyperpart chip (parity with entity list rows).
+        chip_probe = value if isinstance(value, dict) else {"name": display_str}
+        if looks_like_person_ref(chip_probe if chip_probe is not None else {}, col):
+            if isinstance(value, dict):
+                chip_val: Any = value
+            elif display_str:
+                chip_val = {"name": display_str, "id": value}
+            else:
+                chip_val = value
+            chip_html = render_user_chip_html(chip_val, col)
+            if chip_html and chip_html != "—":
+                if ref_route:
+                    if isinstance(value, dict):
+                        id_value = str(value.get("id") or "")
+                    else:
+                        id_value = str(value or "")
+                    if "{id}" in ref_route:
+                        url = ref_route.replace("{id}", id_value)
+                    elif ref_route.endswith("/"):
+                        url = f"{ref_route}{id_value}"
+                    else:
+                        url = f"{ref_route}/{id_value}"
+                    href = _html_escape(url, quote=True)
+                    return RawHTML(f'<a href="{href}" class="dz-user-chip-link">{chip_html}</a>')
+                return RawHTML(chip_html)
+
         if ref_route:
             # Resolve the FK id. After repo.list(fk_display_only=True)
             # the column value can be either a scalar id (string/uuid)

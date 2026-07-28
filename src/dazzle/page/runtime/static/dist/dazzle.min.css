@@ -3081,6 +3081,17 @@ white-space: nowrap;
 font-size: var(--text-sm);
 color: var(--colour-text);
 }
+a.dz-user-chip-link {
+display: inline-flex;
+align-items: center;
+text-decoration: none;
+color: inherit;
+max-width: 100%;
+}
+a.dz-user-chip-link:hover .dz-user-chip__name {
+text-decoration: underline;
+color: var(--colour-primary, var(--colour-text));
+}
 .dz-breadcrumb ol {
 display: flex;
 align-items: center;

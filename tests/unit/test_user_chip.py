@@ -66,3 +66,57 @@ class TestDataRowIntegration:
         )
         assert "dz-avatar" not in out
         assert "Acme Corp" in out
+
+    def test_display_sibling_still_emits_avatar(self) -> None:
+        """``{key}_display`` must not short-circuit Avatar (cycle 1363)."""
+        from dazzle.render.fragment.primitives import RowCapabilities
+        from dazzle.render.fragment.renderer._data_row import render_data_row
+
+        html = render_data_row(
+            (
+                {
+                    "key": "assigned_to",
+                    "type": "ref",
+                    "ref_entity": "User",
+                    "label": "Assigned",
+                },
+            ),
+            {
+                "id": "t1",
+                "assigned_to": {"id": "u9", "__display__": "Maya Chen"},
+                "assigned_to_display": "Maya Chen",
+            },
+            RowCapabilities(),
+            entity_name="Task",
+        )
+        assert "dz-avatar" in html
+        assert "Maya Chen" in html
+
+    def test_ref_entity_alone_detects_person(self) -> None:
+        """Non-heuristic field key + ref_entity=User still chips."""
+        out = _render_cell_display(
+            {"type": "ref", "key": "sponsor", "ref_entity": "User"},
+            {"name": "Pat Lee", "id": "u2"},
+        )
+        assert "dz-avatar" in out
+        assert "Pat Lee" in out
+
+
+class TestRegionPersonRef:
+    def test_workspace_ref_emits_avatar_chip(self) -> None:
+        from dazzle.render.fragment.region._shared import _render_typed_value
+
+        frag = _render_typed_value(
+            {"assigned_to": {"id": "u1", "name": "Ada Lovelace", "__display__": "Ada Lovelace"}},
+            {
+                "key": "assigned_to",
+                "type": "ref",
+                "ref_entity": "User",
+                "ref_route": "/app/user/{id}",
+            },
+        )
+        assert hasattr(frag, "html")
+        assert "dz-avatar" in frag.html
+        assert "dz-user-chip" in frag.html
+        assert "dz-user-chip-link" in frag.html
+        assert "/app/user/u1" in frag.html

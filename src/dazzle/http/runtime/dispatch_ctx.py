@@ -111,16 +111,28 @@ def _dispatch_ctx_from_form(form: Any) -> dict[str, Any]:
     return ctx_out
 
 
+def _detail_ref_value(field_name: str, item: dict[str, Any], fallback: Any) -> Any:
+    """Resolve a detail ref field: keep FK dicts for Avatar chips."""
+    rel = field_name[:-3] if field_name.endswith("_id") else field_name
+    raw = item.get(field_name, fallback)
+    display = item.get(f"{rel}_display") or item.get(f"{field_name}_display")
+    if isinstance(raw, dict):
+        return raw
+    if display not in (None, ""):
+        return {"name": str(display), "id": raw}
+    return raw
+
+
 def _one_detail_field_dict(f: Any, item: dict[str, Any]) -> dict[str, Any]:
     """Map one FieldContext + item → flat detail field dict."""
     field_name = getattr(f, "name", "") or getattr(f, "key", "")
     kind = getattr(f, "type", "text") or "text"
     value = item.get(field_name, "") if isinstance(item, dict) else ""
     if kind == "ref" and isinstance(item, dict):
-        rel = field_name[:-3] if field_name.endswith("_id") else field_name
-        value = item.get(f"{rel}_display") or item.get(f"{field_name}_display") or value
+        value = _detail_ref_value(field_name, item, value)
     extra = getattr(f, "extra", None) or {}
     currency_code = str(extra.get("currency_code", "") or "") if isinstance(extra, dict) else ""
+    ref_entity = str(getattr(f, "ref_entity", "") or "")
     return {
         "key": field_name,
         "label": getattr(f, "label", "") or field_name,
@@ -128,6 +140,7 @@ def _one_detail_field_dict(f: Any, item: dict[str, Any]) -> dict[str, Any]:
         "kind": kind,
         "currency_code": currency_code,
         "semantic_map": dict(getattr(f, "enum_semantics", {}) or {}),
+        "ref_entity": ref_entity,
     }
 
 

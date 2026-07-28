@@ -523,9 +523,29 @@ def _render_table_row(table: dict[str, Any], item: dict[str, Any]) -> str:
         cell_value = item.get(col_key)
         # For ref columns, prefer an explicit `<key>_display` value the
         # relation loader may have injected, else resolve via dict shape.
+        # Person-like refs still emit Avatar chips when only a display string
+        # is present (cycle 1363: do not short-circuit past user_chip).
         if col_type == "ref":
             explicit = item.get(f"{col_key}_display")
-            if explicit:
+            chip_probe = (
+                cell_value
+                if isinstance(cell_value, dict)
+                else {"name": str(explicit or cell_value or "")}
+            )
+            if looks_like_person_ref(chip_probe if chip_probe is not None else {}, col):
+                if isinstance(cell_value, dict):
+                    chip_val: Any = cell_value
+                elif explicit not in (None, ""):
+                    chip_val = {"name": str(explicit), "id": cell_value}
+                else:
+                    chip_val = cell_value
+                chip = render_user_chip_html(chip_val, col)
+                display_html = (
+                    chip
+                    if chip
+                    else _html_mod.escape(str(explicit or cell_value or ""), quote=False)
+                )
+            elif explicit not in (None, ""):
                 display_html = _html_mod.escape(str(explicit), quote=False)
             else:
                 display_html = _render_cell_display(

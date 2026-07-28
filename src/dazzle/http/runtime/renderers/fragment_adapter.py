@@ -138,6 +138,9 @@ def _detail_field_value(f: dict[str, Any]) -> Fragment:
     kind = str(f.get("kind", "text") or "text")
     col = {
         "type": _FORM_KIND_TO_DISPLAY.get(kind, kind),
+        "key": str(f.get("key", "") or ""),
+        "ref_entity": str(f.get("ref_entity", "") or ""),
+        "filter_ref_entity": str(f.get("ref_entity", "") or ""),
         "currency_code": str(f.get("currency_code", "") or ""),
         "semantic_map": dict(f.get("semantic_map", {}) or {}),
     }
