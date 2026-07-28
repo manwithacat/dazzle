@@ -43,6 +43,39 @@ def _ref_detail_route(ref_entity: Any) -> str:
     return detail_path("/app", entity_slug(str(ref_entity)))
 
 
+def _enumish_token(value: Any) -> str:
+    """Normalize enum/str field-type tokens to a plain lowercase-ish string."""
+    if value is None:
+        return ""
+    if hasattr(value, "value"):
+        return str(value.value)
+    return str(value)
+
+
+def _resolved_field_kind_token(field: Any) -> str:
+    """Core IR kind **or** convert_entities scalar_type (kind=scalar).
+
+    Runtime entity specs use ``kind=scalar`` + ``scalar_type=bool|date|…``;
+    core IR uses ``FieldTypeKind.BOOL`` directly as ``type.kind``.
+    """
+    ft = getattr(field, "type", None)
+    kind_val = _enumish_token(getattr(ft, "kind", None) if ft is not None else None)
+    if kind_val == "scalar" and ft is not None:
+        return _enumish_token(getattr(ft, "scalar_type", None))
+    return kind_val
+
+
+# kind / scalar_type token → list column type. date vs datetime kept distinct
+# so UK date-only vs date+time humanisation is not collapsed.
+_KIND_TO_COL_TYPE: dict[str, str] = {
+    "enum": "badge",
+    "bool": "bool",
+    "date": "date",
+    "datetime": "datetime",
+    "money": "currency",
+}
+
+
 def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     """Map an IR field to a column rendering type for workspace templates.
 
@@ -58,26 +91,10 @@ def field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     must resolve both shapes or bool columns render as the Python
     ``"True"``/``"False"`` strings (agent_acceptance / pilot friction).
     """
-    ft = getattr(field, "type", None)
-    kind = getattr(ft, "kind", None) if ft is not None else None
-    kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-    # Runtime convert_entities: kind=scalar + scalar_type carries the true type.
-    if kind_val == "scalar" and ft is not None:
-        st = getattr(ft, "scalar_type", None)
-        kind_val = st.value if hasattr(st, "value") else str(st or "") if st else ""
-    if kind_val == "enum":
-        return "badge"
-    if kind_val == "bool":
-        return "bool"
-    # Keep date vs datetime distinct so list cells can show UK date-only
-    # ("16 Jul 2026") vs date+time ("16 Jul 2026 01:30"). Collapsing both to
-    # "date" stripped time from assignment timestamps and similar fields.
-    if kind_val == "date":
-        return "date"
-    if kind_val == "datetime":
-        return "datetime"
-    if kind_val == "money":
-        return "currency"
+    kind_val = _resolved_field_kind_token(field)
+    mapped = _KIND_TO_COL_TYPE.get(kind_val)
+    if mapped is not None:
+        return mapped
     # State-machine status field renders as badge
     if entity is not None:
         sm = entity.state_machine
