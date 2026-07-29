@@ -162,3 +162,46 @@ class TestTreeBuilder:
         assert len(tree) == 2
         for node in tree:
             assert node["_children"] == []
+
+
+class TestTreeHubDrill1303:
+    """#1303 cycle 1445 — tree node labels drill via detail_url_template."""
+
+    def test_tree_builder_stamps_drill_urls(self) -> None:
+        from dazzle.render.fragment.region import WorkspaceRegionAdapter
+        from dazzle.render.fragment.renderer import FragmentRenderer
+
+        class _FakeRegion:
+            def __init__(self) -> None:
+                self.name = "org"
+                self.title = "Org"
+                self.display = "tree"
+                self.empty_message = ""
+
+        adapter = WorkspaceRegionAdapter()
+        ctx = {
+            "tree_items": [
+                {
+                    "id": "root-1",
+                    "name": "Engineering",
+                    "children": [{"id": "leaf-1", "name": "Platform"}],
+                }
+            ],
+            "detail_url_template": "/app/department/{id}",
+        }
+        fragment = adapter.build(_FakeRegion(), ctx)
+        html = FragmentRenderer().render(fragment)
+        assert 'href="/app/department/root-1"' in html
+        assert 'href="/app/department/leaf-1"' in html
+        assert "data-dz-tree-drill" in html
+        assert "Engineering" in html
+        assert "Platform" in html
+
+    def test_tree_emit_without_drill_unchanged_shape(self) -> None:
+        from dazzle.render.fragment.primitives.data import Tree, TreeNode
+        from dazzle.render.fragment.renderer import FragmentRenderer
+
+        html = FragmentRenderer().render(Tree(nodes=(TreeNode(label="Solo"),)))
+        assert "data-dz-tree" in html or "dz-tree" in html
+        assert "Solo" in html
+        assert "data-dz-tree-drill" not in html

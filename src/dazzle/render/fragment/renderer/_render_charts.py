@@ -433,20 +433,28 @@ class _RenderChartsMixin:
         rotating chevron is CSS ``::before`` on
         ``.dz-tree-node:has(> .dz-tree-children)``, not content SVG.
         Leaves are ``.dz-tree-leaf`` (no disclosure chrome / no open).
+
+        #1303: optional ``drill_url`` wraps the label in a hub ``<a>``.
+        ``stopPropagation`` keeps branch expand on summary chrome while
+        label navigation follows the link (kanban-title drill parity).
         """
         label = ctx.escape(node.label)
+        drill = getattr(node, "drill_url", "") or ""
+        if drill:
+            href = ctx.escape_attr(str(drill))
+            label_html = (
+                f'<a class="dz-tree-label" href="{href}" data-dz-tree-drill '
+                f'onclick="event.stopPropagation()">{label}</a>'
+            )
+        else:
+            label_html = f'<span class="dz-tree-label">{label}</span>'
         if not node.children:
             # Leaf: content only — no details, no chevron, no expand hint.
-            return f'<div class="dz-tree-leaf"><span class="dz-tree-label">{label}</span></div>'
+            return f'<div class="dz-tree-leaf">{label_html}</div>'
         open_attr = " open" if depth == 0 else ""
         count_html = f'<span class="dz-tree-count">{len(node.children)}</span>'
         # Summary holds content (label + count). Disclosure affordance is CSS.
-        summary = (
-            f'<summary class="dz-tree-summary">'
-            f'<span class="dz-tree-label">{label}</span>'
-            f"{count_html}"
-            f"</summary>"
-        )
+        summary = f'<summary class="dz-tree-summary">{label_html}{count_html}</summary>'
         children_html = "".join(
             self._emit_tree_node(c, depth=depth + 1, ctx=ctx) for c in node.children
         )

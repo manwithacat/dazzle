@@ -655,10 +655,16 @@ class TreeNode:
 
     Children are themselves `TreeNode` instances, building an arbitrary-
     depth hierarchy. Empty `children` tuple means the node is a leaf.
+
+    ``drill_url`` (#1303 / cycle 1445): when set, the label renders as a
+    hub link (same contract as LIST/GRID/KANBAN titles). Branch expand
+    chrome stays on the ``summary``; the link stops propagation so a
+    label click navigates without toggling the node.
     """
 
     label: str
     children: tuple["TreeNode", ...] = ()
+    drill_url: str = ""
 
 
 @dataclass(frozen=True, slots=True)

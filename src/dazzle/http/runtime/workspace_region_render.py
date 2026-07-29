@@ -585,6 +585,9 @@ def _build_list_adapter_ctx(
         adapter_ctx["tree_items"] = inputs.tree_items
         adapter_ctx["items"] = inputs.items
         _set_display_key(adapter_ctx, inputs, ctx)
+        # #1303 / cycle 1445 — tree node labels drill via detail_url_template
+        # (action: …/edit demotes when UPDATE denied, same as LIST/GRID).
+        _set_detail_url_template(adapter_ctx, ctx, env.user_ctx)
     elif display_upper == "ACTIVITY_FEED":
         adapter_ctx["items"] = inputs.items
         # #1303 / cycle 1415 — activity rows drill via detail_url_template

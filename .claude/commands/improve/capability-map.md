@@ -74,21 +74,21 @@ apply map patches with `{"apply":true}`.
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1437 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1444 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1443 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1427 | USED |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1445 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1444 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1433 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1445 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1230 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1433 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1445 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
@@ -124,6 +124,8 @@ apply map patches with `{"apply":true}`.
 
 > **Cycle 1441 (2026-07-29).** **capability-sweep** (cadence ≥20 since 1421) — inventory reconcile vs tip. **UNOWNED=0** **COGNITION_STALE_eff=12** **HYGIENE_STALE_eff=27**. Flipped lag≥20 USED→STALE: 4 (demo quality, product_quality, hyperpart-opportunities, rbac). lag<20 STALE→USED: 0. DRIVER CodeQL+inbox **USED@1441**. Top COGNITION digs (aggressive, densify_allowed=0 residual=0 dual_lock=0 suppress_smoke=1 panel_streak=1): **framework-ux edge** / **journey_dogfood** dig+ship / domain-demo re-touch — **not** dual_lock/smoke stamp/WI densify; avoid re-panel ops timeout thrash without shorter scenario. Metered vision STALE → subscription substitutes only. budget 0. Explore **16/100**. Next self-audit@1435 ~1450; capability-sweep@1441 next~1461. Tip CI in_progress 30450503281 — no product push.
 
+> **Cycle 1445 (2026-07-29).** **framework-ux edge** #1303 TREE hub drill — `TreeNode.drill_url` + builder/`_set_detail_url_template` host path + emit `data-dz-tree-drill` (fieldtest device_tree action:device_detail consumer). Unit pins. densify_allowed=0 dual_lock=0. fitness/ux verify **USED@1445**. budget 1. Explore **20/100**. Next story_walk/acceptance dig under aggressive — not dual_lock/smoke/WI densify. self-audit@1435 ~1450; capability-sweep@1441 ~1461.
+>
 > **Cycle 1444 (2026-07-29).** **hm-convergence gallery_probes** (campaign force) discover uncovered=0; prior 8/8 PASS; **ship** Escape dismiss suite: `menubar.escape_dismiss` + `dialog.escape_closes` + `drawer.escape_closes` (+ runners `details_escape_dismiss`/`native_dialog_escape`); catalog 11 probes all PASS; unit pin + behaviour CI pins. densify_allowed=0 dual_lock=0. gallery_probes **USED@1444**. budget 1. Explore **19/100**. Next framework-ux edge / story_walk dig under aggressive — not dual_lock/smoke/WI densify. self-audit@1435 ~1450; capability-sweep@1441 ~1461.
 >
 > **Cycle 1443 (2026-07-29).** **example-apps journey_dogfood** (campaign force residual=0 deepen) domain_join_co — maps stem+SPEC+stories; prove journey 5/5; workspace hub strip+related posts; announcement strip; dual open Workspace; grid→queue board/feed/live/workspace; ST-005; SPEC fingerprint. open_via 1→3 related 0→1 strips 0→2; queue 121→125. journey+prove+process_dig+work-surface+validate **USED@1443**. budget 1. Explore **18/100**. Next framework-ux edge / gallery_probes — not dual_lock/smoke/WI densify. self-audit@1435 ~1450; capability-sweep@1441 ~1461.

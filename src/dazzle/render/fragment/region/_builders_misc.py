@@ -234,6 +234,26 @@ class _BuildersMiscMixin:
         title = _region_title(region)
         raw = ctx.get("tree_items") or ctx.get("items") or []
         label_field = str(ctx.get("display_key") or ctx.get("label_field") or "")
+        # #1303: per-node hub drill (same template contract as LIST/GRID).
+        detail_url_template = str(ctx.get("detail_url_template") or "")
+        fallback_tmpl = str(ctx.get("detail_url_fallback_template") or "")
+        raw_cands = ctx.get("detail_url_candidates")
+        candidate_tmpls: tuple[str, ...] = (
+            tuple(str(c) for c in raw_cands) if isinstance(raw_cands, (list, tuple)) else ()
+        )
+
+        def _node_drill(node: dict[str, Any]) -> str:
+            if not (detail_url_template or candidate_tmpls or fallback_tmpl):
+                return ""
+            links = _resolve_row_links(
+                [node],
+                detail_url_template,
+                fallback_template=fallback_tmpl,
+                candidate_templates=candidate_tmpls,
+            )
+            if not links:
+                return ""
+            return str(links[0] or "")
 
         def _walk(node_list: list[Any]) -> tuple[TreeNode, ...]:
             out: list[TreeNode] = []
@@ -244,7 +264,13 @@ class _BuildersMiscMixin:
                 # Accept both legacy `_children` and typed `children`.
                 children_raw = node.get("_children") or node.get("children") or []
                 children = _walk(children_raw) if isinstance(children_raw, list) else ()
-                out.append(TreeNode(label=label, children=children))
+                out.append(
+                    TreeNode(
+                        label=label,
+                        children=children,
+                        drill_url=_node_drill(node),
+                    )
+                )
             return tuple(out)
 
         nodes = _walk(raw) if isinstance(raw, list) else ()
