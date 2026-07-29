@@ -17,3 +17,6 @@ entity EngagementLetter "Engagement Letter":
 
   signable: true
   signing_validator: app.signing.validator.validate_engagement_letter
+
+  fitness:
+    repr_fields: [party, effective_date, signatory_name, contact]

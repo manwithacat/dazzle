@@ -41,7 +41,8 @@ Six authored scenarios pin the day-to-day flows down. When a User creates a
 new contact, it is saved and confirmed on screen. Browsing shows every
 contact sorted alphabetically by name, and a case-insensitive search narrows
 the list to contacts whose name, email, or company matches. Opening a contact
-shows its full details, with a breadcrumb back to the list. A User can mark a
+shows its full details — identity, employment strip, notes, and related
+engagement letters — with a breadcrumb back to the list. A User can mark a
 contact as a favourite so it appears in the Home and Contacts favourites
 queues; edits to an existing contact are saved with the time of the change
 recorded.
@@ -82,4 +83,4 @@ static proof holds every byte-serving route to that boundary, so no new route
 can stream document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:d5ed74aa6bec59d2f06bd563f9fe29acae6a263a3c591ccacc710aacb55e6c8c -->
+<!-- dazzle-spec-brief: sha256:b206a3326cf3ecfdf6e917cd0d232046391281d7e49dfbfc5fb607be50a19d82 -->

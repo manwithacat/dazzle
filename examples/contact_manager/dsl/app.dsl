@@ -104,7 +104,7 @@ surface contact_list "Contacts":
     search: first_name, last_name, email, company
     empty: "No contacts yet. Add your first contact!"
 
-# Detail view — contact hub (identity / employment / notes)
+# Detail view — contact hub (identity / employment / notes / engagement letters)
 surface contact_detail "Contact Detail":
   uses entity Contact
   mode: view
@@ -127,8 +127,15 @@ surface contact_detail "Contact Detail":
     field created_at "Created"
     field updated_at "Updated"
 
+  # Journey deepen: reverse-hop engagement letters (SPEC signing flow) — not a
+  # flat warehouse dump; call-context hub shows related NDAs/letters in place.
+  related engagements "Engagement letters":
+    display: table
+    show: EngagementLetter
+    columns: party, effective_date, signatory_name, scope_summary
+
   ux:
-    purpose: "Contact hub — identity, employment, and notes in one place"
+    purpose: "Contact hub — identity, employment, notes, and engagement letters in one place"
 
 # Create form
 surface contact_create "Create Contact":

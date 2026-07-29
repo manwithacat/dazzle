@@ -45,11 +45,11 @@ story ST-006 "User opens contact hub for call context":
   executed_by: surface.contact_detail
   persona: user
   trigger: user_click
-  entities: [Contact]
+  entities: [Contact, EngagementLetter]
   given:
     - "User selected a contact from the list or favourites queue"
   then:
-    - "Contact hub shows identity, employment strip, and notes/timeline sections"
+    - "Contact hub shows identity, employment strip, notes/timeline, and related engagement letters"
     - "User can return to the dual-pane list without losing browse context"
 
 story ST-007 "User pins a favourite from the directory queue":
