@@ -712,9 +712,10 @@ workspace staff_directory "Staff Directory":
         icon: "user-plus"
         state: positive
 
+  # Work-surface utility: directory person cards are a pull-to-open queue, not a gallery grid.
   people_cards:
     source: Person
-    display: grid
+    display: queue
     limit: 20
     action: person_detail
     empty: "No people on record"
@@ -1053,9 +1054,10 @@ workspace my_team "My Team":
         icon: "git-branch"
         state: positive
 
+  # Work-surface utility: report cards are pull-to-open career hubs, not a dense card gallery.
   report_cards:
     source: Person
-    display: grid
+    display: queue
     limit: 20
     action: person_detail
     empty: "No people in scope"
@@ -1091,9 +1093,10 @@ workspace starters_desk "New Starters":
     action: person_detail
     empty: "No people on record"
 
+  # Work-surface utility: starter cards are an onboarding pull queue (pair with recent_people).
   starter_cards:
     source: Person
-    display: grid
+    display: queue
     limit: 20
     action: person_detail
     empty: "No people on record"
@@ -1133,9 +1136,10 @@ workspace reporting_desk "Reporting":
     limit: 25
     empty: "No reporting lines yet"
 
+  # Work-surface utility: reporting desk people are open-person queue, not inventory grid.
   people_cards:
     source: Person
-    display: grid
+    display: queue
     limit: 20
     action: person_detail
     empty: "No people on record"
@@ -1191,12 +1195,13 @@ workspace active_staff "Active Staff":
     action: person_detail
     empty: "No active people on record"
 
+  # Work-surface utility: active headcount cards are a pull queue (pair with active_queue).
   active_grid:
     source: Person
     filter: ended_at = null
     sort: legal_name asc
     limit: 20
-    display: grid
+    display: queue
     action: person_detail
     empty: "No active people on record"
 
