@@ -74,6 +74,12 @@ SANCTIONED = {
     # governance docs in REMEDIATION string — not runtime consumption).
     # CI red 2026-07-28 after cycle 1411 promoted the CONTRACT_SURFACE gate.
     "scripts/ship_surface.py",
+    # Path-aware CI packs for packages/hatchi-maxchi/** (hm-surface) — governance
+    # selector only; does not import HM at runtime (24h CI autopsy 2026-07-28).
+    "scripts/ci_changed.py",
+    # Gen-surface freshness gate names the HM contract_surface tool path in
+    # remediation text (operator docs — not runtime consumption).
+    "scripts/gen_surface_check.py",
     # Cross-repo CI mirror: public Actions API for hatchi-maxchi main (governance).
     "scripts/hm_standalone_ci_status.py",
     # Design-context facade names the HM families path in *generated doc prose*

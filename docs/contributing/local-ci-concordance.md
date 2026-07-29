@@ -35,8 +35,9 @@ locally while GitHub stays red on unpaid structural/artifact debt.
 | `test_deferred_imports_ratchet_1438` | function-level `dazzle.*` import growth | hoist import or raise baseline with justification |
 | `test_import_contracts` | layer edges (`core ↛ page/api_kb`) | relocate code |
 | `test_no_bare_except_pass` | silent `except Exception` | log with `exc_info=True` or narrow type |
-| `test_ux_catalogue` | stale catalogue CSS | `python scripts/gen_ux_catalogue.py` |
+| `test_ux_catalogue` | stale catalogue CSS / render crash in previews | `python scripts/gen_ux_catalogue.py` |
 | `test_complexity_ratchet` | cyclomatic/MI regressions | refactor or `dazzle fitness code --write-baseline` |
+| `test_clone_ratchet` (tree regression nodeid) | new/grown clone clusters (URL helpers, etc.) | reuse existing fn or `dazzle fitness clones --write-baseline` |
 | `test_hm_package_suite_gate` | HM gallery stale-dist | `cd packages/hatchi-maxchi && python site/build_site.py` |
 
 **Non-zero exit → do not ship.** The script prints a remediation playbook.
@@ -61,12 +62,26 @@ after a full `ci.yml` matrix. Script: `scripts/ship_surface.py`.
 | `test_no_new_ir_field_orphans` | IR reader baseline |
 | golden IR snapshot | `test_simple_dsl_to_ir_snapshot` |
 | viewport DRAWER freshness | shell toggle selector rot (browser-free) |
+| `gen_surface_check` | catalogue md/css + `CONTRACT_SURFACE.md` vs generators |
 
 **Also runs automatically as the second step of Tier 0** (after preflight).
 Standalone for mid-edit: `make ship-surface`.
 
 After a **cimonitor** repair, new recurrent classes must be **promoted into
 this pack or preflight-surface** — fix-only is incomplete.
+
+### Gen-surface — `make gen-surface-check` (`scripts/gen_surface_check.py`)
+
+Fast check that **committed** UX catalogue + HM `CONTRACT_SURFACE.md` match
+what the generators would emit (no write). Also runs inside `ship-surface`.
+
+| Stale artifact | Regen |
+|----------------|-------|
+| `docs/reference/ux-catalogue.md`, `docs/assets/dazzle-catalogue.css` | `python scripts/gen_ux_catalogue.py` |
+| `packages/hatchi-maxchi/CONTRACT_SURFACE.md` | `python packages/hatchi-maxchi/tools/contract_surface.py --write` |
+
+**Rule:** regenerate, commit the outputs, then re-run. Do not push with dirty
+gen files after HM / render / component work.
 
 ### Path-aware — `make ci-changed` (`scripts/ci_local.sh changed`)
 
@@ -78,7 +93,10 @@ plus worktree dirt):
 | `examples/**/dsl/**` | example SPEC bar |
 | `src/dazzle/mcp/semantics_kb/**` | pattern_count |
 | `src/dazzle/core/**`, IR snapshots | golden IR + IR orphans |
-| shell / viewport / HM | viewport unit + topbar |
+| shell / viewport | viewport unit + topbar |
+| `packages/hatchi-maxchi/**` | **hm-surface** (contract + catalogue + package suite; note sibling visual) |
+| `src/dazzle/render/**`, kanban/components | **render-catalogue** |
+| `src/dazzle/http/**` | **http-ratchets** (deferred import + clone + action URL) |
 | `src/**` | bandit medium on `src/` |
 
 Use mid-edit for a fast loop; does **not** replace Tier 0 for ship.

@@ -8,7 +8,7 @@
 # use pyenv/virtualenv/pip-install-editable for this repo — see
 # docs/contributing/dev-setup.md.
 
-.PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core preflight-surface ship-surface ci-changed sync-ci-type sync-ci-test pre-commit
+.PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core preflight-surface ship-surface gen-surface-check ci-changed sync-ci-type sync-ci-test pre-commit
 
 # Prefer a real uv binary over pyenv shims. A committed `.python-version` of
 # `3.14` is correct for uv + Heroku but makes pyenv abort when that version is
@@ -62,6 +62,7 @@ help:
 	@echo "CI/CD (local concordance — see docs/contributing/local-ci-concordance.md):"
 	@echo "  preflight-surface  Hard gate: API/docs/import/ratchet/HM debt (run before every ship)"
 	@echo "  ship-surface     Tier 0.5: bandit + recurrent SPEC/IR/viewport pack (badge-red classes)"
+	@echo "  gen-surface-check  Catalogue + CONTRACT_SURFACE freshness (no write; part of ship-surface)"
 	@echo "  ci-changed       Path-aware packs for git diff (fast mid-edit loop)"
 	@echo "  ci-fast          Tier 0: preflight + ship-surface + ruff + mypy + gate + mkdocs"
 	@echo "  ci-core          Tier 1: preflight + CI lint/type/unit/security/docs mirror"
@@ -240,6 +241,11 @@ preflight-surface:
 # Also runs as part of ci-fast after preflight-surface.
 ship-surface:
 	bash scripts/ci_local.sh ship-surface
+
+# Committed generated surfaces vs generators (catalogue + CONTRACT_SURFACE).
+# Also runs inside ship-surface; standalone for mid-edit after HM/render work.
+gen-surface-check:
+	$(if $(wildcard .venv/bin/python),.venv/bin/python,python3) scripts/gen_surface_check.py
 
 # Path-aware packs for the current git diff (examples DSL, shell, KB, …).
 ci-changed:

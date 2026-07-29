@@ -147,7 +147,6 @@ def select_packs(paths: list[str]) -> list[Pack]:
         "src/dazzle/testing/viewport.py",
         "src/dazzle/render/fragment/renderer/_render_shell.py",
         "src/dazzle/render/dispatch.py",
-        "packages/",  # design-system package tree (shell CSS/JS)
     ):
         packs.append(
             Pack(
@@ -156,6 +155,63 @@ def select_packs(paths: list[str]) -> list[Pack]:
                 pytest=[
                     "tests/unit/test_viewport.py",
                     "tests/unit/render/fragment/test_topbar_primitive.py",
+                ],
+            )
+        )
+
+    # HM package + design-system gallery (24h CI: CONTRACT_SURFACE / catalogue /
+    # Linux visual plane). Sibling visual is NOT covered — print note on run.
+    if any_prefix("packages/hatchi-maxchi/"):
+        packs.append(
+            Pack(
+                name="hm-surface",
+                reason="HaTchi-MaXchi package / gallery / contract surface",
+                pytest=[
+                    "tests/unit/test_contract_surface_tool.py::test_committed_contract_surface_matches_generator",
+                    "tests/unit/test_ux_catalogue.py",
+                    "tests/unit/test_hm_package_suite_gate.py",
+                    "tests/unit/test_hm_boundary.py::test_package_references_confined_to_sanctioned_seams",
+                ],
+                shell=[
+                    [py, "scripts/gen_ux_catalogue.py", "--mode=ci"],
+                ],
+            )
+        )
+
+    # Render / component pipeline changes re-render catalogue HTML (kanban rank
+    # regression class 2026-07-28).
+    if any_prefix(
+        "src/dazzle/render/",
+        "src/dazzle/testing/ux_catalogue.py",
+        "scripts/gen_ux_catalogue.py",
+    ) or any_glob_substr("components/", "kanban"):
+        packs.append(
+            Pack(
+                name="render-catalogue",
+                reason="render / component / catalogue pipeline",
+                pytest=[
+                    "tests/unit/test_ux_catalogue.py",
+                ],
+                shell=[
+                    [py, "scripts/gen_ux_catalogue.py", "--mode=ci"],
+                ],
+            )
+        )
+
+    # HTTP / workspace route helpers — deferred-import + clone ratchets +
+    # action URL resolution (improve cycles 1403–1406).
+    if any_prefix(
+        "src/dazzle/http/",
+        "src/dazzle/fitness/clones.py",
+    ):
+        packs.append(
+            Pack(
+                name="http-ratchets",
+                reason="http runtime / clone fitness surface",
+                pytest=[
+                    "tests/unit/test_deferred_imports_ratchet_1438.py",
+                    "tests/unit/test_clone_ratchet.py::test_current_tree_does_not_regress_against_baseline",
+                    "tests/unit/test_workspace_rendering.py::TestCrossEntityAction::test_action_url_resolution",
                 ],
             )
         )
@@ -217,6 +273,11 @@ def run_packs(packs: list[Pack], *, dry_run: bool = False) -> int:
     rc = 0
     for pack in packs:
         print(f"==> ci-changed pack: {pack.name}  ({pack.reason})")
+        if pack.name == "hm-surface":
+            print(
+                "    note: Linux visual / behaviour lives on hatchi-maxchi standalone CI "
+                "(hm_standalone_ci_status.py) — monorepo pack does not replace it"
+            )
         if pack.pytest:
             cmd = [py, "-m", "pytest", *pack.pytest, "-q", "--tb=line"]
             print("   ", " ".join(cmd))

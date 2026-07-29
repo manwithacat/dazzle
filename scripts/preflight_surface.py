@@ -8,7 +8,7 @@ red for the same cluster every time:
 
 * API surface baselines (``docs/api-surface/*``)
 * Docs drift (AGENTS.md MCP table, cli.md groups, generated reference pages)
-* Deferred-import / complexity ratchets
+* Deferred-import / complexity / clone ratchets
 * Layer import contracts (``core ↛ page/api_kb``)
 * Silent ``except Exception`` swallows
 * UX catalogue CSS
@@ -47,6 +47,8 @@ SURFACE_TESTS: tuple[str, ...] = (
     "tests/unit/test_swallow_ratchet.py",  # debug_only/silent Exception swallows (cycle 1369 CI)
     "tests/unit/test_ux_catalogue.py",
     "tests/unit/test_complexity_ratchet.py",
+    # Clone / reuse ratchet (CI red 2026-07-28 improve cycles after URL-helper dupes)
+    "tests/unit/test_clone_ratchet.py::test_current_tree_does_not_regress_against_baseline",
     "tests/unit/test_hm_package_suite_gate.py",
     # HM package path references confined to SANCTIONED seams (CI red 2026-07-28
     # after ship_surface REMEDIATION named the monorepo package path without allowlist).
@@ -79,6 +81,12 @@ Remediation by class (run from repo root, commit the regenerated files):
 
   Complexity ratchet
     dazzle fitness code --write-baseline   # only after justified increase
+
+  Clone / reuse ratchet (new or grown function clusters)
+    # reuse the existing helper instead of re-implementing it, or:
+    dazzle fitness clones --write-baseline   # only for parallel-by-design residue
+    # NEVER ruff-format the .json baseline (breaks JSON)
+    pytest tests/unit/test_clone_ratchet.py -q
 
   Import contracts (core ↛ page / api_kb / mcp)
     # relocate code; do not allow-list casually

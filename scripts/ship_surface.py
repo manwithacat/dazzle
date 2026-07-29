@@ -124,6 +124,12 @@ Remediation by class (run from repo root):
     # review packages/hatchi-maxchi/CONTRACT_SURFACE.md; commit with the field ship
     pytest tests/unit/test_contract_surface_tool.py::test_committed_contract_surface_matches_generator -q
 
+  Generated surfaces dirty (catalogue md/css + CONTRACT_SURFACE)
+    .venv/bin/python scripts/gen_surface_check.py   # diagnose
+    .venv/bin/python scripts/gen_ux_catalogue.py
+    uv run python packages/hatchi-maxchi/tools/contract_surface.py --write
+    # commit regenerated files; do not ship with dirty gen outputs
+
 Re-run:
   make ship-surface
   # then: make ci-fast
@@ -214,6 +220,22 @@ def run_ship_tests(*, quiet: bool = False) -> int:
     return subprocess.run(cmd, cwd=REPO, check=False).returncode
 
 
+def run_gen_surface(*, quiet: bool = False) -> int:
+    """Committed catalogue + CONTRACT_SURFACE must match generators (no write)."""
+    py = _python()
+    script = REPO / "scripts" / "gen_surface_check.py"
+    if not script.is_file():
+        print("ship-surface: missing scripts/gen_surface_check.py", file=sys.stderr)
+        return 2
+    if not quiet:
+        print("==> ship-surface: gen-surface-check (catalogue + CONTRACT_SURFACE)")
+    return subprocess.run(
+        [py, str(script), *(["--quiet"] if quiet else [])],
+        cwd=REPO,
+        check=False,
+    ).returncode
+
+
 def run_ship_surface(*, quiet: bool = False, skip_bandit: bool = False) -> int:
     if not skip_bandit:
         brc = run_bandit(quiet=quiet)
@@ -222,6 +244,13 @@ def run_ship_surface(*, quiet: bool = False, skip_bandit: bool = False) -> int:
             return 1
     trc = run_ship_tests(quiet=quiet)
     if trc != 0:
+        print(REMEDIATION, file=sys.stderr)
+        return 1
+    # Post-gen dirty check — closes "feature tests green, generated artifacts stale"
+    # (24h CI autopsy 2026-07-28). Contract nodeid is also in SHIP_TESTS; this
+    # adds catalogue --mode=ci + unified remediation for both.
+    grc = run_gen_surface(quiet=quiet)
+    if grc != 0:
         print(REMEDIATION, file=sys.stderr)
         return 1
     if not quiet:
