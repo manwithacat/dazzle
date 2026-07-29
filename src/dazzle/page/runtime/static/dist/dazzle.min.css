@@ -3953,7 +3953,13 @@ height: calc(var(--space-xs) + 0.25rem);
 .dz-hover-card:hover .dz-hover-card__content,
 .dz-hover-card:hover .dz-hover-card__panel,
 .dz-hover-card:focus-within .dz-hover-card__content,
-.dz-hover-card:focus-within .dz-hover-card__panel {
+.dz-hover-card:focus-within .dz-hover-card__panel,
+.dz-hover-card[data-dz-open] .dz-hover-card__content,
+.dz-hover-card[data-dz-open] .dz-hover-card__panel,
+.dz-hover-card[data-open] .dz-hover-card__content,
+.dz-hover-card[data-open] .dz-hover-card__panel,
+.dz-hover-card.is-open .dz-hover-card__content,
+.dz-hover-card.is-open .dz-hover-card__panel {
 opacity: 1;
 visibility: visible;
 transform: translateY(0);
@@ -3980,12 +3986,20 @@ transition: none;
 .dz-hover-card:hover .dz-hover-card__panel {
 opacity: 0;
 visibility: hidden;
+transform: translateY(-0.25rem);
 pointer-events: none;
 }
 .dz-hover-card:focus-within .dz-hover-card__content,
-.dz-hover-card:focus-within .dz-hover-card__panel {
+.dz-hover-card:focus-within .dz-hover-card__panel,
+.dz-hover-card[data-dz-open] .dz-hover-card__content,
+.dz-hover-card[data-dz-open] .dz-hover-card__panel,
+.dz-hover-card[data-open] .dz-hover-card__content,
+.dz-hover-card[data-open] .dz-hover-card__panel,
+.dz-hover-card.is-open .dz-hover-card__content,
+.dz-hover-card.is-open .dz-hover-card__panel {
 opacity: 1;
 visibility: visible;
+transform: translateY(0);
 pointer-events: auto;
 }
 }
