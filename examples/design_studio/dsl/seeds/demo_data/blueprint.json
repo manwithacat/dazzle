@@ -15,8 +15,8 @@
     "entities": [
       {
         "name": "User",
-        "row_count_default": 4,
-        "notes": "Studio personas (admin/designer/reviewer) so Feedback.reviewer FK can resolve",
+        "row_count_default": 3,
+        "notes": "Explicit User.jsonl pins STABLE_PERSONA_USER_IDS for admin/designer/reviewer so Feedback.reviewer FK resolves after auth mirror skips domain User faker (#1630 / cycle 1430 trial seed).",
         "tenant_scoped": false,
         "field_patterns": [
           {

@@ -894,12 +894,13 @@ workspace comments_desk "Discussion":
     display: timeline
     empty: "No comments yet"
 
+  # Work-surface utility: in-progress work is a pull queue, not a grid dump.
   active_tasks:
     source: Task
     filter: status = in_progress
     sort: priority desc
     limit: 15
-    display: grid
+    display: queue
     action: task_detail
     empty: "No tasks in progress"
 

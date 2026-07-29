@@ -439,7 +439,7 @@
         "metrics of TaskComment",
         "queue of TaskComment",
         "timeline of TaskComment",
-        "grid of Task",
+        "queue of Task",
         "bar_chart of Task"
       ]
     },

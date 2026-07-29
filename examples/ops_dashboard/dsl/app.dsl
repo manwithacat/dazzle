@@ -636,10 +636,14 @@ workspace incident_review "Incident Review":
       active: warning
       resolved: positive
 
+  # Work-surface utility: triggered alerts are a dated stream — timeline.
   recent_alerts:
     source: Alert
     sort: triggered_at desc
-    limit: 5
+    limit: 8
+    display: timeline
+    action: alert_detail
+    empty: "No recent alerts"
 
   # Pair 2: system context + readiness checklist
   system_overview:
