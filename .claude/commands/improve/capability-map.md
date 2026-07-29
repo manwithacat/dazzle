@@ -110,8 +110,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1424 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1424 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1435 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1435 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1435 (2026-07-29).** **self-audit** window ee6ec64f9..1fb79f354 — 5 CLEAN (c1422 HMC-065 work_surface; c1423 story_walk dig contracts; c1424 agent_acceptance + command_center fold; c1425 support_tickets timeline; c1426 gallery popover.dismiss_outside). Dig receipts contract_ok (simple_task story_walk, support_tickets acceptance, design_studio story_walk+acceptance). 0 DISCREPANCY. CodeQL+inbox **USED@1435**. budget 0. Explore **13/100**. Next self-audit ~1450; capability-sweep@1421 next~1441. Aggressive: hyperpart_coherence (queue=0) or work_surface utility / framework-ux edge — not dual_lock/smoke/WI densify. Tip CI in_progress (30444524155) — no product push.
 
 > **Cycle 1424 (2026-07-29).** **example-apps agent_acceptance_panel** support_tickets manager_evaluation (grok-cli) — recommend=unclear, harness thrash (ERR_INSUFFICIENT_RESOURCES). Dig contracts + **in-cycle fix**: framework `command_center` fold 6→3; product manager_ops queue limits, drop open_board, trail 8. Receipt + trial report. qa trial/acceptance/process_dig/validate + DRIVER **USED@1424**. budget 1. Explore **4/100**. Next: journey_dogfood / framework-ux edge — not dual_lock/smoke/WI densify. self-audit@1420 ~1435; capability-sweep@1421 ~1441.
 
