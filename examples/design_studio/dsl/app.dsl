@@ -625,12 +625,13 @@ workspace review_pipeline "Review Pipeline":
     action: asset_edit
     empty: "Nothing awaiting review"
 
+  # Work-surface utility: review pull-work is a queue, not a visual dump.
   review_gallery:
     source: Asset
     filter: status = review
-    sort: name asc
+    sort: updated_at asc
     limit: 15
-    display: grid
+    display: queue
     action: asset_edit
     empty: "Nothing awaiting review"
 

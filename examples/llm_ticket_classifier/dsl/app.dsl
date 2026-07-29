@@ -431,12 +431,13 @@ workspace classification_desk "Classifications":
     display: queue
     empty: "No classifications yet"
 
+  # Work-surface utility: open tickets are a pull queue (attention_rank).
   open_tickets:
     source: Ticket
     filter: status = open
     sort: created_at desc
     limit: 15
-    display: grid
+    display: queue
     action: ticket_detail
     empty: "No open tickets"
 
@@ -478,12 +479,13 @@ workspace priority_desk "Priorities":
     display: queue
     empty: "No priority assessments yet"
 
+  # Work-surface utility: open work is a pull queue, not a grid inventory.
   open_work:
     source: Ticket
     filter: status = open
     sort: created_at desc
     limit: 15
-    display: grid
+    display: queue
     action: ticket_detail
     empty: "No open tickets"
 

@@ -782,12 +782,13 @@ workspace alerts_desk "Alerts":
     display: queue
     empty: "No active alerts"
 
+  # Work-surface utility: systems under pressure are a pull queue (not a grid).
   systems_grid:
     source: System
     filter: status = degraded or status = critical
-    sort: name asc
+    sort: status desc, last_check desc
     limit: 15
-    display: grid
+    display: queue
     action: system_detail
     empty: "No systems under pressure"
 
