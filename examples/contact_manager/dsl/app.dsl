@@ -224,7 +224,8 @@ workspace home "Home":
     source: Contact
     sort: last_name asc, first_name asc
     limit: 8
-    display: grid
+    # Home "who to call" is pull-next, not a photo grid.
+    display: queue
     action: contact_detail
     empty: "No contacts yet. Open Contacts or use New Contact to add your first person or company."
 
@@ -332,7 +333,8 @@ workspace companies "Companies":
     filter: company != null
     sort: company asc, last_name asc
     limit: 30
-    display: grid
+    # Company roster is a call queue, not a warehouse grid.
+    display: queue
     action: contact_detail
     empty: "No company contacts yet"
 
