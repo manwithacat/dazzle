@@ -365,7 +365,12 @@ STAGE_FOLD_COUNTS: dict[str, int] = {
     # intersect-once.
     "dual_pane_flow": 3,
     "scanner_table": 2,
-    "monitor_wall": 6,
+    # monitor_wall: dense multi-signal dashboards (sparklines/charts/queues).
+    # Six concurrent eager region GETs + chart paint still storms nested
+    # Playwright and heavy ops walls; cap at four above-the-fold (metrics +
+    # primary signals), rest intersect-once — same thrash class as
+    # command_center@1424 / dual_pane@1427.
+    "monitor_wall": 4,
     # command_center: keep eager fold small. Six concurrent region
     # GETs on load + row hx-preload on multi-queue boards storms
     # Chromium under nested Playwright (manager_ops trial thrash:

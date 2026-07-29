@@ -1693,12 +1693,13 @@ workspace draft_releases "Draft Releases":
     action: firmware_release_edit
     empty: "No draft firmware releases"
 
+  # Work-surface utility: draft releases are pull-to-ship work — queue beats grid.
   draft_grid:
     source: FirmwareRelease
     filter: status = draft
     sort: version asc
     limit: 15
-    display: grid
+    display: queue
     action: firmware_release_detail
     empty: "No draft firmware releases"
 
