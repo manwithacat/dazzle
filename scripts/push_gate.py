@@ -104,20 +104,21 @@ def _diff_base() -> str:
 def tree_fingerprint() -> str:
     """Fingerprint of content-to-ship vs main — stable across commit of the same tree.
 
-    Uses working-tree diff against origin/main (not HEAD alone) so a clean
-    ``git commit`` of exactly the gated changes does not invalidate the stamp.
-    Any edit after the gates (extra hunks, untracked adds) changes the hash.
+    Composition (committed-ahead + uncommitted) so hashing the same patch as
+    dirty-before-commit vs clean-after-commit yields the same digest:
+
+    * ``git diff base...HEAD`` — commits not on origin/main
+    * ``git diff HEAD`` / ``--cached`` — unstaged / staged dirt
+    * untracked names — new files not yet added
+
+    Any edit after the gates (extra hunks, new untracked) changes the hash.
     """
     base = _diff_base()
-    # Working tree (incl. index) vs base — same before/after commit when all
-    # gated dirt is committed and nothing else remains dirty.
-    diff_wt = _run(["git", "diff", base]).stdout
-    diff_cached = _run(["git", "diff", "--cached", base]).stdout
-    # Names of untracked files (content not hashed fully — name list is enough
-    # to invalidate when new files appear without being gated).
+    committed = _run(["git", "diff", f"{base}...HEAD"]).stdout
+    unstaged = _run(["git", "diff", "HEAD"]).stdout
+    staged = _run(["git", "diff", "--cached", "HEAD"]).stdout
     untracked = _run(["git", "ls-files", "--others", "--exclude-standard"]).stdout
-    porcelain = _run(["git", "status", "--porcelain"]).stdout
-    raw = f"{base}\n{diff_wt}\n{diff_cached}\n{untracked}\n{porcelain}".encode()
+    raw = f"{base}\n{committed}\n{unstaged}\n{staged}\n{untracked}".encode()
     return hashlib.sha256(raw).hexdigest()
 
 

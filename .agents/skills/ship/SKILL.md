@@ -162,7 +162,18 @@ make push-gate
   wait for tip CI, batch commits, regen catalogue/CONTRACT_SURFACE, wait sibling HM).
 - Stamp is written automatically at the end of `ci_local.sh` tier0/tier1. Any edit
   after the stamp invalidates it — re-run gates.
+- Fingerprint is **commit-stable** for the same patch (dirty-before-commit ≡
+  clean-after-commit). If pre-commit rewrites files, re-stage, re-run gates or
+  `python scripts/push_gate.py record --tier 0` only after re-verifying.
 - **Never** `git push` after ad-hoc pytest alone without a matching stamp.
+- Shell pattern (do not push on gate failure)::
+
+  ```bash
+  make ci-fast
+  git add … && git commit …
+  python scripts/push_gate.py check --min-tier 0 || exit 1
+  git push
+  ```
 
 ## 5. Push
 
