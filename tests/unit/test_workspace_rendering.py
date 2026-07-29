@@ -1035,7 +1035,7 @@ class TestViewportLazyLoading:
         ("stage", "expected"),
         [
             (None, 3),
-            ("command_center", 6),
+            ("command_center", 3),
             ("monitor_wall", 6),
             ("scanner_table", 2),
             ("dual_pane_flow", 4),

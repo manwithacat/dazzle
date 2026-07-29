@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "scenario": "manager_evaluation",
+  "identity_headline": "You are Sarah, founder of a small B2B SaaS company with about 50 paying",
+  "verdict": "(synthesized from recorded friction \u2014 agent ran out of steps)\n\nI only got a short look, but the one thing that stopped me cold was Manager Ops: scrolling the queue kicked off a storm of browser resource errors and failed background fetches that thrashed the page until it was only half-usable. That\u2019s the exact screen I\u2019d live in to spot urgency and reassign work for Alex\u2014if it\u2019s choking under light scroll, I can\u2019t trust it for SLA oversight. I\u2019m not running a two-week pilot on this yet; fix the Manager Ops polling/load thrash and I\u2019d look again in 3 months.",
+  "recommend": "unclear",
+  "criteria_scores": [],
+  "pilot_blockers_summary": "",
+  "friction": [
+    {
+      "category": "other",
+      "description": "Console storm of thousands of ERR_INSUFFICIENT_RESOURCES and htmx Failed to fetch errors when scrolling Manager Ops \u2014 page partially usable but background polling/lazy loads thrash browser resources.",
+      "url": "http://localhost:3969/app/workspaces/manager_ops",
+      "evidence": "Scroll on Manager Ops produced +3479 console errors: Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES and repeated htmx:error Failed to fetch. Metrics and ticket links still visible despite storm.",
+      "severity": "medium",
+      "blocks_pilot": false,
+      "ownership": "harness",
+      "framework_vs_app": "unclear"
+    }
+  ],
+  "auto_seed": [],
+  "auto_seed_framework": [],
+  "step_count": 10,
+  "duration_seconds": 603.7287621250143,
+  "tokens_used": 967529,
+  "outcome": "budget_exceeded",
+  "generated_at": "2026-07-29T05:59:39.693716",
+  "signing_outcomes": null,
+  "ladder": {
+    "instrument": "deep_nested",
+    "auto_seed_count": 0
+  }
+}

@@ -360,7 +360,13 @@ STAGE_FOLD_COUNTS: dict[str, int] = {
     "dual_pane_flow": 4,
     "scanner_table": 2,
     "monitor_wall": 6,
-    "command_center": 6,
+    # command_center: keep eager fold small. Six concurrent region
+    # GETs on load + row hx-preload on multi-queue boards storms
+    # Chromium under nested Playwright (manager_ops trial thrash:
+    # ERR_INSUFFICIENT_RESOURCES / htmx Failed to fetch ×thousands).
+    # First three cards = metrics/strip + primary queues; rest
+    # intersect-once as the operator scrolls.
+    "command_center": 3,
     # v0.61.71 (#5): pair_strip — load three pairs eagerly (six
     # regions). Consent flows tend to be top-to-bottom linear so
     # users see the whole story before scrolling.

@@ -13,7 +13,9 @@ ST-013–018 own surfaces.
   group_by status, non-closed) + resolved **queue** (`pending_resolution`) —
   stage movement after claim, not a single-status list (HMC-065).
 - Manager default: `manager_ops` = team metrics + status_list SLA strip +
-  critical/unassigned queues + funnel (not an empty personal list).
+  critical/unassigned queues (limit 12) + funnel + short recent_trail
+  timeline (not an empty personal list; no second open-board kanban —
+  lifecycle board stays on agent_dashboard).
 - Customer default: `my_tickets` = my metrics + open queue + history list.
 - Prefer queue/metrics/kanban over bare list for open-work stories.
 - Keep story `given:` workspace names aligned with persona defaults.

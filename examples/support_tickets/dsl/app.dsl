@@ -554,10 +554,13 @@ workspace manager_ops "Manager Ops":
         icon: "circle-check"
         state: positive
 
+  # Cap queue rows — unbounded queues + row hx-preload storm browser
+  # resources under pilot scroll (manager_evaluation console thrash).
   critical_queue:
     source: Ticket
     filter: priority = critical and status != closed
     sort: created_at asc
+    limit: 12
     display: queue
     action: ticket_edit
     empty: "No critical tickets open"
@@ -566,6 +569,7 @@ workspace manager_ops "Manager Ops":
     source: Ticket
     filter: assigned_to = null and status = open
     sort: priority desc, created_at asc
+    limit: 12
     display: queue
     action: ticket_edit
     empty: "Every open ticket has an assignee"
@@ -581,19 +585,15 @@ workspace manager_ops "Manager Ops":
   recent_trail:
     source: Ticket
     sort: updated_at desc
-    limit: 15
+    limit: 8
     display: timeline
     action: ticket_detail
     empty: "No tickets yet"
 
-  open_board:
-    source: Ticket
-    filter: status != closed
-    display: kanban
-    group_by: status
-    sort: priority desc
-    action: ticket_edit
-    empty: "No open tickets"
+  # Lifecycle kanban lives on agent_dashboard (my_assigned). Manager Ops
+  # stays metrics + SLA strip + focused queues (stem ST-027–029) — a
+  # second full open-board here doubled concurrent row preloads and
+  # thrash under trial scroll without adding reassignment clarity.
 
 workspace agent_dashboard "Agent Dashboard":
   # Personal agent view (assigned work + activity). Manager team home is

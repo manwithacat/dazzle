@@ -59,9 +59,11 @@ comments.
 Five workspaces organise the work. The **Ticket Queue** is the agent home for
 incoming tickets — summary metrics, a review queue, and a kanban board of open
 statuses. **Manager Ops** is the manager home for team performance and
-escalations — metrics, SLA readiness, critical/unassigned queues, status funnel,
-recent ticket trail, and open pipeline board. The **Agent Dashboard** is a
-personal dashboard for claimed work — a status kanban of assigned open tickets,
+escalations — metrics, SLA readiness, critical/unassigned queues (capped),
+status funnel, and a short recent-ticket trail. Lifecycle kanban for claimed
+work lives on the **Agent Dashboard** (not a second open-board on Manager Ops).
+The **Agent Dashboard** is a personal dashboard for claimed work — a status
+kanban of assigned open tickets,
 a resolved close-out queue, and lifecycle metrics first, comment activity last. **My Tickets** is the customer's home:
 open/WIP counts, open-cases queue, history, status chart, trail, and open cards.
 The **Agent Console** — shared by administrators, managers, and agents — lets
@@ -138,4 +140,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:9be8d3b19de4cda17ce574d0b19f3e3e9f291ecff18b144c157780553b03f0eb -->
+<!-- dazzle-spec-brief: sha256:096b875352178545d324215ad1e8eba16c69481b49996b34610b9dbb1bf4083e -->
