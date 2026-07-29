@@ -378,10 +378,12 @@ STAGE_FOLD_COUNTS: dict[str, int] = {
     # First three cards = metrics/strip + primary queues; rest
     # intersect-once as the operator scrolls.
     "command_center": 3,
-    # v0.61.71 (#5): pair_strip — load three pairs eagerly (six
-    # regions). Consent flows tend to be top-to-bottom linear so
-    # users see the whole story before scrolling.
-    "pair_strip": 6,
+    # pair_strip: consent / dual-column stories. Six concurrent eager
+    # region GETs on first paint still storms nested Playwright under
+    # trial scroll (same thrash class as command_center@1424 /
+    # monitor_wall@1433). Cap at four above-the-fold (two pairs);
+    # rest intersect-once as the operator scrolls.
+    "pair_strip": 4,
 }
 
 

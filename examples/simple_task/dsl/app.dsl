@@ -765,7 +765,8 @@ workspace team_overview "Team Overview":
     filter: is_active = true
     sort: name asc
     limit: 15
-    display: list
+    # Active roster is pull-to-open (queue), not a dense personnel table.
+    display: queue
     action: user_detail
     empty: "No active teammates"
 

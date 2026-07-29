@@ -1233,7 +1233,8 @@ workspace engineering_dashboard "Engineering Dashboard":
     source: Tester
     filter: active = true
     sort: name asc
-    display: list
+    # Active tester roster is a pull-next desk (queue), not a dense table scan.
+    display: queue
     action: tester_detail
     empty: "No active testers"
 

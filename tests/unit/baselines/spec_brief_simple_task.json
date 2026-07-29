@@ -407,7 +407,7 @@
         "metrics of Task",
         "bar_chart of Task",
         "queue of Task",
-        "list of User",
+        "queue of User",
         "kanban of Task",
         "timeline of TaskComment"
       ]
