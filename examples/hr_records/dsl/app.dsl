@@ -755,9 +755,10 @@ workspace person_detail "Person Detail":
     tones:
       employment_rows: accent
 
+  # Work-surface utility: employment rows are dated history — timeline not queue.
   employment_history:
     source: Employment
-    display: queue
+    display: timeline
     limit: 20
     empty: "No employment rows"
 

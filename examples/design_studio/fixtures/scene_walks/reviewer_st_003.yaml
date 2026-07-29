@@ -18,4 +18,5 @@ scenes:
           - Review
           - Catalog
           - approved
-    expects: "Authenticated reviewer sees asset catalog review-queue cues"
+          - Status
+    expects: "Authenticated reviewer sees asset catalog review-queue cues (pipeline/status board)"

@@ -245,10 +245,14 @@ workspace studio_dashboard "Studio Dashboard":
     source: Brand
     display: grid
     sort: name asc
+  # Work-surface utility: recent updates are a dated stream (pair with asset_trail).
   recent_assets:
     source: Asset
-    display: grid
+    display: timeline
     sort: updated_at desc
+    limit: 12
+    action: asset_detail
+    empty: "No assets yet"
   asset_trail:
     source: Asset
     sort: updated_at desc
@@ -469,12 +473,13 @@ workspace feedback_desk "Feedback":
     display: queue
     empty: "No feedback yet"
 
+  # Work-surface utility: in-review assets are pull work — queue beats grid.
   assets_in_review:
     source: Asset
     filter: status = review
     sort: updated_at asc
     limit: 15
-    display: grid
+    display: queue
     action: asset_edit
     empty: "Nothing in review"
 
