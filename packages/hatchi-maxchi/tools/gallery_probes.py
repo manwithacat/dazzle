@@ -65,7 +65,8 @@ class Probe:
     kind: str  # runner dispatch key
     params: dict[str, Any] = field(default_factory=dict)
     fix_surface: str = "controller"  # controller | css | partial | gallery-only | contract
-    # exclusive = only one open; multi_open = intentional multi-expand (tree)
+    # exclusive = only one open; multi_open = intentional multi-expand (tree);
+    # hover = CSS/hover reveal (tooltip pseudo, not details)
     intent: str = "exclusive"
 
 
@@ -363,6 +364,46 @@ PROBES: tuple[Probe, ...] = (
         },
         fix_surface="controller",
         intent="exclusive",
+    ),
+    Probe(
+        id="tooltip.hover_shows_hint",
+        stem="tooltip",
+        page="hyperparts/tooltip.html",
+        category="interaction",
+        severity="medium",
+        claim=(
+            "Hovering the tooltip host reveals the CSS ::after hint "
+            "(data-tooltip rest state is closed; tip must appear on hover)"
+        ),
+        kind="css_tooltip_hover",
+        params={
+            # scoped to .hm-preview — first button is the live demo (not glossary terms)
+            "host": "button[data-tooltip], button[data-dz-tooltip], [data-tooltip], [data-dz-tooltip]",
+            "scope": ".hm-preview",
+            "hover_settle_ms": 500,
+            "expect_min_opacity": 0.85,
+        },
+        fix_surface="css",
+        intent="hover",
+    ),
+    Probe(
+        id="tooltip.force_open_shows_hint",
+        stem="tooltip",
+        page="hyperparts/tooltip.html",
+        category="interaction",
+        severity="medium",
+        claim=(
+            "data-tooltip-open / data-dz-tooltip-open forces the CSS ::after hint "
+            "visible without hover (capture / docs still path)"
+        ),
+        kind="css_tooltip_force_open",
+        params={
+            "host": "button[data-tooltip], button[data-dz-tooltip], [data-tooltip], [data-dz-tooltip]",
+            "scope": ".hm-preview",
+            "expect_min_opacity": 0.85,
+        },
+        fix_surface="css",
+        intent="hover",
     ),
 )
 
@@ -688,12 +729,158 @@ def _run_native_dialog_escape(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _pseudo_after_opacity(page: Any, host: Any) -> float | None:
+    """Computed opacity of host ElementHandle/Locator ::after (None if missing)."""
+    # Prefer element-bound evaluate so we never sample glossary .hm-term tips.
+    try:
+        return host.evaluate(
+            """(el) => {
+              if (!el) return null;
+              const st = getComputedStyle(el, '::after');
+              const op = parseFloat(st.opacity);
+              return Number.isFinite(op) ? op : null;
+            }"""
+        )
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _run_css_tooltip_hover(page: Any, probe: Probe) -> dict[str, Any]:
+    """Hover host; assert ::after opacity rises (CSS data-tooltip hint)."""
+    params = probe.params
+    host_sel = params["host"]
+    settle = int(params.get("hover_settle_ms") or 500)
+    min_op = float(params.get("expect_min_opacity") or 0.85)
+
+    scope = _probe_scope(page, params)
+    # Prefer preview-scoped host; fall back to first matching host_sel branch
+    host = None
+    for part in host_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            host = loc
+            break
+    if host is None:
+        return {"verdict": "ERROR", "detail": f"tooltip host not found ({host_sel})"}
+
+    rest = _pseudo_after_opacity(page, host)
+    if rest is None:
+        return {"verdict": "ERROR", "detail": "host present but ::after opacity unreadable"}
+
+    host.hover()
+    # delay 300ms + duration-fast; poll until min opacity or settle budget
+    hover = rest
+    deadline_ms = settle
+    step = 50
+    waited = 0
+    while waited < deadline_ms:
+        page.wait_for_timeout(step)
+        waited += step
+        hover = _pseudo_after_opacity(page, host)
+        if hover is not None and hover >= min_op:
+            break
+    if hover is None:
+        return {"verdict": "ERROR", "detail": "lost host after hover"}
+    if hover >= min_op:
+        return {
+            "verdict": "PASS",
+            "detail": f"rest_opacity={rest:.2f} hover_opacity={hover:.2f} waited_ms={waited}",
+            "rest_opacity": rest,
+            "hover_opacity": hover,
+        }
+    return {
+        "verdict": "FAIL",
+        "detail": (
+            f"hover ::after opacity {hover:.2f} < {min_op} "
+            f"(rest={rest:.2f}) — tooltip CSS not revealing on hover"
+        ),
+        "rest_opacity": rest,
+        "hover_opacity": hover,
+        "dom_hint": host_sel,
+    }
+
+
+def _run_css_tooltip_force_open(page: Any, probe: Probe) -> dict[str, Any]:
+    """Set data-*-tooltip-open on host; assert ::after visible without hover."""
+    params = probe.params
+    host_sel = params["host"]
+    min_op = float(params.get("expect_min_opacity") or 0.85)
+
+    scope = _probe_scope(page, params)
+    host = None
+    for part in host_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            host = loc
+            break
+    if host is None:
+        return {"verdict": "ERROR", "detail": f"tooltip host not found ({host_sel})"}
+
+    rest = _pseudo_after_opacity(page, host)
+    if rest is None:
+        return {"verdict": "ERROR", "detail": "host present but ::after opacity unreadable"}
+
+    # Prefer unprefixed open attr when host uses data-tooltip; dz when data-dz-
+    tag = host.evaluate(
+        """(el) => ({
+          hasDz: el.hasAttribute('data-dz-tooltip'),
+          hasPlain: el.hasAttribute('data-tooltip'),
+        })"""
+    )
+    if tag.get("hasDz") and not tag.get("hasPlain"):
+        open_attr = "data-dz-tooltip-open"
+    else:
+        open_attr = "data-tooltip-open"
+
+    # Playwright locator.evaluate: (element, arg) => …
+    host.evaluate("(el, attr) => { el.setAttribute(attr, ''); }", open_attr)
+    # opacity still transitions (duration-fast) even with delay 0 — poll briefly
+    forced: float | None = rest
+    waited = 0
+    while waited < 400:
+        page.wait_for_timeout(40)
+        waited += 40
+        forced = _pseudo_after_opacity(page, host)
+        if forced is not None and forced >= min_op:
+            break
+    host.evaluate("(el, attr) => { el.removeAttribute(attr); }", open_attr)
+    if forced is None:
+        return {"verdict": "ERROR", "detail": "lost host after force-open attr"}
+    if forced >= min_op:
+        return {
+            "verdict": "PASS",
+            "detail": f"rest_opacity={rest:.2f} force_open({open_attr})={forced:.2f}",
+            "rest_opacity": rest,
+            "force_opacity": forced,
+            "open_attr": open_attr,
+        }
+    return {
+        "verdict": "FAIL",
+        "detail": (
+            f"force-open attr {open_attr} ::after opacity {forced:.2f} < {min_op} "
+            f"(rest={rest:.2f}) — missing [data-*-tooltip-open]::after rule"
+        ),
+        "rest_opacity": rest,
+        "force_opacity": forced,
+        "open_attr": open_attr,
+        "dom_hint": host_sel,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
     "details_dismiss_outside": _run_details_dismiss_outside,
     "details_escape_dismiss": _run_details_escape_dismiss,
     "native_dialog_escape": _run_native_dialog_escape,
+    "css_tooltip_hover": _run_css_tooltip_hover,
+    "css_tooltip_force_open": _run_css_tooltip_force_open,
 }
 
 

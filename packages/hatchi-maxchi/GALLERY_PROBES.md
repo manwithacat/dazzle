@@ -26,6 +26,8 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `drawer.escape_closes` | `drawer` | exclusive | high | controller | Pressing Escape closes an open drawer (drawer is a side <dialog> — Escape must dismiss filters/record panels) |
 | `command.escape_closes` | `command` | exclusive | high | controller | Pressing Escape closes an open command palette (dz-command owns Esc — type=search must not trap the first Escape) |
 | `menu.escape_dismiss` | `menu` | exclusive | high | controller | Pressing Escape closes an open action menu (details-light-dismiss keyboard path — Actions must not stick) |
+| `tooltip.hover_shows_hint` | `tooltip` | hover | medium | css | Hovering the tooltip host reveals the CSS ::after hint (data-tooltip rest state is closed; tip must appear on hover) |
+| `tooltip.force_open_shows_hint` | `tooltip` | hover | medium | css | data-tooltip-open / data-dz-tooltip-open forces the CSS ::after hint visible without hover (capture / docs still path) |
 
 ## Loop (autonomous improve)
 

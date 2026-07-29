@@ -1,6 +1,6 @@
 # Tooltip (`tooltip`)
 
-CSS-only visual hint (`data-dz-tooltip`) — zero JS. A hint, not an accessible tooltip: keep it non-critical (no touch/SR/keyboard path).
+CSS-only visual hint (`data-dz-tooltip`) — zero JS. A hint, not an accessible tooltip: keep it non-critical (no touch/SR/keyboard path). Optional `data-dz-tooltip-open` forces the hint visible (capture/docs).
 
 > **Layer:** L1 surface · **Recipe:** _(unset — see docs/agent/pick-a-surface.md)_
 > Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
@@ -97,7 +97,7 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-Dual-lock root [data-dz-tooltip] (HMC-154).
+Dual-lock root [data-dz-tooltip] (HMC-154). Force-open: data-dz-tooltip-open.
 
 ## Source files
 

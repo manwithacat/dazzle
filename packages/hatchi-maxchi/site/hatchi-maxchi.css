@@ -1697,6 +1697,14 @@ th {
   transition-delay: 300ms;
 }
 
+/* Forced open — gallery capture / docs / dual-lock stills that must show the
+   hint without hover (coherence + Playwright static shots). Do not use on
+   product surfaces that should stay hover-only. */
+[data-tooltip][data-tooltip-open]::after {
+  opacity: 1;
+  transition-delay: 0ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-tooltip]::after { transition: none; }
 }

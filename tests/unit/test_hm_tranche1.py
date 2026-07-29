@@ -23,6 +23,7 @@ def _bundle() -> str:
         '.dz-alert[data-dz-tone="warning"]',
         ".dz-separator",
         "[data-dz-tooltip]::after",
+        "[data-dz-tooltip][data-dz-tooltip-open]::after",
         ".dz-menu__panel",
         ".dz-menu__item",
         "dialog.dz-alert-dialog",

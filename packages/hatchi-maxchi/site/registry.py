@@ -1228,9 +1228,10 @@ HYPERPARTS: list[Hyperpart] = finalize_hyperparts(
             "Tooltip",
             "Overlays",
             "CSS-only visual hint (`data-dz-tooltip`) — zero JS. A hint, not an "
-            "accessible tooltip: keep it non-critical (no touch/SR/keyboard path).",
+            "accessible tooltip: keep it non-critical (no touch/SR/keyboard path). "
+            "Optional `data-dz-tooltip-open` forces the hint visible (capture/docs).",
             '<button class="dz-button" data-dz-variant="outline" data-dz-tooltip="Saved 2 minutes ago">Hover me</button>',
-            notes="Dual-lock root [data-dz-tooltip] (HMC-154).",
+            notes="Dual-lock root [data-dz-tooltip] (HMC-154). Force-open: data-dz-tooltip-open.",
             contracts=("contracts/tooltip.py",),
         ),
         Hyperpart(
