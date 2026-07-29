@@ -181,13 +181,16 @@ class _BuildersCardsMixin:
             cards: list[KanbanCard] = []
             bucket_items = list(buckets.get(col_key, []))
             if rank_field and rearrange == "status":
-                # Index fallback so unranked rows keep stable relative order.
-                bucket_items.sort(
-                    key=lambda it: (
-                        _item_rank(it, float(bucket_items.index(it) * 1000)),
-                        str(it.get("id") or ""),
+                # Decorate with original index — never list.index() (dict equality
+                # / unhashable paths broke catalogue fixtures without `id`).
+                decorated = list(enumerate(bucket_items))
+                decorated.sort(
+                    key=lambda pair: (
+                        _item_rank(pair[1], float(pair[0] * 1000)),
+                        str(pair[1].get("id") or pair[1].get("name") or ""),
                     )
                 )
+                bucket_items = [it for _, it in decorated]
             for idx, item in enumerate(bucket_items):
                 # Per-cell type-aware rendering for secondary fields.
                 fields: list[tuple[str, object]] = []
