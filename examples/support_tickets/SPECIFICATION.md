@@ -48,7 +48,7 @@ per-agent inspection.
 escalations — watching team metrics, spotting bottlenecks in ticket flow, and
 ensuring quality and customer satisfaction. They land on **Manager Ops**: team
 counts, an SLA readiness strip, critical and unassigned work queues, and a
-lifecycle funnel — not an empty personal assigned list. The team Ticket Queue
+lifecycle funnel — not an empty personal assigned kanban. The team Ticket Queue
 and Agent Console remain available. Managers alone can delete tickets or
 comments.
 
@@ -61,8 +61,8 @@ incoming tickets — summary metrics, a review queue, and a kanban board of open
 statuses. **Manager Ops** is the manager home for team performance and
 escalations — metrics, SLA readiness, critical/unassigned queues, status funnel,
 recent ticket trail, and open pipeline board. The **Agent Dashboard** is a
-personal dashboard for claimed work — assigned and pending items and lifecycle
-metrics first, comment activity last. **My Tickets** is the customer's home:
+personal dashboard for claimed work — a status kanban of assigned open tickets,
+a resolved close-out queue, and lifecycle metrics first, comment activity last. **My Tickets** is the customer's home:
 open/WIP counts, open-cases queue, history, status chart, trail, and open cards.
 The **Agent Console** — shared by administrators, managers, and agents — lets
 you pick an agent and see their tickets, comments, comparison charts, priority
@@ -138,4 +138,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:7ba38d7a2c4f9539e45105a08b3266d6ea93c4499f5aae41bbbb8b92286e1971 -->
+<!-- dazzle-spec-brief: sha256:9be8d3b19de4cda17ce574d0b19f3e3e9f291ecff18b144c157780553b03f0eb -->

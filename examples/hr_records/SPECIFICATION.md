@@ -65,8 +65,8 @@ dedicated screens — fourteen in all, from the staff directory to
 
 - **Staff Directory** — shared entry: headcount metrics, staff queue, department
   context, people cards, and employment-by-department chart.
-- **Person Detail** — career desk: employment and salary history, employment
-  trail, and salary reason chart.
+- **Person Detail** — career desk: employment queue plus salary and reporting
+  timelines, employment trail, and salary reason chart.
 - **Departments & Roles** — org pulse, department grid, role queue, reporting
   trail, and roles-by-level chart (not a visual org tree yet).
 - **Compensation Review** — finance/HR salary desk: metrics, active salary
@@ -108,4 +108,4 @@ which keeps the product fast, accessible, and simple to operate. (Verify:
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:f9155271b3edddfee7578134b25b8a749b44b7e1b1a920681f44654e9d21975d -->
+<!-- dazzle-spec-brief: sha256:dd91fff4e92ad7065ecd26cfd4960fcf3b2cc8e39c3febe128c48b4e30d8cbda -->
