@@ -91,7 +91,16 @@ For each failed job:
 | preflight / api surface / docs drift | `make preflight-surface` |
 
 3. **Fix ALL errors — including pre-existing ones.** Goal is green badge.
-4. Commit, push, re-snapshot.
+4. Commit, then push only via push-gate repair mode (skips throttle + CI wait):
+
+   ```bash
+   make preflight-surface && make ship-surface && make ci-fast
+   .venv/bin/python scripts/push_gate.py check --repair --min-tier 0
+   git push
+   ```
+
+   Do **not** product-ship while a *previous* tip is still `in_progress` unless
+   this is pure repair of a completed red (`--repair`).
 
 ## 6. Close the loop (mandatory after repair)
 

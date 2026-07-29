@@ -55,6 +55,12 @@ ceremony. Port-suggestion / `--write-baseline` drain tooling is retired.
   `src/dazzle/.../css/` (except documented KEEP in the delegation allowlist).
 - **Functional gates over pixel perfection** for structural changes; subscription
   vision is advisory (never a ship gate). See Verification gate below.
+- **Sibling CI is a release plane for gallery visuals.** After shipping
+  `components/` / `controllers/` / `site/` / `tests/baselines/` changes:
+  `python scripts/push_gate.py check --min-tier 0` before monorepo push, then
+  `python scripts/hm_standalone_ci_status.py --prefer-completed`. Do not claim
+  DONE while standalone Visual/Behaviour is red. Tags: `--require-hm-green`.
+  Linux baselines ≠ macOS — update baselines from the sibling artifact path.
 
 ## Verification gate (how to prove a change is safe)
 

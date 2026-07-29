@@ -219,6 +219,17 @@ cmd_ship_surface() {
   _ok "ship-surface clean"
 }
 
+_cmd_push_gate_record() {
+  # Stamp worktree after successful local gates so `push_gate check` can enforce
+  # discipline before git push (24h CI cancel-storm / skip-gates autopsy).
+  local tier="$1"
+  if [ -x "$ROOT/.venv/bin/python" ]; then
+    "$ROOT/.venv/bin/python" "$ROOT/scripts/push_gate.py" record --tier "$tier" || true
+  else
+    _run_uv python "$ROOT/scripts/push_gate.py" record --tier "$tier" || true
+  fi
+}
+
 cmd_changed() {
   _log "ci-changed  (path-aware packs for git diff)"
   if [ -x "$ROOT/.venv/bin/python" ]; then
@@ -239,7 +250,9 @@ cmd_tier0() {
   cmd_type_check
   cmd_gates
   cmd_docs
+  _cmd_push_gate_record 0
   _ok "tier0 complete — not full CI; run 'make ci-core' before a release tag"
+  _ok "push stamp tier=0 written — run: make push-gate  before git push"
 }
 
 cmd_tier1() {
@@ -268,7 +281,9 @@ cmd_tier1() {
   fi
   cmd_unit_full
   cmd_docs
+  _cmd_push_gate_record 1
   _ok "tier1 / ci-core complete — still missing Postgres/e2e/walks (Tier 2; see docs)"
+  _ok "push stamp tier=1 written — run: make push-gate  before git push"
 }
 
 usage() {
@@ -279,8 +294,9 @@ Commands:
   preflight-surface     Hard structural debt gate (API/docs/import/ratchet/HM)
   ship-surface          Tier 0.5: bandit + recurrent SPEC/IR/viewport pack
   changed | ci-changed  Path-aware packs for files in git diff
-  tier0 | ship-fast     preflight + ship-surface + ruff + mypy + gate + mkdocs
-  tier1 | ci-core       preflight + CI core mirror (sync, lint, type, unit, security, docs)
+  tier0 | ship-fast     preflight + ship-surface + ruff + mypy + gate + mkdocs (+ push stamp)
+  tier1 | ci-core       preflight + CI core mirror (… + push stamp tier=1)
+  push-gate | push_gate Allow/deny git push (stamp + throttle + CI wait + HM plane)
   sync-type             uv sync --frozen with CI type-check extras (Python 3.12)
   sync-test             uv sync --frozen with CI python-tests extras (Python 3.12)
   type-check            mypy src/dazzle only
@@ -303,6 +319,16 @@ main() {
     changed|ci-changed|path) cmd_changed ;;
     tier0|ship-fast) cmd_tier0 ;;
     tier1|ci-core)   cmd_tier1 ;;
+    push-gate|push_gate)
+      shift || true
+      if [ -x "$ROOT/.venv/bin/python" ]; then
+        "$ROOT/.venv/bin/python" "$ROOT/scripts/push_gate.py" check "$@" \
+          || _die "push-gate blocked — see remediation above"
+      else
+        _run_uv python "$ROOT/scripts/push_gate.py" check "$@" \
+          || _die "push-gate blocked — see remediation above"
+      fi
+      ;;
     sync-type|sync-ci-type) cmd_sync_type ;;
     sync-test|sync-ci-test) cmd_sync_test ;;
     type-check|type-check-ci) cmd_type_check ;;

@@ -101,6 +101,33 @@ plus worktree dirt):
 
 Use mid-edit for a fast loop; does **not** replace Tier 0 for ship.
 
+### Push gate — `make push-gate` (`scripts/push_gate.py`)
+
+**Before every `git push` to main.** Machine-enforced process control from the
+2026-07-28 CI autopsy (cancel storm + skipped gates + HM visual plane):
+
+| Check | Blocks when |
+|-------|-------------|
+| Stamp | No/stale stamp, or worktree fingerprint ≠ stamp (gates not re-run after edit) |
+| Min tier | Stamp tier below required (`make push-gate` defaults to tier **0** = ci-fast) |
+| Throttle | ≥4 commits on `origin/main` in the last hour, or &lt;8m since newest main commit |
+| CI tip | Latest main `ci.yml` is still `in_progress` / `queued` |
+| HM plane | Diff touches gallery CSS/JS/baselines and gen-surface is dirty; optional `--require-hm-green` |
+
+Stamp is **written automatically** at the end of `ci_local.sh` tier0 / tier1.
+Manual:
+
+```bash
+python scripts/push_gate.py record --tier surface   # after preflight+ship-surface only
+python scripts/push_gate.py record --tier 0         # after ci-fast
+python scripts/push_gate.py check --min-tier 0
+python scripts/push_gate.py check --repair          # cimonitor only
+python scripts/push_gate.py check --require-hm-green
+python scripts/push_gate.py status
+```
+
+`/ship` and `/improve` land steps **must** run this and refuse push on non-zero.
+
 ### Tier 0 — `make ci-fast` (`scripts/ci_local.sh tier0`)
 
 **Default for `/ship`.** Budget ~3–4 minutes, no Postgres. **Always runs

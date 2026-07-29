@@ -8,7 +8,7 @@
 # use pyenv/virtualenv/pip-install-editable for this repo — see
 # docs/contributing/dev-setup.md.
 
-.PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core preflight-surface ship-surface gen-surface-check ci-changed sync-ci-type sync-ci-test pre-commit
+.PHONY: help install dev-install lint format type-check type-check-ci security test test-fast test-integration test-all coverage clean build examples ci ci-fast ci-core preflight-surface ship-surface gen-surface-check push-gate ci-changed sync-ci-type sync-ci-test pre-commit
 
 # Prefer a real uv binary over pyenv shims. A committed `.python-version` of
 # `3.14` is correct for uv + Heroku but makes pyenv abort when that version is
@@ -63,6 +63,7 @@ help:
 	@echo "  preflight-surface  Hard gate: API/docs/import/ratchet/HM debt (run before every ship)"
 	@echo "  ship-surface     Tier 0.5: bandit + recurrent SPEC/IR/viewport pack (badge-red classes)"
 	@echo "  gen-surface-check  Catalogue + CONTRACT_SURFACE freshness (no write; part of ship-surface)"
+	@echo "  push-gate        Allow/deny git push (stamp + throttle + CI wait + HM plane)"
 	@echo "  ci-changed       Path-aware packs for git diff (fast mid-edit loop)"
 	@echo "  ci-fast          Tier 0: preflight + ship-surface + ruff + mypy + gate + mkdocs"
 	@echo "  ci-core          Tier 1: preflight + CI lint/type/unit/security/docs mirror"
@@ -246,6 +247,13 @@ ship-surface:
 # Also runs inside ship-surface; standalone for mid-edit after HM/render work.
 gen-surface-check:
 	$(if $(wildcard .venv/bin/python),.venv/bin/python,python3) scripts/gen_surface_check.py
+
+# Before every git push to main: stamp match + hour throttle + CI tip wait + HM plane.
+# After make ci-fast, stamp is auto-written; then: make push-gate && git push
+# Cimonitor repair: .venv/bin/python scripts/push_gate.py check --repair
+# Release/HM visual: .venv/bin/python scripts/push_gate.py check --min-tier 0 --require-hm-green
+push-gate:
+	bash scripts/ci_local.sh push-gate --min-tier 0
 
 # Path-aware packs for the current git diff (examples DSL, shell, KB, …).
 ci-changed:

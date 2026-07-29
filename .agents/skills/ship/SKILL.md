@@ -139,13 +139,39 @@ See the concordance doc for Tier 2.
 - The tag MUST be created AFTER the commit so it points to the correct commit (not the parent).
 - **Release tags require Tier 1 green** (`make ci-core`) in this session (or operator-confirmed) before `git push origin vX.Y.Z`.
 
-## 4. Push
+## 4. Push gate (mandatory — before every `git push`)
 
-- Run `git push` to push the current branch to origin.
+Process control for the 24h cancel-storm / skip-gates failure modes. Script:
+`scripts/push_gate.py` (also `make push-gate`).
+
+```bash
+# After make ci-fast (auto-writes stamp tier=0):
+make push-gate
+# → bash scripts/ci_local.sh push-gate --min-tier 0
+# Blocks when: no/stale/mismatched stamp, >4 main commits/hour, <8m since last
+# main commit, main ci.yml still in_progress, or HM visual plane gen-surface dirty.
+
+# Cimonitor-only repair (skip throttle + CI wait):
+.venv/bin/python scripts/push_gate.py check --repair --min-tier 0
+
+# HM gallery/CSS/controller ship or release tag:
+.venv/bin/python scripts/push_gate.py check --min-tier 0 --require-hm-green
+```
+
+- **Non-zero exit → do not push.** Fix remediation text (re-run `make ci-fast`,
+  wait for tip CI, batch commits, regen catalogue/CONTRACT_SURFACE, wait sibling HM).
+- Stamp is written automatically at the end of `ci_local.sh` tier0/tier1. Any edit
+  after the stamp invalidates it — re-run gates.
+- **Never** `git push` after ad-hoc pytest alone without a matching stamp.
+
+## 5. Push
+
+- Only after **push-gate exit 0**: run `git push` to push the current branch to origin.
 - If a tag was created in step 3, push **only that tag**: `git push origin vX.Y.Z`. This triggers release workflows (PyPI, Homebrew). **Never `git push origin --tags`** — a clone that still holds historically-pruned patch tags re-publishes ALL of them (the 2026-07-02 incident re-pushed 257 pruned v0.82–v0.87 tags; the prune-old-releases workflow had to be dispatched to sweep them).
 - If the push is rejected (e.g. non-fast-forward), do NOT force-push. Inform the user and stop.
+- **HM visual plane:** when the push touches `packages/hatchi-maxchi/{components,controllers,site,tests/baselines,base,tokens,families,dist}/`, treat sibling `hatchi-maxchi` CI as a release plane — do not claim done until `python scripts/hm_standalone_ci_status.py --prefer-completed` is green; use `--require-hm-green` for tags.
 
-## 5. Signal the improvement loop
+## 6. Signal the improvement loop
 
 After a successful push, emit the `fix-deployed` signal so /improve lanes
 re-verify rows the change may affect (the cross-lane contract in
@@ -159,7 +185,7 @@ emit(source='ship', kind='fix-deployed', payload={'sha': '$(git rev-parse --shor
 "
 ```
 
-If step 4 pushed a **published-release tag** — one matching `vX.Y.0`, the same
+If step 5 pushed a **published-release tag** — one matching `vX.Y.0`, the same
 `endsWith('.0')` condition the release workflows use to publish to PyPI/Homebrew —
 additionally emit `dazzle-updated` (the cross-lane contract's "(external — releases)"
 signal). This is what tells /improve a new framework version is live: lanes mark
@@ -175,7 +201,7 @@ emit(source='ship', kind='dazzle-updated', payload={'version': 'vX.Y.0', 'sha': 
 
 Both are best-effort — a failure here never blocks the ship; note it and continue.
 
-## 6. Final verification
+## 7. Final verification
 
 - Run `git status` one last time to confirm the worktree is clean.
 - Report the final state: commit SHA, branch, worktree status, and which gate tier ran.

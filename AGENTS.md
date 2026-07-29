@@ -428,12 +428,16 @@ Example: [DD-001](docs/decisions/DD-001-1617-poly-ref-and-sti-eav.md) for #1621/
   | Structural debt | `make preflight-surface` | Always before ship (also first step of ci-fast/ci-core) |
   | Recurrent badge-red pack | `make ship-surface` | Always in Tier 0 (`ci-fast` runs it after preflight) — bandit + SPEC/IR/viewport pack |
   | Path-aware mid-edit | `make ci-changed` | After touching examples DSL, shell/viewport, KB, or `src/` — not a full ship substitute |
-  | Default ship gate | `make ci-fast` | Every `/ship` (preflight + ship-surface + ruff + mypy + gate + docs) |
+  | Default ship gate | `make ci-fast` | Every `/ship` (preflight + ship-surface + ruff + mypy + gate + docs); writes push stamp |
+  | Push allow/deny | `make push-gate` | **Before every `git push`** — stamp match + ≤4 commits/h + CI not in_progress + HM plane |
   | Release / version bump | `make ci-core` | Before tags / when operator wants GitHub-core concordance |
+  | HM visual ship / tag | `push_gate check --require-hm-green` | Sibling hatchi-maxchi CI must be green for gallery CSS/JS baselines |
   | Badge red | `/cimonitor` | Fix **and** promote the failure class into ship-surface/preflight if Tier 0 would have missed it |
   Do **not** ship on ad-hoc pytest alone. Do **not** treat full CI as the only place
   to discover bandit / SPEC footer / IR golden / pattern_count / viewport selector
-  debt — that is what ship-surface is for.
+  debt — that is what ship-surface is for. **Do not** `git push` while main CI is
+  still `in_progress` (cancel storm) — wait or use `push_gate check --repair` only
+  for cimonitor.
 - **Agent Guidance in CHANGELOG**: When a release introduces new patterns, conventions, ADRs, or breaking changes that affect how agents should work, add a `### Agent Guidance` section to that version's changelog entry. Keep entries concise — one bullet per topic, stating the rule and where to look.
 - **Commit attribution (read before `git commit`)**:
   - **Author / Committer** must be the human account owner (`James Barlow` /

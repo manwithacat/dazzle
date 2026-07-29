@@ -135,8 +135,8 @@ gh run list --workflow ci.yml --branch main --limit 1 \
 
 | Snapshot | Driver action |
 |----------|---------------|
-| **Latest completed run `conclusion=failure` (or `cancelled` / `timed_out` that left the badge red)** | **This cycle is CI repair.** Do **not** pick a product/capability lane. Follow cimonitor: job breakdown → `gh run view <id> --log-failed` → fix root causes (including pre-existing) → **close the loop** (promote new failure class into ship-surface/preflight if Tier 0 would have missed it) → commit → push → note follow-up. Log `lane: cimonitor`. `budget_consumed: 0`. Apply Step 3–4 (log, mark_run, release lock) and exit. Next `/improve` re-checks; if still red, repair again. |
-| **Latest run `in_progress` / `queued`** | Record status + run URL in this cycle's log under **ci:**; **continue** the normal cycle (do not burn the whole cycle waiting — the 6m `/loop` re-checks). |
+| **Latest completed run `conclusion=failure` (or `cancelled` / `timed_out` that left the badge red)** | **This cycle is CI repair.** Do **not** pick a product/capability lane. Follow cimonitor: job breakdown → `gh run view <id> --log-failed` → fix root causes (including pre-existing) → **close the loop** (promote new failure class into ship-surface/preflight if Tier 0 would have missed it) → commit → **`python scripts/push_gate.py check --repair --min-tier 0`** → push → note follow-up. Log `lane: cimonitor`. `budget_consumed: 0`. Apply Step 3–4 (log, mark_run, release lock) and exit. Next `/improve` re-checks; if still red, repair again. |
+| **Latest run `in_progress` / `queued`** | Record status + run URL under **ci:**. **Do not push a new product ship** while tip CI is still running (push_gate blocks this). Prefer digs that do not require push, or end the cycle early and self-schedule `INTERVAL_CI_POLL` (`15m`). Exception: cimonitor repair of a *completed* red tip uses `--repair`. |
 | **Latest completed run `conclusion=success`** | Record **ci: green** (run id) in the cycle log; continue. |
 | **`gh` unavailable / auth failure / no runs** | Log **ci: unavailable** with the error; continue the cycle (local preflight already ran). Do not invent a green badge. |
 
@@ -420,6 +420,21 @@ If the lane requires sub-strategy dispatch, the lane reads from
    the registry an honest picture of what the loop is really exercising. The commit in
    step 6 includes `capability-map.md` when it changed.
 6. **Commit** if the lane modified tracked files (the lane's playbook reports this). Use message format: `improve: cycle N {lane} — {summary}`
+7. **Push (only if this cycle ships code to origin)** — mandatory gate, never ad-hoc:
+   ```bash
+   make preflight-surface
+   make ship-surface
+   make ci-fast                    # preferred; writes push stamp tier=0
+   # or after surface-only: python scripts/push_gate.py record --tier surface
+   make push-gate                  # min-tier 0; blocks throttle / CI wait / stale stamp
+   # HM gallery/CSS/controller diff:
+   #   python scripts/push_gate.py check --min-tier 0 --require-hm-green
+   git push
+   ```
+   - **Refuse push** if `push_gate` exits non-zero (see remediation).
+   - **Batch** micro gallery polish into one commit/push — do not land 5 pushes in 15 minutes.
+   - **HM visual plane:** after push, wait sibling green before claiming cycle success on gallery work:
+     `python scripts/hm_standalone_ci_status.py --prefer-completed`.
 
 ### Step 4: Release lock
 
@@ -524,6 +539,10 @@ Lanes declare which kinds they emit and consume in their own files. Driver wires
 - **Lock is mandatory.** No cycle without `.dazzle/improve.lock` held.
 - **Always preflight.** Even for lanes whose strict checks don't seem relevant — preflight is the floor.
 - **Always CI snapshot.** Step 0c every cycle; red completed badge → repair cycle, not explore.
+- **Never push without push-gate.** `make push-gate` (or `python scripts/push_gate.py check …`) must exit 0 before `git push`. No ad-hoc pytest-only ships. Stamp is produced by `make ci-fast` / `make ci-core`.
+- **No product push while main CI is in_progress.** Wait or self-schedule 15m; use `--repair` only for cimonitor.
+- **Throttle product ships.** ≤4 main commits/hour and ≥8m gap (enforced by push_gate). Batch related fixes.
+- **HM visual is a release plane.** Gallery CSS/JS/baseline changes require sibling `hatchi-maxchi` green before "done"; tags use `--require-hm-green`.
 - **Commit every cycle that modifies tracked files.** Even failure cycles commit if they updated notes.
 - **Explore budget is global.** A lane's explore phase always increments the shared counter. CI repair does not consume explore budget.
 - **Self-schedule every full cycle.** Step 6 is mandatory after REPORT (except `--status` / `--reset-budget`). Use one-shots only; never `recurring: true` for the main chain.
