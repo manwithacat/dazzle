@@ -3931,14 +3931,79 @@ def select(source: str, id: str) -> str:
             "<code>data-dz-kanban-card</code> (<code>contracts/kanban.py</code>). "
             "Linear-class rearrange: when the host stamps "
             '<code>data-dz-kanban-rearrange="status"</code> (UPDATE only), '
-            "<code>dz-kanban.js</code> moves cards via PUT + region refresh; "
+            "<code>dz-kanban.js</code> moves cards via PUT (envelope none) then "
+            "GET-refresh of <code>data-dz-kanban-src</code> with "
+            "<code>outerMorph</code>/<code>outerHTML</code> of the region "
+            "(prefer morph so the announce live-region identity survives); "
             "per-card <code>data-dz-allowed-to</code> lists legal edges. "
             "Read-only boards omit rearrange attrs entirely. Gallery "
             "<code>/mock/kanban/*</code> is demo-only. Attention text carries "
             "<code>data-dz-attn</code> (critical/warning/notice).",
-            tags=("data",),
+            tags=("data", "interactive", "htmx"),
             contracts=("contracts/kanban.py",),
             controller="controllers/dz-kanban.js",
+            # Controller uses raw fetch (not hx-* on the partial). Declaring
+            # the board attrs + Exchange table is the agent-visible swap contract.
+            exchanges=(
+                Exchange(
+                    method="PUT",
+                    endpoint="/api/{entity}/{id}",
+                    trigger="dz-kanban.js: drag-drop onto a column stack or change "
+                    "`select[data-dz-kanban-move]` when the host stamped "
+                    "`data-dz-kanban-rearrange` (UPDATE only). Raw `fetch` PUT — "
+                    "not an htmx attribute on the card",
+                    response="this is the entity's STANDARD update route: JSON body "
+                    "includes the status field named by `data-dz-kanban-status-field` "
+                    '(e.g. `{"status": "in_progress"}`) and, when '
+                    "`data-dz-kanban-rank-field` is set, the rank key for in-column "
+                    "order (midpoint between neighbours). Server MUST re-validate SM "
+                    "edges and permissions — client `data-dz-allowed-to` is a hint. "
+                    "Return 2xx JSON on success; non-2xx aborts the optimistic move "
+                    "and the board reverts on the following GET refresh failure path",
+                    swap="none (raw fetch) — controller then GETs `data-dz-kanban-src` "
+                    "to re-render the board from the server (same bulk-refresh pattern "
+                    "as grid PUT + `dz-grid:refresh`)",
+                    states=("populated", "error"),
+                    envelope="none",
+                    server_example=(
+                        "# FastAPI sketch — product entity update (not a kanban-only API)\n"
+                        "@router.put('/api/tickets/{ticket_id}')\n"
+                        "async def update_ticket(\n"
+                        "    ticket_id: str,\n"
+                        "    body: TicketUpdate,  # status + optional rank fields\n"
+                        "    user: User = Depends(current_user),\n"
+                        ") -> TicketOut:\n"
+                        "    # gate UPDATE; validate status transition (SM);\n"
+                        "    # persist rank when present; return JSON entity\n"
+                        "    ...\n"
+                    ),
+                ),
+                Exchange(
+                    method="GET",
+                    endpoint="/api/workspaces/{ws}/regions/{region}",
+                    trigger="after a successful PUT move, `dz-kanban.js` fetches "
+                    "`data-dz-kanban-src` (the workspace region URL the host stamped). "
+                    "Also used when a host otherwise refreshes the region",
+                    response="the full kanban region fragment: root "
+                    "`[data-dz-kanban-board]` (or host region wrapper) with columns, "
+                    "stacks, and server-rendered cards (dual-lock "
+                    "`data-dz-kanban-card`). Counts and order come from the server — "
+                    "do not return a single card as the board settle. Empty columns "
+                    "keep the stack + empty state markup",
+                    swap="outerMorph / outerHTML of the region root (or innerMorph of "
+                    "the board host if the host keeps a stable outer region shell). "
+                    "Prefer morph so announce live-region identity survives",
+                    states=("loading", "empty", "populated", "error"),
+                    envelope="outer",
+                    server_example=(
+                        "# Region GET — same endpoint the workspace uses for the board\n"
+                        "@router.get('/api/workspaces/{ws}/regions/{region}')\n"
+                        "async def region_html(ws: str, region: str) -> HTMLResponse:\n"
+                        "    # render SSR kanban board for current filters/persona\n"
+                        "    return HTMLResponse(board_html)\n"
+                    ),
+                ),
+            ),
             guidance=Guidance(
                 seams=(
                     "rearrange: host stamps data-dz-kanban-rearrange=status only when "
@@ -3947,12 +4012,17 @@ def select(source: str, id: str) -> str:
                     "PUT entity update then GET data-dz-kanban-src (region refresh) — "
                     "same bulk-refresh pattern as the grid",
                     "keyboard: select[data-dz-kanban-move] offers the same targets as drag",
+                    "swap contract: PUT envelope=none (JSON); GET envelope=outer "
+                    "(full board/region fragment) — see Swap contract section",
                 ),
                 pitfalls=(
                     "do not invent a second rearrange API — reuse entity UPDATE + SM validation",
                     "do not stamp rearrange attrs for read-only personas (chrome leak)",
                     "do not use dashboard personal-layout drag as the product model",
                     "client allowed_to is a hint — server re-validates every drop",
+                    "do not return a single card HTML as the POST/PUT swap — settle via region GET",
+                    "do not claim presentation-only when rearrange attrs are stamped — "
+                    "declare the PUT+GET exchanges",
                 ),
                 do_dont=(
                     (
@@ -3962,6 +4032,10 @@ def select(source: str, id: str) -> str:
                     (
                         "refresh the board from the region endpoint after PUT",
                         "optimistically reorder the DOM without a server settle",
+                    ),
+                    (
+                        "document PUT none + GET outer in the swap contract",
+                        "leave Server exchange as n/a while the controller fetches",
                     ),
                 ),
                 a11y_keys=(

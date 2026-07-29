@@ -32,6 +32,10 @@ _EXTENSION_REQUEST_ATTRS = {
     # the pdf Hyperpart's bytes exchange: PDF.js (not htmx) fetches the
     # data-dz-pdf-src URL — declaring the attribute IS making GETs.
     "data-dz-pdf-src": "GET",
+    # kanban rearrange (dz-kanban.js): raw fetch PUT to data-dz-kanban-api/{id}
+    # then GET data-dz-kanban-src for region refresh — not hx-* on the partial.
+    "data-dz-kanban-api": "PUT",
+    "data-dz-kanban-src": "GET",
 }
 
 
@@ -246,6 +250,47 @@ def _normalize_gallery_bytes(data: bytes) -> bytes:
         count=1,
     )
     return text.encode("utf-8")
+
+
+def test_gallery_part_pages_do_not_ship_dz_code_figures() -> None:
+    """Unprefixed gallery CSS targets ``.code``; leftover ``dz-code`` figures
+    look malformed (copy chrome / token colour missing). Swap-contract
+    examples used to skip apply_prefix entirely — regress that.
+
+    Exception: ``code.html`` is the Code Hyperpart demo — its *live* surface
+    is intentionally the ``dz-code`` / ``code`` figure under test.
+    """
+    bad = []
+    for path in sorted((PKG / "site" / "hyperparts").glob("*.html")):
+        if path.name.endswith("-live.html") or path.name == "code.html":
+            continue
+        text = path.read_text(encoding="utf-8")
+        # Swap-contract / envelope samples live outside the live preview.
+        if 'id="swap-contract"' in text:
+            sec = text.split('id="swap-contract"', 1)[1]
+            sec = sec.split("<section", 1)[0] if "<section" in sec else sec[:20000]
+            if 'class="dz-code"' in sec or "data-dz-code" in sec:
+                bad.append(f"{path.name}#swap-contract")
+        if 'class="dz-code"' in text and path.name != "code.html":
+            # Any residual dz-code on non-code part pages
+            bad.append(path.name)
+    assert not bad, (
+        "hyperpart pages still embed dz-prefixed code figures (gallery CSS is "
+        f"unprefixed .code): {bad[:12]}"
+    )
+
+
+def test_kanban_declares_rearrange_exchanges() -> None:
+    """Rearrange is PUT entity + GET region — not presentation-only n/a."""
+    kanban = next(c for c in HYPERPARTS if c.id == "kanban")
+    methods = {e.method.upper() for e in kanban.exchanges}
+    assert methods == {"PUT", "GET"}, methods
+    put = next(e for e in kanban.exchanges if e.method.upper() == "PUT")
+    get = next(e for e in kanban.exchanges if e.method.upper() == "GET")
+    assert put.envelope == "none"
+    assert get.envelope == "outer"
+    assert "data-dz-kanban-api" in kanban.partial
+    assert "data-dz-kanban-src" in kanban.partial
 
 
 def test_gallery_regenerates_byte_identically(tmp_path) -> None:  # type: ignore[no-untyped-def]

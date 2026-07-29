@@ -86,6 +86,30 @@ def _contracts_html_prefixed(hyperpart, prefix: str) -> str:  # type: ignore[no-
     return "".join(out)
 
 
+def _swap_contract_html_prefixed(hyperpart, prefix: str) -> str:  # type: ignore[no-untyped-def]
+    """Swap-contract section: prefix code-figure chrome, keep dual-lock *text*.
+
+    Full ``apply_prefix`` on this section rewrites teaching tokens like
+    ``data-dz-region`` inside example source. Leaving it unprefixed left
+    ``dz-code`` figures unstyled on the unprefixed gallery (malformed
+    code blocks: meta bar / copy chrome without CSS). Prefix figure chrome
+    only via ``_prefix_code_figure``.
+    """
+    raw = _swap_contract_html(hyperpart)
+    if not raw:
+        return ""
+    parts = re.split(r'(<figure class="dz-code"[\s\S]*?</figure>)', raw)
+    out: list[str] = []
+    for part in parts:
+        if part.startswith('<figure class="dz-code"'):
+            out.append(_prefix_code_figure(part, prefix))
+        else:
+            # Prose + hm-ref chrome — no dz- class rewrite needed; keep
+            # data-dz-* teaching strings exact for agents.
+            out.append(part)
+    return "".join(out)
+
+
 from icons import ICONS, LUCIDE_VERSION  # noqa: E402
 from icons.sprite import build_symbol_sheet, sprite_use_html  # noqa: E402
 from pretty import pretty_html  # noqa: E402
@@ -888,14 +912,22 @@ def _schema_field_rows(model) -> list[tuple[str, str, str]]:  # type: ignore[no-
     req = set(schema.get("required", ()))
     rows: list[tuple[str, str, str]] = []
     for name, prop in schema.get("properties", {}).items():
-        typ = (
-            prop.get("type")
-            or " | ".join(a.get("type", "?") for a in prop.get("anyOf", ()))
-            or "object"
-        )
+        if "anyOf" in prop:
+            # Union types (e.g. float|int|str|None) — skip bare "null" for readability
+            parts = [
+                a.get("type", "?")
+                for a in prop["anyOf"]
+                if isinstance(a, dict) and a.get("type") and a.get("type") != "null"
+            ]
+            typ = " | ".join(parts) if parts else "object"
+            if any(isinstance(a, dict) and a.get("type") == "null" for a in prop["anyOf"]):
+                typ = f"{typ} | null"
+        else:
+            typ = prop.get("type") or "object"
         enum = prop.get("enum")
         if enum:
             typ = f"{typ} ∈ {enum}"
+        # Pipe breaks markdown tables; HTML tables are fine but keep compact form.
         rows.append((name, str(typ), "required" if name in req else "optional"))
     return rows
 
@@ -1394,9 +1426,9 @@ def _guide_body() -> str:
         "validates. Dual-lock freezes <strong>part</strong> HTML; the swap contract "
         "freezes <strong>host/exchange topology</strong> (decision 0012 / ADR-0054). "
         "Both for the grid:</p>"
-        + _exchanges_html(grid)
-        + _swap_contract_html(grid)
-        + _contracts_html(grid)
+        + apply_prefix(_exchanges_html(grid), "")
+        + _swap_contract_html_prefixed(grid, "")
+        + _contracts_html_prefixed(grid, "")
         + "</section>"
     )
     bp_links = " · ".join(
@@ -1965,7 +1997,8 @@ def _dependency_chips(hyperpart) -> str:  # type: ignore[no-untyped-def]
             f'<span class="hm-dep" data-dep="{d.lower()}" '
             f'tabindex="0" data-tooltip="{_html.escape(tip, quote=True)}">{d}</span>'
         )
-    return "".join(chips)
+    # Leading space: unstyled text extract must not glue title + chips.
+    return (" " + "".join(chips)) if chips else ""
 
 
 def _require(name: str) -> str:
@@ -3465,7 +3498,9 @@ window.addEventListener('storage', function (e) {{
             ),
             prefix,
         )
-        tag = f'<span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
+        # Leading space so unstyled / text extract doesn't glue title+tag
+        # ("Kanbandata…" class). CSS still applies margin-left on chips.
+        tag = f' <span class="hm-tag">{c.tags[0]}</span>' if c.tags else ""
         deps = _dependency_chips(c)
         # tabindex+role when framed: overflow-x scroll region must be keyboard
         # accessible (axe scrollable-region-focusable). Overlay frames do not
@@ -3502,9 +3537,9 @@ window.addEventListener('storage', function (e) {{
                     # Dialect/dogfood/provenance live in the page footer — not
                     # ahead of the implementer spine (agents use agents/<id>.md).
                     f"{apply_prefix(_exchanges_html(c), prefix)}"
-                    # Swap contract prose documents dual-lock identity (data-dz-region);
-                    # do not run apply_prefix or it rewrites those source tokens.
-                    f"{_swap_contract_html(c)}"
+                    # Swap contract: prefix code-figure chrome only (not dual-lock
+                    # teaching strings inside examples) — see _swap_contract_html_prefixed.
+                    f"{_swap_contract_html_prefixed(c, prefix)}"
                     f"{apply_prefix(_guidance_html(c), prefix)}"
                     # Contract Python keeps dual-lock names (data-dz-*).
                     f"{_contracts_html_prefixed(c, prefix)}"

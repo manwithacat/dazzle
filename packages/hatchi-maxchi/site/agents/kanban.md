@@ -84,31 +84,117 @@ Status columns of cards — the flow view. Columns show a count; overflowing boa
 
 ## Server exchange
 
-This Hyperpart has **no server exchange** — presentation or client chrome only. If you put `hx-*` on a control that uses this markup, that action's exchange belongs to the action, not this part.
+When the client affordance finishes, htmx issues **this** request. Return the **response fragment** in the table (usually HTML, not JSON). Dazzle often implements these from the app model; a standalone HTMX4 app implements them explicitly.
+
+> **Do not reimplement the gallery.** Flash toasts (e.g. confirm’s > “Deleted (demo).”), `/mock/*` paths, and other static-site > scaffolding are **demo-only** (`MOCK_HTMX` in `site/build_site.py`). > They are not Hyperpart surface and not a product API. If you are > stuck making a toast or mock URL work, stop — implement the > exchange row below instead. See AGENTS.md › *Gallery demos are not > the product API*.
+
+| Request | Trigger | Response fragment | Swap | Envelope | States |
+|---|---|---|---|---|---|
+| `PUT /api/{entity}/{id}` | dz-kanban.js: drag-drop onto a column stack or change `select[data-dz-kanban-move]` when the host stamped `data-dz-kanban-rearrange` (UPDATE only). Raw `fetch` PUT — not an htmx attribute on the card | this is the entity's STANDARD update route: JSON body includes the status field named by `data-dz-kanban-status-field` (e.g. `{"status": "in_progress"}`) and, when `data-dz-kanban-rank-field` is set, the rank key for in-column order (midpoint between neighbours). Server MUST re-validate SM edges and permissions — client `data-dz-allowed-to` is a hint. Return 2xx JSON on success; non-2xx aborts the optimistic move and the board reverts on the following GET refresh failure path | none (raw fetch) — controller then GETs `data-dz-kanban-src` to re-render the board from the server (same bulk-refresh pattern as grid PUT + `dz-grid:refresh`) | `none` | populated error |
+| `GET /api/workspaces/{ws}/regions/{region}` | after a successful PUT move, `dz-kanban.js` fetches `data-dz-kanban-src` (the workspace region URL the host stamped). Also used when a host otherwise refreshes the region | the full kanban region fragment: root `[data-dz-kanban-board]` (or host region wrapper) with columns, stacks, and server-rendered cards (dual-lock `data-dz-kanban-card`). Counts and order come from the server — do not return a single card as the board settle. Empty columns keep the stack + empty state markup | outerMorph / outerHTML of the region root (or innerMorph of the board host if the host keeps a stable outer region shell). Prefer morph so announce live-region identity survives | `outer` | loading empty populated error |
+
+### `PUT /api/{entity}/{id}` — example handler
+
+Application code (not the dual-lock module). FastAPI-shaped; do not use `from __future__ import annotations` in route files (ADR-0014).
+
+```python
+# FastAPI sketch — product entity update (not a kanban-only API)
+@router.put('/api/tickets/{ticket_id}')
+async def update_ticket(
+    ticket_id: str,
+    body: TicketUpdate,  # status + optional rank fields
+    user: User = Depends(current_user),
+) -> TicketOut:
+    # gate UPDATE; validate status transition (SM);
+    # persist rank when present; return JSON entity
+    ...
+```
+
+### `GET /api/workspaces/{ws}/regions/{region}` — example handler
+
+Application code (not the dual-lock module). FastAPI-shaped; do not use `from __future__ import annotations` in route files (ADR-0014).
+
+```python
+# Region GET — same endpoint the workspace uses for the board
+@router.get('/api/workspaces/{ws}/regions/{region}')
+async def region_html(ws: str, region: str) -> HTMLResponse:
+    # render SSR kanban board for current filters/persona
+    return HTMLResponse(board_html)
+```
 
 ## Swap contract
 
 Agent-visible HTMX topology (ADR-0054 / decision 0012). **Exchange envelope** = what the response may re-emit relative to the persistent slot (`body_only` | `outer` | `none` | `host_owned` | `document`). Dual-lock validates part markup only — not this envelope. Stem: `stems/morph-safe-hypermedia.md`.
 
-**No host HTMX exchange** on this part — presentation or client chrome only. **Exchange envelope:** `n/a`.
+Gallery mocks may approximate morph with `innerHTML` — production follows the swap column in **Server exchange**.
 
-If a **host** wraps this markup in `hx-*`, **that host owns the swap contract** (sole identity + envelope). Prefer `innerMorph` / `outerMorph` for stable slots; replacement for flash; body-only responses under inner swaps.
+### Exchanges (swap · envelope)
+
+- `PUT /api/{entity}/{id}` → none (raw fetch) — controller then GETs `data-dz-kanban-src` to re-render the board from the server (same bulk-refresh pattern as grid PUT + `dz-grid:refresh`) · **envelope=`none`**
+- `GET /api/workspaces/{ws}/regions/{region}` → outerMorph / outerHTML of the region root (or innerMorph of the board host if the host keeps a stable outer region shell). Prefer morph so announce live-region identity survives · **envelope=`outer`**
+
+### Morph (persistent region)
+
+- `GET /api/workspaces/{ws}/regions/{region}` → outer
+
+### No HTML swap (raw fetch / companion OOB)
+
+- `PUT /api/{entity}/{id}` → none
+
+### Envelope rules
+
+- **`body_only`** — innerHTML / innerMorph into a slot; response is interior only (no re-wrap of slot id / nested `data-dz-region`).
+- **`outer`** — outerHTML / outerMorph; response may carry identity.
+- **`none`** — no HTML swap (JSON/204/bytes; client or OOB companion).
+- **`host_owned`** — swap target/mode chosen by the host button's `hx-target` / `hx-swap` (part does not fix the envelope).
+- **`document`** — full navigation / document load (not a fragment).
+- Slot owns stable `id` / domain keys; state in DOM, not Alpine.
 
 ### Envelope response examples
 
 What the **server returns** for each exchange. Match the **exchange envelope**; dual-lock still applies to interior markup.
 
-This part has no owned exchange (envelope `n/a`). If a host adds `hx-*`, that host’s envelope applies — typically `body_only`:
+#### `PUT /api/{entity}/{id}` · envelope=`none`
 
-```html
-<!-- Prefer hx-swap=innerMorph into a stable body slot -->
-<div class="dz-stack">content…</div>
+Correct response for none (raw fetch / no HTML swap).
+
+**Do — correct response body**
+
+```text
+// envelope=none — no HTML swap (JSON/204; client or OOB companion)
+// HTTP 204 No Content
+// or:
+{ "ok": true }
+// Application/json; status 200
+// Optional: separate OOB HTML fragments if the host declares them
 ```
 
-Do **not** re-own the slot:
+**Don’t — violates `none`**
+
+```text
+<!-- WRONG: HTML body when hx-swap is none / raw fetch expects JSON|204 -->
+<div class="dz-alert">Deleted</div>
+```
+
+#### `GET /api/workspaces/{ws}/regions/{region}` · envelope=`outer`
+
+Correct response for outer (outerHTML / outerMorph) replacing #slot.
+
+**Do — correct response body**
 
 ```html
-<div id="kanban-root" data-dz-region>…</div>
+<!-- envelope=outer → response root may carry the slot identity -->
+<div id="slot" class="dz-card" data-dz-card>
+  <!-- full replacement of the previous element -->
+</div>
+```
+
+**Don’t — violates `outer`**
+
+```html
+<!-- WRONG for outer: body-only fragment when the host expects a full element -->
+<!-- (missing root that matches hx-target — leaves empty or nested junk) -->
+<span>partial content without the target root</span>
 ```
 
 ## How to use it
@@ -119,6 +205,7 @@ Do **not** re-own the slot:
 - per-card data-dz-allowed-to lists manual SM edges; empty = not draggable
 - PUT entity update then GET data-dz-kanban-src (region refresh) — same bulk-refresh pattern as the grid
 - keyboard: select[data-dz-kanban-move] offers the same targets as drag
+- swap contract: PUT envelope=none (JSON); GET envelope=outer (full board/region fragment) — see Swap contract section
 
 ### Do / Don't
 
@@ -126,6 +213,7 @@ Do **not** re-own the slot:
 |---|---|
 | gate rearrange chrome on UPDATE like queue transitions | show grab cursors for everyone and 403 on drop |
 | refresh the board from the region endpoint after PUT | optimistically reorder the DOM without a server settle |
+| document PUT none + GET outer in the swap contract | leave Server exchange as n/a while the controller fetches |
 
 ### Pitfalls
 
@@ -133,6 +221,8 @@ Do **not** re-own the slot:
 - do not stamp rearrange attrs for read-only personas (chrome leak)
 - do not use dashboard personal-layout drag as the product model
 - client allowed_to is a hint — server re-validates every drop
+- do not return a single card HTML as the POST/PUT swap — settle via region GET
+- do not claim presentation-only when rearrange attrs are stamped — declare the PUT+GET exchanges
 
 ### Keyboard / AT
 
@@ -226,7 +316,7 @@ def render(card: KanbanCard) -> str:
 
 ## Notes
 
-Cards are SERVER-rendered — dual-lock root is data-dz-kanban-card (contracts/kanban.py). Linear-class rearrange: when the host stamps data-dz-kanban-rearrange="status" (UPDATE only), dz-kanban.js moves cards via PUT + region refresh; per-card data-dz-allowed-to lists legal edges. Read-only boards omit rearrange attrs entirely. Gallery /mock/kanban/* is demo-only. Attention text carries data-dz-attn (critical/warning/notice).
+Cards are SERVER-rendered — dual-lock root is data-dz-kanban-card (contracts/kanban.py). Linear-class rearrange: when the host stamps data-dz-kanban-rearrange="status" (UPDATE only), dz-kanban.js moves cards via PUT (envelope none) then GET-refresh of data-dz-kanban-src with outerMorph/outerHTML of the region (prefer morph so the announce live-region identity survives); per-card data-dz-allowed-to lists legal edges. Read-only boards omit rearrange attrs entirely. Gallery /mock/kanban/* is demo-only. Attention text carries data-dz-attn (critical/warning/notice).
 
 ## Source files
 
