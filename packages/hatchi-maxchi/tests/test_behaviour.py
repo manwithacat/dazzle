@@ -136,6 +136,48 @@ def test_menubar_dismiss_outside(page) -> None:  # type: ignore[no-untyped-def]
     assert scope.locator(f"{item}[open]").count() == 0
 
 
+def test_menubar_escape_dismiss(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery probe menubar.escape_dismiss — Escape closes File panel."""
+    goto_part(page, "menubar")
+    scope = page.locator(".hm-preview")
+    item = "details.dz-menubar__item, details.menubar__item"
+    trigger = "summary.dz-menubar__trigger, summary.menubar__trigger"
+    scope.locator(trigger).filter(has_text="File").first.click()
+    page.wait_for_timeout(80)
+    assert scope.locator(f"{item}[open]").count() == 1
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(100)
+    assert scope.locator(f"{item}[open]").count() == 0
+
+
+def test_dialog_escape_closes(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery probe dialog.escape_closes — Escape cancels open modal."""
+    goto_part(page, "dialog")
+    dlg = "dialog.dialog"
+    page.locator(".hm-preview [data-dialog-open], .hm-preview [data-dz-dialog-open]").first.click()
+    page.wait_for_timeout(150)
+    assert page.evaluate(
+        f"!!document.querySelector('{dlg}') && document.querySelector('{dlg}').open"
+    )
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(120)
+    assert not page.evaluate(f"document.querySelector('{dlg}').open")
+
+
+def test_drawer_escape_closes(page) -> None:  # type: ignore[no-untyped-def]
+    """Gallery probe drawer.escape_closes — Escape dismisses side panel."""
+    goto_part(page, "drawer")
+    dlg = "dialog.drawer"
+    page.locator(".hm-preview [data-dialog-open], .hm-preview [data-dz-dialog-open]").first.click()
+    page.wait_for_timeout(150)
+    assert page.evaluate(
+        f"!!document.querySelector('{dlg}') && document.querySelector('{dlg}').open"
+    )
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(120)
+    assert not page.evaluate(f"document.querySelector('{dlg}').open")
+
+
 def test_navigation_menu_dismiss_outside(page) -> None:  # type: ignore[no-untyped-def]
     """Gallery probe navigation_menu.dismiss_outside — click outside closes panel."""
     goto_part(page, "navigation-menu")

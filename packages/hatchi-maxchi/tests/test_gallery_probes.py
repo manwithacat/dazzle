@@ -30,19 +30,32 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     ids = {p.id for p in PROBES}
     assert "menubar.exclusive_open" in ids
     assert "menubar.dismiss_outside" in ids
+    assert "menubar.escape_dismiss" in ids
     assert "navigation_menu.exclusive_open" in ids
     assert "navigation_menu.dismiss_outside" in ids
     assert "popover.dismiss_outside" in ids
     assert "menu.dismiss_outside" in ids
+    assert "dialog.escape_closes" in ids
+    assert "drawer.escape_closes" in ids
     assert "accordion.exclusive_open" in ids
     assert "tree.multi_open" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
         assert p.intent in {"exclusive", "multi_open"}
+        assert p.kind in {
+            "exclusive_details_open",
+            "multi_details_open",
+            "details_dismiss_outside",
+            "details_escape_dismiss",
+            "native_dialog_escape",
+        }
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"
+    dialog = next(p for p in PROBES if p.id == "dialog.escape_closes")
+    assert dialog.kind == "native_dialog_escape"
+    assert dialog.fix_surface == "controller"
 
 
 def test_match_observation_menubar_file_edit() -> None:

@@ -21,6 +21,9 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `navigation_menu.dismiss_outside` | `navigation-menu` | exclusive | high | controller | Clicking outside the navigation menu closes the open panel (mega panels must not stick after leaving the nav) |
 | `popover.dismiss_outside` | `popover` | exclusive | high | controller | Clicking outside an open popover closes it (details-light-dismiss spatial dismiss — free panels must not stick) |
 | `menu.dismiss_outside` | `menu` | exclusive | high | controller | Clicking outside an open action menu closes it (details-light-dismiss spatial dismiss — local action menus must not stick) |
+| `menubar.escape_dismiss` | `menubar` | exclusive | high | controller | Pressing Escape closes the open menubar panel (keyboard dismiss must match outside-click — File must not stick) |
+| `dialog.escape_closes` | `dialog` | exclusive | high | controller | Pressing Escape closes an open modal dialog (native <dialog> cancel — modal must not trap Escape) |
+| `drawer.escape_closes` | `drawer` | exclusive | high | controller | Pressing Escape closes an open drawer (drawer is a side <dialog> — Escape must dismiss filters/record panels) |
 
 ## Loop (autonomous improve)
 

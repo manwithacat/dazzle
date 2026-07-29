@@ -262,6 +262,67 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    Probe(
+        id="menubar.escape_dismiss",
+        stem="menubar",
+        page="hyperparts/menubar.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Pressing Escape closes the open menubar panel "
+            "(keyboard dismiss must match outside-click — File must not stick)"
+        ),
+        kind="details_escape_dismiss",
+        params={
+            "root": "[data-dz-menubar], .dz-menubar, .menubar, [data-menubar]",
+            "item": "details.dz-menubar__item, details.menubar__item",
+            "trigger": "summary.dz-menubar__trigger, summary.menubar__trigger",
+            "open_label": "File",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
+    Probe(
+        id="dialog.escape_closes",
+        stem="dialog",
+        page="hyperparts/dialog.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Pressing Escape closes an open modal dialog "
+            "(native <dialog> cancel — modal must not trap Escape)"
+        ),
+        kind="native_dialog_escape",
+        params={
+            "open_trigger": "[data-dialog-open], [data-dz-dialog-open]",
+            "dialog": "dialog.dialog, dialog.dz-dialog",
+            "scope": ".hm-preview",
+            "open_settle_ms": 150,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
+    Probe(
+        id="drawer.escape_closes",
+        stem="drawer",
+        page="hyperparts/drawer.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Pressing Escape closes an open drawer "
+            "(drawer is a side <dialog> — Escape must dismiss filters/record panels)"
+        ),
+        kind="native_dialog_escape",
+        params={
+            "open_trigger": "[data-dialog-open], [data-dz-dialog-open]",
+            "dialog": "dialog.drawer, dialog.dz-drawer",
+            "scope": ".hm-preview",
+            "open_settle_ms": 150,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -482,10 +543,116 @@ def _run_details_dismiss_outside(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_details_escape_dismiss(page: Any, probe: Probe) -> dict[str, Any]:
+    """Open first trigger, press Escape, assert no open details remain."""
+    params = probe.params
+    item_sel = params["item"]
+    trigger_sel = params["trigger"]
+    open_label = params.get("open_label")
+
+    scope = _probe_scope(page, params)
+    root = scope.locator(params["root"]).first
+    if root.count() == 0:
+        return {"verdict": "ERROR", "detail": f"root not found ({params['root']})"}
+
+    trig = scope.locator(trigger_sel)
+    if open_label:
+        trig = trig.filter(has_text=open_label)
+    trig = trig.first
+    if trig.count() == 0:
+        return {"verdict": "ERROR", "detail": "trigger not found"}
+    trig.click()
+    page.wait_for_timeout(80)
+    before = _open_labels(scope, item_sel)
+    if not before:
+        return {"verdict": "ERROR", "detail": "failed to open panel before Escape"}
+
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(100)
+    after = _open_labels(scope, item_sel)
+    if not after:
+        return {
+            "verdict": "PASS",
+            "detail": f"dismissed after Escape (was {before})",
+            "open_labels_before": before,
+            "open_labels": after,
+        }
+    return {
+        "verdict": "FAIL",
+        "detail": f"Escape left open_labels={after} (before={before})",
+        "open_labels_before": before,
+        "open_labels": after,
+        "dom_hint": item_sel,
+    }
+
+
+def _run_native_dialog_escape(page: Any, probe: Probe) -> dict[str, Any]:
+    """Open a native <dialog> via trigger, Escape, assert ``dialog.open`` is false.
+
+    Covers modal dialog + drawer (side dialog). ``dz-dialog`` defers
+    ``showModal`` with ``setTimeout(0)`` so we settle longer than details probes.
+    """
+    params = probe.params
+    open_sel = params["open_trigger"]
+    dialog_sel = params["dialog"]
+    settle = int(params.get("open_settle_ms", 150))
+
+    scope = _probe_scope(page, params)
+    # Prefer in-scope trigger; dialog element may be a sibling under .hm-preview
+    open_btn = scope.locator(open_sel).first
+    if open_btn.count() == 0:
+        open_btn = page.locator(open_sel).first
+    if open_btn.count() == 0:
+        return {"verdict": "ERROR", "detail": f"open trigger not found ({open_sel})"}
+
+    open_btn.click()
+    page.wait_for_timeout(settle)
+
+    # Evaluate open state on first matching dialog (preview-scoped when possible)
+    is_open = page.evaluate(
+        """(sel) => {
+          const scoped = document.querySelector('.hm-preview');
+          const root = scoped || document;
+          const d = root.querySelector(sel) || document.querySelector(sel);
+          return !!(d && d.open);
+        }""",
+        dialog_sel,
+    )
+    if not is_open:
+        return {
+            "verdict": "ERROR",
+            "detail": f"dialog did not open after trigger click ({dialog_sel})",
+        }
+
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(120)
+    still_open = page.evaluate(
+        """(sel) => {
+          const scoped = document.querySelector('.hm-preview');
+          const root = scoped || document;
+          const d = root.querySelector(sel) || document.querySelector(sel);
+          return !!(d && d.open);
+        }""",
+        dialog_sel,
+    )
+    if not still_open:
+        return {
+            "verdict": "PASS",
+            "detail": f"Escape closed {dialog_sel}",
+        }
+    return {
+        "verdict": "FAIL",
+        "detail": f"Escape left dialog open ({dialog_sel})",
+        "dom_hint": dialog_sel,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
     "details_dismiss_outside": _run_details_dismiss_outside,
+    "details_escape_dismiss": _run_details_escape_dismiss,
+    "native_dialog_escape": _run_native_dialog_escape,
 }
 
 
