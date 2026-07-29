@@ -729,7 +729,8 @@ workspace systems_desk "Systems":
     source: System
     sort: name asc
     limit: 20
-    display: grid
+    # Fleet roster is pull-to-open hubs, not a warehouse grid.
+    display: queue
     action: system_detail
     empty: "No systems registered"
 
@@ -780,6 +781,7 @@ workspace alerts_desk "Alerts":
     sort: severity desc, triggered_at desc
     limit: 25
     display: queue
+    action: alert_detail
     empty: "No active alerts"
 
   # Work-surface utility: systems under pressure are a pull queue (not a grid).
@@ -835,7 +837,8 @@ workspace integrations_desk "Integrations":
     filter: status = live
     sort: name asc
     limit: 20
-    display: grid
+    # Live connectors are a status queue for ops, not a card wall.
+    display: queue
     empty: "No live integrations"
 
   enable_trail:
@@ -1079,8 +1082,13 @@ surface alert_detail "Alert Detail":
     field triggered_at "Triggered"
     field acknowledged_by "Acknowledged By"
 
+  section notes "Notes":
+    layout: strip
+    field message "Message"
+    field acknowledged_by "Acknowledged By"
+
   ux:
-    purpose: "Inspect alert severity strip and parent System context"
+    purpose: "Inspect alert severity strip and open parent System hub for context"
 
 surface alert_ack "Acknowledge Alert":
   uses entity Alert

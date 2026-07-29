@@ -64,7 +64,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
-| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1448 | USED |
+| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1449 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1442 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1448 | USED |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1443 | USED |
@@ -73,7 +73,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1437 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1444 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1448 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1449 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1445 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
@@ -124,6 +124,8 @@ apply map patches with `{"apply":true}`.
 
 > **Cycle 1441 (2026-07-29).** **capability-sweep** (cadence ≥20 since 1421) — inventory reconcile vs tip. **UNOWNED=0** **COGNITION_STALE_eff=12** **HYGIENE_STALE_eff=27**. Flipped lag≥20 USED→STALE: 4 (demo quality, product_quality, hyperpart-opportunities, rbac). lag<20 STALE→USED: 0. DRIVER CodeQL+inbox **USED@1441**. Top COGNITION digs (aggressive, densify_allowed=0 residual=0 dual_lock=0 suppress_smoke=1 panel_streak=1): **framework-ux edge** / **journey_dogfood** dig+ship / domain-demo re-touch — **not** dual_lock/smoke stamp/WI densify; avoid re-panel ops timeout thrash without shorter scenario. Metered vision STALE → subscription substitutes only. budget 0. Explore **16/100**. Next self-audit@1435 ~1450; capability-sweep@1441 next~1461. Tip CI in_progress 30450503281 — no product push.
 
+> **Cycle 1449 (2026-07-29).** **example-apps journey_dogfood** dig ops_dashboard ST-006–010 prove journey 10/10; alert_detail second strip; systems_grid+live_grid→queue; active_queue action; SPEC fingerprint. strips 2→3 residual=0 densify=0. journey+prove+process_dig+work-surface+validate **USED@1449**. budget 1. Explore **23/100**. tip CI may still hold push. self-audit@1435 ~1450; capability-sweep@1441 ~1461.
+>
 > **Cycle 1448 (2026-07-29).** **example-apps agent_acceptance_panel** dig contact_manager ST-004–007 maps trial+stories+stem+SPEC; walks 4/4 validate+dry-run; trial skip (avoid hang streak); **product** recent_contacts+by_company grid→**queue**; SPEC fingerprint. residual=0 densify=0. acceptance+walks+process_dig+work-surface+validate **USED@1448**. budget 1. Explore **22/100**. Pushed 1447 then this. Next journey_dogfood/framework-ux under aggressive — not dual_lock/smoke/WI densify. self-audit@1435 ~1450; capability-sweep@1441 ~1461.
 >
 > **Cycle 1447 (2026-07-29).** **example-apps story_walk** dig project_tracker ST-001–005 maps+walks validate/dry-run 5/5; live skip; **product** project_overview/active_projects/open_tasks/roster grid→**queue**; SPEC fingerprint. residual=0 densify=0. story_walk+walk+process_dig+work-surface+validate **USED@1447**. budget 1. Explore **21/100**. **pushed: no** (tip CI in_progress 30462043292 repair). Next after green tip: acceptance/framework-ux — not dual_lock/smoke/WI densify. self-audit@1435 ~1450; capability-sweep@1441 ~1461.
