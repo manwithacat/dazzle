@@ -878,12 +878,13 @@ workspace active_alerts "Active Alerts":
     action: alert_detail
     empty: "No active alerts"
 
+  # Work-surface utility: active alerts are pull-to-ack work — queue beats grid.
   active_grid:
     source: Alert
     filter: status = active
     sort: severity desc, triggered_at asc
     limit: 15
-    display: grid
+    display: queue
     action: alert_detail
     empty: "No active alerts"
 
@@ -931,12 +932,13 @@ workspace resolved_alerts "Resolved Alerts":
     action: alert_detail
     empty: "No resolved alerts"
 
+  # Work-surface utility: resolved alerts are a dated history — timeline.
   resolved_grid:
     source: Alert
     filter: status = resolved
     sort: severity desc, triggered_at desc
     limit: 15
-    display: grid
+    display: timeline
     action: alert_detail
     empty: "No resolved alerts"
 

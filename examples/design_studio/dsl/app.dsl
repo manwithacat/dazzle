@@ -289,10 +289,14 @@ workspace asset_catalog "Asset Catalog":
     tones:
       in_review: warning
       approved: positive
+  # Work-surface utility: recent asset stream by created_at — timeline.
   asset_grid:
     source: Asset
-    display: grid
+    display: timeline
     sort: created_at desc
+    limit: 20
+    action: asset_detail
+    empty: "No assets yet"
   review_queue:
     source: Asset
     filter: status = review
@@ -679,12 +683,13 @@ workspace active_campaigns "Active Campaigns":
     action: campaign_edit
     empty: "No active campaigns"
 
+  # Work-surface utility: active campaigns are current work — queue beats grid.
   active_grid:
     source: Campaign
     filter: status = active
     sort: name asc
     limit: 15
-    display: grid
+    display: queue
     action: campaign_edit
     empty: "No active campaigns"
 
