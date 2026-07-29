@@ -57,15 +57,17 @@ comments.
 ## Where work happens
 
 Five workspaces organise the work. The **Ticket Queue** is the agent home for
-incoming tickets — summary metrics, a review queue, and a kanban board of open
-statuses. **Manager Ops** is the manager home for team performance and
-escalations — metrics, SLA readiness, critical/unassigned queues (capped),
-status funnel, and a short recent-ticket trail. Lifecycle kanban for claimed
-work lives on the **Agent Dashboard** (not a second open-board on Manager Ops).
-The **Agent Dashboard** is a personal dashboard for claimed work — a status
-kanban of assigned open tickets,
-a resolved close-out queue, and lifecycle metrics first, comment activity last. **My Tickets** is the customer's home:
-open/WIP counts, open-cases queue, history, status chart, trail, and open cards.
+incoming tickets — summary metrics, a review queue, a kanban board of open
+statuses, and a recent-comment **timeline** (dated stream, not a flat list).
+**Manager Ops** is the manager home for team performance and escalations —
+metrics, SLA readiness, critical/unassigned queues (capped), status funnel, and
+a short recent-ticket trail. Lifecycle kanban for claimed work lives on the
+**Agent Dashboard** (not a second open-board on Manager Ops). The **Agent
+Dashboard** is a personal dashboard for claimed work — a status kanban of
+assigned open tickets, a resolved close-out queue, lifecycle metrics, and
+comment **timelines**/activity last. **My Tickets** is the customer's home:
+open/WIP counts, open-cases queue, resolved-recent **timeline**, history chart,
+trail, and open cards.
 The **Agent Console** — shared by administrators, managers, and agents — lets
 you pick an agent and see their tickets, comments, comparison charts, priority
 queue, comment trail, and open ticket cards.
@@ -140,4 +142,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:096b875352178545d324215ad1e8eba16c69481b49996b34610b9dbb1bf4083e -->
+<!-- dazzle-spec-brief: sha256:7a5e6d9513e730553e4d96861fcc7f0a80c9a4c81f223a73410ff60dae7f685a -->

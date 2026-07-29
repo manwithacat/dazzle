@@ -491,11 +491,12 @@ workspace ticket_queue "Ticket Queue":
     action: ticket_edit
     empty: "No open tickets"
 
+  # Work-surface utility: dated comment stream → timeline (time_order), not row list.
   recent_comments:
     source: Comment
     sort: created_at desc
     limit: 12
-    display: list
+    display: timeline
     action: comment_detail
     empty: "No recent comments"
 
@@ -651,11 +652,12 @@ workspace agent_dashboard "Agent Dashboard":
     empty: "No tickets logged yet"
 
   # ── Activity last (comment noise) ───────────────────────────────────
+  # Work-surface utility: sparse dated events → timeline (mirrors simple_task).
   recent_comments:
     source: Comment
     sort: created_at desc
     limit: 10
-    display: list
+    display: timeline
     action: comment_detail
     empty: "No recent comments"
 
@@ -717,12 +719,13 @@ workspace my_tickets "My Tickets":
     action: ticket_detail
     empty: "You have not submitted any tickets yet"
 
+  # Resolved history is chronological awareness — timeline beats inventory list.
   resolved_recent:
     source: Ticket
     filter: created_by = current_user and status = resolved
     sort: updated_at desc
     limit: 10
-    display: list
+    display: timeline
     action: ticket_detail
     empty: "No resolved tickets yet"
 

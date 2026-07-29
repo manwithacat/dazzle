@@ -16,8 +16,11 @@ ST-013–018 own surfaces.
   critical/unassigned queues (limit 12) + funnel + short recent_trail
   timeline (not an empty personal list; no second open-board kanban —
   lifecycle board stays on agent_dashboard).
-- Customer default: `my_tickets` = my metrics + open queue + history list.
-- Prefer queue/metrics/kanban over bare list for open-work stories.
+- Customer default: `my_tickets` = my metrics + open queue + resolved **timeline**
+  (`resolved_recent`) + history trail.
+- Comment streams on `ticket_queue` / `agent_dashboard` use **timeline**
+  (dated events), not inventory list — same work-surface utility as simple_task.
+- Prefer queue/metrics/kanban/timeline over bare list for open-work and event streams.
 - Keep story `given:` workspace names aligned with persona defaults.
 
 ## Not this
