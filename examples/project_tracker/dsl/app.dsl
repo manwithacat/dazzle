@@ -300,8 +300,10 @@ workspace dashboard "Dashboard":
 
   project_overview:
     source: Project
-    display: grid
+    # Portfolio scan is pull-next cards, not a dense photo grid.
+    display: queue
     sort: updated_at desc
+    action: project_detail
 
   task_flow:
     source: Task
@@ -434,7 +436,9 @@ workspace milestone_plan "Milestone Plan":
     source: Project
     filter: status = active
     sort: updated_at desc
-    display: grid
+    # Active portfolio is a work queue, not a warehouse grid.
+    display: queue
+    action: project_detail
 
   milestone_mix:
     source: Milestone
@@ -479,7 +483,8 @@ workspace discussion_desk "Discussion":
     filter: status != done
     sort: priority desc
     limit: 15
-    display: grid
+    # Open work is pull-next, not a card wall.
+    display: queue
     action: task_detail
     empty: "No open tasks"
 
@@ -571,7 +576,8 @@ workspace people_desk "People":
     filter: is_active = true
     sort: name asc
     limit: 25
-    display: grid
+    # Active roster is a people queue (open hub), not a dense grid.
+    display: queue
     action: user_detail
     empty: "No team members yet"
 

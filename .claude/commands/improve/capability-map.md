@@ -64,16 +64,16 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
-| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1443 | USED |
+| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1447 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1442 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1442 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1447 | USED |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1443 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1437 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1444 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1443 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1447 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1445 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
@@ -124,6 +124,8 @@ apply map patches with `{"apply":true}`.
 
 > **Cycle 1441 (2026-07-29).** **capability-sweep** (cadence ≥20 since 1421) — inventory reconcile vs tip. **UNOWNED=0** **COGNITION_STALE_eff=12** **HYGIENE_STALE_eff=27**. Flipped lag≥20 USED→STALE: 4 (demo quality, product_quality, hyperpart-opportunities, rbac). lag<20 STALE→USED: 0. DRIVER CodeQL+inbox **USED@1441**. Top COGNITION digs (aggressive, densify_allowed=0 residual=0 dual_lock=0 suppress_smoke=1 panel_streak=1): **framework-ux edge** / **journey_dogfood** dig+ship / domain-demo re-touch — **not** dual_lock/smoke stamp/WI densify; avoid re-panel ops timeout thrash without shorter scenario. Metered vision STALE → subscription substitutes only. budget 0. Explore **16/100**. Next self-audit@1435 ~1450; capability-sweep@1441 next~1461. Tip CI in_progress 30450503281 — no product push.
 
+> **Cycle 1447 (2026-07-29).** **example-apps story_walk** dig project_tracker ST-001–005 maps+walks validate/dry-run 5/5; live skip; **product** project_overview/active_projects/open_tasks/roster grid→**queue**; SPEC fingerprint. residual=0 densify=0. story_walk+walk+process_dig+work-surface+validate **USED@1447**. budget 1. Explore **21/100**. **pushed: no** (tip CI in_progress 30462043292 repair). Next after green tip: acceptance/framework-ux — not dual_lock/smoke/WI densify. self-audit@1435 ~1450; capability-sweep@1441 ~1461.
+>
 > **Cycle 1445 (2026-07-29).** **framework-ux edge** #1303 TREE hub drill — `TreeNode.drill_url` + builder/`_set_detail_url_template` host path + emit `data-dz-tree-drill` (fieldtest device_tree action:device_detail consumer). Unit pins. densify_allowed=0 dual_lock=0. fitness/ux verify **USED@1445**. budget 1. Explore **20/100**. Next story_walk/acceptance dig under aggressive — not dual_lock/smoke/WI densify. self-audit@1435 ~1450; capability-sweep@1441 ~1461.
 >
 > **Cycle 1444 (2026-07-29).** **hm-convergence gallery_probes** (campaign force) discover uncovered=0; prior 8/8 PASS; **ship** Escape dismiss suite: `menubar.escape_dismiss` + `dialog.escape_closes` + `drawer.escape_closes` (+ runners `details_escape_dismiss`/`native_dialog_escape`); catalog 11 probes all PASS; unit pin + behaviour CI pins. densify_allowed=0 dual_lock=0. gallery_probes **USED@1444**. budget 1. Explore **19/100**. Next framework-ux edge / story_walk dig under aggressive — not dual_lock/smoke/WI densify. self-audit@1435 ~1450; capability-sweep@1441 ~1461.
