@@ -50,11 +50,11 @@ apply map patches with `{"apply":true}`.
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1385 | STALE |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1403 | STALE |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1403 | STALE |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1430 | USED |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1430 | STALE |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1459 | USED |
-| `qa-trial` skill | COGNITION | skill | trials | 1424 | USED |
+| `qa-trial` skill | COGNITION | skill | trials | 1424 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1460 | USED |
@@ -110,8 +110,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1443 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1457 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1457 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1461 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1461 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1461 (2026-07-29).** **capability-sweep** (cadence ≥20 since 1441) — inventory reconcile vs tip. **UNOWNED=0** **COGNITION_STALE_eff=16** **HYGIENE_STALE_eff=30**. Flipped lag≥20 USED→STALE: 2 (`dazzle demo reset-and-load` (#1627 clos, `qa-trial` skill). lag<20 STALE→USED: 0. DRIVER CodeQL+inbox **USED@1461**. Top COGNITION digs (aggressive, densify_allowed=0 residual=0 dual_lock=0 suppress_smoke=1): **hm-convergence gallery_probes** (campaign force) / **framework-ux edge** / **story_walk** dig+ship / domain-demo re-touch — **not** dual_lock/smoke stamp/WI densify. Metered vision STALE → subscription substitutes only. budget 0. Explore **29/100**. Next self-audit@1450 ~1465; capability-sweep@1461 next~1481.
 
 > **Cycle 1460 (2026-07-29).** **example-apps journey_dogfood** dig contact_manager ST-001/004–008 maps stem+SPEC+stories; prove journey 6/6; walks 4/4 validate+dry-run; live skip; **product** contact_detail related EngagementLetter (related 0→1) + fitness repr_fields; SPEC fingerprint. residual=0 densify=0. journey+prove+walk+process_dig+validate **USED@1460**. budget 1. Explore **29/100**. Next: framework-ux / story_walk under aggressive — not dual_lock/smoke/WI densify. self-audit@1450 ~1465; capability-sweep@1441 ~1461.
 
