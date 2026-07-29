@@ -3,6 +3,9 @@
 **Goal:** Map a user job to the correct L1 Hyperpart (or host-local primitive).
 **Open when:** “I need a dropdown / picker / chips / typeahead / filter / top nav / actions menu.”
 **Do not open:** gallery HTML first; do not invent a new part before this matrix.
+**Work surfaces (kanban / timeline / queue / …):** use
+`pick-a-work-surface.md` + `work_surface_utility.toml` — this file is for
+**controls**, not region/board choice.
 
 ## Steps
 

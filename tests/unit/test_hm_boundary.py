@@ -80,6 +80,14 @@ SANCTIONED = {
     # Gen-surface freshness gate names the HM contract_surface tool path in
     # remediation text (operator docs — not runtime consumption).
     "scripts/gen_surface_check.py",
+    # Push-gate HM visual plane lists packages/hatchi-maxchi path prefixes and
+    # remediation for sibling CI (operator governance — not runtime consumption).
+    # CI red 2026-07-29 after push_gate ship.
+    "scripts/push_gate.py",
+    # Work-surface utility ontology lives under HM agent docs; scanner loads the
+    # TOML path for improve/agent pick (measurement — not runtime CSS/JS).
+    "src/dazzle/qa/work_surface_utility.py",
+    "scripts/work_surface_utility.py",
     # Cross-repo CI mirror: public Actions API for hatchi-maxchi main (governance).
     "scripts/hm_standalone_ci_status.py",
     # Design-context facade names the HM families path in *generated doc prose*

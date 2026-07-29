@@ -15,7 +15,6 @@ version: 1
 # Active campaign id, or null / omitted for pure steady_state.
 # Operator 2026-07-27: aggressive-change — ship product/framework mutations, not clean re-stamps.
 active_campaign: aggressive-change
-
 steady_state:
   # After hard preemption (CI / CodeQL / REGRESSION / inbox), prefer in order:
   selection_order:
