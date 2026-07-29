@@ -64,7 +64,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | USED |
-| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1418 | USED |
+| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1420 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1348 | STALE |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1348 | STALE |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1348 | STALE |
@@ -110,8 +110,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1417 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1417 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1420 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1420 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1420 (2026-07-29).** **self-audit** window 4f3ae822c..ee6ec64f9 — 5 CLEAN product claims (c1406 EDIT gate, c1410 kanban drill, c1415 activity drill, c1417 sparkline/profile, c1418 ontology+scanner); 1 DISCREPANCY c1418 CC/IR remediated@1419 → **AUD-006 DONE**. Seeded **HMC-065 PENDING** work-surface apply. CodeQL+inbox + work-surface utility **USED@1420**. budget 0. Explore **1/100**. Next capability-sweep@1400 due; then HMC-065 / story_walk.
 
 > **Cycle 1419 (2026-07-29).** **cimonitor** — main red tip 10ac00c0f (run 30417135375): work_surface_utility CC20/23 + IR baseline DocumentSpec.for_entity. Refactored helpers under ceiling; shrunk ir_reader_baseline. CodeQL+inbox **USED@1419**. budget 0. Explore **1/100**.
 
