@@ -1035,7 +1035,8 @@ workspace my_team "My Team":
 
   role_mix:
     source: Role
-    display: list
+    # Team desk role mix is pull-to-open (queue), not a dense catalogue table.
+    display: queue
     limit: 15
     action: role_detail
     empty: "No roles defined"

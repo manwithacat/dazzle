@@ -169,7 +169,8 @@ workspace home "Workspace Home":
     source: Workspace
     sort: name asc
     limit: 10
-    display: list
+    # Workspace picker is pull-to-enter (queue), not a dense catalogue table.
+    display: queue
     empty: "No workspaces yet"
 
   activity_strip:
