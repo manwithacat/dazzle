@@ -19,6 +19,19 @@ from conftest import goto_part, part_uri, wait_for_layout  # noqa: E402
 PALETTE = "dialog.command"
 INPUT = ".command__input"
 
+
+def _open_item_selector(item_sel: str) -> str:
+    """Append ``[open]`` to each comma-separated branch (not only the last).
+
+    ``f\"{item}[open]\"`` on multi-branch lists is wrong: only the final branch
+    gets the attribute filter, so e.g. ``details.menu, details.dz-menu[open]``
+    still matches closed ``details.menu`` (gallery probe runner shares this
+    helper under tools/gallery_probes.py).
+    """
+    parts = [p.strip() for p in item_sel.split(",") if p.strip()]
+    return ", ".join(f"{p}[open]" for p in parts)
+
+
 # Behaviour runs in BOTH Chromium and WebKit (Safari's engine). WebKit
 # catches Safari/iPadOS regressions the keyboard-only + Chromium tests
 # miss — e.g. the command palette's close button collapsing to 0×0 under
@@ -197,12 +210,13 @@ def test_menu_escape_dismiss(page) -> None:  # type: ignore[no-untyped-def]
     goto_part(page, "menu")
     scope = page.locator(".hm-preview")
     item = "details.menu, details.dz-menu"
+    open_sel = _open_item_selector(item)
     scope.locator("summary").filter(has_text="Actions").first.click()
     page.wait_for_timeout(80)
-    assert scope.locator(f"{item}[open]").count() == 1
+    assert scope.locator(open_sel).count() == 1
     page.keyboard.press("Escape")
     page.wait_for_timeout(100)
-    assert scope.locator(f"{item}[open]").count() == 0
+    assert scope.locator(open_sel).count() == 0
 
 
 def test_navigation_menu_dismiss_outside(page) -> None:  # type: ignore[no-untyped-def]
