@@ -803,11 +803,12 @@ workspace agent_console "Agent Console":
 
   # 2-hop dotted (the #1304 case): comments on tickets assigned to the
   # selected agent — Comment -> ticket -> assigned_to.
+  # Work-surface utility: dated comment stream → timeline (time_order).
   agent_ticket_comments:
     source: Comment
     filter: ticket.assigned_to = current_context
     sort: created_at desc
-    display: list
+    display: timeline
     action: comment_detail
     empty: "No comments on this agent's tickets"
 

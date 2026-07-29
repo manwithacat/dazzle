@@ -220,6 +220,27 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    Probe(
+        id="popover.dismiss_outside",
+        stem="popover",
+        page="hyperparts/popover.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking outside an open popover closes it "
+            "(details-light-dismiss spatial dismiss — free panels must not stick)"
+        ),
+        kind="details_dismiss_outside",
+        params={
+            "root": "details.popover, details.dz-popover, .popover, .dz-popover",
+            "item": "details.popover, details.dz-popover",
+            "trigger": "details.popover > summary, details.dz-popover > summary",
+            "open_label": "Details",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 

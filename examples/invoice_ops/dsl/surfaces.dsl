@@ -591,9 +591,10 @@ workspace audit_review "Audit Review":
       disputed: destructive
       paid: positive
 
+  # Work-surface utility: payment attempts are dated events → timeline.
   payment_attempts:
     source: PaymentAttempt
-    display: grid
+    display: timeline
     sort: created_at desc
     limit: 20
     empty: "No payment attempts to review"
