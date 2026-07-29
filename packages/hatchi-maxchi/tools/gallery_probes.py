@@ -323,6 +323,47 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    Probe(
+        id="command.escape_closes",
+        stem="command",
+        page="hyperparts/command.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Pressing Escape closes an open command palette "
+            "(dz-command owns Esc — type=search must not trap the first Escape)"
+        ),
+        kind="native_dialog_escape",
+        params={
+            "open_trigger": "[data-hm-open-command], [data-dz-open-command]",
+            "dialog": "dialog.command, dialog.dz-command, [data-command]",
+            "scope": ".hm-preview",
+            "open_settle_ms": 150,
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
+    Probe(
+        id="menu.escape_dismiss",
+        stem="menu",
+        page="hyperparts/menu.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Pressing Escape closes an open action menu "
+            "(details-light-dismiss keyboard path — Actions must not stick)"
+        ),
+        kind="details_escape_dismiss",
+        params={
+            "root": "details.menu, details.dz-menu, .menu, .dz-menu",
+            "item": "details.menu, details.dz-menu",
+            "trigger": "details.menu > summary, details.dz-menu > summary",
+            "open_label": "Actions",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 

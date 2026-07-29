@@ -37,6 +37,8 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "menu.dismiss_outside" in ids
     assert "dialog.escape_closes" in ids
     assert "drawer.escape_closes" in ids
+    assert "command.escape_closes" in ids
+    assert "menu.escape_dismiss" in ids
     assert "accordion.exclusive_open" in ids
     assert "tree.multi_open" in ids
     for p in PROBES:

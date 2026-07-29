@@ -24,6 +24,8 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `menubar.escape_dismiss` | `menubar` | exclusive | high | controller | Pressing Escape closes the open menubar panel (keyboard dismiss must match outside-click — File must not stick) |
 | `dialog.escape_closes` | `dialog` | exclusive | high | controller | Pressing Escape closes an open modal dialog (native <dialog> cancel — modal must not trap Escape) |
 | `drawer.escape_closes` | `drawer` | exclusive | high | controller | Pressing Escape closes an open drawer (drawer is a side <dialog> — Escape must dismiss filters/record panels) |
+| `command.escape_closes` | `command` | exclusive | high | controller | Pressing Escape closes an open command palette (dz-command owns Esc — type=search must not trap the first Escape) |
+| `menu.escape_dismiss` | `menu` | exclusive | high | controller | Pressing Escape closes an open action menu (details-light-dismiss keyboard path — Actions must not stick) |
 
 ## Loop (autonomous improve)
 
