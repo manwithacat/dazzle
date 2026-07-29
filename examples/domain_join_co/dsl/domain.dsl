@@ -92,22 +92,25 @@ surface announcement_list "Announcements":
   uses entity Announcement
   mode: list
   open: Announcement via id
+  # Context hop: workspace field opens the tenant hub (journey open-via).
+  open: Workspace via workspace
   section main:
     field title "Title"
     field workspace "Workspace"
   ux:
-    purpose: "Team board — open a row for the announcement hub"
+    purpose: "Team board — open a row for the announcement hub or its workspace"
 
 surface announcement_detail "Announcement":
   uses entity Announcement
   mode: view
   section summary "Summary":
+    layout: strip
     field title "Title"
     field workspace "Workspace"
   section body "Body":
     field body "Body"
   ux:
-    purpose: "Announcement hub — title, workspace context, and body in one place"
+    purpose: "Announcement hub — title strip, workspace context, and body in one place"
 
 surface announcement_create "Post Announcement":
   uses entity Announcement
@@ -115,6 +118,33 @@ surface announcement_create "Post Announcement":
   section main:
     field title "Title"
     field body "Body"
+
+# Workspace hub — related announcements reverse hop (journey related + strip).
+surface workspace_list "Workspaces":
+  uses entity Workspace
+  mode: list
+  open: Workspace via id
+  section main:
+    field name "Name"
+    field slug "Slug"
+    field role "Role"
+  ux:
+    purpose: "Tenant roots — open a workspace hub for join context and posts"
+
+surface workspace_detail "Workspace":
+  uses entity Workspace
+  mode: view
+  section identity "Identity":
+    layout: strip
+    field name "Name"
+    field slug "Slug"
+    field role "Role"
+  related posts "Announcements":
+    display: table
+    show: Announcement
+    columns: title
+  ux:
+    purpose: "Workspace hub — identity strip and tenant-scoped announcements"
 
 # Story-driven home: metrics + readiness strip before the announcement feed.
 # Join-request approval lives in runtime admin console (not DSL) — see
@@ -189,7 +219,8 @@ workspace home "Workspace Home":
     source: Announcement
     sort: title asc
     limit: 12
-    display: grid
+    # Pull-to-read board (queue), not catalogue grid cards.
+    display: queue
     action: announcement_detail
     empty: "No announcements yet"
 
@@ -228,7 +259,8 @@ workspace announce "Team Board":
     source: Announcement
     sort: title asc
     limit: 15
-    display: grid
+    # Member feed is a work queue of posts to open, not a card catalogue.
+    display: queue
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
 
@@ -264,7 +296,8 @@ workspace announce "Team Board":
     source: Workspace
     sort: name asc
     limit: 8
-    display: grid
+    display: queue
+    action: workspace_detail
     empty: "No workspace context"
 
 workspace publish_desk "Publish":
@@ -292,7 +325,7 @@ workspace publish_desk "Publish":
     source: Announcement
     sort: title asc
     limit: 15
-    display: grid
+    display: queue
     action: announcement_detail
     empty: "Board empty"
 

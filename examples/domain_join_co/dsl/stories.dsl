@@ -51,5 +51,18 @@ story ST-004 "Member opens an announcement hub for full context":
   given:
     - "Announcement exists and is readable under current_tenant"
   then:
-    - "Announcement hub shows summary (title, workspace) and body sections"
+    - "Announcement hub shows summary strip (title, workspace) and body"
     - "Member cannot create or update announcements"
+
+story ST-005 "Admin opens a workspace hub from the board":
+  status: accepted
+  executed_by: surface.workspace_detail
+  persona: admin
+  trigger: user_click
+  entities: [Workspace, Announcement]
+  given:
+    - "Admin is on the home or announce workspace"
+    - "At least one Workspace tenant root exists"
+  then:
+    - "Workspace hub shows identity strip (name, slug, role)"
+    - "Related announcements table lists posts scoped to that tenant"
