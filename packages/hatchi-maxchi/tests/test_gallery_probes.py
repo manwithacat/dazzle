@@ -33,6 +33,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "navigation_menu.exclusive_open" in ids
     assert "navigation_menu.dismiss_outside" in ids
     assert "popover.dismiss_outside" in ids
+    assert "menu.dismiss_outside" in ids
     assert "accordion.exclusive_open" in ids
     assert "tree.multi_open" in ids
     for p in PROBES:

@@ -573,12 +573,13 @@ workspace draft_studio "Draft Studio":
     action: asset_edit
     empty: "No draft assets"
 
+  # Work-surface utility: drafts awaiting polish are pull work — queue beats grid.
   draft_gallery:
     source: Asset
     filter: status = draft
-    sort: name asc
+    sort: updated_at asc
     limit: 20
-    display: grid
+    display: queue
     action: asset_edit
     empty: "No draft assets"
 

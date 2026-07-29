@@ -241,6 +241,27 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    Probe(
+        id="menu.dismiss_outside",
+        stem="menu",
+        page="hyperparts/menu.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking outside an open action menu closes it "
+            "(details-light-dismiss spatial dismiss — local action menus must not stick)"
+        ),
+        kind="details_dismiss_outside",
+        params={
+            "root": "details.menu, details.dz-menu, .menu, .dz-menu",
+            "item": "details.menu, details.dz-menu",
+            "trigger": "details.menu > summary, details.dz-menu > summary",
+            "open_label": "Actions",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 

@@ -20,6 +20,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `menubar.dismiss_outside` | `menubar` | exclusive | high | controller | Clicking outside the menubar closes the open panel (app chrome must not leave File/Edit stuck open) |
 | `navigation_menu.dismiss_outside` | `navigation-menu` | exclusive | high | controller | Clicking outside the navigation menu closes the open panel (mega panels must not stick after leaving the nav) |
 | `popover.dismiss_outside` | `popover` | exclusive | high | controller | Clicking outside an open popover closes it (details-light-dismiss spatial dismiss — free panels must not stick) |
+| `menu.dismiss_outside` | `menu` | exclusive | high | controller | Clicking outside an open action menu closes it (details-light-dismiss spatial dismiss — local action menus must not stick) |
 
 ## Loop (autonomous improve)
 
