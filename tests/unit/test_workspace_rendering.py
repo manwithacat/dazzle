@@ -1038,7 +1038,7 @@ class TestViewportLazyLoading:
             ("command_center", 3),
             ("monitor_wall", 6),
             ("scanner_table", 2),
-            ("dual_pane_flow", 4),
+            ("dual_pane_flow", 3),
         ],
         ids=[
             "test_fold_count_default",

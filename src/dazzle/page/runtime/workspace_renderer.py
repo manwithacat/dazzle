@@ -357,7 +357,13 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
 STAGE_FOLD_COUNTS: dict[str, int] = {
     "focus_metric": 3,
-    "dual_pane_flow": 4,
+    # dual_pane_flow: agent-style dashboards often stack kanban + queues +
+    # funnels + comment timelines (agent_dashboard ≈ 8 regions). Four
+    # concurrent eager region GETs + row hx-preload still storms nested
+    # Playwright under trial scroll (sibling of command_center thrash@1424).
+    # Keep three above-the-fold (metrics/WIP board + primary queue); rest
+    # intersect-once.
+    "dual_pane_flow": 3,
     "scanner_table": 2,
     "monitor_wall": 6,
     # command_center: keep eager fold small. Six concurrent region
