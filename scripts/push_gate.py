@@ -104,21 +104,27 @@ def _diff_base() -> str:
 def tree_fingerprint() -> str:
     """Fingerprint of content-to-ship vs main — stable across commit of the same tree.
 
-    Composition (committed-ahead + uncommitted) so hashing the same patch as
-    dirty-before-commit vs clean-after-commit yields the same digest:
+    Uses a single working-tree view against ``origin/main`` (or HEAD fallback):
 
-    * ``git diff base...HEAD`` — commits not on origin/main
-    * ``git diff HEAD`` / ``--cached`` — unstaged / staged dirt
-    * untracked names — new files not yet added
+    * ``git diff <base>`` — everything from base to the **working tree** (local
+      commits already in HEAD *and* uncommitted tracked edits, as one patch)
+    * untracked path names — new files not yet added
 
-    Any edit after the gates (extra hunks, new untracked) changes the hash.
+    So dirty-before-commit and clean-after-commit of the same patch hash equal.
+    Any extra edit or new untracked path after the gates changes the hash.
     """
     base = _diff_base()
-    committed = _run(["git", "diff", f"{base}...HEAD"]).stdout
-    unstaged = _run(["git", "diff", "HEAD"]).stdout
-    staged = _run(["git", "diff", "--cached", "HEAD"]).stdout
+    # Working tree vs base (not base...HEAD alone — that breaks across commit).
+    wt = _run(["git", "diff", base]).stdout
+    # Staged-but-not-in-WT is rare; include index vs WT empty cases via cached
+    # only when index differs from HEAD and from WT (partial stage).
+    index_vs_head = _run(["git", "diff", "--cached", "HEAD"]).stdout
+    wt_vs_head = _run(["git", "diff", "HEAD"]).stdout
+    # If index matches WT, index_vs_head == wt_vs_head and we must not double
+    # count — only add index delta when it is not already in wt_vs_head.
+    extra_index = "" if index_vs_head == wt_vs_head else index_vs_head
     untracked = _run(["git", "ls-files", "--others", "--exclude-standard"]).stdout
-    raw = f"{base}\n{committed}\n{unstaged}\n{staged}\n{untracked}".encode()
+    raw = f"{base}\n{wt}\n{extra_index}\n{untracked}".encode()
     return hashlib.sha256(raw).hexdigest()
 
 
