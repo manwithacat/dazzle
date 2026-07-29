@@ -1116,12 +1116,13 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: issue_report_edit
     empty: "No open reports to triage"
 
+  # Work-surface utility: critical open work is a pull queue, not inventory grid.
   critical_issues:
     source: IssueReport
     filter: severity = critical and status != closed
     sort: reported_at desc
     limit: 10
-    display: grid
+    display: queue
     action: issue_report_detail
     empty: "No critical issues!"
 
@@ -1164,11 +1165,12 @@ workspace engineering_dashboard "Engineering Dashboard":
       open: warning
       releases_live: positive
 
+  # Work-surface utility: release history is chronological — timeline beats grid.
   firmware_releases:
     source: FirmwareRelease
     sort: release_date desc
     limit: 10
-    display: grid
+    display: timeline
     action: firmware_release_detail
     empty: "No firmware releases"
 
@@ -1441,12 +1443,13 @@ workspace issue_triage "Issue Triage":
     action: issue_report_edit
     empty: "No open reports to triage"
 
+  # Work-surface utility: critical open work is a pull queue, not inventory grid.
   critical_issues:
     source: IssueReport
     filter: severity = critical and status != closed
     sort: reported_at desc
     limit: 10
-    display: grid
+    display: queue
     action: issue_report_detail
     empty: "No critical issues!"
 
@@ -1482,11 +1485,12 @@ workspace firmware_pipeline "Firmware Pipeline":
       live: positive
       open_tasks: accent
 
+  # Work-surface utility: release history is chronological — timeline beats grid.
   firmware_releases:
     source: FirmwareRelease
     sort: release_date desc
     limit: 15
-    display: grid
+    display: timeline
     action: firmware_release_detail
     empty: "No firmware releases"
 

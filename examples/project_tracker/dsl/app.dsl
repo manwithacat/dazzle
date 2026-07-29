@@ -515,11 +515,13 @@ workspace files_desk "Files":
     tones:
       files: accent
 
+  # Work-surface utility: dated attachment stream → timeline (time_order).
   recent_files:
     source: Attachment
     sort: created_at desc
     limit: 25
-    display: grid
+    display: timeline
+    action: attachment_view
     empty: "No attachments yet"
 
   open_tasks:
