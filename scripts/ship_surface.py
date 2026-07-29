@@ -57,6 +57,9 @@ SHIP_TESTS: tuple[str, ...] = (
     "tests/unit/test_mcp_agent_cognition_1629.py::test_mcp_status_changelog_compact_by_default",
     # HM CONTRACT_SURFACE.md drift (CI red 2026-07-28 after KanbanCard.drill_url)
     "tests/unit/test_contract_surface_tool.py::test_committed_contract_surface_matches_generator",
+    # HM dual-lock sole-emitter (CI red 2026-07-29 after tree #1303 drill in
+    # _render_charts.py — contract attrs must assemble only under fragment/ingest)
+    "tests/unit/test_hm_contract_dom_conformance.py::test_typed_path_is_sole_emitter",
 )
 
 REMEDIATION = """

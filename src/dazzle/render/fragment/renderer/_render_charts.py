@@ -61,6 +61,7 @@ from dazzle.render.fragment.ingest import (
     render_time_series,
     render_timeline_event,
     render_tree,
+    render_tree_node_label,
 )
 from dazzle.render.fragment.primitives import (
     BarChart,
@@ -434,20 +435,10 @@ class _RenderChartsMixin:
         ``.dz-tree-node:has(> .dz-tree-children)``, not content SVG.
         Leaves are ``.dz-tree-leaf`` (no disclosure chrome / no open).
 
-        #1303: optional ``drill_url`` wraps the label in a hub ``<a>``.
-        ``stopPropagation`` keeps branch expand on summary chrome while
-        label navigation follows the link (kanban-title drill parity).
+        #1303: optional ``drill_url`` wraps the label via ingest
+        ``render_tree_node_label`` (sole-emitter for ``data-dz-tree-drill``).
         """
-        label = ctx.escape(node.label)
-        drill = getattr(node, "drill_url", "") or ""
-        if drill:
-            href = ctx.escape_attr(str(drill))
-            label_html = (
-                f'<a class="dz-tree-label" href="{href}" data-dz-tree-drill '
-                f'onclick="event.stopPropagation()">{label}</a>'
-            )
-        else:
-            label_html = f'<span class="dz-tree-label">{label}</span>'
+        label_html = render_tree_node_label(node.label, getattr(node, "drill_url", "") or "")
         if not node.children:
             # Leaf: content only — no details, no chevron, no expand hint.
             return f'<div class="dz-tree-leaf">{label_html}</div>'

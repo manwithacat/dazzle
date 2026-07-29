@@ -1108,6 +1108,24 @@ def render_tree(t: Tree) -> str:
     return f'<div class="dz-tree" {root_attrs}>{t.body_html}</div>'
 
 
+def render_tree_node_label(label: str, drill_url: str = "") -> str:
+    """Tree node label HTML (#1303 hub drill) — sole-emitter for ``data-dz-tree-*``.
+
+    Host recursive emit (`_emit_tree_node`) builds structure; contract attrs
+    for the label link live here so ``test_typed_path_is_sole_emitter`` holds.
+    ``stopPropagation`` keeps branch expand on summary chrome while the link
+    navigates (kanban-title / queue-row drill parity).
+    """
+    label_esc = _html.escape(label)
+    if not drill_url:
+        return f'<span class="dz-tree-label">{label_esc}</span>'
+    href = _html.escape(str(drill_url), quote=True)
+    return (
+        f'<a class="dz-tree-label" href="{href}" data-dz-tree-drill '
+        f'onclick="event.stopPropagation()">{label_esc}</a>'
+    )
+
+
 def render_calendar(c: Calendar) -> str:
     """Model → calendar region (matches HM contracts/calendar.py)."""
     root_attrs = calendar_root_attrs(c)
