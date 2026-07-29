@@ -1039,6 +1039,7 @@ class TestViewportLazyLoading:
             ("monitor_wall", 4),
             ("scanner_table", 2),
             ("dual_pane_flow", 3),
+            ("pair_strip", 3),
         ],
         ids=[
             "test_fold_count_default",
@@ -1046,6 +1047,7 @@ class TestViewportLazyLoading:
             "test_fold_count_monitor_wall",
             "test_fold_count_scanner_table",
             "test_fold_count_dual_pane",
+            "test_fold_count_pair_strip",
         ],
     )
     def test_fold_count(self, stage, expected) -> None:

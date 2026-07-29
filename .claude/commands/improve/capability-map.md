@@ -81,14 +81,14 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1445 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1453 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1230 | STALE |
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
-| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1445 | USED |
+| `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1453 | USED |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |
 | `dual_lock_queue` / `dual_lock_expand` | HYGIENE | script + strategy | **hm-convergence** | 1341 | STALE |
@@ -124,6 +124,8 @@ apply map patches with `{"apply":true}`.
 
 > **Cycle 1441 (2026-07-29).** **capability-sweep** (cadence ≥20 since 1421) — inventory reconcile vs tip. **UNOWNED=0** **COGNITION_STALE_eff=12** **HYGIENE_STALE_eff=27**. Flipped lag≥20 USED→STALE: 4 (demo quality, product_quality, hyperpart-opportunities, rbac). lag<20 STALE→USED: 0. DRIVER CodeQL+inbox **USED@1441**. Top COGNITION digs (aggressive, densify_allowed=0 residual=0 dual_lock=0 suppress_smoke=1 panel_streak=1): **framework-ux edge** / **journey_dogfood** dig+ship / domain-demo re-touch — **not** dual_lock/smoke stamp/WI densify; avoid re-panel ops timeout thrash without shorter scenario. Metered vision STALE → subscription substitutes only. budget 0. Explore **16/100**. Next self-audit@1435 ~1450; capability-sweep@1441 next~1461. Tip CI in_progress 30450503281 — no product push.
 
+> **Cycle 1453 (2026-07-29).** **framework-ux edge** pair_strip STAGE_FOLD 4→3 thrash mitigation + TestViewportLazyLoading pin. densify=0 dual_lock=0. fitness/ux path **USED@1453**. budget 1. Explore **25/100**. Pushed 1451+1452. Next story_walk/gallery under aggressive — not dual_lock/smoke/WI densify. self-audit@1450 ~1465; capability-sweep@1441 ~1461.
+>
 > **Cycle 1452 (2026-07-29).** **cimonitor** — tip e96ad1280 red only py3.12 setup-uv timeout (manifest fetch); py3.13/3.14 + lint/type/security/postgres/HM green. `gh run rerun --failed` 30467553309. Local 1451 gallery probes hold. CodeQL+inbox **USED@1452**. budget 0. Explore **24/100**.
 >
 > **Cycle 1451 (2026-07-29).** **hm-convergence gallery_probes** (campaign force) discover uncovered=0; prior 11 PASS; **ship** command.escape_closes + menu.escape_dismiss; catalog 13/13 PASS; unit pins. densify=0 dual_lock=0. gallery_probes **USED@1451**. budget 1. Explore **24/100**. Next story_walk/framework-ux under aggressive — not dual_lock/smoke/WI densify. self-audit@1450 next~1465; capability-sweep@1441 ~1461.

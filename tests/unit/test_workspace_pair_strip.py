@@ -45,7 +45,7 @@ class TestPairStripStageRegistered:
 
         assert "pair_strip" in STAGE_FOLD_COUNTS
         # Three pairs = six regions eagerly loaded above the fold
-        assert STAGE_FOLD_COUNTS["pair_strip"] == 4
+        assert STAGE_FOLD_COUNTS["pair_strip"] == 3
 
 
 class TestPairStripDefaultColSpan:
