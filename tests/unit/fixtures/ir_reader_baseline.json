@@ -98,7 +98,6 @@
   "llm.ArtifactRefSpec.content_hash",
   "llm.ArtifactRefSpec.storage_uri",
   "messaging.ChannelSpec.receive_operations",
-  "messaging.DocumentSpec.for_entity",
   "messaging.MappingSpec.is_template",
   "messaging.ProviderConfigSpec.max_per_minute",
   "messaging.ReceiveActionSpec.upsert_field",

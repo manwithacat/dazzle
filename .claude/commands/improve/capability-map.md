@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
+> **Cycle 1419 (2026-07-29).** **cimonitor** — main red tip 10ac00c0f (run 30417135375): work_surface_utility CC20/23 + IR baseline DocumentSpec.for_entity. Refactored helpers under ceiling; shrunk ir_reader_baseline. CodeQL+inbox **USED@1419**. budget 0. Explore **1/100**.
+
 > **Cycle 1417 (2026-07-28).** **framework-ux edge** sparkline host-width fill (preserveAspectRatio=none + column stack) + profile-card stats strip auto-fit KPI chips. Stamped rbac + CodeQL/inbox **USED@1417**. budget 1. Explore **60/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.
 
 > **Cycle 1416 (2026-07-28).** **framework-ux edge** day_timeline #1303 hub drill — `_build_day_timeline_slots` honors `detail_url_template` (was hardwired empty); host DAY_TIMELINE gates EDIT via `_set_detail_url_template`. Stamped rbac + CodeQL/inbox **USED@1416**. budget 1. Explore **59/100**. Next self-audit ~1419; capability-sweep@1400 next~1420.

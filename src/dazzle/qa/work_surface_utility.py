@@ -38,6 +38,46 @@ _DISPLAY_ALIASES: dict[str, str] = {
     "pdf_viewer": "list",  # document surface — not a work board; treat as list residual-free
 }
 
+# Charts / chrome / detail embeds are not work boards — skip in scan.
+_CHROME_DISPLAYS: frozenset[str] = frozenset(
+    {
+        "metrics",
+        "summary",
+        "bar_chart",
+        "line_chart",
+        "area_chart",
+        "sparkline",
+        "heatmap",
+        "histogram",
+        "box_plot",
+        "funnel",
+        "funnel_chart",
+        "pivot",
+        "pivot_table",
+        "comparison",
+        "cohort_strip",
+        "entity_card",
+        "profile_card",
+        "map",
+        "search_box",
+        "pdf_viewer",
+        "diagram",
+        "tree",
+        "tabbed_list",
+        "insight_summary",
+        "radar",
+        "bullet",
+        "bar_track",
+        "action_grid",
+        "pipeline_steps",
+        "confirm_action_panel",
+        "progress",
+        "detail",  # embedded detail region, not a board
+    }
+)
+
+_MODE_SKIP = frozenset({"view", "detail", "create", "edit"})
+
 
 @dataclass(frozen=True)
 class WorkSurface:
@@ -81,28 +121,39 @@ def load_ontology(path: Path | None = None) -> dict[str, Any]:
     return data
 
 
+def _str_tuple(val: Any) -> tuple[str, ...]:
+    """Coerce a TOML list field to a tuple of strings."""
+    if not val:
+        return ()
+    return tuple(str(x) for x in val)
+
+
+def _row_to_surface(row: dict[str, Any]) -> WorkSurface | None:
+    sid = str(row.get("id") or "").strip()
+    if not sid:
+        return None
+    return WorkSurface(
+        id=sid,
+        layer=str(row.get("layer") or "region"),
+        job=str(row.get("job") or ""),
+        use_when=_str_tuple(row.get("use_when")),
+        refuse_when=_str_tuple(row.get("refuse_when")),
+        prefers_over=_str_tuple(row.get("prefers_over")),
+        utility_axes=_str_tuple(row.get("utility_axes")),
+        dsl_hints=_str_tuple(row.get("dsl_hints")),
+        measure_proxy=str(row.get("measure_proxy") or ""),
+    )
+
+
 def surfaces_from_ontology(data: dict[str, Any] | None = None) -> list[WorkSurface]:
     raw = data if data is not None else load_ontology()
     out: list[WorkSurface] = []
     for row in list(raw.get("surface") or []):
         if not isinstance(row, dict):
             continue
-        sid = str(row.get("id") or "").strip()
-        if not sid:
-            continue
-        out.append(
-            WorkSurface(
-                id=sid,
-                layer=str(row.get("layer") or "region"),
-                job=str(row.get("job") or ""),
-                use_when=tuple(str(x) for x in (row.get("use_when") or [])),
-                refuse_when=tuple(str(x) for x in (row.get("refuse_when") or [])),
-                prefers_over=tuple(str(x) for x in (row.get("prefers_over") or [])),
-                utility_axes=tuple(str(x) for x in (row.get("utility_axes") or [])),
-                dsl_hints=tuple(str(x) for x in (row.get("dsl_hints") or [])),
-                measure_proxy=str(row.get("measure_proxy") or ""),
-            )
-        )
+        surface = _row_to_surface(row)
+        if surface is not None:
+            out.append(surface)
     return out
 
 
@@ -122,24 +173,25 @@ def _surface_mode(surface: Any) -> str:
     return str(getattr(mode, "value", mode) or "").strip().lower()
 
 
-def _surface_display(surface: Any) -> str:
-    """Explicit board/stream display token only — not mode (view/list)."""
-    for attr in ("display", "region_kind", "list_display"):
-        val = getattr(surface, attr, None)
+def _first_display_token(obj: Any, attrs: tuple[str, ...]) -> str:
+    for attr in attrs:
+        val = getattr(obj, attr, None)
         if val is None:
             continue
         text = str(getattr(val, "value", val) or "").strip()
-        if text and text.lower() not in ("view", "detail", "create", "edit"):
+        if text and text.lower() not in _MODE_SKIP:
             return text
+    return ""
+
+
+def _surface_display(surface: Any) -> str:
+    """Explicit board/stream display token only — not mode (view/list)."""
+    text = _first_display_token(surface, ("display", "region_kind", "list_display"))
+    if text:
+        return text
     ux = getattr(surface, "ux", None)
     if ux is not None:
-        for attr in ("display", "region"):
-            val = getattr(ux, attr, None)
-            if val is None:
-                continue
-            text = str(getattr(val, "value", val) or "").strip()
-            if text and text.lower() not in ("view", "detail", "create", "edit"):
-                return text
+        return _first_display_token(ux, ("display", "region"))
     return ""
 
 
@@ -148,6 +200,22 @@ def _region_display(region: Any) -> str:
     if disp is None:
         return ""
     return str(getattr(disp, "value", disp) or "").strip().lower()
+
+
+def _entity_name(obj: Any) -> str:
+    """Best-effort entity name from region/surface IR shapes.
+
+    String-literal getattr keys are intentional — IR reader parity scans them.
+    """
+    for key in ("entity", "source"):
+        val = getattr(obj, key, None)
+        if val is not None and str(val).strip():
+            return str(val).strip()
+    # DocumentSpec / some regions use for_entity
+    val = getattr(obj, "for_entity", None)
+    if val is not None and str(val).strip():
+        return str(val).strip()
+    return ""
 
 
 def _append_finding(
@@ -206,66 +274,21 @@ def _append_finding(
     )
 
 
-def scan_project(project: Path, *, app_name: str | None = None) -> list[FitFinding]:
-    """Scan workspace regions (+ list surfaces) for work-surface ontology fit.
-
-    Prefer **workspace.region.display** (where kanban/timeline/queue live).
-    List surfaces without a workspace region still count as ``list``.
-    """
-    appspec = load_project_appspec(project)
-    app = app_name or project.name
-    known = surface_by_id()
-    findings: list[FitFinding] = []
-    seen_keys: set[str] = set()
-
+def _scan_workspace_regions(
+    appspec: Any,
+    *,
+    app: str,
+    known: dict[str, WorkSurface],
+    findings: list[FitFinding],
+    seen_keys: set[str],
+) -> None:
     for ws in list(getattr(appspec, "workspaces", None) or []):
         ws_name = str(getattr(ws, "name", "") or "")
         for region in list(getattr(ws, "regions", None) or []):
             rname = str(getattr(region, "name", "") or "")
-            entity = str(
-                getattr(region, "entity", None)
-                or getattr(region, "for_entity", None)
-                or getattr(region, "source", None)
-                or ""
-            )
-            display_raw = _region_display(region)
-            if not display_raw:
-                display_raw = "list"
-            # Charts / chrome / detail embeds are not work boards — skip.
-            if display_raw in (
-                "metrics",
-                "summary",
-                "bar_chart",
-                "line_chart",
-                "area_chart",
-                "sparkline",
-                "heatmap",
-                "histogram",
-                "box_plot",
-                "funnel",
-                "funnel_chart",
-                "pivot",
-                "pivot_table",
-                "comparison",
-                "cohort_strip",
-                "entity_card",
-                "profile_card",
-                "map",
-                "search_box",
-                "pdf_viewer",
-                "diagram",
-                "tree",
-                "tabbed_list",
-                "insight_summary",
-                "radar",
-                "bullet",
-                "bar_track",
-                "action_grid",
-                "pipeline_steps",
-                "confirm_action_panel",
-                "progress",
-                "detail",  # embedded detail region, not a board
-            ):
+            entity = _entity_name(region)
+            display_raw = _region_display(region) or "list"
+            if display_raw in _CHROME_DISPLAYS:
                 continue
             key = f"ws:{ws_name}/{rname}:{display_raw}"
             if key in seen_keys:
@@ -280,13 +303,21 @@ def scan_project(project: Path, *, app_name: str | None = None) -> list[FitFindi
                 known=known,
             )
 
-    # List-mode surfaces not already covered as regions (admin lists, etc.)
+
+def _scan_list_surfaces(
+    appspec: Any,
+    *,
+    app: str,
+    known: dict[str, WorkSurface],
+    findings: list[FitFinding],
+    seen_keys: set[str],
+) -> None:
+    """List-mode surfaces not already covered as regions (admin lists, etc.)."""
     for surface in list(getattr(appspec, "surfaces", None) or []):
-        mode = _surface_mode(surface)
-        if mode not in ("list",):
+        if _surface_mode(surface) != "list":
             continue
         name = str(getattr(surface, "name", "") or "")
-        entity = str(getattr(surface, "entity", "") or getattr(surface, "for_entity", "") or "")
+        entity = _entity_name(surface)
         key = f"surf:{name}"
         if any(name in f.surface_name for f in findings):
             continue
@@ -301,6 +332,21 @@ def scan_project(project: Path, *, app_name: str | None = None) -> list[FitFindi
             display_raw="list",
             known=known,
         )
+
+
+def scan_project(project: Path, *, app_name: str | None = None) -> list[FitFinding]:
+    """Scan workspace regions (+ list surfaces) for work-surface ontology fit.
+
+    Prefer **workspace.region.display** (where kanban/timeline/queue live).
+    List surfaces without a workspace region still count as ``list``.
+    """
+    appspec = load_project_appspec(project)
+    app = app_name or project.name
+    known = surface_by_id()
+    findings: list[FitFinding] = []
+    seen_keys: set[str] = set()
+    _scan_workspace_regions(appspec, app=app, known=known, findings=findings, seen_keys=seen_keys)
+    _scan_list_surfaces(appspec, app=app, known=known, findings=findings, seen_keys=seen_keys)
     return findings
 
 
