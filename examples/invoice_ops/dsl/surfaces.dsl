@@ -445,7 +445,7 @@ workspace my_invoices "My Invoices":
     source: Supplier
     sort: name asc
     limit: 10
-    display: grid
+    display: queue
     action: supplier_detail
     empty: "No suppliers yet"
 
@@ -512,7 +512,7 @@ workspace approval_desk "Approval Desk":
     source: Supplier
     sort: name asc
     limit: 12
-    display: grid
+    display: queue
     action: supplier_detail
     empty: "No suppliers yet"
 
@@ -652,7 +652,7 @@ workspace suppliers_desk "Suppliers":
 
   roster:
     source: Supplier
-    display: grid
+    display: queue
     sort: name asc
     limit: 25
     action: supplier_detail
@@ -706,7 +706,7 @@ workspace team_desk "Team":
 
   people:
     source: User
-    display: grid
+    display: queue
     sort: name asc
     limit: 25
     action: user_detail

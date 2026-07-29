@@ -769,7 +769,7 @@ workspace my_tickets "My Tickets":
     filter: created_by = current_user and status != closed
     sort: updated_at desc
     limit: 12
-    display: grid
+    display: queue
     action: ticket_detail
     empty: "You have no open tickets"
 
@@ -864,7 +864,7 @@ workspace agent_console "Agent Console":
     filter: assigned_to = current_context and status != closed
     sort: priority desc
     limit: 12
-    display: grid
+    display: queue
     action: ticket_detail
     empty: "No open tickets for this agent"
 
