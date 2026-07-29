@@ -7850,9 +7850,14 @@ tr.dz-master-detail__item[aria-current="true"] > td {
 /* --- hatchi-maxchi/components/hover-card.css --- */
 /* HYPERPART: hover-card */
 /*
- * Rich preview on hover/focus — CSS-only progressive enhancement.
- * Trigger + floating panel; panel appears on :hover / :focus-within.
- * Touch users get the panel via focus (tab) — hover is a desktop affordance.
+ * Rich preview on hover/focus/click — progressive enhancement.
+ * Trigger + floating panel opens on:
+ *   :hover / :focus-within  — fine pointers + keyboard
+ *   [data-dz-open] / [data-open] / .is-open — controller (touch / click)
+ *
+ * iPadOS Safari does not keep :hover or button :focus after tap; relying on
+ * focus-within alone made the gallery demo appear dead. controllers/dz-hover-card.js
+ * toggles data-open on click/tap.
  *
  * Anatomy (canonical):
  *   .dz-hover-card
@@ -7863,7 +7868,7 @@ tr.dz-master-detail__item[aria-current="true"] > td {
  * visual gap so the cursor can move trigger → panel without leaving
  * :hover on the root (classic "death zone" bug when top > 100%).
  *
- * shadcn parity (HMC-035). Distinct from popover (explicit open).
+ * shadcn parity (HMC-035). Distinct from popover (details exclusive open).
  */
 
 .dz-hover-card {
@@ -7928,10 +7933,17 @@ tr.dz-master-detail__item[aria-current="true"] > td {
   height: calc(var(--space-xs) + 0.25rem);
 }
 
+/* Open: hover + focus-within (desktop/keyboard) OR explicit open (touch click) */
 .dz-hover-card:hover .dz-hover-card__content,
 .dz-hover-card:hover .dz-hover-card__panel,
 .dz-hover-card:focus-within .dz-hover-card__content,
-.dz-hover-card:focus-within .dz-hover-card__panel {
+.dz-hover-card:focus-within .dz-hover-card__panel,
+.dz-hover-card[data-dz-open] .dz-hover-card__content,
+.dz-hover-card[data-dz-open] .dz-hover-card__panel,
+.dz-hover-card[data-open] .dz-hover-card__content,
+.dz-hover-card[data-open] .dz-hover-card__panel,
+.dz-hover-card.is-open .dz-hover-card__content,
+.dz-hover-card.is-open .dz-hover-card__panel {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -7957,18 +7969,30 @@ tr.dz-master-detail__item[aria-current="true"] > td {
   }
 }
 
-/* Prefer focus on coarse pointers — hover-only is a desktop affordance */
+/*
+ * Coarse pointers: do not rely on sticky :hover (iOS first-tap quirks).
+ * Keep explicit open + focus-within; ignore bare :hover so a leftover sticky
+ * hover state does not fight click-to-close.
+ */
 @media (hover: none) {
   .dz-hover-card:hover .dz-hover-card__content,
   .dz-hover-card:hover .dz-hover-card__panel {
     opacity: 0;
     visibility: hidden;
+    transform: translateY(-0.25rem);
     pointer-events: none;
   }
   .dz-hover-card:focus-within .dz-hover-card__content,
-  .dz-hover-card:focus-within .dz-hover-card__panel {
+  .dz-hover-card:focus-within .dz-hover-card__panel,
+  .dz-hover-card[data-dz-open] .dz-hover-card__content,
+  .dz-hover-card[data-dz-open] .dz-hover-card__panel,
+  .dz-hover-card[data-open] .dz-hover-card__content,
+  .dz-hover-card[data-open] .dz-hover-card__panel,
+  .dz-hover-card.is-open .dz-hover-card__content,
+  .dz-hover-card.is-open .dz-hover-card__panel {
     opacity: 1;
     visibility: visible;
+    transform: translateY(0);
     pointer-events: auto;
   }
 }
