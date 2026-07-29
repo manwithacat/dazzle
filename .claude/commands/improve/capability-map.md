@@ -48,26 +48,26 @@ apply map patches with `{"apply":true}`.
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
 | `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1385 | STALE |
-| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1403 | USED |
-| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1403 | USED |
+| MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1403 | STALE |
+| `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1403 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1430 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
-| `dazzle qa trial` | COGNITION | CLI | trials | 1430 | USED |
+| `dazzle qa trial` | COGNITION | CLI | trials | 1440 | USED |
 | `qa-trial` skill | COGNITION | skill | trials | 1424 | USED |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1431 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1431 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1430 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1440 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1361 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
-| `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | USED |
-| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1437 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1429 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1429 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1430 | USED |
+| `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
+| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1440 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1439 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1439 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1440 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
@@ -98,7 +98,7 @@ apply map patches with `{"apply":true}`.
 | `/fuzz` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/smells` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
 | `/xproject` | HYGIENE | standalone loop | own entrypoint | 1232 | STALE |
-| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1417 | USED |
+| `dazzle rbac` | HYGIENE | CLI | framework-ux | 1417 | STALE |
 | `dazzle coverage` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle fragment-audit` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle process` | HYGIENE | CLI + MCP | example-apps | 1302 | STALE |
@@ -110,8 +110,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1234 | STALE |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1435 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1435 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1441 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1441 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,9 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1441 (2026-07-29).** **capability-sweep** (cadence ≥20 since 1421) — inventory reconcile vs tip. **UNOWNED=0** **COGNITION_STALE_eff=12** **HYGIENE_STALE_eff=27**. Flipped lag≥20 USED→STALE: 4 (demo quality, product_quality, hyperpart-opportunities, rbac). lag<20 STALE→USED: 0. DRIVER CodeQL+inbox **USED@1441**. Top COGNITION digs (aggressive, densify_allowed=0 residual=0 dual_lock=0 suppress_smoke=1 panel_streak=1): **framework-ux edge** / **journey_dogfood** dig+ship / domain-demo re-touch — **not** dual_lock/smoke stamp/WI densify; avoid re-panel ops timeout thrash without shorter scenario. Metered vision STALE → subscription substitutes only. budget 0. Explore **16/100**. Next self-audit@1435 ~1450; capability-sweep@1441 next~1461. Tip CI in_progress 30450503281 — no product push.
+
 
 > **Cycle 1437 (2026-07-29).** **hm-convergence hyperpart_coherence OBSERVE** queue=0 → work_surface_apply + admin framework modes. **Ship framework:** `_platform_admin` deploys/logs/events LIST→**timeline**, feedback LIST→**queue** (+ golden snapshot). **Ship product:** support_tickets all_cases→timeline agent_tickets→queue; llm classifications→timeline priority_strip→queue; hr recent_starters→queue salary/team_employment/reporting_lines→timeline; domain_join board_preview→timeline. Fleet residual=0 (queue+7 timeline+18 list−25). hyperpart+work-surface+validate **USED@1437**. budget 1. Explore **14/100**. **pushed: no** (tip CI in_progress 30446761304). Next self-audit ~1450; capability-sweep@1421 next~1441.
 
