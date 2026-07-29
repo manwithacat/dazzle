@@ -156,11 +156,12 @@ workspace home "Workspace Home":
     action: announcement_detail
     empty: "No announcements yet — post one to keep the team informed"
 
+  # Work-surface utility: board feed is awareness stream — timeline beats inventory list.
   board_preview:
     source: Announcement
     sort: title asc
     limit: 10
-    display: list
+    display: timeline
     action: announcement_detail
     empty: "Board is empty"
 

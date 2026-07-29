@@ -481,10 +481,12 @@ _REGION_DEFS: list[tuple[str, str | None, DisplayMode, str | None, bool, bool, b
     ("health", "SystemHealth", DisplayMode.GRID, None, True, False, False),
     ("metrics", "SystemMetric", DisplayMode.BAR_CHART, "standard", False, False, False),
     ("processes", "ProcessRun", DisplayMode.LIST, "standard", False, False, False),
-    ("deploys", "DeployHistory", DisplayMode.LIST, None, True, False, False),
-    ("feedback", "FeedbackReport", DisplayMode.LIST, None, True, True, False),
-    ("logs", "LogEntry", DisplayMode.LIST, "standard", False, False, False),
-    ("events", "EventTrace", DisplayMode.LIST, "standard", False, False, False),
+    # Work-surface utility: deploy/event/log streams are chronological.
+    ("deploys", "DeployHistory", DisplayMode.TIMELINE, None, True, False, False),
+    # Feedback is a triage pull-queue (act on next report), not a table scan.
+    ("feedback", "FeedbackReport", DisplayMode.QUEUE, None, True, True, False),
+    ("logs", "LogEntry", DisplayMode.TIMELINE, "standard", False, False, False),
+    ("events", "EventTrace", DisplayMode.TIMELINE, "standard", False, False, False),
     ("app_map", None, DisplayMode.DIAGRAM, None, False, False, False),
 ]
 

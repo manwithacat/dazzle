@@ -303,18 +303,20 @@ workspace support_dashboard "Support Dashboard":
     action: ticket_detail
     empty: "Nothing in progress"
 
+  # Work-surface utility: dated AI classification stream → timeline.
   classifications:
     source: TicketClassification
     sort: classified_at desc
     limit: 20
-    display: list
+    display: timeline
     empty: "No classifications yet"
 
+  # Work-surface utility: priority assessments are a ranked pull queue.
   priority_strip:
     source: PriorityAssessment
     sort: priority desc
     limit: 12
-    display: list
+    display: queue
     empty: "No priority assessments yet"
 
   triage_readiness:

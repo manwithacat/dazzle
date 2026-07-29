@@ -711,11 +711,12 @@ workspace my_tickets "My Tickets":
     action: ticket_detail
     empty: "Nothing currently in progress"
 
+  # Work-surface utility: full case history is chronological — timeline beats inventory list.
   all_cases:
     source: Ticket
     filter: created_by = current_user
     sort: created_at desc
-    display: list
+    display: timeline
     action: ticket_detail
     empty: "You have not submitted any tickets yet"
 
@@ -793,11 +794,12 @@ workspace agent_console "Agent Console":
     display_field: name
 
   # 1-hop: tickets directly assigned to the selected agent.
+  # Work-surface utility: assigned open work is a pull queue ranked by priority.
   agent_tickets:
     source: Ticket
     filter: assigned_to = current_context
     sort: priority desc
-    display: list
+    display: queue
     action: ticket_detail
     empty: "No tickets assigned to this agent"
 

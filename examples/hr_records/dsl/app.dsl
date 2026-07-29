@@ -675,9 +675,10 @@ workspace staff_directory "Staff Directory":
     # need a `filter:` block here — but the example exists to demonstrate
     # the gap, so the region is unfiltered and the list shows everyone.
 
+  # Work-surface utility: recent joiners are an onboarding pull queue, not inventory.
   recent_starters:
     source: Person
-    display: list
+    display: queue
     limit: 15
     action: person_detail
     empty: "No recent joiners listed"
@@ -892,9 +893,10 @@ workspace compensation_review "Compensation Review":
     limit: 25
     empty: "No active salaries"
 
+  # Work-surface utility: salary bands read as dated events → timeline (queue is salary_queue).
   salary_list:
     source: Salary
-    display: list
+    display: timeline
     limit: 20
     empty: "No active salaries"
 
@@ -1018,15 +1020,16 @@ workspace my_team "My Team":
     action: person_detail
     empty: "No people in scope"
 
+  # Work-surface utility: employment + reporting history are chronological streams.
   team_employment:
     source: Employment
-    display: list
+    display: timeline
     limit: 20
     empty: "No employment rows for your team"
 
   reporting_lines:
     source: ManagerLink
-    display: list
+    display: timeline
     limit: 20
     empty: "No reporting lines yet"
 

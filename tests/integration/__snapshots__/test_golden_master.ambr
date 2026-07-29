@@ -1895,7 +1895,7 @@
             'date_range': False,
             'day_timeline_config': None,
             'delta': None,
-            'display': <DisplayMode.LIST: 'list'>,
+            'display': <DisplayMode.TIMELINE: 'timeline'>,
             'drill': None,
             'empty_message': None,
             'entity_card_config': None,

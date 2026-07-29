@@ -64,16 +64,16 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | USED |
-| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1433 | USED |
+| **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1437 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1429 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1429 | USED |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1430 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1428 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1437 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1432 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1433 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1437 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1427 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
@@ -121,6 +121,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1437 (2026-07-29).** **hm-convergence hyperpart_coherence OBSERVE** queue=0 → work_surface_apply + admin framework modes. **Ship framework:** `_platform_admin` deploys/logs/events LIST→**timeline**, feedback LIST→**queue** (+ golden snapshot). **Ship product:** support_tickets all_cases→timeline agent_tickets→queue; llm classifications→timeline priority_strip→queue; hr recent_starters→queue salary/team_employment/reporting_lines→timeline; domain_join board_preview→timeline. Fleet residual=0 (queue+7 timeline+18 list−25). hyperpart+work-surface+validate **USED@1437**. budget 1. Explore **14/100**. **pushed: no** (tip CI in_progress 30446761304). Next self-audit ~1450; capability-sweep@1421 next~1441.
 
 > **Cycle 1436 (2026-07-29).** **cimonitor** — main red tip 1fb79f354 (run 30444524155): (1) HM standalone visual — confirm+tabs over 1% after gallery chrome; refreshed full linux baselines (176) via hm-update-visual-baselines 30446074706; (2) py3.14 `test_eslint_no_errors` 30s TimeoutExpired on cold npx eslint install — local bin preferred + timeout 120s. CodeQL+inbox **USED@1436**. budget 0. Explore **13/100**. Next self-audit ~1450; capability-sweep@1421 next~1441. Aggressive after green: hyperpart_coherence (queue=0 skip) / framework-ux edge / work_surface — not dual_lock/smoke/WI densify.
 
