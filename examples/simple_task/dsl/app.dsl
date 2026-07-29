@@ -930,12 +930,14 @@ workspace people_desk "People":
       active: positive
       open_tasks: accent
 
+  # Work-surface utility: people roster is a pull-to-open teammate hub queue
+  # (Monday review / ST-021), not a card gallery grid.
   roster:
     source: User
     filter: is_active = true
     sort: name asc
     limit: 25
-    display: grid
+    display: queue
     action: user_detail
     empty: "No active teammates"
 
