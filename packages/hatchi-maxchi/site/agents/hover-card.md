@@ -1,6 +1,6 @@
 # Hover card (`hover-card`)
 
-Rich preview on hover/focus — CSS-only progressive enhancement over a trigger link or button.
+Rich preview on hover/focus/tap — progressive enhancement over a trigger link or button.
 
 > **Layer:** L1 surface · **Recipe:** _(unset — see docs/agent/pick-a-surface.md)_
 > Curriculum: `AGENTS.md` · pick matrix: `docs/agent/pick-a-surface.md` · blast radius: `CONSUMER_MAP.md`
@@ -13,7 +13,7 @@ Rich preview on hover/focus — CSS-only progressive enhancement over a trigger 
 
 ```html
 <div class="hover-card" data-hover-card>
-  <button type="button" class="hover-card__trigger">@maya</button>
+  <button type="button" class="hover-card__trigger" aria-expanded="false">@maya</button>
   <div class="hover-card__content" role="tooltip">
     <p class="hover-card__title">Maya Reyes</p>
     <p class="hover-card__description">Operations lead · Online now</p>
@@ -52,13 +52,31 @@ Do **not** re-own the slot:
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- no Server exchange on this part — pure presentation or client chrome
-- satisfy the DOM contract tables (CI stop-ship)
+- open: CSS :hover/:focus-within OR data-dz-open from controller
+- trigger click/tap toggles open; outside click + Escape close
+- aria-expanded on the trigger mirrors open state
+- death-zone bridge: __content::before covers margin-top gap
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| ship the controller with the partial on touch-first surfaces | document 'tab for touch' as the only open path |
+| keep __content in the DOM (SSR); toggle visibility only | fetch the panel on first hover (death zone + flash) |
+
+### Pitfalls
+
+- do not rely on focus-within alone for touch — load dz-hover-card.js
+- do not use hover-card for multi-control forms (use popover/dialog)
+- do not omit the trigger class — controller binds .dz-hover-card__trigger
+
+### Keyboard / AT
+
+- Keyboard: Tab to trigger + Enter/Space activates button (toggle)
+- Escape closes explicit open
+- role=tooltip on the panel — keep content non-interactive
 
 ## DOM contract
 
@@ -77,11 +95,15 @@ What emitted markup must satisfy (CI: `tests/test_contracts.py`). Do not invent 
 Monorepo dual-lock only — import `contracts._kit` from the HM package. Do not paste into app route modules.
 
 ```python
-"""HYPERPART: hover-card — rich preview on hover/focus.
+"""HYPERPART: hover-card — rich preview on hover/focus/tap.
 
 Dual-lock unit is the card root. Trigger chrome and tooltip body are
-host-owned. Class ``.dz-hover-card`` is the stable substrate root
-(gallery CSS :hover/:focus-within; no FragmentRenderer emit yet).
+host-owned. Class ``.dz-hover-card`` is the stable substrate root.
+
+Open paths:
+  * CSS ``:hover`` / ``:focus-within`` (fine pointers + keyboard)
+  * ``data-dz-open`` / gallery ``data-open`` via ``controllers/dz-hover-card.js``
+    (click/tap — required on iPadOS Safari where focus/hover do not stick)
 """
 
 from contracts._kit import DomContract, Node
@@ -97,9 +119,10 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-shadcn parity (HMC-035). Opens on :hover / :focus-within; coarse pointers use focus (tab). Transparent ::before bridge covers the visual gap so the cursor can move into the panel without dropping :hover. Distinct from popover (explicit open). Dual-lock root .dz-hover-card (HMC-133). No JS controller. Canonical panel class is __content (__panel is a legacy alias).
+shadcn parity (HMC-035). Opens on :hover / :focus-within (fine pointers + keyboard) and on click/tap via controllers/dz-hover-card.js (data-dz-open / gallery data-open) — iPadOS Safari does not keep :hover or button :focus after a tap, so CSS-only demos looked dead. Transparent ::before bridge covers the visual gap for desktop hover. Distinct from popover (details exclusive open). Dual-lock root .dz-hover-card (HMC-133). Canonical panel class is __content (__panel is a legacy alias).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
 - `contracts/hover_card.py`
+- `controllers/dz-hover-card.js`

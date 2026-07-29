@@ -5625,9 +5625,14 @@ button.item:hover {
 @layer components {
 /* HYPERPART: hover-card */
 /*
- * Rich preview on hover/focus — CSS-only progressive enhancement.
- * Trigger + floating panel; panel appears on :hover / :focus-within.
- * Touch users get the panel via focus (tab) — hover is a desktop affordance.
+ * Rich preview on hover/focus/click — progressive enhancement.
+ * Trigger + floating panel opens on:
+ *   :hover / :focus-within  — fine pointers + keyboard
+ *   [data-open] / [data-open] / .is-open — controller (touch / click)
+ *
+ * iPadOS Safari does not keep :hover or button :focus after tap; relying on
+ * focus-within alone made the gallery demo appear dead. controllers/hover-card.js
+ * toggles data-open on click/tap.
  *
  * Anatomy (canonical):
  *   .hover-card
@@ -5638,7 +5643,7 @@ button.item:hover {
  * visual gap so the cursor can move trigger → panel without leaving
  * :hover on the root (classic "death zone" bug when top > 100%).
  *
- * shadcn parity (HMC-035). Distinct from popover (explicit open).
+ * shadcn parity (HMC-035). Distinct from popover (details exclusive open).
  */
 
 .hover-card {
@@ -5703,10 +5708,17 @@ button.item:hover {
   height: calc(var(--space-xs) + 0.25rem);
 }
 
+/* Open: hover + focus-within (desktop/keyboard) OR explicit open (touch click) */
 .hover-card:hover .hover-card__content,
 .hover-card:hover .hover-card__panel,
 .hover-card:focus-within .hover-card__content,
-.hover-card:focus-within .hover-card__panel {
+.hover-card:focus-within .hover-card__panel,
+.hover-card[data-open] .hover-card__content,
+.hover-card[data-open] .hover-card__panel,
+.hover-card[data-open] .hover-card__content,
+.hover-card[data-open] .hover-card__panel,
+.hover-card.is-open .hover-card__content,
+.hover-card.is-open .hover-card__panel {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -5732,18 +5744,30 @@ button.item:hover {
   }
 }
 
-/* Prefer focus on coarse pointers — hover-only is a desktop affordance */
+/*
+ * Coarse pointers: do not rely on sticky :hover (iOS first-tap quirks).
+ * Keep explicit open + focus-within; ignore bare :hover so a leftover sticky
+ * hover state does not fight click-to-close.
+ */
 @media (hover: none) {
   .hover-card:hover .hover-card__content,
   .hover-card:hover .hover-card__panel {
     opacity: 0;
     visibility: hidden;
+    transform: translateY(-0.25rem);
     pointer-events: none;
   }
   .hover-card:focus-within .hover-card__content,
-  .hover-card:focus-within .hover-card__panel {
+  .hover-card:focus-within .hover-card__panel,
+  .hover-card[data-open] .hover-card__content,
+  .hover-card[data-open] .hover-card__panel,
+  .hover-card[data-open] .hover-card__content,
+  .hover-card[data-open] .hover-card__panel,
+  .hover-card.is-open .hover-card__content,
+  .hover-card.is-open .hover-card__panel {
     opacity: 1;
     visibility: visible;
+    transform: translateY(0);
     pointer-events: auto;
   }
 }

@@ -2663,22 +2663,55 @@ def select(source: str, id: str) -> str:
             "hover-card",
             "Hover card",
             "Overlays",
-            "Rich preview on hover/focus — CSS-only progressive enhancement over a "
+            "Rich preview on hover/focus/tap — progressive enhancement over a "
             "trigger link or button.",
             '<div class="dz-hover-card" data-dz-hover-card>'
-            '<button type="button" class="dz-hover-card__trigger">@maya</button>'
+            '<button type="button" class="dz-hover-card__trigger" '
+            'aria-expanded="false">@maya</button>'
             '<div class="dz-hover-card__content" role="tooltip">'
             '<p class="dz-hover-card__title">Maya Reyes</p>'
             '<p class="dz-hover-card__description">Operations lead · Online now</p>'
             "</div></div>",
-            notes="shadcn parity (HMC-035). Opens on :hover / :focus-within; "
-            "coarse pointers use focus (tab). Transparent ::before bridge "
-            "covers the visual gap so the cursor can move into the panel "
-            "without dropping :hover. Distinct from popover (explicit open). "
-            "Dual-lock root .dz-hover-card (HMC-133). No JS controller. "
-            "Canonical panel class is __content (__panel is a legacy alias).",
-            tags=("overlay",),
+            notes="shadcn parity (HMC-035). Opens on :hover / :focus-within "
+            "(fine pointers + keyboard) and on click/tap via "
+            "<code>controllers/dz-hover-card.js</code> (<code>data-dz-open</code> / "
+            "gallery <code>data-open</code>) — iPadOS Safari does not keep "
+            ":hover or button :focus after a tap, so CSS-only demos looked dead. "
+            "Transparent ::before bridge covers the visual gap for desktop hover. "
+            "Distinct from popover (details exclusive open). Dual-lock root "
+            ".dz-hover-card (HMC-133). Canonical panel class is __content "
+            "(__panel is a legacy alias).",
+            tags=("overlay", "interactive"),
             contracts=("contracts/hover_card.py",),
+            controller="controllers/dz-hover-card.js",
+            guidance=Guidance(
+                seams=(
+                    "open: CSS :hover/:focus-within OR data-dz-open from controller",
+                    "trigger click/tap toggles open; outside click + Escape close",
+                    "aria-expanded on the trigger mirrors open state",
+                    "death-zone bridge: __content::before covers margin-top gap",
+                ),
+                pitfalls=(
+                    "do not rely on focus-within alone for touch — load dz-hover-card.js",
+                    "do not use hover-card for multi-control forms (use popover/dialog)",
+                    "do not omit the trigger class — controller binds .dz-hover-card__trigger",
+                ),
+                do_dont=(
+                    (
+                        "ship the controller with the partial on touch-first surfaces",
+                        "document 'tab for touch' as the only open path",
+                    ),
+                    (
+                        "keep __content in the DOM (SSR); toggle visibility only",
+                        "fetch the panel on first hover (death zone + flash)",
+                    ),
+                ),
+                a11y_keys=(
+                    "Keyboard: Tab to trigger + Enter/Space activates button (toggle)",
+                    "Escape closes explicit open",
+                    "role=tooltip on the panel — keep content non-interactive",
+                ),
+            ),
         ),
         Hyperpart(
             "carousel",

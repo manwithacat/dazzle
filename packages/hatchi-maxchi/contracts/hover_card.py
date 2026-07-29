@@ -1,8 +1,12 @@
-"""HYPERPART: hover-card — rich preview on hover/focus.
+"""HYPERPART: hover-card — rich preview on hover/focus/tap.
 
 Dual-lock unit is the card root. Trigger chrome and tooltip body are
-host-owned. Class ``.dz-hover-card`` is the stable substrate root
-(gallery CSS :hover/:focus-within; no FragmentRenderer emit yet).
+host-owned. Class ``.dz-hover-card`` is the stable substrate root.
+
+Open paths:
+  * CSS ``:hover`` / ``:focus-within`` (fine pointers + keyboard)
+  * ``data-dz-open`` / gallery ``data-open`` via ``controllers/dz-hover-card.js``
+    (click/tap — required on iPadOS Safari where focus/hover do not stick)
 """
 
 from contracts._kit import DomContract, Node

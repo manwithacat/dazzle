@@ -176,6 +176,48 @@ def test_menu_light_dismiss_esc_and_outside(page) -> None:  # type: ignore[no-un
     assert page.locator(".hm-preview details[open]").count() == 0
 
 
+def test_hover_card_click_opens_and_escape_closes(page) -> None:  # type: ignore[no-untyped-def]
+    """Touch/desktop click path: panel is not CSS-hover-only.
+
+    iPadOS Safari does not keep :hover or button :focus after tap; the
+    controller must set data-open so the panel becomes visible.
+    """
+    goto_part(page, "hover-card")
+    root = page.locator(".hm-preview .hover-card, .hm-preview .dz-hover-card").first
+    content = root.locator(".hover-card__content, .dz-hover-card__content").first
+    # Closed by default (opacity/visibility — check open attr absent)
+    assert root.get_attribute("data-open") is None
+    assert root.get_attribute("data-dz-open") is None
+    page.locator(
+        ".hm-preview .hover-card__trigger, .hm-preview .dz-hover-card__trigger"
+    ).first.click()
+    page.wait_for_timeout(80)
+    assert (
+        root.get_attribute("data-open") is not None
+        or root.get_attribute("data-dz-open") is not None
+        or "is-open" in (root.get_attribute("class") or "")
+    )
+    # Panel must be visible to the user (not opacity 0)
+    assert content.is_visible()
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(80)
+    assert root.get_attribute("data-open") is None
+    assert root.get_attribute("data-dz-open") is None
+
+
+def test_hover_card_outside_click_closes(page) -> None:  # type: ignore[no-untyped-def]
+    goto_part(page, "hover-card")
+    root = page.locator(".hm-preview .hover-card, .hm-preview .dz-hover-card").first
+    page.locator(
+        ".hm-preview .hover-card__trigger, .hm-preview .dz-hover-card__trigger"
+    ).first.click()
+    page.wait_for_timeout(80)
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(80)
+    assert root.get_attribute("data-open") is None
+    assert root.get_attribute("data-dz-open") is None
+
+
 def test_popover_light_dismiss_esc_and_outside(page) -> None:  # type: ignore[no-untyped-def]
     """Stem overlay-light-dismiss: popover closes on Esc and outside pointer."""
     goto_part(page, "popover")
