@@ -110,8 +110,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1443 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1441 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1441 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1457 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1457 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -121,6 +121,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1457 (2026-07-29).** **cimonitor** — tip completed red (1455 HM mirror) while 1456 menu.escape fix in_progress. Generalized `_open_item_selector` to menubar/tree/nav multi-branch open pins + pure unit. CodeQL+inbox **USED@1457**. budget 0. Explore **26/100**. Next: poll tip+HM green then aggressive story_walk — not dual_lock/smoke/WI densify.
 
 > **Cycle 1441 (2026-07-29).** **capability-sweep** (cadence ≥20 since 1421) — inventory reconcile vs tip. **UNOWNED=0** **COGNITION_STALE_eff=12** **HYGIENE_STALE_eff=27**. Flipped lag≥20 USED→STALE: 4 (demo quality, product_quality, hyperpart-opportunities, rbac). lag<20 STALE→USED: 0. DRIVER CodeQL+inbox **USED@1441**. Top COGNITION digs (aggressive, densify_allowed=0 residual=0 dual_lock=0 suppress_smoke=1 panel_streak=1): **framework-ux edge** / **journey_dogfood** dig+ship / domain-demo re-touch — **not** dual_lock/smoke stamp/WI densify; avoid re-panel ops timeout thrash without shorter scenario. Metered vision STALE → subscription substitutes only. budget 0. Explore **16/100**. Next self-audit@1435 ~1450; capability-sweep@1441 next~1461. Tip CI in_progress 30450503281 — no product push.
 

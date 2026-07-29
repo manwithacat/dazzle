@@ -32,6 +32,15 @@ def _open_item_selector(item_sel: str) -> str:
     return ", ".join(f"{p}[open]" for p in parts)
 
 
+def test_open_item_selector_multi_branch() -> None:
+    """Pure unit — multi-branch [open] must not leave earlier branches unfiltered."""
+    assert _open_item_selector("details.menu, details.dz-menu") == (
+        "details.menu[open], details.dz-menu[open]"
+    )
+    assert _open_item_selector("details.menu") == "details.menu[open]"
+    assert _open_item_selector(" a , b ") == "a[open], b[open]"
+
+
 # Behaviour runs in BOTH Chromium and WebKit (Safari's engine). WebKit
 # catches Safari/iPadOS regressions the keyboard-only + Chromium tests
 # miss — e.g. the command palette's close button collapsing to 0×0 under
@@ -88,13 +97,14 @@ def test_menubar_exclusive_open(page) -> None:  # type: ignore[no-untyped-def]
     """Gallery probe menubar.exclusive_open — File then Edit leaves only Edit open."""
     goto_part(page, "menubar")
     item = "details.dz-menubar__item, details.menubar__item"
+    open_sel = _open_item_selector(item)
     trigger = "summary.dz-menubar__trigger, summary.menubar__trigger"
     page.locator(trigger).filter(has_text="File").first.click()
     page.wait_for_timeout(80)
     page.locator(trigger).filter(has_text="Edit").first.click()
     page.wait_for_timeout(80)
-    open_n = page.locator(f"{item}[open]").count()
-    labels = page.locator(f"{item}[open] summary").all_text_contents()
+    open_n = page.locator(open_sel).count()
+    labels = page.locator(f"{open_sel} summary").all_text_contents()
     labels = [" ".join(t.split()) for t in labels]
     assert open_n == 1, f"expected exclusive open, got {open_n}: {labels}"
     assert labels == ["Edit"], labels
@@ -104,14 +114,16 @@ def test_navigation_menu_exclusive_open(page) -> None:  # type: ignore[no-untype
     """Gallery probe navigation_menu.exclusive_open — one mega panel at a time."""
     goto_part(page, "navigation-menu")
     root = "[data-dz-navigation-menu], .dz-navigation-menu, .navigation-menu"
-    item = f"{root} details"
+    # Attach `` details`` to each root branch before [open] (not only the last).
+    item = ", ".join(f"{r.strip()} details" for r in root.split(",") if r.strip())
+    open_sel = _open_item_selector(item)
     trigger = "summary.dz-navigation-menu__trigger, summary.navigation-menu__trigger"
     page.locator(trigger).filter(has_text="Product").first.click()
     page.wait_for_timeout(80)
     page.locator(trigger).filter(has_text="Resources").first.click()
     page.wait_for_timeout(80)
-    open_n = page.locator(f"{item}[open]").count()
-    labels = page.locator(f"{item}[open] summary").all_text_contents()
+    open_n = page.locator(open_sel).count()
+    labels = page.locator(f"{open_sel} summary").all_text_contents()
     labels = [" ".join(t.split()) for t in labels]
     assert open_n == 1, f"expected exclusive open, got {open_n}: {labels}"
     assert any("Resources" in t for t in labels), labels
@@ -123,12 +135,13 @@ def test_tree_multi_open(page) -> None:  # type: ignore[no-untyped-def]
     # Scope to gallery demo — contract-live preview mounts a second forest
     scope = page.locator(".hm-preview")
     item = "details.dz-tree-node, details.tree-node"
+    open_sel = _open_item_selector(item)
     trigger = "summary.dz-tree-summary, summary.tree-summary"
     scope.locator(trigger).filter(has_text="Platform").first.click()
     page.wait_for_timeout(80)
     scope.locator(trigger).filter(has_text="Design systems").first.click()
     page.wait_for_timeout(80)
-    labels = scope.locator(f"{item}[open] > summary").all_text_contents()
+    labels = scope.locator(f"{open_sel} > summary").all_text_contents()
     labels = [" ".join(t.split()) for t in labels]
     joined = " ".join(labels)
     assert "Platform" in joined and "Design systems" in joined, labels
@@ -140,13 +153,14 @@ def test_menubar_dismiss_outside(page) -> None:  # type: ignore[no-untyped-def]
     goto_part(page, "menubar")
     scope = page.locator(".hm-preview")
     item = "details.dz-menubar__item, details.menubar__item"
+    open_sel = _open_item_selector(item)
     trigger = "summary.dz-menubar__trigger, summary.menubar__trigger"
     scope.locator(trigger).filter(has_text="File").first.click()
     page.wait_for_timeout(80)
-    assert scope.locator(f"{item}[open]").count() == 1
+    assert scope.locator(open_sel).count() == 1
     page.mouse.click(8, 8)
     page.wait_for_timeout(100)
-    assert scope.locator(f"{item}[open]").count() == 0
+    assert scope.locator(open_sel).count() == 0
 
 
 def test_menubar_escape_dismiss(page) -> None:  # type: ignore[no-untyped-def]
@@ -154,13 +168,14 @@ def test_menubar_escape_dismiss(page) -> None:  # type: ignore[no-untyped-def]
     goto_part(page, "menubar")
     scope = page.locator(".hm-preview")
     item = "details.dz-menubar__item, details.menubar__item"
+    open_sel = _open_item_selector(item)
     trigger = "summary.dz-menubar__trigger, summary.menubar__trigger"
     scope.locator(trigger).filter(has_text="File").first.click()
     page.wait_for_timeout(80)
-    assert scope.locator(f"{item}[open]").count() == 1
+    assert scope.locator(open_sel).count() == 1
     page.keyboard.press("Escape")
     page.wait_for_timeout(100)
-    assert scope.locator(f"{item}[open]").count() == 0
+    assert scope.locator(open_sel).count() == 0
 
 
 def test_dialog_escape_closes(page) -> None:  # type: ignore[no-untyped-def]
