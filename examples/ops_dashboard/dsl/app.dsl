@@ -193,14 +193,16 @@ workspace command_center "Command Center":
   # per-region `refresh: every 30s` below stays as a fallback heartbeat.
   live: on
 
-  # Alert Feed - Shows active alerts. Live-refreshes (#1391) so the
-  # on-call engineer sees new alerts without reloading — the region's
-  # HTMX card re-fetches every 30s.
+  # Alert Feed - active alerts as an urgency queue (severity-sorted), not a
+  # multi-field admin list. Live-refreshes (#1391) so the on-call engineer
+  # sees new alerts without reloading — the region's HTMX card re-fetches
+  # every 30s. work_surface_utility: queue fits shared pool + attention_rank.
   active_alerts:
     source: Alert
     filter: status = active
     sort: severity desc, triggered_at desc
     limit: 20
+    display: queue
     refresh: every 30s
 
   # Alert Timeline — chronological event stream across all systems

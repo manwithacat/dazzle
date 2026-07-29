@@ -26,7 +26,7 @@ Around these, the product provides the full working surface: engineers can brows
 
 ## Where work happens
 
-**Command Center** is the heart of the product: real-time operations monitoring and incident response, built for the Operations Engineer. It presents the estate from every useful angle — a live list, timeline, queue, and task inbox of Alerts; Systems as a kanban board, grid, lists, and a metrics panel; and a rich analytical layer over Alerts including bar charts, an insight summary, a comparison view, a cross-tabulated breakdown, a heatmap, line, area, and sparkline trends, and a day timeline. Systems get their own statistical views — histogram, radar, box plot, bullet and bar-track gauges, profile cards, and a cohort strip.
+**Command Center** is the heart of the product: real-time operations monitoring and incident response, built for the Operations Engineer. It presents the estate from every useful angle — a severity-sorted active alert **queue**, full alert **timeline**, ack queue, and task inbox of Alerts; Systems as a kanban board, grid, lists, and a metrics panel; and a rich analytical layer over Alerts including bar charts, an insight summary, a comparison view, a cross-tabulated breakdown, a heatmap, line, area, and sparkline trends, and a day timeline. Systems get their own statistical views — histogram, radar, box plot, bullet and bar-track gauges, profile cards, and a cohort strip.
 
 **Incident Review** serves the same engineers for side-by-side pairs in change-management review: Alert metrics beside an Alert list, System metrics, and a confirm-action panel for the Integration connection.
 
@@ -59,4 +59,4 @@ These guarantees hold because the product is built on Dazzle, and each one can b
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:4bff5548c112bc4706388244768c6d1e8f17eeadbe3f9828de5c49b941a9ea72 -->
+<!-- dazzle-spec-brief: sha256:fc1fde00cf89a251a92f801ccbf607bea0feab77b0499ae504b7fe5e7f1bd7d2 -->

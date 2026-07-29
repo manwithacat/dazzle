@@ -51,8 +51,9 @@ all three roles — has board metrics, a kanban of tasks, due timeline, urgent
 queue, status chart, and comment trail. The **Admin Dashboard** is the
 administrator home: metrics for tasks and users, plus urgent and overdue
 queues. The **Team Overview** is the manager home: metrics, flow chart, review
-queue, and team roster. **My Work** is each person's assigned pressure strip,
-personal board, and due timeline. **Discussion** is the comment desk with
+queue, team roster, assignee plate kanban, and recent discussion timeline.
+**My Work** is each person's assigned pressure strip, personal board, due
+timeline, and discussion timeline. **Discussion** is the comment desk with
 trail, active cards, and status chart. **People** is the roster and capacity
 desk with unassigned queue, in-flight board, and load chart.
 
@@ -118,4 +119,4 @@ an explicit trigger, prompt contract, and timeout — rather than ad-hoc calls
 buried in code, so what the AI is allowed to touch is reviewable in one place
 (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:2c6f2bc1950c278cff7d733bd1347ffd98628c69af9e6692131806d4af940587 -->
+<!-- dazzle-spec-brief: sha256:4c306f8706d91d74271c9ffb583245168267d8c9168cf9c63f2c8de77b03bca5 -->

@@ -409,7 +409,7 @@
         "queue of Task",
         "list of User",
         "kanban of Task",
-        "list of TaskComment"
+        "timeline of TaskComment"
       ]
     },
     {
@@ -422,7 +422,7 @@
         "metrics of Task",
         "kanban of Task",
         "timeline of Task",
-        "list of TaskComment"
+        "timeline of TaskComment"
       ]
     },
     {

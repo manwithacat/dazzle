@@ -779,12 +779,13 @@ workspace team_overview "Team Overview":
     action: task_edit
     empty: "No assigned open work"
 
-  # Discussion pulse — TaskComment source.
+  # Discussion pulse — TaskComment source (time-ordered events, not a field table).
+  # HMC-065 follow-on / work_surface_utility: timeline for dated comment streams.
   recent_discussion:
     source: TaskComment
     sort: created_at desc
     limit: 12
-    display: list
+    display: timeline
     empty: "No recent comments"
 
   lead_readiness:
@@ -840,12 +841,12 @@ workspace my_work "My Work":
     action: task_edit
     empty: "No upcoming due dates on your work"
 
-  # Comments source — not another Task list pad.
+  # Comments source — dated events; timeline over list (time_order axis).
   my_discussion:
     source: TaskComment
     sort: created_at desc
     limit: 12
-    display: list
+    display: timeline
     empty: "No comments on tasks yet"
 
   focus_hint:
