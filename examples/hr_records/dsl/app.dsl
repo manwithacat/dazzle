@@ -761,15 +761,17 @@ workspace person_detail "Person Detail":
     limit: 20
     empty: "No employment rows"
 
+  # HMC-065 / work_surface_utility: salary + reporting rows are dated events
+  # (effective_from / link dates) — timeline matches use_when time_order over list.
   salary_history:
     source: Salary
-    display: list
+    display: timeline
     limit: 15
     empty: "No salary rows"
 
   reporting_history:
     source: ManagerLink
-    display: list
+    display: timeline
     limit: 15
     empty: "No reporting lines on record"
 

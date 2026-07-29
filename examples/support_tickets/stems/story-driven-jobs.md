@@ -9,10 +9,13 @@ ST-013–018 own surfaces.
 ## Reconstruct
 
 - Agent default: `ticket_queue` = metrics + `display: queue` + kanban.
+- Agent secondary: `agent_dashboard` personal WIP = **kanban** (`my_assigned`
+  group_by status, non-closed) + resolved **queue** (`pending_resolution`) —
+  stage movement after claim, not a single-status list (HMC-065).
 - Manager default: `manager_ops` = team metrics + status_list SLA strip +
   critical/unassigned queues + funnel (not an empty personal list).
 - Customer default: `my_tickets` = my metrics + open queue + history list.
-- Prefer queue/metrics over bare list for open-work stories.
+- Prefer queue/metrics/kanban over bare list for open-work stories.
 - Keep story `given:` workspace names aligned with persona defaults.
 
 ## Not this

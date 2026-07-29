@@ -602,22 +602,28 @@ workspace agent_dashboard "Agent Dashboard":
   stage: "dual_pane_flow"
   access: persona(agent, manager)
 
-  # ── Work first: assigned + pending tickets ──────────────────────────
+  # ── Work first: personal WIP board + close-out queue ────────────────
+  # HMC-065 / work_surface_utility: stage movement is the agent job after
+  # claim — kanban (group_by status) beats a single-status list for
+  # state_progress. Filter spans open lifecycle (not only in_progress) so
+  # columns are non-empty; closed stays off-board.
   my_assigned:
     source: Ticket
-    filter: assigned_to = current_user and status = in_progress
+    filter: assigned_to = current_user and status != closed
     sort: priority desc
-    limit: 10
-    display: list
+    limit: 24
+    display: kanban
+    group_by: status
     action: ticket_edit
     empty: "No tickets assigned to you"
 
+  # Resolved-only close-out — urgency/next-action, not multi-stage ceremony.
   pending_resolution:
     source: Ticket
     filter: assigned_to = current_user and status = resolved
     sort: updated_at desc
-    limit: 5
-    display: list
+    limit: 8
+    display: queue
     action: ticket_detail
     empty: "No tickets pending closure"
 
