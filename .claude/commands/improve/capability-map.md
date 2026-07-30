@@ -66,19 +66,19 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1501 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1503 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1503 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1506 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1506 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1506 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1499 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1499 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1504 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1506 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1506 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1506 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1484 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1499 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1506 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -108,11 +108,11 @@ apply map patches with `{"apply":true}`.
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1235 | STALE |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1235 | STALE |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1234 | STALE |
-| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1504 | USED |
+| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1506 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1504 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1504 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1506 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1506 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -124,6 +124,8 @@ apply map patches with `{"apply":true}`.
 ## Cycle notes (newest first)
 
 > **Cycle 1504 (2026-07-30).** **example-apps journey_dogfood** (campaign force residual=0 panel_streak_break) dig llm_ticket_classifier ST-001–006 maps stem+stories; prove journey 6/6; **product** ticket_detail AI classifications table→**queue** + columns; ST-002 then-criteria; residual=0 densify=0. journey+prove+validate+unified probes **USED@1504**. budget 1. Explore **63/100**. Push carry-forward 1501–1503 + this. Next campaign framework-ux/gallery under aggressive — not dual_lock/smoke/WI densify. self-audit@1497 ~1512; capability-sweep@1501 ~1521.
+
+> **Cycle 1506 (2026-07-30).** **example-apps story_walk** (campaign hyperpart_coherence queue=0 + gallery 25/25 PASS → fall-through require_mutation) dig hr_records ST-001–005 maps stem+stories+trial+SPEC; walks 5/5 validate+dry-run; **product** person/department/role related table→**queue**; trial hub-queue criterion; dig receipt live_unproven. residual=0 densify=0 dual_lock=0. hyperpart OBSERVE + gallery + story_walk+walk+process_dig+validate+CodeQL+inbox **USED@1506**. budget 1. Explore **65/100**. **pushed: no** (throttle 4/h; ahead 3 unpushed). Next self-audit@1497 ~1512; capability-sweep@1501 ~1521.
 
 > **Cycle 1503 (2026-07-30).** **example-apps agent_acceptance_panel** dig project_tracker ST-001–005 maps trial+stories+stem+SPEC; walks 5/5 validate+dry-run; trial skip product_first; **product** task_detail discussion table→**queue** + my_tasks assigned_queue action→task_detail; trial hub+discussion criteria; dig receipt live_unproven. residual=0 densify=0. acceptance+walk+process_dig+validate **USED@1503**. budget 1. Explore **62/100**. Push carry-forward 1501+1502 with tip CI green. Next campaign journey/framework-ux under aggressive — not dual_lock/smoke/WI densify. self-audit@1497 ~1512; capability-sweep@1501 ~1521.
 

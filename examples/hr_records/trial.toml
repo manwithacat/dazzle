@@ -36,6 +36,7 @@ tasks = [
 adoption_criteria = [
     "Staff directory shows real person rows when seeded (not empty pilot-breaker)",
     "Person open is a usable hub (employment/context/status), not a flat field dump",
+    "Person hub related employment/compensation/reporting regions are pull queues, not warehouse tables",
     "Assignment status (active / on leave / terminated) is visible on employment path",
     "Compensation people region is a scannable pull queue, not a decorative grid",
     "Primary create / add-person CTA uses human language and is discoverable",

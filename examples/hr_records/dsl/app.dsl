@@ -466,19 +466,21 @@ surface person_detail "Person":
     layout: strip
     field started_at "Started"
     field ended_at "Ended (NULL = active)"
+  # Person hub pull queues (RelatedDisplayMode.QUEUE) — role/amount-first
+  # career roster, not warehouse tables (cycle 1506 story_walk / ST-002 path).
   related employment "Employment history":
-    display: table
+    display: queue
     show: Employment
     columns: role, department, status, start_date, end_date
   related compensation "Salary history":
-    display: table
+    display: queue
     show: Salary
     columns: amount, effective_from, effective_to, reason
   related reporting "Reporting lines":
-    display: table
+    display: queue
     show: ManagerLink
   ux:
-    purpose: "Person hub — identity, tenure strip, employment and salary history"
+    purpose: "Person hub — identity, tenure strip, employment and salary pull queues"
 
 surface person_create "Add Person":
   uses entity Person
@@ -514,11 +516,12 @@ surface department_detail "Department":
   section main "Unit":
     field name "Name"
     field parent_department "Parent"
+  # Department hub role roster as pull queue (title-first), not warehouse table.
   related roles "Roles in unit":
-    display: table
+    display: queue
     show: Role
   ux:
-    purpose: "Department hub — unit identity and roles"
+    purpose: "Department hub — unit identity and role pull queue"
 
 surface department_create "Add Department":
   uses entity Department
@@ -545,11 +548,12 @@ surface role_detail "Role":
     field title "Title"
     field level "Level"
     field department "Department"
+  # Role hub employment as pull queue (person/status-first), not warehouse table.
   related employment "Employment in role":
-    display: table
+    display: queue
     show: Employment
   ux:
-    purpose: "Role hub — title, level, and employment history"
+    purpose: "Role hub — title, level, and employment pull queue"
 
 surface role_create "Add Role":
   uses entity Role

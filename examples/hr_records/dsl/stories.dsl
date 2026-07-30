@@ -25,7 +25,7 @@ story ST-002 "Line Manager opens a report career hub":
     - "Manager lands on the my_team desk (reports pulse + employment)"
     - "Manager has list permission on Person for their reports"
   then:
-    - "Person hub shows identity, tenure strip, and related employment history"
+    - "Person hub shows identity, tenure strip, and related employment as a pull queue"
     - "Manager sees only people in their reporting scope"
 
 story ST-003 "Finance reviews compensation then hops to person context":
@@ -62,5 +62,5 @@ story ST-005 "HR Admin walks employment history back to the person hub":
     - "HR Admin has list permission on Employment"
   then:
     - "Employment rows open Person via person (context hub, not orphan warehouse rows)"
-    - "Person hub shows related employment and compensation tables"
+    - "Person hub shows related employment and compensation as pull queues (not warehouse tables)"
     - "Employment list and hub show assignment status (active / on leave / terminated)"
