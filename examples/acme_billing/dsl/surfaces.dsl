@@ -311,10 +311,12 @@ workspace billing "Acme Billing":
     display: queue
     empty: "No invoices found"
 
+  # Work-surface utility (cycle 1488 journey): org portfolio is pull-to-open hubs.
   organizations:
     source: Organization
-    display: grid
+    display: queue
     sort: name asc
+    action: organization_detail
     empty: "No organizations found"
 
   projects:
@@ -348,10 +350,12 @@ workspace my_work "My Work":
     tones:
       projects: accent
 
+  # Work-surface utility (cycle 1488 journey): member projects → queue to hubs.
   assigned_projects:
     source: Project
-    display: grid
+    display: queue
     sort: name asc
+    action: project_detail
     empty: "No projects assigned to you yet"
 
   my_invoices:
@@ -449,10 +453,12 @@ workspace invoices_home "Invoices":
     limit: 15
     empty: "No open invoices"
 
+  # Work-surface utility (cycle 1488 journey): project context → pull queue.
   projects_context:
     source: Project
-    display: grid
+    display: queue
     sort: name asc
+    action: project_detail
     empty: "No projects found"
 
   invoice_status_mix:
@@ -485,10 +491,12 @@ workspace team_home "Team":
     display: timeline
     empty: "No memberships yet"
 
+  # Work-surface utility (cycle 1488 journey): people roster → pull-to-open users.
   people:
     source: User
-    display: grid
+    display: queue
     sort: name asc
+    action: user_detail
     empty: "No users found"
 
   membership_chart:
@@ -521,10 +529,12 @@ workspace orgs_home "Organizations":
     tones:
       organizations: accent
 
+  # Work-surface utility (cycle 1488 journey): org roster → pull queue.
   org_roster:
     source: Organization
-    display: grid
+    display: queue
     sort: name asc
+    action: organization_detail
     empty: "No organizations found"
 
   project_context:
@@ -572,11 +582,13 @@ workspace sensitive_review "Sensitive Review":
     display: queue
     empty: "No sensitive invoices flagged"
 
+  # Work-surface utility (cycle 1488 journey): project cards → pull queue to hubs.
   project_cards:
     source: Project
-    display: grid
+    display: queue
     sort: name asc
     limit: 15
+    action: project_detail
     empty: "No projects found"
 
   invoice_trail:
@@ -619,11 +631,13 @@ workspace public_billing "Public Billing":
     display: queue
     empty: "No non-sensitive invoices"
 
+  # Work-surface utility (cycle 1488 journey): project cards → pull queue to hubs.
   project_cards:
     source: Project
-    display: grid
+    display: queue
     sort: name asc
     limit: 15
+    action: project_detail
     empty: "No projects found"
 
   public_trail:
@@ -667,11 +681,13 @@ workspace org_pulse "Org Pulse":
     display: queue
     empty: "No organizations"
 
+  # Work-surface utility (cycle 1488 journey): project cards → pull queue to hubs.
   project_cards:
     source: Project
-    display: grid
+    display: queue
     sort: name asc
     limit: 15
+    action: project_detail
     empty: "No projects found"
 
   people_trail:
