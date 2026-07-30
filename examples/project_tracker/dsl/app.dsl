@@ -391,7 +391,9 @@ workspace my_tasks "My Tasks":
     sort: priority desc, due_date asc
     limit: 20
     display: queue
-    action: task_edit
+    # Open the task hub (status strip + discussion queue + files), not the
+    # edit form — member pilot path for ST-003 (cycle 1502 acceptance).
+    action: task_detail
     empty: "No open tasks"
 
   board:
@@ -712,8 +714,10 @@ surface task_detail "Task Detail":
     field labels "Labels"
     field estimated_hours "Estimate"
 
+  # Task hub discussion as pull roster queue (body-first), not warehouse
+  # table — ST-003 member task hub path (cycle 1502 agent_acceptance_panel).
   related comments "Discussion":
-    display: table
+    display: queue
     show: Comment
     columns: body, author, created_at
 

@@ -53,16 +53,19 @@ while the company has three named principals.
 """
 
 tasks = [
+    "Land on My Tasks. Open one item from the assigned work queue — does it land a task hub (status, ownership, discussion) rather than a bare edit form?",
+    "On that task hub, is Discussion a scannable queue (recent comments body-first) rather than a warehouse table?",
     "From the board or My Tasks, open a teammate hub via an assignee name (or Team Member list).",
     "Does the hub show identity, role strip, assigned work, and owned projects?",
-    "As manager (or via People if reachable), is the team roster non-empty with openable people?",
-    "Decide if teammate context hops are credible for a two-week pilot.",
+    "Decide if My Tasks → task hub → discussion + teammate hops are credible for a two-week pilot.",
 ]
 
 adoption_criteria = [
+    "My Tasks queue opens a task hub with status strip and discussion",
+    "Task hub discussion is readable as a pull queue (not a dead warehouse table)",
     "Assignee hop lands a Team Member Overview without 404",
     "Hub shows assigned work and/or owned projects for that person",
-    "Would trust teammate context in a sales demo",
+    "Would trust My Tasks + teammate context in a two-week pilot as-is or with minor fixes",
 ]
 
 stop_when = """
