@@ -664,6 +664,36 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1513 — combobox progressive enhance + pick commits select value.
+    Probe(
+        id="combobox.enhance_and_select",
+        stem="combobox",
+        page="hyperparts/combobox.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Native select[data-combobox] enhances on pointerdown; picking High "
+            "writes select value=high, shows High in the overlay input, and closes "
+            "the listbox (data-open cleared)"
+        ),
+        kind="combobox_select",
+        params={
+            "select": "select[data-combobox], select[data-dz-combobox]",
+            "root": (
+                ".combobox[data-enhanced], .combobox[data-dz-enhanced], "
+                ".dz-combobox[data-enhanced], .dz-combobox[data-dz-enhanced]"
+            ),
+            "option": (
+                '.combobox-option[data-value="high"], .dz-combobox-option[data-value="high"]'
+            ),
+            "input": ".combobox-input, .dz-combobox-input",
+            "expect_value": "high",
+            "expect_label": "High",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -1692,6 +1722,135 @@ def _run_carousel_advance(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_combobox_select(page: Any, probe: Probe) -> dict[str, Any]:
+    """Enhance native select[data-combobox], pick an option, assert commit+close.
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py
+    ``test_combobox_click_option_closes_listbox`` for gallery catalog (cycle 1513).
+    Gallery demos use unprefixed classes; product emits ``dz-`` / ``data-dz-*``.
+    """
+    params = probe.params
+    select_sel = params.get("select", "select[data-combobox], select[data-dz-combobox]")
+    root_sel = params.get(
+        "root",
+        (
+            ".combobox[data-enhanced], .combobox[data-dz-enhanced], "
+            ".dz-combobox[data-enhanced], .dz-combobox[data-dz-enhanced]"
+        ),
+    )
+    option_sel = params.get(
+        "option",
+        '.combobox-option[data-value="high"], .dz-combobox-option[data-value="high"]',
+    )
+    input_sel = params.get("input", ".combobox-input, .dz-combobox-input")
+    expect_value = str(params.get("expect_value", "high"))
+    expect_label = str(params.get("expect_label", "High"))
+    settle = int(params.get("settle_ms", 120))
+
+    scope = _probe_scope(page, params)
+    sel = None
+    for part in select_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            sel = loc
+            break
+    if sel is None:
+        return {"verdict": "ERROR", "detail": f"select not found ({select_sel})"}
+
+    sel.dispatch_event("pointerdown")
+    page.wait_for_timeout(settle)
+
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {
+            "verdict": "FAIL",
+            "detail": f"enhanced combobox root not found after pointerdown ({root_sel})",
+            "dom_hint": root_sel,
+        }
+
+    open_attr = root.get_attribute("data-open")
+    if open_attr is None:
+        open_attr = root.get_attribute("data-dz-open")
+    if open_attr is None:
+        return {
+            "verdict": "FAIL",
+            "detail": "combobox did not open after pointerdown (no data-open)",
+            "dom_hint": root_sel,
+        }
+
+    opt = None
+    for part in option_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            opt = loc
+            break
+    if opt is None:
+        return {
+            "verdict": "FAIL",
+            "detail": f"option not found ({option_sel})",
+            "dom_hint": option_sel,
+        }
+
+    opt.click()
+    page.wait_for_timeout(settle)
+
+    value_after = sel.input_value()
+    if value_after != expect_value:
+        return {
+            "verdict": "FAIL",
+            "detail": f"select value={value_after!r}, expected {expect_value!r}",
+            "dom_hint": select_sel,
+        }
+
+    input_el = None
+    for part in input_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            input_el = loc
+            break
+    if input_el is None:
+        return {"verdict": "FAIL", "detail": f"overlay input not found ({input_sel})"}
+    label_after = input_el.input_value()
+    if expect_label.lower() not in (label_after or "").lower():
+        return {
+            "verdict": "FAIL",
+            "detail": f"input label={label_after!r}, expected ≈{expect_label!r}",
+            "dom_hint": input_sel,
+        }
+
+    open_after = root.get_attribute("data-open") or root.get_attribute("data-dz-open")
+    if open_after is not None:
+        return {
+            "verdict": "FAIL",
+            "detail": f"listbox still open after pick (data-open={open_after!r})",
+            "dom_hint": root_sel,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"selected value={value_after!r} label={label_after!r}; listbox closed",
+        "value": value_after,
+        "label": label_after,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -1708,6 +1867,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "aria_pressed_toggle": _run_aria_pressed_toggle,
     "radio_group_select": _run_radio_group_select,
     "carousel_advance": _run_carousel_advance,
+    "combobox_select": _run_combobox_select,
 }
 
 

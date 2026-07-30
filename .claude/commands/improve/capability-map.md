@@ -72,8 +72,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1506 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1507 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1513 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1513 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1509 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1510 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
@@ -111,8 +111,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1509 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1512 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1512 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1513 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1513 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1513 (2026-07-30).** **hm-convergence gallery_probes** (campaign hyperpart_coherence queue=0 lag investigate <20 fall-through; tip CI in_progress) **ship** `combobox.enhance_and_select` + `combobox_select` runner; catalog **27/27 PASS**; unit pin. densify=0 dual_lock=0 coherence queue=0. hyperpart OBSERVE + gallery_probes **USED@1513**. budget 1. Explore **71/100**. **pushed: hold** until tip green. Next acceptance/framework-ux under aggressive; capability-sweep@1501 ~1521.
 
 > **Cycle 1512 (2026-07-30).** **self-audit** window c2a1fc684..9ad567ef6 — 5 CLEAN (c1499 dz-toggle; c1507 carousel.advance_next; c1510 related cards/files HM tabs; c1505 multi queue tabs; c1509 domain_join queues). Dig-contract CLEAN 1511/1508/1506 (receipts+contract log lines). 0 DISCREPANCY/AUD/REGRESSION. Pushed held 1511. CodeQL+inbox **USED@1512**. budget 0. Explore **70/100**. Next capability-sweep@1501 ~1521; campaign hyperpart/acceptance under aggressive residual=0 densify=0.
 

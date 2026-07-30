@@ -39,6 +39,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `toggle.pressed_flips` | `toggle` | exclusive | high | controller | Clicking a toolbar toggle flips aria-pressed both ways (Bold/Italic mode must stay live without a page reload) |
 | `toggle_group.radio_exclusive` | `toggle-group` | exclusive | high | css | Selecting a second toggle-group segment checks only that radio (List then Board leaves only Board checked — native exclusive group) |
 | `carousel.advance_next` | `carousel` | exclusive | high | controller | Clicking Next advances the clamp carousel from slide 1 to 2 (data-carousel-index, active slide, and live status must update) |
+| `combobox.enhance_and_select` | `combobox` | exclusive | high | controller | Native select[data-combobox] enhances on pointerdown; picking High writes select value=high, shows High in the overlay input, and closes the listbox (data-open cleared) |
 
 ## Loop (autonomous improve)
 
