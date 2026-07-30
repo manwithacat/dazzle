@@ -819,11 +819,14 @@ workspace line_items_desk "Line Items":
       open_invoices: accent
       lines: positive
 
+  # Work-surface utility (cycle 1487 acceptance): composition lines are a pull
+  # queue into the parent invoice hub — not a decorative card grid.
   recent_lines:
     source: LineItem
     sort: id desc
     limit: 25
-    display: grid
+    display: queue
+    action: invoice_detail
     empty: "No line items yet"
 
   draft_invoices:

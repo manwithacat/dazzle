@@ -15,13 +15,16 @@ for a two-week pilot with your AP clerk.
 
 business_context = """
 Roughly 40 invoices per week. You care that awaiting-approval work is visible
-with amount and urgency, and that you can open a hub before approve/reject.
+with amount and urgency, that you can open a hub before approve/reject, and that
+line-item composition (what is on open invoices) is a scannable pull queue into
+the invoice hub — not a warehouse grid of orphan lines.
 """
 
 tasks = [
     "Land on Approval Desk. Are awaiting / approved / rejected counts obvious?",
     "Skim the awaiting-approval queue. Can you see invoice numbers and amounts without a spreadsheet?",
     "Open one submitted invoice hub. Is status, supplier, and amount legible?",
+    "If you visit Line Items, are recent lines a pull queue toward invoice hubs?",
     "Decide whether you would pilot this desk with your AP clerk.",
 ]
 
@@ -29,6 +32,7 @@ phases = [
     "Orient on Approval Desk",
     "Queue density and amount visibility",
     "Hub before decision",
+    "Line composition path",
     "Pilot verdict",
 ]
 
@@ -36,6 +40,7 @@ adoption_criteria = [
     "Awaiting work is visible without hunting entity lists",
     "Invoice amount is visible on the desk or hub",
     "Approve/reject path is discoverable from the desk",
+    "Line-item composition desk uses a pull queue into invoice hubs (not a decorative grid)",
     "Would run a two-week pilot as-is or with minor fixes",
 ]
 
