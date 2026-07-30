@@ -2504,9 +2504,19 @@ async def _workspace_handler(
         effective_route = urlparse(htmx.current_url).path
 
     # Apply per-user workspace layout preferences (order, visibility, widths)
-    from dazzle.page.runtime.workspace_renderer import apply_layout_preferences, build_catalog
+    from dazzle.page.runtime.workspace_renderer import (
+        apply_layout_preferences,
+        apply_persona_focus,
+        build_catalog,
+    )
 
     render_ws_ctx = apply_layout_preferences(ws_context, user_preferences)
+    # PersonaVariant focus/purpose: author default order when the user has
+    # not saved a personal layout (prefs win). Surfaces search/metrics early
+    # when DSL declares ``ux: as <persona>: focus: …`` (EX-048 / cycle 1470).
+    pref_key = f"workspace.{getattr(ws_context, 'name', '')}.layout"
+    if not user_preferences.get(pref_key):
+        render_ws_ctx = apply_persona_focus(render_ws_ctx, user_roles)
     catalog = build_catalog(ws_context)
 
     # #948 server-render migration: cards come from the workspace IR

@@ -412,7 +412,7 @@ class TestDashboardRoundTrip:
         assert result.regions[0].col_span == 12
 
 
-def _make_workspace(stage: str, region_count: int = 3) -> object:
+def _make_workspace(stage: str, region_count: int = 3, *, ux: object | None = None) -> object:
     from types import SimpleNamespace
 
     regions = []
@@ -452,4 +452,137 @@ def _make_workspace(stage: str, region_count: int = 3) -> object:
         sse_url="",
         fold_count=None,
         access=None,
+        ux=ux,
     )
+
+
+class TestApplyPersonaFocus:
+    """PersonaVariant focus reorders default layout; purpose override."""
+
+    def test_focus_leads_and_skips_unknown(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.page.runtime.workspace_renderer import (
+            apply_persona_focus,
+            build_workspace_context,
+        )
+
+        ux = SimpleNamespace(
+            persona_variants=[
+                SimpleNamespace(
+                    persona="user",
+                    focus=["region_2", "region_0", "ghost"],
+                    purpose="User overview",
+                )
+            ]
+        )
+        ctx = build_workspace_context(_make_workspace("scanner_table", 4, ux=ux))
+        assert ctx.persona_focus == {"user": ["region_2", "region_0", "ghost"]}
+        assert ctx.persona_purposes == {"user": "User overview"}
+
+        result = apply_persona_focus(ctx, ["role_user"])
+        assert [r.name for r in result.regions] == [
+            "region_2",
+            "region_0",
+            "region_1",
+            "region_3",
+        ]
+        assert result.purpose == "User overview"
+
+    def test_no_roles_or_no_focus_is_noop(self) -> None:
+        from types import SimpleNamespace
+
+        from dazzle.page.runtime.workspace_renderer import (
+            apply_persona_focus,
+            build_workspace_context,
+        )
+
+        ux = SimpleNamespace(
+            persona_variants=[SimpleNamespace(persona="admin", focus=["region_1"], purpose="Admin")]
+        )
+        ctx = build_workspace_context(_make_workspace("scanner_table", 2, ux=ux))
+        assert apply_persona_focus(ctx, []) is ctx
+        # role does not match admin
+        assert apply_persona_focus(ctx, ["role_user"]) is ctx
+
+    def test_contact_manager_home_shape_find_contact_early(self) -> None:
+        """Mirrors contact_manager home: search is last in DSL, focus puts it early."""
+        from types import SimpleNamespace
+
+        from dazzle.page.runtime.workspace_renderer import (
+            apply_persona_focus,
+            build_workspace_context,
+        )
+
+        names = [
+            "directory_stats",
+            "favourite_contacts",
+            "recent_contacts",
+            "company_contacts",
+            "company_mix",
+            "find_contact",
+        ]
+        regions = []
+        for n in names:
+            regions.append(
+                SimpleNamespace(
+                    name=n,
+                    source="Contact",
+                    sources=[],
+                    display="LIST",
+                    filter=None,
+                    sort=[],
+                    limit=None,
+                    action=None,
+                    group_by=None,
+                    aggregates={},
+                    date_field=None,
+                    date_range=False,
+                    heatmap_rows=None,
+                    heatmap_columns=None,
+                    heatmap_value=None,
+                    heatmap_thresholds=None,
+                    progress_stages=None,
+                    progress_complete_at=None,
+                    empty_message=None,
+                    source_filters=None,
+                )
+            )
+        ux = SimpleNamespace(
+            persona_variants=[
+                SimpleNamespace(
+                    persona="user",
+                    focus=[
+                        "directory_stats",
+                        "find_contact",
+                        "favourite_contacts",
+                        "recent_contacts",
+                    ],
+                    purpose="See a friendly overview",
+                )
+            ]
+        )
+        ws = SimpleNamespace(
+            name="home",
+            title="Home",
+            purpose="Welcome overview",
+            stage="",
+            regions=regions,
+            nav_groups=[],
+            context_selector=None,
+            fold_count=None,
+            access=None,
+            ux=ux,
+            live=False,
+        )
+        ctx = build_workspace_context(ws)
+        result = apply_persona_focus(ctx, ["user"])
+        assert [r.name for r in result.regions][:4] == [
+            "directory_stats",
+            "find_contact",
+            "favourite_contacts",
+            "recent_contacts",
+        ]
+        # fold_count default 3 → first three (incl. find_contact) eager in typed render
+        assert result.fold_count == 3
+        assert result.regions[1].name == "find_contact"

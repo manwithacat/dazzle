@@ -31,8 +31,16 @@ from dazzle.page.runtime.action_urls import (
 )
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
 
+# apply_persona_focus lives in workspace_persona_focus; re-export for
+# historical callers / tests that import from workspace_renderer.
+from dazzle.page.runtime.workspace_persona_focus import (  # noqa: F401
+    apply_persona_focus,
+    collect_workspace_persona_overrides,
+)
+
 # Action URL helpers live in action_urls.py (MI leaf). Tests may import
 # `_action_to_url` from this module or from action_urls directly.
+# apply_persona_focus re-exported from workspace_persona_focus (leaf).
 
 
 def _entity_to_app_url(entity_name: str) -> str:
@@ -211,6 +219,14 @@ class WorkspaceContext(BaseModel):
     context_selector_entity: str = ""  # v0.38.0: entity for context selector
     context_selector_label: str = ""  # Human-readable label for context selector
     context_options_url: str = ""  # API URL to fetch context options
+    # Per-persona region emphasis from ``ux: as <persona>: focus: r1, r2``.
+    # Applied at request time when the user has no saved layout preference
+    # (user prefs win). First matching role reorders regions so focus names
+    # lead — they then fall inside fold_count eager GETs (#378). Closes the
+    # EX-048 deferred ``focus`` gap for workspaces (cycle 1470).
+    persona_focus: dict[str, list[str]] = Field(default_factory=dict)
+    # Per-persona purpose overrides (same ``ux: as <persona>:`` block).
+    persona_purposes: dict[str, str] = Field(default_factory=dict)
 
 
 # =============================================================================
@@ -709,6 +725,8 @@ def build_workspace_context(
 
             ctx_label = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", ctx_entity)
 
+    persona_focus, persona_purposes = collect_workspace_persona_overrides(workspace)
+
     return WorkspaceContext(
         name=workspace.name,
         title=workspace.title or workspace.name.replace("_", " ").title(),
@@ -724,6 +742,8 @@ def build_workspace_context(
         # connect + sse:entity.* card triggers. Tenant is resolved server-side
         # by the /_ops/sse/events endpoint, so the URL carries no query params.
         sse_url="/_ops/sse/events" if getattr(workspace, "live", False) else "",
+        persona_focus=persona_focus,
+        persona_purposes=persona_purposes,
     )
 
 
