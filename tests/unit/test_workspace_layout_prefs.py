@@ -583,6 +583,65 @@ class TestApplyPersonaFocus:
             "favourite_contacts",
             "recent_contacts",
         ]
-        # fold_count default 3 → first three (incl. find_contact) eager in typed render
-        assert result.fold_count == 3
+        # EX-048@1484: fold expands to cover all known focus regions (was 3 → last focus delayed)
+        assert result.fold_count == 4
         assert result.regions[1].name == "find_contact"
+
+    def test_focus_fold_capped_at_max(self) -> None:
+        """Many focus names expand fold but stay under thrash cap (6)."""
+        from types import SimpleNamespace
+
+        from dazzle.page.runtime.workspace_renderer import (
+            apply_persona_focus,
+            build_workspace_context,
+        )
+
+        names = [f"region_{i}" for i in range(10)]
+        regions = []
+        for n in names:
+            regions.append(
+                SimpleNamespace(
+                    name=n,
+                    source="Contact",
+                    sources=[],
+                    display="LIST",
+                    filter=None,
+                    sort=[],
+                    limit=None,
+                    action=None,
+                    group_by=None,
+                    aggregates={},
+                    date_field=None,
+                    date_range=False,
+                    heatmap_rows=None,
+                    heatmap_columns=None,
+                    heatmap_value=None,
+                    heatmap_thresholds=None,
+                    progress_stages=None,
+                    progress_complete_at=None,
+                    empty_message=None,
+                    source_filters=None,
+                )
+            )
+        focus = names[:8]
+        ux = SimpleNamespace(
+            persona_variants=[SimpleNamespace(persona="user", focus=focus, purpose="")]
+        )
+        ws = SimpleNamespace(
+            name="wide",
+            title="Wide",
+            purpose="",
+            stage="command_center",
+            regions=regions,
+            nav_groups=[],
+            context_selector=None,
+            fold_count=None,
+            access=None,
+            ux=ux,
+            live=False,
+        )
+        ctx = build_workspace_context(ws)
+        assert ctx.fold_count == 3  # command_center stage default
+        result = apply_persona_focus(ctx, ["user"])
+        assert result.fold_count == 6  # _MAX_FOCUS_FOLD
+        assert [r.name for r in result.regions][:8] == focus

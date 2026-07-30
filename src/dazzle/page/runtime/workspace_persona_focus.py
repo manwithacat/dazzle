@@ -13,6 +13,11 @@ from __future__ import annotations
 
 from typing import Any
 
+# Cap eager regions after focus lead so persona intent wins over stage
+# STAGE_FOLD defaults without re-opening command_center / dual_pane thrash
+# (nested Playwright storms when fold ≥6–8 concurrent region GETs).
+_MAX_FOCUS_FOLD = 6
+
 
 def collect_workspace_persona_overrides(
     workspace: Any,
@@ -74,6 +79,22 @@ def regions_with_focus_lead(
     return ordered
 
 
+def _fold_count_for_focus(
+    regions: list[Any],
+    focus_names: list[str],
+    current_fold: int,
+) -> int | None:
+    """Return expanded fold_count, or None when stage default already covers focus."""
+    known = {r.name for r in regions}
+    n_focus = sum(1 for name in focus_names if name in known)
+    if n_focus <= 0:
+        return None
+    desired = min(n_focus, _MAX_FOCUS_FOLD)
+    if desired <= current_fold:
+        return None
+    return desired
+
+
 def apply_persona_focus(
     ctx: Any,
     user_roles: list[str],
@@ -81,9 +102,14 @@ def apply_persona_focus(
     """Reorder regions so the matching persona's ``focus:`` list leads.
 
     Author intent from ``ux: as <persona>: focus: r1, r2, …``. Unknown focus
-    names are skipped. First matching role wins. Does not recompute
-    ``fold_count`` — leading focus regions fall into the eager window via
-    index < fold_count in the typed renderer. Never mutates *ctx*.
+    names are skipped. First matching role wins. Never mutates *ctx*.
+
+    Cycle 1484 (EX-048 follow-up): also expand ``fold_count`` so every
+    *known* focus region is above the fold (eager GET). Stage defaults
+    often cap at 3 while authors list 4 focus regions (e.g. contact_manager
+    home: directory_stats + find_contact + favourites + recent) — without
+    expansion the last focus card stayed intersect-once. Cap at
+    ``_MAX_FOCUS_FOLD`` to avoid re-opening multi-queue thrash.
     """
     persona_focus = getattr(ctx, "persona_focus", None) or {}
     persona_purposes = getattr(ctx, "persona_purposes", None) or {}
@@ -97,9 +123,15 @@ def apply_persona_focus(
     if purpose_override:
         updates["purpose"] = purpose_override
     if focus_names:
-        reordered = regions_with_focus_lead(list(ctx.regions), focus_names)
+        regions = list(ctx.regions)
+        reordered = regions_with_focus_lead(regions, focus_names)
         if reordered is not None:
             updates["regions"] = reordered
+            regions = reordered
+        current_fold = int(getattr(ctx, "fold_count", None) or 0) or 0
+        expanded = _fold_count_for_focus(regions, focus_names, current_fold)
+        if expanded is not None:
+            updates["fold_count"] = expanded
     if not updates:
         return ctx
     return ctx.model_copy(update=updates)
