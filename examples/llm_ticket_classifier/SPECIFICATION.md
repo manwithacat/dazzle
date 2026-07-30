@@ -79,6 +79,8 @@ not free prose):
 
 ## Automation & controls
 
+One durable process reinforces intake triage: when a **Ticket** enters **in_progress**, a supervisor review step is required so handoff is not an informal chat (verify: `dazzle process list`).
+
 Four AI-assisted steps are declared in the model and run as part of the
 system's operation:
 
@@ -121,4 +123,4 @@ declared in the model — each with an explicit trigger, prompt contract, and
 timeout — rather than ad-hoc calls buried in code, so what the AI is allowed to
 touch is reviewable in one place. (Verify: `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:57ab7da2783d9eea07bccdc49af7c18e230175ca79f32bd2263b96799fae58ac -->
+<!-- dazzle-spec-brief: sha256:eb25b68934bbc91b0bad138e37b50641c322aadbc458a52323b000cea6622413 -->

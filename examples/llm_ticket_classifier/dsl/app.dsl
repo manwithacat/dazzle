@@ -142,6 +142,14 @@ entity Ticket "Support Ticket":
   description: text required pii(category=freeform)
   customer_email: str(100) required pii(category=contact)
   status: enum[open, in_progress, resolved, closed] = open
+  # domain_lifecycle_priors: status enum had no transitions (status∄t residual)
+  transitions:
+    open -> in_progress
+    in_progress -> resolved
+    resolved -> closed
+    in_progress -> open
+    resolved -> in_progress
+    closed -> open: role(supervisor) or role(admin)
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
