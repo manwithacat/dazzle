@@ -17,23 +17,27 @@ You are logged in as the hr_admin account for a two-week pilot decision.
 business_context = """
 You onboard people, look up contacts, and review compensation with finance.
 Empty directories fail a pilot immediately. You care about: (1) seeing people
-without hunting, (2) opening a person hub that shows employment context,
-(3) finding departments/roles without warehouse admin chrome, (4) a clear
-path to add someone. If those fail, you keep the spreadsheet.
+without hunting, (2) opening a person hub that shows employment context and
+assignment status (active / on leave / terminated), (3) finding departments/roles
+without warehouse admin chrome, (4) a clear path to add someone, (5) compensation
+desk people as a scannable pull queue not a card gallery. If those fail, you keep
+the spreadsheet.
 """
 
 tasks = [
     "Land on Staff Directory (or the HR home). Are people listed with useful names?",
-    "Open a person row. Is it a career/person hub (employment, history) or a flat field dump?",
-    "Open Departments & Roles (or equivalent). Does the name match what you see?",
+    "Open a person row. Is it a career/person hub (employment, history, status) or a flat field dump?",
+    "On Staff Directory, can you see assignment status mix or cues (active / on leave)?",
+    "Open Compensation Review. Are people a pull queue toward person hubs?",
     "Find how you would add a person (CTA language) without becoming a warehouse admin.",
     "Decide whether this is a credible HR skeleton for a two-week pilot.",
 ]
 
 adoption_criteria = [
     "Staff directory shows real person rows when seeded (not empty pilot-breaker)",
-    "Person open is a usable hub (employment/context), not a flat field dump",
-    "View names are honest about what is rendered (no fake org-chart claims)",
+    "Person open is a usable hub (employment/context/status), not a flat field dump",
+    "Assignment status (active / on leave / terminated) is visible on employment path",
+    "Compensation people region is a scannable pull queue, not a decorative grid",
     "Primary create / add-person CTA uses human language and is discoverable",
     "Would run a two-week pilot as-is or with minor fixes",
 ]

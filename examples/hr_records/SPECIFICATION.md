@@ -73,9 +73,9 @@ dedicated screens — fourteen in all, from the staff directory to
 - **Departments & Roles** — org pulse, department grid, role queue, reporting
   trail, and roles-by-level chart (not a visual org tree yet).
 - **Compensation Review** — finance/HR salary desk: metrics, active salary
-  queue, reason chart, and people cards.
+  queue, reason chart, and people pull-queue to person hubs.
 - **Time Machine** — HR-admin as-of snapshot: metrics, employment queue, salary
-  grid, reporting trail, and employment chart (`?as_of=YYYY-MM-DD`).
+  timeline, reporting trail, and employment chart (`?as_of=YYYY-MM-DD`).
 - **My Team** — manager desk with reports queue, cards, and role mix chart.
 - **New Starters** — HR onboarding desk with starter cards and employment trail.
 - **Reporting** — ManagerLink trail with people cards and department chart.
@@ -119,4 +119,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:bbf4db8f9e18348550e8e0653813b57909d67f336b8d456e837a339679b3dc1c -->
+<!-- dazzle-spec-brief: sha256:2862fe3d19df6261edc492b40f42c3f9fc892ac9735261ee479a76dca9cc178b -->

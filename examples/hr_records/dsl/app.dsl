@@ -961,9 +961,11 @@ workspace compensation_review "Compensation Review":
       count: count(Salary)
     empty: "No active salaries"
 
+  # Work-surface utility (cycle 1482 acceptance): people are a pull-to-open
+  # queue on the compensation desk, not a gallery grid.
   people_cards:
     source: Person
-    display: grid
+    display: queue
     limit: 15
     action: person_detail
     empty: "No people on record"
@@ -1002,9 +1004,11 @@ workspace time_machine "Time Machine":
     limit: 25
     empty: "No employment rows for this as-of"
 
+  # Work-surface utility (cycle 1482 acceptance): as-of salary rows are dated
+  # band events → timeline (matches employment_snapshot queue + reporting timeline).
   salary_snapshot:
     source: Salary
-    display: grid
+    display: timeline
     limit: 20
     empty: "No salary rows for this as-of"
 
