@@ -57,6 +57,8 @@ Who advances what is governed by the declared rules: managers and admins can mov
 
 ## Automation & controls
 
+**Project lifecycle.** Projects move active ↔ archived (managers archive; admin may reactivate).
+
 One durable process reinforces the review handoff: when a Task enters **review**, a manager review step is required so acceptance is not an informal chat (verify: `dazzle process list`).
 
 ## The technical foundation
@@ -78,4 +80,4 @@ byte-serving route to that boundary, so no new route can stream attachment
 bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:188b60cad049fa5ff525491ca74c380f20d6804c71c9677448e48cb974c0e91c -->
+<!-- dazzle-spec-brief: sha256:d43cf1469ae2c978f249192a8052f0759e283ded0364509cd593b5c613ba4da3 -->

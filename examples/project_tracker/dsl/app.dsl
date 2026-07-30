@@ -108,6 +108,12 @@ entity Project "Project":
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
+  # Project archive SM (domain residual status∄transitions).
+  # Managers archive finished work; admin may reactivate.
+  transitions:
+    active -> archived: role(admin) or role(manager)
+    archived -> active: role(admin)
+
   permit:
     list: role(admin) or role(manager) or role(member)
     read: role(admin) or role(manager) or role(member)
