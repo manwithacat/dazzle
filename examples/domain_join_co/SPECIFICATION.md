@@ -30,6 +30,8 @@ member, authored by the admin. Every announcement belongs to exactly one
 workspace, and its visibility follows that ownership — it exercises precisely
 the access that a verified-domain join unlocks.
 
+An Announcement moves draft -> published -> archived under admin control; published posts may return to draft for edits, and archived posts may be republished.
+
 Announcements can be listed, read in detail, and posted through three
 dedicated screens.
 
@@ -82,4 +84,8 @@ which keeps the product fast, accessible, and simple to operate. (Verify:
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:80ef727cce1a73103713ceba9c7236be49bd7e3fb764f4f93f5f1e4bfd742af6 -->
+## Automation & controls
+
+**Announcement lifecycle.** Announcements move draft → published → archived (admin may return published to draft or republish archived).
+
+<!-- dazzle-spec-brief: sha256:65536c7342e0a09120364c8d1bf8bc09f63266223828d21ba895d75994116902 -->

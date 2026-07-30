@@ -67,6 +67,14 @@ entity Announcement "Announcement":
   title: str(200) required
   body: text required
   workspace: ref Workspace required
+  # Domain residual lifecycle densify (cycle 1477): posts are not eternally live.
+  status: enum[draft,published,archived]=draft
+  transitions:
+    draft -> published: role(admin)
+    published -> archived: role(admin)
+    published -> draft: role(admin)
+    archived -> published: role(admin)
+    draft -> archived: role(admin)
   permit:
     create: role(admin)
     read: role(admin) or role(member)
