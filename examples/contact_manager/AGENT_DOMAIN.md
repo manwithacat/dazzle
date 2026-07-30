@@ -7,8 +7,8 @@
 
 > **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Beginner+ > **DSL Features Demonstrated**: dual_pane_flow stage, intent declaration, domain/pattern tags, indexes A personal contact management app that lets users efficiently browse and manage their professional and personal contacts. The dual-pane interface enables quick scanning of contacts while viewi
 
-**Source:** `/Volumes/SSD/Dazzle/examples/contact_manager/SPEC.md`
-**Fingerprint:** `9fbeb4dabddc0413`
+**Source:** `examples/contact_manager/SPEC.md`
+**Fingerprint:** `d6cf91195521bcd6`
 
 ## Personas (jobs)
 
@@ -16,11 +16,12 @@
 
 ## Nouns (domain types)
 
+- **EngagementLetter** (grounded) owner≈`owner` lifecycle: draft → sent → signed — definitional sentence in founder brief (A X is …)
 - **Contact** (grounded) owner≈`owner` lifecycle: — — appears in founder brief (source=capitalized_noun)
 
 ## Rejected chrome (not domain)
 
-`Acceptance`, `Add`, `Change`, `Click`, `Criteria`, `Delete`, `Duplicate`, `Edit`, `Efficient`, `Flow`, `Import`, `Indexe`, `Level`, `Multiple`, `Point`, `Profile`, `Rule`, `Sale`, `Scrollable`, `Search`, `Star`, `bare`, `currently`, `detail`, `directory`, `dual`, `email`, `favorite`, `favourites`, `form`, `implementation`, `list`, `pane`, `pattern`, `personal`, `phone`, `save`, `short`, `unique`
+`Acceptance`, `Add`, `Administrator`, `Change`, `Click`, `Criteria`, `Delete`, `Duplicate`, `Edit`, `Efficient`, `Flow`, `Import`, `Indexe`, `Level`, `Multiple`, `Point`, `Profile`, `Rule`, `Sale`, `Scrollable`, `Search`, `Star`, `bare`, `currently`, `detail`, `directory`, `dual`, `email`, `favorite`, `favourites`, `firm`, `form`, `implementation`, `letter`, `list`, `pane`, `pattern`, `personal`, `phone`, `save`, `short`, `unique`
 
 ## Desks
 
@@ -28,7 +29,7 @@
 
 ## Demo spine (seed stories)
 
-- `manager`: Manager has seeded Contact rows for their desk (min_rows=1, entity≈Contact)
+- `manager`: Manager has seeded EngagementLetter rows for their desk (min_rows=1, entity≈EngagementLetter)
 
 ## Open questions
 
@@ -43,6 +44,7 @@ _None — consider process blocks when ≥2 personas share a lifecycle noun._
 - Prefer knowledge concepts before inventing structure.
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
+- 1 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -51,8 +53,8 @@ _None — consider process blocks when ≥2 personas share a lifecycle noun._
   "version": 1,
   "title": "Contact Manager - Product Specification",
   "summary": "> **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Beginner+ > **DSL Features Demonstrated**: dual_pane_flow stage, intent declaration, domain/pattern tags, indexes A personal contact management app that lets users efficiently browse and manage their professional and personal contacts. The dual-pane interface enables quick scanning of contacts while viewi",
-  "source_path": "/Volumes/SSD/Dazzle/examples/contact_manager/SPEC.md",
-  "source_sha256": "9fbeb4dabddc0413",
+  "source_path": "examples/contact_manager/SPEC.md",
+  "source_sha256": "d6cf91195521bcd6",
   "personas": [
     {
       "id_hint": "manager",
@@ -65,6 +67,17 @@ _None — consider process blocks when ≥2 personas share a lifecycle noun._
     }
   ],
   "nouns": [
+    {
+      "name": "EngagementLetter",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [
+        "draft",
+        "sent",
+        "signed"
+      ],
+      "owner_field_hint": "owner"
+    },
     {
       "name": "Contact",
       "status": "grounded",
@@ -85,9 +98,9 @@ _None — consider process blocks when ≥2 personas share a lifecycle noun._
   "demo_spine": [
     {
       "persona": "manager",
-      "story": "Manager has seeded Contact rows for their desk",
+      "story": "Manager has seeded EngagementLetter rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Contact"
+      "entity_hint": "EngagementLetter"
     }
   ],
   "open_questions": [],
@@ -95,11 +108,13 @@ _None — consider process blocks when ≥2 personas share a lifecycle noun._
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "1 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Acceptance",
     "Add",
+    "Administrator",
     "Change",
     "Click",
     "Criteria",
@@ -127,8 +142,10 @@ _None — consider process blocks when ≥2 personas share a lifecycle noun._
     "email",
     "favorite",
     "favourites",
+    "firm",
     "form",
     "implementation",
+    "letter",
     "list",
     "pane",
     "pattern",

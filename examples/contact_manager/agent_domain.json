@@ -2,8 +2,8 @@
   "version": 1,
   "title": "Contact Manager - Product Specification",
   "summary": "> **Document Status**: Refined specification ready for DSL conversion > **Complexity Level**: Beginner+ > **DSL Features Demonstrated**: dual_pane_flow stage, intent declaration, domain/pattern tags, indexes A personal contact management app that lets users efficiently browse and manage their professional and personal contacts. The dual-pane interface enables quick scanning of contacts while viewi",
-  "source_path": "/Volumes/SSD/Dazzle/examples/contact_manager/SPEC.md",
-  "source_sha256": "9fbeb4dabddc0413",
+  "source_path": "examples/contact_manager/SPEC.md",
+  "source_sha256": "d6cf91195521bcd6",
   "personas": [
     {
       "id_hint": "manager",
@@ -16,6 +16,17 @@
     }
   ],
   "nouns": [
+    {
+      "name": "EngagementLetter",
+      "status": "grounded",
+      "evidence": "definitional sentence in founder brief (A X is \u2026)",
+      "lifecycle_hint": [
+        "draft",
+        "sent",
+        "signed"
+      ],
+      "owner_field_hint": "owner"
+    },
     {
       "name": "Contact",
       "status": "grounded",
@@ -36,9 +47,9 @@
   "demo_spine": [
     {
       "persona": "manager",
-      "story": "Manager has seeded Contact rows for their desk",
+      "story": "Manager has seeded EngagementLetter rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Contact"
+      "entity_hint": "EngagementLetter"
     }
   ],
   "open_questions": [],
@@ -46,11 +57,13 @@
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "1 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Acceptance",
     "Add",
+    "Administrator",
     "Change",
     "Click",
     "Criteria",
@@ -78,8 +91,10 @@
     "email",
     "favorite",
     "favourites",
+    "firm",
     "form",
     "implementation",
+    "letter",
     "list",
     "pane",
     "pattern",

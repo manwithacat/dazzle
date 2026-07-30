@@ -83,4 +83,8 @@ static proof holds every byte-serving route to that boundary, so no new route
 can stream document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:b206a3326cf3ecfdf6e917cd0d232046391281d7e49dfbfc5fb607be50a19d82 -->
+## Automation & controls
+
+**Engagement letter lifecycle.** Engagement letters move draft → sent → signed; administrators may void a letter from draft, sent, or signed.
+
+<!-- dazzle-spec-brief: sha256:08deae79fd80a88b150c334c64296fde001714c2b838ccf7650e1b42f94ee727 -->

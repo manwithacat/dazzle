@@ -53,6 +53,24 @@ A person in the user's professional or personal network.
 
 ---
 
+
+### Entity: EngagementLetter
+
+A firm engagement letter / NDA tied to a Contact. The letter moves through a
+signing lifecycle: draft → sent → signed (or void if withdrawn).
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `status` | Enum | Yes | draft, sent, signed, void |
+| `contact` | Ref Contact | Yes | Party relationship |
+| `party` | String | Yes | Counterparty label |
+| `scope_summary` | Text | Yes | Scope of engagement |
+| `effective_date` | Date | Yes | When the letter takes effect |
+
+**Lifecycle:** An EngagementLetter moves `draft -> sent -> signed` under normal
+signing; administrators may move any non-signed state (or signed) to `void`.
+
+
 ## User Interface Specification
 
 ### Where work happens
