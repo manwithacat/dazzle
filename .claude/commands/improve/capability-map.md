@@ -111,8 +111,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1443 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1461 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1461 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1465 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1465 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1465 (2026-07-30).** **self-audit** window e96ad1280..b12af659a — 5 CLEAN (c1462 domain_lifecycle_priors + support process; c1458 story_walk dig contracts; c1464 project_tracker process densify; c1451 gallery Escape probes; c1460 journey dig contracts). Dig-contract CLEAN story_walk/acceptance/journey. 0 DISCREPANCY/AUD/REGRESSION. CodeQL+inbox **USED@1465**. budget 0. Explore **32/100**. Next: domain densify hr_records|llm residual=3 under residual_total>0 — not dual_lock/smoke/WI densify. self-audit@1465 next~1480; capability-sweep@1461 next~1481.
 
 > **Cycle 1461 (2026-07-29).** **capability-sweep** (cadence ≥20 since 1441) — inventory reconcile vs tip. **UNOWNED=0** **COGNITION_STALE_eff=16** **HYGIENE_STALE_eff=30**. Flipped lag≥20 USED→STALE: 2 (`dazzle demo reset-and-load` (#1627 clos, `qa-trial` skill). lag<20 STALE→USED: 0. DRIVER CodeQL+inbox **USED@1461**. Top COGNITION digs (aggressive, densify_allowed=0 residual=0 dual_lock=0 suppress_smoke=1): **hm-convergence gallery_probes** (campaign force) / **framework-ux edge** / **story_walk** dig+ship / domain-demo re-touch — **not** dual_lock/smoke stamp/WI densify. Metered vision STALE → subscription substitutes only. budget 0. Explore **29/100**. Next self-audit@1450 ~1465; capability-sweep@1461 next~1481.
 
