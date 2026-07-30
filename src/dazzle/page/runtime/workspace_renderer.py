@@ -31,16 +31,17 @@ from dazzle.page.runtime.action_urls import (
 )
 from dazzle.page.runtime.auto_display import resolve_region_display_mode
 
-# apply_persona_focus lives in workspace_persona_focus; re-export for
-# historical callers / tests that import from workspace_renderer.
-from dazzle.page.runtime.workspace_persona_focus import (  # noqa: F401
-    apply_persona_focus,
+# Explicit `as name` re-export so mypy [attr-defined] allows
+# `from workspace_renderer import apply_persona_focus` (CI type-check).
+from dazzle.page.runtime.workspace_persona_focus import (
+    apply_persona_focus as apply_persona_focus,
+)
+from dazzle.page.runtime.workspace_persona_focus import (
     collect_workspace_persona_overrides,
 )
 
 # Action URL helpers live in action_urls.py (MI leaf). Tests may import
 # `_action_to_url` from this module or from action_urls directly.
-# apply_persona_focus re-exported from workspace_persona_focus (leaf).
 
 
 def _entity_to_app_url(entity_name: str) -> str:
