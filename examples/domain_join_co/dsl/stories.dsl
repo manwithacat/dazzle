@@ -51,7 +51,7 @@ story ST-004 "Member opens an announcement hub for full context":
   given:
     - "Announcement exists and is readable under current_tenant"
   then:
-    - "Announcement hub shows summary strip (title, workspace) and body"
+    - "Announcement hub shows lifecycle strip (title, status, workspace) and body"
     - "Member cannot create or update announcements"
 
 story ST-005 "Admin opens a workspace hub from the board":
@@ -65,4 +65,18 @@ story ST-005 "Admin opens a workspace hub from the board":
     - "At least one Workspace tenant root exists"
   then:
     - "Workspace hub shows identity strip (name, slug, role)"
-    - "Related announcements table lists posts scoped to that tenant"
+    - "Related announcements appear as a pull queue (title + status), not a warehouse table"
+
+story ST-006 "Admin works the publish desk draft queue into a post hub":
+  status: accepted
+  executed_by: surface.announcement_detail
+  persona: admin
+  trigger: user_click
+  entities: [Announcement]
+  given:
+    - "Admin is on the publish_desk workspace"
+    - "At least one draft Announcement exists"
+  then:
+    - "Draft queue lists only status=draft posts"
+    - "Opening a draft hops to the Announcement hub with lifecycle strip"
+    - "Live cards list only published posts for board pulse"

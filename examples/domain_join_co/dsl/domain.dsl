@@ -51,6 +51,7 @@ entity Workspace "Workspace":
   slug: slug required
   name: str(120) required
   role: str(40)
+  display_field: name
   tenant_host:
     domain: domainjoin.example
     slug_field: slug
@@ -58,6 +59,8 @@ entity Workspace "Workspace":
     order: 1
   membership:
     roles: role            # ADR-0037: membership ONLY on the root kind
+  fitness:
+    repr_fields: [name, slug, role]
 
 # ── Tenant-scoped data the join grants access to ──────────────────────────────
 
@@ -69,12 +72,15 @@ entity Announcement "Announcement":
   workspace: ref Workspace required
   # Domain residual lifecycle densify (cycle 1477): posts are not eternally live.
   status: enum[draft,published,archived]=draft
+  display_field: title
   transitions:
     draft -> published: role(admin)
     published -> archived: role(admin)
     published -> draft: role(admin)
     archived -> published: role(admin)
     draft -> archived: role(admin)
+  fitness:
+    repr_fields: [title, status, workspace]
   permit:
     create: role(admin)
     read: role(admin) or role(member)
@@ -104,9 +110,14 @@ surface announcement_list "Announcements":
   open: Workspace via workspace
   section main:
     field title "Title"
+    field status "Status"
     field workspace "Workspace"
   ux:
     purpose: "Team board — open a row for the announcement hub or its workspace"
+    filter: status
+    sort: title asc
+    search: title
+    empty: "No announcements yet — post one from Publish"
 
 surface announcement_detail "Announcement":
   uses entity Announcement
@@ -114,11 +125,12 @@ surface announcement_detail "Announcement":
   section summary "Summary":
     layout: strip
     field title "Title"
+    field status "Status"
     field workspace "Workspace"
   section body "Body":
     field body "Body"
   ux:
-    purpose: "Announcement hub — title strip, workspace context, and body in one place"
+    purpose: "Announcement hub — lifecycle strip, workspace context, and body in one place"
 
 surface announcement_create "Post Announcement":
   uses entity Announcement
@@ -147,12 +159,13 @@ surface workspace_detail "Workspace":
     field name "Name"
     field slug "Slug"
     field role "Role"
+  # Pull-next post queue (not warehouse table) — ST-005 / journey hub deepen.
   related posts "Announcements":
-    display: table
+    display: queue
     show: Announcement
-    columns: title
+    columns: title, status
   ux:
-    purpose: "Workspace hub — identity strip and tenant-scoped announcements"
+    purpose: "Workspace hub — identity strip and tenant-scoped announcement queue"
 
 # Story-driven home: metrics + readiness strip before the announcement feed.
 # Join-request approval lives in runtime admin console (not DSL) — see
@@ -209,6 +222,7 @@ workspace home "Workspace Home":
     limit: 10
     # Workspace picker is pull-to-enter (queue), not a dense catalogue table.
     display: queue
+    action: workspace_detail
     empty: "No workspaces yet"
 
   activity_strip:
@@ -323,19 +337,21 @@ workspace publish_desk "Publish":
 
   draft_queue:
     source: Announcement
+    filter: status = draft
     sort: title asc
     limit: 20
     display: queue
     action: announcement_detail
-    empty: "No posts yet — create one to brief the team"
+    empty: "No drafts — create one to brief the team"
 
   live_cards:
     source: Announcement
+    filter: status = published
     sort: title asc
     limit: 15
     display: queue
     action: announcement_detail
-    empty: "Board empty"
+    empty: "Board empty — publish a draft to go live"
 
   readiness:
     display: status_list

@@ -7,14 +7,19 @@ strip vs member announcement board — not a bare announcement list warehouse.
 
 ## Reconstruct
 
-- admin default: `home` = announcement metrics + status_list (domain/policy) + feed.
+- admin default: `home` = announcement metrics + status_list (domain/policy) + feed;
+  tenant_roots queue opens workspace hubs.
 - member default: `announce` (Team Board) = board metrics + feed.
+- admin `publish_desk` = draft queue (status=draft) vs live published cards.
+- Workspace hub related announcements are a **pull queue** (title+status), not a table.
+- Announcement hub lifecycle strip includes status (draft/published/archived).
 - Join-request queue stays in runtime auth admin — do not invent DSL for it here.
 
 ## Not this
 
 - Home = only an announcement list with no join narrative.
 - Every persona defaults to the same desk when jobs differ.
+- Workspace hub related posts as a warehouse table.
 
 ## Expressions
 
