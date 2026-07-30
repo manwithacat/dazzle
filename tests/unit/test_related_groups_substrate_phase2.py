@@ -157,6 +157,28 @@ def test_status_cards_mode_renders_cards() -> None:
     assert "Design" in html
 
 
+def test_status_cards_mode_multi_tab_uses_hm_tabs() -> None:
+    """Cycle 1510 — multi related status_cards use HM tabs (not stacked h4s)."""
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Milestones",
+        display="status_cards",
+        tabs=[
+            _tab(tab_id="open", label="Open"),
+            _tab(tab_id="done", label="Done", entity_name="Milestone"),
+        ],
+    )
+    html = _render(g)
+    assert 'class="dz-tabs" data-dz-tabs' in html or "data-dz-tabs" in html
+    assert 'class="dz-tabs__tab"' in html
+    assert 'data-dz-tab-target="dz-related-tab-open"' in html
+    assert 'id="dz-related-tab-done"' in html
+    assert "dz-related-tab-count" in html
+    assert "dz-related-tab-label" not in html
+    assert "dz-related-status-card" in html
+    assert "Design" in html
+
+
 # ── file_list mode ──
 
 
@@ -164,6 +186,28 @@ def test_file_list_mode_renders_files() -> None:
     g = RelatedGroupContext(group_id="g1", label="Files", display="file_list", tabs=[_tab()])
     html = _render(g)
     assert "dz-skeleton" not in html
+    assert "dz-related-file" in html
+    assert "Design" in html
+
+
+def test_file_list_mode_multi_tab_uses_hm_tabs() -> None:
+    """Cycle 1510 — multi related file_list use HM tabs (not stacked h4s)."""
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Attachments",
+        display="file_list",
+        tabs=[
+            _tab(tab_id="docs", label="Docs"),
+            _tab(tab_id="imgs", label="Images", entity_name="File"),
+        ],
+    )
+    html = _render(g)
+    assert 'class="dz-tabs" data-dz-tabs' in html or "data-dz-tabs" in html
+    assert 'class="dz-tabs__tab"' in html
+    assert 'data-dz-tab-target="dz-related-tab-docs"' in html
+    assert 'id="dz-related-tab-imgs"' in html
+    assert "dz-related-tab-count" in html
+    assert "dz-related-tab-label" not in html
     assert "dz-related-file" in html
     assert "Design" in html
 

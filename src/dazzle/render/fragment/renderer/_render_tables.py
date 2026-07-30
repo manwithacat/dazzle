@@ -436,6 +436,26 @@ class _RenderTablesMixin:
             f"+ New {ctx.escape(t.create_label)}</a></div>"
         )
 
+    @staticmethod
+    def _related_hm_tab_buttons(tabs: list[RelatedTab], ctx: RenderContext) -> str:
+        """HM tabs link-strip for multi related groups (table/queue/cards/files)."""
+        return "".join(
+            f'<button type="button" class="dz-tabs__tab"'
+            f"{' aria-current="true"' if i == 0 else ''} "
+            f'data-dz-tab-target="dz-related-tab-{ctx.escape_attr(t.tab_id)}">'
+            f'{ctx.escape(t.label)}<span class="dz-related-tab-count">{len(t.rows)}</span>'
+            "</button>"
+            for i, t in enumerate(tabs)
+        )
+
+    @staticmethod
+    def _related_hm_panel_attrs(tab_id: str, index: int, multi: bool, ctx: RenderContext) -> str:
+        """Panel id/class/hidden attrs when multi-tab; empty string for single."""
+        if not multi:
+            return ""
+        hidden = "" if index == 0 else " hidden"
+        return f' id="dz-related-tab-{ctx.escape_attr(tab_id)}" class="dz-tabs__panel"{hidden}'
+
     def _emit_related_table(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
         """Multi-tab strips ride the HM tabs Hyperpart (Tier F4): honest
         link-strip buttons (`aria-current`, no role=tablist) driven by the
@@ -445,22 +465,11 @@ class _RenderTablesMixin:
         multi = len(tabs) > 1
         parts = ['<div class="dz-tabs" data-dz-tabs>']
         if multi:
-            buttons = "".join(
-                f'<button type="button" class="dz-tabs__tab"'
-                f"{' aria-current="true"' if i == 0 else ''} "
-                f'data-dz-tab-target="dz-related-tab-{ctx.escape_attr(t.tab_id)}">'
-                f'{ctx.escape(t.label)}<span class="dz-related-tab-count">{len(t.rows)}</span>'
-                "</button>"
-                for i, t in enumerate(tabs)
+            parts.append(
+                f'<div class="dz-tabs__list">{self._related_hm_tab_buttons(tabs, ctx)}</div>'
             )
-            parts.append(f'<div class="dz-tabs__list">{buttons}</div>')
         for i, t in enumerate(tabs):
-            panel_attrs = (
-                f' id="dz-related-tab-{ctx.escape_attr(t.tab_id)}" class="dz-tabs__panel"'
-                f"{'' if i == 0 else ' hidden'}"
-                if multi
-                else ""
-            )
+            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, multi, ctx)
             head = "".join(f'<th scope="col">{ctx.escape(h)}</th>' for h in t.headers)
             if t.rows:
                 body_rows = []
@@ -492,33 +501,69 @@ class _RenderTablesMixin:
         parts.append("</div>")
         return "".join(parts)
 
-    def _emit_related_cards(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
-        multi = len(tabs) > 1
-        parts: list[str] = []
-        for t in tabs:
-            block = ['<div class="dz-related-group">']
-            if multi:
-                block.append(f'<h4 class="dz-related-tab-label">{ctx.escape(t.label)}</h4>')
-            block.append(self._related_create_row(t, ctx))
-            cards = []
-            for i, row in enumerate(t.rows):
-                drill = t.row_drill[i] if t.row_drill else ""
-                attrs = self._related_drill_attrs(drill, ctx)
+    def _emit_related_cards_or_files_body(
+        self, t: RelatedTab, ctx: RenderContext, *, kind: str
+    ) -> str:
+        """Create-row + status-card or file-list body for one related tab.
+
+        ``kind`` is ``\"cards\"`` or ``\"files\"`` — shared control flow so multi-tab
+        HM shell (cycle 1510) does not clone row iteration twice.
+        """
+        parts = [self._related_create_row(t, ctx)]
+        items: list[str] = []
+        for i, row in enumerate(t.rows):
+            drill = t.row_drill[i] if t.row_drill else ""
+            attrs = self._related_drill_attrs(drill, ctx)
+            if kind == "files":
+                lines = "".join(
+                    f'<span class="dz-related-file-{"name" if j == 0 else "meta"}">'
+                    f"{ctx.escape(c)}</span>"
+                    for j, c in enumerate(row[:2])
+                )
+                items.append(f'<div class="dz-related-file-row"{attrs}>{lines}</div>')
+            else:
                 lines = "".join(
                     f'<div class="dz-related-status-card-'
                     f'{"primary" if j == 0 else "secondary"}">{ctx.escape(c)}</div>'
                     for j, c in enumerate(row[:3])
                 )
-                cards.append(f'<div class="dz-related-status-card"{attrs}>{lines}</div>')
-            if cards:
-                block.append(f'<div class="dz-related-status-cards">{"".join(cards)}</div>')
-            else:
-                block.append(
-                    f'<p class="dz-related-empty">No {ctx.escape(t.label.lower())} found.</p>'
-                )
-            block.append("</div>")
-            parts.append("".join(block))
+                items.append(f'<div class="dz-related-status-card"{attrs}>{lines}</div>')
+        if items:
+            wrap = "dz-related-file-list" if kind == "files" else "dz-related-status-cards"
+            parts.append(f'<div class="{wrap}">{"".join(items)}</div>')
+        else:
+            parts.append(f'<p class="dz-related-empty">No {ctx.escape(t.label.lower())} found.</p>')
         return "".join(parts)
+
+    def _emit_related_cards_or_files(
+        self, tabs: list[RelatedTab], ctx: RenderContext, *, kind: str
+    ) -> str:
+        """status_cards / file_list — multi-tab uses HM tabs (parity table/queue)."""
+        if not tabs:
+            return ""
+        multi = len(tabs) > 1
+        if not multi:
+            return (
+                f'<div class="dz-related-group">'
+                f"{self._emit_related_cards_or_files_body(tabs[0], ctx, kind=kind)}</div>"
+            )
+        parts = [
+            '<div class="dz-tabs" data-dz-tabs>',
+            f'<div class="dz-tabs__list">{self._related_hm_tab_buttons(tabs, ctx)}</div>',
+        ]
+        for i, t in enumerate(tabs):
+            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, True, ctx)
+            parts.append(
+                f"<div{panel_attrs}>"
+                f'<div class="dz-related-group">'
+                f"{self._emit_related_cards_or_files_body(t, ctx, kind=kind)}"
+                f"</div></div>"
+            )
+        parts.append("</div>")
+        return "".join(parts)
+
+    def _emit_related_cards(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+        return self._emit_related_cards_or_files(tabs, ctx, kind="cards")
 
     def _emit_related_queue_body(self, t: RelatedTab, ctx: RenderContext) -> str:
         """Create-row + queue region for one related tab (shared by multi/single)."""
@@ -587,21 +632,12 @@ class _RenderTablesMixin:
             return (
                 f'<div class="dz-related-group">{self._emit_related_queue_body(tabs[0], ctx)}</div>'
             )
-        parts = ['<div class="dz-tabs" data-dz-tabs>']
-        buttons = "".join(
-            f'<button type="button" class="dz-tabs__tab"'
-            f"{' aria-current="true"' if i == 0 else ''} "
-            f'data-dz-tab-target="dz-related-tab-{ctx.escape_attr(t.tab_id)}">'
-            f'{ctx.escape(t.label)}<span class="dz-related-tab-count">{len(t.rows)}</span>'
-            "</button>"
-            for i, t in enumerate(tabs)
-        )
-        parts.append(f'<div class="dz-tabs__list">{buttons}</div>')
+        parts = [
+            '<div class="dz-tabs" data-dz-tabs>',
+            f'<div class="dz-tabs__list">{self._related_hm_tab_buttons(tabs, ctx)}</div>',
+        ]
         for i, t in enumerate(tabs):
-            panel_attrs = (
-                f' id="dz-related-tab-{ctx.escape_attr(t.tab_id)}" class="dz-tabs__panel"'
-                f"{'' if i == 0 else ' hidden'}"
-            )
+            panel_attrs = self._related_hm_panel_attrs(t.tab_id, i, True, ctx)
             parts.append(
                 f"<div{panel_attrs}>"
                 f'<div class="dz-related-group">'
@@ -612,32 +648,7 @@ class _RenderTablesMixin:
         return "".join(parts)
 
     def _emit_related_files(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
-        multi = len(tabs) > 1
-        parts: list[str] = []
-        for t in tabs:
-            block = ['<div class="dz-related-group">']
-            if multi:
-                block.append(f'<h4 class="dz-related-tab-label">{ctx.escape(t.label)}</h4>')
-            block.append(self._related_create_row(t, ctx))
-            files = []
-            for i, row in enumerate(t.rows):
-                drill = t.row_drill[i] if t.row_drill else ""
-                attrs = self._related_drill_attrs(drill, ctx)
-                lines = "".join(
-                    f'<span class="dz-related-file-{"name" if j == 0 else "meta"}">'
-                    f"{ctx.escape(c)}</span>"
-                    for j, c in enumerate(row[:2])
-                )
-                files.append(f'<div class="dz-related-file-row"{attrs}>{lines}</div>')
-            if files:
-                block.append(f'<div class="dz-related-file-list">{"".join(files)}</div>')
-            else:
-                block.append(
-                    f'<p class="dz-related-empty">No {ctx.escape(t.label.lower())} found.</p>'
-                )
-            block.append("</div>")
-            parts.append("".join(block))
-        return "".join(parts)
+        return self._emit_related_cards_or_files(tabs, ctx, kind="files")
 
     def _emit_column_visibility_menu(self, m: ColumnVisibilityMenu, ctx: RenderContext) -> str:
         """Convergence C2.1: the column-visibility menu as a native <details>

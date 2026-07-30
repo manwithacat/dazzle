@@ -75,14 +75,14 @@ apply map patches with `{"apply":true}`.
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1506 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1507 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1509 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1484 | USED |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1510 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1507 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1484 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1510 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -111,8 +111,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1509 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1509 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1509 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1510 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1510 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1510 (2026-07-30).** **framework-ux edge_cases** related status_cards + file_list multi-tab → HM `dz-tabs` (parity table/queue cycle 1505); shared `_related_hm_tab_buttons` / `_emit_related_cards_or_files`; unit pins multi-tab no stacked h4. residual=0 densify=0 dual_lock=0. fitness/ux + CodeQL+inbox **USED@1510**. budget 1. Explore **69/100**. Next self-audit@1497 ~1512; campaign hyperpart/story_walk under aggressive. capability-sweep@1501 ~1521.
 
 > **Cycle 1509 (2026-07-30).** **example-apps journey_dogfood** (campaign force residual=0) dig domain_join_co ST-001–006 maps stem+SPEC+stories; prove journey 6/6; **product** workspace related posts table→**queue**, announcement lifecycle strip+list status, tenant_roots action, publish draft/published filters, ST-006, fitness.repr_fields; SPEC fingerprint. residual=0 densify=0. journey+prove+process_dig+validate+CodeQL+inbox **USED@1509**. budget 1. Explore **68/100**. Next campaign framework-ux under aggressive residual=0 densify=0. self-audit@1497 ~1512; capability-sweep@1501 ~1521.
 
