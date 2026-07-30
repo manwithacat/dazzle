@@ -163,4 +163,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:fb5804609d1ca96639f3ade323b3c9c93038b937abd4c5b394b9011e5a3be5af -->
+<!-- dazzle-spec-brief: sha256:e756d7eb9eb351518531299f64d94b86fc7f90db6a0dbe8b66794fb10924cf25 -->

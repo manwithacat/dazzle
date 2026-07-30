@@ -25,7 +25,7 @@ story ST-002 "Approver opens invoice hub before approve or reject":
   given:
     - "Invoice.status is submitted"
   then:
-    - "Invoice hub shows status strip, supplier, amount, and related line items"
+    - "Invoice hub shows status strip, supplier, amount, and related line items as a pull queue"
     - "Approver can transition to approved or rejected with reason"
 
 story ST-003 "Finance settles invoices from the ready-to-pay queue":
@@ -39,7 +39,7 @@ story ST-003 "Finance settles invoices from the ready-to-pay queue":
     - "Invoices exist with status approved"
   then:
     - "Finance sees approved invoices in the ready_to_pay queue"
-    - "Opening a row lands on the Invoice hub with payment attempts related"
+    - "Opening a row lands on the Invoice hub with payment attempts as a pull queue"
 
 story ST-004 "Finance works the open dispute queue":
   status: accepted
@@ -64,7 +64,7 @@ story ST-005 "Requester reviews own invoices and line items via hub":
     - "Requester is on the my_invoices workspace"
     - "Requester has list permission on Invoice"
   then:
-    - "Requester opens Invoice hub with related line items"
+    - "Requester opens Invoice hub with related line items as a pull queue"
     - "Requester can add line items and submit draft invoices"
 
 story ST-006 "Auditor traces payment attempts back to the invoice hub":

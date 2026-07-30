@@ -19,4 +19,6 @@ scenes:
           - Supplier
           - Status
           - Reject
-    expects: "Authenticated approver sees invoice hub path cues from approval desk"
+          - Line items
+          - Payment
+    expects: "Authenticated approver sees invoice hub path cues (status + line/payment queues) from approval desk"

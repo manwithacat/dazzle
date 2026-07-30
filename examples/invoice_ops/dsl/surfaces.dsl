@@ -34,16 +34,18 @@ surface invoice_detail "Invoice":
     field rejection_reason "Rejection Reason"
     field dispute_reason "Dispute Reason"
     field submitted_by "Submitted By"
+  # Hub related as pull queues (not warehouse tables) — ST-002/003/005
+  # acceptance path: scan composition + settlement trail, hop into detail.
   related lines "Line items":
-    display: table
+    display: queue
     show: LineItem
     columns: description, quantity, unit_amount
   related payments "Payment attempts":
-    display: table
+    display: queue
     show: PaymentAttempt
     columns: attempt_number, status, failure_reason, created_at
   ux:
-    purpose: "Invoice hub — status, lines, and settlement trail in one place"
+    purpose: "Invoice hub — status, line-item pull queue, and payment attempt queue"
 
 surface invoice_create "New Invoice":
   uses entity Invoice
@@ -77,14 +79,14 @@ surface supplier_detail "Supplier":
     field contact_email "Contact"
     field region "Region"
   related bank "Bank accounts":
-    display: table
+    display: queue
     show: SupplierBankAccount
   related invoices "Invoices":
-    display: table
+    display: queue
     show: Invoice
     columns: invoice_number, amount, status
   ux:
-    purpose: "Supplier hub — identity, bank refs, and invoice history"
+    purpose: "Supplier hub — identity, bank-ref queue, and invoice history queue"
 
 # =============================================================================
 # PAYMENT ATTEMPT SURFACES
@@ -148,15 +150,15 @@ surface tenant_detail "Tenant":
     field region "Region"
     field status "Status"
   related people "Users":
-    display: table
+    display: queue
     show: User
     columns: name, email
   related suppliers "Suppliers":
-    display: table
+    display: queue
     show: Supplier
     columns: name, region, contact_email
   ux:
-    purpose: "Tenant hub — identity, users, and suppliers"
+    purpose: "Tenant hub — identity, people queue, and supplier roster queue"
 
 # =============================================================================
 # USER SURFACES
@@ -183,11 +185,11 @@ surface user_detail "User":
     layout: strip
     field tenant_id "Tenant"
   related invoices_raised "Invoices raised":
-    display: table
+    display: queue
     show: Invoice
     columns: invoice_number, amount, status
   ux:
-    purpose: "Person hub — identity and invoices they submitted"
+    purpose: "Person hub — identity and submitted-invoice pull queue"
 
 # =============================================================================
 # LINE ITEM SURFACES
