@@ -55,6 +55,10 @@ Work flows through two lifecycles. A **Task** moves from backlog → todo → in
 
 Who advances what is governed by the declared rules: managers and admins can move any task; a team member advances only the tasks assigned to them.
 
+## Automation & controls
+
+One durable process reinforces the review handoff: when a Task enters **review**, a manager review step is required so acceptance is not an informal chat (verify: `dazzle process list`).
+
 ## The technical foundation
 
 These guarantees hold because the product is built on Dazzle, and each can be independently verified by running a single command.
@@ -74,4 +78,4 @@ byte-serving route to that boundary, so no new route can stream attachment
 bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:803fc68855ba644e53db07991cf2268d836299ac256580fdfec350e1e53dfdca -->
+<!-- dazzle-spec-brief: sha256:188b60cad049fa5ff525491ca74c380f20d6804c71c9677448e48cb974c0e91c -->
