@@ -557,6 +557,35 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="css",
         intent="exclusive",
     ),
+    # Cycle 1491 — slider live readout (controller writes range value into
+    # [data-range-value] / [data-dz-range-value] on input, group-scoped).
+    Probe(
+        id="slider.updates_readout",
+        stem="slider",
+        page="hyperparts/slider.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Changing the range input updates the group's live value readout "
+            "(settings must show the new number without a page reload)"
+        ),
+        kind="range_value_readout",
+        params={
+            "input": (
+                'input[type="range"][data-slider], '
+                'input[type="range"][data-dz-slider], '
+                "input.form-slider[type=range], input.dz-form-slider[type=range]"
+            ),
+            "readout": (
+                "[data-range-value], [data-dz-range-value], "
+                ".form-slider-value, .dz-form-slider-value"
+            ),
+            "scope": ".hm-preview",
+            "set_value": "30",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -1253,6 +1282,67 @@ def _run_checkbox_toggle(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_range_value_readout(page: Any, probe: Probe) -> dict[str, Any]:
+    """Set a range input value; assert sibling group readout text matches.
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py::test_slider_updates_value_readout
+    for the autonomous gallery_probes catalog (cycle 1491).
+    """
+    params = probe.params
+    input_sel = params["input"]
+    readout_sel = params["readout"]
+    target = str(params.get("set_value", "30"))
+    settle = int(params.get("settle_ms", 80))
+
+    scope = _probe_scope(page, params)
+    inp = None
+    for part in input_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            inp = loc
+            break
+    if inp is None:
+        return {"verdict": "ERROR", "detail": f"range input not found ({input_sel})"}
+
+    out = None
+    for part in readout_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            out = loc
+            break
+    if out is None:
+        return {"verdict": "ERROR", "detail": f"readout not found ({readout_sel})"}
+
+    before = (out.inner_text() or "").strip()
+    # Playwright fill on range + input event so delegated controllers fire.
+    inp.evaluate(
+        """(el, v) => {
+            el.value = String(v);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        }""",
+        target,
+    )
+    page.wait_for_timeout(settle)
+    after = (out.inner_text() or "").strip()
+    if after != target:
+        return {
+            "verdict": "FAIL",
+            "detail": (f"readout stayed {after!r} after set_value={target!r} (was {before!r})"),
+            "dom_hint": f"{input_sel} → {readout_sel}",
+        }
+    return {
+        "verdict": "PASS",
+        "detail": f"readout {before!r}→{after!r}",
+        "value": after,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -1265,6 +1355,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "data_open_dismiss_outside": _run_data_open_dismiss_outside,
     "tabs_exclusive_select": _run_tabs_exclusive_select,
     "checkbox_toggle": _run_checkbox_toggle,
+    "range_value_readout": _run_range_value_readout,
 }
 
 

@@ -35,6 +35,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `switch.toggles_checked` | `switch` | exclusive | medium | partial | Clicking a switch track toggles the checkbox checked state (settings must flip Email notifications off then on again) |
 | `controls.checkbox_toggles` | `controls` | exclusive | medium | css | Clicking a designed checkbox flips native checked state both ways (selection controls must not be label-only paint) |
 | `controls.switch_toggles` | `controls` | exclusive | medium | css | Clicking the controls-page switch checkbox flips checked both ways (primitive switch class shares semantics with dedicated switch page) |
+| `slider.updates_readout` | `slider` | exclusive | high | controller | Changing the range input updates the group's live value readout (settings must show the new number without a page reload) |
 
 ## Loop (autonomous improve)
 

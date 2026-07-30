@@ -50,6 +50,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "switch.toggles_checked" in ids
     assert "controls.checkbox_toggles" in ids
     assert "controls.switch_toggles" in ids
+    assert "slider.updates_readout" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -66,7 +67,11 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "data_open_dismiss_outside",
             "tabs_exclusive_select",
             "checkbox_toggle",
+            "range_value_readout",
         }
+    slider = next(p for p in PROBES if p.id == "slider.updates_readout")
+    assert slider.kind == "range_value_readout"
+    assert slider.fix_surface == "controller"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"
