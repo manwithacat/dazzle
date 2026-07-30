@@ -19,4 +19,6 @@ scenes:
           - Headcount
           - Person
           - Employment
+          - Assignment
+          - Status
     expects: "Authenticated HR Admin sees headcount metrics and staff directory cues"

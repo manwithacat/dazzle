@@ -1,5 +1,6 @@
 # Story walk ST-005 — HR Admin walks employment history back to the person hub
-# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-005 then:
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-005 then:, SPECIFICATION.md
+# Employment lifecycle (active → on_leave → terminated).
 
 persona: hr_admin
 home_workspace: staff_directory
@@ -19,4 +20,7 @@ scenes:
           - Person
           - Department
           - Role
-    expects: "Authenticated HR Admin sees employment context leading to person hub"
+          - Status
+          - Active
+          - Assignment
+    expects: "Authenticated HR Admin sees employment + assignment status leading to person hub"

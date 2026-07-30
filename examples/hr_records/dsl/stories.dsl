@@ -63,3 +63,4 @@ story ST-005 "HR Admin walks employment history back to the person hub":
   then:
     - "Employment rows open Person via person (context hub, not orphan warehouse rows)"
     - "Person hub shows related employment and compensation tables"
+    - "Employment list and hub show assignment status (active / on leave / terminated)"

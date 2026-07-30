@@ -66,7 +66,8 @@ dedicated screens — fourteen in all, from the staff directory to
 ## Where work happens
 
 - **Staff Directory** — shared entry: headcount metrics, staff queue, department
-  context, people cards, and employment-by-department chart.
+  context, people cards, employment-by-department chart, and assignment-status mix
+  (active / on leave / terminated).
 - **Person Detail** — career desk: employment queue plus salary and reporting
   timelines, employment trail, and salary reason chart.
 - **Departments & Roles** — org pulse, department grid, role queue, reporting
@@ -118,4 +119,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:b618b683586541ab848c615455c83e0403c0840efc2f776f7e9e4187a438a490 -->
+<!-- dazzle-spec-brief: sha256:bbf4db8f9e18348550e8e0653813b57909d67f336b8d456e837a339679b3dc1c -->

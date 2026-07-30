@@ -469,7 +469,7 @@ surface person_detail "Person":
   related employment "Employment history":
     display: table
     show: Employment
-    columns: role, department, start_date, end_date
+    columns: role, department, status, start_date, end_date
   related compensation "Salary history":
     display: table
     show: Salary
@@ -580,6 +580,7 @@ surface employment_list "Employment history":
     field person "Person"
     field role "Role"
     field department "Department"
+    field status "Status"
     field start_date "Start"
     field end_date "End"
   ux:
@@ -593,11 +594,13 @@ surface employment_create "Start Employment":
     field role "Role"
     field department "Department"
     field start_date "Start date"
+    field status "Status"
 
 surface employment_edit "End / Update Employment":
   uses entity Employment
   mode: edit
   section main:
+    field status "Status"
     field end_date "End date (set to close)"
     field notes "Notes"
 
@@ -720,6 +723,10 @@ workspace staff_directory "Staff Directory":
         caption: "Onboarding queue lives on New Starters"
         icon: "user-plus"
         state: positive
+      - title: "Assignment status"
+        caption: "Employment moves active → on leave → terminated under HR control"
+        icon: "badge-check"
+        state: positive
 
   # Work-surface utility: directory person cards are a pull-to-open queue, not a gallery grid.
   people_cards:
@@ -733,6 +740,16 @@ workspace staff_directory "Staff Directory":
     source: Employment
     display: bar_chart
     group_by: department
+    aggregate:
+      count: count(Employment)
+    empty: "No employment rows"
+
+  # Lifecycle densify (cycle 1479 story_walk): status mix next to dept mix so
+  # ST-001/ST-005 see active / on_leave / terminated without orphan CRUD.
+  assignment_status_mix:
+    source: Employment
+    display: bar_chart
+    group_by: status
     aggregate:
       count: count(Employment)
     empty: "No employment rows"
