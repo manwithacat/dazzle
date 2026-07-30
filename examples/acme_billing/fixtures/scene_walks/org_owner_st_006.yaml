@@ -1,0 +1,22 @@
+# Story walk ST-006 — maps stems/story-driven-jobs.md + stories.dsl
+# Acceptance dig cycle 1514: land-and-see on billing; live dig can deepen hub hops.
+
+persona: org_owner
+home_workspace: billing
+
+scenes:
+  - id: land_st_006
+    story: ST-006
+    entry: /app/workspaces/billing
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Project
+          - Invoice
+          - Organization
+          - Billing
+          - queue
+    expects: "Org owner lands on billing portfolio before project hub queue hop"

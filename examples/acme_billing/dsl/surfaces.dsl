@@ -28,12 +28,14 @@ surface organization_detail "Organization":
     field name "Name"
     field created_at "Created"
 
+  # Pull-next project roster (not warehouse table) — ST-011 acceptance hub dig.
   related projects "Projects":
-    display: table
+    display: queue
     show: Project
+    columns: name, created_at
 
   ux:
-    purpose: "Organization hub — identity and related projects"
+    purpose: "Organization hub — identity and related project queue"
 
 surface organization_create "Create Organization":
   uses entity Organization
@@ -132,18 +134,19 @@ surface project_detail "Project":
     layout: strip
     field created_at "Created"
 
+  # Invoice + membership pull queues (not warehouse tables) — ST-006/008 dig.
   related invoices "Invoices":
-    display: table
+    display: queue
     show: Invoice
     columns: number, amount, sensitive, created_at
 
   related members "Memberships":
-    display: table
+    display: queue
     show: Membership
     columns: user, project
 
   ux:
-    purpose: "Project hub — org context, invoices, and memberships"
+    purpose: "Project hub — org context, invoice queue, and membership queue"
 
 surface project_create "Create Project":
   uses entity Project

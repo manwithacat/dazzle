@@ -116,7 +116,7 @@ story ST-006 "Org owner browses projects and opens a project hub":
     - "Org owner has list permission on Project within their organization"
   then:
     - "Org owner sees projects scoped to their organization"
-    - "Row open hops to Project detail with related invoices and memberships"
+    - "Row open hops to Project detail with related invoices and memberships as pull queues"
 
 story ST-007 "Org owner reviews invoices from the portfolio queue into project context":
   status: accepted
@@ -140,7 +140,7 @@ story ST-008 "Auditor opens project hub for read-only invoice review":
   given:
     - "Auditor is authenticated and scoped to the organization"
   then:
-    - "Project hub shows related invoices including sensitive ones"
+    - "Project hub shows related invoices as a pull queue including sensitive ones"
     - "Auditor cannot create, update, or delete invoices"
 
 story ST-009 "Project member sees only assigned projects and non-sensitive invoices":
@@ -179,4 +179,4 @@ story ST-011 "Admin reviews cross-org portfolio from organization hubs":
     - "Acme and Globex organizations both exist"
   then:
     - "Admin sees all organizations"
-    - "Organization hub shows related projects without org scope restriction"
+    - "Organization hub shows related projects as a pull queue without org scope restriction"

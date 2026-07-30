@@ -1,0 +1,21 @@
+# Story walk ST-009 — maps stems/story-driven-jobs.md + stories.dsl
+# Acceptance dig cycle 1514: land-and-see on my_work; live dig can deepen hub hops.
+
+persona: project_member
+home_workspace: my_work
+
+scenes:
+  - id: land_st_009
+    story: ST-009
+    entry: /app/workspaces/my_work
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Project
+          - Invoice
+          - Work
+          - queue
+    expects: "Project member sees assigned projects and non-sensitive invoice cues"
