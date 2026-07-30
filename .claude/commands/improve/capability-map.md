@@ -51,7 +51,7 @@ apply map patches with `{"apply":true}`.
 | **domain lifecycle/process priors** (`domain_brief.lifecycles` + `domain_cognition_bar`) | COGNITION | script + extract | **example-apps** | 1477 | STALE |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1403 | STALE |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1403 | STALE |
-| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1430 | STALE |
+| `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1518 | USED |
 | MCP `status` `demo_world`/`runtime` (#1629 world-model read) | COGNITION | MCP | example-apps + agent DX | 1367 | STALE |
 | MCP `db` project-local DATABASE_URL (#1629 G2) | COGNITION | MCP | example-apps + agent DX | 1331 | STALE |
 | `dazzle qa trial` | COGNITION | CLI | trials | 1508 | USED |
@@ -66,9 +66,9 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | USED |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1517 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1517 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1517 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1518 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1518 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1518 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
@@ -111,8 +111,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1515 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1517 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1517 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1518 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1518 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1518 (2026-07-30).** **example-apps story_walk** residual contact_manager live_unproven:user_st_009 — **live green** all 5 walks (seeded serve :3767 + reset-and-load); mark-live + dig receipt walk_live_run=0; residual_total 1→0. story_walk+walk+demo reset-and-load **USED@1518**. budget 1. Explore **76/100**. Next capability-sweep@1501 ~1521; campaign hyperpart under aggressive residual=0 densify=0.
 
 > **Cycle 1517 (2026-07-30).** **example-apps story_walk** dig contact_manager ST-004–009; **product** engagement letter list+detail dual open-via (open_via 1→3 strips 1→2); ST-009 + walk; prove 7/7; dig receipt. residual story_walk deepen live_unproven. story_walk+walk+process_dig+journey **USED@1517**. budget 1. Explore **75/100**. Pushed held 1516. Next capability-sweep@1501 ~1521.
 
