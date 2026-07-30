@@ -60,6 +60,10 @@ SHIP_TESTS: tuple[str, ...] = (
     # HM dual-lock sole-emitter (CI red 2026-07-29 after tree #1303 drill in
     # _render_charts.py — contract attrs must assemble only under fragment/ingest)
     "tests/unit/test_hm_contract_dom_conformance.py::test_typed_path_is_sole_emitter",
+    # HM generated maps after registry/controller ships (CI red 2026-07-30
+    # cycle 1499 dz-toggle — CONSUMER_MAP + DUAL_LOCK_COVERAGE drift ×3 Pythons)
+    "tests/unit/test_consumer_map_tool.py::test_committed_consumer_map_matches_generator",
+    "tests/unit/test_dual_lock_coverage_tool.py::test_committed_coverage_matches_generator",
 )
 
 REMEDIATION = """
@@ -126,6 +130,13 @@ Remediation by class (run from repo root):
     uv run python packages/hatchi-maxchi/tools/contract_surface.py --write
     # review packages/hatchi-maxchi/CONTRACT_SURFACE.md; commit with the field ship
     pytest tests/unit/test_contract_surface_tool.py::test_committed_contract_surface_matches_generator -q
+
+  HM CONSUMER_MAP.md / DUAL_LOCK_COVERAGE.md stale (new controller or guidance)
+    uv run python packages/hatchi-maxchi/tools/consumer_map.py --write
+    uv run python packages/hatchi-maxchi/tools/dual_lock_coverage.py --write
+    # commit regenerated maps with the registry/controller ship
+    pytest tests/unit/test_consumer_map_tool.py::test_committed_consumer_map_matches_generator -q
+    pytest tests/unit/test_dual_lock_coverage_tool.py::test_committed_coverage_matches_generator -q
 
   Generated surfaces dirty (catalogue md/css + CONTRACT_SURFACE)
     .venv/bin/python scripts/gen_surface_check.py   # diagnose

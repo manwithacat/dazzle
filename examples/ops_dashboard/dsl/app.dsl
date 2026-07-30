@@ -1023,10 +1023,12 @@ surface system_detail "System Detail":
     field cpu_usage "CPU Usage"
     field memory_usage "Memory Usage"
 
+  # Open alerts are a pull queue on the system hub (RelatedDisplayMode.QUEUE),
+  # not a warehouse table — severity/message first for triage (cycle 1500).
   related alerts "Open alerts":
-    display: table
+    display: queue
     show: Alert
-    columns: severity, message, status, triggered_at
+    columns: message, severity, status, triggered_at
 
   ux:
     purpose: "System hub — health strip and open alerts in one place"

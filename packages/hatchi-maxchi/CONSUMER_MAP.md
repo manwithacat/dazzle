@@ -232,6 +232,7 @@ _No composition edges declared._
 - `popover` — composes_with
 - `tabs` — composes_with
 - `toast` — composes_with
+- `toggle` — composes_with
 - `wizard` — composes_with
 
 ### `card`
@@ -838,10 +839,15 @@ _No composition edges declared._
 **Related from (`composes_with`)**
 
 - `drawer` — composes_with
+- `toggle` — composes_with
 
 ### `toolbar`
 
 **Layer:** `L2` · **Recipe:** `chrome-presentation` (presentation / chrome)
+
+**Related from (`composes_with`)**
+
+- `toggle` — composes_with
 
 **Embeds (forward `composes`)**
 
