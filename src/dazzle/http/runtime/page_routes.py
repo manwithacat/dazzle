@@ -474,6 +474,46 @@ def _apply_persona_overrides(req_table: Any, user_roles: list[str]) -> None:
             return
 
 
+def _apply_persona_detail_primary(
+    req_detail: Any,
+    user_roles: list[str],
+    *,
+    can_update: bool,
+) -> None:
+    """Apply VIEW-surface ``action_primary`` to the detail primary CTA.
+
+    EX-048 VIEW half. Compiles map ``persona_primary_urls`` /
+    ``persona_primary_labels`` / ``persona_primary_kinds`` onto
+    ``edit_url`` / ``edit_label`` for the first matching role.
+
+    - ``kind=create``: always apply (CREATE of another entity is not gated
+      by this entity's UPDATE permit — e.g. tester on device_detail →
+      issue_report_create even when Device UPDATE is denied).
+    - ``kind=edit``: only apply when ``can_update`` is True so RBAC that
+      cleared ``edit_url`` is not re-opened by a persona edit primary.
+    """
+    if not user_roles:
+        return
+    urls = getattr(req_detail, "persona_primary_urls", None) or {}
+    labels = getattr(req_detail, "persona_primary_labels", None) or {}
+    kinds = getattr(req_detail, "persona_primary_kinds", None) or {}
+    if not urls and not labels:
+        return
+    for role in user_roles:
+        normalised = role.removeprefix("role_")
+        if normalised not in urls and normalised not in labels:
+            continue
+        kind = kinds.get(normalised, "edit")
+        if kind == "edit" and not can_update:
+            return
+        if normalised in urls:
+            req_detail.edit_url = urls[normalised]
+        if normalised in labels:
+            req_detail.edit_label = labels[normalised]
+        req_detail.primary_action_kind = kind
+        return
+
+
 def _apply_persona_form_overrides(
     req_form: Any,
     user_roles: list[str],
@@ -1504,6 +1544,7 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
 
     # Suppress Edit/Delete buttons when permit rules deny the operation
     # or when the workspace declares read_only for the user's persona (#550, #552).
+    _can_update = True
     if prc.ctx.user_roles is not None:
         _suppress = _should_suppress_mutations(
             prc.deps, prc.surface_name, prc.auth_ctx, prc.ctx.user_roles
@@ -1513,12 +1554,14 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
             req_detail.delete_url = None
             req_detail.transitions = []
             req_detail.integration_actions = []
+            _can_update = False
         else:
             # Fine-grained: check UPDATE and DELETE individually.
             # SM transitions + integration actions are UPDATE mutations —
             # list rows already omit chips when can_update is False
             # (cycle 1390); detail chrome must match (cycle 1392).
-            if not _user_can_mutate(prc.deps, prc.surface_name, "update", prc.auth_ctx):
+            _can_update = _user_can_mutate(prc.deps, prc.surface_name, "update", prc.auth_ctx)
+            if not _can_update:
                 req_detail.edit_url = None
                 req_detail.transitions = []
                 req_detail.integration_actions = []
@@ -1526,6 +1569,9 @@ async def _handle_detail(prc: _PageRequestContext) -> None:
                 prc.deps, prc.surface_name, "delete", prc.auth_ctx
             ):
                 req_detail.delete_url = None
+            # EX-048 VIEW: persona action_primary after RBAC so CREATE
+            # primaries still surface when this entity's UPDATE is denied.
+            _apply_persona_detail_primary(req_detail, prc.ctx.user_roles, can_update=_can_update)
 
     # Related-tab "+ New X" is CREATE on the *related* entity (not parent
     # UPDATE). Compile-time always stamps create_url; request-time must clear

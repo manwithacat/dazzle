@@ -1261,6 +1261,7 @@ def _compile_view_surface(
     app_prefix: str,
     reverse_refs: list[tuple[str, str, ir.EntitySpec]] | None = None,
     poly_refs: list[tuple[str, str, str, str, ir.EntitySpec]] | None = None,
+    surfaces_by_name: dict[str, ir.SurfaceSpec] | None = None,
 ) -> PageContext:
     """Compile a VIEW mode surface to a PageContext with detail context."""
     fields = _build_form_fields(surface, entity)
@@ -1476,6 +1477,34 @@ def _compile_view_surface(
                 file_field=file_fields[0].name,
             )
 
+    # EX-048 VIEW half: persona action_primary → detail primary CTA.
+    # CREATE targets become a create-route CTA (e.g. tester on device_detail
+    # → issue_report_create); EDIT targets override edit route + label.
+    persona_primary_urls: dict[str, str] = {}
+    persona_primary_labels: dict[str, str] = {}
+    persona_primary_kinds: dict[str, str] = {}
+    _surfaces = surfaces_by_name or {}
+    _ux = surface.ux
+    if _ux and _ux.persona_variants:
+        for _variant in _ux.persona_variants:
+            if not _variant.action_primary:
+                continue
+            target = _surfaces.get(_variant.action_primary)
+            if target is None:
+                continue
+            t_entity = target.entity_ref or entity_name
+            t_slug = app_paths.entity_slug(t_entity)
+            if target.mode == SurfaceMode.CREATE:
+                persona_primary_urls[_variant.persona] = app_paths.create_path(app_prefix, t_slug)
+                persona_primary_kinds[_variant.persona] = "create"
+            elif target.mode == SurfaceMode.EDIT:
+                persona_primary_urls[_variant.persona] = app_paths.edit_path(app_prefix, t_slug)
+                persona_primary_kinds[_variant.persona] = "edit"
+            else:
+                continue
+            if target.title:
+                persona_primary_labels[_variant.persona] = target.title
+
     return PageContext(
         page_title=surface.title or f"{entity_name} Details",
         page_purpose=page_purpose,
@@ -1496,6 +1525,9 @@ def _compile_view_surface(
             external_link_actions=external_links,
             show_history=surface.show_history,  # #956 cycle 10
             sections=detail_sections,
+            persona_primary_urls=persona_primary_urls,
+            persona_primary_labels=persona_primary_labels,
+            persona_primary_kinds=persona_primary_kinds,
         ),
         pdf_viewer=pdf_viewer_ctx,
     )
@@ -1576,6 +1608,7 @@ def compile_surface_to_context(
             app_prefix,
             reverse_refs=reverse_refs,
             poly_refs=poly_refs,
+            surfaces_by_name=surfaces_by_name,
         )
     else:
         return _compile_custom_surface(surface)

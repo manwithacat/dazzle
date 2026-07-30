@@ -1,18 +1,22 @@
 """PersonaVariant ``action_primary`` wiring — compile + request resolve.
 
-DSL authors declare ``for <persona>: action_primary: <surface>``. When the
-target surface is CREATE-mode, the list-header CTA must use that surface's
-route and title as the Create button. EDIT/VIEW targets are recorded but
-do not override the create CTA (no record id at list-header scope).
+DSL authors declare ``for <persona>: action_primary: <surface>``.
+
+* LIST + CREATE target → list-header Create CTA route/label.
+* LIST + EDIT target → recorded only (no record id at list header).
+* VIEW + CREATE target → detail primary CTA (e.g. tester device_detail →
+  issue_report_create) even when Device UPDATE is denied (EX-048 VIEW).
+* VIEW + EDIT target → edit route + surface title label when UPDATE ok.
 """
 
 from __future__ import annotations
 
 from dazzle.core import ir
 from dazzle.core.ir.surfaces import SurfaceSection
-from dazzle.page.app_paths import create_path, entity_slug
+from dazzle.page.app_paths import create_path, edit_path, entity_slug
 from dazzle.page.converters.template_compiler import (
     _compile_list_surface,
+    _compile_view_surface,
     compile_appspec_to_templates,
 )
 
@@ -186,3 +190,195 @@ def test_appspec_compile_threads_surfaces_by_name() -> None:
     list_ctx = next(c for c in contexts.values() if c.table is not None)
     assert list_ctx.table.persona_create_labels.get("admin") == "Add Task"
     assert list_ctx.table.persona_create_urls["admin"] == "/app/task/create"
+
+
+def test_compile_view_resolves_create_action_primary() -> None:
+    """device_detail as tester → issue_report_create primary CTA."""
+    device = ir.EntitySpec(
+        name="Device",
+        label="Device",
+        title="Device",
+        fields=[
+            ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID), pk=True),
+            ir.FieldSpec(
+                name="name",
+                type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=100),
+            ),
+        ],
+    )
+    view_s = ir.SurfaceSpec(
+        name="device_detail",
+        title="Device Detail",
+        mode=ir.SurfaceMode.VIEW,
+        entity_ref="Device",
+        sections=[SurfaceSection(name="main", elements=[])],
+        ux=ir.UXSpec(
+            persona_variants=[
+                ir.PersonaVariant(persona="engineer", action_primary="device_edit"),
+                ir.PersonaVariant(persona="tester", action_primary="issue_report_create"),
+            ]
+        ),
+    )
+    edit_s = ir.SurfaceSpec(
+        name="device_edit",
+        title="Edit Device",
+        mode=ir.SurfaceMode.EDIT,
+        entity_ref="Device",
+        sections=[SurfaceSection(name="main", elements=[])],
+    )
+    create_s = ir.SurfaceSpec(
+        name="issue_report_create",
+        title="Report Issue",
+        mode=ir.SurfaceMode.CREATE,
+        entity_ref="IssueReport",
+        sections=[SurfaceSection(name="main", elements=[])],
+    )
+    by_name = {
+        "device_detail": view_s,
+        "device_edit": edit_s,
+        "issue_report_create": create_s,
+    }
+    ctx = _compile_view_surface(
+        view_s,
+        device,
+        "Device",
+        "/devices",
+        "device",
+        "/app",
+        surfaces_by_name=by_name,
+    )
+    assert ctx.detail is not None
+    d = ctx.detail
+    assert d.persona_primary_urls["tester"] == create_path("/app", entity_slug("IssueReport"))
+    assert d.persona_primary_labels["tester"] == "Report Issue"
+    assert d.persona_primary_kinds["tester"] == "create"
+    assert d.persona_primary_urls["engineer"] == edit_path("/app", entity_slug("Device"))
+    assert d.persona_primary_labels["engineer"] == "Edit Device"
+    assert d.persona_primary_kinds["engineer"] == "edit"
+
+
+def test_apply_persona_detail_primary_create_when_update_denied() -> None:
+    from dazzle.http.runtime.page_routes import _apply_persona_detail_primary
+    from dazzle.render.context import DetailContext, FieldContext
+
+    detail = DetailContext(
+        entity_name="Device",
+        title="Device Detail",
+        fields=[FieldContext(name="name", label="Name", type="text")],
+        edit_url=None,  # UPDATE denied cleared default edit
+        persona_primary_urls={"tester": "/app/issuereport/create"},
+        persona_primary_labels={"tester": "Report Issue"},
+        persona_primary_kinds={"tester": "create"},
+    )
+    _apply_persona_detail_primary(detail, ["role_tester"], can_update=False)
+    assert detail.edit_url == "/app/issuereport/create"
+    assert detail.edit_label == "Report Issue"
+    assert detail.primary_action_kind == "create"
+
+
+def test_apply_persona_detail_primary_edit_respects_update_deny() -> None:
+    from dazzle.http.runtime.page_routes import _apply_persona_detail_primary
+    from dazzle.render.context import DetailContext, FieldContext
+
+    detail = DetailContext(
+        entity_name="Device",
+        title="Device Detail",
+        fields=[FieldContext(name="name", label="Name", type="text")],
+        edit_url=None,
+        persona_primary_urls={"engineer": "/app/device/{id}/edit"},
+        persona_primary_labels={"engineer": "Edit Device"},
+        persona_primary_kinds={"engineer": "edit"},
+    )
+    _apply_persona_detail_primary(detail, ["engineer"], can_update=False)
+    assert detail.edit_url is None
+    assert detail.edit_label == "Edit"
+
+
+def test_apply_persona_detail_primary_edit_when_update_ok() -> None:
+    from dazzle.http.runtime.page_routes import _apply_persona_detail_primary
+    from dazzle.render.context import DetailContext, FieldContext
+
+    detail = DetailContext(
+        entity_name="Device",
+        title="Device Detail",
+        fields=[FieldContext(name="name", label="Name", type="text")],
+        edit_url="/app/device/{id}/edit",
+        persona_primary_urls={"engineer": "/app/device/{id}/edit"},
+        persona_primary_labels={"engineer": "Edit Device"},
+        persona_primary_kinds={"engineer": "edit"},
+    )
+    _apply_persona_detail_primary(detail, ["engineer"], can_update=True)
+    assert detail.edit_url == "/app/device/{id}/edit"
+    assert detail.edit_label == "Edit Device"
+    assert detail.primary_action_kind == "edit"
+
+
+def test_detail_actions_use_edit_label_for_create_primary() -> None:
+    from dazzle.http.runtime.renderers.fragment_adapter import FragmentSurfaceAdapter
+
+    adapter = FragmentSurfaceAdapter()
+    actions = adapter._build_detail_actions(
+        {
+            "edit_url": "/app/issuereport/create",
+            "edit_label": "Report Issue",
+            "primary_action_kind": "create",
+            "entity_name": "Device",
+            "delete_url": "",
+            "transitions": [],
+            "integration_actions": [],
+            "external_link_actions": [],
+        }
+    )
+    assert len(actions) == 1
+    assert getattr(actions[0], "label", None) == "Report Issue"
+
+
+def test_appspec_compile_view_threads_action_primary() -> None:
+    appspec = ir.AppSpec(
+        name="demo",
+        title="Demo",
+        domain=ir.DomainSpec(
+            name="d",
+            entities=[
+                _task_entity(),
+                ir.EntitySpec(
+                    name="IssueReport",
+                    label="Issue",
+                    title="Issue Report",
+                    fields=[
+                        ir.FieldSpec(
+                            name="id",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                            pk=True,
+                        ),
+                    ],
+                ),
+            ],
+        ),
+        surfaces=[
+            ir.SurfaceSpec(
+                name="task_detail",
+                title="Task Detail",
+                mode=ir.SurfaceMode.VIEW,
+                entity_ref="Task",
+                sections=[SurfaceSection(name="main", elements=[])],
+                ux=ir.UXSpec(
+                    persona_variants=[
+                        ir.PersonaVariant(persona="tester", action_primary="issue_report_create"),
+                    ]
+                ),
+            ),
+            ir.SurfaceSpec(
+                name="issue_report_create",
+                title="Report Issue",
+                mode=ir.SurfaceMode.CREATE,
+                entity_ref="IssueReport",
+                sections=[SurfaceSection(name="main", elements=[])],
+            ),
+        ],
+    )
+    contexts = compile_appspec_to_templates(appspec, app_prefix="/app")
+    view_ctx = next(c for c in contexts.values() if c.detail is not None)
+    assert view_ctx.detail.persona_primary_labels["tester"] == "Report Issue"
+    assert view_ctx.detail.persona_primary_kinds["tester"] == "create"
+    assert "create" in view_ctx.detail.persona_primary_urls["tester"]

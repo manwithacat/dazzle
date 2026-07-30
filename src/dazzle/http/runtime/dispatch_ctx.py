@@ -338,6 +338,8 @@ def _dispatch_ctx_from_detail(
         "region_name": getattr(detail, "entity_name", "") + "_detail",
         "related_groups": _related_groups_from_detail(detail),
         "edit_url": getattr(detail, "edit_url", None) or "",
+        "edit_label": getattr(detail, "edit_label", None) or "Edit",
+        "primary_action_kind": getattr(detail, "primary_action_kind", None) or "edit",
         "delete_url": getattr(detail, "delete_url", None) or "",
         "back_url": getattr(detail, "back_url", "/") or "/",
         "entity_name": getattr(detail, "entity_name", "") or "",

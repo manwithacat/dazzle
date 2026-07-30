@@ -357,6 +357,9 @@ class DetailContext(BaseModel):
     item: dict[str, Any] = Field(default_factory=dict)
     api_endpoint: str | None = None
     edit_url: str | None = None
+    # Primary CTA label (default "Edit"). Persona ``action_primary`` may
+    # swap this to a CREATE surface title (e.g. "Report Issue") on VIEW.
+    edit_label: str = "Edit"
     delete_url: str | None = None
     back_url: str = "/"
     transitions: list[TransitionContext] = Field(default_factory=list)
@@ -371,6 +374,16 @@ class DetailContext(BaseModel):
     show_history: bool = False
     # #1600 Wedge B: multi-section overview chrome (optional).
     sections: list[DetailSectionContext] = Field(default_factory=list)
+    # Per-persona primary CTA from ``for <persona>: action_primary:``.
+    # CREATE targets → create route + surface title; EDIT targets →
+    # edit route + surface title. Resolved at request time into
+    # ``edit_url`` / ``edit_label`` (EX-048 VIEW half).
+    persona_primary_urls: dict[str, str] = Field(default_factory=dict)
+    persona_primary_labels: dict[str, str] = Field(default_factory=dict)
+    # "edit" | "create" per persona — CREATE primaries skip UPDATE RBAC.
+    persona_primary_kinds: dict[str, str] = Field(default_factory=dict)
+    # Request-resolved kind of the current primary CTA.
+    primary_action_kind: str = "edit"
 
 
 class IslandContext(BaseModel):

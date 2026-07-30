@@ -680,12 +680,16 @@ class FragmentSurfaceAdapter:
             # panel cell (`#peek-content-{id}`) instead of navigating to the edit
             # page. RBAC is inherited for free (this only fires when `edit_url` is
             # set, which the detail builder already gates on update permission).
+            # EX-048: persona action_primary may swap label/route (CREATE CTA
+            # on VIEW); peek in-place only applies to same-record EDIT.
+            edit_label = str(ctx.get("edit_label") or "Edit") or "Edit"
+            primary_kind = str(ctx.get("primary_action_kind") or "edit")
             peek = bool(ctx.get("peek"))
             item_id = str(ctx.get("item_id", "") or "")
-            if peek and item_id:
+            if peek and item_id and primary_kind == "edit":
                 actions.append(
                     Button(
-                        label="Edit",
+                        label=edit_label,
                         variant="secondary",
                         hx_get=URL(f"{edit_url}?peek=1"),
                         hx_target=TargetSelector(f"#peek-content-{item_id}"),
@@ -696,9 +700,13 @@ class FragmentSurfaceAdapter:
             else:
                 actions.append(
                     Link(
-                        label="Edit",
+                        label=edit_label,
                         href=URL(str(edit_url)),
-                        data_action=f"{entity_name}.edit",
+                        data_action=(
+                            f"{entity_name}.edit"
+                            if primary_kind == "edit"
+                            else f"{entity_name}.primary"
+                        ),
                     )
                 )
 
