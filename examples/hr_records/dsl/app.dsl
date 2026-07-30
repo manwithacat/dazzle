@@ -47,7 +47,7 @@ persona employee "Employee":
   default_workspace: person_detail
   uses nav employee_nav
 
-# Curated sidebars: workspace destinations only (WI primary N).
+# Curated sidebars: workspace destinations only (prefer desks over bare entity lists).
 nav hr_admin_nav:
   group "People":
     staff_directory
@@ -259,8 +259,8 @@ entity Employment "Employment":
   department: ref Department required    # denormalised — role may move dept later
   start_date: date required
   end_date: date    # NULL = currently active
-  # Domain residual lifecycle densify (cycle 1476): phase of the assignment
-  # (complements temporal start/end — status is the SM; dates are the range).
+  # Assignment lifecycle phase (cycle 1476): complements temporal start/end —
+  # status is the state machine; dates are the effective range.
   status: enum[active,on_leave,terminated]=active
   notes: text
 
@@ -702,16 +702,19 @@ workspace staff_directory "Staff Directory":
     # arithmetic in filters isn't first-class for list region filters
     # outside aggregate where clauses.
 
+  # Org context as pull queues (agent_acceptance cycle 1522) — open hubs, not inventory lists.
   department_context:
     source: Department
-    display: list
+    display: queue
+    sort: name asc
     limit: 15
     action: department_detail
     empty: "No departments"
 
   role_context:
     source: Role
-    display: list
+    display: queue
+    sort: title asc
     limit: 15
     action: role_detail
     empty: "No roles"
@@ -748,7 +751,7 @@ workspace staff_directory "Staff Directory":
       count: count(Employment)
     empty: "No employment rows"
 
-  # Lifecycle densify (cycle 1479 story_walk): status mix next to dept mix so
+  # Lifecycle signal (cycle 1479 story_walk): status mix next to dept mix so
   # ST-001/ST-005 see active / on_leave / terminated without orphan CRUD.
   assignment_status_mix:
     source: Employment
@@ -808,9 +811,11 @@ workspace person_detail "Person Detail":
     limit: 15
     empty: "No reporting lines on record"
 
+  # Department roster as pull queue toward hubs (not bare inventory list).
   org_context:
     source: Department
-    display: list
+    display: queue
+    sort: name asc
     limit: 10
     action: department_detail
     empty: "No departments"
@@ -935,16 +940,19 @@ workspace compensation_review "Compensation Review":
     limit: 20
     empty: "No active salaries"
 
+  # Role catalogue + headcount as pull queues for compensation pilots (not inventory lists).
   role_catalogue:
     source: Role
-    display: list
+    display: queue
+    sort: title asc
     limit: 20
     action: role_detail
     empty: "No roles defined"
 
   headcount_context:
     source: Person
-    display: list
+    display: queue
+    sort: legal_name asc
     limit: 15
     action: person_detail
     empty: "No people on record"

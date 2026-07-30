@@ -1,4 +1,4 @@
-# Process densify from domain process_candidates (improve domain_lifecycle_priors).
+# Process priors from domain process_candidates (improve domain_lifecycle_priors).
 # Candidate: assignment — manager acknowledges employment handoff (domain
 # entity_hint "Department" is chrome; gold handoff is Employment on create).
 

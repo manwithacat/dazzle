@@ -28,7 +28,8 @@ tasks = [
     "Land on Staff Directory (or the HR home). Are people listed with useful names?",
     "Open a person row. Is it a career/person hub (employment, history, status) or a flat field dump?",
     "On Staff Directory, can you see assignment status mix or cues (active / on leave)?",
-    "Open Compensation Review. Are people a pull queue toward person hubs?",
+    "Open Compensation Review. Are people a pull queue toward person hubs? Are role catalogue and headcount also queues (not bare lists)?",
+    "On Staff Directory, do department and role context open hubs as pull queues?",
     "Find how you would add a person (CTA language) without becoming a warehouse admin.",
     "Decide whether this is a credible HR skeleton for a two-week pilot.",
 ]
@@ -37,6 +38,7 @@ adoption_criteria = [
     "Staff directory shows real person rows when seeded (not empty pilot-breaker)",
     "Person open is a usable hub (employment/context/status), not a flat field dump",
     "Person hub related employment/compensation/reporting regions are pull queues, not warehouse tables",
+    "Staff Directory department/role context and Compensation role catalogue/headcount are pull queues toward hubs",
     "Assignment status (active / on leave / terminated) is visible on employment path",
     "Compensation people region is a scannable pull queue, not a decorative grid",
     "Primary create / add-person CTA uses human language and is discoverable",

@@ -13,6 +13,7 @@ story ST-001 "HR Admin browses staff directory and opens a person hub":
     - "HR Admin has list permission on Person"
   then:
     - "HR Admin sees headcount metrics and the staff list"
+    - "Department and role context on Staff Directory are pull queues toward hubs (not inventory lists)"
     - "Row open hops to the Person detail hub with employment and salary history"
 
 story ST-002 "Line Manager opens a report career hub":
@@ -38,6 +39,7 @@ story ST-003 "Finance reviews compensation then hops to person context":
     - "Finance is on the compensation_review workspace"
   then:
     - "Finance sees compensation metrics and active salary rows"
+    - "Role catalogue and headcount context are pull queues toward hubs (not inventory lists)"
     - "Salary row open hops to the Person overview hub via person FK"
 
 story ST-004 "Employee reviews own career timeline hub":
