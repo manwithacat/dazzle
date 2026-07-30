@@ -768,12 +768,14 @@ surface brand_detail "Brand Detail":
     display: status_cards
     show: Asset
 
+  # Pull-next campaign roster (not warehouse table) — ST-002 story_walk hub dig.
   related campaigns "Campaigns":
-    display: table
+    display: queue
     show: Campaign
+    columns: name, status, start_date
 
   ux:
-    purpose: "Brand hub — identity, palette strip, assets and campaigns"
+    purpose: "Brand hub — identity, palette strip, assets and campaign queue"
 
 surface asset_list "Assets":
   uses entity Asset
@@ -816,12 +818,14 @@ surface asset_detail "Asset Detail":
     field quality_score "Quality"
     field tags "Tags"
 
+  # Feedback as pull queue (rating+comment first) — ST-004/006 story_walk hub dig.
   related feedback "Feedback":
-    display: table
+    display: queue
     show: Feedback
+    columns: rating, comment, created_at
 
   ux:
-    purpose: "Asset hub — production strip and related feedback"
+    purpose: "Asset hub — production strip and related feedback queue"
 
 surface asset_edit "Edit Asset":
   uses entity Asset

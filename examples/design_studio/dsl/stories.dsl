@@ -25,7 +25,7 @@ story ST-002 "Designer opens brand hub for assets and campaigns":
   given:
     - "Brand exists and is readable"
   then:
-    - "Brand hub shows identity, palette strip, related assets and campaigns"
+    - "Brand hub shows identity, palette strip, related assets, and campaigns as a pull queue (not a warehouse table)"
 
 story ST-003 "Reviewer works the review queue on asset catalog":
   status: accepted
@@ -49,7 +49,7 @@ story ST-004 "Reviewer opens asset hub with feedback trail":
   given:
     - "Asset exists and is readable"
   then:
-    - "Asset hub shows production strip and related Feedback"
+    - "Asset hub shows production strip and related Feedback as a pull queue"
     - "Reviewer can leave feedback from the asset context"
 
 story ST-005 "Designer hops from asset list to brand context":
@@ -74,4 +74,4 @@ story ST-006 "Designer traces feedback back to the asset hub":
     - "Designer has list permission on Feedback"
   then:
     - "Feedback rows open Asset via asset"
-    - "Asset hub shows related Feedback table"
+    - "Asset hub shows related Feedback as a pull queue (not a warehouse table)"

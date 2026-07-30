@@ -11,12 +11,15 @@ a shared asset warehouse.
 - designer also has `brand_desk` (brand-first path).
 - reviewer default: `review_desk` = review-load + awaiting-review queue.
 - `asset_catalog` remains the full library (card grid, not a media gallery) for all product personas.
+- Brand hub related campaigns are a **pull queue** (name+status); asset hub
+  feedback is a **pull queue** (rating+comment) — not warehouse tables.
 
 ## Not this
 
 - Persona lands on a bare entity list when the job is triage, review, or oversight.
 - Every persona defaults to the same mega-workspace.
 - Story `given:` workspace names that disagree with `default_workspace`.
+- Hub related rosters as dense tables when the job is pull-next review.
 
 ## Expressions
 

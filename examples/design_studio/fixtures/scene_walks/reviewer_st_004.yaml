@@ -19,4 +19,5 @@ scenes:
           - Feedback
           - Review
           - approved
-    expects: "Authenticated reviewer sees review desk asset/feedback trail cues"
+          - queue
+    expects: "Authenticated reviewer sees review desk asset/feedback-queue trail cues"

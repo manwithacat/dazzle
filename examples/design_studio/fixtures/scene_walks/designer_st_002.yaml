@@ -19,4 +19,5 @@ scenes:
           - Asset
           - Campaign
           - Studio
-    expects: "Authenticated designer sees brand/asset/campaign portfolio cues before hub hop"
+          - portfolio
+    expects: "Authenticated designer sees brand/asset/campaign portfolio cues before hub campaign-queue hop"
