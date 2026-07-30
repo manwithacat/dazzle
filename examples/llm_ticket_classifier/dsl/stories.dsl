@@ -26,7 +26,7 @@ story ST-002 "Support agent opens ticket hub with AI classifications":
   given:
     - "Ticket exists and is readable"
   then:
-    - "Ticket hub shows summary, lifecycle strip, and related AI classifications"
+    - "Ticket hub shows summary, lifecycle strip, and related AI classifications as a pull queue"
     - "Agent can edit status from the ticket context"
 
 story ST-003 "Supervisor reviews classification trail":

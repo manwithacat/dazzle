@@ -227,9 +227,12 @@ surface ticket_detail "Ticket Detail":
     field created_at "Created"
     field updated_at "Updated"
 
+  # Ticket hub AI trail as pull roster queue (category-first), not warehouse
+  # table — ST-002 support-agent hub path (cycle 1504 journey_dogfood).
   related classifications "AI Classifications":
-    display: table
+    display: queue
     show: TicketClassification
+    columns: category, priority, sentiment, classified_at
 
   ux:
     purpose: "Ticket hub — lifecycle strip and related LLM classification runs"
