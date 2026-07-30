@@ -487,6 +487,29 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    Probe(
+        id="switch.toggles_checked",
+        stem="switch",
+        page="hyperparts/switch.html",
+        category="interaction",
+        severity="medium",
+        claim=(
+            "Clicking a switch track toggles the checkbox checked state "
+            "(settings must flip Email notifications off then on again)"
+        ),
+        kind="checkbox_toggle",
+        params={
+            "input": (
+                "input[data-switch], input[data-dz-switch], "
+                ".switch input[type=checkbox], .dz-switch input[type=checkbox]"
+            ),
+            "scope": ".hm-preview",
+            # first switch is checked in gallery demo
+            "start_checked": True,
+        },
+        fix_surface="partial",
+        intent="exclusive",
+    ),
 )
 
 
@@ -1132,6 +1155,57 @@ def _run_tabs_exclusive_select(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_checkbox_toggle(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click a checkbox/switch input; assert checked flips both ways."""
+    params = probe.params
+    input_sel = params["input"]
+    start = params.get("start_checked")
+    settle = int(params.get("settle_ms", 80))
+
+    scope = _probe_scope(page, params)
+    inp = None
+    for part in input_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            inp = loc
+            break
+    if inp is None:
+        return {"verdict": "ERROR", "detail": f"input not found ({input_sel})"}
+
+    checked0 = bool(inp.is_checked())
+    if start is not None and checked0 != bool(start):
+        # still exercise toggle; note mismatch
+        pass
+
+    inp.click(force=True)
+    page.wait_for_timeout(settle)
+    checked1 = bool(inp.is_checked())
+    if checked1 == checked0:
+        return {
+            "verdict": "FAIL",
+            "detail": f"click did not flip checked (stayed {checked0})",
+            "dom_hint": input_sel,
+        }
+
+    inp.click(force=True)
+    page.wait_for_timeout(settle)
+    checked2 = bool(inp.is_checked())
+    if checked2 != checked0:
+        return {
+            "verdict": "FAIL",
+            "detail": f"second click did not restore checked={checked0} (got {checked2})",
+            "dom_hint": input_sel,
+        }
+    return {
+        "verdict": "PASS",
+        "detail": f"toggled {checked0}→{checked1}→{checked2}",
+        "checked_sequence": [checked0, checked1, checked2],
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -1143,6 +1217,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "data_open_escape": _run_data_open_escape,
     "data_open_dismiss_outside": _run_data_open_dismiss_outside,
     "tabs_exclusive_select": _run_tabs_exclusive_select,
+    "checkbox_toggle": _run_checkbox_toggle,
 }
 
 

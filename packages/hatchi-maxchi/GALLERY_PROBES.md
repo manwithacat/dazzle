@@ -32,6 +32,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `hover_card.escape_closes` | `hover-card` | hover | high | controller | Pressing Escape closes a click-opened hover-card (touch path uses data-open — Escape must clear it so previews do not stick) |
 | `hover_card.dismiss_outside` | `hover-card` | hover | high | controller | Clicking outside a click-opened hover-card closes it (spatial dismiss for touch/explicit open — previews must not stick) |
 | `tabs.exclusive_select` | `tabs` | exclusive | high | controller | Selecting a second tab reveals only its panel and moves aria-current (exclusive select — Overview then Activity leaves only Activity visible) |
+| `switch.toggles_checked` | `switch` | exclusive | medium | partial | Clicking a switch track toggles the checkbox checked state (settings must flip Email notifications off then on again) |
 
 ## Loop (autonomous improve)
 
