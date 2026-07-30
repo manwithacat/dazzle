@@ -6,7 +6,7 @@ Kept separate from ``runner.py`` so HTTP orchestration stays MI-clean.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urljoin
 
 import httpx
@@ -61,17 +61,20 @@ async def do_playwright_click(
         ctx = await browser.new_context(base_url=base_url, storage_state=None)
         jar = cookie_jar_for_playwright(client=client, cookies=cookies, base_url=base_url)
         if jar:
-            await ctx.add_cookies(jar)
+            # Playwright SetCookieParam is TypedDict; our jar is plain dicts.
+            await ctx.add_cookies(cast(Any, jar))
         page = await ctx.new_page()
         try:
             target = last_url or base_url + "/"
             if not target.startswith("http"):
                 target = urljoin(base_url + "/", target.lstrip("/"))
             await page.goto(target, wait_until="networkidle", timeout=timeout_ms)
+            # role is DSL-authored str; Playwright stubs want Literal AriaRole.
+            aria_role = cast(Any, role)
             if action.regex and name:
-                locator = page.get_by_role(role, name=re.compile(name))
+                locator = page.get_by_role(aria_role, name=re.compile(name))
             else:
-                locator = page.get_by_role(role, name=name, exact=True)
+                locator = page.get_by_role(aria_role, name=name, exact=True)
             await locator.first.click(timeout=timeout_ms)
             await page.wait_for_load_state("networkidle", timeout=timeout_ms)
             body = await page.content()
