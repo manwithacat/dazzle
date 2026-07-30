@@ -111,8 +111,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1509 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1511 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1511 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1512 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1512 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1512 (2026-07-30).** **self-audit** window c2a1fc684..9ad567ef6 — 5 CLEAN (c1499 dz-toggle; c1507 carousel.advance_next; c1510 related cards/files HM tabs; c1505 multi queue tabs; c1509 domain_join queues). Dig-contract CLEAN 1511/1508/1506 (receipts+contract log lines). 0 DISCREPANCY/AUD/REGRESSION. Pushed held 1511. CodeQL+inbox **USED@1512**. budget 0. Explore **70/100**. Next capability-sweep@1501 ~1521; campaign hyperpart/acceptance under aggressive residual=0 densify=0.
 
 > **Cycle 1511 (2026-07-30).** **example-apps story_walk** (campaign force residual=0; tip CI in_progress) dig design_studio ST-001–006 maps stem+stories+SPEC; walks 6/6 validate+dry-run; **product** brand campaigns + asset feedback table→**queue**; ST-002/004/006 criteria; dig receipt live_unproven. residual=0 densify=0. story_walk+walk+process_dig+validate+CodeQL+inbox **USED@1511**. budget 1. Explore **70/100**. **pushed: no** (tip CI 30577941370 in_progress). Next self-audit@1497 due ~1512; push 1511 when tip green. capability-sweep@1501 ~1521.
 
