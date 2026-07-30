@@ -241,10 +241,15 @@ workspace studio_dashboard "Studio Dashboard":
       campaigns: count(Campaign)
     tones:
       in_review: warning
+  # Work-surface utility (cycle 1483 journey): brand portfolio is a pull-to-open
+  # queue toward brand hubs — not a decorative card grid on the studio home.
   brands:
     source: Brand
-    display: grid
+    display: queue
     sort: name asc
+    limit: 20
+    action: brand_detail
+    empty: "No brands yet"
   # Work-surface utility: recent updates are a dated stream (pair with asset_trail).
   recent_assets:
     source: Asset
@@ -333,10 +338,14 @@ workspace brand_desk "Brand Desk":
       campaigns: count(Campaign)
     tones:
       brands: accent
+  # Work-surface utility (cycle 1483 journey): brand desk portfolio → queue to hubs.
   brand_grid:
     source: Brand
-    display: grid
+    display: queue
     sort: name asc
+    limit: 25
+    action: brand_detail
+    empty: "No brands yet"
   campaign_queue:
     source: Campaign
     filter: status = active
@@ -440,10 +449,13 @@ workspace campaign_desk "Campaigns":
     group_by: status
     empty: "No campaigns yet"
 
+  # Work-surface utility (cycle 1483 journey): brand context is pull-to-open, not grid.
   brand_context:
     source: Brand
     sort: name asc
-    display: grid
+    display: queue
+    limit: 20
+    action: brand_detail
     empty: "No brands"
 
   campaign_mix:

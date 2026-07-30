@@ -56,13 +56,13 @@ and that grant is itself an explicit, auditable declaration.
 
 ## Where work happens
 
-- **Studio Dashboard** — designer/admin portfolio: metrics, brand/asset grids,
+- **Studio Dashboard** — designer/admin portfolio: metrics, brand pull-queue, asset timelines,
   asset trail, status chart, and in-review queue.
-- **Brand Desk** — brand-first path: brand metrics, brand grid, active campaign
+- **Brand Desk** — brand-first path: brand metrics, brand pull-queue, active campaign
   queue, asset trail, and campaign mix chart.
 - **Review Desk** — reviewer home: review-load metrics, awaiting-review queue,
   recently approved, feedback timeline, pipeline kanban, and status chart.
-- **Asset Catalog** — catalog metrics, asset grid, review queue, pipeline
+- **Asset Catalog** — catalog metrics, asset timeline, review queue, pipeline
   kanban, and status mix chart.
 - **Campaigns** — campaign schedule desk with active queue, status board, brand
   context, and load chart.
@@ -123,4 +123,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:250c696056b8abfff33755261974676b0d1a3120afc4986f88c0334c84603024 -->
+<!-- dazzle-spec-brief: sha256:d8eba9c282260953dc9557bb93227e5b01275fae5ff253be126cab06b6d1e5f4 -->
