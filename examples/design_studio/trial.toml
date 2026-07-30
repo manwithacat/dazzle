@@ -40,6 +40,7 @@ adoption_criteria = [
     "Studio dashboard shows portfolio pressure (brands, assets, in-review) without menu archaeology",
     "Brand open is a hub (identity/palette + related assets/campaigns), not a flat field dump",
     "Asset row opens a useful hub with production/review context and a hop to parent brand",
+    "Publish desk surfaces approved/published assets as prioritised queues (not decorative grids only)",
     "Designer can start work (new asset or find review status) without becoming warehouse admin",
     "Would run a two-week pilot replacing Drive+Slack brand context with this tool as-is or with minor fixes",
 ]

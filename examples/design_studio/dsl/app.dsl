@@ -539,14 +539,16 @@ workspace publish_desk "Publish Desk":
     action: asset_edit
     empty: "No approved assets waiting to publish"
 
+  # Live published set is still pull work for campaigns (name order) — queue
+  # beats card-grid thrash; hub action stays asset_edit (acceptance cycle 1493).
   published_gallery:
     source: Asset
     filter: status = published
     sort: name asc
     limit: 20
-    display: grid
+    display: queue
     action: asset_edit
-    empty: "No published assets yet"
+    empty: "No published assets yet — approve and publish from the review path"
 
   publish_trail:
     source: Asset
