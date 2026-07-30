@@ -111,8 +111,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1443 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
-| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1465 | USED |
-| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1465 | USED |
+| **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1480 | USED |
+| **GitHub inbox** | DRIVER | GitHub API + strategies | **driver (Step 0c3)** | 1480 | USED |
 | `dazzle pitch` | EXEMPT | CLI + MCP | — | — | EXEMPT (human-invoked) |
 | `dazzle spec` / `spec-narrate` skill | EXEMPT | CLI + skill | — | — | EXEMPT (stakeholder docs) |
 | `dsl-authoring` skill | EXEMPT | skill | — | — | EXEMPT (in-session) |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1480 (2026-07-30).** **self-audit** window b12af659a..bccdb66fe — 5 CLEAN (c1469 gallery Escape probes; c1470 PersonaVariant focus; c1478 switch.toggles_checked; c1475 EngagementLetter lifecycle; c1479 story_walk dig contract). Dig-contract CLEAN story_walk@1479. 0 DISCREPANCY/AUD/REGRESSION. CodeQL+inbox **USED@1480**. budget 0. Explore **45/100**. Next: capability-sweep@1461 due ~1481; campaign agent_acceptance_panel under aggressive residual=0 densify=0.
 
 > **Cycle 1468 (2026-07-30).** **example-apps domain_lifecycle_priors** densify acme_billing: process `invoice_owner_review` (Invoice created→org_owner human_task). acme residual 2→0; residual_apps 7→6; mpp 1→0. densify_allowed=0. domain+process+validate **USED@1468**. budget 1. Explore **35/100**. Next transitions ops/invoice/project or lifecycle_prior contact_manager. self-audit@1465 next~1480; capability-sweep@1461 ~1481.
 
