@@ -1141,12 +1141,14 @@ workspace engineering_dashboard "Engineering Dashboard":
     action: issue_report_edit
     empty: "No issues to triage"
 
+  # Work-surface utility (cycle 1486 story_walk): fleet devices are pull-to-open
+  # hubs, not a gallery grid.
   active_devices:
     source: Device
     filter: status = active
     sort: batch_number asc
     limit: 50
-    display: grid
+    display: queue
     action: device_detail
     empty: "No active devices"
 
@@ -1297,12 +1299,13 @@ workspace tester_dashboard "Tester Dashboard":
       critical_found: destructive
       open_tasks: accent
 
+  # Work-surface utility (cycle 1486 story_walk ST-044): assigned kit is a pull queue.
   my_devices:
     source: Device
     filter: assigned_tester_id = current_user
     sort: name asc
     limit: 15
-    display: grid
+    display: queue
     action: device_detail
     empty: "No devices assigned to you yet"
 
@@ -1534,12 +1537,13 @@ workspace field_kit "Field Kit":
       open_tasks: accent
       assigned: positive
 
+  # Work-surface utility (cycle 1486 story_walk): field kit assignments → queue.
   assigned_devices:
     source: Device
     filter: assigned_tester_id = current_user
     sort: name asc
     limit: 20
-    display: grid
+    display: queue
     action: device_detail
     empty: "No devices assigned to you yet"
 
@@ -1584,12 +1588,13 @@ workspace tester_roster "Tester Roster":
       active: positive
       devices: accent
 
+  # Work-surface utility (cycle 1486 story_walk ST-047): roster is pull-to-open hubs.
   active_testers:
     source: Tester
     filter: active = true
     sort: name asc
     limit: 25
-    display: grid
+    display: queue
     action: tester_detail
     empty: "No active testers"
 
@@ -1635,12 +1640,13 @@ workspace device_fleet "Device Fleet":
       prototype: accent
       recalled: destructive
 
+  # Work-surface utility (cycle 1486 story_walk ST-045): fleet active devices → queue.
   active_devices:
     source: Device
     filter: status = active
     sort: name asc
     limit: 20
-    display: grid
+    display: queue
     action: device_detail
     empty: "No active devices"
 
