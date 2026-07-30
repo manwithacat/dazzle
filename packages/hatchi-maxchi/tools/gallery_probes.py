@@ -510,6 +510,53 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="partial",
         intent="exclusive",
     ),
+    # Cycle 1485 — controls primitive page (checkbox + switch on one demo row).
+    # Reuses checkbox_toggle runner; radio intentionally omitted (single-option
+    # demos stay checked — exclusive radio needs a multi-option name= group).
+    Probe(
+        id="controls.checkbox_toggles",
+        stem="controls",
+        page="hyperparts/controls.html",
+        category="interaction",
+        severity="medium",
+        claim=(
+            "Clicking a designed checkbox flips native checked state both ways "
+            "(selection controls must not be label-only paint)"
+        ),
+        kind="checkbox_toggle",
+        params={
+            "input": (
+                "input.checkbox[type=checkbox], input.dz-checkbox[type=checkbox], "
+                "input[type=checkbox].checkbox"
+            ),
+            "scope": ".hm-preview",
+            "start_checked": True,
+        },
+        fix_surface="css",
+        intent="exclusive",
+    ),
+    Probe(
+        id="controls.switch_toggles",
+        stem="controls",
+        page="hyperparts/controls.html",
+        category="interaction",
+        severity="medium",
+        claim=(
+            "Clicking the controls-page switch checkbox flips checked both ways "
+            "(primitive switch class shares semantics with dedicated switch page)"
+        ),
+        kind="checkbox_toggle",
+        params={
+            "input": (
+                "input.switch[type=checkbox], input.dz-switch[type=checkbox], "
+                "input[type=checkbox].switch"
+            ),
+            "scope": ".hm-preview",
+            "start_checked": True,
+        },
+        fix_surface="css",
+        intent="exclusive",
+    ),
 )
 
 

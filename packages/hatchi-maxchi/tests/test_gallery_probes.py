@@ -48,6 +48,8 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "hover_card.dismiss_outside" in ids
     assert "tabs.exclusive_select" in ids
     assert "switch.toggles_checked" in ids
+    assert "controls.checkbox_toggles" in ids
+    assert "controls.switch_toggles" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}

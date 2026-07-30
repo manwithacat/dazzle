@@ -59,7 +59,7 @@ apply map patches with `{"apply":true}`.
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1483 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1484 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1485 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1482 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1361 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
@@ -72,13 +72,13 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1478 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1478 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1485 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1485 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1483 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1484 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1478 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1485 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1485 (2026-07-30).** **hm-convergence gallery_probes** (campaign hyperpart_coherence queue=0 → expand catalog) **ship** controls.checkbox_toggles + controls.switch_toggles; catalog **22/22 PASS** live; dual_lock=0 coherence queue=0. gallery_probes **USED@1485**. budget 1. Explore **49/100**. Next campaign rotation under aggressive residual=0 densify=0. self-audit@1480 ~1495; capability-sweep@1481 ~1501.
 
 > **Cycle 1484 (2026-07-30).** **framework-ux edge** EX-048 focus fold expansion — `apply_persona_focus` raises fold_count to cover known focus regions (cap 6) so contact_manager home 4-focus no longer leaves last focus intersect-only; unit pins. densify=0 dual_lock=0. fitness/ux path **USED@1484**. budget 1. Explore **48/100**. Next campaign rotation gallery/hyperpart under aggressive residual=0 densify=0. self-audit@1480 ~1495; capability-sweep@1481 ~1501.
 
