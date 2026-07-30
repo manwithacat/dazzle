@@ -242,13 +242,15 @@ surface user_detail "User Detail":
     field is_active "Active"
     field created_at "Joined"
 
+  # User hub pull queue (RelatedDisplayMode.QUEUE) — title-first triage roster,
+  # not a warehouse table (cycle 1501 story_walk / ST-021 path).
   related tickets "Tickets":
-    display: table
+    display: queue
     show: Ticket
     columns: title, status, priority, assigned_to, created_at
 
   related comments "Comments":
-    display: table
+    display: queue
     show: Comment
     columns: content, is_internal, created_at
 
@@ -330,8 +332,10 @@ surface ticket_detail "Ticket Detail":
     field updated_at "Updated"
     field resolved_at "Resolved"
 
+  # Ticket hub discussion as pull roster queue (content-first), not warehouse
+  # table — ST-021 agent detail+comment history story path (cycle 1501).
   related discussion "Discussion":
-    display: table
+    display: queue
     show: Comment
     columns: content, author, is_internal, created_at
 
