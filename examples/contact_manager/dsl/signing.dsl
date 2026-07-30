@@ -30,3 +30,40 @@ entity EngagementLetter "Engagement Letter":
 
   fitness:
     repr_fields: [party, effective_date, signatory_name, contact, status]
+
+# Journey open-via densify (cycle 1517 story_walk): letters are not orphan
+# warehouse rows — list hops to letter hub or parent Contact hub.
+surface engagement_letter_list "Engagement letters":
+  uses entity EngagementLetter
+  mode: list
+  open: EngagementLetter via id
+  open: Contact via contact
+  section main:
+    field party "Party"
+    field status "Status"
+    field effective_date "Effective"
+    field contact "Contact"
+    field signatory_name "Signatory"
+  ux:
+    purpose: "Engagement letter queue — open a letter hub or hop to the Contact"
+    filter: status
+    sort: effective_date desc
+    search: party, signatory_name
+    empty: "No engagement letters yet — open a contact hub to attach one"
+
+surface engagement_letter_detail "Engagement letter":
+  uses entity EngagementLetter
+  mode: view
+  section summary "Summary":
+    layout: strip
+    field party "Party"
+    field status "Status"
+    field effective_date "Effective"
+  section parties "Parties":
+    field contact "Contact"
+    field signatory_name "Signatory"
+    field signatory_email "Signatory email"
+  section scope "Scope":
+    field scope_summary "Scope summary"
+  ux:
+    purpose: "Engagement letter hub — lifecycle strip, parties, and scope in one place"

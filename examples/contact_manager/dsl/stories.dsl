@@ -49,7 +49,7 @@ story ST-006 "User opens contact hub for call context":
   given:
     - "User selected a contact from the list or favourites queue"
   then:
-    - "Contact hub shows identity, employment strip, notes/timeline, and related engagement letters"
+    - "Contact hub shows identity, employment strip, notes/timeline, and related engagement letters as a pull queue"
     - "User can return to the dual-pane list without losing browse context"
 
 story ST-007 "User pins a favourite from the directory queue":
@@ -77,3 +77,16 @@ story ST-008 "User edits an existing contact":
   then:
     - "Updated fields are saved to database"
     - "updated_at timestamp is set"
+
+story ST-009 "User browses engagement letters into contact or letter hub":
+  status: accepted
+  executed_by: surface.engagement_letter_list
+  persona: user
+  trigger: user_click
+  entities: [EngagementLetter, Contact]
+  given:
+    - "Engagement letters exist for contacts in the directory"
+  then:
+    - "Letter rows open EngagementLetter via id (letter hub with lifecycle strip)"
+    - "Contact field open hops to Contact via contact (parent hub, not a dead FK cell)"
+    - "Contact hub related engagement letters remain a pull queue"

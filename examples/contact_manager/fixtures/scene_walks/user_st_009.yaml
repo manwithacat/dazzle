@@ -1,0 +1,21 @@
+# Story walk ST-009 — engagement letter list → letter/contact hubs
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-009 then:
+
+persona: user
+home_workspace: home
+
+scenes:
+  - id: land_st_009
+    story: ST-009
+    entry: /app/workspaces/home
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Contact
+          - Favourite
+          - directory
+          - Home
+    expects: "User lands on home overview before engagement letter list/hub hops"
