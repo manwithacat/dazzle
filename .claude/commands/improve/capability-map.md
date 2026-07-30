@@ -72,7 +72,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1513 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1519 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1513 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1509 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1516 | USED |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1519 (2026-07-30).** **hm-convergence hyperpart_coherence investigate** (lag ≥20 since 1478) recapture 92/92 (harness: meta-refresh alias resolve + fresh page/domcontentloaded — fixes grid-cols cascade ERR); ingest coherent=92 mean=8.9 queue=0. **Ship** `hm_pages_vision` alias capture + unit pin. hyperpart coherence **USED@1519**. budget 1. Explore **77/100**.
 
 > **Cycle 1518 (2026-07-30).** **example-apps story_walk** residual contact_manager live_unproven:user_st_009 — **live green** all 5 walks (seeded serve :3767 + reset-and-load); mark-live + dig receipt walk_live_run=0; residual_total 1→0. story_walk+walk+demo reset-and-load **USED@1518**. budget 1. Explore **76/100**. Next capability-sweep@1501 ~1521; campaign hyperpart under aggressive residual=0 densify=0.
 

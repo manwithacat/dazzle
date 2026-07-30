@@ -158,3 +158,39 @@ def test_discover_hyperpart_pages() -> None:
     assert "button" in stems
     assert "money" in stems
     assert all(rel.startswith("/hyperparts/") for _, rel in pages)
+
+
+def test_meta_refresh_alias_resolves_to_canonical(tmp_path: Path) -> None:
+    """grid-cols-style meta-refresh aliases must capture the target page, not hang."""
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[2] / "scripts" / "hm_pages_vision.py"
+    spec = importlib.util.spec_from_file_location("hm_pages_vision", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    site = tmp_path / "site"
+    hp = site / "hyperparts"
+    hp.mkdir(parents=True)
+    (hp / "grid.html").write_text("<html><body>canonical grid</body></html>\n", encoding="utf-8")
+    (hp / "grid-cols.html").write_text(
+        "<!doctype html><html><head>"
+        '<meta http-equiv="refresh" content="0; url=grid.html">'
+        '<link rel="canonical" href="grid.html">'
+        "</head><body>alias</body></html>\n",
+        encoding="utf-8",
+    )
+    (hp / "button.html").write_text("<html><body>button</body></html>\n", encoding="utf-8")
+
+    assert mod._meta_refresh_target(hp / "grid-cols.html") == "grid.html"
+    assert mod._meta_refresh_target(hp / "button.html") is None
+    assert mod._resolve_capture_rel(site, "/hyperparts/grid-cols.html") == "/hyperparts/grid.html"
+    assert mod._resolve_capture_rel(site, "/hyperparts/button.html") == "/hyperparts/button.html"
+
+    # Live gallery still has the real aliases
+    live = Path(__file__).resolve().parents[2] / "packages" / "hatchi-maxchi" / "site"
+    if (live / "hyperparts" / "grid-cols.html").is_file():
+        assert (
+            mod._resolve_capture_rel(live, "/hyperparts/grid-cols.html") == "/hyperparts/grid.html"
+        )

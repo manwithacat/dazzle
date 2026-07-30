@@ -90,6 +90,63 @@ def _url(base: str, path: str) -> str:
     return base + path
 
 
+def _meta_refresh_target(html_path: Path) -> str | None:
+    """Return relative/absolute target of an instant meta-refresh, if any.
+
+    Alias gallery pages (``grid-cols.html`` → ``grid.html``) use
+    ``<meta http-equiv="refresh" content="0; url=…">``. Navigating those in
+    Playwright then screenshotting hangs CDP (fonts-ready never completes on
+    the intermediate document). Capture should open the canonical URL directly.
+    """
+    import re
+
+    try:
+        text = html_path.read_text(encoding="utf-8", errors="replace")[:8000]
+    except OSError:
+        return None
+    m = re.search(
+        r'<meta\s+[^>]*http-equiv=["\']refresh["\'][^>]*>',
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not m:
+        # attribute order may put content first
+        m = re.search(
+            r'<meta\s+[^>]*content=["\'][^"\']*url\s*=[^"\']*["\'][^>]*http-equiv=["\']refresh["\'][^>]*>',
+            text,
+            flags=re.IGNORECASE,
+        )
+    if not m:
+        return None
+    tag = m.group(0)
+    cm = re.search(
+        r'content=["\']\s*\d+\s*;\s*url\s*=\s*["\']?([^"\'\s>]+)',
+        tag,
+        flags=re.IGNORECASE,
+    )
+    if not cm:
+        cm = re.search(r'url\s*=\s*["\']?([^"\'\s>;]+)', tag, flags=re.IGNORECASE)
+    return cm.group(1).strip() if cm else None
+
+
+def _resolve_capture_rel(site_dir: Path | None, rel: str) -> str:
+    """Map gallery alias paths to their canonical sibling before navigation."""
+    if site_dir is None or not rel.startswith("/hyperparts/"):
+        return rel
+    html_path = site_dir / rel.lstrip("/")
+    if not html_path.is_file():
+        return rel
+    target = _meta_refresh_target(html_path)
+    if not target:
+        return rel
+    # relative targets like "grid.html" live beside the alias
+    if "://" in target:
+        return rel  # absolute off-site — keep original
+    if target.startswith("/"):
+        return target
+    return f"/hyperparts/{Path(target).name}"
+
+
 def _http_base_for_site(site_dir: Path) -> tuple[str, object]:
     """Serve *site_dir* on a free localhost port (PDF.js cannot XHR file://)."""
     import http.server
@@ -144,6 +201,35 @@ def _settle_demo(page, name: str) -> None:
             page.wait_for_timeout(2000)
 
 
+def _follow_meta_refresh(page, *, settle_ms: int = 400) -> str | None:
+    """If the page is a meta-refresh alias (e.g. grid-cols → grid), navigate once.
+
+    Instant ``content="0; url=…"`` redirects race Playwright's screenshot path and
+    can hang CDP for 30s+ on the intermediate document. Prefer the canonical URL.
+    """
+    try:
+        href = page.evaluate(
+            """() => {
+              const m = document.querySelector('meta[http-equiv="refresh" i]');
+              if (!m) return null;
+              const content = (m.getAttribute('content') || '').trim();
+              // "0; url=grid.html" or "0;url='grid.html'"
+              const match = /url\\s*=\\s*['\"]?([^'\"\\s;]+)/i.exec(content);
+              return match ? match[1] : null;
+            }"""
+        )
+    except Exception:
+        return None
+    if not href:
+        return None
+    try:
+        page.goto(href, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(settle_ms)
+        return page.url
+    except Exception:
+        return None
+
+
 def capture(
     *,
     base: str,
@@ -159,31 +245,43 @@ def capture(
     screens: list[dict] = []
     httpd = None
     effective_base = base
+    local_site: Path | None = site_dir if site_dir is not None and site_dir.is_dir() else None
     # file:// PDF/XHR and some ES modules fail CORS — serve the site tree over HTTP.
     if base.startswith("file://"):
         root = Path(base[len("file://") :])
         if root.is_dir():
+            local_site = root
             effective_base, httpd = _http_base_for_site(root)
             print(f"local HTTP capture base: {effective_base}  (from {root})")
     elif site_dir is not None and site_dir.is_dir() and base.startswith("file://"):
+        local_site = site_dir
         effective_base, httpd = _http_base_for_site(site_dir)
 
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            # Fresh page per stem: a timed-out screenshot leaves the tab unusable
+            # and cascades ERR for every later page in the sweep (cycle 1519).
             for name, rel in pages:
-                url = _url(effective_base, rel)
+                capture_rel = _resolve_capture_rel(local_site, rel)
+                url = _url(effective_base, capture_rel)
                 status = None
+                page = browser.new_page(viewport={"width": 1280, "height": 900})
                 try:
-                    resp = page.goto(url, wait_until="networkidle", timeout=45000)
+                    # networkidle hangs on long-polling demos / meta-refresh races;
+                    # domcontentloaded + short settle is enough for static gallery.
+                    resp = page.goto(url, wait_until="domcontentloaded", timeout=45000)
                     status = resp.status if resp else None
-                    page.wait_for_timeout(500)
+                    page.wait_for_timeout(300)
+                    # Defense in depth if static resolve missed a refresh tag.
+                    final = _follow_meta_refresh(page)
+                    if final:
+                        url = final
                     try:
-                        page.wait_for_load_state("networkidle", timeout=8000)
+                        page.wait_for_load_state("networkidle", timeout=4000)
                     except Exception:
                         pass
-                    page.wait_for_timeout(200)
+                    page.wait_for_timeout(150)
                     _settle_demo(page, name)
                     body = page.inner_text("body")[:200]
                     is_404 = (
@@ -193,19 +291,34 @@ def capture(
                         or not body.strip()
                     )
                     png = out / f"{name}.png"
+                    # Tall gallery pages (grid ~14k px) need headroom beyond the
+                    # Playwright default 30s screenshot budget.
+                    shot_timeout = 60000
                     if not is_404 and clip_demo:
                         loc = page.locator(
                             "main .hm-demo, main [data-hm-demo], .hm-hyperpart-demo, #demo, main"
                         ).first
                         try:
                             if loc.count() > 0:
-                                loc.screenshot(path=str(png))
+                                loc.screenshot(path=str(png), timeout=shot_timeout)
                             else:
-                                page.screenshot(path=str(png), full_page=full_page)
+                                page.screenshot(
+                                    path=str(png),
+                                    full_page=full_page,
+                                    timeout=shot_timeout,
+                                )
                         except Exception:
-                            page.screenshot(path=str(png), full_page=full_page)
+                            page.screenshot(
+                                path=str(png),
+                                full_page=full_page,
+                                timeout=shot_timeout,
+                            )
                     else:
-                        page.screenshot(path=str(png), full_page=full_page and not is_404)
+                        page.screenshot(
+                            path=str(png),
+                            full_page=full_page and not is_404,
+                            timeout=shot_timeout,
+                        )
                     screens.append(
                         {
                             "image_id": name,
@@ -231,6 +344,11 @@ def capture(
                             "error": str(e),
                         }
                     )
+                finally:
+                    try:
+                        page.close()
+                    except Exception:
+                        pass
             browser.close()
     finally:
         if httpd is not None:
@@ -520,6 +638,7 @@ def main(argv: list[str] | None = None) -> int:
             pages=pages,
             full_page=args.full_page,
             clip_demo=args.clip_demo,
+            site_dir=args.site_dir,
         )
         print(
             f"manifest: {out / 'manifest.json'}  screens={len(man['screens'])}  404s={man['n_404']}"
