@@ -55,7 +55,15 @@ already in **repair mode** after a push, and then cap polls so the lock TTL
    `ci_gap: <class> | promoted to ship-surface|preflight|n/a`.
 6. **Commit** — product fix: conventional message (`fix: …` / `test: …`). Prefer one focused commit; if pre-existing debt is unrelated, a separate `fix: resolve pre-existing …` commit is fine.
 7. **Push** — `git push` to the branch that feeds `main` CI (usually `main` on this repo). Confirm with the user only if push is blocked or the branch is protected in a way that needs a PR (default: push when the improve session already has push authority on main).
+   **`paths-ignore` trap (cycle 1495/1496):** `ci.yml` ignores pure `docs/**`
+   (and a few other non-code paths). A repair that *only* regenerates
+   `docs/api-surface/*.txt` will **not** re-run the CI workflow — the badge
+   stays red on the previous failed SHA. Always include a non-ignored path
+   in the same push (pinning unit test, `src/` comment, or `tests/` assert)
+   so the matrix actually re-validates tip.
 8. **Re-check** — snapshot again (or short poll). If still red and time remains under lock TTL, continue diagnosis; else log partial progress and leave the next cycle to resume.
+   After a docs-only push, confirm a **new** `ci.yml` run exists for tip SHA
+   (not only docs/CodeQL); if missing, push the non-ignored pin from step 7.
 9. **Log** — append improve-log as `lane: cimonitor`:
 
 ```

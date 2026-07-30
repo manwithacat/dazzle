@@ -521,7 +521,7 @@ class FragmentSurfaceAdapter:
             return _wrap(_detail_region(detail_body))
 
         # ADR-0049 Phase 2 Task 3a: render the FETCHED related-group content
-        # (table / status_cards / file_list) instead of a Skeleton placeholder.
+        # (table / status_cards / file_list / queue) instead of a Skeleton placeholder.
         related_regions: list[Fragment] = []
         for group in related_groups:
             group_title = str(group.get("label") or group.get("title") or "Related")
