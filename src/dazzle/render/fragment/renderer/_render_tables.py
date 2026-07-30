@@ -544,14 +544,21 @@ class _RenderTablesMixin:
                 parts.append("".join(block))
                 continue
             rows_html: list[str] = []
+            headers = list(t.headers or ())
             for i, row in enumerate(t.rows):
                 drill = t.row_drill[i] if t.row_drill else ""
                 title = row[0] if row else ""
-                meta = row[1:] if len(row) > 1 else ()
-                meta_html = "".join(
-                    f'<span class="dz-queue-row-meta">{ctx.escape(c)}</span>' for c in meta
-                )
-                # Prefer HM queue row seam when drill present; else static row.
+                meta_vals = row[1:] if len(row) > 1 else ()
+                meta_headers = headers[1 : 1 + len(meta_vals)]
+                # Cycle 1498: label meta with column headers when present so
+                # hub queues read like workspace queues ("Status: open"), not
+                # anonymous bare values.
+                meta_parts: list[str] = []
+                for j, val in enumerate(meta_vals):
+                    label = meta_headers[j] if j < len(meta_headers) else ""
+                    text = f"{ctx.escape(label)}: {ctx.escape(val)}" if label else ctx.escape(val)
+                    meta_parts.append(f'<span class="dz-queue-row-meta">{text}</span>')
+                meta_html = "".join(meta_parts)
                 rows_html.append(
                     render_queue_row(
                         QueueRowSeam(

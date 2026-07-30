@@ -178,3 +178,13 @@ def test_queue_mode_renders_queue_rows() -> None:
     assert "dz-queue-region" in html
     assert "dz-queue-rows" in html
     assert "Design" in html
+
+
+def test_queue_mode_labels_meta_with_column_headers() -> None:
+    """Cycle 1498 — meta cells include header labels (Status: …)."""
+    g = RelatedGroupContext(group_id="g1", label="Tasks", display="queue", tabs=[_tab()])
+    html = _render(g)
+    assert "dz-queue-row-meta" in html
+    # Badge/type format may title-case values; label prefix is the contract.
+    assert "Status: " in html
+    assert "Design" in html

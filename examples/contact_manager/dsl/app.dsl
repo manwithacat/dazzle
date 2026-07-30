@@ -127,10 +127,10 @@ surface contact_detail "Contact Detail":
     field created_at "Created"
     field updated_at "Updated"
 
-  # Journey deepen: reverse-hop engagement letters (SPEC signing flow) — not a
-  # flat warehouse dump; call-context hub shows related NDAs/letters in place.
+  # Journey deepen: reverse-hop engagement letters (SPEC signing flow) — pull
+  # roster queue (RelatedDisplayMode.QUEUE), not a warehouse table (cycle 1498).
   related engagements "Engagement letters":
-    display: table
+    display: queue
     show: EngagementLetter
     columns: party, effective_date, signatory_name, scope_summary
 
