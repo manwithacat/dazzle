@@ -90,6 +90,15 @@ entity Alert "Alert":
   status: enum[active,acknowledged,resolved]=active
   acknowledged_by: str(200)
 
+  # State machine: active → ack → resolve (domain residual status∄transitions).
+  # Engineers drive ack/resolve; admin may re-open resolved for rework.
+  transitions:
+    active -> acknowledged: role(ops_engineer) or role(admin)
+    active -> resolved: role(ops_engineer) or role(admin)
+    acknowledged -> resolved: role(ops_engineer) or role(admin)
+    acknowledged -> active: role(ops_engineer) or role(admin)
+    resolved -> active: role(admin)
+
   # Computed field: hours since alert was triggered
   hours_open: computed days_since(triggered_at)
 
@@ -131,6 +140,16 @@ entity Integration "Integration":
   status: enum[off,pending,live,revoked] = off
   enabled_at: datetime
   notes: str(500)
+
+  # State machine: confirm_action_panel opt-in (off → pending → live / revoke).
+  # Admin-only — matches permit write gate (domain residual status∄transitions).
+  transitions:
+    off -> pending: role(admin)
+    pending -> live: role(admin)
+    pending -> off: role(admin)
+    live -> revoked: role(admin)
+    revoked -> off: role(admin)
+    revoked -> pending: role(admin)
 
   audit: all
 
