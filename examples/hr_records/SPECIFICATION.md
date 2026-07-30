@@ -104,8 +104,14 @@ which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
 
+## Automation & controls
+
+One durable process reinforces the employment handoff: when a new **Employment**
+row is created, a manager acknowledgment step is required so team ownership is
+not an informal chat (verify: `dazzle process list`).
+
 ## How work flows
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:bcf3e7a47c2fab7b1cba5a29790adef6725bcba6f9489915d57de86b7835632d -->
+<!-- dazzle-spec-brief: sha256:ef8dff600ef5befcf9e0bc88c864be766446ab83e3b742b9bd0d512dcf204861 -->

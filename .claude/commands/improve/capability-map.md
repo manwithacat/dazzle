@@ -67,7 +67,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1459 | USED |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1460 | USED |
-| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1460 | USED |
+| `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1466 | USED |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1466 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1466 (2026-07-30).** **example-apps domain_lifecycle_priors** densify hr_records process `employment_manager_assignment` (Employment created→manager ack) + land design_studio `campaign_activation_assignment`. hr residual 3→1; mpp 3→2; residual_apps=8. densify_allowed=0. domain+process+validate **USED@1466**. budget 1. Explore **33/100**. CI tip in_progress — commit local, push after green. Next llm/acme process densify. self-audit@1465 next~1480; capability-sweep@1461 ~1481.
 
 > **Cycle 1465 (2026-07-30).** **self-audit** window e96ad1280..b12af659a — 5 CLEAN (c1462 domain_lifecycle_priors + support process; c1458 story_walk dig contracts; c1464 project_tracker process densify; c1451 gallery Escape probes; c1460 journey dig contracts). Dig-contract CLEAN story_walk/acceptance/journey. 0 DISCREPANCY/AUD/REGRESSION. CodeQL+inbox **USED@1465**. budget 0. Explore **32/100**. Next: domain densify hr_records|llm residual=3 under residual_total>0 — not dual_lock/smoke/WI densify. self-audit@1465 next~1480; capability-sweep@1461 next~1481.
 
