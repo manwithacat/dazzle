@@ -114,6 +114,12 @@ practice, one per role:
   everything across every organization, unrestricted by any single
   organization's boundary.
 
+## Automation & controls
+
+One durable process reinforces invoice handoff: when an **Invoice** is
+**created**, an organization-owner review step is required so commercial
+approval is not an informal chat (verify: `dazzle process list`).
+
 ## The technical foundation
 
 **Security.** Access-controlled records are filtered to what each user is
@@ -139,4 +145,4 @@ enhanced. There is no heavy single-page JavaScript application to maintain,
 which keeps the product fast, accessible, and simple to operate. (Verify:
 `dazzle validate`.)
 
-<!-- dazzle-spec-brief: sha256:fe08384de7c05974afe3a2fae4839386d72ac743d1112cd40ba7ca51740b3077 -->
+<!-- dazzle-spec-brief: sha256:e5e4e084a7ad098649e1fdc3d18cf5d92fc073f9c60034cd74f098e24b9452cc -->

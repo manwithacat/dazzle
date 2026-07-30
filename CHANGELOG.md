@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+### Changed
+- **acme_billing process densify** — durable `invoice_owner_review` process
+  (Invoice created → org_owner human_task) + compliance auditspec baseline
+  refresh for DSL hash.
+
 ## [0.109.0] - 2026-07-28
 
 ### Added
