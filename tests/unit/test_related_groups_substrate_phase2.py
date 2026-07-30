@@ -234,6 +234,20 @@ def test_queue_mode_labels_meta_with_column_headers() -> None:
     assert "Design" in html
 
 
+def test_queue_mode_overflow_when_total_exceeds_rows() -> None:
+    """Cycle 1516 — related queue shows total + overflow when fetch is capped."""
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Tasks",
+        display="queue",
+        tabs=[_tab(total=12)],
+    )
+    html = _render(g)
+    assert 'class="dz-queue-count">12</span>' in html or ">12</span>" in html
+    assert "Showing 2 of 12" in html
+    assert "dz-queue-overflow" in html
+
+
 def test_queue_mode_multi_tab_uses_hm_tabs() -> None:
     """Cycle 1505 — multi related-queue strips use HM tabs (not stacked h4s)."""
     g = RelatedGroupContext(

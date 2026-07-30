@@ -604,12 +604,18 @@ class _RenderTablesMixin:
                     )
                 )
             )
+        # Prefer full related total when fetch is capped (parity workspace queues).
+        count = t.total if getattr(t, "total", 0) and t.total >= len(t.rows) else len(t.rows)
+        overflow_html = ""
+        if count > len(t.rows):
+            overflow_html = f'<p class="dz-queue-overflow">Showing {len(t.rows)} of {count}</p>'
         parts.append(
             f'<div class="dz-queue-region">'
             f'<div class="dz-queue-count-row">'
-            f'<span class="dz-queue-count">{len(t.rows)}</span>'
+            f'<span class="dz-queue-count">{count}</span>'
             f"</div>"
             f'<div class="dz-queue-rows">{"".join(rows_html)}</div>'
+            f"{overflow_html}"
             f"</div>"
         )
         return "".join(parts)

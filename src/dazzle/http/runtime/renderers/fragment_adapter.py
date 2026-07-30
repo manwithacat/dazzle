@@ -639,6 +639,9 @@ class FragmentSurfaceAdapter:
                     create_href += f"&{ftf}={tab.get('filter_type_value', '') or ''}"
                 create_action = f"{tab.get('entity_name', '') or ''}.create"
                 create_label = str(tab.get("label", "") or "")
+            total = int(tab.get("total", 0) or 0)
+            if total < len(rows):
+                total = len(rows)
             tabs.append(
                 RelatedTab(
                     tab_id=str(tab.get("tab_id", "") or ""),
@@ -649,6 +652,7 @@ class FragmentSurfaceAdapter:
                     create_href=create_href,
                     create_action=create_action,
                     create_label=create_label,
+                    total=total,
                 )
             )
         return RelatedGroup(

@@ -283,12 +283,16 @@ class RelatedTab:
     create_href: str = ""
     create_action: str = ""
     create_label: str = ""
+    # Full related count when fetch is limited (workspace-queue parity overflow).
+    total: int = 0
 
     def __post_init__(self) -> None:
         if self.row_drill and len(self.row_drill) != len(self.rows):
             raise ValueError(
                 f"row_drill length {len(self.row_drill)} != rows length {len(self.rows)}"
             )
+        if self.total < 0:
+            raise ValueError(f"total must be >= 0, got {self.total}")
 
 
 @dataclass(frozen=True, slots=True)
