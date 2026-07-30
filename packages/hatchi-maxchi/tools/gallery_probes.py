@@ -633,6 +633,37 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="css",
         intent="exclusive",
     ),
+    # Cycle 1507 — carousel stage advance (controller moves data-active + status).
+    Probe(
+        id="carousel.advance_next",
+        stem="carousel",
+        page="hyperparts/carousel.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking Next advances the clamp carousel from slide 1 to 2 "
+            "(data-carousel-index, active slide, and live status must update)"
+        ),
+        kind="carousel_advance",
+        params={
+            # Prefer clamp strip (not ambient loop) so ends/status stay deterministic.
+            "root": (
+                '[data-carousel-wrap="none"], [data-dz-carousel-wrap="none"], '
+                ".carousel[data-carousel-wrap=none], .dz-carousel[data-dz-carousel-wrap=none]"
+            ),
+            "next": "[data-carousel-next], [data-dz-carousel-next]",
+            "active_slide": (
+                ".carousel__slide[data-active], .carousel__slide[data-dz-active], "
+                ".dz-carousel__slide[data-active], .dz-carousel__slide[data-dz-active]"
+            ),
+            "status": "[data-carousel-status], [data-dz-carousel-status]",
+            "expect_index_after": "1",
+            "expect_status_contains": "2 of",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -1542,6 +1573,125 @@ def _run_radio_group_select(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_carousel_advance(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click carousel Next; assert index, active slide, and status advance.
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py carousel clamp
+    next-step for the autonomous gallery_probes catalog (cycle 1507).
+    """
+    params = probe.params
+    root_sel = params["root"]
+    next_sel = params.get("next", "[data-carousel-next], [data-dz-carousel-next]")
+    active_sel = params.get(
+        "active_slide",
+        (
+            ".carousel__slide[data-active], .carousel__slide[data-dz-active], "
+            ".dz-carousel__slide[data-active], .dz-carousel__slide[data-dz-active]"
+        ),
+    )
+    status_sel = params.get("status", "[data-carousel-status], [data-dz-carousel-status]")
+    expect_index = str(params.get("expect_index_after", "1"))
+    expect_status = params.get("expect_status_contains") or "2 of"
+    settle = int(params.get("settle_ms", 120))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"carousel root not found ({root_sel})"}
+
+    next_btn = None
+    for part in next_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            next_btn = loc
+            break
+    if next_btn is None:
+        return {"verdict": "ERROR", "detail": f"next control not found ({next_sel})"}
+
+    index_before = (
+        root.get_attribute("data-carousel-index")
+        or root.get_attribute("data-dz-carousel-index")
+        or "0"
+    )
+    status_el = None
+    for part in status_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            status_el = loc
+            break
+    status_before = (status_el.inner_text() if status_el else "") or ""
+    active_before = root.locator(active_sel).count()
+
+    if next_btn.is_disabled():
+        return {
+            "verdict": "FAIL",
+            "detail": f"next disabled at index={index_before!r} (cannot advance)",
+            "dom_hint": next_sel,
+        }
+
+    next_btn.click()
+    page.wait_for_timeout(settle)
+
+    index_after = (
+        root.get_attribute("data-carousel-index")
+        or root.get_attribute("data-dz-carousel-index")
+        or ""
+    )
+    status_after = (status_el.inner_text() if status_el else "") or ""
+    active_after = root.locator(active_sel).count()
+
+    if index_after != expect_index:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"index stayed {index_after!r} after next "
+                f"(was {index_before!r}, expected {expect_index!r})"
+            ),
+            "dom_hint": root_sel,
+        }
+    if active_after != 1:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"expected exactly 1 active slide after next, got {active_after} "
+                f"(before={active_before})"
+            ),
+            "dom_hint": active_sel,
+        }
+    if expect_status.lower() not in status_after.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"status {status_after!r} missing {expect_status!r} (was {status_before!r})"
+            ),
+            "dom_hint": status_sel,
+        }
+    return {
+        "verdict": "PASS",
+        "detail": (
+            f"index {index_before!r}→{index_after!r}; "
+            f"status {status_before.strip()!r}→{status_after.strip()!r}"
+        ),
+        "index_before": index_before,
+        "index_after": index_after,
+        "status_after": status_after.strip(),
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -1557,6 +1707,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "range_value_readout": _run_range_value_readout,
     "aria_pressed_toggle": _run_aria_pressed_toggle,
     "radio_group_select": _run_radio_group_select,
+    "carousel_advance": _run_carousel_advance,
 }
 
 

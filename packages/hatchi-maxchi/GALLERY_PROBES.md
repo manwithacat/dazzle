@@ -38,6 +38,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `slider.updates_readout` | `slider` | exclusive | high | controller | Changing the range input updates the group's live value readout (settings must show the new number without a page reload) |
 | `toggle.pressed_flips` | `toggle` | exclusive | high | controller | Clicking a toolbar toggle flips aria-pressed both ways (Bold/Italic mode must stay live without a page reload) |
 | `toggle_group.radio_exclusive` | `toggle-group` | exclusive | high | css | Selecting a second toggle-group segment checks only that radio (List then Board leaves only Board checked — native exclusive group) |
+| `carousel.advance_next` | `carousel` | exclusive | high | controller | Clicking Next advances the clamp carousel from slide 1 to 2 (data-carousel-index, active slide, and live status must update) |
 
 ## Loop (autonomous improve)
 

@@ -73,12 +73,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1506 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1506 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1507 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1506 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1484 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1506 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1507 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -123,9 +123,11 @@ apply map patches with `{"apply":true}`.
 
 ## Cycle notes (newest first)
 
-> **Cycle 1504 (2026-07-30).** **example-apps journey_dogfood** (campaign force residual=0 panel_streak_break) dig llm_ticket_classifier ST-001–006 maps stem+stories; prove journey 6/6; **product** ticket_detail AI classifications table→**queue** + columns; ST-002 then-criteria; residual=0 densify=0. journey+prove+validate+unified probes **USED@1504**. budget 1. Explore **63/100**. Push carry-forward 1501–1503 + this. Next campaign framework-ux/gallery under aggressive — not dual_lock/smoke/WI densify. self-audit@1497 ~1512; capability-sweep@1501 ~1521.
+> **Cycle 1507 (2026-07-30).** **hm-convergence gallery_probes** (campaign force) discover uncovered=0; prior 25 PASS; **ship** `carousel.advance_next` + `carousel_advance` runner; catalog **26/26 PASS**; unit pin kinds include toggle+carousel. densify=0 dual_lock=0 coherence queue=0. gallery_probes + hm gallery interaction **USED@1507**. budget 1. Explore **66/100**. Next framework-ux/acceptance under aggressive; push 1503–1507 when throttle clears. self-audit@1497 ~1512; capability-sweep@1501 ~1521.
 
 > **Cycle 1506 (2026-07-30).** **example-apps story_walk** (campaign hyperpart_coherence queue=0 + gallery 25/25 PASS → fall-through require_mutation) dig hr_records ST-001–005 maps stem+stories+trial+SPEC; walks 5/5 validate+dry-run; **product** person/department/role related table→**queue**; trial hub-queue criterion; dig receipt live_unproven. residual=0 densify=0 dual_lock=0. hyperpart OBSERVE + gallery + story_walk+walk+process_dig+validate+CodeQL+inbox **USED@1506**. budget 1. Explore **65/100**. **pushed: no** (throttle 4/h; ahead 3 unpushed). Next self-audit@1497 ~1512; capability-sweep@1501 ~1521.
+
+> **Cycle 1504 (2026-07-30).** **example-apps journey_dogfood** (campaign force residual=0 panel_streak_break) dig llm_ticket_classifier ST-001–006 maps stem+stories; prove journey 6/6; **product** ticket_detail AI classifications table→**queue** + columns; ST-002 then-criteria; residual=0 densify=0. journey+prove+validate+unified probes **USED@1504**. budget 1. Explore **63/100**. Push carry-forward 1501–1503 + this. Next campaign framework-ux/gallery under aggressive — not dual_lock/smoke/WI densify. self-audit@1497 ~1512; capability-sweep@1501 ~1521.
 
 > **Cycle 1503 (2026-07-30).** **example-apps agent_acceptance_panel** dig project_tracker ST-001–005 maps trial+stories+stem+SPEC; walks 5/5 validate+dry-run; trial skip product_first; **product** task_detail discussion table→**queue** + my_tasks assigned_queue action→task_detail; trial hub+discussion criteria; dig receipt live_unproven. residual=0 densify=0. acceptance+walk+process_dig+validate **USED@1503**. budget 1. Explore **62/100**. Push carry-forward 1501+1502 with tip CI green. Next campaign journey/framework-ux under aggressive — not dual_lock/smoke/WI densify. self-audit@1497 ~1512; capability-sweep@1501 ~1521.
 

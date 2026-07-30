@@ -51,6 +51,9 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "controls.checkbox_toggles" in ids
     assert "controls.switch_toggles" in ids
     assert "slider.updates_readout" in ids
+    assert "toggle.pressed_flips" in ids
+    assert "toggle_group.radio_exclusive" in ids
+    assert "carousel.advance_next" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -68,10 +71,16 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "tabs_exclusive_select",
             "checkbox_toggle",
             "range_value_readout",
+            "aria_pressed_toggle",
+            "radio_group_select",
+            "carousel_advance",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"
     assert slider.fix_surface == "controller"
+    carousel = next(p for p in PROBES if p.id == "carousel.advance_next")
+    assert carousel.kind == "carousel_advance"
+    assert carousel.fix_surface == "controller"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"
