@@ -854,11 +854,15 @@ workspace org_chart "Departments & Roles":
       departments: accent
 
   # TODO(#hr-hierarchy): recursive tree for self-ref Department / ManagerLink.
+  # Until then: prioritised department roster (queue), not a card grid — opens
+  # department hubs for role/reporting context (story_walk cycle 1492).
   departments:
     source: Department
-    display: grid
+    display: queue
+    sort: name asc
+    limit: 25
     action: department_detail
-    empty: "No departments"
+    empty: "No departments yet — add one to start the org roster"
 
   # Job roles (title/level/department) are org reference data managed by
   # hr_admin — surfacing them here makes role_list/role_create reachable
