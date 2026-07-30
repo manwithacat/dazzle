@@ -405,6 +405,88 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="css",
         intent="hover",
     ),
+    Probe(
+        id="popover.escape_dismiss",
+        stem="popover",
+        page="hyperparts/popover.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Pressing Escape closes an open popover "
+            "(details-light-dismiss keyboard path — free panels must not stick)"
+        ),
+        kind="details_escape_dismiss",
+        params={
+            "root": "details.popover, details.dz-popover, .popover, .dz-popover",
+            "item": "details.popover, details.dz-popover",
+            "trigger": "details.popover > summary, details.dz-popover > summary",
+            "open_label": "Details",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
+    Probe(
+        id="hover_card.escape_closes",
+        stem="hover-card",
+        page="hyperparts/hover-card.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Pressing Escape closes a click-opened hover-card "
+            "(touch path uses data-open — Escape must clear it so previews do not stick)"
+        ),
+        kind="data_open_escape",
+        params={
+            "root": ("[data-dz-hover-card], [data-hover-card], .dz-hover-card, .hover-card"),
+            "trigger": ".dz-hover-card__trigger, .hover-card__trigger",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="hover",
+    ),
+    Probe(
+        id="hover_card.dismiss_outside",
+        stem="hover-card",
+        page="hyperparts/hover-card.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking outside a click-opened hover-card closes it "
+            "(spatial dismiss for touch/explicit open — previews must not stick)"
+        ),
+        kind="data_open_dismiss_outside",
+        params={
+            "root": ("[data-dz-hover-card], [data-hover-card], .dz-hover-card, .hover-card"),
+            "trigger": ".dz-hover-card__trigger, .hover-card__trigger",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="hover",
+    ),
+    Probe(
+        id="tabs.exclusive_select",
+        stem="tabs",
+        page="hyperparts/tabs.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Selecting a second tab reveals only its panel and moves aria-current "
+            "(exclusive select — Overview then Activity leaves only Activity visible)"
+        ),
+        kind="tabs_exclusive_select",
+        params={
+            "root": "[data-dz-tabs], [data-tabs], .dz-tabs, .tabs",
+            "tab": ".dz-tabs__tab, .tabs__tab, [data-tab-target], [data-dz-tab-target]",
+            "activate_label": "Activity",
+            "expect_current_label": "Activity",
+            "expect_panel_visible_id": "hm-tab-activity",
+            "expect_panel_hidden_id": "hm-tab-overview",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -873,6 +955,183 @@ def _run_css_tooltip_force_open(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _root_is_data_open(root: Any) -> bool:
+    """True when hover-card-style open state is set (data-open / data-dz-open / is-open)."""
+    return bool(
+        root.evaluate(
+            """(el) => !!(
+              el && (
+                el.hasAttribute('data-open') ||
+                el.hasAttribute('data-dz-open') ||
+                (el.classList && el.classList.contains('is-open'))
+              )
+            )"""
+        )
+    )
+
+
+def _run_data_open_escape(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click trigger to set data-open, Escape, assert open attrs cleared."""
+    params = probe.params
+    root_sel = params["root"]
+    trigger_sel = params["trigger"]
+    settle = int(params.get("open_settle_ms", 100))
+
+    scope = _probe_scope(page, params)
+    root = scope.locator(root_sel).first
+    if root.count() == 0:
+        return {"verdict": "ERROR", "detail": f"root not found ({root_sel})"}
+    trig = scope.locator(trigger_sel).first
+    if trig.count() == 0:
+        return {"verdict": "ERROR", "detail": f"trigger not found ({trigger_sel})"}
+
+    if _root_is_data_open(root):
+        # unexpected pre-open — still exercise dismiss
+        pass
+    else:
+        trig.click()
+        page.wait_for_timeout(settle)
+        if not _root_is_data_open(root):
+            return {
+                "verdict": "ERROR",
+                "detail": "click did not set data-open / data-dz-open / is-open",
+            }
+
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(100)
+    if not _root_is_data_open(root):
+        return {
+            "verdict": "PASS",
+            "detail": "Escape cleared data-open on hover-card root",
+        }
+    return {
+        "verdict": "FAIL",
+        "detail": "Escape left data-open / data-dz-open / is-open set",
+        "dom_hint": root_sel,
+    }
+
+
+def _run_data_open_dismiss_outside(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click trigger to set data-open, outside click, assert open attrs cleared."""
+    params = probe.params
+    root_sel = params["root"]
+    trigger_sel = params["trigger"]
+    settle = int(params.get("open_settle_ms", 100))
+
+    scope = _probe_scope(page, params)
+    root = scope.locator(root_sel).first
+    if root.count() == 0:
+        return {"verdict": "ERROR", "detail": f"root not found ({root_sel})"}
+    trig = scope.locator(trigger_sel).first
+    if trig.count() == 0:
+        return {"verdict": "ERROR", "detail": f"trigger not found ({trigger_sel})"}
+
+    trig.click()
+    page.wait_for_timeout(settle)
+    if not _root_is_data_open(root):
+        return {
+            "verdict": "ERROR",
+            "detail": "click did not set data-open / data-dz-open / is-open",
+        }
+
+    page.mouse.click(8, 8)
+    page.wait_for_timeout(100)
+    if not _root_is_data_open(root):
+        return {
+            "verdict": "PASS",
+            "detail": "outside click cleared data-open on hover-card root",
+        }
+    return {
+        "verdict": "FAIL",
+        "detail": "outside click left data-open / data-dz-open / is-open set",
+        "dom_hint": root_sel,
+    }
+
+
+def _run_tabs_exclusive_select(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click a tab; assert aria-current moves and only its panel is unhidden."""
+    params = probe.params
+    root_sel = params["root"]
+    tab_sel = params["tab"]
+    activate = params.get("activate_label") or params.get("sequence", ["Activity"])[-1]
+    expect_current = params.get("expect_current_label") or activate
+    visible_id = params.get("expect_panel_visible_id")
+    hidden_id = params.get("expect_panel_hidden_id")
+    settle = int(params.get("settle_ms", 120))
+
+    scope = _probe_scope(page, params)
+    root = scope.locator(root_sel).first
+    if root.count() == 0:
+        return {"verdict": "ERROR", "detail": f"tabs root not found ({root_sel})"}
+
+    tab = root.locator(tab_sel).filter(has_text=activate).first
+    if tab.count() == 0:
+        return {"verdict": "ERROR", "detail": f"tab not found: {activate!r}"}
+
+    tab.click()
+    page.wait_for_timeout(settle)
+
+    # Apply [aria-current="true"] to *each* comma branch (same footgun as
+    # _open_item_selector — suffix only on the last branch matches every tab).
+    current_sel = ", ".join(
+        f'{p.strip()}[aria-current="true"]' for p in tab_sel.split(",") if p.strip()
+    )
+    current_text = root.locator(current_sel).first
+    if current_text.count() == 0:
+        return {
+            "verdict": "FAIL",
+            "detail": "no tab with aria-current=true after click",
+            "dom_hint": tab_sel,
+        }
+    got_label = _norm_label(current_text.inner_text())
+    if expect_current.lower() not in got_label.lower():
+        return {
+            "verdict": "FAIL",
+            "detail": f"aria-current on {got_label!r}, expected ≈{expect_current!r}",
+            "current_label": got_label,
+        }
+
+    # Panel visibility via id (gallery demos use stable hm-tab-* ids)
+    issues: list[str] = []
+    if visible_id:
+        hid = page.evaluate(
+            """(id) => {
+              const el = document.getElementById(id);
+              return el ? !!el.hidden : null;
+            }""",
+            visible_id,
+        )
+        if hid is None:
+            issues.append(f"panel #{visible_id} missing")
+        elif hid:
+            issues.append(f"panel #{visible_id} still hidden")
+    if hidden_id:
+        hid = page.evaluate(
+            """(id) => {
+              const el = document.getElementById(id);
+              return el ? !!el.hidden : null;
+            }""",
+            hidden_id,
+        )
+        if hid is None:
+            issues.append(f"panel #{hidden_id} missing")
+        elif not hid:
+            issues.append(f"panel #{hidden_id} still visible (not exclusive)")
+
+    if issues:
+        return {
+            "verdict": "FAIL",
+            "detail": f"current={got_label!r}; " + "; ".join(issues),
+            "current_label": got_label,
+            "dom_hint": root_sel,
+        }
+    return {
+        "verdict": "PASS",
+        "detail": (f"current={got_label!r} visible={visible_id} hidden={hidden_id}"),
+        "current_label": got_label,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -881,6 +1140,9 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "native_dialog_escape": _run_native_dialog_escape,
     "css_tooltip_hover": _run_css_tooltip_hover,
     "css_tooltip_force_open": _run_css_tooltip_force_open,
+    "data_open_escape": _run_data_open_escape,
+    "data_open_dismiss_outside": _run_data_open_dismiss_outside,
+    "tabs_exclusive_select": _run_tabs_exclusive_select,
 }
 
 

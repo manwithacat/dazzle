@@ -28,6 +28,10 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `menu.escape_dismiss` | `menu` | exclusive | high | controller | Pressing Escape closes an open action menu (details-light-dismiss keyboard path — Actions must not stick) |
 | `tooltip.hover_shows_hint` | `tooltip` | hover | medium | css | Hovering the tooltip host reveals the CSS ::after hint (data-tooltip rest state is closed; tip must appear on hover) |
 | `tooltip.force_open_shows_hint` | `tooltip` | hover | medium | css | data-tooltip-open / data-dz-tooltip-open forces the CSS ::after hint visible without hover (capture / docs still path) |
+| `popover.escape_dismiss` | `popover` | exclusive | high | controller | Pressing Escape closes an open popover (details-light-dismiss keyboard path — free panels must not stick) |
+| `hover_card.escape_closes` | `hover-card` | hover | high | controller | Pressing Escape closes a click-opened hover-card (touch path uses data-open — Escape must clear it so previews do not stick) |
+| `hover_card.dismiss_outside` | `hover-card` | hover | high | controller | Clicking outside a click-opened hover-card closes it (spatial dismiss for touch/explicit open — previews must not stick) |
+| `tabs.exclusive_select` | `tabs` | exclusive | high | controller | Selecting a second tab reveals only its panel and moves aria-current (exclusive select — Overview then Activity leaves only Activity visible) |
 
 ## Loop (autonomous improve)
 

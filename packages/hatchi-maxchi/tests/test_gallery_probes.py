@@ -43,6 +43,10 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "tree.multi_open" in ids
     assert "tooltip.hover_shows_hint" in ids
     assert "tooltip.force_open_shows_hint" in ids
+    assert "popover.escape_dismiss" in ids
+    assert "hover_card.escape_closes" in ids
+    assert "hover_card.dismiss_outside" in ids
+    assert "tabs.exclusive_select" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -55,6 +59,9 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "native_dialog_escape",
             "css_tooltip_hover",
             "css_tooltip_force_open",
+            "data_open_escape",
+            "data_open_dismiss_outside",
+            "tabs_exclusive_select",
         }
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
