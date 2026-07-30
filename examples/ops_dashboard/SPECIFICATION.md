@@ -47,6 +47,10 @@ Ten authored scenarios pin the product's flows down. A representative sample:
 
 ## Automation & controls
 
+**Alert lifecycle.** Active Alerts move through active → acknowledged → resolved (engineers may ack/resolve; administrators may re-open resolved Alerts).
+
+**Integration lifecycle.** The admin-managed SIMS-sync Integration record moves off → pending → live, and live → revoked (with paths back to off/pending for rework).
+
 The product connects to **PagerDuty**, an integration with the team's external alerting service.
 
 ## The technical foundation
@@ -59,4 +63,4 @@ These guarantees hold because the product is built on Dazzle, and each one can b
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:502ec874cfae25468c9fe462c0e241b84640a0a287e81e703d027c98417320ef -->
+<!-- dazzle-spec-brief: sha256:b7f1e7d27c52ec4defa9e9983bd7b81d0240ffeba3722b9ef87beb8c189aed2e -->
