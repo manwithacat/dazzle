@@ -694,6 +694,37 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1520 — wizard forward after required stage validates.
+    Probe(
+        id="wizard.forward_after_valid",
+        stem="wizard",
+        page="hyperparts/wizard.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "After filling the required field on step 0, clicking the step-1 "
+            "stepper advances data-step to 1, shows stage 1, and marks step 1 current "
+            "(forward is validity-gated one step at a time)"
+        ),
+        kind="wizard_step_forward",
+        params={
+            "root": "[data-wizard], [data-dz-wizard]",
+            "step_attr": "data-step",  # also tries data-dz-step
+            "required_input": "#hm-wiz-name, input[required]",
+            "fill_value": "Acme launch",
+            "step_to": "1",
+            "step_button": (
+                '[data-step-to="1"], [data-dz-step-to="1"], '
+                'button.form-stepper-button[data-step-to="1"], '
+                'button.dz-form-stepper-button[data-dz-step-to="1"]'
+            ),
+            "stage": '[data-stage="1"], [data-dz-stage="1"]',
+            "expect_step_after": "1",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -1851,6 +1882,124 @@ def _run_combobox_select(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_wizard_step_forward(page: Any, probe: Probe) -> dict[str, Any]:
+    """Fill required field on current wizard stage, click next stepper, assert advance.
+
+    Gallery demos use unprefixed ``data-wizard`` / ``data-step`` / ``data-step-to``;
+    product emits ``data-dz-*``. Forward is one step at a time and validity-gated
+    (see ``controllers/dz-wizard.js`` / bundled unprefixed twin).
+    """
+    params = probe.params
+    root_sel = params.get("root", "[data-wizard], [data-dz-wizard]")
+    required_sel = params.get("required_input", "input[required]")
+    fill_value = str(params.get("fill_value", "Acme launch"))
+    step_btn_sel = params.get(
+        "step_button",
+        '[data-step-to="1"], [data-dz-step-to="1"]',
+    )
+    stage_sel = params.get("stage", '[data-stage="1"], [data-dz-stage="1"]')
+    expect_step = str(params.get("expect_step_after", "1"))
+    settle = int(params.get("settle_ms", 150))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"wizard root not found ({root_sel})"}
+
+    def _step_attr() -> str:
+        return root.get_attribute("data-step") or root.get_attribute("data-dz-step") or ""
+
+    step_before = _step_attr()
+    inp = None
+    for part in required_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            inp = loc
+            break
+    if inp is None:
+        return {
+            "verdict": "ERROR",
+            "detail": f"required input not found ({required_sel})",
+            "dom_hint": required_sel,
+        }
+    inp.fill(fill_value)
+
+    btn = None
+    for part in step_btn_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            btn = loc
+            break
+    if btn is None:
+        return {
+            "verdict": "ERROR",
+            "detail": f"step button not found ({step_btn_sel})",
+            "dom_hint": step_btn_sel,
+        }
+    btn.click()
+    page.wait_for_timeout(settle)
+
+    step_after = _step_attr()
+    if step_after != expect_step:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"data-step stayed {step_after!r} after forward "
+                f"(was {step_before!r}, expected {expect_step!r}) — "
+                "validity gate or stepper controller may be broken"
+            ),
+            "dom_hint": root_sel,
+        }
+
+    stage = None
+    for part in stage_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            stage = loc
+            break
+    if stage is None:
+        return {
+            "verdict": "FAIL",
+            "detail": f"target stage not found after advance ({stage_sel})",
+            "dom_hint": stage_sel,
+        }
+    # Playwright: hidden attribute present → get_attribute returns "" or "true"
+    if stage.get_attribute("hidden") is not None:
+        # Some browsers expose empty string; treat any present attr as hidden=True
+        # unless explicitly false — wizard uses native boolean hidden.
+        is_hidden = stage.evaluate("el => el.hidden === true")
+        if is_hidden:
+            return {
+                "verdict": "FAIL",
+                "detail": f"stage still hidden after advance to step {expect_step}",
+                "dom_hint": stage_sel,
+            }
+
+    return {
+        "verdict": "PASS",
+        "detail": f"data-step {step_before!r}→{step_after!r}; stage visible after valid fill",
+        "step_before": step_before,
+        "step_after": step_after,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -1868,6 +2017,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "radio_group_select": _run_radio_group_select,
     "carousel_advance": _run_carousel_advance,
     "combobox_select": _run_combobox_select,
+    "wizard_step_forward": _run_wizard_step_forward,
 }
 
 

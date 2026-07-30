@@ -55,6 +55,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "toggle_group.radio_exclusive" in ids
     assert "carousel.advance_next" in ids
     assert "combobox.enhance_and_select" in ids
+    assert "wizard.forward_after_valid" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -76,6 +77,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "radio_group_select",
             "carousel_advance",
             "combobox_select",
+            "wizard_step_forward",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"
@@ -86,6 +88,9 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     combobox = next(p for p in PROBES if p.id == "combobox.enhance_and_select")
     assert combobox.kind == "combobox_select"
     assert combobox.fix_surface == "controller"
+    wizard = next(p for p in PROBES if p.id == "wizard.forward_after_valid")
+    assert wizard.kind == "wizard_step_forward"
+    assert wizard.fix_surface == "controller"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"

@@ -73,12 +73,12 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1519 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1513 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1520 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1509 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1516 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1507 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1520 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1520 (2026-07-30).** **hm-convergence gallery_probes** (campaign force) discover uncovered=0; prior 27 PASS; **ship** `wizard.forward_after_valid` + `wizard_step_forward` runner; catalog **28/28 PASS**; unit pin. densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1520**. budget 1. Explore **78/100**.
 
 > **Cycle 1519 (2026-07-30).** **hm-convergence hyperpart_coherence investigate** (lag ≥20 since 1478) recapture 92/92 (harness: meta-refresh alias resolve + fresh page/domcontentloaded — fixes grid-cols cascade ERR); ingest coherent=92 mean=8.9 queue=0. **Ship** `hm_pages_vision` alias capture + unit pin. hyperpart coherence **USED@1519**. budget 1. Explore **77/100**.
 
