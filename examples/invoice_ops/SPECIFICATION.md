@@ -106,6 +106,10 @@ audit evidence.
 
 ## Automation & controls
 
+**Tenant lifecycle.** Tenant roots move active ↔ suspended (tenant_admin only).
+
+**Payment attempt lifecycle.** Payment attempts move pending → succeeded|failed; failed may return to pending for retry.
+
 **What runs without a human.** The *Settle Approved Invoice* process runs
 automatically when an invoice changes, carrying out settlement work in the
 background rather than relying on someone to remember it.
@@ -159,4 +163,4 @@ a built-in background engine coordinated through the database itself: there is
 no separate queue infrastructure to deploy or operate, and an interrupted run
 is picked up rather than lost. (Verify: `dazzle process list`.)
 
-<!-- dazzle-spec-brief: sha256:3e36085d741f6849a46ecdcbe151365d2e5a5690c574ffdae55e1b1c06c07b20 -->
+<!-- dazzle-spec-brief: sha256:1064cfd5cbcda6fccef6a23164848e7f8f608db605e88ee6902b5dd609183192 -->

@@ -16,6 +16,12 @@ entity Tenant "Tenant":
   status: enum[active,suspended]=active
   created_at: datetime auto_add
 
+  # Tenant operational status (domain residual status∄transitions).
+  # Only tenant_admin may suspend/reactivate the customer company root.
+  transitions:
+    active -> suspended: role(tenant_admin)
+    suspended -> active: role(tenant_admin)
+
   permit:
     create: role(tenant_admin)
     read: role(requester) or role(approver) or role(finance) or role(auditor) or role(tenant_admin)
@@ -257,6 +263,13 @@ entity PaymentAttempt "Payment Attempt":
   provider_reference: str(80) optional
   failure_reason: text optional
   created_at: datetime auto_add
+
+  # Settlement attempt SM (domain residual status∄transitions).
+  # Provider outcomes are terminal; finance may re-open failed for retry.
+  transitions:
+    pending -> succeeded: role(finance) or role(finance_admin)
+    pending -> failed: role(finance) or role(finance_admin)
+    failed -> pending: role(finance) or role(finance_admin)
 
   permit:
     create: role(finance) or role(finance_admin)
