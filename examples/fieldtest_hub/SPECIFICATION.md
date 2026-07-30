@@ -69,6 +69,11 @@ Twenty-six authored scenarios pin these flows down, spanning all three active ro
 
 ## Automation & controls
 
+One process reacts to device lifecycle changes: when a Device becomes active
+(field-ready), a manager assignment step confirms which field tester owns it —
+the multi-persona handoff is part of the model, not an informal email chain
+(verify: `dazzle process list`).
+
 The programme's money is under declared control. Two double-entry accounts, both in GBP, anchor the books: the **Device Cost Account**, which accrues repair and replacement expenses against the fleet of field devices, and the **Operations Budget**, which draws down the field-test programme's allocated operations budget. The **Record Repair Cost** transaction moves money between them as a balanced movement — charging a device repair to the cost account and drawing it from the operations budget in one indivisible step.
 
 ## The technical foundation
@@ -81,4 +86,4 @@ These guarantees hold because the product is built on Dazzle, and each can be in
 
 **Architecture.** The interface is rendered on the server and progressively enhanced. There is no heavy single-page JavaScript application to maintain, which keeps the product fast, accessible, and simple to operate (verify: `dazzle validate`).
 
-<!-- dazzle-spec-brief: sha256:01c1a1cd2252073b402b51fe275d08fb1d44d9c134347ea2e569322fc07eddd4 -->
+<!-- dazzle-spec-brief: sha256:0d428fb91778540b9242bd776e6d02e5094e9e1370d3c46503e4727f222bbfd9 -->

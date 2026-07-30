@@ -132,6 +132,9 @@ keeps the product fast, accessible, and simple to operate (verify:
 `dazzle validate`). Response-time commitments are declared in the model per
 record type, with escalation tiers — the commitment is explicit and
 inspectable rather than a support-page promise (verify: `dazzle validate`).
+Long-running multi-persona work — such as manager review when a ticket enters
+in-progress — is declared as a durable process rather than an informal handoff
+(verify: `dazzle process list`).
 
 ## Compliance posture
 
@@ -142,4 +145,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:b7e917c98dd2923ebf70ac979e30bba872c19c495ad8c23fea9a5d99dd045c99 -->
+<!-- dazzle-spec-brief: sha256:a9455c00710619824401e203b7a46204ca8aee96618fd02ee7c896e97d421d9f -->
