@@ -12,11 +12,14 @@ and fleet metrics for engineer/manager; personal queues for testers.
   keep kanban/map/tree as secondary demos.
 - Tester: `tester_dashboard` = personal metrics + device/issue/task queues.
 - ST-037–041 own the manager/engineer job surfaces; ST-042–044 own tester.
+- Device hub related issues/sessions and tester hub activity/assignments are
+  **pull queues** (ST-045/047), not warehouse tables.
 
 ## Not this
 
 - Landing managers only on density demos (map/tree) without pressure metrics.
 - Treating issue triage as a plain chronological list.
+- Hub related rosters as dense tables when the job is pull-next field work.
 
 ## Expressions
 

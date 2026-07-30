@@ -312,7 +312,7 @@ story ST-045 "Engineer opens device hub with issues and sessions":
   given:
     - "Device exists and is readable"
   then:
-    - "Device hub shows production strip, assignment, related issues, and sessions"
+    - "Device hub shows production strip, assignment, and related issues/sessions as pull queues"
 
 story ST-046 "Engineer opens issue then hops to device context":
   status: accepted
@@ -335,4 +335,4 @@ story ST-047 "Manager opens tester hub for assignments and activity":
   given:
     - "Manager has list permission on Tester"
   then:
-    - "Tester hub shows related testing activity and device/task assignments"
+    - "Tester hub shows related testing activity and device/task assignments as pull queues"

@@ -484,17 +484,19 @@ surface device_detail "Device Detail":
     field created_at "Created"
     field updated_at "Last Updated"
 
+  # Pull-next issue/session queues (not warehouse tables) — ST-045 journey dig.
   related issues "Issue reports":
-    display: table
+    display: queue
     show: IssueReport
     columns: severity, status, category, reported_at
 
   related sessions "Test sessions":
-    display: table
+    display: queue
     show: TestSession
+    columns: environment, duration_minutes, logged_at
 
   ux:
-    purpose: "Device hub — production strip, assignment, issues, and sessions"
+    purpose: "Device hub — production strip, assignment, issue queue, and session queue"
 
     as engineer:
       scope: all
@@ -601,16 +603,19 @@ surface tester_detail "Tester Detail":
     field active "Active"
     field joined_at "Joined At"
 
+  # Pull-next activity/assignment queues — ST-047 journey dig.
   related activity "Testing Activity":
-    display: table
+    display: queue
     show: TestSession, IssueReport
+    columns: environment, severity, logged_at
 
   related assignments "Assignments":
-    display: table
+    display: queue
     show: Device, Task
+    columns: name, status, type
 
   ux:
-    purpose: "View tester details and activity"
+    purpose: "Tester hub — activity and assignment queues (not warehouse tables)"
 
     as engineer:
       scope: all
