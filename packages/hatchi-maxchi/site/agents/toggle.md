@@ -50,13 +50,35 @@ Do **not** re-own the slot:
 
 ## How to use it
 
-No extended guidance authored yet — start from Copy this and the dependency chips.
-
 ### Seams
 
-- copy the partial under Copy this; keep root class and data-* modifiers so the CSS/JS bundle matches
-- no Server exchange on this part — pure presentation or client chrome
-- satisfy the DOM contract tables (CI stop-ship)
+- button root carries data-dz-toggle (gallery: data-toggle)
+- aria-pressed is the live state; SSR may set the initial value
+- dz-toggle.js flips aria-pressed on click (no round-trip)
+
+### Do / Don't
+
+| Do | Don't |
+|---|---|
+| flip aria-pressed client-side for toolbar mode controls | require a server exchange to press Bold/Italic |
+| pair multiple independent toggles in a toolbar row | make one toggle uncheck siblings (that is toggle-group) |
+
+### Pitfalls
+
+- do not use toggle for form booleans — use switch/checkbox
+- do not invent exclusive group logic here — use toggle-group radios
+- skip disabled / aria-disabled buttons and data-dz-widget bridges
+
+### Keyboard / AT
+
+- aria-pressed announces the mode to AT
+- Space/Enter activate the button (native button semantics)
+
+### Related parts
+
+- `toggle-group` — agents/toggle-group.md
+- `button` — agents/button.md
+- `toolbar` — agents/toolbar.md
 
 ## DOM contract
 
@@ -100,9 +122,10 @@ __all__ = ["DOM_CONTRACT"]
 
 ## Notes
 
-PLACEHOLDER — shadcn parity (HMC-032). Distinct from switch (form boolean) and toggle-group (exclusive radios). Server sets aria-pressed; dual-lock root [data-dz-toggle] (HMC-130).
+Distinct from switch (form boolean) and toggle-group (exclusive radios). Initial aria-pressed may come from SSR; dz-toggle.js flips it on click. Dual-lock root [data-dz-toggle] (HMC-130).
 
 ## Source files
 
 - `site/registry.py` (partial + exchanges + guidance)
 - `contracts/toggle.py`
+- `controllers/dz-toggle.js`

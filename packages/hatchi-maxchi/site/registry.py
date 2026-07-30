@@ -2556,11 +2556,39 @@ def select(source: str, id: str) -> str:
             '<button type="button" class="dz-toggle" data-dz-toggle aria-pressed="false" '
             'data-dz-size="sm"><span style="text-decoration:underline">U</span></button>'
             "</div>",
-            notes="PLACEHOLDER — shadcn parity (HMC-032). Distinct from switch "
-            "(form boolean) and toggle-group (exclusive radios). Server sets "
-            "aria-pressed; dual-lock root [data-dz-toggle] (HMC-130).",
+            notes="Distinct from switch (form boolean) and toggle-group (exclusive "
+            "radios). Initial aria-pressed may come from SSR; dz-toggle.js flips "
+            "it on click. Dual-lock root [data-dz-toggle] (HMC-130).",
             tags=("form", "interactive"),
+            controller="controllers/dz-toggle.js",
             contracts=("contracts/toggle.py",),
+            guidance=Guidance(
+                seams=(
+                    "button root carries data-dz-toggle (gallery: data-toggle)",
+                    "aria-pressed is the live state; SSR may set the initial value",
+                    "dz-toggle.js flips aria-pressed on click (no round-trip)",
+                ),
+                pitfalls=(
+                    "do not use toggle for form booleans — use switch/checkbox",
+                    "do not invent exclusive group logic here — use toggle-group radios",
+                    "skip disabled / aria-disabled buttons and data-dz-widget bridges",
+                ),
+                do_dont=(
+                    (
+                        "flip aria-pressed client-side for toolbar mode controls",
+                        "require a server exchange to press Bold/Italic",
+                    ),
+                    (
+                        "pair multiple independent toggles in a toolbar row",
+                        "make one toggle uncheck siblings (that is toggle-group)",
+                    ),
+                ),
+                a11y_keys=(
+                    "aria-pressed announces the mode to AT",
+                    "Space/Enter activate the button (native button semantics)",
+                ),
+                composes_with=("toggle-group", "button", "toolbar"),
+            ),
         ),
         Hyperpart(
             "kbd",

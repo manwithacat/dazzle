@@ -1808,6 +1808,28 @@ def test_slider_skips_widget_managed_inputs(page) -> None:  # type: ignore[no-un
     )
 
 
+def test_toggle_flips_aria_pressed(page) -> None:  # type: ignore[no-untyped-def]
+    """dz-toggle.js flips aria-pressed on click for toolbar mode controls.
+
+    Distinct from switch (native checkbox) and toggle-group (exclusive radios).
+    Gallery probe: toggle.pressed_flips (cycle 1499).
+    """
+    goto_part(page, "toggle")
+    btn = page.locator("#toggle .hm-preview button[data-toggle]").filter(has_text="Bold").first
+    assert btn.count() == 1
+    assert btn.get_attribute("aria-pressed") == "true"
+    btn.click()
+    page.wait_for_timeout(80)
+    assert btn.get_attribute("aria-pressed") == "false", (
+        "first click must release a pressed toolbar toggle"
+    )
+    btn.click()
+    page.wait_for_timeout(80)
+    assert btn.get_attribute("aria-pressed") == "true", (
+        "second click must restore aria-pressed=true"
+    )
+
+
 def test_drawer_opens_via_shared_opener_and_closes(page) -> None:  # type: ignore[no-untyped-def]
     """The drawer is a native <dialog> anchored to the edge; it reuses the
     dialog's opener (no drawer-specific JS) and closes natively. Proves the

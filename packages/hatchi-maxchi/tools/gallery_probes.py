@@ -586,6 +586,53 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1499 — toolbar toggle (aria-pressed) + segmented toggle-group.
+    Probe(
+        id="toggle.pressed_flips",
+        stem="toggle",
+        page="hyperparts/toggle.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Clicking a toolbar toggle flips aria-pressed both ways "
+            "(Bold/Italic mode must stay live without a page reload)"
+        ),
+        kind="aria_pressed_toggle",
+        params={
+            "button": (
+                "button[data-toggle], button[data-dz-toggle], button.toggle, button.dz-toggle"
+            ),
+            "scope": ".hm-preview",
+            # Bold starts pressed in the gallery demo.
+            "prefer_label_contains": "Bold",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
+    Probe(
+        id="toggle_group.radio_exclusive",
+        stem="toggle-group",
+        page="hyperparts/toggle-group.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Selecting a second toggle-group segment checks only that radio "
+            "(List then Board leaves only Board checked — native exclusive group)"
+        ),
+        kind="radio_group_select",
+        params={
+            "root": (
+                "fieldset.toggle-group, fieldset.dz-toggle-group, "
+                ".toggle-group[role=radiogroup], .dz-toggle-group[role=radiogroup]"
+            ),
+            "radio": 'input[type="radio"]',
+            "activate_label_contains": "Board",
+            "expect_checked_label_contains": "Board",
+            "scope": ".hm-preview",
+        },
+        fix_surface="css",
+        intent="exclusive",
+    ),
 )
 
 
@@ -1343,6 +1390,158 @@ def _run_range_value_readout(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_aria_pressed_toggle(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click a [data-toggle] button; assert aria-pressed flips both ways."""
+    params = probe.params
+    button_sel = params["button"]
+    prefer = (params.get("prefer_label_contains") or "").strip()
+    settle = int(params.get("settle_ms", 80))
+
+    scope = _probe_scope(page, params)
+    btn = None
+    for part in button_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part)
+        if prefer:
+            filtered = loc.filter(has_text=prefer)
+            if filtered.count() > 0:
+                btn = filtered.first
+                break
+        if loc.count() > 0:
+            btn = loc.first
+            break
+    if btn is None:
+        return {"verdict": "ERROR", "detail": f"toggle button not found ({button_sel})"}
+
+    pressed0 = btn.get_attribute("aria-pressed")
+    if pressed0 not in ("true", "false"):
+        return {
+            "verdict": "FAIL",
+            "detail": f"aria-pressed missing/invalid before click: {pressed0!r}",
+            "dom_hint": button_sel,
+        }
+
+    btn.click()
+    page.wait_for_timeout(settle)
+    pressed1 = btn.get_attribute("aria-pressed")
+    if pressed1 == pressed0:
+        return {
+            "verdict": "FAIL",
+            "detail": f"click did not flip aria-pressed (stayed {pressed0!r})",
+            "dom_hint": button_sel,
+        }
+    expect1 = "false" if pressed0 == "true" else "true"
+    if pressed1 != expect1:
+        return {
+            "verdict": "FAIL",
+            "detail": f"after first click aria-pressed={pressed1!r}, expected {expect1!r}",
+            "dom_hint": button_sel,
+        }
+
+    btn.click()
+    page.wait_for_timeout(settle)
+    pressed2 = btn.get_attribute("aria-pressed")
+    if pressed2 != pressed0:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"second click did not restore aria-pressed={pressed0!r} (got {pressed2!r})"
+            ),
+            "dom_hint": button_sel,
+        }
+    return {
+        "verdict": "PASS",
+        "detail": f"aria-pressed {pressed0}→{pressed1}→{pressed2}",
+        "pressed_sequence": [pressed0, pressed1, pressed2],
+    }
+
+
+def _run_radio_group_select(page: Any, probe: Probe) -> dict[str, Any]:
+    """Click a radio in a toggle-group; assert exclusive checked state."""
+    params = probe.params
+    root_sel = params["root"]
+    radio_sel = params.get("radio", 'input[type="radio"]')
+    activate = params.get("activate_label_contains") or "Board"
+    expect = params.get("expect_checked_label_contains") or activate
+    settle = int(params.get("settle_ms", 80))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"toggle-group root not found ({root_sel})"}
+
+    radios = root.locator(radio_sel)
+    n = radios.count()
+    if n < 2:
+        return {
+            "verdict": "ERROR",
+            "detail": f"need ≥2 radios in group, found {n}",
+            "dom_hint": radio_sel,
+        }
+
+    target = None
+    for i in range(n):
+        r = radios.nth(i)
+        # label text is typically on the wrapping <label>
+        label = r.evaluate(
+            """(el) => {
+              const lab = el.closest('label');
+              return lab ? (lab.innerText || lab.textContent || '') : '';
+            }"""
+        )
+        if activate.lower() in (label or "").lower():
+            target = r
+            break
+    if target is None:
+        return {
+            "verdict": "ERROR",
+            "detail": f"radio with label containing {activate!r} not found",
+        }
+
+    target.click(force=True)
+    page.wait_for_timeout(settle)
+
+    checked_labels: list[str] = []
+    for i in range(n):
+        r = radios.nth(i)
+        if r.is_checked():
+            label = r.evaluate(
+                """(el) => {
+                  const lab = el.closest('label');
+                  return lab ? (lab.innerText || lab.textContent || '') : '';
+                }"""
+            )
+            checked_labels.append(_norm_label(label or ""))
+
+    if len(checked_labels) != 1:
+        return {
+            "verdict": "FAIL",
+            "detail": f"expected exactly 1 checked radio, got {checked_labels!r}",
+            "dom_hint": root_sel,
+        }
+    if expect.lower() not in checked_labels[0].lower():
+        return {
+            "verdict": "FAIL",
+            "detail": f"checked={checked_labels[0]!r}, expected ≈{expect!r}",
+            "dom_hint": root_sel,
+        }
+    return {
+        "verdict": "PASS",
+        "detail": f"exclusive checked={checked_labels[0]!r}",
+        "checked_label": checked_labels[0],
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -1356,6 +1555,8 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "tabs_exclusive_select": _run_tabs_exclusive_select,
     "checkbox_toggle": _run_checkbox_toggle,
     "range_value_readout": _run_range_value_readout,
+    "aria_pressed_toggle": _run_aria_pressed_toggle,
+    "radio_group_select": _run_radio_group_select,
 }
 
 

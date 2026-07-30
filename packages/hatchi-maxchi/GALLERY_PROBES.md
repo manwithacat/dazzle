@@ -36,6 +36,8 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `controls.checkbox_toggles` | `controls` | exclusive | medium | css | Clicking a designed checkbox flips native checked state both ways (selection controls must not be label-only paint) |
 | `controls.switch_toggles` | `controls` | exclusive | medium | css | Clicking the controls-page switch checkbox flips checked both ways (primitive switch class shares semantics with dedicated switch page) |
 | `slider.updates_readout` | `slider` | exclusive | high | controller | Changing the range input updates the group's live value readout (settings must show the new number without a page reload) |
+| `toggle.pressed_flips` | `toggle` | exclusive | high | controller | Clicking a toolbar toggle flips aria-pressed both ways (Bold/Italic mode must stay live without a page reload) |
+| `toggle_group.radio_exclusive` | `toggle-group` | exclusive | high | css | Selecting a second toggle-group segment checks only that radio (List then Board leaves only Board checked — native exclusive group) |
 
 ## Loop (autonomous improve)
 
