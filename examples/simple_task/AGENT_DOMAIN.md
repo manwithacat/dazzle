@@ -7,15 +7,13 @@
 
 Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it — Administrators, Team Managers, and Team Members — each seeing exactly the work
 
-**Source:** `examples/simple_task/SPECIFICATION.md`
-**Fingerprint:** `a2cdc96dd942fc9d`
+**Source:** `/Volumes/SSD/Dazzle/examples/simple_task/SPECIFICATION.md`
+**Fingerprint:** `8833b74e73c2c00e`
 
 ## Personas (jobs)
 
 - **Manager** (`manager`, stable≈`manager`, grounded) — desk `manager_desk` — role word in founder brief
 - **Member** (`member`, stable≈`member`, grounded) — desk `member_desk` — role word in founder brief
-- **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — role word in founder brief
-- **User** (`user`, stable≈`user`, grounded) — desk `user_desk` — Generic system user
 
 ## Nouns (domain types)
 
@@ -31,26 +29,29 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
 
 - **manager_desk** for `manager` (hypothesis) owner≈`assigned_to` — Job desk for Manager
 - **member_desk** for `member` (hypothesis) owner≈`assigned_to` — Job desk for Member
-- **admin_desk** for `admin` (hypothesis) owner≈`assigned_to` — Job desk for Admin
-- **user_desk** for `user` (hypothesis) owner≈`assigned_to` — Job desk for User
 
 ## Demo spine (seed stories)
 
 - `manager`: Manager has seeded Task rows for their desk (min_rows=1, entity≈Task)
 - `member`: Member has seeded Task rows for their desk (min_rows=1, entity≈Task)
-- `admin`: Admin has seeded Task rows for their desk (min_rows=1, entity≈Task)
-- `user`: User has seeded Task rows for their desk (min_rows=1, entity≈Task)
 
 ## Open questions
 
 - `q1`: Can a task have multiple users, or just one?
 - `q2`: Should users receive email/push notifications for key events?
 
+## Process candidates (hypothesis)
+
+- **escalation** (hypothesis) entity≈`Task` personas=[member, manager] — Task: worker escalates to manager when blocked or SLA risk
+- **assignment** (hypothesis) entity≈`Task` personas=[manager, member] — Task: auto or manager assignment to a worker
+
 ## Research notes
 
 - Prefer knowledge concepts before inventing structure.
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
+- process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
+- 1 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -59,8 +60,8 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
   "version": 1,
   "title": "Team Task Manager \u2014 Specification",
   "summary": "Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it \u2014 Administrators, Team Managers, and Team Members \u2014 each seeing exactly the work",
-  "source_path": "examples/simple_task/SPECIFICATION.md",
-  "source_sha256": "a2cdc96dd942fc9d",
+  "source_path": "/Volumes/SSD/Dazzle/examples/simple_task/SPECIFICATION.md",
+  "source_sha256": "8833b74e73c2c00e",
   "personas": [
     {
       "id_hint": "manager",
@@ -79,24 +80,6 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
       "stable_id_candidate": "member",
       "status": "grounded",
       "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "admin",
-      "label": "Admin",
-      "job": "",
-      "desk": "admin_desk",
-      "stable_id_candidate": "admin",
-      "status": "grounded",
-      "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "user",
-      "label": "User",
-      "job": "Generic system user",
-      "desk": "user_desk",
-      "stable_id_candidate": "user",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -142,20 +125,6 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
       "purpose": "Job desk for Member",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
-    },
-    {
-      "persona": "admin",
-      "name": "admin_desk",
-      "purpose": "Job desk for Admin",
-      "owner_field_hint": "assigned_to",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "user",
-      "name": "user_desk",
-      "purpose": "Job desk for User",
-      "owner_field_hint": "assigned_to",
-      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -168,18 +137,6 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
     {
       "persona": "member",
       "story": "Member has seeded Task rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Task"
-    },
-    {
-      "persona": "admin",
-      "story": "Admin has seeded Task rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Task"
-    },
-    {
-      "persona": "user",
-      "story": "User has seeded Task rows for their desk",
       "min_rows": 1,
       "entity_hint": "Task"
     }
@@ -196,10 +153,34 @@ Team Task Manager is a task-tracking system for teams: work is captured as Tasks
       "blocks_promote": false
     }
   ],
+  "process_candidates": [
+    {
+      "id_hint": "escalation",
+      "summary": "Task: worker escalates to manager when blocked or SLA risk",
+      "personas": [
+        "member",
+        "manager"
+      ],
+      "entity_hint": "Task",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "assignment",
+      "summary": "Task: auto or manager assignment to a worker",
+      "personas": [
+        "manager",
+        "member"
+      ],
+      "entity_hint": "Task",
+      "status": "hypothesis"
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
+    "1 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Administrator",

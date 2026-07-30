@@ -25,6 +25,11 @@ held up (including what didn't, and any measurement mistakes caught along the wa
   capability (one availability check re-implemented in four files) — but also
   parallel-by-design families, so the cheap reuse check is a *screen, not a
   verdict*. Tests the B(ii) reuse half the context-bounds spike left open.
+- [Agent domain priors vs example sophistication](agent-domain-prior-investigation.md)
+  — external Schema.org/OWL thesis evaluated against the example fleet and the
+  real domain-extract path. Finding: lifecycle/process priors already exist in
+  `inference_kb` but do not attach to `AGENT_DOMAIN`; Schema.org/OWL would not
+  close the measured gaps. Runnable scorers under `scripts/`.
 
 ## Related
 

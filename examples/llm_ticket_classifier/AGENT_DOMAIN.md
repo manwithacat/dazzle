@@ -7,20 +7,19 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,
 
-**Source:** `examples/llm_ticket_classifier/SPECIFICATION.md`
-**Fingerprint:** `3b8fb00022056a7f`
+**Source:** `/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md`
+**Fingerprint:** `f0b78ad6fd55a118`
 
 ## Personas (jobs)
 
 - **Agent** (`agent`, stable≈`agent`, grounded) — desk `agent_desk` — role word in founder brief
 - **Customer** (`customer`, stable≈`customer`, grounded) — desk `customer_desk` — role word in founder brief
-- **User** (`user`, stable≈`user`, grounded) — desk `user_desk` — Generic system user
 
 ## Nouns (domain types)
 
 - **AssessmentResult** (grounded) owner≈`—` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **SupportTicket** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **TicketClassification** (grounded) owner≈`—` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **SupportTicket** (grounded) owner≈`assigned_to` lifecycle: open → in_progress → waiting_on_customer → escalated → resolved → closed — definitional sentence in founder brief (A X is …)
+- **TicketClassification** (grounded) owner≈`—` lifecycle: open → in_progress → resolved → closed → reopened — definitional sentence in founder brief (A X is …)
 - **Ticket** (grounded) owner≈`assigned_to` lifecycle: open → in_progress → resolved → closed → reopened — appears in founder brief (source=capitalized_noun)
 - **Classification** (grounded) owner≈`—` lifecycle: — — appears in founder brief (source=article_noun)
 
@@ -32,23 +31,28 @@
 
 - **agent_desk** for `agent` (hypothesis) owner≈`assigned_to` — Job desk for Agent
 - **customer_desk** for `customer` (hypothesis) owner≈`assigned_to` — Job desk for Customer
-- **user_desk** for `user` (hypothesis) owner≈`assigned_to` — Job desk for User
 
 ## Demo spine (seed stories)
 
-- `agent`: Agent has seeded AssessmentResult rows for their desk (min_rows=1, entity≈AssessmentResult)
-- `customer`: Customer has seeded AssessmentResult rows for their desk (min_rows=1, entity≈AssessmentResult)
-- `user`: User has seeded AssessmentResult rows for their desk (min_rows=1, entity≈AssessmentResult)
+- `agent`: Agent has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
+- `customer`: Customer has seeded SupportTicket rows for their desk (min_rows=1, entity≈SupportTicket)
 
 ## Open questions
 
 _None blocking._
+
+## Process candidates (hypothesis)
+
+- **assignment** (hypothesis) entity≈`SupportTicket` personas=[manager, agent] — SupportTicket: auto or manager assignment to a worker
+- **triage** (hypothesis) entity≈`SupportTicket` personas=[agent, manager] — SupportTicket: intake triage before deep work
 
 ## Research notes
 
 - Prefer knowledge concepts before inventing structure.
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
+- process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
+- 3 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -57,8 +61,8 @@ _None blocking._
   "version": 1,
   "title": "Support Ticket Classifier \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* The Support Ticket Classifier is a support-operations system that pairs a human support team with declared, AI-assisted analysis. It manages support tickets,",
-  "source_path": "examples/llm_ticket_classifier/SPECIFICATION.md",
-  "source_sha256": "3b8fb00022056a7f",
+  "source_path": "/Volumes/SSD/Dazzle/examples/llm_ticket_classifier/SPECIFICATION.md",
+  "source_sha256": "f0b78ad6fd55a118",
   "personas": [
     {
       "id_hint": "agent",
@@ -77,15 +81,6 @@ _None blocking._
       "stable_id_candidate": "customer",
       "status": "grounded",
       "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "user",
-      "label": "User",
-      "job": "Generic system user",
-      "desk": "user_desk",
-      "stable_id_candidate": "user",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -100,14 +95,27 @@ _None blocking._
       "name": "SupportTicket",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "open",
+        "in_progress",
+        "waiting_on_customer",
+        "escalated",
+        "resolved",
+        "closed"
+      ],
       "owner_field_hint": "assigned_to"
     },
     {
       "name": "TicketClassification",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "open",
+        "in_progress",
+        "resolved",
+        "closed",
+        "reopened"
+      ],
       "owner_field_hint": null
     },
     {
@@ -145,40 +153,51 @@ _None blocking._
       "purpose": "Job desk for Customer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
-    },
-    {
-      "persona": "user",
-      "name": "user_desk",
-      "purpose": "Job desk for User",
-      "owner_field_hint": "assigned_to",
-      "status": "hypothesis"
     }
   ],
   "demo_spine": [
     {
       "persona": "agent",
-      "story": "Agent has seeded AssessmentResult rows for their desk",
+      "story": "Agent has seeded SupportTicket rows for their desk",
       "min_rows": 1,
-      "entity_hint": "AssessmentResult"
+      "entity_hint": "SupportTicket"
     },
     {
       "persona": "customer",
-      "story": "Customer has seeded AssessmentResult rows for their desk",
+      "story": "Customer has seeded SupportTicket rows for their desk",
       "min_rows": 1,
-      "entity_hint": "AssessmentResult"
-    },
-    {
-      "persona": "user",
-      "story": "User has seeded AssessmentResult rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "AssessmentResult"
+      "entity_hint": "SupportTicket"
     }
   ],
   "open_questions": [],
+  "process_candidates": [
+    {
+      "id_hint": "assignment",
+      "summary": "SupportTicket: auto or manager assignment to a worker",
+      "personas": [
+        "manager",
+        "agent"
+      ],
+      "entity_hint": "SupportTicket",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "triage",
+      "summary": "SupportTicket: intake triage before deep work",
+      "personas": [
+        "agent",
+        "manager"
+      ],
+      "entity_hint": "SupportTicket",
+      "status": "hypothesis"
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
+    "3 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Agent",

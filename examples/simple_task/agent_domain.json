@@ -2,8 +2,8 @@
   "version": 1,
   "title": "Team Task Manager \u2014 Specification",
   "summary": "Team Task Manager is a task-tracking system for teams: work is captured as Tasks, assigned to Team Members, discussed in threaded comments, and moved through an explicit lifecycle from *todo* to *done*. Three roles use it \u2014 Administrators, Team Managers, and Team Members \u2014 each seeing exactly the work",
-  "source_path": "examples/simple_task/SPECIFICATION.md",
-  "source_sha256": "a2cdc96dd942fc9d",
+  "source_path": "/Volumes/SSD/Dazzle/examples/simple_task/SPECIFICATION.md",
+  "source_sha256": "8833b74e73c2c00e",
   "personas": [
     {
       "id_hint": "manager",
@@ -22,24 +22,6 @@
       "stable_id_candidate": "member",
       "status": "grounded",
       "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "admin",
-      "label": "Admin",
-      "job": "",
-      "desk": "admin_desk",
-      "stable_id_candidate": "admin",
-      "status": "grounded",
-      "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "user",
-      "label": "User",
-      "job": "Generic system user",
-      "desk": "user_desk",
-      "stable_id_candidate": "user",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -85,20 +67,6 @@
       "purpose": "Job desk for Member",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
-    },
-    {
-      "persona": "admin",
-      "name": "admin_desk",
-      "purpose": "Job desk for Admin",
-      "owner_field_hint": "assigned_to",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "user",
-      "name": "user_desk",
-      "purpose": "Job desk for User",
-      "owner_field_hint": "assigned_to",
-      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -111,18 +79,6 @@
     {
       "persona": "member",
       "story": "Member has seeded Task rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Task"
-    },
-    {
-      "persona": "admin",
-      "story": "Admin has seeded Task rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Task"
-    },
-    {
-      "persona": "user",
-      "story": "User has seeded Task rows for their desk",
       "min_rows": 1,
       "entity_hint": "Task"
     }
@@ -139,10 +95,34 @@
       "blocks_promote": false
     }
   ],
+  "process_candidates": [
+    {
+      "id_hint": "escalation",
+      "summary": "Task: worker escalates to manager when blocked or SLA risk",
+      "personas": [
+        "member",
+        "manager"
+      ],
+      "entity_hint": "Task",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "assignment",
+      "summary": "Task: auto or manager assignment to a worker",
+      "personas": [
+        "manager",
+        "member"
+      ],
+      "entity_hint": "Task",
+      "status": "hypothesis"
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
+    "1 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Administrator",

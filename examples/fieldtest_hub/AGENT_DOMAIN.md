@@ -7,21 +7,20 @@
 
 FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k
 
-**Source:** `examples/fieldtest_hub/SPECIFICATION.md`
-**Fingerprint:** `f1955f72605c3e98`
+**Source:** `/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md`
+**Fingerprint:** `70110bba0b3471c8`
 
 ## Personas (jobs)
 
 - **Tester** (`tester`, stable≈`tester`, grounded) — desk `tester_desk` — role word in founder brief
 - **Manager** (`manager`, stable≈`manager`, grounded) — desk `manager_desk` — role word in founder brief
 - **Engineer** (`engineer`, stable≈`engineer`, grounded) — desk `engineer_desk` — role word in founder brief
-- **User** (`user`, stable≈`user`, grounded) — desk `user_desk` — Generic system user
 
 ## Nouns (domain types)
 
 - **Device** (grounded) owner≈`assigned_to` lifecycle: prototype → active — definitional sentence in founder brief (A X is …)
-- **FirmwareRelease** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **IssueReport** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **FirmwareRelease** (grounded) owner≈`assigned_to` lifecycle: draft → released → deprecated — definitional sentence in founder brief (A X is …)
+- **IssueReport** (grounded) owner≈`assigned_to` lifecycle: open → triaged → in_progress → fixed → verified → closed — definitional sentence in founder brief (A X is …)
 - **Task** (grounded) owner≈`assigned_to` lifecycle: pending → assigned → in_progress → completed → blocked — definitional sentence in founder brief (A X is …)
 - **TestSession** (grounded) owner≈`assigned_to` lifecycle: — — definitional sentence in founder brief (A X is …)
 
@@ -34,14 +33,12 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
 - **tester_desk** for `tester` (hypothesis) owner≈`assigned_to` — Job desk for Tester
 - **manager_desk** for `manager` (hypothesis) owner≈`assigned_to` — Job desk for Manager
 - **engineer_desk** for `engineer` (hypothesis) owner≈`assigned_to` — Job desk for Engineer
-- **user_desk** for `user` (hypothesis) owner≈`assigned_to` — Job desk for User
 
 ## Demo spine (seed stories)
 
 - `tester`: Tester has seeded Device rows for their desk (min_rows=1, entity≈Device)
 - `manager`: Manager has seeded Device rows for their desk (min_rows=1, entity≈Device)
 - `engineer`: Engineer has seeded Device rows for their desk (min_rows=1, entity≈Device)
-- `user`: User has seeded Device rows for their desk (min_rows=1, entity≈Device)
 
 ## Open questions
 
@@ -49,11 +46,19 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
 - `q2`: Can a report have multiple tests, or just one?
 - `q3`: Can an issue have multiple tasks, or just one?
 
+## Process candidates (hypothesis)
+
+- **escalation** (hypothesis) entity≈`Device` personas=[member, manager] — Device: worker escalates to manager when blocked or SLA risk
+- **assignment** (hypothesis) entity≈`Device` personas=[manager, member] — Device: auto or manager assignment to a worker
+- **triage** (hypothesis) entity≈`Device` personas=[agent, engineer] — Device: intake triage before deep work
+
 ## Research notes
 
 - Prefer knowledge concepts before inventing structure.
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
+- process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
+- 4 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -62,8 +67,8 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
   "version": 1,
   "title": "FieldTest Hub \u2014 Specification",
   "summary": "FieldTest Hub is a field-testing operations product for hardware programmes. It tracks physical Devices from prototype through active use to recall or retirement, the Testers who carry them in the field, and everything the field sends back: logged Test Sessions, severity-graded Issue Reports, remediation Tasks, and the versioned Firmware Releases that respond to what the field discovers. It also k",
-  "source_path": "examples/fieldtest_hub/SPECIFICATION.md",
-  "source_sha256": "f1955f72605c3e98",
+  "source_path": "/Volumes/SSD/Dazzle/examples/fieldtest_hub/SPECIFICATION.md",
+  "source_sha256": "70110bba0b3471c8",
   "personas": [
     {
       "id_hint": "tester",
@@ -91,15 +96,6 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
       "stable_id_candidate": "engineer",
       "status": "grounded",
       "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "user",
-      "label": "User",
-      "job": "Generic system user",
-      "desk": "user_desk",
-      "stable_id_candidate": "user",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -117,14 +113,25 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
       "name": "FirmwareRelease",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "draft",
+        "released",
+        "deprecated"
+      ],
       "owner_field_hint": "assigned_to"
     },
     {
       "name": "IssueReport",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "open",
+        "triaged",
+        "in_progress",
+        "fixed",
+        "verified",
+        "closed"
+      ],
       "owner_field_hint": "assigned_to"
     },
     {
@@ -169,13 +176,6 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
       "purpose": "Job desk for Engineer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
-    },
-    {
-      "persona": "user",
-      "name": "user_desk",
-      "purpose": "Job desk for User",
-      "owner_field_hint": "assigned_to",
-      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -194,12 +194,6 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
     {
       "persona": "engineer",
       "story": "Engineer has seeded Device rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Device"
-    },
-    {
-      "persona": "user",
-      "story": "User has seeded Device rows for their desk",
       "min_rows": 1,
       "entity_hint": "Device"
     }
@@ -221,10 +215,44 @@ FieldTest Hub is a field-testing operations product for hardware programmes. It 
       "blocks_promote": false
     }
   ],
+  "process_candidates": [
+    {
+      "id_hint": "escalation",
+      "summary": "Device: worker escalates to manager when blocked or SLA risk",
+      "personas": [
+        "member",
+        "manager"
+      ],
+      "entity_hint": "Device",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "assignment",
+      "summary": "Device: auto or manager assignment to a worker",
+      "personas": [
+        "manager",
+        "member"
+      ],
+      "entity_hint": "Device",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "triage",
+      "summary": "Device: intake triage before deep work",
+      "personas": [
+        "agent",
+        "engineer"
+      ],
+      "entity_hint": "Device",
+      "status": "hypothesis"
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
+    "4 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Account",

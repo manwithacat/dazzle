@@ -8,6 +8,12 @@ import re
 from pathlib import Path
 from typing import Any
 
+from dazzle.domain_brief.lifecycles import (
+    identify_lifecycles as _identify_lifecycles,
+)
+from dazzle.domain_brief.lifecycles import (
+    resolve_lifecycle_for_name as _resolve_lifecycle_for_name,
+)
 from dazzle.domain_brief.models import (
     AgentDomain,
     DemoSpineRow,
@@ -15,6 +21,7 @@ from dazzle.domain_brief.models import (
     DomainNoun,
     DomainPersona,
     OpenQuestion,
+    ProcessCandidate,
 )
 from dazzle.domain_brief.noun_signals import (
     bullet_entities as _bullet_entities_impl,
@@ -221,6 +228,47 @@ def _life_by_entity(lifecycles_raw: dict[str, Any]) -> dict[str, list[str]]:
         if ent and states:
             out[ent] = states
     return out
+
+
+def _lifecycle_for_noun(name: str, life_by_entity: dict[str, list[str]]) -> list[str]:
+    """Exact + fuzzy attach so SupportTicket gets Ticket lifecycle, etc."""
+    return _resolve_lifecycle_for_name(name, life_by_entity)
+
+
+# Generic persona ids that pollute desks unless the brief has a job signal.
+_GENERIC_PERSONA_IDS = frozenset(
+    {
+        "user",
+        "admin",
+        "staff",
+        "member",
+        "owner",
+        "customer",
+        "provider",
+        "guest",
+        "visitor",
+    }
+)
+
+
+def _persona_job_grounded(label: str, pid: str, text: str) -> bool:
+    """True when the brief treats this role as a job, not chrome filler."""
+    if pid not in _GENERIC_PERSONA_IDS:
+        return True
+    # Job / desk / role-section language near the label
+    patterns = (
+        rf"\b{re.escape(label)}s?\b.{{0,40}}\b(desk|job|role|persona|can |must |may )\b",
+        rf"\b(desk|job|role|persona)\b.{{0,40}}\b{re.escape(label)}s?\b",
+        rf"\b{re.escape(label)}s?\s+(can|must|may|reviews?|approves?|manages?|"
+        rf"triages?|submits?|follows?|works?|sees?|watches?|handles?|processes?)\b",
+        rf"\bas\s+(an?\s+)?{re.escape(label)}\b",
+    )
+    if any(re.search(p, text, re.I | re.S) for p in patterns):
+        return True
+    # Explicit persona lists often use markdown headers
+    if re.search(rf"^#{{1,3}}\s+{re.escape(label)}\s*$", text, re.I | re.M):
+        return True
+    return False
 
 
 # Adjectives / verbs / UI / status chrome that discover_entities still emits on long SPECs
@@ -639,7 +687,8 @@ def _try_add_header_noun(
             name=candidate,
             status="grounded",
             evidence=evidence,
-            lifecycle_hint=life_by_entity.get(candidate, []) or life_by_entity.get(name, []),
+            lifecycle_hint=_lifecycle_for_noun(candidate, life_by_entity)
+            or _lifecycle_for_noun(name, life_by_entity),
             owner_field_hint=_owner_for_noun(candidate, text),
         )
     )
@@ -729,7 +778,8 @@ def _try_add_discovered_noun(
             name=name,
             status="grounded",
             evidence=f"appears in founder brief (source={source or '?'})",
-            lifecycle_hint=life_by_entity.get(name, []) or life_by_entity.get(raw_name, []),
+            lifecycle_hint=_lifecycle_for_noun(name, life_by_entity)
+            or _lifecycle_for_noun(raw_name, life_by_entity),
             owner_field_hint=_owner_for_noun(name, text),
         )
     )
@@ -814,6 +864,9 @@ def _build_personas_desks_spine(
             return
         pid = _stable_for(label)
         if pid in seen:
+            return
+        # P2: drop generic personas unless the brief gives a job signal.
+        if not _persona_job_grounded(label, pid, text):
             return
         seen.add(pid)
         desk = _desk_name(pid)
@@ -989,9 +1042,13 @@ def extract_from_text(
     entities_raw, personas_raw, lifecycles_raw, questions_raw = _run_offline_analyses(text)
     life = _life_by_entity(lifecycles_raw)
     nouns, rejected = _extract_nouns(entities_raw, text, life)
+
+    life, process_raw = _refine_lifecycles_for_nouns(text, nouns, life, lifecycles_raw)
     personas, desks, spine = _build_personas_desks_spine(text, personas_raw, nouns)
     open_qs = _collect_questions(text, questions_raw, personas, nouns, desks)
     title_val, summary = _title_and_summary(text, title)
+    process_candidates = _process_candidates_from_raw(process_raw)
+    research_notes = _research_notes(process_candidates, nouns)
 
     return AgentDomain(
         title=title_val,
@@ -1003,13 +1060,70 @@ def extract_from_text(
         desks=desks,
         demo_spine=spine,
         open_questions=open_qs,
+        process_candidates=process_candidates,
         rejected_chrome=sorted(set(rejected)),
-        research_notes=[
-            "Prefer knowledge concepts before inventing structure.",
-            "Do not promote ungrounded nouns.",
-            "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
-        ],
+        research_notes=research_notes,
     )
+
+
+def _refine_lifecycles_for_nouns(
+    text: str,
+    nouns: list[DomainNoun],
+    life: dict[str, list[str]],
+    lifecycles_raw: dict[str, Any],
+) -> tuple[dict[str, list[str]], list[Any]]:
+    """Re-bind lifecycles on grounded nouns; return life map + process_raw."""
+    if not nouns:
+        return life, list(lifecycles_raw.get("process_candidates") or [])
+    refined = _identify_lifecycles(text, [n.name for n in nouns])
+    life = _life_by_entity(refined)
+    for n in nouns:
+        if not n.lifecycle_hint:
+            n.lifecycle_hint = _lifecycle_for_noun(n.name, life)
+    return life, list(refined.get("process_candidates") or [])
+
+
+def _process_candidates_from_raw(process_raw: list[Any]) -> list[ProcessCandidate]:
+    out: list[ProcessCandidate] = []
+    for row in process_raw:
+        if not isinstance(row, dict):
+            continue
+        id_hint = str(row.get("id_hint") or "").strip()
+        if not id_hint:
+            continue
+        out.append(
+            ProcessCandidate(
+                id_hint=id_hint,
+                summary=str(row.get("summary") or ""),
+                personas=[str(p) for p in (row.get("personas") or []) if p],
+                entity_hint=str(row.get("entity_hint") or "") or None,
+                status="hypothesis",
+            )
+        )
+    return out
+
+
+def _research_notes(
+    process_candidates: list[ProcessCandidate],
+    nouns: list[DomainNoun],
+) -> list[str]:
+    notes = [
+        "Prefer knowledge concepts before inventing structure.",
+        "Do not promote ungrounded nouns.",
+        "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    ]
+    if process_candidates:
+        notes.append(
+            "process_candidates are hypotheses — author `process` blocks when "
+            "multi-persona handoffs are real; do not invent decorative processes."
+        )
+    life_count = sum(1 for n in nouns if n.lifecycle_hint)
+    if life_count:
+        notes.append(
+            f"{life_count} noun(s) carry lifecycle_hint — emit transitions: "
+            "(and lifecycle: evidence when product requires ADR-0020)."
+        )
+    return notes
 
 
 def extract_from_path(path: Path) -> AgentDomain:

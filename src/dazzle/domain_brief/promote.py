@@ -18,12 +18,16 @@ def promote_checklist(domain: AgentDomain) -> dict[str, Any]:
             f"({', '.join(p.id_hint for p in domain.personas)}).",
             "2. Author entities for grounded nouns only "
             f"({', '.join(n.name for n in domain.nouns if n.status == 'grounded')}).",
-            "3. Add status lifecycles where lifecycle_hint is non-empty.",
-            "4. Author workspaces/desks from domain.desks; bind filters with owner_field_hint "
+            "3. Add status lifecycles where lifecycle_hint is non-empty "
+            "(transitions: + role/requires guards where the brief implies them).",
+            "4. When process_candidates is non-empty, author `process` blocks "
+            f"({', '.join(p.id_hint for p in domain.process_candidates) or '—'}) "
+            "for multi-persona handoffs — do not stop at status enums alone.",
+            "5. Author workspaces/desks from domain.desks; bind filters with owner_field_hint "
             "+ current_user (never invent chrome fields).",
-            "5. Seed demo_spine stories under dsl/seeds/demo_data using STABLE_PERSONA_USER_IDS.",
-            "6. dazzle validate → serve → demo reset-and-load → product_quality score.",
-            "7. Do not re-run bootstrap as SSOT (counter-prior bootstrap_pollution).",
+            "6. Seed demo_spine stories under dsl/seeds/demo_data using STABLE_PERSONA_USER_IDS.",
+            "7. dazzle validate → serve → demo reset-and-load → product_quality score.",
+            "8. Do not re-run bootstrap as SSOT (counter-prior bootstrap_pollution).",
         ]
     return {
         "ready": report.ready_to_promote,

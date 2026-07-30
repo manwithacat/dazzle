@@ -41,6 +41,7 @@ when residual remains: product → demo → journey):
 | `example-apps story_walk` | `improve/strategies/story_walk.md` | `scripts/story_walk_bar.py` (landing stories ↔ walks) |
 | `example-apps agent_acceptance_panel` | `improve/strategies/agent_acceptance_panel.md` | `scripts/trial_verdict_bar.py` + live `qa trial` |
 | `example-apps agent_qa_smoke` | `improve/strategies/agent_qa_smoke.md` | `scripts/qa_smoke_bar.py` + `dazzle qa smoke-dig` |
+| `example-apps domain_lifecycle_priors` | `improve/strategies/domain_lifecycle_priors.md` | `scripts/domain_cognition_bar.py` (+ lifecycle/process priors) |
 
 Unified OBSERVE for every example-apps cycle (and for `--status`):
 
@@ -50,6 +51,7 @@ python scripts/improve_example_probes.py --status
 # demo_fleet … residual=N next=…
 # journey_maturity … residual=N next=…
 # story_walk / trial_verdict …
+# domain_cognition … residual=N next=…   # lifecycle/process priors
 # example_probes residual_total=N next=… force=example-apps <strategy>
 ```
 

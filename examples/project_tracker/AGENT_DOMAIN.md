@@ -7,22 +7,21 @@
 
 Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces — a Dashboard for the overview and a Project Board for day-to-day task and milestone management.
 
-**Source:** `examples/project_tracker/SPECIFICATION.md`
-**Fingerprint:** `336597f66186a6ca`
+**Source:** `/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md`
+**Fingerprint:** `8b923a4553c0c493`
 
 ## Personas (jobs)
 
 - **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — role word in founder brief
 - **Manager** (`manager`, stable≈`manager`, grounded) — desk `manager_desk` — role word in founder brief
 - **Member** (`member`, stable≈`member`, grounded) — desk `member_desk` — role word in founder brief
-- **User** (`user`, stable≈`user`, grounded) — desk `user_desk` — Generic system user
 
 ## Nouns (domain types)
 
 - **Attachment** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Comment** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Milestone** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Project** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Milestone** (grounded) owner≈`owner` lifecycle: planning → active → completed — definitional sentence in founder brief (A X is …)
+- **Project** (grounded) owner≈`owner` lifecycle: backlog → todo → in_progress → review → done → cancelled — definitional sentence in founder brief (A X is …)
 - **Task** (grounded) owner≈`assigned_to` lifecycle: progress → review → done — definitional sentence in founder brief (A X is …)
 - **TeamMember** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 
@@ -35,14 +34,12 @@ Project Tracker is a team project-management product. It organises work as Proje
 - **admin_desk** for `admin` (hypothesis) owner≈`owner` — Job desk for Admin
 - **manager_desk** for `manager` (hypothesis) owner≈`owner` — Job desk for Manager
 - **member_desk** for `member` (hypothesis) owner≈`owner` — Job desk for Member
-- **user_desk** for `user` (hypothesis) owner≈`owner` — Job desk for User
 
 ## Demo spine (seed stories)
 
-- `admin`: Admin has seeded Attachment rows for their desk (min_rows=1, entity≈Attachment)
-- `manager`: Manager has seeded Attachment rows for their desk (min_rows=1, entity≈Attachment)
-- `member`: Member has seeded Attachment rows for their desk (min_rows=1, entity≈Attachment)
-- `user`: User has seeded Attachment rows for their desk (min_rows=1, entity≈Attachment)
+- `admin`: Admin has seeded Task rows for their desk (min_rows=1, entity≈Task)
+- `manager`: Manager has seeded Task rows for their desk (min_rows=1, entity≈Task)
+- `member`: Member has seeded Task rows for their desk (min_rows=1, entity≈Task)
 
 ## Open questions
 
@@ -53,11 +50,18 @@ Project Tracker is a team project-management product. It organises work as Proje
 - `q5`: Can a project have multiple milestones, or just one?
 - `q6`: Can a task have multiple attachments, or just one?
 
+## Process candidates (hypothesis)
+
+- **escalation** (hypothesis) entity≈`Task` personas=[member, manager] — Task: worker escalates to manager when blocked or SLA risk
+- **assignment** (hypothesis) entity≈`Task` personas=[manager, member] — Task: auto or manager assignment to a worker
+
 ## Research notes
 
 - Prefer knowledge concepts before inventing structure.
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
+- process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
+- 3 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -66,8 +70,8 @@ Project Tracker is a team project-management product. It organises work as Proje
   "version": 1,
   "title": "Project Tracker \u2014 Specification",
   "summary": "Project Tracker is a team project-management product. It organises work as Projects owned by a team member, broken into Milestones and Tasks, with Comments and Attachments carrying the conversation and the evidence alongside each task. Everyone on the team shares two working surfaces \u2014 a Dashboard for the overview and a Project Board for day-to-day task and milestone management.",
-  "source_path": "examples/project_tracker/SPECIFICATION.md",
-  "source_sha256": "336597f66186a6ca",
+  "source_path": "/Volumes/SSD/Dazzle/examples/project_tracker/SPECIFICATION.md",
+  "source_sha256": "8b923a4553c0c493",
   "personas": [
     {
       "id_hint": "admin",
@@ -95,15 +99,6 @@ Project Tracker is a team project-management product. It organises work as Proje
       "stable_id_candidate": "member",
       "status": "grounded",
       "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "user",
-      "label": "User",
-      "job": "Generic system user",
-      "desk": "user_desk",
-      "stable_id_candidate": "user",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -125,14 +120,25 @@ Project Tracker is a team project-management product. It organises work as Proje
       "name": "Milestone",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "planning",
+        "active",
+        "completed"
+      ],
       "owner_field_hint": "owner"
     },
     {
       "name": "Project",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "backlog",
+        "todo",
+        "in_progress",
+        "review",
+        "done",
+        "cancelled"
+      ],
       "owner_field_hint": "owner"
     },
     {
@@ -175,39 +181,26 @@ Project Tracker is a team project-management product. It organises work as Proje
       "purpose": "Job desk for Member",
       "owner_field_hint": "owner",
       "status": "hypothesis"
-    },
-    {
-      "persona": "user",
-      "name": "user_desk",
-      "purpose": "Job desk for User",
-      "owner_field_hint": "owner",
-      "status": "hypothesis"
     }
   ],
   "demo_spine": [
     {
       "persona": "admin",
-      "story": "Admin has seeded Attachment rows for their desk",
+      "story": "Admin has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Attachment"
+      "entity_hint": "Task"
     },
     {
       "persona": "manager",
-      "story": "Manager has seeded Attachment rows for their desk",
+      "story": "Manager has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Attachment"
+      "entity_hint": "Task"
     },
     {
       "persona": "member",
-      "story": "Member has seeded Attachment rows for their desk",
+      "story": "Member has seeded Task rows for their desk",
       "min_rows": 1,
-      "entity_hint": "Attachment"
-    },
-    {
-      "persona": "user",
-      "story": "User has seeded Attachment rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Attachment"
+      "entity_hint": "Task"
     }
   ],
   "open_questions": [
@@ -242,10 +235,34 @@ Project Tracker is a team project-management product. It organises work as Proje
       "blocks_promote": false
     }
   ],
+  "process_candidates": [
+    {
+      "id_hint": "escalation",
+      "summary": "Task: worker escalates to manager when blocked or SLA risk",
+      "personas": [
+        "member",
+        "manager"
+      ],
+      "entity_hint": "Task",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "assignment",
+      "summary": "Task: auto or manager assignment to a worker",
+      "personas": [
+        "manager",
+        "member"
+      ],
+      "entity_hint": "Task",
+      "status": "hypothesis"
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
+    "3 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Board",

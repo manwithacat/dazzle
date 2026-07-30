@@ -18,6 +18,7 @@ import re
 from typing import Any
 
 from dazzle.core.capabilities.cognition import enable_suggestion
+from dazzle.domain_brief.lifecycles import identify_lifecycles as _identify_lifecycles_core
 
 from .common import error_response, extract_progress, unknown_op_response
 from .spec_questions import (
@@ -776,7 +777,8 @@ def _identify_lifecycles(arguments: dict[str, Any]) -> str:
     Identify state transitions for entities.
 
     Takes discovered entities and the spec text, returns
-    suggested state machines.
+    suggested state machines (arrow chains, workflow templates,
+    fuzzy entity attach) plus multi-persona process candidates.
     """
     progress = extract_progress(arguments)
     progress.log_sync("Identifying entity lifecycles...")
@@ -786,111 +788,8 @@ def _identify_lifecycles(arguments: dict[str, Any]) -> str:
     if not spec_text:
         return error_response("spec_text is required")
 
-    # Common lifecycle patterns
-    lifecycle_keywords = {
-        "order": ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"],
-        "request": ["draft", "submitted", "pending", "approved", "rejected", "completed"],
-        "application": ["submitted", "under_review", "accepted", "rejected", "withdrawn"],
-        "booking": ["pending", "confirmed", "in_progress", "completed", "cancelled"],
-        "payment": ["pending", "processing", "completed", "failed", "refunded"],
-        "task": ["pending", "assigned", "in_progress", "completed", "blocked"],
-        "ticket": ["open", "in_progress", "resolved", "closed", "reopened"],
-        "listing": ["draft", "active", "paused", "sold", "expired"],
-        "job": ["open", "assigned", "in_progress", "completed", "cancelled"],
-    }
-
-    # Find action words that suggest transitions
-    transition_words = re.findall(
-        r"\b(post|submit|approve|reject|cancel|complete|assign|accept|decline|confirm|ship|deliver|pay|review|start|finish|close)\w*\b",
-        spec_text.lower(),
-    )
-
-    lifecycles = []
-
-    # #1353: explicit arrow chains ("draft->sent->paid", "draft → sent → paid")
-    # are the strongest lifecycle signal in a spec — they mirror the DSL's own
-    # transitions syntax verbatim, so honour them before any pattern guessing.
-    # Attribution: the chain belongs to an entity named in the same sentence,
-    # else it is surfaced unattributed for the agent to place.
-    entity_names = [e if isinstance(e, str) else e.get("name", "") for e in entities]
-    for sentence in re.split(r"[.;\n]", spec_text):
-        for chain in re.findall(r"\b\w+(?:\s*(?:->|→|=>)\s*\w+)+", sentence):
-            states = [s.strip().lower() for s in re.split(r"\s*(?:->|→|=>)\s*", chain)]
-            if len(states) < 2:
-                continue
-            # Nearest entity mentioned before the chain wins (specs describe
-            # an entity then its lifecycle); fall back to the nearest after.
-            sentence_lower = sentence.lower()
-            chain_pos = sentence_lower.find(states[0])
-            best: tuple[float, str] | None = None
-            for n in entity_names:
-                pos = sentence_lower.find(n.lower()) if n else -1
-                if pos < 0:
-                    continue
-                distance = chain_pos - pos if pos <= chain_pos else (pos - chain_pos) + 10_000
-                if best is None or distance < best[0]:
-                    best = (distance, n)
-            owner = best[1] if best else "UNKNOWN"
-            lifecycles.append(
-                {
-                    "entity": owner,
-                    "status_field": "status",
-                    "states": states,
-                    "source": "arrow_chain",
-                }
-            )
-    arrow_entities = {lc["entity"] for lc in lifecycles}
-
-    for entity in entities:
-        entity_name = entity if isinstance(entity, str) else entity.get("name", "")
-        if entity_name in arrow_entities:
-            continue  # an explicit chain beats pattern guessing
-        entity_lower = entity_name.lower()
-
-        # Check if entity matches known lifecycle patterns
-        matched_pattern = None
-        for pattern_name, states in lifecycle_keywords.items():
-            if pattern_name in entity_lower or entity_lower in pattern_name:
-                matched_pattern = states
-                break
-
-        if matched_pattern:
-            lifecycles.append(
-                {
-                    "entity": entity_name,
-                    "status_field": "status",
-                    "states": matched_pattern,
-                    "source": "pattern_match",
-                }
-            )
-        elif any(word in entity_lower for word in ["request", "order", "booking", "job"]):
-            # Generic request-like lifecycle
-            lifecycles.append(
-                {
-                    "entity": entity_name,
-                    "status_field": "status",
-                    "states": ["pending", "active", "completed", "cancelled"],
-                    "source": "generic_pattern",
-                }
-            )
-
-    # Also suggest lifecycles based on transition words found
-    if transition_words and not lifecycles:
-        lifecycles.append(
-            {
-                "entity": "UNKNOWN",
-                "status_field": "status",
-                "suggested_transitions": list(set(transition_words)),
-                "hint": "These actions suggest state transitions. Assign to appropriate entities.",
-            }
-        )
-
     return json.dumps(
-        {
-            "lifecycles": lifecycles,
-            "detected_transitions": list(set(transition_words)),
-            "hint": "Add state machines to entities with clear lifecycles. Not every entity needs one.",
-        },
+        _identify_lifecycles_core(spec_text, entities if isinstance(entities, list) else []),
         indent=2,
     )
 

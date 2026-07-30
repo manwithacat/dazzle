@@ -58,6 +58,17 @@ class OpenQuestion:
 
 
 @dataclass
+class ProcessCandidate:
+    """Hypothesis process for multi-persona lifecycle domains (not DSL)."""
+
+    id_hint: str
+    summary: str
+    personas: list[str] = field(default_factory=list)
+    entity_hint: str | None = None
+    status: ClaimStatus = "hypothesis"
+
+
+@dataclass
 class AgentDomain:
     """Mutable agent-facing domain document (not DSL)."""
 
@@ -71,6 +82,7 @@ class AgentDomain:
     desks: list[DomainDesk] = field(default_factory=list)
     demo_spine: list[DemoSpineRow] = field(default_factory=list)
     open_questions: list[OpenQuestion] = field(default_factory=list)
+    process_candidates: list[ProcessCandidate] = field(default_factory=list)
     research_notes: list[str] = field(default_factory=list)
     rejected_chrome: list[str] = field(default_factory=list)
 
@@ -100,6 +112,7 @@ class AgentDomain:
             desks=_list("desks", DomainDesk),
             demo_spine=_list("demo_spine", DemoSpineRow),
             open_questions=_list("open_questions", OpenQuestion),
+            process_candidates=_list("process_candidates", ProcessCandidate),
             research_notes=list(data.get("research_notes") or []),
             rejected_chrome=list(data.get("rejected_chrome") or []),
         )

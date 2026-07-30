@@ -7,8 +7,8 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those
 
-**Source:** `examples/invoice_ops/SPECIFICATION.md`
-**Fingerprint:** `829eb476d540bff7`
+**Source:** `/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md`
+**Fingerprint:** `ea08f703d09ad6cc`
 
 ## Personas (jobs)
 
@@ -16,19 +16,16 @@
 - **Approver** (`approver`, stable≈`approver`, grounded) — desk `approver_desk` — role word in founder brief
 - **Finance** (`finance`, stable≈`finance`, grounded) — desk `finance_desk` — role word in founder brief
 - **Auditor** (`auditor`, stable≈`auditor`, grounded) — desk `auditor_desk` — role word in founder brief
-- **Customer** (`customer`, stable≈`customer`, grounded) — desk `customer_desk` — Person who purchases/consumes
 - **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — System administrator
 - **Staff** (`staff`, stable≈`staff`, grounded) — desk `staff_desk` — Internal team member
-- **User** (`user`, stable≈`user`, grounded) — desk `user_desk` — Generic system user
-- **Provider** (`provider`, stable≈`provider`, grounded) — desk `provider_desk` — Person who provides services
 
 ## Nouns (domain types)
 
-- **Invoice** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Invoice** (grounded) owner≈`requester` lifecycle: draft → submitted → approved → rejected → paid — definitional sentence in founder brief (A X is …)
 - **Supplier** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Tenant** (grounded) owner≈`requester` lifecycle: — — definitional sentence in founder brief (A X is …)
-- **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
 - **Bank** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=capitalized_noun)
+- **Payment** (grounded) owner≈`requester` lifecycle: pending → processing → completed → failed → refunded — appears in founder brief (source=capitalized_noun)
 - **Approver** (grounded) owner≈`requester` lifecycle: — — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
@@ -41,11 +38,8 @@
 - **approver_desk** for `approver` (hypothesis) owner≈`requester` — Job desk for Approver
 - **finance_desk** for `finance` (hypothesis) owner≈`requester` — Job desk for Finance
 - **auditor_desk** for `auditor` (hypothesis) owner≈`requester` — Job desk for Auditor
-- **customer_desk** for `customer` (hypothesis) owner≈`requester` — Job desk for Customer
 - **admin_desk** for `admin` (hypothesis) owner≈`requester` — Job desk for Admin
 - **staff_desk** for `staff` (hypothesis) owner≈`requester` — Job desk for Staff
-- **user_desk** for `user` (hypothesis) owner≈`requester` — Job desk for User
-- **provider_desk** for `provider` (hypothesis) owner≈`requester` — Job desk for Provider
 
 ## Demo spine (seed stories)
 
@@ -53,22 +47,28 @@
 - `approver`: Approver has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `finance`: Finance has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `auditor`: Auditor has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
-- `customer`: Customer has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `admin`: Admin has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 - `staff`: Staff has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
-- `user`: User has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
-- `provider`: Provider has seeded Invoice rows for their desk (min_rows=1, entity≈Invoice)
 
 ## Open questions
 
 - `q1`: Can an invoice have multiple payments, or just one?
 - `q2`: When is an invoice settled — on approval, on a schedule, or only after a successful payment attempt?
 
+## Process candidates (hypothesis)
+
+- **approval_flow** (hypothesis) entity≈`Invoice` personas=[requester, approver] — Invoice: requester submits, approver decides (approve/reject)
+- **assignment** (hypothesis) entity≈`Invoice` personas=[manager, member] — Invoice: auto or manager assignment to a worker
+- **settlement** (hypothesis) entity≈`Invoice` personas=[finance, approver] — Invoice: finance settles / pays after approval
+- **triage** (hypothesis) entity≈`Invoice` personas=[agent, manager] — Invoice: intake triage before deep work
+
 ## Research notes
 
 - Prefer knowledge concepts before inventing structure.
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
+- process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
+- 2 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -77,8 +77,8 @@
   "version": 1,
   "title": "Invoice Ops \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Invoice Ops is a multi-tenant supplier-invoice processing system. Each customer company operates as its own tenant, managing its suppliers, the invoices those",
-  "source_path": "examples/invoice_ops/SPECIFICATION.md",
-  "source_sha256": "829eb476d540bff7",
+  "source_path": "/Volumes/SSD/Dazzle/examples/invoice_ops/SPECIFICATION.md",
+  "source_sha256": "ea08f703d09ad6cc",
   "personas": [
     {
       "id_hint": "requester",
@@ -117,15 +117,6 @@
       "evidence": "role word in founder brief"
     },
     {
-      "id_hint": "customer",
-      "label": "Customer",
-      "job": "Person who purchases/consumes",
-      "desk": "customer_desk",
-      "stable_id_candidate": "customer",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
-    },
-    {
       "id_hint": "admin",
       "label": "Admin",
       "job": "System administrator",
@@ -142,24 +133,6 @@
       "stable_id_candidate": "staff",
       "status": "grounded",
       "evidence": "extract_personas + brief"
-    },
-    {
-      "id_hint": "user",
-      "label": "User",
-      "job": "Generic system user",
-      "desk": "user_desk",
-      "stable_id_candidate": "user",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
-    },
-    {
-      "id_hint": "provider",
-      "label": "Provider",
-      "job": "Person who provides services",
-      "desk": "provider_desk",
-      "stable_id_candidate": "provider",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -167,7 +140,13 @@
       "name": "Invoice",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "draft",
+        "submitted",
+        "approved",
+        "rejected",
+        "paid"
+      ],
       "owner_field_hint": "requester"
     },
     {
@@ -185,6 +164,13 @@
       "owner_field_hint": "requester"
     },
     {
+      "name": "Bank",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=capitalized_noun)",
+      "lifecycle_hint": [],
+      "owner_field_hint": "requester"
+    },
+    {
       "name": "Payment",
       "status": "grounded",
       "evidence": "appears in founder brief (source=capitalized_noun)",
@@ -195,13 +181,6 @@
         "failed",
         "refunded"
       ],
-      "owner_field_hint": "requester"
-    },
-    {
-      "name": "Bank",
-      "status": "grounded",
-      "evidence": "appears in founder brief (source=capitalized_noun)",
-      "lifecycle_hint": [],
       "owner_field_hint": "requester"
     },
     {
@@ -242,13 +221,6 @@
       "status": "hypothesis"
     },
     {
-      "persona": "customer",
-      "name": "customer_desk",
-      "purpose": "Job desk for Customer",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
       "persona": "admin",
       "name": "admin_desk",
       "purpose": "Job desk for Admin",
@@ -259,20 +231,6 @@
       "persona": "staff",
       "name": "staff_desk",
       "purpose": "Job desk for Staff",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "user",
-      "name": "user_desk",
-      "purpose": "Job desk for User",
-      "owner_field_hint": "requester",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "provider",
-      "name": "provider_desk",
-      "purpose": "Job desk for Provider",
       "owner_field_hint": "requester",
       "status": "hypothesis"
     }
@@ -303,12 +261,6 @@
       "entity_hint": "Invoice"
     },
     {
-      "persona": "customer",
-      "story": "Customer has seeded Invoice rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Invoice"
-    },
-    {
       "persona": "admin",
       "story": "Admin has seeded Invoice rows for their desk",
       "min_rows": 1,
@@ -317,18 +269,6 @@
     {
       "persona": "staff",
       "story": "Staff has seeded Invoice rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Invoice"
-    },
-    {
-      "persona": "user",
-      "story": "User has seeded Invoice rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "Invoice"
-    },
-    {
-      "persona": "provider",
-      "story": "Provider has seeded Invoice rows for their desk",
       "min_rows": 1,
       "entity_hint": "Invoice"
     }
@@ -345,10 +285,54 @@
       "blocks_promote": false
     }
   ],
+  "process_candidates": [
+    {
+      "id_hint": "approval_flow",
+      "summary": "Invoice: requester submits, approver decides (approve/reject)",
+      "personas": [
+        "requester",
+        "approver"
+      ],
+      "entity_hint": "Invoice",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "assignment",
+      "summary": "Invoice: auto or manager assignment to a worker",
+      "personas": [
+        "manager",
+        "member"
+      ],
+      "entity_hint": "Invoice",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "settlement",
+      "summary": "Invoice: finance settles / pays after approval",
+      "personas": [
+        "finance",
+        "approver"
+      ],
+      "entity_hint": "Invoice",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "triage",
+      "summary": "Invoice: intake triage before deep work",
+      "personas": [
+        "agent",
+        "manager"
+      ],
+      "entity_hint": "Invoice",
+      "status": "hypothesis"
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
+    "2 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Account",

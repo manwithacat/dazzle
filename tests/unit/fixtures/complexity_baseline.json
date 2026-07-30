@@ -70,6 +70,7 @@
       "_default_completion": 1,
       "_extract_first_json_object": 13,
       "_format_history_line": 14,
+      "_history_state_true_suffix": 6,
       "_is_stuck": 3,
       "_tool_use_to_action": 5
     },
@@ -119,10 +120,13 @@
       "HttpExecutor.execute": 12,
       "PlaywrightExecutor": 10,
       "PlaywrightExecutor.__init__": 1,
-      "PlaywrightExecutor._on_console": 3,
+      "PlaywrightExecutor._console_window": 2,
+      "PlaywrightExecutor._on_console": 4,
       "PlaywrightExecutor._resolve_locator": 4,
-      "PlaywrightExecutor.execute": 30,
-      "_dom_hash": 1
+      "PlaywrightExecutor.execute": 37,
+      "_dom_hash": 1,
+      "_search_box_results_selector": 9,
+      "_search_box_results_summary": 3
     },
     "mi_rank": "A"
   },
@@ -1305,6 +1309,7 @@
       "_seed_signable_rows": 14,
       "qa_capture": 10,
       "qa_component_vision": 3,
+      "qa_hyperpart_opportunities": 1,
       "qa_login": 3,
       "qa_property_vision": 3,
       "qa_smoke_crawl": 1,
@@ -6733,9 +6738,13 @@
       "_declared_persona_ids": 4,
       "_find_user_role_enum": 9,
       "_is_unknown_scope_persona": 2,
+      "_list_personas_missing_read": 6,
+      "_personas_for_scope_op": 7,
+      "_scope_rule_op": 3,
       "_validate_predicate_node": 42,
       "_warn_unknown_tokens": 4,
       "validate_admin_personas_scope_conflict": 8,
+      "validate_list_without_read_scope": 7,
       "validate_rbac_matrix_diagnostics": 4,
       "validate_role_references_against_enum": 8,
       "validate_scope_personas_declared": 13,
@@ -7263,20 +7272,30 @@
   "dazzle/domain_brief/extract.py": {
     "functions": {
       "_blocking_gap_questions": 6,
-      "_build_personas_desks_spine": 9,
-      "_canonical_case": 2,
+      "_brief_domain_score": 3,
+      "_build_personas_desks_spine": 10,
+      "_bullet_entities": 1,
+      "_canonical_case": 1,
       "_collect_questions": 4,
-      "_definition_entities": 7,
+      "_default_owner_from_brief": 9,
+      "_definition_entities": 9,
       "_desk_name": 1,
-      "_discovered_noun_reject_reason": 7,
+      "_discovered_noun_reject_reason": 8,
       "_extract_nouns": 5,
       "_grounded_in_brief": 2,
       "_header_entities": 5,
-      "_is_noise_or_broken_question": 6,
+      "_is_every_fused_prose": 4,
+      "_is_noise_or_broken_question": 12,
       "_is_plural_of_known": 5,
       "_life_by_entity": 9,
+      "_lifecycle_for_noun": 1,
       "_owner_for_noun": 5,
+      "_persona_job_grounded": 5,
+      "_primary_spine_noun": 2,
+      "_process_candidates_from_raw": 11,
       "_question_text": 4,
+      "_refine_lifecycles_for_nouns": 7,
+      "_research_notes": 5,
       "_run_offline_analyses": 4,
       "_seen_has": 3,
       "_sha256": 1,
@@ -7285,12 +7304,12 @@
       "_strong_noun_signal": 14,
       "_title_and_summary": 11,
       "_try_add_discovered_noun": 10,
-      "_try_add_header_noun": 12,
+      "_try_add_header_noun": 15,
       "extract_from_path": 1,
       "extract_from_text": 3,
-      "find_founder_brief": 4
+      "find_founder_brief": 8
     },
-    "mi_rank": "A"
+    "mi_rank": "B"
   },
   "dazzle/domain_brief/gaps.py": {
     "functions": {
@@ -7299,6 +7318,33 @@
       "GapsReport.to_dict": 2,
       "_persona_gaps": 8,
       "score_gaps": 13
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/domain_brief/lifecycles.py": {
+    "functions": {
+      "_arrow_lifecycles": 2,
+      "_camel_parts": 4,
+      "_entity_names": 7,
+      "_merge_template_row": 9,
+      "_norm": 2,
+      "_pattern_lifecycle_for_entity": 7,
+      "_persona_signals": 2,
+      "_process_eligible": 6,
+      "_process_rule_hits": 6,
+      "_template_keys": 10,
+      "_want_approval": 5,
+      "_want_escalation": 4,
+      "_want_settlement": 4,
+      "attribute_chain_to_entity": 14,
+      "best_keyword_match": 4,
+      "entity_matches_keyword": 6,
+      "identify_lifecycles": 8,
+      "match_pattern_lifecycle": 4,
+      "parse_arrow_chains": 8,
+      "propose_process_candidates": 14,
+      "resolve_lifecycle_for_name": 14,
+      "workflow_lifecycle_patterns": 6
     },
     "mi_rank": "A"
   },
@@ -7311,13 +7357,24 @@
       "DomainDesk": 1,
       "DomainNoun": 1,
       "DomainPersona": 1,
-      "OpenQuestion": 1
+      "OpenQuestion": 1,
+      "ProcessCandidate": 1
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/domain_brief/noun_signals.py": {
+    "functions": {
+      "bullet_entities": 8,
+      "canonical_case": 9,
+      "singular_type_label": 15,
+      "split_camel_tokens": 3,
+      "type_evidence_capitalized": 5
     },
     "mi_rank": "A"
   },
   "dazzle/domain_brief/promote.py": {
     "functions": {
-      "promote_checklist": 5
+      "promote_checklist": 7
     },
     "mi_rank": "A"
   },
@@ -7348,6 +7405,7 @@
       "_section_desks": 4,
       "_section_nouns": 6,
       "_section_personas": 7,
+      "_section_processes": 5,
       "_section_questions": 4,
       "_section_spine": 4,
       "default_paths": 1,
@@ -10992,9 +11050,10 @@
   },
   "dazzle/http/runtime/auth_identity_mirror.py": {
     "functions": {
+      "_coerce_enum_role": 7,
       "_resolve_source": 4,
       "_scalar_placeholder": 1,
-      "build_domain_user_upsert": 33,
+      "build_domain_user_upsert": 40,
       "mirror_auth_user_to_domain": 3
     },
     "mi_rank": "A"
@@ -11187,11 +11246,14 @@
       "_build_dispatch_ctx": 4,
       "_detail_actions_from_context": 17,
       "_detail_fields_from_context": 5,
+      "_detail_ref_value": 5,
       "_detail_sections_from_context": 13,
       "_dispatch_ctx_from_detail": 14,
       "_dispatch_ctx_from_form": 20,
-      "_dispatch_ctx_from_table": 35,
-      "_one_detail_field_dict": 15,
+      "_dispatch_ctx_from_table": 42,
+      "_field_ref_route": 5,
+      "_one_detail_field_dict": 12,
+      "_ref_route_for_entity": 2,
       "_related_groups_from_detail": 24
     },
     "mi_rank": "B"
@@ -11546,11 +11608,16 @@
   },
   "dazzle/http/runtime/handlers/list_handlers.py": {
     "functions": {
+      "_demote_edit_path_to_detail": 5,
       "_detail_url_candidates": 4,
       "_list_handler_body": 93,
       "_principal_can_op": 15,
       "build_data_table": 13,
+      "bulk_actions_for_principal": 3,
       "create_list_handler": 3,
+      "entity_name_for_app_path": 15,
+      "gate_edit_path_drill_for_principal": 5,
+      "gate_edit_path_drill_map_for_principal": 3,
       "list_state_transitions": 5
     },
     "mi_rank": "A"
@@ -12108,22 +12175,27 @@
       "_ChromeAssets": 1,
       "_PageRequestContext": 1,
       "_PageRouterConfig": 1,
+      "_access_runtime_from_auth": 6,
       "_annotate_form_usage": 6,
       "_apply_anon_nav": 1,
       "_apply_persona_form_overrides": 28,
       "_apply_persona_overrides": 22,
       "_build_workspace_primary_action_candidates": 9,
-      "_check_entity_cedar_access": 22,
+      "_cedar_mutation_needs_record": 6,
+      "_check_entity_cedar_access": 23,
       "_check_surface_access": 10,
       "_collect_request_params": 7,
       "_dedupe_nav_items_against_groups": 7,
       "_dispatch_custom_mode": 2,
+      "_entity_can_mutate": 8,
       "_entity_title_for_create_cta": 10,
       "_filter_nav_by_entity_access": 18,
+      "_gate_related_tab_create_urls": 8,
+      "_gate_table_inline_editable": 5,
       "_handle_create_form": 7,
-      "_handle_detail": 38,
+      "_handle_detail": 37,
       "_handle_edit_form": 9,
-      "_handle_table": 41,
+      "_handle_table": 43,
       "_inject_auth_context": 26,
       "_inject_integration_actions": 10,
       "_inject_onboarding_step": 18,
@@ -12134,24 +12206,28 @@
       "_make_page_handler": 1,
       "_make_root_redirect_handler": 1,
       "_make_workspace_handler": 1,
-      "_maybe_dispatch_inner_html": 15,
+      "_maybe_dispatch_inner_html": 12,
+      "_mutation_access_op": 1,
       "_page_handler": 13,
       "_read_entity_in_process": 6,
       "_read_workspace_action_usage": 1,
       "_reconcile_nav_model": 3,
       "_reconcile_nav_route": 6,
       "_render_response": 18,
+      "_request_services": 2,
       "_resolve_auth_context": 4,
       "_resolve_chrome_assets": 4,
+      "_resolve_dispatch_surface": 8,
       "_resolve_nav_model": 5,
-      "_resolve_workspace_authored_actions": 6,
+      "_resolve_workspace_authored_actions": 8,
       "_root_redirect": 8,
       "_should_suppress_mutations": 11,
       "_suppress_inaccessible_cta": 11,
-      "_user_can_mutate": 19,
-      "_workspace_handler": 41,
+      "_user_can_mutate": 4,
+      "_workspace_handler": 44,
       "build_app_page_context": 12,
-      "create_page_routes": 90,
+      "create_page_routes": 92,
+      "gate_authored_primary_actions_for_principal": 5,
       "gate_detail_transitions": 2
     },
     "mi_rank": "C"
@@ -12499,14 +12575,14 @@
       "FragmentSurfaceAdapter": 29,
       "FragmentSurfaceAdapter._build_detail_actions": 32,
       "FragmentSurfaceAdapter._build_form": 29,
-      "FragmentSurfaceAdapter._build_list": 52,
+      "FragmentSurfaceAdapter._build_list": 57,
       "FragmentSurfaceAdapter._build_list_toolbar": 12,
       "FragmentSurfaceAdapter._build_related_group": 29,
       "FragmentSurfaceAdapter._build_view": 37,
       "FragmentSurfaceAdapter.build": 4,
       "_build_column_header": 7,
       "_cell_value": 3,
-      "_detail_field_value": 5,
+      "_detail_field_value": 9,
       "_esc_attr": 1,
       "_filter_option": 4,
       "_format_cell": 3,
@@ -12580,7 +12656,7 @@
     "functions": {
       "ConstraintViolationError": 2,
       "ConstraintViolationError.__init__": 1,
-      "Repository": 11,
+      "Repository": 10,
       "Repository.__init__": 9,
       "Repository._convert_row_dict": 10,
       "Repository._model_to_row": 2,
@@ -12588,13 +12664,14 @@
       "Repository._read_on_conn": 2,
       "Repository._record_query": 2,
       "Repository._row_to_model": 2,
+      "Repository._safe_row_to_model": 4,
       "Repository.aggregate": 11,
       "Repository.create": 17,
       "Repository.delete": 5,
       "Repository.exists": 2,
       "Repository.explain_aggregate": 1,
       "Repository.fts_search": 16,
-      "Repository.list": 36,
+      "Repository.list": 37,
       "Repository.read": 22,
       "Repository.update": 21,
       "RepositoryFactory": 3,
@@ -12772,7 +12849,8 @@
   "dazzle/http/runtime/route_validator.py": {
     "functions": {
       "_drill_down_entities": 10,
-      "_mounted_get_paths": 5,
+      "_mounted_get_paths": 6,
+      "_normalize_path_template": 4,
       "validate_app_links": 10,
       "validate_routes": 16
     },
@@ -13593,8 +13671,9 @@
       "_EntitySQL": 3,
       "_EntitySQL.__init__": 2,
       "_TestDeps": 1,
-      "_authenticate_test_user": 6,
+      "_authenticate_test_user": 3,
       "_build_fixture_id_map": 3,
+      "_clear_auth_users_for_reset": 5,
       "_create_one_fixture": 11,
       "_delete_entity": 2,
       "_ensure_demo_persona_memberships": 7,
@@ -13610,7 +13689,9 @@
       "_persona_email_candidates": 6,
       "_prepare_fixture_row": 7,
       "_primary_demo_org_id": 4,
-      "_reset_test_data": 18,
+      "_reset_test_data": 16,
+      "_resolve_test_auth_role": 9,
+      "_role_enum_values": 6,
       "_rollback_created": 4,
       "_seed_fixtures": 4,
       "_session_for_test_user": 6,
@@ -13766,7 +13847,7 @@
     "functions": {
       "_apply_format_spec": 5,
       "_build_cohort_cells": 51,
-      "_build_day_timeline_slots": 35,
+      "_build_day_timeline_slots": 37,
       "_build_task_inbox_payload": 15,
       "_coerce_pipeline_progress": 6,
       "_coerce_to_datetime": 13,
@@ -13796,10 +13877,13 @@
   },
   "dazzle/http/runtime/workspace_columns.py": {
     "functions": {
+      "_enumish_token": 3,
+      "_ref_detail_route": 2,
+      "_resolved_field_kind_token": 4,
       "build_entity_columns": 1,
-      "build_entity_columns_full": 22,
-      "build_surface_columns": 36,
-      "field_kind_to_col_type": 11
+      "build_entity_columns_full": 23,
+      "build_surface_columns": 37,
+      "field_kind_to_col_type": 5
     },
     "mi_rank": "A"
   },
@@ -13826,12 +13910,15 @@
   "dazzle/http/runtime/workspace_region_computes.py": {
     "functions": {
       "_all_fks_to": 7,
+      "_allowed_by_id_for_sm": 6,
       "_batched_fk_cohort_aggregate": 5,
       "_batched_share_cohort_aggregate": 12,
       "_batched_via_cohort_aggregate": 21,
       "_coerce_float": 3,
       "_entity_name_of": 2,
+      "_entity_rank_field": 6,
       "_find_fk_to": 7,
+      "_manual_transition_targets": 10,
       "_prefer_primary_queue_transitions": 4,
       "_resolve_via_link_direction": 4,
       "_retarget_scope_predicate_to_alias": 3,
@@ -13851,6 +13938,7 @@
       "compute_filter_columns_and_active": 6,
       "compute_heatmap": 14,
       "compute_kanban_columns": 9,
+      "compute_kanban_rearrange": 7,
       "compute_pipeline_steps": 11,
       "compute_profile_card": 12,
       "compute_progress": 9,
@@ -13862,7 +13950,7 @@
   "dazzle/http/runtime/workspace_region_fetch.py": {
     "functions": {
       "RegionItemsResult": 1,
-      "fetch_region_items": 48
+      "fetch_region_items": 53
     },
     "mi_rank": "A"
   },
@@ -13878,7 +13966,11 @@
   "dazzle/http/runtime/workspace_region_orchestration.py": {
     "functions": {
       "_read_stored_insight": 2,
-      "compute_region_render_inputs": 102
+      "compute_region_render_inputs": 119,
+      "gate_action_grid_cards_for_principal": 7,
+      "gate_confirm_action_urls_for_principal": 5,
+      "gate_kanban_rearrange_for_principal": 3,
+      "gate_queue_transitions_for_principal": 3
     },
     "mi_rank": "A"
   },
@@ -13893,27 +13985,30 @@
     "functions": {
       "RegionRenderInputs": 1,
       "RenderEnv": 1,
+      "_active_list_search": 3,
+      "_apply_list_search_chrome": 2,
       "_build_card_adapter_ctx": 13,
       "_build_chart_adapter_ctx": 27,
-      "_build_dashboard_adapter_ctx": 14,
+      "_build_dashboard_adapter_ctx": 15,
       "_build_list_adapter_ctx": 13,
       "_build_specialty_adapter_ctx": 15,
       "_entity_display_field": 2,
+      "_gated_entity_detail_urls": 6,
       "_overlays_to_series": 5,
       "_pick_display_key": 5,
       "_pivot_to_series": 14,
-      "_set_detail_url_template": 2,
+      "_set_detail_url_template": 6,
       "_set_display_key": 1,
-      "render_region_html": 16
+      "render_region_html": 21
     },
     "mi_rank": "A"
   },
   "dazzle/http/runtime/workspace_route_builder.py": {
     "functions": {
-      "WorkspaceRouteBuilder": 22,
+      "WorkspaceRouteBuilder": 29,
       "WorkspaceRouteBuilder.__init__": 3,
       "WorkspaceRouteBuilder._init_workspace_entity_routes": 9,
-      "WorkspaceRouteBuilder.init_workspace_routes": 51,
+      "WorkspaceRouteBuilder.init_workspace_routes": 71,
       "_workspace_route_methods": 5
     },
     "mi_rank": "A"
@@ -16386,14 +16481,31 @@
     "functions": {
       "_discover_entities": 39,
       "_extract_personas": 10,
-      "_generate_questions": 10,
-      "_identify_lifecycles": 27,
+      "_generate_questions": 3,
+      "_identify_lifecycles": 3,
       "_load_counter_priors_for_flagging": 2,
       "_propose_patterns": 23,
       "_refine_spec": 6,
       "_strip_markdown_tables": 9,
       "_surface_rules": 9,
       "handle_spec_analyze": 8
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/mcp/server/handlers/spec_questions.py": {
+    "functions": {
+      "_notify_and_comm_topic_questions": 7,
+      "_payment_topic_questions": 7,
+      "bilateral_review_signal": 5,
+      "build_clarification_questions": 2,
+      "cardinality_questions": 10,
+      "entity_stems": 7,
+      "indefinite_article": 5,
+      "is_bad_cardinality_pair": 4,
+      "plausible_cardinality_token": 1,
+      "plural_obj": 2,
+      "right_stem": 4,
+      "topic_questions": 4
     },
     "mi_rank": "A"
   },
@@ -16928,7 +17040,7 @@
   },
   "dazzle/page/converters/template_compiler.py": {
     "functions": {
-      "_build_columns": 46,
+      "_build_columns": 37,
       "_build_companion_contexts": 5,
       "_build_currency_options": 3,
       "_build_entity_columns": 11,
@@ -16939,7 +17051,7 @@
       "_build_state_machine_field_options": 7,
       "_compile_custom_surface": 2,
       "_compile_form_surface": 13,
-      "_compile_list_surface": 40,
+      "_compile_list_surface": 44,
       "_compile_view_surface": 63,
       "_effective_field_source_ref": 3,
       "_enum_semantic_map": 2,
@@ -16951,6 +17063,7 @@
       "_infer_filter_type": 20,
       "_list_detail_url_candidates": 5,
       "_list_detail_url_template": 5,
+      "_ref_column_meta": 5,
       "_resolve_content_measure": 5,
       "_resolve_field_source": 10,
       "_widget_kind_to_form_type": 1,
@@ -17001,6 +17114,19 @@
     "functions": {
       "resolve_action_prominence": 3,
       "resolve_action_prominence_by_usage": 8
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/page/runtime/action_urls.py": {
+    "functions": {
+      "_mode_str": 2,
+      "_split_action_query": 2,
+      "action_to_url": 11,
+      "confirm_action_to_url": 13,
+      "fill_row_id_in_url": 5,
+      "region_row_drill_url": 11,
+      "surface_entity_path": 2,
+      "surface_entity_path_for_row": 4
     },
     "mi_rank": "A"
   },
@@ -17278,7 +17404,6 @@
       "RegionContext": 1,
       "SourceTabContext": 1,
       "WorkspaceContext": 1,
-      "_action_to_url": 12,
       "_build_diagram_data": 15,
       "_default_col_span": 3,
       "_entity_to_app_url": 1,
@@ -17881,6 +18006,31 @@
     },
     "mi_rank": "A"
   },
+  "dazzle/qa/hyperpart_opportunity.py": {
+    "functions": {
+      "HyperpartOpportunity": 3,
+      "HyperpartOpportunity.to_friction": 2,
+      "HyperpartOpportunity.to_json": 1,
+      "_echo_opportunity_summary": 8,
+      "_entity_by_name": 5,
+      "_field_names_for_surface": 7,
+      "_field_type_kind": 3,
+      "_is_person_ref": 1,
+      "_person_ref_for_field": 5,
+      "_queue_opportunity": 8,
+      "_ref_entity": 2,
+      "_region_display": 2,
+      "_section_field_names": 7,
+      "_surface_mode": 2,
+      "_write_opportunity_report": 5,
+      "build_opportunity_report": 7,
+      "run_hyperpart_opportunities": 8,
+      "scan_appspec": 1,
+      "scan_person_ref_opportunities": 14,
+      "scan_queue_opportunities": 8
+    },
+    "mi_rank": "A"
+  },
   "dazzle/qa/models.py": {
     "functions": {
       "CapturedScreen": 1,
@@ -18093,9 +18243,12 @@
       "_descriptions_similar": 6,
       "_evidence_similar": 4,
       "_first_line": 3,
-      "_infer_recommend": 10,
+      "_friction_has_product_signal": 5,
+      "_harness_only_downgrade": 2,
+      "_infer_recommend": 11,
       "_jaccard": 3,
       "_norm_ws": 2,
+      "_normalize_verdict_text": 2,
       "_sort_friction": 1,
       "_title_from_description": 3,
       "_token_set": 4,
@@ -18134,6 +18287,32 @@
       "_rag": 3,
       "drift_violations": 5,
       "run_scan": 12
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/qa/work_surface_utility.py": {
+    "functions": {
+      "FitFinding": 2,
+      "FitFinding.to_json": 1,
+      "WorkSurface": 1,
+      "_append_finding": 5,
+      "_entity_name": 6,
+      "_first_display_token": 6,
+      "_region_display": 3,
+      "_row_to_surface": 6,
+      "_scan_list_surfaces": 8,
+      "_scan_workspace_regions": 10,
+      "_str_tuple": 3,
+      "_surface_display": 3,
+      "_surface_mode": 2,
+      "load_ontology": 3,
+      "normalize_display": 3,
+      "ontology_path": 1,
+      "residual": 3,
+      "scan_project": 2,
+      "summary": 3,
+      "surface_by_id": 2,
+      "surfaces_from_ontology": 6
     },
     "mi_rank": "A"
   },
@@ -18628,7 +18807,7 @@
       "grid_region_root_attrs": 1,
       "heatmap_root_attrs": 1,
       "histogram_root_attrs": 1,
-      "kanban_card_root_attrs": 1,
+      "kanban_card_root_attrs": 10,
       "list_region_root_attrs": 1,
       "metric_tile_root_attrs": 2,
       "money_from_form": 6,
@@ -18641,9 +18820,9 @@
       "queue_row_root_attrs": 2,
       "radar_root_attrs": 1,
       "render_action_card": 4,
-      "render_activity_row": 2,
+      "render_activity_row": 4,
       "render_bar_chart": 4,
-      "render_bar_track": 7,
+      "render_bar_track": 8,
       "render_box_plot": 3,
       "render_bullet": 6,
       "render_calendar": 4,
@@ -18658,7 +18837,7 @@
       "render_grid_region": 1,
       "render_heatmap": 6,
       "render_histogram": 5,
-      "render_kanban_card": 2,
+      "render_kanban_card": 10,
       "render_list_region": 1,
       "render_metric_tile": 14,
       "render_pagination": 6,
@@ -18676,8 +18855,9 @@
       "render_status_list_entry": 4,
       "render_task_inbox": 1,
       "render_time_series": 17,
-      "render_timeline_event": 2,
+      "render_timeline_event": 4,
       "render_tree": 1,
+      "render_tree_node_label": 2,
       "search_box_root_attrs": 1,
       "search_select_root_attrs": 1,
       "search_select_shell_from_form": 4,
@@ -19078,11 +19258,11 @@
   },
   "dazzle/render/fragment/region/_builders_cards.py": {
     "functions": {
-      "_BuildersCardsMixin": 26,
+      "_BuildersCardsMixin": 33,
       "_BuildersCardsMixin._build_action_grid": 15,
       "_BuildersCardsMixin._build_cohort_strip": 36,
       "_BuildersCardsMixin._build_entity_card": 15,
-      "_BuildersCardsMixin._build_kanban": 41,
+      "_BuildersCardsMixin._build_kanban": 76,
       "_BuildersCardsMixin._build_profile_card": 21
     },
     "mi_rank": "A"
@@ -19123,20 +19303,21 @@
   },
   "dazzle/render/fragment/region/_builders_misc.py": {
     "functions": {
-      "_BuildersMiscMixin": 18,
+      "_BuildersMiscMixin": 19,
       "_BuildersMiscMixin._build_confirm_action_panel": 27,
       "_BuildersMiscMixin._build_detail": 13,
       "_BuildersMiscMixin._build_grid": 27,
-      "_BuildersMiscMixin._build_search_box": 11,
-      "_BuildersMiscMixin._build_tree": 8,
-      "_pick_label": 7
+      "_BuildersMiscMixin._build_search_box": 10,
+      "_BuildersMiscMixin._build_tree": 12,
+      "_pick_label": 7,
+      "_search_box_placeholder": 7
     },
     "mi_rank": "A"
   },
   "dazzle/render/fragment/region/_builders_tables.py": {
     "functions": {
-      "_BuildersTablesMixin": 52,
-      "_BuildersTablesMixin._build_list": 79,
+      "_BuildersTablesMixin": 55,
+      "_BuildersTablesMixin._build_list": 90,
       "_BuildersTablesMixin._build_pivot_table": 35,
       "_BuildersTablesMixin._build_queue": 57,
       "_BuildersTablesMixin._build_tabbed_list": 34,
@@ -19151,12 +19332,15 @@
   "dazzle/render/fragment/region/_builders_timeline.py": {
     "functions": {
       "_BuildersTimelineMixin": 21,
-      "_BuildersTimelineMixin._build_activity_feed": 12,
+      "_BuildersTimelineMixin._build_activity_feed": 7,
       "_BuildersTimelineMixin._build_day_timeline": 16,
       "_BuildersTimelineMixin._build_task_inbox": 26,
-      "_BuildersTimelineMixin._build_timeline": 27,
+      "_BuildersTimelineMixin._build_timeline": 33,
       "_activity_actor_label": 9,
-      "_activity_description": 4
+      "_activity_description": 4,
+      "_activity_drill_by_id": 4,
+      "_activity_empty_message": 3,
+      "_activity_feed_rows": 6
     },
     "mi_rank": "A"
   },
@@ -19185,7 +19369,7 @@
     "functions": {
       "_region_title": 2,
       "_render_status_badge_html": 5,
-      "_render_typed_value": 33,
+      "_render_typed_value": 43,
       "_wrap_surface": 1
     },
     "mi_rank": "A"
@@ -19235,11 +19419,11 @@
     "functions": {
       "_RowArchetype": 1,
       "_json_summary": 8,
-      "_render_cell_display": 43,
-      "_render_table_row": 58,
+      "_render_cell_display": 46,
+      "_render_table_row": 71,
       "assemble_list_row": 7,
       "drill_row_attrs": 6,
-      "render_data_row": 5,
+      "render_data_row": 7,
       "render_data_table_rows": 4,
       "slideover_content_id": 1,
       "slideover_panel_id": 1
@@ -19266,7 +19450,7 @@
   },
   "dazzle/render/fragment/renderer/_render_charts.py": {
     "functions": {
-      "_RenderChartsMixin": 5,
+      "_RenderChartsMixin": 6,
       "_RenderChartsMixin._emit": 1,
       "_RenderChartsMixin._emit_bar_chart": 5,
       "_RenderChartsMixin._emit_box_plot": 5,
@@ -19277,14 +19461,17 @@
       "_RenderChartsMixin._emit_heatmap": 2,
       "_RenderChartsMixin._emit_histogram": 4,
       "_RenderChartsMixin._emit_kanban_board": 3,
-      "_RenderChartsMixin._emit_kanban_region": 9,
+      "_RenderChartsMixin._emit_kanban_card_html": 5,
+      "_RenderChartsMixin._emit_kanban_region": 10,
       "_RenderChartsMixin._emit_pipeline_steps": 8,
       "_RenderChartsMixin._emit_radar": 6,
       "_RenderChartsMixin._emit_sparkline": 1,
       "_RenderChartsMixin._emit_time_series": 16,
-      "_RenderChartsMixin._emit_timeline": 10,
+      "_RenderChartsMixin._emit_timeline": 11,
       "_RenderChartsMixin._emit_tree": 3,
-      "_RenderChartsMixin._emit_tree_node": 5
+      "_RenderChartsMixin._emit_tree_node": 5,
+      "_RenderChartsMixin._kanban_board_root_attrs": 9,
+      "_RenderChartsMixin._kanban_card_fields_html": 3
     },
     "mi_rank": "A"
   },
@@ -19333,10 +19520,10 @@
   },
   "dazzle/render/fragment/renderer/_render_interactive.py": {
     "functions": {
-      "_RenderInteractiveMixin": 4,
+      "_RenderInteractiveMixin": 5,
       "_RenderInteractiveMixin._action_attrs": 3,
       "_RenderInteractiveMixin._emit": 1,
-      "_RenderInteractiveMixin._emit_bulk_action_toolbar": 1,
+      "_RenderInteractiveMixin._emit_bulk_action_toolbar": 8,
       "_RenderInteractiveMixin._emit_button": 6,
       "_RenderInteractiveMixin._emit_confirm_gate": 17,
       "_RenderInteractiveMixin._emit_create_button": 3,
@@ -19408,7 +19595,7 @@
       "_RenderTablesMixin._emit": 1,
       "_RenderTablesMixin._emit_action_card": 2,
       "_RenderTablesMixin._emit_action_grid": 3,
-      "_RenderTablesMixin._emit_activity_feed": 3,
+      "_RenderTablesMixin._emit_activity_feed": 5,
       "_RenderTablesMixin._emit_bar_track": 2,
       "_RenderTablesMixin._emit_column_visibility_menu": 2,
       "_RenderTablesMixin._emit_data_list_scroll": 5,
@@ -19545,10 +19732,26 @@
       "_series_color": 1,
       "_series_layer_parts": 4,
       "_shared_axis": 4,
-      "box_plot_svg": 12,
+      "box_plot_svg": 13,
       "histogram_svg": 17,
       "radar_svg": 13,
       "time_series_svg": 24
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/render/user_chip.py": {
+    "functions": {
+      "_avatar_markup": 2,
+      "_col_ref_entity": 8,
+      "_hue_for_name": 2,
+      "_ref_id_from_value": 4,
+      "_value_looks_like_person": 8,
+      "initials_from_display": 7,
+      "looks_like_person_ref": 9,
+      "ref_route_url": 7,
+      "render_user_chip_html": 9,
+      "render_user_chip_linked_html": 1,
+      "wrap_user_chip_link": 4
     },
     "mi_rank": "A"
   },
@@ -21113,6 +21316,7 @@
       "_TagCollector.__init__": 1,
       "_TagCollector.handle_starttag": 1,
       "_extract_workspace_layout": 4,
+      "apply_inner_swap": 8,
       "assemble_workspace_composite": 2,
       "parse_html": 1
     },
@@ -21504,6 +21708,7 @@
     "functions": {
       "_bind_save_as": 4,
       "_company_blob": 2,
+      "_fallback_message": 4,
       "_fetch_list_pages": 6,
       "_field_get": 4,
       "_json_rows": 9,
@@ -21520,7 +21725,17 @@
       "api_find": 10,
       "api_post": 8,
       "api_upload_file": 6,
-      "dispatch_api_action": 2
+      "dispatch_api_action": 2,
+      "playwright_click_api_fallback": 10
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/testing/walk/actions_playwright.py": {
+    "functions": {
+      "click_timeout_ms": 3,
+      "cookie_jar_for_playwright": 3,
+      "do_playwright_click": 9,
+      "playwright_click_with_fallback": 8
     },
     "mi_rank": "A"
   },
@@ -21612,7 +21827,7 @@
   },
   "dazzle/testing/walk/runner.py": {
     "functions": {
-      "WalkRunner": 5,
+      "WalkRunner": 4,
       "WalkRunner.__aenter__": 2,
       "WalkRunner.__aexit__": 2,
       "WalkRunner.__init__": 1,
@@ -21630,7 +21845,7 @@
       "WalkRunner._apply_session_cookie": 2,
       "WalkRunner._entry_for": 7,
       "WalkRunner._get": 2,
-      "WalkRunner._playwright_click": 12,
+      "WalkRunner._playwright_click": 4,
       "WalkRunner._prime_csrf": 5,
       "WalkRunner._run_action": 7,
       "WalkRunner._run_scene": 4,

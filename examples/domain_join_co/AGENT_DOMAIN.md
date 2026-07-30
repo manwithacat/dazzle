@@ -7,15 +7,12 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Domain Join Co is a workspace system built around verified-domain membership: a company's workspace is anchored to its verified email domain, employees join
 
-**Source:** `examples/domain_join_co/SPECIFICATION.md`
-**Fingerprint:** `bb61d69b83dfd7fd`
+**Source:** `/Volumes/SSD/Dazzle/examples/domain_join_co/SPECIFICATION.md`
+**Fingerprint:** `3ccb170d6a173dd6`
 
 ## Personas (jobs)
 
 - **Admin** (`admin`, stable≈`admin`, grounded) — desk `admin_desk` — role word in founder brief
-- **Member** (`member`, stable≈`member`, grounded) — desk `member_desk` — role word in founder brief
-- **Owner** (`owner`, stable≈`owner`, grounded) — desk `owner_desk` — Person who owns/creates primary content
-- **User** (`user`, stable≈`user`, grounded) — desk `user_desk` — Generic system user
 
 ## Nouns (domain types)
 
@@ -30,26 +27,25 @@
 ## Desks
 
 - **admin_desk** for `admin` (hypothesis) owner≈`owner` — Job desk for Admin
-- **member_desk** for `member` (hypothesis) owner≈`owner` — Job desk for Member
-- **owner_desk** for `owner` (hypothesis) owner≈`owner` — Job desk for Owner
-- **user_desk** for `user` (hypothesis) owner≈`owner` — Job desk for User
 
 ## Demo spine (seed stories)
 
 - `admin`: Admin has seeded JoinCo rows for their desk (min_rows=1, entity≈JoinCo)
-- `member`: Member has seeded JoinCo rows for their desk (min_rows=1, entity≈JoinCo)
-- `owner`: Owner has seeded JoinCo rows for their desk (min_rows=1, entity≈JoinCo)
-- `user`: User has seeded JoinCo rows for their desk (min_rows=1, entity≈JoinCo)
 
 ## Open questions
 
 _None blocking._
+
+## Process candidates (hypothesis)
+
+- **assignment** (hypothesis) entity≈`JoinCo` personas=[manager, member] — JoinCo: auto or manager assignment to a worker
 
 ## Research notes
 
 - Prefer knowledge concepts before inventing structure.
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
+- process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
 
 ## Machine twin
 
@@ -58,8 +54,8 @@ _None blocking._
   "version": 1,
   "title": "Domain Join Co \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* Domain Join Co is a workspace system built around verified-domain membership: a company's workspace is anchored to its verified email domain, employees join",
-  "source_path": "examples/domain_join_co/SPECIFICATION.md",
-  "source_sha256": "bb61d69b83dfd7fd",
+  "source_path": "/Volumes/SSD/Dazzle/examples/domain_join_co/SPECIFICATION.md",
+  "source_sha256": "3ccb170d6a173dd6",
   "personas": [
     {
       "id_hint": "admin",
@@ -69,33 +65,6 @@ _None blocking._
       "stable_id_candidate": "admin",
       "status": "grounded",
       "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "member",
-      "label": "Member",
-      "job": "",
-      "desk": "member_desk",
-      "stable_id_candidate": "member",
-      "status": "grounded",
-      "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "owner",
-      "label": "Owner",
-      "job": "Person who owns/creates primary content",
-      "desk": "owner_desk",
-      "stable_id_candidate": "owner",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
-    },
-    {
-      "id_hint": "user",
-      "label": "User",
-      "job": "Generic system user",
-      "desk": "user_desk",
-      "stable_id_candidate": "user",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -128,27 +97,6 @@ _None blocking._
       "purpose": "Job desk for Admin",
       "owner_field_hint": "owner",
       "status": "hypothesis"
-    },
-    {
-      "persona": "member",
-      "name": "member_desk",
-      "purpose": "Job desk for Member",
-      "owner_field_hint": "owner",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "owner",
-      "name": "owner_desk",
-      "purpose": "Job desk for Owner",
-      "owner_field_hint": "owner",
-      "status": "hypothesis"
-    },
-    {
-      "persona": "user",
-      "name": "user_desk",
-      "purpose": "Job desk for User",
-      "owner_field_hint": "owner",
-      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -157,31 +105,26 @@ _None blocking._
       "story": "Admin has seeded JoinCo rows for their desk",
       "min_rows": 1,
       "entity_hint": "JoinCo"
-    },
-    {
-      "persona": "member",
-      "story": "Member has seeded JoinCo rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "JoinCo"
-    },
-    {
-      "persona": "owner",
-      "story": "Owner has seeded JoinCo rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "JoinCo"
-    },
-    {
-      "persona": "user",
-      "story": "User has seeded JoinCo rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "JoinCo"
     }
   ],
   "open_questions": [],
+  "process_candidates": [
+    {
+      "id_hint": "assignment",
+      "summary": "JoinCo: auto or manager assignment to a worker",
+      "personas": [
+        "manager",
+        "member"
+      ],
+      "entity_hint": "JoinCo",
+      "status": "hypothesis"
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes."
   ],
   "rejected_chrome": [
     "Data",

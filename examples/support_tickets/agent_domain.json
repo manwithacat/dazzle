@@ -2,8 +2,8 @@
   "version": 1,
   "title": "Support Tickets \u2014 Specification",
   "summary": "Support Tickets is a customer-support system that tracks customer issues from first report to resolution, with response-time awareness built in. Customers submit and follow their own tickets; Support Agents work a shared queue; Support Managers watch team performance and handle escalations; an",
-  "source_path": "examples/support_tickets/SPECIFICATION.md",
-  "source_sha256": "b6a4daae03f88387",
+  "source_path": "/Volumes/SSD/Dazzle/examples/support_tickets/SPECIFICATION.md",
+  "source_sha256": "7d69926fe7e80ddb",
   "personas": [
     {
       "id_hint": "agent",
@@ -31,15 +31,6 @@
       "stable_id_candidate": "customer",
       "status": "grounded",
       "evidence": "role word in founder brief"
-    },
-    {
-      "id_hint": "user",
-      "label": "User",
-      "job": "Generic system user",
-      "desk": "user_desk",
-      "stable_id_candidate": "user",
-      "status": "grounded",
-      "evidence": "extract_personas + brief"
     }
   ],
   "nouns": [
@@ -54,7 +45,14 @@
       "name": "SupportTicket",
       "status": "grounded",
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
-      "lifecycle_hint": [],
+      "lifecycle_hint": [
+        "open",
+        "in_progress",
+        "waiting_on_customer",
+        "escalated",
+        "resolved",
+        "closed"
+      ],
       "owner_field_hint": "assigned_to"
     },
     {
@@ -86,13 +84,6 @@
       "purpose": "Job desk for Customer",
       "owner_field_hint": "assigned_to",
       "status": "hypothesis"
-    },
-    {
-      "persona": "user",
-      "name": "user_desk",
-      "purpose": "Job desk for User",
-      "owner_field_hint": "assigned_to",
-      "status": "hypothesis"
     }
   ],
   "demo_spine": [
@@ -113,12 +104,6 @@
       "story": "Customer has seeded SupportTicket rows for their desk",
       "min_rows": 1,
       "entity_hint": "SupportTicket"
-    },
-    {
-      "persona": "user",
-      "story": "User has seeded SupportTicket rows for their desk",
-      "min_rows": 1,
-      "entity_hint": "SupportTicket"
     }
   ],
   "open_questions": [
@@ -128,16 +113,59 @@
       "blocks_promote": false
     }
   ],
+  "process_candidates": [
+    {
+      "id_hint": "approval_flow",
+      "summary": "SupportTicket: requester submits, approver decides (approve/reject)",
+      "personas": [
+        "requester",
+        "approver"
+      ],
+      "entity_hint": "SupportTicket",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "escalation",
+      "summary": "SupportTicket: worker escalates to manager when blocked or SLA risk",
+      "personas": [
+        "agent",
+        "manager"
+      ],
+      "entity_hint": "SupportTicket",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "assignment",
+      "summary": "SupportTicket: auto or manager assignment to a worker",
+      "personas": [
+        "manager",
+        "agent"
+      ],
+      "entity_hint": "SupportTicket",
+      "status": "hypothesis"
+    },
+    {
+      "id_hint": "triage",
+      "summary": "SupportTicket: intake triage before deep work",
+      "personas": [
+        "agent",
+        "manager"
+      ],
+      "entity_hint": "SupportTicket",
+      "status": "hypothesis"
+    }
+  ],
   "research_notes": [
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
-    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL."
+    "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
+    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
+    "1 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Administrator",
     "Agent",
     "Approval",
-    "Close",
     "Console",
     "Dashboard",
     "JavaScript",
@@ -152,10 +180,12 @@
     "byte",
     "change",
     "chosen",
+    "close",
     "critical",
     "data",
     "datastore",
     "declared",
+    "flat",
     "framework",
     "informal",
     "kanban",
@@ -168,9 +198,12 @@
     "personal",
     "product",
     "queue",
+    "recent",
+    "resolved",
     "response",
     "review",
     "shared",
+    "short",
     "signed",
     "solo",
     "static",

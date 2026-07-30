@@ -140,6 +140,15 @@ def _qa_smoke() -> tuple[str, str | None, int]:
     return mod.format_status(rows), nxt, len(residual)
 
 
+def _domain_cognition() -> tuple[str, str | None, int]:
+    """Lifecycle/process prior residual — AGENT_DOMAIN stale + densify opportunities."""
+    mod = _load("domain_cognition_bar", REPO / "scripts" / "domain_cognition_bar.py")
+    rows = mod.scan(live_extract=True)
+    residual = [r for r in rows if r.is_residual]
+    nxt = residual[0].app if residual else None
+    return mod.format_status(rows), nxt, len(residual)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--status", action="store_true", help="One-line suite (default)")
@@ -201,7 +210,16 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # noqa: BLE001
         results.append(("qa_smoke", f"qa_smoke error={type(exc).__name__}", None, -1))
 
-    # Selection: structure → demo → journey → felt → story_walk → trial → process → smoke.
+    try:
+        d_line, d_nxt, d_n = _domain_cognition()
+        results.append(("domain_cognition", d_line, d_nxt, d_n))
+    except Exception as exc:  # noqa: BLE001
+        results.append(
+            ("domain_cognition", f"domain_cognition error={type(exc).__name__}", None, -1)
+        )
+
+    # Selection: structure → demo → journey → felt → story_walk → trial → process → smoke
+    # → domain_cognition (lifecycle/process priors; last so product residuals win).
     # Campaign land-l25-smoke / improve_policy may force agent_qa_smoke ahead of this list.
     STRATEGY_FOR = {
         "product_maturity": "product_maturity",
@@ -212,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
         "trial_verdict": "agent_acceptance_panel",
         "process_dig": "story_walk",  # default; overridden by receipt strategy
         "qa_smoke": "agent_qa_smoke",
+        "domain_cognition": "domain_lifecycle_priors",
     }
     preferred_next: str | None = None
     preferred_probe: str | None = None
@@ -271,9 +290,14 @@ def main(argv: list[str] | None = None) -> int:
         for line in pq_lines:
             if line not in {r[1] for r in results[:3]}:
                 print(line)
-        # story_walk + trial_verdict + process_dig status lines
+        # story_walk + trial_verdict + process_dig + domain_cognition status lines
         for name, line, _nxt, _n in results:
-            if name in {"story_walk", "trial_verdict", "process_dig"}:
+            if name in {
+                "story_walk",
+                "trial_verdict",
+                "process_dig",
+                "domain_cognition",
+            }:
                 print(line)
         if wi_line:
             print(wi_line)

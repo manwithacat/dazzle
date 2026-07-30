@@ -87,6 +87,19 @@ def _section_questions(domain: AgentDomain) -> list[str]:
     ]
 
 
+def _section_processes(domain: AgentDomain) -> list[str]:
+    if not domain.process_candidates:
+        return ["_None — consider process blocks when ≥2 personas share a lifecycle noun._"]
+    lines = []
+    for p in domain.process_candidates:
+        roles = ", ".join(p.personas) if p.personas else "—"
+        lines.append(
+            f"- **{p.id_hint}** ({p.status}) entity≈`{p.entity_hint or '—'}` "
+            f"personas=[{roles}] — {p.summary}"
+        )
+    return lines
+
+
 def render_markdown(domain: AgentDomain) -> str:
     """Human + agent readable domain brief with embedded JSON twin."""
     chunks: list[str] = [
@@ -133,6 +146,10 @@ def render_markdown(domain: AgentDomain) -> str:
             "## Open questions",
             "",
             *_section_questions(domain),
+            "",
+            "## Process candidates (hypothesis)",
+            "",
+            *_section_processes(domain),
         ]
     )
     if domain.research_notes:
