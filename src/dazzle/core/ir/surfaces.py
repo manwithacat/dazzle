@@ -35,6 +35,9 @@ class RelatedDisplayMode(StrEnum):
     TABLE = "table"
     STATUS_CARDS = "status_cards"
     FILE_LIST = "file_list"
+    # Prioritised pull-work roster on a detail hub (journey cycle 1494).
+    # Renders as a queue of primary+meta rows (not a warehouse table).
+    QUEUE = "queue"
 
 
 class OpenViaTarget(BaseModel):

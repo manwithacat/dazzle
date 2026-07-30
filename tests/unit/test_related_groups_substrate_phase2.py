@@ -2,7 +2,7 @@
 
 The substrate `_build_view` originally rendered related groups as `Skeleton`
 placeholders; the (now-deleted) legacy `render_detail_view` rendered real inline
-content across 3 display modes (table / status_cards / file_list), used by 4+
+content across 4 display modes (table / status_cards / file_list / queue), used by 4+
 example apps. The substrate dispatch ctx didn't even carry the fetched data (it
 threaded the surface IR config, not `detail.related_groups`). The substrate now
 reproduces that content; this pins it.
@@ -165,4 +165,16 @@ def test_file_list_mode_renders_files() -> None:
     html = _render(g)
     assert "dz-skeleton" not in html
     assert "dz-related-file" in html
+    assert "Design" in html
+
+
+# ── queue mode (cycle 1494) ──
+
+
+def test_queue_mode_renders_queue_rows() -> None:
+    g = RelatedGroupContext(group_id="g1", label="Tasks", display="queue", tabs=[_tab()])
+    html = _render(g)
+    assert "dz-skeleton" not in html
+    assert "dz-queue-region" in html
+    assert "dz-queue-rows" in html
     assert "Design" in html

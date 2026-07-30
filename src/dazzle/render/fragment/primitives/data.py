@@ -294,14 +294,15 @@ class RelatedTab:
 @dataclass(frozen=True, slots=True)
 class RelatedGroup:
     """A group of related-entity tabs on a detail page (ADR-0049 Phase 2),
-    rendered by `display` mode: `table` (Alpine tab-strip + per-tab table),
-    `status_cards` (cards of the first 3 columns), or `file_list` (file rows
-    of the first 2 columns). Reproduces the legacy `_render_related_group`
+    rendered by `display` mode: `table` (tabs Hyperpart + per-tab table),
+    `status_cards` (cards of the first 3 columns), `file_list` (file rows
+    of the first 2 columns), or `queue` (prioritised primary+meta rows for
+    pull work on a hub). Reproduces the legacy `_render_related_group`
     content the substrate previously stubbed as a `Skeleton`."""
 
     group_id: str
     label: str
-    display: str  # "table" | "status_cards" | "file_list"
+    display: str  # "table" | "status_cards" | "file_list" | "queue"
     tabs: tuple[RelatedTab, ...]
     is_auto: bool = False
 

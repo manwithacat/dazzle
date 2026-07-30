@@ -403,13 +403,16 @@ class _RenderTablesMixin:
 
     def _emit_related_group(self, g: RelatedGroup, ctx: RenderContext) -> str:
         """Task 3a: render a related-entity group's real content (table /
-        status_cards / file_list), reproducing the legacy detail related-group
-        renderers. Cells are pre-formatted value strings (escaped here)."""
+        status_cards / file_list / queue), reproducing the legacy detail
+        related-group renderers. Cells are pre-formatted value strings
+        (escaped here)."""
         tabs = list(g.tabs)
         if g.display == "table":
             return self._emit_related_table(tabs, ctx)
         if g.display == "status_cards":
             return self._emit_related_cards(tabs, ctx)
+        if g.display == "queue":
+            return self._emit_related_queue(tabs, ctx)
         return self._emit_related_files(tabs, ctx)
 
     @staticmethod
@@ -513,6 +516,63 @@ class _RenderTablesMixin:
                 block.append(
                     f'<p class="dz-related-empty">No {ctx.escape(t.label.lower())} found.</p>'
                 )
+            block.append("</div>")
+            parts.append("".join(block))
+        return "".join(parts)
+
+    def _emit_related_queue(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
+        """Prioritised related roster — first column title, rest as meta.
+
+        Uses the same ``dz-queue-*`` classes as workspace queues so hub
+        related work (tasks, assigned work) reads as pull work, not a
+        warehouse table (RelatedDisplayMode.QUEUE, cycle 1494).
+        """
+        multi = len(tabs) > 1
+        parts: list[str] = []
+        for t in tabs:
+            block = ['<div class="dz-related-group">']
+            if multi:
+                block.append(f'<h4 class="dz-related-tab-label">{ctx.escape(t.label)}</h4>')
+            block.append(self._related_create_row(t, ctx))
+            if not t.rows:
+                block.append(
+                    f'<div class="dz-queue-region">'
+                    f'<p class="dz-empty-dense dz-queue-empty" role="status">'
+                    f"No {ctx.escape(t.label.lower())} found.</p></div>"
+                )
+                block.append("</div>")
+                parts.append("".join(block))
+                continue
+            rows_html: list[str] = []
+            for i, row in enumerate(t.rows):
+                drill = t.row_drill[i] if t.row_drill else ""
+                title = row[0] if row else ""
+                meta = row[1:] if len(row) > 1 else ()
+                meta_html = "".join(
+                    f'<span class="dz-queue-row-meta">{ctx.escape(c)}</span>' for c in meta
+                )
+                # Prefer HM queue row seam when drill present; else static row.
+                rows_html.append(
+                    render_queue_row(
+                        QueueRowSeam(
+                            title=title,
+                            attention_level="",
+                            attention_message="",
+                            date_html=meta_html,
+                            badges_html="",
+                            actions_html="",
+                            drill_url=drill or "",
+                        )
+                    )
+                )
+            block.append(
+                f'<div class="dz-queue-region">'
+                f'<div class="dz-queue-count-row">'
+                f'<span class="dz-queue-count">{len(t.rows)}</span>'
+                f"</div>"
+                f'<div class="dz-queue-rows">{"".join(rows_html)}</div>'
+                f"</div>"
+            )
             block.append("</div>")
             parts.append("".join(block))
         return "".join(parts)

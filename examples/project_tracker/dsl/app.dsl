@@ -649,8 +649,10 @@ surface project_detail "Project Detail":
     field start_date "Start"
     field target_date "Target"
 
+  # Journey hub: pull-work task roster (queue) beats warehouse table —
+  # RelatedDisplayMode.QUEUE (framework cycle 1494) + open hops to Task detail.
   related tasks "Tasks":
-    display: table
+    display: queue
     show: Task
     columns: title, status, priority, assigned_to, due_date
 
@@ -878,13 +880,14 @@ surface user_detail "Team Member Overview":
   section timeline "Timeline":
     field created_at "Joined"
 
+  # Teammate hub: assigned work as prioritised queue (RelatedDisplayMode.QUEUE).
   related assigned_work "Assigned work":
-    display: table
+    display: queue
     show: Task
     columns: title, status, priority, parent_project, due_date
 
   related owned_projects "Owned projects":
-    display: table
+    display: queue
     show: Project
     columns: name, status, target_date
 
