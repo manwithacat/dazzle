@@ -83,6 +83,12 @@ Together these form the studio's operating rhythm: designers draft assets for a
 brand, reviewers attach feedback and move work through review to approval,
 approved work is published into campaigns, and finished material is archived.
 
+## Automation & controls
+
+One durable process reinforces campaign ownership: when a Campaign becomes
+**active**, a designer claim step confirms who owns the work so activation is
+not an informal chat (verify: `dazzle process list`).
+
 ## The technical foundation
 
 **Security.** Access-controlled records are filtered to what each user is
@@ -117,4 +123,4 @@ byte-serving route to that boundary, so no new route can stream asset bytes
 outside it without being explicitly listed. (Verify:
 `dazzle rbac byte-routes --strict`.)
 
-<!-- dazzle-spec-brief: sha256:2135ddbb78a90aebef3c2fae8e05600b66f3c446b7db555d01ef21dcbb24ea82 -->
+<!-- dazzle-spec-brief: sha256:250c696056b8abfff33755261974676b0d1a3120afc4986f88c0334c84603024 -->
