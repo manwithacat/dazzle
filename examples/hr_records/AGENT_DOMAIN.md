@@ -7,8 +7,8 @@
 
 *Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every
 
-**Source:** `/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md`
-**Fingerprint:** `d75851f836ec5327`
+**Source:** `examples/hr_records/SPECIFICATION.md`
+**Fingerprint:** `c8c48b3e344dea3c`
 
 ## Personas (jobs)
 
@@ -21,10 +21,11 @@
 - **Department** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Person** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
 - **Role** (grounded) owner≈`owner` lifecycle: — — definitional sentence in founder brief (A X is …)
+- **Employment** (grounded) owner≈`owner` lifecycle: active → on_leave → terminated — appears in founder brief (source=article_noun)
 
 ## Rejected chrome (not domain)
 
-`Beyond`, `Card`, `JavaScript`, `Link`, `Machine`, `ManagerLink`, `Metric`, `Team`, `Think`, `auditable`, `career`, `catalogued`, `clear`, `command`, `compensation`, `current`, `currently`, `data`, `detail`, `directory`, `effective`, `facts`, `formal`, `framework`, `idea`, `identity`, `line`, `live`, `mature`, `organisation`, `organisational`, `parent`, `period`, `personnel`, `present`, `product`, `report`, `review`, `rules`, `starter`, `technical`, `time`, `tree`, `visual`, `work`
+`Beyond`, `Card`, `JavaScript`, `Link`, `Machine`, `ManagerLink`, `Metric`, `Team`, `Think`, `auditable`, `career`, `catalogued`, `clear`, `command`, `compensation`, `current`, `currently`, `data`, `detail`, `directory`, `effective`, `facts`, `formal`, `framework`, `idea`, `identity`, `informal`, `line`, `live`, `mature`, `organisation`, `organisational`, `parent`, `period`, `personnel`, `present`, `product`, `report`, `review`, `rules`, `starter`, `technical`, `time`, `tree`, `visual`, `work`
 
 ## Desks
 
@@ -44,8 +45,8 @@ _None blocking._
 
 ## Process candidates (hypothesis)
 
-- **escalation** (hypothesis) entity≈`Department` personas=[member, manager] — Department: worker escalates to manager when blocked or SLA risk
-- **assignment** (hypothesis) entity≈`Department` personas=[manager, member] — Department: auto or manager assignment to a worker
+- **escalation** (hypothesis) entity≈`Employment` personas=[member, manager] — Employment: worker escalates to manager when blocked or SLA risk
+- **assignment** (hypothesis) entity≈`Employment` personas=[manager, member] — Employment: auto or manager assignment to a worker
 
 ## Research notes
 
@@ -53,6 +54,7 @@ _None blocking._
 - Do not promote ungrounded nouns.
 - Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.
 - process_candidates are hypotheses — author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.
+- 1 noun(s) carry lifecycle_hint — emit transitions: (and lifecycle: evidence when product requires ADR-0020).
 
 ## Machine twin
 
@@ -61,8 +63,8 @@ _None blocking._
   "version": 1,
   "title": "HR Records \u2014 System Specification",
   "summary": "*Generated from the application model. Every guarantee cited below can be independently verified with the command shown beside it.* HR Records is a personnel record system built around a simple idea: the facts about a person's career change over time, and the system should remember every",
-  "source_path": "/Volumes/SSD/Dazzle/examples/hr_records/SPECIFICATION.md",
-  "source_sha256": "d75851f836ec5327",
+  "source_path": "examples/hr_records/SPECIFICATION.md",
+  "source_sha256": "c8c48b3e344dea3c",
   "personas": [
     {
       "id_hint": "manager",
@@ -113,6 +115,17 @@ _None blocking._
       "evidence": "definitional sentence in founder brief (A X is \u2026)",
       "lifecycle_hint": [],
       "owner_field_hint": "owner"
+    },
+    {
+      "name": "Employment",
+      "status": "grounded",
+      "evidence": "appears in founder brief (source=article_noun)",
+      "lifecycle_hint": [
+        "active",
+        "on_leave",
+        "terminated"
+      ],
+      "owner_field_hint": "owner"
     }
   ],
   "desks": [
@@ -162,22 +175,22 @@ _None blocking._
   "process_candidates": [
     {
       "id_hint": "escalation",
-      "summary": "Department: worker escalates to manager when blocked or SLA risk",
+      "summary": "Employment: worker escalates to manager when blocked or SLA risk",
       "personas": [
         "member",
         "manager"
       ],
-      "entity_hint": "Department",
+      "entity_hint": "Employment",
       "status": "hypothesis"
     },
     {
       "id_hint": "assignment",
-      "summary": "Department: auto or manager assignment to a worker",
+      "summary": "Employment: auto or manager assignment to a worker",
       "personas": [
         "manager",
         "member"
       ],
-      "entity_hint": "Department",
+      "entity_hint": "Employment",
       "status": "hypothesis"
     }
   ],
@@ -185,7 +198,8 @@ _None blocking._
     "Prefer knowledge concepts before inventing structure.",
     "Do not promote ungrounded nouns.",
     "Counter-prior bootstrap_pollution: this document is cognition draft, not DSL.",
-    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes."
+    "process_candidates are hypotheses \u2014 author `process` blocks when multi-persona handoffs are real; do not invent decorative processes.",
+    "1 noun(s) carry lifecycle_hint \u2014 emit transitions: (and lifecycle: evidence when product requires ADR-0020)."
   ],
   "rejected_chrome": [
     "Beyond",
@@ -214,6 +228,7 @@ _None blocking._
     "framework",
     "idea",
     "identity",
+    "informal",
     "line",
     "live",
     "mature",

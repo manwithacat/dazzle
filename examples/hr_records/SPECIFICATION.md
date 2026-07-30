@@ -37,6 +37,8 @@ record types tied to that person:
 
 - An **Employment** record assigns a person to a role and a department for a
   period; a record with no end date is the currently active assignment.
+
+An Employment assignment moves active -> on_leave -> terminated under normal HR control; terminated or on_leave may return to active when rehired or returned.
 - A **Salary** record captures compensation for a period; one with no closing
   date is the compensation in force today.
 - A **Manager Link** records a reporting line between a report and their
@@ -106,6 +108,8 @@ which keeps the product fast, accessible, and simple to operate. (Verify:
 
 ## Automation & controls
 
+**Employment lifecycle.** Employment assignments move active → on_leave → terminated (HR may return on_leave or terminated to active).
+
 One durable process reinforces the employment handoff: when a new **Employment**
 row is created, a manager acknowledgment step is required so team ownership is
 not an informal chat (verify: `dazzle process list`).
@@ -114,4 +118,4 @@ not an informal chat (verify: `dazzle process list`).
 
 Work moves through the roles and queues described above so each step has a clear owner.
 
-<!-- dazzle-spec-brief: sha256:ef8dff600ef5befcf9e0bc88c864be766446ab83e3b742b9bd0d512dcf204861 -->
+<!-- dazzle-spec-brief: sha256:b618b683586541ab848c615455c83e0403c0840efc2f776f7e9e4187a438a490 -->

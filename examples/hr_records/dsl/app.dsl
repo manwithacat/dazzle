@@ -259,8 +259,17 @@ entity Employment "Employment":
   department: ref Department required    # denormalised — role may move dept later
   start_date: date required
   end_date: date    # NULL = currently active
-
+  # Domain residual lifecycle densify (cycle 1476): phase of the assignment
+  # (complements temporal start/end — status is the SM; dates are the range).
+  status: enum[active,on_leave,terminated]=active
   notes: text
+
+  transitions:
+    active -> on_leave: role(hr_admin)
+    on_leave -> active: role(hr_admin)
+    active -> terminated: role(hr_admin)
+    on_leave -> terminated: role(hr_admin)
+    terminated -> active: role(hr_admin)
 
   # #1223 Phase 3a.i (v0.71.161) — IR + parser shipped. Runtime
   # consumers (tombstone filter on read paths, ?as_of= URL param,

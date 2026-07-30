@@ -47,8 +47,8 @@ apply map patches with `{"apply":true}`.
 
 | Capability | Class | Surface | Owning lane | Last-exercised | Status |
 |---|---|---|---|---|---|
-| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1475 | USED |
-| **domain lifecycle/process priors** (`domain_brief.lifecycles` + `domain_cognition_bar`) | COGNITION | script + extract | **example-apps** | 1475 | USED |
+| `dazzle domain` / MCP `domain` (extract/gaps/research/promote) | COGNITION | CLI+MCP | **example-apps** + agent DX | 1476 | USED |
+| **domain lifecycle/process priors** (`domain_brief.lifecycles` + `domain_cognition_bar`) | COGNITION | script + extract | **example-apps** | 1476 | USED |
 | MCP `product_quality` (persona homes + stills + maturity + metric_list risk) | COGNITION | MCP | **example-apps** | 1403 | STALE |
 | `dazzle demo quality` (#1626 felt residual bar) | COGNITION | CLI | **example-apps** | 1403 | STALE |
 | `dazzle demo reset-and-load` (#1627 closed-loop seed) | COGNITION | CLI | example-apps + agent DX | 1430 | STALE |
