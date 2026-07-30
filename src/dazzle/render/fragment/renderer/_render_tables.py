@@ -520,68 +520,95 @@ class _RenderTablesMixin:
             parts.append("".join(block))
         return "".join(parts)
 
+    def _emit_related_queue_body(self, t: RelatedTab, ctx: RenderContext) -> str:
+        """Create-row + queue region for one related tab (shared by multi/single)."""
+        parts = [self._related_create_row(t, ctx)]
+        if not t.rows:
+            parts.append(
+                f'<div class="dz-queue-region">'
+                f'<p class="dz-empty-dense dz-queue-empty" role="status">'
+                f"No {ctx.escape(t.label.lower())} found.</p></div>"
+            )
+            return "".join(parts)
+        rows_html: list[str] = []
+        headers = list(t.headers or ())
+        for i, row in enumerate(t.rows):
+            drill = t.row_drill[i] if t.row_drill else ""
+            title = row[0] if row else ""
+            meta_vals = row[1:] if len(row) > 1 else ()
+            meta_headers = headers[1 : 1 + len(meta_vals)]
+            # Cycle 1498: label meta with column headers when present so
+            # hub queues read like workspace queues ("Status: open"), not
+            # anonymous bare values.
+            meta_parts: list[str] = []
+            for j, val in enumerate(meta_vals):
+                label = meta_headers[j] if j < len(meta_headers) else ""
+                text = f"{ctx.escape(label)}: {ctx.escape(val)}" if label else ctx.escape(val)
+                meta_parts.append(f'<span class="dz-queue-row-meta">{text}</span>')
+            meta_html = "".join(meta_parts)
+            rows_html.append(
+                render_queue_row(
+                    QueueRowSeam(
+                        title=title,
+                        attention_level="",
+                        attention_message="",
+                        date_html=meta_html,
+                        badges_html="",
+                        actions_html="",
+                        drill_url=drill or "",
+                    )
+                )
+            )
+        parts.append(
+            f'<div class="dz-queue-region">'
+            f'<div class="dz-queue-count-row">'
+            f'<span class="dz-queue-count">{len(t.rows)}</span>'
+            f"</div>"
+            f'<div class="dz-queue-rows">{"".join(rows_html)}</div>'
+            f"</div>"
+        )
+        return "".join(parts)
+
     def _emit_related_queue(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:
         """Prioritised related roster — first column title, rest as meta.
 
         Uses the same ``dz-queue-*`` classes as workspace queues so hub
         related work (tasks, assigned work) reads as pull work, not a
         warehouse table (RelatedDisplayMode.QUEUE, cycle 1494).
+
+        Multi-tab strips ride the HM tabs Hyperpart (cycle 1505) — same as
+        related ``table`` mode — so agents and users switch queues without
+        stacking every roster under stacked h4 labels.
         """
+        if not tabs:
+            return ""
         multi = len(tabs) > 1
-        parts: list[str] = []
-        for t in tabs:
-            block = ['<div class="dz-related-group">']
-            if multi:
-                block.append(f'<h4 class="dz-related-tab-label">{ctx.escape(t.label)}</h4>')
-            block.append(self._related_create_row(t, ctx))
-            if not t.rows:
-                block.append(
-                    f'<div class="dz-queue-region">'
-                    f'<p class="dz-empty-dense dz-queue-empty" role="status">'
-                    f"No {ctx.escape(t.label.lower())} found.</p></div>"
-                )
-                block.append("</div>")
-                parts.append("".join(block))
-                continue
-            rows_html: list[str] = []
-            headers = list(t.headers or ())
-            for i, row in enumerate(t.rows):
-                drill = t.row_drill[i] if t.row_drill else ""
-                title = row[0] if row else ""
-                meta_vals = row[1:] if len(row) > 1 else ()
-                meta_headers = headers[1 : 1 + len(meta_vals)]
-                # Cycle 1498: label meta with column headers when present so
-                # hub queues read like workspace queues ("Status: open"), not
-                # anonymous bare values.
-                meta_parts: list[str] = []
-                for j, val in enumerate(meta_vals):
-                    label = meta_headers[j] if j < len(meta_headers) else ""
-                    text = f"{ctx.escape(label)}: {ctx.escape(val)}" if label else ctx.escape(val)
-                    meta_parts.append(f'<span class="dz-queue-row-meta">{text}</span>')
-                meta_html = "".join(meta_parts)
-                rows_html.append(
-                    render_queue_row(
-                        QueueRowSeam(
-                            title=title,
-                            attention_level="",
-                            attention_message="",
-                            date_html=meta_html,
-                            badges_html="",
-                            actions_html="",
-                            drill_url=drill or "",
-                        )
-                    )
-                )
-            block.append(
-                f'<div class="dz-queue-region">'
-                f'<div class="dz-queue-count-row">'
-                f'<span class="dz-queue-count">{len(t.rows)}</span>'
-                f"</div>"
-                f'<div class="dz-queue-rows">{"".join(rows_html)}</div>'
-                f"</div>"
+        if not multi:
+            return (
+                f'<div class="dz-related-group">{self._emit_related_queue_body(tabs[0], ctx)}</div>'
             )
-            block.append("</div>")
-            parts.append("".join(block))
+        parts = ['<div class="dz-tabs" data-dz-tabs>']
+        buttons = "".join(
+            f'<button type="button" class="dz-tabs__tab"'
+            f"{' aria-current="true"' if i == 0 else ''} "
+            f'data-dz-tab-target="dz-related-tab-{ctx.escape_attr(t.tab_id)}">'
+            f'{ctx.escape(t.label)}<span class="dz-related-tab-count">{len(t.rows)}</span>'
+            "</button>"
+            for i, t in enumerate(tabs)
+        )
+        parts.append(f'<div class="dz-tabs__list">{buttons}</div>')
+        for i, t in enumerate(tabs):
+            panel_attrs = (
+                f' id="dz-related-tab-{ctx.escape_attr(t.tab_id)}" class="dz-tabs__panel"'
+                f"{'' if i == 0 else ' hidden'}"
+            )
+            parts.append(
+                f"<div{panel_attrs}>"
+                f'<div class="dz-related-group">'
+                f"{self._emit_related_queue_body(t, ctx)}"
+                f"</div></div>"
+            )
+        parts.append("</div>")
         return "".join(parts)
 
     def _emit_related_files(self, tabs: list[RelatedTab], ctx: RenderContext) -> str:

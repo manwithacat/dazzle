@@ -188,3 +188,25 @@ def test_queue_mode_labels_meta_with_column_headers() -> None:
     # Badge/type format may title-case values; label prefix is the contract.
     assert "Status: " in html
     assert "Design" in html
+
+
+def test_queue_mode_multi_tab_uses_hm_tabs() -> None:
+    """Cycle 1505 — multi related-queue strips use HM tabs (not stacked h4s)."""
+    g = RelatedGroupContext(
+        group_id="g1",
+        label="Work",
+        display="queue",
+        tabs=[
+            _tab(tab_id="tasks", label="Tasks"),
+            _tab(tab_id="bugs", label="Bugs", entity_name="Bug"),
+        ],
+    )
+    html = _render(g)
+    assert 'class="dz-tabs" data-dz-tabs' in html or "data-dz-tabs" in html
+    assert 'class="dz-tabs__tab"' in html
+    assert 'data-dz-tab-target="dz-related-tab-tasks"' in html
+    assert 'id="dz-related-tab-bugs"' in html
+    assert "dz-related-tab-count" in html
+    assert "dz-related-tab-label" not in html  # no stacked h4 labels
+    assert "dz-queue-region" in html
+    assert "Design" in html
