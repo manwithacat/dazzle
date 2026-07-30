@@ -375,8 +375,10 @@ surface task_detail "Task Detail":
     field created_at "Created"
     field updated_at "Updated"
 
+  # Task hub discussion as pull roster queue (content-first), not warehouse
+  # table — ST-021 assignee overview / Monday-review path (cycle 1502 acceptance).
   related discussion "Discussion":
-    display: table
+    display: queue
     show: TaskComment
     columns: content, author, created_at
 
@@ -548,13 +550,16 @@ surface user_detail "Team Member Overview":
   section timeline "Timeline":
     field created_at "Joined"
 
+  # Team-member hub pull queues (RelatedDisplayMode.QUEUE) — title-first open
+  # work roster for Monday review (ST-021 / agency_lead criteria), not warehouse
+  # tables (cycle 1502 agent_acceptance_panel).
   related work "Open work":
-    display: table
+    display: queue
     show: Task
     columns: title, status, priority, due_date
 
   related comments "Comments":
-    display: table
+    display: queue
     show: TaskComment
     columns: content, author, created_at
 
