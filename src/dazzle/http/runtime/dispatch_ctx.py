@@ -314,6 +314,32 @@ def _detail_actions_from_context(detail: Any) -> dict[str, Any]:
     }
 
 
+def _detail_primary_cta_fields(detail: Any) -> dict[str, str]:
+    """EX-048: edit_url / edit_label / primary_action_kind for the adapter."""
+    return {
+        "edit_url": getattr(detail, "edit_url", None) or "",
+        "edit_label": getattr(detail, "edit_label", None) or "Edit",
+        "primary_action_kind": getattr(detail, "primary_action_kind", None) or "edit",
+    }
+
+
+def _maybe_append_subtype_panels(
+    fields_out: list[Any],
+    item: Any,
+    surface: ir.SurfaceSpec | None,
+    services: Any,
+) -> None:
+    """Subtype panel fields when app_spec + multi-section surface + dict item."""
+    if services is None or surface is None or not isinstance(item, dict):
+        return
+    if not getattr(surface, "sections", None):
+        return
+    app_spec = getattr(services, "app_spec", None)
+    if app_spec is None:
+        return
+    _append_subtype_panel_fields(fields_out, item, surface, app_spec)
+
+
 def _dispatch_ctx_from_detail(
     detail: Any,
     surface: ir.SurfaceSpec | None,
@@ -323,34 +349,30 @@ def _dispatch_ctx_from_detail(
     """VIEW: DetailContext → flat detail-adapter ctx."""
     item = getattr(detail, "item", {}) or {}
     detail_fields_out = _detail_fields_from_context(detail)
-    app_spec = getattr(services, "app_spec", None) if services is not None else None
-    if (
-        app_spec is not None
-        and surface is not None
-        and getattr(surface, "sections", None)
-        and isinstance(item, dict)
-    ):
-        _append_subtype_panel_fields(detail_fields_out, item, surface, app_spec)
+    _maybe_append_subtype_panels(detail_fields_out, item, surface, services)
     actions = _detail_actions_from_context(detail)
-    return {
+    entity_name = getattr(detail, "entity_name", "") or ""
+    item_id = ""
+    if isinstance(item, dict):
+        item_id = str(item.get("id", "") or "")
+    ctx: dict[str, Any] = {
         "fields": detail_fields_out,
         "sections": _detail_sections_from_context(detail),
-        "region_name": getattr(detail, "entity_name", "") + "_detail",
+        "region_name": f"{entity_name}_detail",
         "related_groups": _related_groups_from_detail(detail),
-        "edit_url": getattr(detail, "edit_url", None) or "",
-        "edit_label": getattr(detail, "edit_label", None) or "Edit",
-        "primary_action_kind": getattr(detail, "primary_action_kind", None) or "edit",
         "delete_url": getattr(detail, "delete_url", None) or "",
         "back_url": getattr(detail, "back_url", "/") or "/",
-        "entity_name": getattr(detail, "entity_name", "") or "",
+        "entity_name": entity_name,
         "transitions": actions["transitions"],
         "status_field": getattr(detail, "status_field", "status") or "status",
         "integration_actions": actions["integration_actions"],
         "external_link_actions": actions["external_link_actions"],
-        "item_id": str(item.get("id", "") or "") if isinstance(item, dict) else "",
+        "item_id": item_id,
         "show_history": bool(getattr(detail, "show_history", False)),
         "detail_context": detail,
     }
+    ctx.update(_detail_primary_cta_fields(detail))
+    return ctx
 
 
 def _build_dispatch_ctx(
