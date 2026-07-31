@@ -153,3 +153,27 @@ RESTING_ICONS_MEASURE_JS = """() => {
     thTextRight,
   };
 }"""
+
+
+# Cycle 1538 — overflow.cell_no_stack: multi-chip rows stay one baseline.
+CHIP_STRIP_BASELINE_MEASURE_JS = """() => {
+  const strips = [...document.querySelectorAll('.dz-tr-actions')];
+  if (!strips.length) return { error: 'no .dz-tr-actions strips' };
+  const rows = [];
+  for (const strip of strips) {
+    const cs = getComputedStyle(strip);
+    const kids = [...strip.children].filter(
+      (el) => el.getBoundingClientRect().width > 0.5
+    );
+    if (kids.length < 2) continue;
+    const tops = kids.map((el) => el.getBoundingClientRect().top);
+    rows.push({
+      childCount: kids.length,
+      tops,
+      flexWrap: cs.flexWrap,
+      flexDirection: cs.flexDirection,
+    });
+  }
+  if (!rows.length) return { error: 'no multi-child action strips' };
+  return { rows };
+}"""

@@ -84,5 +84,31 @@ def assert_box_near_cell_end(
     assert 0 <= delta < max_pad, f"{label}: delta to cell right={delta} (box={box}, cell={cell})"
 
 
+# Multi-chip actions: tops within ε; flex-wrap must stay nowrap (humanqa stack).
+BASELINE_TOP_EPS_PX = 4.0
+
+
+def assert_single_baseline_no_stack(
+    tops: list[float],
+    *,
+    flex_wrap: str | None = None,
+    eps: float = BASELINE_TOP_EPS_PX,
+    label: str = "action children",
+) -> None:
+    """``overflow.cell_no_stack`` — action children share one baseline (no wrap stack).
+
+    Multi-word SM chips + icons must stay a single horizontal pack. A wrap
+    stack under a narrow actions column is the humanqa failure mode where
+    chips look like a vertical pile left of the ACTIONS header.
+    """
+    if flex_wrap is not None:
+        assert flex_wrap == "nowrap", f"{label}: flex-wrap={flex_wrap!r} (expected nowrap)"
+    assert tops, f"{label}: no measured tops"
+    lo, hi = min(tops), max(tops)
+    assert (hi - lo) <= eps, (
+        f"{label}: tops span {hi - lo:.2f}px > eps={eps} (tops={tops}) — children stacked"
+    )
+
+
 def require_no_error(raw: dict[str, Any]) -> None:
     assert raw.get("error") is None, raw

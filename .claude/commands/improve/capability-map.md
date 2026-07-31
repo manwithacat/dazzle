@@ -82,7 +82,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1534 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1538 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1538 (2026-07-31).** campaign hyperpart_coherence queue=0 lag~19 (post-1519) → fall-through **framework-ux** (skip 4th consecutive gallery expand): **ship** layout_kit `overflow.cell_no_stack` predicate + `CHIP_STRIP_BASELINE_MEASURE_JS` + L2 multi-chip baseline test; geometry 6 passed. residual=0 densify=0 dual_lock=0. fitness **USED@1538**. budget 1. Explore **94/100**.
 
 > **Cycle 1537 (2026-07-31).** campaign hyperpart_coherence queue=0 lag~18 (post-1519) → fall-through **gallery_probes** expand: **ship** `search_select.open_typeahead_select_hold` + `search_select_typeahead_select` runner; catalog **31/31 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction + hyperpart OBSERVE **USED@1537**. budget 1. Explore **93/100**.
 

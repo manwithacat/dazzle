@@ -19,6 +19,7 @@ from tests.layout_kit.predicates import (
     assert_multiword_chip_wider_than_icon,
     assert_no_ghost_flex_items,
     assert_shared_end,
+    assert_single_baseline_no_stack,
     assert_strip_flex_end_full_width,
 )
 
@@ -29,6 +30,7 @@ __all__ = [
     "assert_multiword_chip_wider_than_icon",
     "assert_no_ghost_flex_items",
     "assert_shared_end",
+    "assert_single_baseline_no_stack",
     "assert_strip_flex_end_full_width",
     "dazzle_css_path",
     "measure_selectors",

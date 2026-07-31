@@ -23,6 +23,7 @@ pytest.importorskip("playwright.sync_api")
 
 from tests.layout_kit.fixtures import (  # noqa: E402
     ACTIONS_COLUMN_MEASURE_JS,
+    CHIP_STRIP_BASELINE_MEASURE_JS,
     RESTING_ICONS_MEASURE_JS,
     actions_column_table_body,
     actions_resting_icons_body,
@@ -38,6 +39,7 @@ from tests.layout_kit.predicates import (  # noqa: E402
     assert_multiword_chip_wider_than_icon,
     assert_no_ghost_flex_items,
     assert_shared_end,
+    assert_single_baseline_no_stack,
     assert_strip_flex_end_full_width,
     require_no_error,
 )
@@ -129,3 +131,33 @@ def test_resting_state_icons_do_not_reserve_space_left_of_chips() -> None:
         eps=ALIGN_END_EPS_PX,
         label="resting chips under ACTIONS header",
     )
+
+
+def test_multi_chip_actions_share_single_baseline_no_stack() -> None:
+    """``overflow.cell_no_stack`` — multi SM chips stay one horizontal pack.
+
+    Cycle 1538 layout_kit expand (Phase 1+ of css-layout-test-architecture).
+    """
+    css_path = dazzle_css_path()
+    if not css_path.is_file():
+        pytest.skip(f"missing bundled CSS {css_path}")
+    html = wrap_fixture_html(
+        actions_column_table_body(),
+        css=css_path.read_text(encoding="utf-8"),
+    )
+    snap = render_layout(
+        html=html,
+        state=LayoutState.RESTING,
+        measure_js=CHIP_STRIP_BASELINE_MEASURE_JS,
+        tmp_name="dz-actions-chip-baseline.html",
+    )
+    data = snap.raw
+    require_no_error(data)
+    rows = data.get("rows") or []
+    assert rows, data
+    for i, r in enumerate(rows):
+        assert_single_baseline_no_stack(
+            list(r["tops"]),
+            flex_wrap=r.get("flexWrap"),
+            label=f"actions strip row[{i}]",
+        )
