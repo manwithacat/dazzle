@@ -240,7 +240,9 @@ surface ticket_detail "Ticket Detail":
 surface classification_list "Classifications":
   uses entity TicketClassification
   mode: list
-  open: Ticket via ticket
+  # Dual open (cycle 1540 agent_acceptance): primary = classification hub for
+  # ST-006 inspect run; secondary = parent Ticket hub for ST-003 trail review.
+  open: TicketClassification via id | Ticket via ticket
   section main:
     field ticket "Ticket"
     field category "Category"
@@ -248,7 +250,7 @@ surface classification_list "Classifications":
     field sentiment "Sentiment"
     field classified_at "Classified At"
   ux:
-    purpose: "Review AI classifications — open a row for the parent ticket hub"
+    purpose: "Review AI classifications — open a row for the classification hub or parent ticket hub"
     sort: classified_at desc
     filter: category, priority, sentiment
     search: suggested_response, llm_job_id

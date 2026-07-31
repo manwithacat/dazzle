@@ -1,0 +1,21 @@
+# Story walk ST-002 — Support agent opens ticket hub with AI classifications
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-002
+
+persona: support_agent
+home_workspace: ticket_management
+
+scenes:
+  - id: land_st_002
+    story: ST-002
+    entry: /app/workspaces/ticket_management
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Ticket
+          - Queue
+          - Status
+          - Subject
+    expects: "Agent lands ticket queue from which ticket hubs with AI classifications open"

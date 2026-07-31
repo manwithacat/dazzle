@@ -12,6 +12,8 @@ related AI classifications as a **pull queue** (not warehouse table) (ST-002).
 - Agent `ticket_management` = non-closed queue + full list.
 - Ticket detail hub: lifecycle strip + related classifications `display: queue`
   (cycle 1504 journey_dogfood).
+- Classification list dual open `TicketClassification via id | Ticket via ticket`
+  (cycle 1540 agent_acceptance) — ST-006 inspect run + ST-003 parent ticket hub.
 - LLM intents remain the automation story; workspaces own the human job.
 
 ## Not this

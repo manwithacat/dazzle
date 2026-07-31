@@ -30,7 +30,7 @@ the ticket, this is worse than the spreadsheet.
 tasks = [
     "Land on Ticket Management. Can you see non-closed work as a queue and open a ticket without hunting?",
     "Open a ticket hub. Is there a lifecycle/status strip and related AI classifications, or a flat field dump?",
-    "Browse classifications (if reachable). Opening a classification — do you hop to the parent ticket hub, or get stuck on an orphan AI row?",
+    "Browse classifications (if reachable). Opening a classification — can you reach the classification hub (inspect the AI run) and/or the parent ticket hub, or get stuck on an orphan AI row?",
     "Create a new ticket or edit status on an existing one. Does the flow feel like support work, or CRUD admin?",
 ]
 

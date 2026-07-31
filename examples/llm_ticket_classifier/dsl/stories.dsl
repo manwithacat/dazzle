@@ -40,7 +40,7 @@ story ST-003 "Supervisor reviews classification trail":
     - "TicketClassifications exist from LLM runs"
   then:
     - "Supervisor sees classifications sorted by classified_at"
-    - "Opening a classification row hops to the parent Ticket hub"
+    - "Opening a classification row can hop to the classification hub (id) or parent Ticket hub via ticket"
 
 story ST-004 "Support agent captures a new ticket for auto-classify":
   status: accepted
@@ -77,3 +77,4 @@ story ST-006 "Agent inspects a single classification run":
   then:
     - "Classification hub shows triage labels, confidence strip, and suggested response"
     - "llm_job_id remains visible for auditability"
+    - "Classification list dual-open can land on this hub via TicketClassification id"

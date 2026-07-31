@@ -1,0 +1,23 @@
+# Story walk ST-006 — Agent inspects a single classification run
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-006
+# classification_list dual-open lands TicketClassification via id (cycle 1540)
+
+persona: support_agent
+home_workspace: ticket_management
+
+scenes:
+  - id: land_st_006
+    story: ST-006
+    entry: /app/workspaces/ticket_management
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Ticket
+          - Classif
+          - Category
+          - Priority
+          - Sentiment
+    expects: "Agent reaches classification trail from job workspace (dual-open list path to ST-006 hub)"

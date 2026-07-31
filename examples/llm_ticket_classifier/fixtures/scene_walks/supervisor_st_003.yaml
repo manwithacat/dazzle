@@ -1,0 +1,23 @@
+# Story walk ST-003 — Supervisor reviews classification trail
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-003
+# Dual open on classification_list (cycle 1540): TicketClassification | Ticket
+
+persona: supervisor
+home_workspace: support_dashboard
+
+scenes:
+  - id: land_st_003
+    story: ST-003
+    entry: /app/workspaces/support_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Classif
+          - Ticket
+          - Category
+          - Priority
+          - Sentiment
+    expects: "Authenticated supervisor sees classification trail / metrics cues"

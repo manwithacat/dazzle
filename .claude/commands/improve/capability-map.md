@@ -60,13 +60,13 @@ apply map patches with `{"apply":true}`.
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
 | **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1532 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1523 | USED |
-| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1528 | USED |
+| **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1540 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1361 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa smoke-dig` (fleet random-seed dig cycle) | COGNITION | CLI + script | **example-apps** + trials | 1328 | STALE |
 | `dazzle qa hyperpart-opportunities` | COGNITION | CLI | **example-apps** + trials + framework-ux | 1418 | STALE |
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
-| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1526 | USED |
+| **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1540 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1526 | USED |
 | **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1528 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1540 (2026-07-31).** campaign force **example-apps agent_acceptance_panel**: dig llm_ticket_classifier — **product** classification_list dual open `TicketClassification via id | Ticket via ticket`; ST-003/006 criteria + stem + trial wording; 4 scene walks validate+dry-run; dig receipt PASS live_unproven (trial skip product_first). residual_total=0 densify=0. acceptance+story_walk **USED@1540**. budget 1. Explore **96/100**.
 
 > **Cycle 1539 (2026-07-31).** campaign **hyperpart_coherence investigate** (lag≥20 since 1519): recapture 92/92 (0 404s); host Read spot-check app-shell-live/pdf/diagram/grid-cols; PIL non-blank; ingest coherent=92 mean=8.91 queue=0. **Ship require_mutation:** `money.sync_minor_and_blur_normalize` gallery probe; catalog **32/32 PASS**. hyperpart + gallery **USED@1539**. budget 1. Explore **95/100**.
 

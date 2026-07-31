@@ -1,0 +1,22 @@
+# Story walk ST-001 — Support agent works the open ticket queue
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-001
+
+persona: support_agent
+home_workspace: ticket_management
+
+scenes:
+  - id: land_st_001
+    story: ST-001
+    entry: /app/workspaces/ticket_management
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Ticket
+          - Queue
+          - Status
+          - Subject
+          - Open
+    expects: "Authenticated support agent sees ticket queue cues on ticket_management"
