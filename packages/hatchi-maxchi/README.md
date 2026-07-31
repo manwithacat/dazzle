@@ -21,11 +21,11 @@ release tag (fonts resolve relatively — no extra setup):
 
 ```html
 <link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/gh/manwithacat/hatchi-maxchi@v0.1.1/dist/hatchi-maxchi.css"
-      integrity="sha384-4Z7gtoZuZUhVnNEMeDC3/AXOILjQcFC/nbO9nQphICi8jo1RGGYZGs+CHPwOfTYw"
+      href="https://cdn.jsdelivr.net/gh/manwithacat/hatchi-maxchi@v0.2.0/dist/hatchi-maxchi.css"
+      integrity="sha384-SPOTkEk27jv24h/Dpih9OwXM0dTGCoEf0uQQJEHse8P9E8qhdk+QvPsut3A6Wur3"
       crossorigin="anonymous">
-<script src="https://cdn.jsdelivr.net/gh/manwithacat/hatchi-maxchi@v0.1.1/dist/hatchi-maxchi.js"
-        integrity="sha384-jGqDs8tteHH9K20CHlgS9G9u65mjpYvV3hBuarTb2oI8ahsPn8CxPYqbPMUhCtl1"
+<script src="https://cdn.jsdelivr.net/gh/manwithacat/hatchi-maxchi@v0.2.0/dist/hatchi-maxchi.js"
+        integrity="sha384-M9W0grtfNiYrivGnVK/FRI4+YNlf3x1RkyXuQT8byKKvOIRyWt3z7JABBMfTdZk6"
         crossorigin="anonymous" defer></script>
 ```
 
@@ -265,7 +265,7 @@ developer, but not mistakable for shadcn side-by-side.
 ## Versioning & releases
 
 Semantic versioning from **0.1.0**; `package.json` is the version source
-of truth and release tags (`v0.1.0`) must match it — CI enforces this and
+of truth and release tags (`v0.2.0`) must match it — CI enforces this and
 attaches the built bundle to each
 [GitHub release](https://github.com/manwithacat/hatchi-maxchi/releases).
 Pre-1.0, minor bumps may rename or reshape components; patch bumps are
