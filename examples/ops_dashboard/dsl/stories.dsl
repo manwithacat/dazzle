@@ -95,7 +95,7 @@ story ST-008 "Operations Engineer triages alerts by severity then opens system c
     - "Open Alerts exist across systems"
   then:
     - "Severity breakdown charts and the ack queue surface critical/high first"
-    - "Alert row open hops to the System overview hub via system FK"
+    - "Alert rows open the Alert hub (id) or hop to the System overview hub via system FK"
 
 story ST-009 "Operations Engineer drills into a degraded system hub":
   status: accepted
@@ -119,4 +119,5 @@ story ST-010 "Operations Engineer reviews alert history against system health":
     - "System has transitioned through degraded / critical states"
   then:
     - "Alert detail shows severity strip and parent System"
+    - "Operator reaches the alert hub from the alert list (open Alert via id) or system context"
     - "Operator correlates status-change timestamps with triggering Alerts"

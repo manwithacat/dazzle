@@ -1071,7 +1071,8 @@ surface alert_list "Alerts":
   uses entity Alert
   mode: list
   render: fragment
-  open: System via system
+  # Dual open-via (cycle 1526): alert hub first, parent System hub as pipe hop.
+  open: Alert via id | System via system
 
   section main "Active Alerts":
     field system "System"
@@ -1081,7 +1082,7 @@ surface alert_list "Alerts":
     field status "Status"
 
   ux:
-    purpose: "Review alerts by severity — open a row for the parent System hub"
+    purpose: "Review alerts by severity — open an alert hub or hop to the parent System"
     sort: triggered_at desc
     filter: severity, status
     search: message, acknowledged_by

@@ -1,5 +1,8 @@
 # Story walk ST-008 — Operations Engineer triages alerts by severity then opens system context
 # Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-008 then:
+#   - Severity breakdown + ack queue
+#   - Alert rows open Alert hub (id) or System hub via system FK
+# Deepened cycle 1526: dual open-via alert_list.
 
 persona: ops_engineer
 home_workspace: command_center
@@ -20,3 +23,32 @@ scenes:
           - System
           - Triage
     expects: "Authenticated ops engineer sees severity triage and system context cues"
+  - id: open_alert_hub
+    story: ST-008
+    entry: /app/alert/62000000-0000-4000-8000-000000000001
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - OOM
+          - Critical
+          - Alert
+          - Severity
+          - System
+    expects: "Alert hub shows severity strip and parent system context"
+  - id: open_system_from_alert_context
+    story: ST-008
+    entry: /app/system/61000000-0000-4000-8000-000000000002
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - System
+          - Health
+          - Alert
+          - Status
+    expects: "Parent System hub remains reachable for context hops from alert triage"
