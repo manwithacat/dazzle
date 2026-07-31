@@ -1,4 +1,4 @@
-# Process densify from domain process_candidates (improve domain_lifecycle_priors).
+# Process seeds from domain process_candidates (improve domain_lifecycle_priors).
 # Candidate: approval_flow — Invoice submit/approve handoff across personas.
 # Gold Invoice has no status enum yet; trigger on created (grammar: created|status)
 # so org_owner review is durable, not an informal chat after admin create.

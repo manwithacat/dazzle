@@ -90,4 +90,4 @@ Work moves through the roles and queues described above so each step has a clear
 
 **Announcement lifecycle.** Announcements move draft → published → archived (admin may return published to draft or republish archived).
 
-<!-- dazzle-spec-brief: sha256:8bab89536ee314488c58e1efa2c6f16a1e9b7250621114c29c746eeeb68de2da -->
+<!-- dazzle-spec-brief: sha256:7dc0d5955168a19b073aa7fdf82b85f52c4be51a5fc0bc9f0efee91428b87d80 -->

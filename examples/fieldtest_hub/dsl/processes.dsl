@@ -1,4 +1,4 @@
-# Process densify from domain process_candidates (improve domain_lifecycle_priors).
+# Process seeds from domain process_candidates (improve domain_lifecycle_priors).
 # Candidate: assignment — manager assigns active devices to field testers.
 
 module fieldtest_hub.processes

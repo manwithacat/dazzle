@@ -70,7 +70,7 @@ entity Announcement "Announcement":
   title: str(200) required
   body: text required
   workspace: ref Workspace required
-  # Domain residual lifecycle densify (cycle 1477): posts are not eternally live.
+  # Domain residual lifecycle (cycle 1477): posts are not eternally live.
   status: enum[draft,published,archived]=draft
   display_field: title
   transitions:
@@ -105,9 +105,8 @@ entity Announcement "Announcement":
 surface announcement_list "Announcements":
   uses entity Announcement
   mode: list
-  open: Announcement via id
-  # Context hop: workspace field opens the tenant hub (journey open-via).
-  open: Workspace via workspace
+  # Pipe dual hop (cycle 1529) — two open: lines last-win in the parser.
+  open: Announcement via id | Workspace via workspace
   section main:
     field title "Title"
     field status "Status"

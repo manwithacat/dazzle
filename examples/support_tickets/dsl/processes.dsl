@@ -1,4 +1,4 @@
-# Process densify from domain process_candidates (improve domain_lifecycle_priors).
+# Process seeds from domain process_candidates (improve domain_lifecycle_priors).
 # Candidate: escalation — agent/manager handoff when SLA risk or critical work.
 
 module support_tickets.processes

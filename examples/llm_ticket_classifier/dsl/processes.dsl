@@ -1,4 +1,4 @@
-# Process densify from domain process_candidates (improve domain_lifecycle_priors).
+# Process seeds from domain process_candidates (improve domain_lifecycle_priors).
 # Candidate: triage — intake handoff before deep work (agent/manager → gold personas).
 
 module llm_ticket_classifier.processes

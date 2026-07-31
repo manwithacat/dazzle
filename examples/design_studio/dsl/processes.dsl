@@ -1,4 +1,4 @@
-# Process densify from domain process_candidates (improve domain_lifecycle_priors).
+# Process seeds from domain process_candidates (improve domain_lifecycle_priors).
 # Candidate: assignment — campaign activation hands work to a designer.
 
 module design_studio.processes

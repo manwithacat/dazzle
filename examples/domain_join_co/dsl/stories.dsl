@@ -27,7 +27,7 @@ story ST-002 "Admin browses announcements and opens the hub":
     - "Announcements exist in the tenant"
   then:
     - "Admin sees join_readiness strip and announcement metrics"
-    - "Row open hops to Announcement via id (detail hub, not a dead warehouse row)"
+    - "Row open hops to Announcement via id or Workspace via workspace (pipe dual open, not a dead warehouse row)"
 
 story ST-003 "Member reads the team board after self-join":
   status: accepted
