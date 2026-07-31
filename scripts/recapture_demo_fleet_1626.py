@@ -206,13 +206,15 @@ def _run_app(app: str, *, skip_capture: bool = False) -> int:
             if persona:
                 cmd.extend(["--persona", persona])
             print(f"  capture persona={label}", flush=True)
+            # #1626 R4 — invoice pay_desk/my_invoices and multi-desk apps need
+            # longer than 300s; antagonist brief: ≥600s per persona.
             cap = subprocess.run(
                 cmd,
                 cwd=str(REPO),
                 env=env,
                 capture_output=True,
                 text=True,
-                timeout=300,
+                timeout=600,
             )
             if cap.stdout:
                 print(cap.stdout[-1200:], flush=True)
