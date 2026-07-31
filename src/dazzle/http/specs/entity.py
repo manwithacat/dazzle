@@ -415,6 +415,16 @@ class StateMachineSpec(BaseModel):
         """Check if a transition is allowed (ignoring guards)."""
         return to_state in self.get_allowed_targets(from_state)
 
+    def terminal_states(self) -> set[str]:
+        """States with no outgoing transition to a *different* state (#1399 / #1626 R2).
+
+        Runtime ``http.specs.entity.StateMachineSpec`` must match the IR twin
+        used by HTMX region poll-stop (``_region_polling_complete``). Missing
+        this method 500s every HX-Target region fetch for SM entities — the
+        ops Command Center Active Alerts still bug.
+        """
+        return {s for s in self.states if not (self.get_allowed_targets(s) - {s})}
+
     def get_transition(self, from_state: str, to_state: str) -> StateTransitionSpec | None:
         """Get the transition definition between two states."""
         for t in self.transitions:
