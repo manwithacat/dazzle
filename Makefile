@@ -45,6 +45,8 @@ help:
 	@echo "  type-check       Run mypy type checker (current venv)"
 	@echo "  type-check-ci    mypy after CI-matching extras (prefer before release)"
 	@echo "  security         Run bandit + pip-audit security checks"
+	@echo "  semgrep-diff     Agent Semgrep hygiene (diff packs; not CI-hard)"
+	@echo "  semgrep-src      Semgrep security packs on src/dazzle (slower)"
 	@echo "  spell            Run codespell spell checker"
 	@echo ""
 	@echo "Testing:"
@@ -128,6 +130,13 @@ security:
 	@echo ""
 	@echo "=== Dependency Vulnerability Scan (soft — use make ci-core for hard-fail) ==="
 	$(UV) run pip-audit --strict --desc on || true
+
+# Agent hygiene — not a CI hard gate (bandit + CodeQL remain the ship gates).
+semgrep-diff:
+	python scripts/semgrep_diff.py --base origin/main
+
+semgrep-src:
+	python scripts/semgrep_diff.py --all-src --limit 80
 
 spell:
 	$(UV) run codespell --skip '*.json,*.min.js' --ignore-words-list 'doubleclick' src/ tests/ docs/ examples/

@@ -89,6 +89,8 @@ apply map patches with `{"apply":true}`.
 | `dazzle test-design` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle pulse` | HYGIENE | CLI | framework-ux | 1303 | STALE |
 | `dazzle sentinel scan` | HYGIENE | CLI + MCP | framework-ux | 1302 | STALE |
+| `/semgrep` / `scripts/semgrep_diff.py` (p/python + owasp + audit) | HYGIENE | skill + script | **framework-ux** + driver | — | STALE |
+| Semgrep MCP (`semgrep mcp`) | HYGIENE | MCP | framework-ux + Grok config | — | STALE |
 | `dazzle fitness` CLI | HYGIENE | CLI | framework-ux | 1484 | STALE |
 | `dazzle discovery` | HYGIENE | CLI + MCP | example-apps | 1216 | STALE |
 | `dazzle composition` | HYGIENE | CLI + MCP | framework-ux | 1390 | STALE |

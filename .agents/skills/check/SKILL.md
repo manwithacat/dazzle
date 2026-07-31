@@ -61,6 +61,7 @@ Issue all applicable commands as **separate Bash calls in a single message** so 
 | DSL validation | `dsl_changed` | `dazzle validate` (in affected example dirs) + SPEC freshness via ship-surface |
 | Parser corpus | `parser_changed` | `pytest tests/parser_corpus/ -x -q --tb=short` |
 | MCP verify | `mcp_changed` | `python scripts/verify-mcp.py` |
+| Semgrep (diff packs) | `py_changed` | `python scripts/semgrep_diff.py` (agent hygiene — not CI-hard; see `/semgrep`) |
 
 **mypy command** must stay identical to `/ship` Tier 0 and CI (`mypy src/dazzle` — no extra flags). For release-grade type confidence when extras may be thin:
 
@@ -93,6 +94,7 @@ Read each command's output and present a summary:
 | DSL validation | SKIP/PASS/FAIL | reason |
 | Parser corpus | SKIP/PASS/FAIL | reason |
 | MCP verification | SKIP/PASS/FAIL | reason |
+| Semgrep (diff) | SKIP/PASS/FAIL | N findings ≥ warning |
 
 **Overall: PASS/FAIL**
 ```
