@@ -82,7 +82,7 @@ apply map patches with `{"apply":true}`.
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
-| fitness **engine** | HYGIENE | Python API | framework-ux | 1538 | USED |
+| fitness **engine** | HYGIENE | Python API | framework-ux | 1546 | USED |
 | `dazzle sentinel mutate` | HYGIENE | CLI | test-suite | 1229 | STALE |
 | `dazzle rhythm` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle story` | HYGIENE | CLI + MCP | example-apps | 1460 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1546 (2026-07-31).** campaign force **framework-ux**: wire **content_measure** end-to-end (PageContext → AppShell → data-dz-measure on main + CSS tokens); layout_kit `measure.shell` L2 pin app≥product; unit emit+dispatch. residual=0 densify=0 dual_lock=0. fitness **USED@1546**. budget 1. Explore **100/100**.
 
 > **Cycle 1545 (2026-07-31).** campaign force **hm-convergence gallery_probes**: expand **ship** `app_shell.sidebar_toggle` + runner (live shell hamburger data-sidebar open↔closed); catalog **33/33 PASS**; unit pin. residual=0 densify=0 dual_lock=0. gallery_probes + hm gallery interaction **USED@1545**. budget 1. Explore **99/100**.
 

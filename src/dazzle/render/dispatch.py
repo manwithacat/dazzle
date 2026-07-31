@@ -439,6 +439,21 @@ def build_app_chrome_page(
     # sidebar (i.e. real navigation). app_prefix defaults to /app.
     app_prefix = getattr(ctx, "app_prefix", "") or "/app"
     command_endpoint = f"{app_prefix}/command" if sidebar is not None else ""
+    # Content measure: compiler sets PageContext.content_measure from
+    # ux.measure (list→app, form/detail→product). Empty string = full-bleed.
+    raw_measure = getattr(ctx, "content_measure", None)
+    if raw_measure is None:
+        # Infer when callers skip the compiler (tests / ad-hoc pages).
+        if getattr(ctx, "table", None) is not None:
+            content_measure = "app"
+        elif getattr(ctx, "form", None) is not None or getattr(ctx, "detail", None) is not None:
+            content_measure = "product"
+        else:
+            content_measure = ""
+    else:
+        content_measure = str(raw_measure).strip().lower()
+        if content_measure not in ("app", "product", "wide", ""):
+            content_measure = ""
     body = AppShell(
         sidebar=sidebar,
         header=topbar,
@@ -449,6 +464,7 @@ def build_app_chrome_page(
         page_purpose=getattr(ctx, "page_purpose", "") or "",
         sidebar_state=sidebar_state,
         command_endpoint=command_endpoint,
+        content_measure=content_measure,
     )
     return Page(
         title=title,

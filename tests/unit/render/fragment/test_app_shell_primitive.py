@@ -147,3 +147,30 @@ def test_app_shell_sidebar_aside_has_id_for_toggle_target() -> None:
     toggle's aria-controls resolves."""
     html = _render(AppShell(body=Text("hi"), sidebar=Text("nav")))
     assert 'id="dz-app-sidebar"' in html
+
+
+# ──────────── content measure (data-dz-measure on <main>) ────────────
+# PageContext.content_measure was set by template_compiler since cycle
+# 1286 but never reached the DOM — AppShell had no field and the
+# renderer never emitted the attribute. Cycle 1546 wires it through.
+
+
+def test_app_shell_emits_data_dz_measure_when_set() -> None:
+    for token in ("app", "product", "wide"):
+        html = _render(AppShell(body=Text("body"), content_measure=token))
+        assert f'data-dz-measure="{token}"' in html, token
+        # Attribute lives on main (shell content column), not shell root.
+        main = html[html.index("<main") : html.index("</main>") + 7]
+        assert f'data-dz-measure="{token}"' in main
+
+
+def test_app_shell_omits_data_dz_measure_when_empty_or_full() -> None:
+    """Empty / full-bleed: no max-width contract on main."""
+    for measure in ("", "full", "  ", "unknown"):
+        html = _render(AppShell(body=Text("body"), content_measure=measure))
+        assert "data-dz-measure" not in html, measure
+
+
+def test_app_shell_content_measure_is_case_normalised() -> None:
+    html = _render(AppShell(body=Text("body"), content_measure="Product"))
+    assert 'data-dz-measure="product"' in html

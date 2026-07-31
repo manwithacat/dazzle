@@ -161,3 +161,61 @@ def test_multi_chip_actions_share_single_baseline_no_stack() -> None:
             flex_wrap=r.get("flexWrap"),
             label=f"actions strip row[{i}]",
         )
+
+
+def test_measure_shell_app_wider_than_product() -> None:
+    """``measure.shell`` — app max-width ≥ product (content measure tokens).
+
+    Cycle 1546: wire data-dz-measure + CSS; L2 pin that list (app) stays
+    at least as wide as form/detail (product) under production cascade.
+    """
+    from tests.layout_kit.fixtures import SHELL_MEASURE_BODY, SHELL_MEASURE_JS
+    from tests.layout_kit.predicates import assert_app_shell_wider_than_product
+
+    css_path = dazzle_css_path()
+    if not css_path.is_file():
+        pytest.skip(f"missing bundled CSS {css_path}")
+    # Wide viewport so app soft-cap (96rem) and product (48rem) both bind.
+    html = wrap_fixture_html(
+        SHELL_MEASURE_BODY,
+        css=css_path.read_text(encoding="utf-8"),
+        stage_width=1800,
+    )
+    snap = render_layout(
+        html=html,
+        state=LayoutState.RESTING,
+        measure_js=SHELL_MEASURE_JS,
+        viewport=(1900, 900),
+        tmp_name="dz-shell-measure.html",
+    )
+    data = snap.raw
+    require_no_error(data.get("product") or {})
+    require_no_error(data.get("app") or {})
+    product = data["product"]
+    app = data["app"]
+    wide = data["wide"]
+    full = data["full"]
+
+    def _max_px(entry: dict) -> float:
+        raw = str(entry.get("maxWidthCss") or "")
+        if raw.endswith("px"):
+            return float(raw[:-2])
+        if raw in ("none", "", "auto"):
+            return float("inf")
+        # rem → assume 16px root
+        if raw.endswith("rem"):
+            return float(raw[:-3]) * 16.0
+        return float(entry.get("widthPx") or 0)
+
+    product_max = _max_px(product)
+    app_max = _max_px(app)
+    wide_max = _max_px(wide)
+    assert_app_shell_wider_than_product(app_max, product_max)
+    assert product_max < wide_max <= app_max or wide_max == product_max, (
+        product_max,
+        wide_max,
+        app_max,
+    )
+    # Full-bleed has no data-dz-measure → max-width none (unconstrained).
+    assert full.get("measure") is None
+    assert str(full.get("maxWidthCss") or "") in ("none", "auto", "")

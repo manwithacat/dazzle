@@ -16,6 +16,7 @@ from tests.layout_kit.harness import (
     render_layout,
 )
 from tests.layout_kit.predicates import (
+    assert_app_shell_wider_than_product,
     assert_multiword_chip_wider_than_icon,
     assert_no_ghost_flex_items,
     assert_shared_end,
@@ -27,6 +28,7 @@ __all__ = [
     "Box",
     "LayoutSnapshot",
     "LayoutState",
+    "assert_app_shell_wider_than_product",
     "assert_multiword_chip_wider_than_icon",
     "assert_no_ghost_flex_items",
     "assert_shared_end",

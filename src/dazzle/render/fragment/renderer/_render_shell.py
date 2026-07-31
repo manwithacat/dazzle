@@ -250,6 +250,11 @@ class _RenderShellMixin:
             main_attrs += f' data-dz-surface="{ctx.escape_attr(a.surface_name)}"'
         if a.workspace_name:
             main_attrs += f' data-dz-workspace="{ctx.escape_attr(a.workspace_name)}"'
+        # Content measure (ux.measure → PageContext → shell). Only emit the
+        # three constrained tokens; empty/"full" means unconstrained main.
+        measure = (a.content_measure or "").strip().lower()
+        if measure in ("app", "product", "wide"):
+            main_attrs += f' data-dz-measure="{measure}"'
         main_inner: list[str] = []
         if a.page_purpose:
             main_inner.append(

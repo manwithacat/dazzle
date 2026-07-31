@@ -110,5 +110,24 @@ def assert_single_baseline_no_stack(
     )
 
 
+def assert_app_shell_wider_than_product(
+    app_max_px: float,
+    product_max_px: float,
+    *,
+    label: str = "measure.shell",
+) -> None:
+    """``measure.shell`` — ``data-dz-measure=app`` max-width ≥ product.
+
+    Regression story: list/board surfaces need the soft ultrawide cap
+    (``--dz-content-measure-app``); form/detail use the readable product
+    measure (``--dz-content-measure``). If app ever collapses to product
+    (or both unconstrained), tables pinch on wide monitors.
+    """
+    assert float(app_max_px) >= float(product_max_px), (
+        f"{label}: app max-width {app_max_px}px < product {product_max_px}px"
+    )
+    assert float(product_max_px) > 0, f"{label}: product measure not applied"
+
+
 def require_no_error(raw: dict[str, Any]) -> None:
     assert raw.get("error") is None, raw

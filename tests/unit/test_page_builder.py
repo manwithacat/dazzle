@@ -108,3 +108,33 @@ def test_dispatch_render_page_inner_html_not_escaped() -> None:
     assert "&lt;section" not in html
     assert "&amp;amp;" not in html
     assert '<section class="x">raw &amp; cooked</section>' in html
+
+
+def test_dispatch_render_page_threads_content_measure_to_main() -> None:
+    """Cycle 1546: PageContext.content_measure → AppShell → data-dz-measure."""
+
+    class _Ctx(_FakePageContext):
+        def __init__(self, measure: str | None) -> None:
+            super().__init__()
+            self.content_measure = measure
+            self.nav_items = ()
+            self.nav_groups = ()
+            self.view_name = "task_list"
+            self.surface_name = ""
+            self.workspace_name = ""
+            self.page_purpose = ""
+            self.app_prefix = "/app"
+            self.table = None
+            self.form = None
+            self.detail = None
+
+    html = dispatch_render_page(_Ctx("product"), inner_html="<p>form</p>", chrome=True)
+    assert 'data-dz-measure="product"' in html
+    main_open = html[html.index("<main") : html.index(">", html.index("<main")) + 1]
+    assert 'data-dz-measure="product"' in main_open
+
+    html_app = dispatch_render_page(_Ctx("app"), inner_html="<p>list</p>", chrome=True)
+    assert 'data-dz-measure="app"' in html_app
+
+    html_full = dispatch_render_page(_Ctx(""), inner_html="<p>full</p>", chrome=True)
+    assert "data-dz-measure" not in html_full

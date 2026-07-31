@@ -222,6 +222,29 @@
   padding: var(--space-md);
 }
 
+/* Content measure — shell max-width from ux.measure / PageContext
+ * (pick-a-measure.md). Attribute omitted for true full-bleed (full). */
+.dz-app-main[data-dz-measure="product"] {
+  max-width: var(--dz-content-measure);
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.dz-app-main[data-dz-measure="wide"] {
+  max-width: var(--dz-content-measure-wide);
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.dz-app-main[data-dz-measure="app"] {
+  max-width: min(100%, var(--dz-content-measure-app));
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
 @media (min-width: 64rem) {
   .dz-app-main {
     padding: var(--space-lg);

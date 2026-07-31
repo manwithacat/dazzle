@@ -155,6 +155,43 @@ RESTING_ICONS_MEASURE_JS = """() => {
 }"""
 
 
+# Cycle 1546 — measure.shell: app ≥ product content measure max-width.
+SHELL_MEASURE_BODY = """
+<main class="dz-app-main" id="main-product" data-dz-measure="product">
+  <p>product measure</p>
+</main>
+<main class="dz-app-main" id="main-app" data-dz-measure="app">
+  <p>app measure</p>
+</main>
+<main class="dz-app-main" id="main-wide" data-dz-measure="wide">
+  <p>wide measure</p>
+</main>
+<main class="dz-app-main" id="main-full">
+  <p>full bleed (no data-dz-measure)</p>
+</main>
+"""
+
+SHELL_MEASURE_JS = """() => {
+  const read = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return { error: 'missing ' + id };
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    return {
+      maxWidthCss: cs.maxWidth,
+      widthPx: r.width,
+      measure: el.getAttribute('data-dz-measure'),
+    };
+  };
+  return {
+    product: read('main-product'),
+    app: read('main-app'),
+    wide: read('main-wide'),
+    full: read('main-full'),
+  };
+}"""
+
+
 # Cycle 1538 — overflow.cell_no_stack: multi-chip rows stay one baseline.
 CHIP_STRIP_BASELINE_MEASURE_JS = """() => {
   const strips = [...document.querySelectorAll('.dz-tr-actions')];

@@ -281,6 +281,14 @@ class AppShell:
     `"/app/command"`), the shell emits an empty `dz-command` dialog wired to
     this hx-get endpoint; `dz-command.js` opens it on ⌘K and the input
     fetches persona-scoped results on focus. Empty omits the palette."""
+    content_measure: str = ""
+    """App-shell content measure emitted as ``data-dz-measure`` on ``<main>``.
+
+    Values: ``app`` | ``product`` | ``wide`` (empty / ``full`` → omit attr for
+    unconstrained main). CSS in ``app-shell.css`` caps max-width via
+    ``--dz-content-measure*`` tokens (see pick-a-measure.md). Threaded from
+    ``PageContext.content_measure`` (template_compiler resolves ``ux.measure``).
+    """
 
 
 @dataclass(frozen=True, slots=True)

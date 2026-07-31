@@ -169,6 +169,13 @@
   --width-content: 56rem;
   --width-page: 80rem;
 
+  /* App-shell content measure (``data-dz-measure`` on ``.dz-app-main``).
+   * pick-a-measure.md — product readable form/detail; wide intermediate;
+   * app soft ultrawide for list/board scan. */
+  --dz-content-measure: 48rem;        /* product */
+  --dz-content-measure-wide: 56rem;   /* wide (= --width-content) */
+  --dz-content-measure-app: 96rem;    /* app soft cap */
+
   /* ─────────────────────────── touch targets ───────────────────────
    * Minimum hit-area on touch devices. Apple HIG calls for 44×44pt;
    * Material recommends 48×48dp. We use 44px as a good middle —
