@@ -114,8 +114,19 @@ job desk in the sidebar — prefer multi-workspace access + clear default landin
 
 Structural product maturity is **necessary but not sufficient**. An independent
 artifact-only bake-off (QA screenshots + landings vs category SaaS) scored the
-example fleet **~2.8 / 10** (pass line for “keep watching a sales demo” = **7.0**;
-P0 target after fixes = **≥ 5.5**). Tracking: GitHub **#1626**.
+example fleet:
+
+| Checkpoint | Fleet mean | Trio mean | Pass (≥5.5 fleet) |
+|------------|------------|-----------|-------------------|
+| Original | **~2.8** | ~3.0 | Fail |
+| 21 Jul | **~3.8** | ~5.9 | Fail |
+| **31 Jul (post recapture)** | **~5.1** | ~5.7 | **Still fail (~0.4 short)** |
+
+Pass line for “keep watching a sales demo” = **7.0** commercial; P0 fleet target
+= **≥ 5.5**. Tracking: GitHub **#1626**.
+
+**Agent residual queue (R1–R6, hero stills, messaging):**  
+[`docs/reference/antagonist-agent-brief-1626.md`](./antagonist-agent-brief-1626.md)
 
 | P0 | Failure | Owner altitude |
 |----|---------|----------------|
@@ -127,9 +138,10 @@ P0 target after fixes = **≥ 5.5**). Tracking: GitHub **#1626**.
 | **P0-6** | Empty hero stills as happy-path QA names | QA capture + seed gate |
 | **P0-7–9** | False domain views (org chart, gallery, timeline); invoice desks empty | Example honesty + seeds |
 
-**Improve priority:** after structural residual is empty, drain **#1626 P0**
-before STALE Tier-1 noise. Do **not** add entity list surfaces to “pass”
-commercial bake-off.
+**Improve priority:** after structural residual is empty, drain **#1626** residual
+queue (agent brief R1–R6) before STALE Tier-1 noise. Do **not** add entity list
+surfaces to “fix” commercial bake-off. Do **not** claim fleet ≥5.5 until a
+human still re-score (or explicit demotion) says so.
 
 ### Agent loop (`/improve`)
 
@@ -205,6 +217,13 @@ pilot would run a two-week trial.”
 | `platform_admin_landing` | product `admin` `default_workspace: _platform_admin` | Example DSL: land on a product desk + access |
 | Persona-home seed residual | `current_user` region hits = 0 for stable demo UUID | Assignment-aware `*.jsonl` seeds |
 | Empty-hero still | Happy-path screenshot &lt; byte floor | Re-seed + `dazzle qa capture` after seeds |
+| `label_glue` | Queue/card meta runs together (`Amount:xCurrency:y`) | Framework queue/list meta templates (**R1** — highest leverage to 5.5) |
+| `cta_add_double` | CTA `New Add Person` / `New Add Department` | `human_create_cta_label` + surface titles (**R3**) |
+| `hero_http_error` | Happy-path desk shows product 500 shell | Region compute / example desk (**R2** ops Active Alerts) |
+| `capture_desk_timeout` | Default desks never still (pay_desk / my_invoices hang) | Capture readiness + per-persona recapture (**R4**) |
+
+Human residual order and hero still paths:
+[`antagonist-agent-brief-1626.md`](./antagonist-agent-brief-1626.md).
 
 **Acceptance (showcase ready, per app):** no builder chrome on business desks;
 human singular CTAs; no raw JSON errors in browser; no platform-only nav for
@@ -217,9 +236,10 @@ python scripts/demo_fleet_bar.py
 python scripts/demo_fleet_bar.py --strict
 ```
 
-Checks P0-4 nav isolation, P0-5 blueprint min rows, and P0-6 “not only
-`_platform_admin_*` stills”. Full visual re-score still needs fresh
-`dazzle qa capture` after seeds.
+Checks P0-4 nav isolation, P0-5 blueprint min rows, P0-6 empty-hero byte floors
+(including non-trio heroes after 31 Jul), and “not only `_platform_admin_*`
+stills”. Full visual re-score still needs fresh `dazzle qa capture` after seeds
+— use `scripts/recapture_demo_fleet_1626.py` (per-persona serve restart).
 ## Relationship to other gates
 
 | Gate | Altitude | Optimises |

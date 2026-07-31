@@ -8,7 +8,8 @@ from pathlib import Path
 PLATFORM_STILL_PREFIX = "_platform_admin_"
 
 # When still file exists under app screenshots — skip if absent (CI often
-# has no gitignored .dazzle stills).
+# has no gitignored .dazzle stills). Floors are empty-hero gates only — not
+# human composite scores (#1626 antagonist re-score 2026-07-31).
 HERO_MIN_BYTES: dict[str, dict[str, int]] = {
     "invoice_ops": {
         "approval_desk_approver_desktop_light.png": 80_000,
@@ -16,6 +17,7 @@ HERO_MIN_BYTES: dict[str, dict[str, int]] = {
         # Requester / auditor desks were empty-state theater (~45–48 KB).
         "my_invoices_requester_desktop_light.png": 60_000,
         "audit_review_auditor_desktop_light.png": 60_000,
+        "finance_ops_finance_desktop_light.png": 70_000,
     },
     "support_tickets": {
         "manager_ops_manager_desktop_light.png": 80_000,
@@ -27,6 +29,29 @@ HERO_MIN_BYTES: dict[str, dict[str, int]] = {
         "task_board_manager_desktop_light.png": 90_000,
         "my_work_member_desktop_light.png": 60_000,
         "team_overview_manager_desktop_light.png": 80_000,
+    },
+    # Non-trio heroes that moved the 31 Jul fleet score (protect density).
+    "project_tracker": {
+        "project_board_manager_desktop_light.png": 120_000,
+        "dashboard_manager_desktop_light.png": 100_000,
+    },
+    "contact_manager": {
+        "contacts_user_desktop_light.png": 70_000,
+    },
+    "fieldtest_hub": {
+        "issue_triage_manager_desktop_light.png": 90_000,
+        "device_fleet_manager_desktop_light.png": 90_000,
+    },
+    "hr_records": {
+        "staff_directory_hr_admin_desktop_light.png": 100_000,
+    },
+    "ops_dashboard": {
+        "command_center_ops_engineer_desktop_light.png": 80_000,
+        "incident_review_ops_engineer_desktop_light.png": 90_000,
+    },
+    "design_studio": {
+        "brand_desk_designer_desktop_light.png": 100_000,
+        "asset_catalog_designer_desktop_light.png": 100_000,
     },
 }
 
