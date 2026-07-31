@@ -68,7 +68,7 @@ apply map patches with `{"apply":true}`.
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1526 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1526 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1526 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1527 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1527 (2026-07-31).** **self-audit** window 289758645..1bcd4e316 — 5 largest: c1514 acme acceptance CLEAN; c1519 hyperpart capture CLEAN; c1513 combobox probe CLEAN; c1520 wizard probe CLEAN; c1517 contact dual-open **DISCREPANCY** (dual open lines last-wins). Dig contracts: acme/contact/hr/project receipts ok; **ops_dashboard@1526 contract_incomplete** (no trial_skip). AUD-007/008 OPEN. Pushed held 1525+1526. budget 0. Explore **83/100**. Next clear AUD/process residual; self-audit@1527 next~1542; capability-sweep@1521 next~1541.
 
 > **Cycle 1526 (2026-07-31).** campaign hyperpart_coherence queue=0 lag~7 (post-1519) → **fall-through** agent_acceptance dig ops_dashboard ST-006–010 maps stem+stories+SPEC; walks 5/5 validate+dry-run; **product** alert_list dual open `Alert via id | System via system`; ST-008/010 criteria; walk st_008 3 scenes; SPEC fingerprint. OBSERVE hyperpart queue=0. residual=0 densify=0. acceptance+walk+process_dig+journey+hyperpart OBSERVE **USED@1526**. budget 1. Explore **83/100**. **pushed: hold** tip CI 1524 in_progress + ahead 1525. Next self-audit@1512 ~1527.
 
