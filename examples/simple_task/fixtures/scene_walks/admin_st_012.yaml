@@ -1,0 +1,24 @@
+# Story walk ST-012 — Administrator views all tasks across organization
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-012 then:
+# Admin dashboard = metrics + urgent/overdue queues (not bare CRUD only).
+
+persona: admin
+home_workspace: admin_dashboard
+
+scenes:
+  - id: land_st_012
+    story: ST-012
+    entry: /app/workspaces/admin_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Task
+          - Urgent
+          - Overdue
+          - Priority
+          - Status
+          - Admin
+    expects: "Authenticated admin sees org-wide task queues and pressure cues"

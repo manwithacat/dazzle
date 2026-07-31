@@ -1,0 +1,24 @@
+# Story walk ST-014 — Administrator views system-wide analytics
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-014 then:
+# admin_dashboard metrics: total_tasks / status mix + team velocity counts.
+
+persona: admin
+home_workspace: admin_dashboard
+
+scenes:
+  - id: land_st_014
+    story: ST-014
+    entry: /app/workspaces/admin_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Task
+          - Total
+          - Progress
+          - Review
+          - Done
+          - Admin
+    expects: "Authenticated admin sees aggregate task status metrics on dashboard"

@@ -1,0 +1,23 @@
+# Story walk ST-013 — Administrator configures team settings
+# Maps: stems/story-driven-jobs.md, dsl/stories.dsl ST-013 then:
+# Admin home + team_metrics (roster surface is user_list; land desk first).
+
+persona: admin
+home_workspace: admin_dashboard
+
+scenes:
+  - id: land_st_013
+    story: ST-013
+    entry: /app/workspaces/admin_dashboard
+    actions:
+      - type: navigate
+      - type: assert_not_login
+      - type: assert_http_ok
+      - type: assert_any_text
+        texts:
+          - Team
+          - User
+          - Active
+          - Admin
+          - Dashboard
+    expects: "Authenticated admin sees team roster/metrics cues on admin desk"
