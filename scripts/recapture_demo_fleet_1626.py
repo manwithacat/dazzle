@@ -165,6 +165,59 @@ def _free_port(port: int) -> None:
             pass
 
 
+def _wait_port_free(port: int, timeout: float = 10.0) -> bool:
+    """True when nothing is listening on *port* (or we cannot probe)."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            out = subprocess.run(
+                ["lsof", "-ti", f"tcp:{port}"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            if not (out.stdout or "").strip():
+                return True
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+            return True
+        time.sleep(0.25)
+    return False
+
+
+def _clear_runtime(project: Path) -> None:
+    """Drop stale runtime.json so we do not seed against a previous serve's ports."""
+    runtime = project / ".dazzle" / "runtime.json"
+    if runtime.is_file():
+        try:
+            runtime.unlink()
+        except OSError:
+            pass
+
+
+def _read_runtime_base(project: Path, *, prefer_port: int, timeout: float = 90.0) -> str | None:
+    """Discover actual serve URL from runtime.json (serve may rebind if port busy)."""
+    runtime = project / ".dazzle" / "runtime.json"
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if runtime.is_file():
+            try:
+                data = json.loads(runtime.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                time.sleep(0.25)
+                continue
+            ui = data.get("ui_url") or data.get("api_url")
+            if isinstance(ui, str) and ui.startswith("http"):
+                return ui.rstrip("/")
+            port = data.get("ui_port") or data.get("api_port") or prefer_port
+            try:
+                return f"http://127.0.0.1:{int(port)}"
+            except (TypeError, ValueError):
+                pass
+        time.sleep(0.25)
+    return None
+
+
 def _py() -> str:
     candidate = REPO / ".venv" / "bin" / "python"
     return str(candidate) if candidate.is_file() else sys.executable
@@ -265,7 +318,12 @@ def _capture_persona(
     """Serve + seed + capture one persona; always tear down serve."""
     label = persona or "(all)"
     _free_port(port)
-    time.sleep(0.2)
+    if not _wait_port_free(port, timeout=15.0):
+        print(
+            f"WARN {app}: port {port} still busy after free — serve may rebind; "
+            "will discover actual URL via runtime.json",
+            file=sys.stderr,
+        )
 
     log_path = _serve_log_path(project, app, persona)
     serve_cmd = [
@@ -283,12 +341,13 @@ def _capture_persona(
         "--database-url",
         db,
     ]
-    print(f"  serve persona={label} port={port} log={log_path}", flush=True)
+    print(f"  serve persona={label} prefer_port={port} log={log_path}", flush=True)
     log_fh = log_path.open("wb")
     env = dict(env)
     env.setdefault("PYTHONUNBUFFERED", "1")
     proc: subprocess.Popen[bytes] | None = None
     try:
+        _clear_runtime(project)
         proc = subprocess.Popen(
             serve_cmd,
             cwd=str(project),
@@ -297,11 +356,18 @@ def _capture_persona(
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
-        base = f"http://127.0.0.1:{port}"
+        # Prefer runtime.json (actual bind) over preferred port — find_available_ports
+        # rebinds when the preferred port is still held after kill (invoice finance miss).
+        base = _read_runtime_base(project, prefer_port=port, timeout=90.0)
+        if base is None:
+            base = f"http://127.0.0.1:{port}"
         docs = base + "/docs"
-        ready = _wait_http(docs, timeout=120) or _wait_http(base, timeout=30)
+        ready = _wait_http(docs, timeout=60) or _wait_http(base, timeout=30)
         if not ready:
-            print(f"FAIL {app}: serve not ready for persona={label}", file=sys.stderr)
+            print(
+                f"FAIL {app}: serve not ready for persona={label} base={base}",
+                file=sys.stderr,
+            )
             if proc.poll() is not None:
                 print(
                     f"  serve exited early code={proc.returncode}",
@@ -309,6 +375,7 @@ def _capture_persona(
                 )
             print(_tail_file(log_path), file=sys.stderr)
             return 1
+        print(f"  serve ready base={base}", flush=True)
         # Brief settle after consecutive readiness (migrations / warm caches).
         time.sleep(0.5)
         seed_ok = _seed(project, base, env, py)

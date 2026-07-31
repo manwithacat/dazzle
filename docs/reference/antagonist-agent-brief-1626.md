@@ -42,7 +42,12 @@ Fleet **5.1** · Trio **~5.7** · Pass **5.5**.
 
 ## Residual work queue (ordered for ≥5.5)
 
-### R1 · Label glue (framework — highest leverage)
+**Code status (2026-07-31 agent drain):** R1–R5 framework/example fixes landed;
+R4 settle bug + R6 metric/email polish landed. **Human re-score still required**
+before claiming fleet ≥5.5. Stills under `examples/*/.dazzle/qa/screenshots`
+are the score source — recapture after each residual cluster.
+
+### R1 · Label glue (framework — highest leverage) — **code done**
 
 | | |
 |--|--|
@@ -53,8 +58,9 @@ Fleet **5.1** · Trio **~5.7** · Pass **5.5**.
 | **Score impact** | +0.2–0.4 Trust/First 10s → **likely clears fleet 5.5** |
 | **Lane** | framework-ux (queue/list meta formatting) |
 | **Residual id** | `label_glue` (human until OCR floor exists) |
+| **Shipped** | meta chip spacing + catalogue CSS (`dz-queue-row-meta-line`) |
 
-### R2 · ops Command Center Active Alerts 500
+### R2 · ops Command Center Active Alerts 500 — **code done**
 
 | | |
 |--|--|
@@ -64,8 +70,9 @@ Fleet **5.1** · Trio **~5.7** · Pass **5.5**.
 | **Score impact** | ops 4.0 → ~5.0–5.5 |
 | **Lane** | example-apps `ops_dashboard` + region error handling |
 | **Residual id** | `hero_http_error` |
+| **Shipped** | `StateMachineSpec.terminal_states` on `http.specs.entity` (HTMX poll-stop) |
 
-### R3 · CTA grammar residual
+### R3 · CTA grammar residual — **code done**
 
 | | |
 |--|--|
@@ -75,7 +82,7 @@ Fleet **5.1** · Trio **~5.7** · Pass **5.5**.
 | **Lane** | `human_create_cta_label` + HR surface titles |
 | **Residual id** | `cta_add_double` |
 
-### R4 · Capture holes
+### R4 · Capture holes — **code done**
 
 | Desk | Failure |
 |------|---------|
@@ -89,8 +96,9 @@ Fleet **5.1** · Trio **~5.7** · Pass **5.5**.
 | **Done when** | Fresh `pay_desk_finance_*` + `my_invoices_requester_*`; recapture restarts serve per persona; timeout ≥600s |
 | **Lane** | qa capture readiness + `scripts/recapture_demo_fleet_1626.py` |
 | **Residual id** | `capture_desk_timeout` |
+| **Shipped** | Capture settle catches Playwright `TimeoutError` (not only builtin); HTMX settle budget 25s; per-persona recapture + preflight |
 
-### R5 · Design visual minimum (P0-8)
+### R5 · Design visual minimum (P0-8) — **code done**
 
 | | |
 |--|--|
@@ -98,13 +106,18 @@ Fleet **5.1** · Trio **~5.7** · Pass **5.5**.
 | **Done when** | Color chips and/or type placeholders visible in stills |
 | **Evidence** | brand_desk + asset_catalog designer stills |
 | **Lane** | framework color widget + design_studio |
+| **Shipped** | color widget swatches + Brand/Asset story seeds |
 
-### R6 · Soft polish (after R1–R4)
+### R6 · Soft polish (after R1–R4) — **code + recapture done**
 
-- Synthetic metric deltas (`800.0%`) when equal to seed noise
-- Contact hero emails prefer story domains over `@example.test`
-- Support `manager_ops` recapture
-- Category depth (conversation hub, invoice document hub, org tree) is **P1**
+- [x] Synthetic metric deltas (`800.0%`) when seed noise — omit `delta_pct` when `|pct| > 200`
+- [x] Contact hero emails prefer story domains over `@example.test`
+- [x] Support `manager_ops` recapture (hardened per-persona path + runtime port discovery)
+- Category depth (conversation hub, invoice document hub, org tree) is **P1** (deferred)
+
+**Agent OCR spot-checks (local stills, 2026-07-31):** ops Active Alerts rows / no 500;
+contact story domains; HR no `New Add`; support meta spacing; design brand hex present.
+Human re-score still required before fleet ≥5.5 claim.
 
 ---
 

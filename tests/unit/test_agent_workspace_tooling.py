@@ -161,3 +161,15 @@ def test_recapture_docstring_mentions_pipe_deadlock(recapture) -> None:
     doc = recapture.__doc__ or ""
     assert "PIPE" in doc
     assert "preflight" in doc.lower()
+
+
+def test_recapture_runtime_base_reads_ui_url(recapture, tmp_path: Path) -> None:
+    """When serve rebinds, seed/capture must follow runtime.json not preferred port."""
+    dazzle = tmp_path / ".dazzle"
+    dazzle.mkdir()
+    (dazzle / "runtime.json").write_text(
+        json.dumps({"ui_url": "http://127.0.0.1:3103", "ui_port": 3103}),
+        encoding="utf-8",
+    )
+    base = recapture._read_runtime_base(tmp_path, prefer_port=18102, timeout=1.0)
+    assert base == "http://127.0.0.1:3103"

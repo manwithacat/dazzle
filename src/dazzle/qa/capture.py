@@ -37,6 +37,24 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Playwright's TimeoutError is *not* a subclass of builtin TimeoutError
+# (playwright._impl._errors.TimeoutError → Error → Exception). Catching only
+# the builtin lets HTMX settle timeouts abort the whole target and drop stills
+# (#1626 R4 capture_desk_timeout on multi-region desks). Mirror agent executor
+# + smoke_crawl settle handling.
+_SETTLE_TIMEOUT_TYPES: tuple[type[BaseException], ...] = (TimeoutError, OSError, RuntimeError)
+try:
+    from playwright.async_api import TimeoutError as _PlaywrightTimeoutError
+
+    _SETTLE_TIMEOUT_TYPES = (_PlaywrightTimeoutError, TimeoutError, OSError, RuntimeError)
+except ImportError:  # pragma: no cover — playwright optional for plan-only hosts
+    pass
+
+# Multi-region desks (invoice pay_desk / my_invoices, dense ops command center)
+# fan out concurrent HTMX region GETs after first paint; 8s was too tight and
+# the mis-caught timeout dropped the PNG entirely.
+_HTMX_SETTLE_MS = 25_000
+
 
 # =============================================================================
 # CaptureTarget
@@ -399,12 +417,13 @@ async def _capture_one(
                 # #1626 P0-6: workspace regions load via HTMX after first paint.
                 # Screenshotting before region fan-out freezes empty-state theater
                 # as the "happy path" still (customer/requester/member desks).
+                # Soft settle only — Playwright timeout must not abort capture (R4).
                 try:
                     await page.wait_for_function(
                         "() => !document.querySelector('.htmx-request, .htmx-swapping')",
-                        timeout=8_000,
+                        timeout=_HTMX_SETTLE_MS,
                     )
-                except (TimeoutError, OSError, RuntimeError):
+                except _SETTLE_TIMEOUT_TYPES:
                     logger.debug(
                         "htmx settle wait timed out after capture navigate to %s",
                         full_url,
@@ -412,7 +431,7 @@ async def _capture_one(
                     )
                 try:
                     await page.wait_for_timeout(400)
-                except (TimeoutError, OSError, RuntimeError):
+                except _SETTLE_TIMEOUT_TYPES:
                     logger.debug("post-htmx settle timeout after capture navigate", exc_info=True)
                 await page.screenshot(path=str(screenshot_path), full_page=full_page)
                 logger.info(

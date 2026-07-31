@@ -277,6 +277,14 @@ class TestComputeAggregateMetricsDelta:
         assert m["delta_pct"] == 0.0
         assert m["delta_direction"] == "up"
 
+    def test_absurd_pct_omitted_for_demo_seed_noise_1626(self) -> None:
+        """#1626 R6: stock vs thin prior window must not paint 800.0% on tiles."""
+        # (9 - 1) / 1 * 100 = 800% — plausible absolute delta, not the %
+        m = self._run(current=9, prior=1)
+        assert m["delta"] == 8
+        assert m["delta_direction"] == "up"
+        assert "delta_pct" not in m
+
     def test_no_delta_keys_when_spec_absent(self) -> None:
         from dazzle.http.runtime.workspace_aggregation import _compute_aggregate_metrics
 

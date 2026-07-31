@@ -56,7 +56,10 @@
             "params": {
               "source_field": "first_name",
               "domains": [
-                "example.test"
+                "northwind.example",
+                "contoso.example",
+                "alpha-ltd.example",
+                "bravo-co.example"
               ]
             }
           },
