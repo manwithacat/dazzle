@@ -58,8 +58,8 @@ apply map patches with `{"apply":true}`.
 | `qa-trial` skill | COGNITION | skill | trials | 1424 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
-| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1517 | USED |
-| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1522 | USED |
+| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1523 | USED |
+| **unified example probes** | COGNITION | script | **example-apps** (driver) | 1523 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1522 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1361 | STALE |
 | `dazzle qa smoke-crawl` | COGNITION | CLI | **example-apps** + trials | 1328 | STALE |
@@ -68,13 +68,13 @@ apply map patches with `{"apply":true}`.
 | **work-surface utility ontology** | COGNITION | `work_surface_utility.toml` + `scripts/work_surface_utility.py` + `pick-a-work-surface.md` | **hm-convergence** + framework-ux | 1488 | STALE |
 | **story_walk bar** / dig contracts (#1638) | COGNITION | script + strategy | **example-apps** | 1518 | USED |
 | `dazzle test walk` (validate/run/dry-run) | COGNITION | CLI | **example-apps** | 1522 | USED |
-| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1522 | USED |
+| **process_dig / dig contracts sensors** (`improve_dig_receipt`, probe process_dig) | COGNITION | script + probes | **example-apps** + driver | 1523 | USED |
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
 | **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1519 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1520 | USED |
-| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1522 | USED |
+| `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1523 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1516 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1523 (2026-07-31).** **example-apps journey_dogfood** dig design_studio ST-001–006 maps stem+stories+SPEC; prove journey 6/6; **product** brand_detail related assets status_cards→**queue** (name+status+type+quality); ST-002/005 criteria + stem; SPEC fingerprint. residual=0 densify=0. journey+prove+process_dig+validate+CodeQL+inbox **USED@1523**. budget 1. Explore **80/100**. Next campaign framework-ux under aggressive residual=0 densify=0; self-audit@1512 ~1527; capability-sweep@1521 next~1541.
 
 > **Cycle 1522 (2026-07-30).** **example-apps agent_acceptance_panel** dig hr_records ST-001–005 maps stem+stories+trial+SPEC; walks 5/5 validate+dry-run; trial skip product_first; **product** staff_directory department/role context + person org_context + compensation role_catalogue/headcount list→**queue**; scoreboard densify comments cleared (smells 3→0); ST-001/003+trial criteria; dig receipt PASS live_unproven. residual=0 densify=0. acceptance+walk+process_dig+validate+CodeQL+inbox **USED@1522**. budget 1. Explore **79/100**. Next campaign framework-ux under aggressive residual=0 densify=0; self-audit@1512 ~1527; capability-sweep@1521 next~1541.
 

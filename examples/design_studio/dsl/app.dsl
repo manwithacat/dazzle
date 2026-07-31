@@ -764,9 +764,11 @@ surface brand_detail "Brand Detail":
     field accent_color "Accent" widget=color
 
 
+  # Pull-next asset roster (not status_cards warehouse) — ST-002 journey dig.
   related assets "Assets":
-    display: status_cards
+    display: queue
     show: Asset
+    columns: name, status, asset_type, quality_score
 
   # Pull-next campaign roster (not warehouse table) — ST-002 story_walk hub dig.
   related campaigns "Campaigns":
@@ -775,7 +777,7 @@ surface brand_detail "Brand Detail":
     columns: name, status, start_date
 
   ux:
-    purpose: "Brand hub — identity, palette strip, assets and campaign queue"
+    purpose: "Brand hub — identity, palette strip, asset queue, and campaign queue"
 
 surface asset_list "Assets":
   uses entity Asset

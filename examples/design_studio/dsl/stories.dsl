@@ -25,7 +25,7 @@ story ST-002 "Designer opens brand hub for assets and campaigns":
   given:
     - "Brand exists and is readable"
   then:
-    - "Brand hub shows identity, palette strip, related assets, and campaigns as a pull queue (not a warehouse table)"
+    - "Brand hub shows identity, palette strip, related Assets as a pull queue (name+status+type), and campaigns as a pull queue (not warehouse tables)"
 
 story ST-003 "Reviewer works the review queue on asset catalog":
   status: accepted
@@ -62,7 +62,7 @@ story ST-005 "Designer hops from asset list to brand context":
     - "Designer has list permission on Asset"
   then:
     - "Asset rows open Brand via brand (context hub, not orphan warehouse rows)"
-    - "Brand hub shows related assets for the batch"
+    - "Brand hub shows related assets as a pull queue for the batch"
 
 story ST-006 "Designer traces feedback back to the asset hub":
   status: accepted

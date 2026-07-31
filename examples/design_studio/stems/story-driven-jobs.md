@@ -11,8 +11,9 @@ a shared asset warehouse.
 - designer also has `brand_desk` (brand-first path).
 - reviewer default: `review_desk` = review-load + awaiting-review queue.
 - `asset_catalog` remains the full library (card grid, not a media gallery) for all product personas.
-- Brand hub related campaigns are a **pull queue** (name+status); asset hub
-  feedback is a **pull queue** (rating+comment) — not warehouse tables.
+- Brand hub related **assets** and **campaigns** are **pull queues**
+  (assets: name+status+type; campaigns: name+status) — not status_cards/tables.
+- Asset hub feedback is a **pull queue** (rating+comment) — not warehouse tables.
 
 ## Not this
 
