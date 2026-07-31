@@ -20,6 +20,8 @@ ST-013–018 own surfaces.
   (`resolved_recent`) + history trail.
 - Comment streams on `ticket_queue` / `agent_dashboard` use **timeline**
   (dated events), not inventory list — same work-surface utility as simple_task.
+- Comment list dual open `Comment via id | Ticket via ticket` (cycle 1543
+  journey_dogfood) — inspect the note or hop to the parent ticket hub.
 - Prefer queue/metrics/kanban/timeline over bare list for open-work and event streams.
 - Keep story `given:` workspace names aligned with persona defaults.
 

@@ -68,6 +68,7 @@ story ST-018 "User creates a new Comment":
   then:
     - "New Comment is saved to database"
     - "User sees confirmation message"
+    - "Comment activity list can open the note detail or parent Ticket hub (dual open)"
 
 story ST-019 "Support Agent works the open ticket queue":
   status: accepted

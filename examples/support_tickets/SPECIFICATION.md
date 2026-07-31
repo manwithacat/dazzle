@@ -145,4 +145,4 @@ holds every byte-serving route to that boundary, so no new route can stream
 document bytes outside it without being explicitly listed (verify:
 `dazzle rbac byte-routes --strict`).
 
-<!-- dazzle-spec-brief: sha256:a9455c00710619824401e203b7a46204ca8aee96618fd02ee7c896e97d421d9f -->
+<!-- dazzle-spec-brief: sha256:19e6e87f88c7f6129d79da0b2ddb16546cceea98c1e95a353df9f0a423188856 -->

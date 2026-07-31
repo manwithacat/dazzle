@@ -58,7 +58,7 @@ apply map patches with `{"apply":true}`.
 | `qa-trial` skill | COGNITION | skill | trials | 1424 | STALE |
 | **example product maturity** / WI D/N/L/J/G | COGNITION | script + strategy | **example-apps** | 1522 | USED |
 | **demo fleet bar** (#1626) | COGNITION | script + strategy | **example-apps** | 1330 | STALE |
-| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1532 | USED |
+| **example journey maturity** | COGNITION | script + strategy | **example-apps** | 1543 | USED |
 | **unified example probes** | COGNITION | script | **example-apps** (driver) | 1523 | USED |
 | **agent_acceptance_panel** (multi-seat trial) | COGNITION | strategy + qa trial | **example-apps** | 1540 | USED |
 | **agent_qa_smoke** (L2.5 smoke-crawl + hyperpart opps) | COGNITION | strategy + `qa smoke-crawl` / `smoke-dig` + `qa_smoke_bar.py` | **example-apps** + trials | 1361 | STALE |
@@ -108,7 +108,7 @@ apply map patches with `{"apply":true}`.
 | MCP `test_intelligence` | HYGIENE | MCP | test-suite | 1235 | STALE |
 | MCP `semantics` | HYGIENE | MCP | example-apps | 1235 | STALE |
 | `dazzle representation` + MCP `representation` | HYGIENE | CLI + MCP | framework-ux + example-apps | 1234 | STALE |
-| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1515 | STALE |
+| `dazzle prove` | HYGIENE | CLI | framework-ux + example-apps | 1543 | USED |
 | `dazzle scaffold` | HYGIENE | CLI | example-apps | 1230 | STALE |
 | `dazzle.risk` model-driven failure-mode scoring (MDF-01..14) | HYGIENE | Python package | **framework-ux** | 1230 | STALE |
 | **CodeQL / code-scanning** | DRIVER | GitHub API + strategy | **driver (Step 0c2)** | 1541 | USED |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1543 (2026-07-31).** campaign force **example-apps journey_dogfood**: dig support_tickets — **product** comment_list dual open `Comment via id | Ticket via ticket`; ST-018 criteria + stem; prove journey **18/18**; SPEC fingerprint; dig receipt PASS. residual=0 densify=0. journey+prove **USED@1543**. budget 1. Explore **97/100**.
 
 > **Cycle 1542 (2026-07-31).** **self-audit** window c1b33ce3b..f0ad8a0ff — 5 largest: c1534 layout_kit CLEAN; c1537 search-select CLEAN; c1536 tags CLEAN; c1535 toast CLEAN; c1539 money+hyperpart CLEAN. Dig contracts: 1528/1533/1540 receipts+contract lines ok; AUD-007/008 DONE held. Dual-open IR: llm classification_list + contact engagement + ops alert + domain_join all multi-target. 0 DISCREPANCY/AUD/REGRESSION. budget 0. Explore **96/100**.
 
