@@ -6345,6 +6345,11 @@ display: inline-flex;
 align-items: center;
 gap: 0.35rem;
 }
+.dz-queue-row-meta-sep {
+color: var(--colour-text-muted);
+opacity: 0.55;
+user-select: none;
+}
 .dz-color-swatch {
 display: inline-block;
 width: 0.9rem;

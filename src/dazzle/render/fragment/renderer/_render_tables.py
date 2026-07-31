@@ -613,9 +613,10 @@ class _RenderTablesMixin:
                 label = meta_headers[j] if j < len(meta_headers) else ""
                 text = f"{ctx.escape(label)}: {ctx.escape(val)}" if label else ctx.escape(val)
                 meta_parts.append(f'<span class="dz-queue-row-meta">{text}</span>')
-            # #1626 R1 — wrap so CSS gap separates meta chips (no Amount:…Currency glue).
+            # #1626 R1 — mid-dot join so OCR/humans never glue adjacent chips.
+            sep = '<span class="dz-queue-row-meta-sep" aria-hidden="true"> · </span>'
             meta_html = (
-                f'<div class="dz-queue-row-meta-line">{"".join(meta_parts)}</div>'
+                f'<div class="dz-queue-row-meta-line">{sep.join(meta_parts)}</div>'
                 if meta_parts
                 else ""
             )
@@ -920,24 +921,27 @@ class _RenderTablesMixin:
         rows_html: list[str] = []
         for row in q.rows:
             badges_html = "".join(_render_status_badge_html(b.value) for b in row.badges)
-            meta_spans = "".join(
-                (
-                    f'<span class="dz-queue-row-meta">{ctx.escape(m.label)}: {m.value}</span>'
-                    if getattr(m, "html", False)
-                    else f'<span class="dz-queue-row-meta">'
-                    f"{ctx.escape(m.label)}: {ctx.escape(m.value)}"
-                    f"</span>"
+            # #1626 R1 — chip spans + mid-dot separators so OCR/humans never
+            # read "Support AgentCreated At" as one run-on token (CSS gap alone
+            # still OCR-joins adjacent labels).
+            meta_parts: list[str] = []
+            for m in getattr(row, "meta_columns", ()) or ():
+                if getattr(m, "html", False):
+                    meta_parts.append(
+                        f'<span class="dz-queue-row-meta">{ctx.escape(m.label)}: {m.value}</span>'
+                    )
+                else:
+                    meta_parts.append(
+                        f'<span class="dz-queue-row-meta">'
+                        f"{ctx.escape(m.label)}: {ctx.escape(m.value)}</span>"
+                    )
+            for d in row.date_columns:
+                meta_parts.append(
+                    f'<span class="dz-queue-row-date">'
+                    f"{ctx.escape(d.label)}: {ctx.escape(d.timeago_str)}</span>"
                 )
-                for m in getattr(row, "meta_columns", ()) or ()
-            )
-            date_spans = "".join(
-                f'<span class="dz-queue-row-date">'
-                f"{ctx.escape(d.label)}: {ctx.escape(d.timeago_str)}"
-                f"</span>"
-                for d in row.date_columns
-            )
-            # #1626 R1 — single meta line with gap between chips + dates.
-            chips = meta_spans + date_spans
+            sep = '<span class="dz-queue-row-meta-sep" aria-hidden="true"> · </span>'
+            chips = sep.join(meta_parts)
             date_html = f'<div class="dz-queue-row-meta-line">{chips}</div>' if chips else ""
             rows_html.append(
                 render_queue_row(

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from dazzle.render.fragment.region._builders_tables import (
     _format_queue_meta_value,
 )
@@ -44,6 +46,26 @@ def test_queue_meta_folds_currency_into_amount() -> None:
     assert "Amount" in labels
     assert meta[0].value.startswith("GBP")
     assert "12,550" in meta[0].value
+
+
+def test_queue_row_html_joins_meta_chips_with_sep() -> None:
+    """#1626 R1 — rendered queue meta chips use mid-dot separators for OCR/humans."""
+    # Contract string from _render_tables queue path — keep in lockstep.
+    sep = '<span class="dz-queue-row-meta-sep" aria-hidden="true"> · </span>'
+    chips = sep.join(
+        [
+            '<span class="dz-queue-row-meta">Assigned To: Support Agent</span>',
+            '<span class="dz-queue-row-date">Created At: 2d ago</span>',
+        ]
+    )
+    assert "dz-queue-row-meta-sep" in chips
+    assert " · " in chips
+    assert chips.index("Support Agent") < chips.index("meta-sep")
+    src = (
+        Path(__file__).resolve().parents[2]
+        / "src/dazzle/render/fragment/renderer/_render_tables.py"
+    ).read_text(encoding="utf-8")
+    assert "dz-queue-row-meta-sep" in src
 
 
 def test_queue_row_includes_amount_and_supplier_meta() -> None:

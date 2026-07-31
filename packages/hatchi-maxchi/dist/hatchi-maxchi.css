@@ -8947,6 +8947,12 @@ a.action-card:hover {
   gap: 0.35rem;
 }
 
+.queue-row-meta-sep {
+  color: var(--colour-text-muted);
+  opacity: 0.55;
+  user-select: none;
+}
+
 /* #1626 R5 / P0-8 — palette chips on brand desks (list + queue). */
 .color-swatch {
   display: inline-block;
