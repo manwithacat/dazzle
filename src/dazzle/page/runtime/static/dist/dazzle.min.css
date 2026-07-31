@@ -6328,6 +6328,16 @@ font-size: var(--text-xs);
 color: var(--colour-text-muted);
 margin-block-start: 0.125rem;
 }
+.dz-queue-row-meta-line {
+display: flex;
+flex-wrap: wrap;
+align-items: baseline;
+gap: 0.15rem var(--space-sm);
+margin-block-start: 0.125rem;
+font-size: var(--text-xs);
+color: var(--colour-text-muted);
+}
+.dz-queue-row-meta,
 .dz-queue-row-date {
 font-size: var(--text-xs);
 color: var(--colour-text-muted);

@@ -8927,6 +8927,18 @@ a.action-card:hover {
   margin-block-start: 0.125rem;
 }
 
+/* #1626 R1 — space meta chips so "Amount: xCurrency: y" never glues. */
+.queue-row-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem var(--space-sm);
+  margin-block-start: 0.125rem;
+  font-size: var(--text-xs);
+  color: var(--colour-text-muted);
+}
+
+.queue-row-meta,
 .queue-row-date {
   font-size: var(--text-xs);
   color: var(--colour-text-muted);

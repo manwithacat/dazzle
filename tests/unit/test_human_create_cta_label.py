@@ -58,3 +58,31 @@ def test_empty_explicit_uses_entity_title() -> None:
         )
         == "New Invoice"
     )
+
+
+def test_add_person_surface_title_does_not_double_verb() -> None:
+    """#1626 R3 — HR create surfaces titled 'Add Person' → New Person."""
+    assert (
+        human_create_cta_label(
+            explicit="Add Person",
+            entity_title="Person",
+            entity_name="Person",
+        )
+        == "New Person"
+    )
+    assert (
+        human_create_cta_label(
+            explicit="",
+            entity_title="Add Department",
+            entity_name="Department",
+        )
+        == "New Department"
+    )
+    assert (
+        human_create_cta_label(
+            explicit="Add Role",
+            entity_title="Role",
+            entity_name="Role",
+        )
+        == "New Role"
+    )

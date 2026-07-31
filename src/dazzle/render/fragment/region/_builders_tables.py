@@ -104,23 +104,58 @@ def _queue_row_meta_columns(
     display_key: str,
     queue_status_field: str,
 ) -> list[QueueMetaColumn]:
-    """Domain density lines for one queue row (amount / supplier / …)."""
+    """Domain density lines for one queue row (amount / supplier / …).
+
+    #1626 R1 — fold a sibling ``currency`` code into money/amount so buyers
+    never see glued ``Amount:…Currency:…`` pairs, and skip bare currency
+    columns once folded.
+    """
     meta: list[QueueMetaColumn] = []
     skip_types = frozenset({"badge", "date"})
-    for col in columns or []:
-        if len(meta) >= _QUEUE_META_MAX or not isinstance(col, dict):
-            continue
+    col_list = [c for c in (columns or []) if isinstance(c, dict)]
+    currency_code = ""
+    currency_keys: set[str] = set()
+    for col in col_list:
+        key = str(col.get("key") or "").lower()
+        label = str(col.get("label") or "").lower()
+        if key in {"currency", "currency_code"} or label in {"currency", "currency code"}:
+            raw = _queue_meta_raw(item, str(col.get("key") or ""))
+            if raw is not None and str(raw).strip():
+                currency_code = str(raw).strip().upper()
+                currency_keys.add(str(col.get("key") or ""))
+
+    for col in col_list:
+        if len(meta) >= _QUEUE_META_MAX:
+            break
         key = str(col.get("key") or "")
         if not key or key == display_key or key == queue_status_field:
             continue
+        if key in currency_keys:
+            continue  # folded into amount when present
         if str(col.get("type") or "") in skip_types:
             continue
         raw = _queue_meta_raw(item, key)
         if raw is None:
             continue
-        value_str = _format_queue_meta_value(raw, col)
+        # Prefer combined money line when we have a free-standing currency code.
+        col_type = str(col.get("type") or "").lower()
+        key_l = key.lower()
+        if currency_code and (
+            col_type in ("currency", "money", "number", "decimal", "float", "int")
+            or key_l in {"amount", "total", "value", "price", "balance"}
+        ):
+            try:
+                num = float(raw)
+                value_str = f"{currency_code} {num:,.2f}"
+            except (TypeError, ValueError):
+                value_str = f"{currency_code} {raw}".strip()
+        else:
+            value_str = _format_queue_meta_value(raw, col)
         if value_str:
             meta.append(QueueMetaColumn(label=str(col.get("label") or key), value=value_str))
+    # If amount never appeared but currency did, still show the code once.
+    if not meta and currency_code:
+        meta.append(QueueMetaColumn(label="Currency", value=currency_code))
     return meta
 
 

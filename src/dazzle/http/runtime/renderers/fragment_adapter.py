@@ -62,6 +62,23 @@ _COLLECTION_CTA_SUFFIX = re.compile(
 _CREATE_VERB_PREFIX = re.compile(r"^(Create|Add|New)\s+", re.IGNORECASE)
 
 
+def _cta_noun(text: str) -> str:
+    """Strip Create/Add/New verbs and collection suffixes from a CTA noun.
+
+    #1626 R3 — surface titles like ``Add Person`` must not become
+    ``New Add Person`` when the framework prefixes ``New``.
+    """
+    noun = (text or "").strip()
+    # Peel repeated verb prefixes (Add New Person → Person).
+    for _ in range(3):
+        stripped = _CREATE_VERB_PREFIX.sub("", noun).strip()
+        if stripped == noun:
+            break
+        noun = stripped
+    noun = _COLLECTION_CTA_SUFFIX.sub("", noun).strip() or noun
+    return noun
+
+
 def human_create_cta_label(
     *,
     explicit: str = "",
@@ -70,31 +87,22 @@ def human_create_cta_label(
 ) -> str:
     """Primary list CTA: singular record language, never collection chrome.
 
-    #1626 P0-2 — buyers see ``+ New Contact List`` when the list surface
-    title (or a create surface named after the collection) leaks into
-    the button. Prefer entity display title; strip collection suffixes
+    #1626 P0-2 / R3 — buyers see ``+ New Contact List`` when the list surface
+    title leaks, or ``+ New Add Person`` when create surfaces are titled
+    ``Add Person``. Prefer entity display title; strip collection suffixes
     and redundant Create/Add/New verbs.
     """
     candidate = (explicit or "").strip()
     if candidate and _COLLECTION_CTA_SUFFIX.search(candidate):
         candidate = ""
     if candidate:
-        candidate = _CREATE_VERB_PREFIX.sub("", candidate).strip() or candidate
-        # Explicit full labels that already read as actions ("Invite user")
-        # keep their text; short noun phrases get "New ".
-        if _CREATE_VERB_PREFIX.match(explicit.strip()):
-            # Was "Create Contact" / "New Invoice" → "New Contact"
-            noun = _CREATE_VERB_PREFIX.sub("", explicit.strip()).strip()
-            if noun and not _COLLECTION_CTA_SUFFIX.search(noun):
-                return f"New {noun}"
+        noun = _cta_noun(candidate)
+        if noun and not _COLLECTION_CTA_SUFFIX.search(noun):
+            return f"New {noun}"
         if candidate.lower().startswith("new "):
-            return candidate
-        # Short noun ("Contact") → "New Contact"
-        if " " not in candidate or len(candidate) < 28:
-            return f"New {candidate}"
+            return f"New {_cta_noun(candidate[4:])}" if _cta_noun(candidate[4:]) else candidate
         return candidate
-    noun = (entity_title or entity_name.replace("_", " ") or "item").strip()
-    noun = _COLLECTION_CTA_SUFFIX.sub("", noun).strip() or noun
+    noun = _cta_noun(entity_title or entity_name.replace("_", " ") or "item")
     return f"New {noun}"
 
 

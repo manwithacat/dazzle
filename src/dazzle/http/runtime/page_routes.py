@@ -2288,18 +2288,21 @@ def _entity_title_for_create_cta(
     create_surface: Any,
     titles: dict[str, str],
 ) -> str:
-    """Resolve commercial singular title for a workspace New X CTA."""
+    """Resolve commercial singular title for a workspace New X CTA.
+
+    #1626 R3 — strip Create/Add/New verb prefixes so ``Add Person`` becomes
+    ``Person`` (caller prefixes ``New `` → ``New Person``, not ``New Add Person``).
+    """
+    from dazzle.http.runtime.renderers.fragment_adapter import _cta_noun
+
     ent_title = (titles.get(entity_ref) or "").strip()
     if ent_title and ent_title != entity_ref:
-        return ent_title
+        return _cta_noun(ent_title)
     create_title = (getattr(create_surface, "title", "") or "").strip()
-    lower = create_title.lower()
-    if lower.startswith("create "):
-        return create_title[7:].strip() or entity_ref.replace("_", " ").title()
-    if lower.startswith("new "):
-        return create_title[4:].strip() or entity_ref.replace("_", " ").title()
     if create_title:
-        return create_title
+        noun = _cta_noun(create_title)
+        if noun:
+            return noun
     return entity_ref.replace("_", " ").title()
 
 
