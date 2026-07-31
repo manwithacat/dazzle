@@ -72,10 +72,10 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1529 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1530 | USED |
 | gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1520 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1529 | USED |
-| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1524 | USED |
+| `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1530 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
 | `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1520 | USED |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1530 (2026-07-31).** campaign hyperpart queue=0 → fall-through **framework-ux** open: merge — multiple `open:` lines merge hops (AUD-007 last-win root fix); unit pin `test_parse_multiple_open_lines_merge`; scoreboard_smells 1→0 (comment false positive WI N). tip CI 1528 in_progress — no push (hold 1529+1530). residual=0 densify=0. fitness/ux + hyperpart OBSERVE **USED@1530**. budget 1. Explore **86/100**.
 
 > **Cycle 1529 (2026-07-31).** campaign hyperpart queue=0 → fall-through **journey_dogfood** dig domain_join_co ST-001–006; **product** announcement_list pipe dual open `Announcement via id | Workspace via workspace`; ST-002 criteria + stem; SPEC fingerprint; fleet densify scoreboard comments cleaned (processes.dsl×6). prove 6/6 dual open_hop. Pushed held 1527+1528. residual=0 densify=0. journey+hyperpart OBSERVE+validate **USED@1529**. budget 1. Explore **85/100**.
 

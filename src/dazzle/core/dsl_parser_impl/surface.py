@@ -795,6 +795,10 @@ def _kw_open(parser: Any, state: _SurfaceState) -> None:
         open: first_non_null(company, sole_trader, partnership)
         open: first_non_null(Company via company, SoleTrader via sole_trader)
 
+    Multiple ``open:`` lines on one surface **merge** hops in declaration order
+    (cycle 1530 / AUD-007). Prefer a single pipe-chained line; two bare lines
+    used to last-win and drop earlier hops.
+
     First non-null FK on the row wins at drill time; null chain falls back to
     same-entity detail (#1614).
     """
@@ -835,10 +839,20 @@ def _kw_open(parser: Any, state: _SurfaceState) -> None:
             break
     if not targets:
         parser.error("open: requires at least one hop (Entity via field or first_non_null(...))")
-    state.open_via_targets = targets
+    # Merge repeated open: lines (AUD-007: last-win dropped earlier hops).
+    if state.open_via_targets:
+        seen = {(t.via, t.entity) for t in state.open_via_targets}
+        for t in targets:
+            key = (t.via, t.entity)
+            if key not in seen:
+                state.open_via_targets.append(t)
+                seen.add(key)
+    else:
+        state.open_via_targets = list(targets)
     # Back-compat single-field views (validation, simple templates)
-    state.open_entity = targets[0].entity
-    state.open_via = targets[0].via
+    primary = state.open_via_targets[0]
+    state.open_entity = primary.entity
+    state.open_via = primary.via
     parser.skip_newlines()
 
 

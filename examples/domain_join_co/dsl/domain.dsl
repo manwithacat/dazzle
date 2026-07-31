@@ -105,7 +105,8 @@ entity Announcement "Announcement":
 surface announcement_list "Announcements":
   uses entity Announcement
   mode: list
-  # Pipe dual hop (cycle 1529) — two open: lines last-win in the parser.
+  # Pipe dual hop (cycle 1529) — prefer one pipe line (parser also merges
+  # multiple open: lines since cycle 1530 / AUD-007).
   open: Announcement via id | Workspace via workspace
   section main:
     field title "Title"

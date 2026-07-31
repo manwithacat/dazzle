@@ -355,6 +355,37 @@ surface sub_list "Subs":
     ]
 
 
+def test_parse_multiple_open_lines_merge() -> None:
+    """Cycle 1530 / AUD-007 — two open: lines merge; no longer last-wins."""
+    from dazzle.core.dsl_parser_impl import parse_dsl
+
+    dsl = """
+module test.core
+app test_app "T"
+
+entity Letter "Letter":
+  id: uuid pk
+  contact: ref Contact
+
+entity Contact "Contact":
+  id: uuid pk
+
+surface letter_list "Letters":
+  uses entity Letter
+  mode: list
+  open: Letter via id
+  open: Contact via contact
+"""
+    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+    surface = fragment.surfaces[0]
+    assert surface.open_via == "id"
+    assert surface.open_entity == "Letter"
+    assert [(t.entity, t.via) for t in surface.open_via_targets] == [
+        ("Letter", "id"),
+        ("Contact", "contact"),
+    ]
+
+
 def test_data_row_first_non_null_htmx() -> None:
     """Rich data-table path uses multi-hop candidates."""
     from dazzle.render.fragment.primitives import RowCapabilities
