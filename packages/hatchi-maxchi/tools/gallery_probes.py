@@ -826,6 +826,35 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1539 — money minor carrier sync + blur normalize (require_mutation
+    # after hyperpart investigate queue=0). Mirrors test_money_field_syncs_…
+    Probe(
+        id="money.sync_minor_and_blur_normalize",
+        stem="money",
+        page="hyperparts/money.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Typing a major amount rewrites the hidden minor carrier; blur "
+            "normalizes display to scale decimals; empty blur clears the carrier "
+            "(money submit contract is integer minor — not a static demo)"
+        ),
+        kind="money_sync_minor_blur",
+        params={
+            "root": "[data-money], [data-dz-money], .money, .dz-money",
+            "display": (
+                "input[inputmode=decimal], input[inputmode='decimal'], input.form-input[type=text]"
+            ),
+            "minor": "input[name=amount_minor], input[type=hidden][name$=_minor]",
+            "seed_minor": "1500",
+            "type_value": "12.5",
+            "expect_minor_typed": "1250",
+            "expect_display_blur": "12.50",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -2534,6 +2563,118 @@ def _run_search_select_typeahead_select(page: Any, probe: Probe) -> dict[str, An
     }
 
 
+def _run_money_sync_minor_blur(page: Any, probe: Probe) -> dict[str, Any]:
+    """Major input → minor carrier; blur normalize; empty clears carrier.
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py
+    test_money_field_syncs_minor_carrier_and_normalizes (cycle 1539).
+    """
+    params = probe.params
+    root_sel = params.get("root", "[data-money], [data-dz-money], .money, .dz-money")
+    display_sel = params.get(
+        "display",
+        "input[inputmode=decimal], input[inputmode='decimal']",
+    )
+    minor_sel = params.get(
+        "minor",
+        "input[name=amount_minor], input[type=hidden][name$=_minor]",
+    )
+    seed_minor = str(params.get("seed_minor", "1500"))
+    type_value = str(params.get("type_value", "12.5"))
+    expect_minor_typed = str(params.get("expect_minor_typed", "1250"))
+    expect_display_blur = str(params.get("expect_display_blur", "12.50"))
+    settle = int(params.get("settle_ms", 50))
+
+    scope = _probe_scope(page, params)
+    root = None
+    for part in root_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            root = loc
+            break
+    if root is None:
+        return {"verdict": "ERROR", "detail": f"money root not found ({root_sel})"}
+
+    display = None
+    for part in display_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            display = loc
+            break
+    if display is None:
+        return {"verdict": "ERROR", "detail": f"display input not found ({display_sel})"}
+
+    minor = None
+    for part in minor_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = root.locator(part).first
+        if loc.count() > 0:
+            minor = loc
+            break
+    if minor is None:
+        return {"verdict": "ERROR", "detail": f"minor carrier not found ({minor_sel})"}
+
+    got_seed = minor.input_value()
+    if got_seed != seed_minor:
+        return {
+            "verdict": "FAIL",
+            "detail": f"seed minor {got_seed!r} != {seed_minor!r}",
+            "dom_hint": minor_sel,
+        }
+
+    display.fill(type_value)
+    page.wait_for_timeout(settle)
+    got_typed = minor.input_value()
+    if got_typed != expect_minor_typed:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"after type {type_value!r} minor={got_typed!r} "
+                f"(expected {expect_minor_typed!r}) — input sync broken"
+            ),
+            "dom_hint": minor_sel,
+        }
+
+    display.evaluate("el => el.blur()")
+    page.wait_for_timeout(settle)
+    got_disp = display.input_value()
+    if got_disp != expect_display_blur:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"blur display {got_disp!r} != {expect_display_blur!r} — scale normalize broken"
+            ),
+            "dom_hint": display_sel,
+        }
+
+    display.fill("")
+    display.evaluate("el => el.blur()")
+    page.wait_for_timeout(settle)
+    got_clear = minor.input_value()
+    if got_clear != "":
+        return {
+            "verdict": "FAIL",
+            "detail": f"empty blur left minor={got_clear!r} (expected clear)",
+            "dom_hint": minor_sel,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (
+            f"seed {seed_minor}; type {type_value!r}→minor {expect_minor_typed}; "
+            f"blur {expect_display_blur!r}; empty clears carrier"
+        ),
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -2555,6 +2696,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "toast_dismiss_and_fire": _run_toast_dismiss_and_fire,
     "tags_seed_add_remove": _run_tags_seed_add_remove,
     "search_select_typeahead_select": _run_search_select_typeahead_select,
+    "money_sync_minor_blur": _run_money_sync_minor_blur,
 }
 
 

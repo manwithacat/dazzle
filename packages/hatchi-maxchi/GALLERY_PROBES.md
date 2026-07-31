@@ -44,6 +44,7 @@ python scripts/hm_gallery_probes.py --run   # monorepo entrypoint
 | `toast.dismiss_and_client_fire` | `toast` | exclusive | high | controller | Dismissing a stack toast removes it after leave motion; dispatching showToast appends a new toast with the detail title (stack host must honor dismiss + client fire — not a static markup demo) |
 | `tags.seed_add_and_remove` | `tags` | exclusive | high | controller | Seeded comma value enhances into chips; Enter adds a new chip and rewrites the native comma-joined value; Remove × drops a chip (chips UI must own submit contract — not a static demo) |
 | `search_select.open_typeahead_select_hold` | `search-select` | exclusive | high | controller | Focus opens the typeahead panel; typing filters mock rows; selecting a row shows confirm and holds the panel past blur grace; after confirm-hold the panel auto-dismisses (not a static markup demo) |
+| `money.sync_minor_and_blur_normalize` | `money` | exclusive | high | controller | Typing a major amount rewrites the hidden minor carrier; blur normalizes display to scale decimals; empty blur clears the carrier (money submit contract is integer minor — not a static demo) |
 
 ## Loop (autonomous improve)
 

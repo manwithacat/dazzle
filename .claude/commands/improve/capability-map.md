@@ -72,13 +72,13 @@ apply map patches with `{"apply":true}`.
 | `dazzle qa taste-panel` (metered; **use subscription substitute**) | COGNITION | CLI + `hm_visual_smoke` | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa component-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** + framework-ux | 1233 | STALE |
 | `dazzle qa property-vision` (metered; **use host-Read / gallery**) | COGNITION | CLI + substitute | **hm-convergence** | 1233 | STALE |
-| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1537 | USED |
-| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1537 | USED |
+| **HM hyperpart coherence** | COGNITION | script + strategy | **hm-convergence** | 1539 | USED |
+| gallery_probes (`hm_gallery_probes.py`) | HYGIENE | script | **hm-convergence** | 1539 | USED |
 | `dazzle validate` / `lint` | HYGIENE | CLI | example-apps (Tier 1) | 1531 | USED |
 | `dazzle ux verify` (contracts/interactions) | HYGIENE | CLI | framework-ux, ux-converge, example-apps | 1534 | USED |
 | `dazzle qa capture` (Tier-2 visual scrape) | HYGIENE | CLI | example-apps (visual_tier2) | 1231 | STALE |
 | `dazzle qa login` | HYGIENE | CLI | (support for capture/verify) | 1231 | STALE |
-| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1537 | USED |
+| `hm gallery interaction probes` | HYGIENE | script + strategy | **hm-convergence** | 1539 | USED |
 | `dazzle deploy plan` | HYGIENE | CLI | example-apps (Tier 1) | 1230 | STALE |
 | MCP `conformance` | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
 | MCP `dsl` (fidelity/validate/lint/brief/…) | HYGIENE | MCP | example-apps (Tier 1) | 1259 | STALE |
@@ -122,6 +122,8 @@ apply map patches with `{"apply":true}`.
 ---
 
 ## Cycle notes (newest first)
+
+> **Cycle 1539 (2026-07-31).** campaign **hyperpart_coherence investigate** (lag≥20 since 1519): recapture 92/92 (0 404s); host Read spot-check app-shell-live/pdf/diagram/grid-cols; PIL non-blank; ingest coherent=92 mean=8.91 queue=0. **Ship require_mutation:** `money.sync_minor_and_blur_normalize` gallery probe; catalog **32/32 PASS**. hyperpart + gallery **USED@1539**. budget 1. Explore **95/100**.
 
 > **Cycle 1538 (2026-07-31).** campaign hyperpart_coherence queue=0 lag~19 (post-1519) → fall-through **framework-ux** (skip 4th consecutive gallery expand): **ship** layout_kit `overflow.cell_no_stack` predicate + `CHIP_STRIP_BASELINE_MEASURE_JS` + L2 multi-chip baseline test; geometry 6 passed. residual=0 densify=0 dual_lock=0. fitness **USED@1538**. budget 1. Explore **94/100**.
 
