@@ -10,6 +10,8 @@ Billing workspace is portfolio metrics + invoice queue before entity lists.
 - project_member/contractor stay on scoped surfaces, not full billing.
 - Organization hub related projects and project hub related invoices/memberships
   are **pull queues**, not warehouse tables (ST-006/008/011).
+- Invoice list dual open `Invoice via id | Project via project` (cycle 1544
+  story_walk) — inspect the invoice or hop to the project hub.
 
 ## Not this
 

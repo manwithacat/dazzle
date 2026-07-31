@@ -129,7 +129,7 @@ story ST-007 "Org owner reviews invoices from the portfolio queue into project c
     - "Invoices exist for projects under the org"
   then:
     - "Portfolio metrics and open_invoices queue surface recent billing work"
-    - "Invoice row open hops to the parent Project hub via project FK"
+    - "Invoice row open can hop to Invoice detail (id) or the parent Project hub via project FK"
 
 story ST-008 "Auditor opens project hub for read-only invoice review":
   status: accepted
@@ -166,7 +166,7 @@ story ST-010 "External contractor reviews non-sensitive invoices via project hub
     - "Sensitive and non-sensitive invoices exist"
   then:
     - "Only non-sensitive org invoices appear"
-    - "Row open hops to Project hub; sensitive rows stay excluded by scope"
+    - "Row open can hop to Invoice detail or Project hub; sensitive rows stay excluded by scope"
 
 story ST-011 "Admin reviews cross-org portfolio from organization hubs":
   status: accepted

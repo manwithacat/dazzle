@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "walks": {
+    "admin_st_011": {
+      "live_ok_at": "2026-07-31T09:41:57+00:00"
+    },
+    "auditor_st_002": {
+      "live_ok_at": "2026-07-31T09:41:57+00:00"
+    },
+    "auditor_st_008": {
+      "live_ok_at": "2026-07-31T09:41:57+00:00"
+    },
+    "external_contractor_st_004": {
+      "live_ok_at": "2026-07-31T09:41:57+00:00"
+    },
+    "external_contractor_st_010": {
+      "live_ok_at": "2026-07-31T09:41:57+00:00"
+    },
+    "org_owner_st_006": {
+      "live_ok_at": "2026-07-31T09:41:57+00:00"
+    },
+    "org_owner_st_007": {
+      "live_ok_at": "2026-07-31T09:41:57+00:00"
+    },
+    "project_member_st_003": {
+      "live_ok_at": "2026-07-31T09:41:57+00:00"
+    },
+    "project_member_st_009": {
+      "live_ok_at": "2026-07-31T09:41:57+00:00"
+    }
+  }
+}

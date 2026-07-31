@@ -174,7 +174,9 @@ surface invoice_list "Invoices":
   uses entity Invoice
   mode: list
   render: fragment
-  open: Project via project
+  # Dual open (cycle 1544 story_walk): primary = invoice detail; secondary =
+  # parent Project hub for portfolio → project context (ST-002/007/010).
+  open: Invoice via id | Project via project
 
   section main "Invoices":
     field number "Number"
@@ -189,7 +191,7 @@ surface invoice_list "Invoices":
   # The declared sort gives the list sortable headers (grid convergence C1.1 —
   # exercised end-to-end by tests/e2e/test_grid_convergence_e2e.py).
   ux:
-    purpose: "Browse invoices — open a row for the parent Project hub"
+    purpose: "Browse invoices — open a row for invoice detail or the parent Project hub"
     sort: number asc
     bulk_actions:
       mark_sensitive: sensitive -> true
@@ -243,14 +245,15 @@ surface membership_list "Memberships":
   uses entity Membership
   mode: list
   render: fragment
-  open: Project via project
+  # Dual open (cycle 1544): membership detail or parent Project hub.
+  open: Membership via id | Project via project
 
   section main "Memberships":
     field user "User"
     field project "Project"
 
   ux:
-    purpose: "Memberships — open a row for the parent Project hub"
+    purpose: "Memberships — open a row for membership detail or the parent Project hub"
 
 surface membership_detail "Membership":
   uses entity Membership
