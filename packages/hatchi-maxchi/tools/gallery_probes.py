@@ -753,6 +753,38 @@ PROBES: tuple[Probe, ...] = (
         fix_surface="controller",
         intent="exclusive",
     ),
+    # Cycle 1536 — tags chips: seed enhance + Enter add + × remove (submit value).
+    # Mirrors test_behaviour test_tags_seed_and_add_chip / test_tags_remove_chip.
+    Probe(
+        id="tags.seed_add_and_remove",
+        stem="tags",
+        page="hyperparts/tags.html",
+        category="interaction",
+        severity="high",
+        claim=(
+            "Seeded comma value enhances into chips; Enter adds a new chip and "
+            "rewrites the native comma-joined value; Remove × drops a chip "
+            "(chips UI must own submit contract — not a static demo)"
+        ),
+        kind="tags_seed_add_remove",
+        params={
+            "native": "input[data-tags], input[data-dz-tags]",
+            "root": (
+                ".tags[data-enhanced], .dz-tags[data-dz-enhanced], "
+                ".tags[data-dz-enhanced], .dz-tags[data-enhanced]"
+            ),
+            "chip": ".tags-chip, .dz-tags-chip",
+            "entry": ".tags-entry, .dz-tags-entry",
+            "seed_count": 2,
+            "add_value": "frontend",
+            "expect_after_add": "urgent,backend,frontend",
+            "remove_label": "Remove urgent",
+            "expect_after_remove": "backend,frontend",
+            "scope": ".hm-preview",
+        },
+        fix_surface="controller",
+        intent="exclusive",
+    ),
 )
 
 
@@ -2150,6 +2182,144 @@ def _run_toast_dismiss_and_fire(page: Any, probe: Probe) -> dict[str, Any]:
     }
 
 
+def _run_tags_seed_add_remove(page: Any, probe: Probe) -> dict[str, Any]:
+    """Seed enhance → Enter add chip → × remove; native value stays comma-joined.
+
+    Mirrors packages/hatchi-maxchi/tests/test_behaviour.py
+    test_tags_seed_and_add_chip + test_tags_remove_chip for the autonomous
+    gallery_probes catalog (cycle 1536). Gallery dual-lock uses unprefixed
+    data-tags / .tags-*; product dist uses data-dz-tags / .dz-tags-*.
+    """
+    params = probe.params
+    native_sel = params.get("native", "input[data-tags], input[data-dz-tags]")
+    root_sel = params.get(
+        "root",
+        (
+            ".tags[data-enhanced], .dz-tags[data-dz-enhanced], "
+            ".tags[data-dz-enhanced], .dz-tags[data-enhanced]"
+        ),
+    )
+    chip_sel = params.get("chip", ".tags-chip, .dz-tags-chip")
+    entry_sel = params.get("entry", ".tags-entry, .dz-tags-entry")
+    seed_count = int(params.get("seed_count", 2))
+    add_value = str(params.get("add_value", "frontend"))
+    expect_after_add = str(params.get("expect_after_add", "urgent,backend,frontend"))
+    remove_label = str(params.get("remove_label", "Remove urgent"))
+    expect_after_remove = str(params.get("expect_after_remove", "backend,frontend"))
+    settle = int(params.get("settle_ms", 100))
+
+    scope = _probe_scope(page, params)
+    native = None
+    for part in native_sel.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        loc = scope.locator(part).first
+        if loc.count() > 0:
+            native = loc
+            break
+    if native is None:
+        return {"verdict": "ERROR", "detail": f"tags native input not found ({native_sel})"}
+
+    # Seeded values should enhance on DOM ready; pointerdown covers empty/late paths.
+    page.wait_for_timeout(settle)
+    root = scope.locator(root_sel).first
+    if root.count() < 1:
+        native.dispatch_event("pointerdown")
+        page.wait_for_timeout(settle)
+        root = scope.locator(root_sel).first
+    if root.count() < 1:
+        return {
+            "verdict": "FAIL",
+            "detail": f"tags root not enhanced ({root_sel})",
+            "dom_hint": root_sel,
+        }
+
+    chips = scope.locator(chip_sel)
+    initial = chips.count()
+    if initial < seed_count:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"seed enhance left {initial} chips (expected ≥{seed_count}) — "
+                "SSR comma value may not paint chips"
+            ),
+            "dom_hint": chip_sel,
+        }
+
+    entry = scope.locator(entry_sel).first
+    if entry.count() < 1:
+        return {
+            "verdict": "FAIL",
+            "detail": f"tags entry not found ({entry_sel})",
+            "dom_hint": entry_sel,
+        }
+    entry.fill(add_value)
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(settle // 2 if settle >= 50 else 50)
+    after_add = chips.count()
+    if after_add != initial + 1:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"Enter add left {after_add} chips (was {initial}, expected "
+                f"{initial + 1}) — chip create path broken"
+            ),
+            "dom_hint": entry_sel,
+        }
+    native_val = native.input_value()
+    if native_val != expect_after_add:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"native value after add {native_val!r} != {expect_after_add!r} — "
+                "submit contract drift"
+            ),
+            "dom_hint": native_sel,
+        }
+
+    remove_btn = scope.get_by_role("button", name=remove_label)
+    if remove_btn.count() < 1:
+        # aria-label fallback
+        remove_btn = scope.locator(f'button[aria-label="{remove_label}"]')
+    if remove_btn.count() < 1:
+        return {
+            "verdict": "FAIL",
+            "detail": f"remove control not found ({remove_label!r})",
+            "dom_hint": "button[aria-label]",
+        }
+    remove_btn.first.click()
+    page.wait_for_timeout(settle // 2 if settle >= 50 else 50)
+    after_remove = chips.count()
+    if after_remove != after_add - 1:
+        return {
+            "verdict": "FAIL",
+            "detail": (
+                f"remove left {after_remove} chips (was {after_add}, expected "
+                f"{after_add - 1}) — × dismiss broken"
+            ),
+            "dom_hint": chip_sel,
+        }
+    native_val2 = native.input_value()
+    if native_val2 != expect_after_remove:
+        return {
+            "verdict": "FAIL",
+            "detail": (f"native value after remove {native_val2!r} != {expect_after_remove!r}"),
+            "dom_hint": native_sel,
+        }
+
+    return {
+        "verdict": "PASS",
+        "detail": (
+            f"seed={initial}; add {add_value!r} → {after_add}; "
+            f"remove {remove_label!r} → {after_remove} value={native_val2!r}"
+        ),
+        "seed_chips": initial,
+        "after_add": after_add,
+        "after_remove": after_remove,
+    }
+
+
 KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "exclusive_details_open": _run_exclusive_details_open,
     "multi_details_open": _run_multi_details_open,
@@ -2169,6 +2339,7 @@ KIND_RUNNERS: dict[str, Callable[[Any, Probe], dict[str, Any]]] = {
     "combobox_select": _run_combobox_select,
     "wizard_step_forward": _run_wizard_step_forward,
     "toast_dismiss_and_fire": _run_toast_dismiss_and_fire,
+    "tags_seed_add_remove": _run_tags_seed_add_remove,
 }
 
 

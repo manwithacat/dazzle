@@ -57,6 +57,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert "combobox.enhance_and_select" in ids
     assert "wizard.forward_after_valid" in ids
     assert "toast.dismiss_and_client_fire" in ids
+    assert "tags.seed_add_and_remove" in ids
     for p in PROBES:
         assert p.stem and p.page and p.kind and p.claim
         assert p.severity in {"blocker", "high", "medium", "low"}
@@ -80,6 +81,7 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
             "combobox_select",
             "wizard_step_forward",
             "toast_dismiss_and_fire",
+            "tags_seed_add_remove",
         }
     slider = next(p for p in PROBES if p.id == "slider.updates_readout")
     assert slider.kind == "range_value_readout"
@@ -97,6 +99,10 @@ def test_catalog_has_core_exclusive_open_probes() -> None:
     assert toast.kind == "toast_dismiss_and_fire"
     assert toast.fix_surface == "controller"
     assert toast.page == "hyperparts/toast-live.html"
+    tags = next(p for p in PROBES if p.id == "tags.seed_add_and_remove")
+    assert tags.kind == "tags_seed_add_remove"
+    assert tags.fix_surface == "controller"
+    assert tags.page == "hyperparts/tags.html"
     tree = next(p for p in PROBES if p.id == "tree.multi_open")
     assert tree.intent == "multi_open"
     assert tree.kind == "multi_details_open"
