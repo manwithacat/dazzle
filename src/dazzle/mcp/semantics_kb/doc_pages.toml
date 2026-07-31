@@ -1608,6 +1608,13 @@ order = 120.6
 handwritten = true
 intro = "Instance-level anti-warehouse gate: answer-first landing, job coverage, warehouse density for example apps."
 
+[pages.antagonist-agent-brief-1626]
+title = "Antagonist Agent Brief (#1626)"
+slug = "antagonist-agent-brief-1626"
+order = 120.7
+handwritten = true
+intro = "Agent residual queue R1–R6 for the demo-fleet antagonist bake-off — stills floors, recapture recipe, messaging constraints."
+
 [pages.fitness-methodology]
 title = "Fitness Methodology"
 slug = "fitness-methodology"

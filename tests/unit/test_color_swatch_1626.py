@@ -14,7 +14,7 @@ from dazzle.render.fragment.renderer._data_row import (
 
 def test_color_swatch_html_for_hex() -> None:
     html = _render_color_swatch_html("#336699")
-    assert 'data-dz-color-swatch' in html
+    assert "data-dz-color-swatch" in html
     assert "background-color: #336699" in html
     assert "#336699" in html
 

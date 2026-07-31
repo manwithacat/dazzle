@@ -105,8 +105,15 @@ explicitly demote fleet claim) → PASS fleet demo mature.
 **Seed + capture recipe** (when Postgres available):
 
 ```bash
-# Fleet recapture (restarts serve per persona; timeout default 600s):
+# Agent-loop preflight (FS/git/venv/Postgres) — fail-fast before long capture:
+.venv/bin/python scripts/agent_workspace_health.py --require-postgres
+# macOS volume TCC (Ghostty/Terminal on /Volumes): cannot silent-grant;
+# diagnose + System Settings steps:
+./scripts/macos_agent_volume_access.sh
+# Fleet recapture (restarts serve per persona; default preflight on;
+# serve logs to examples/<app>/.dazzle/recapture-logs/ — never PIPE):
 .venv/bin/python scripts/recapture_demo_fleet_1626.py --apps $APP
+.venv/bin/python scripts/recapture_demo_fleet_1626.py --preflight-only
 # Or manual:
 # generate fixtures from blueprint
 dazzle demo generate --project examples/$APP --format json --output-dir .dazzle/demo_data

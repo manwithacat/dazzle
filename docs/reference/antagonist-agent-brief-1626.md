@@ -1,8 +1,8 @@
 # Agent brief — antagonist residual for #1626
 
-**Audience:** `/improve` example-apps / framework-ux agents  
-**Stance:** Product-surface only. Stills under `examples/*/.dazzle/qa/screenshots` are the human score source.  
-**Human score (2026-07-31 recapture):** fleet mean **~5.1 / 10** (pass ≥**5.5**). Short by **~0.4**.  
+**Audience:** `/improve` example-apps / framework-ux agents
+**Stance:** Product-surface only. Stills under `examples/*/.dazzle/qa/screenshots` are the human score source.
+**Human score (2026-07-31 recapture):** fleet mean **~5.1 / 10** (pass ≥**5.5**). Short by **~0.4**.
 **Do not claim bake-off pass** until a fresh human re-score says so.
 
 Tracking: GitHub **#1626**. Product-maturity overview:
@@ -125,10 +125,17 @@ After expanding floors (31 Jul), protect non-trio heroes the same way as the tri
 ## Recapture recipe
 
 ```bash
+# Preflight (volume TCC / git / venv / Postgres) — run first in agent shells:
+.venv/bin/python scripts/agent_workspace_health.py --require-postgres
+./scripts/macos_agent_volume_access.sh   # macOS /Volumes only; no silent grant
+
 # Preferred (restart serve per persona — multi-persona on one process wedges):
+# Default runs preflight; serve stdout → examples/<app>/.dazzle/recapture-logs/
+# (never PIPE — unread PIPE deadlocks serve: LISTEN but no HTTP).
 .venv/bin/python scripts/recapture_demo_fleet_1626.py
 .venv/bin/python scripts/recapture_demo_fleet_1626.py --apps invoice_ops,ops_dashboard
 .venv/bin/python scripts/recapture_demo_fleet_1626.py --capture-timeout 900
+.venv/bin/python scripts/recapture_demo_fleet_1626.py --preflight-only
 ```
 
 Requires Postgres `dazzle_<app>` and Playwright Chromium.

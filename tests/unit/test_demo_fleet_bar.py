@@ -129,7 +129,9 @@ def test_hero_min_bytes_covers_non_trio_showcase() -> None:
         floors = mod.HERO_MIN_BYTES.get(app) or {}
         assert floors, f"missing HERO_MIN_BYTES for {app}"
     # Project board floor must be high enough to reject empty-shell stills.
-    assert mod.HERO_MIN_BYTES["project_tracker"]["project_board_manager_desktop_light.png"] >= 100_000
+    assert (
+        mod.HERO_MIN_BYTES["project_tracker"]["project_board_manager_desktop_light.png"] >= 100_000
+    )
 
 
 def test_product_quality_stills_aligned_with_demo_fleet_heroes() -> None:

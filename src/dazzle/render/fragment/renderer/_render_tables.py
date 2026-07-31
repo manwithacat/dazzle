@@ -922,9 +922,7 @@ class _RenderTablesMixin:
             badges_html = "".join(_render_status_badge_html(b.value) for b in row.badges)
             meta_spans = "".join(
                 (
-                    f'<span class="dz-queue-row-meta">'
-                    f"{ctx.escape(m.label)}: {m.value}"
-                    f"</span>"
+                    f'<span class="dz-queue-row-meta">{ctx.escape(m.label)}: {m.value}</span>'
                     if getattr(m, "html", False)
                     else f'<span class="dz-queue-row-meta">'
                     f"{ctx.escape(m.label)}: {ctx.escape(m.value)}"

@@ -57,6 +57,7 @@
 | [QA Trial Patterns](qa-trial-patterns.md) | Patterns surfaced by `dazzle qa trial` — qualitative business-user evaluation of a Dazzle app. |
 | [QA Trial gen-2](qa-trial-gen2.md) | Current-model trial posture: budgets, adoption_criteria, structured verdict, authoring defaults. |
 | [Product Maturity](product-maturity.md) | Instance-level anti-warehouse gate: answer-first landing, job coverage, warehouse density for example apps. |
+| [Antagonist Agent Brief (#1626)](antagonist-agent-brief-1626.md) | Agent residual queue R1–R6 for the demo-fleet antagonist bake-off — stills floors, recapture recipe, messaging constraints. |
 | [Fitness Methodology](fitness-methodology.md) | The optional Agent-Led Fitness Methodology V&V loop that checks app fitness against declared intent. |
 | [Fitness Investigator](fitness-investigator.md) | Agent-led investigation of ranked fitness clusters that produces actionable improvement proposals. |
 | [Fitness Triage](fitness-triage.md) | Turning a flat fitness backlog into ranked, actionable clusters for investigation. |

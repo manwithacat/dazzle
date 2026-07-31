@@ -84,6 +84,9 @@ SANCTIONED = {
     # remediation for sibling CI (operator governance — not runtime consumption).
     # CI red 2026-07-29 after push_gate ship.
     "scripts/push_gate.py",
+    # Diff-scoped Semgrep excludes packages/hatchi-maxchi/tests/baselines
+    # (binary PNG noise) — governance path filter, not HM runtime consumption.
+    "scripts/semgrep_diff.py",
     # Work-surface utility ontology lives under HM agent docs; scanner loads the
     # TOML path for improve/agent pick (measurement — not runtime CSS/JS).
     "src/dazzle/qa/work_surface_utility.py",

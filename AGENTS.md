@@ -464,6 +464,7 @@ Reusable workflows live in `.agents/skills/<name>/SKILL.md` (open-standard forma
 - **cimonitor** — Snapshot/repair the main CI badge; after repair, **close the loop** by promoting new failure classes into `ship-surface` / `preflight-surface`
 - **docs-update** — Sync documentation with recently closed GitHub issues
 - **smells** — Two-phase read-only code-smells analysis: regression checks + new systemic patterns
+- **semgrep** — Diff-scoped Semgrep (python/owasp/audit) + optional Sentinel modernisation; CLI SSOT via `scripts/semgrep_diff.py`
 - **dsl-authoring** — Syntax rules and common mistakes for writing/editing Dazzle `.dsl` files
 - **qa-trial** — Author `trial.toml` scenarios that evaluate a Dazzle app as a real business user
 - **spec-narrate** — Generate a stakeholder-facing SPECIFICATION.md from a Dazzle DSL project

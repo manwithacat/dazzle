@@ -3832,7 +3832,7 @@
       "_kw_emits": 3,
       "_kw_layout": 2,
       "_kw_mode": 1,
-      "_kw_open": 10,
+      "_kw_open": 14,
       "_kw_peek": 1,
       "_kw_priority": 1,
       "_kw_refresh": 1,
@@ -11246,12 +11246,14 @@
       "_build_dispatch_ctx": 4,
       "_detail_actions_from_context": 17,
       "_detail_fields_from_context": 5,
+      "_detail_primary_cta_fields": 4,
       "_detail_ref_value": 5,
       "_detail_sections_from_context": 13,
-      "_dispatch_ctx_from_detail": 14,
+      "_dispatch_ctx_from_detail": 8,
       "_dispatch_ctx_from_form": 20,
       "_dispatch_ctx_from_table": 42,
       "_field_ref_route": 5,
+      "_maybe_append_subtype_panels": 6,
       "_one_detail_field_dict": 12,
       "_ref_route_for_entity": 2,
       "_related_groups_from_detail": 24
@@ -12178,6 +12180,7 @@
       "_access_runtime_from_auth": 6,
       "_annotate_form_usage": 6,
       "_apply_anon_nav": 1,
+      "_apply_persona_detail_primary": 14,
       "_apply_persona_form_overrides": 28,
       "_apply_persona_overrides": 22,
       "_build_workspace_primary_action_candidates": 9,
@@ -12188,7 +12191,7 @@
       "_dedupe_nav_items_against_groups": 7,
       "_dispatch_custom_mode": 2,
       "_entity_can_mutate": 8,
-      "_entity_title_for_create_cta": 10,
+      "_entity_title_for_create_cta": 7,
       "_filter_nav_by_entity_access": 18,
       "_gate_related_tab_create_urls": 8,
       "_gate_table_inline_editable": 5,
@@ -12224,7 +12227,7 @@
       "_should_suppress_mutations": 11,
       "_suppress_inaccessible_cta": 11,
       "_user_can_mutate": 4,
-      "_workspace_handler": 44,
+      "_workspace_handler": 45,
       "build_app_page_context": 12,
       "create_page_routes": 92,
       "gate_authored_primary_actions_for_principal": 5,
@@ -12572,22 +12575,23 @@
   },
   "dazzle/http/runtime/renderers/fragment_adapter.py": {
     "functions": {
-      "FragmentSurfaceAdapter": 29,
-      "FragmentSurfaceAdapter._build_detail_actions": 32,
+      "FragmentSurfaceAdapter": 30,
+      "FragmentSurfaceAdapter._build_detail_actions": 37,
       "FragmentSurfaceAdapter._build_form": 29,
       "FragmentSurfaceAdapter._build_list": 57,
       "FragmentSurfaceAdapter._build_list_toolbar": 12,
-      "FragmentSurfaceAdapter._build_related_group": 29,
+      "FragmentSurfaceAdapter._build_related_group": 31,
       "FragmentSurfaceAdapter._build_view": 37,
       "FragmentSurfaceAdapter.build": 4,
       "_build_column_header": 7,
       "_cell_value": 3,
+      "_cta_noun": 5,
       "_detail_field_value": 9,
       "_esc_attr": 1,
       "_filter_option": 4,
       "_format_cell": 3,
       "_pick_empty_state": 9,
-      "human_create_cta_label": 15,
+      "human_create_cta_label": 11,
       "render_generic_detail": 1
     },
     "mi_rank": "B"
@@ -13882,7 +13886,7 @@
       "_resolved_field_kind_token": 4,
       "build_entity_columns": 1,
       "build_entity_columns_full": 23,
-      "build_surface_columns": 37,
+      "build_surface_columns": 41,
       "field_kind_to_col_type": 5
     },
     "mi_rank": "A"
@@ -14113,6 +14117,7 @@
       "StateMachineSpec.get_transition": 5,
       "StateMachineSpec.get_transitions_from": 4,
       "StateMachineSpec.is_transition_allowed": 1,
+      "StateMachineSpec.terminal_states": 3,
       "StateTransitionSpec": 2,
       "StateTransitionSpec.is_wildcard": 1,
       "TimeUnit": 1,
@@ -17052,7 +17057,7 @@
       "_compile_custom_surface": 2,
       "_compile_form_surface": 13,
       "_compile_list_surface": 44,
-      "_compile_view_surface": 63,
+      "_compile_view_surface": 73,
       "_effective_field_source_ref": 3,
       "_enum_semantic_map": 2,
       "_extract_surface_purpose": 6,
@@ -17396,6 +17401,16 @@
     "functions": {
       "_is_supporting_widget": 4,
       "resolve_when_empty": 4
+    },
+    "mi_rank": "A"
+  },
+  "dazzle/page/runtime/workspace_persona_focus.py": {
+    "functions": {
+      "_fold_count_for_focus": 6,
+      "apply_persona_focus": 13,
+      "collect_workspace_persona_overrides": 10,
+      "first_persona_override": 6,
+      "regions_with_focus_lead": 11
     },
     "mi_rank": "A"
   },
@@ -18625,7 +18640,7 @@
       "_build_sidebar_from_ctx": 22,
       "_safe_url": 3,
       "_sidebar_from_nav_model": 20,
-      "build_app_chrome_page": 10,
+      "build_app_chrome_page": 15,
       "build_page": 4,
       "dispatch_render": 4,
       "dispatch_render_page": 2
@@ -19139,8 +19154,8 @@
       "ReferenceLine": 3,
       "ReferenceLine.__post_init__": 2,
       "RelatedGroup": 1,
-      "RelatedTab": 4,
-      "RelatedTab.__post_init__": 3,
+      "RelatedTab": 5,
+      "RelatedTab.__post_init__": 4,
       "RowCapabilities": 1,
       "SearchBox": 3,
       "SearchBox.__post_init__": 2,
@@ -19321,13 +19336,13 @@
       "_BuildersTablesMixin._build_pivot_table": 35,
       "_BuildersTablesMixin._build_queue": 57,
       "_BuildersTablesMixin._build_tabbed_list": 34,
-      "_format_queue_meta_value": 12,
+      "_format_queue_meta_value": 14,
       "_outlier_badge": 2,
       "_queue_meta_raw": 6,
-      "_queue_row_meta_columns": 14,
+      "_queue_row_meta_columns": 36,
       "_rag_badge": 1
     },
-    "mi_rank": "B"
+    "mi_rank": "C"
   },
   "dazzle/render/fragment/region/_builders_timeline.py": {
     "functions": {
@@ -19369,7 +19384,7 @@
     "functions": {
       "_region_title": 2,
       "_render_status_badge_html": 5,
-      "_render_typed_value": 43,
+      "_render_typed_value": 44,
       "_wrap_surface": 1
     },
     "mi_rank": "A"
@@ -19419,7 +19434,8 @@
     "functions": {
       "_RowArchetype": 1,
       "_json_summary": 8,
-      "_render_cell_display": 46,
+      "_render_cell_display": 47,
+      "_render_color_swatch_html": 5,
       "_render_table_row": 71,
       "assemble_list_row": 7,
       "drill_row_attrs": 6,
@@ -19568,9 +19584,9 @@
   },
   "dazzle/render/fragment/renderer/_render_shell.py": {
     "functions": {
-      "_RenderShellMixin": 4,
+      "_RenderShellMixin": 5,
       "_RenderShellMixin._emit": 1,
-      "_RenderShellMixin._emit_app_shell": 11,
+      "_RenderShellMixin._emit_app_shell": 13,
       "_RenderShellMixin._emit_error_page": 2,
       "_RenderShellMixin._emit_nav_group": 4,
       "_RenderShellMixin._emit_nav_item": 6,
@@ -19608,18 +19624,26 @@
       "_RenderTablesMixin._emit_pivot_table": 4,
       "_RenderTablesMixin._emit_pivot_table_region": 11,
       "_RenderTablesMixin._emit_profile_card": 1,
-      "_RenderTablesMixin._emit_queue_region": 12,
-      "_RenderTablesMixin._emit_related_cards": 8,
-      "_RenderTablesMixin._emit_related_files": 8,
-      "_RenderTablesMixin._emit_related_group": 3,
-      "_RenderTablesMixin._emit_related_table": 13,
+      "_RenderTablesMixin._emit_queue_region": 14,
+      "_RenderTablesMixin._emit_related_cards": 1,
+      "_RenderTablesMixin._emit_related_cards_or_files": 4,
+      "_RenderTablesMixin._emit_related_cards_or_files_body": 10,
+      "_RenderTablesMixin._emit_related_files": 1,
+      "_RenderTablesMixin._emit_related_group": 4,
+      "_RenderTablesMixin._emit_related_queue": 4,
+      "_RenderTablesMixin._emit_related_queue_body": 12,
+      "_RenderTablesMixin._emit_related_table": 9,
       "_RenderTablesMixin._emit_slide_over": 1,
       "_RenderTablesMixin._emit_stage_bar": 2,
       "_RenderTablesMixin._emit_status_list": 4,
       "_RenderTablesMixin._emit_table": 32,
       "_RenderTablesMixin._queue_actions_html": 7,
       "_RenderTablesMixin._related_create_row": 2,
-      "_RenderTablesMixin._related_drill_attrs": 2
+      "_RenderTablesMixin._related_drill_attrs": 2,
+      "_RenderTablesMixin._related_hm_panel_attrs": 3,
+      "_RenderTablesMixin._related_hm_tab_buttons": 3,
+      "_RenderTablesMixin._related_overflow_html": 2,
+      "_RenderTablesMixin._related_tab_count": 3
     },
     "mi_rank": "A"
   },

@@ -70,9 +70,10 @@ Stamp improve capability **`dazzle sentinel scan`** when either path runs in a c
 
 ## 3. Semgrep MCP (native)
 
-When Grok has `[mcp_servers.semgrep]` (`semgrep mcp` stdio), discover tools via
-`search_tool` / MCP list and call scan tools on paths of interest. Prefer the
-same rule packs as the script when the server allows config selection.
+When the harness has a Semgrep MCP server configured (`semgrep mcp` stdio, or
+the host's MCP registry entry for Semgrep), discover tools via the host's MCP
+list / tool-search and call scan tools on paths of interest. Prefer the same
+rule packs as the script when the server allows config selection.
 
 If MCP is missing: still run `scripts/semgrep_diff.py` — CLI is the SSOT.
 
