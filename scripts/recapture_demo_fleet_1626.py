@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
-"""Re-capture product-desk stills for #1626 Phase 6.
+"""Re-capture product-desk stills for #1626.
 
-For each showcase app: serve (test mode) → demo reset-and-load → qa capture
---above-fold. Requires Postgres DBs named dazzle_<app> and Playwright chromium.
+For each showcase app **and each product persona**: serve → demo
+reset-and-load → qa capture --above-fold, then kill the server.
 
-Usage:
+**Why per-persona serve:** multi-persona capture against one long-lived serve
+process often wedges (subsequent personas hang on "Server did not become ready"
+or hit 300s subprocess timeouts). 31 Jul antagonist recapture proved
+restart-per-persona is reliable.
+
+Requires Postgres DBs named ``dazzle_<app>`` and Playwright chromium.
+
+Usage::
+
   .venv/bin/python scripts/recapture_demo_fleet_1626.py
   .venv/bin/python scripts/recapture_demo_fleet_1626.py --apps simple_task,invoice_ops
+  .venv/bin/python scripts/recapture_demo_fleet_1626.py --capture-timeout 900
+  .venv/bin/python scripts/recapture_demo_fleet_1626.py --skip-capture  # seed only
 """
 
 from __future__ import annotations
@@ -36,6 +46,7 @@ SHOWCASE = [
 ]
 # Fixed ports per app to avoid clobbering concurrent work
 _BASE_PORT = 18100
+_DEFAULT_CAPTURE_TIMEOUT = 600
 
 
 def _db_url(app: str) -> str:
@@ -45,7 +56,7 @@ def _db_url(app: str) -> str:
     )
 
 
-def _personas_for_app(project: Path) -> list[str]:
+def _personas_for_app(project: Path) -> list[str | None]:
     """Stable persona ids with default_workspace (skip pure admin)."""
     try:
         from dazzle.core.appspec_loader import load_project_appspec
@@ -53,8 +64,8 @@ def _personas_for_app(project: Path) -> list[str]:
 
         appspec = load_project_appspec(project)
     except Exception:
-        return []
-    out: list[str] = []
+        return [None]
+    out: list[str | None] = []
     skip = {"admin", "platform_admin", "superuser"}
     for p in appspec.personas or []:
         pid = spec_display_id(p, default=None, prefer="id")
@@ -63,7 +74,7 @@ def _personas_for_app(project: Path) -> list[str]:
         if not getattr(p, "default_workspace", None):
             continue
         out.append(str(pid))
-    return out
+    return out or [None]
 
 
 def _wait_http(url: str, timeout: float = 90.0) -> bool:
@@ -78,24 +89,93 @@ def _wait_http(url: str, timeout: float = 90.0) -> bool:
     return False
 
 
-def _run_app(app: str, *, skip_capture: bool = False) -> int:
-    project = REPO / "examples" / app
-    if not (project / "dazzle.toml").is_file():
-        print(f"SKIP {app}: no dazzle.toml", file=sys.stderr)
-        return 0
+def _kill_proc(proc: subprocess.Popen[str]) -> None:
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError, OSError):
+        proc.terminate()
+    try:
+        proc.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            proc.kill()
 
-    idx = SHOWCASE.index(app) if app in SHOWCASE else 0
-    port = _BASE_PORT + idx
-    db = _db_url(app)
-    env = os.environ.copy()
-    env["DATABASE_URL"] = db
-    env["DAZZLE_ENV"] = "development"
-    env["DAZZLE_QA_MODE"] = "1"
-    # Prefer project venv python
-    py = str(REPO / ".venv" / "bin" / "python")
-    if not Path(py).is_file():
-        py = sys.executable
 
+def _free_port(port: int) -> None:
+    subprocess.run(
+        f"lsof -ti tcp:{port} 2>/dev/null | xargs kill -9 2>/dev/null",
+        shell=True,
+        check=False,
+    )
+
+
+def _py() -> str:
+    candidate = REPO / ".venv" / "bin" / "python"
+    return str(candidate) if candidate.is_file() else sys.executable
+
+
+def _seed(project: Path, base: str, env: dict[str, str], py: str) -> bool:
+    reset = subprocess.run(
+        [
+            py,
+            "-m",
+            "dazzle",
+            "demo",
+            "reset-and-load",
+            "--project",
+            str(project),
+            "--base-url",
+            base,
+            "-y",
+            "--json",
+            "--skip-verify",
+        ],
+        cwd=str(REPO),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    seed_ok = reset.returncode == 0
+    try:
+        report = json.loads(reset.stdout or "{}")
+        steps = report.get("steps") or []
+        seed_step = next((s for s in steps if s.get("step") == "seed"), None)
+        if seed_step is not None:
+            seed_ok = bool(seed_step.get("ok"))
+        print(
+            f"  reset-and-load: fixtures={report.get('fixture_count')} "
+            f"seed_ok={seed_ok} data_dir={report.get('data_dir')}",
+            flush=True,
+        )
+        if report.get("error"):
+            print(f"  error: {report.get('error')}", flush=True)
+    except json.JSONDecodeError:
+        if reset.stdout:
+            print(reset.stdout[-1500:], flush=True)
+    if not seed_ok and reset.stderr:
+        print(reset.stderr[-1500:], file=sys.stderr)
+    return seed_ok
+
+
+def _capture_persona(
+    *,
+    app: str,
+    project: Path,
+    port: int,
+    db: str,
+    persona: str | None,
+    env: dict[str, str],
+    py: str,
+    capture_timeout: int,
+    skip_capture: bool,
+) -> int:
+    """Serve + seed + capture one persona; always tear down serve."""
+    label = persona or "(all)"
+    _free_port(port)
+    time.sleep(0.2)
     serve_cmd = [
         py,
         "-m",
@@ -110,7 +190,7 @@ def _run_app(app: str, *, skip_capture: bool = False) -> int:
         "--database-url",
         db,
     ]
-    print(f"\n=== {app} port={port} db={db} ===", flush=True)
+    print(f"  serve persona={label} port={port}", flush=True)
     proc = subprocess.Popen(
         serve_cmd,
         cwd=str(project),
@@ -123,121 +203,116 @@ def _run_app(app: str, *, skip_capture: bool = False) -> int:
     try:
         base = f"http://127.0.0.1:{port}"
         if not _wait_http(base + "/docs", timeout=120) and not _wait_http(base, timeout=30):
-            print(f"FAIL {app}: serve did not become ready", file=sys.stderr)
-            # dump last log lines
-            if proc.stdout:
-                try:
-                    # non-blocking-ish: kill then read
-                    pass
-                except Exception:
-                    pass
+            print(f"FAIL {app}: serve not ready for persona={label}", file=sys.stderr)
             return 1
-
-        # Give runtime.json a moment to write
-        time.sleep(1.5)
-        # --json + --skip-verify: seed HTTP success is the recapture gate;
-        # live_desk residual (e.g. empty PaymentAttempt for auditor) must not
-        # block still capture when Invoice/Task spines seeded (#1626).
-        reset = subprocess.run(
-            [
-                py,
-                "-m",
-                "dazzle",
-                "demo",
-                "reset-and-load",
-                "--project",
-                str(project),
-                "--base-url",
-                base,
-                "-y",
-                "--json",
-                "--skip-verify",
-            ],
-            cwd=str(REPO),
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-        seed_ok = reset.returncode == 0
-        try:
-            report = json.loads(reset.stdout or "{}")
-            steps = report.get("steps") or []
-            seed_step = next((s for s in steps if s.get("step") == "seed"), None)
-            if seed_step is not None:
-                seed_ok = bool(seed_step.get("ok"))
-            print(
-                f"reset-and-load: fixtures={report.get('fixture_count')} "
-                f"seed_ok={seed_ok} data_dir={report.get('data_dir')}",
-                flush=True,
-            )
-            if report.get("error"):
-                print(f"  error: {report.get('error')}", flush=True)
-        except json.JSONDecodeError:
-            print(reset.stdout[-1500:] if reset.stdout else "", flush=True)
+        time.sleep(1.0)
+        seed_ok = _seed(project, base, env, py)
         if not seed_ok:
-            print(reset.stderr[-1500:] if reset.stderr else "", file=sys.stderr)
-            print(f"WARN {app}: seed not clean — capture may be empty theater", file=sys.stderr)
-
+            print(
+                f"WARN {app}: seed not clean for persona={label} — capture may be empty theater",
+                file=sys.stderr,
+            )
         if skip_capture:
             return 0 if seed_ok else 1
 
-        # Per-persona capture avoids 600s full-app timeouts on multi-desk apps.
-        personas = _personas_for_app(project)
-        if not personas:
-            personas = [None]  # single full capture
-        any_fail = False
-        for persona in personas:
-            cmd = [
-                py,
-                "-m",
-                "dazzle",
-                "qa",
-                "capture",
-                "--url",
-                base,
-                "--app",
-                app,
-                "--above-fold",
-                "--viewport",
-                "desktop",
-            ]
-            label = persona or "(all)"
-            if persona:
-                cmd.extend(["--persona", persona])
-            print(f"  capture persona={label}", flush=True)
-            # #1626 R4 — invoice pay_desk/my_invoices and multi-desk apps need
-            # longer than 300s; antagonist brief: ≥600s per persona.
+        cmd = [
+            py,
+            "-m",
+            "dazzle",
+            "qa",
+            "capture",
+            "--url",
+            base,
+            "--app",
+            app,
+            "--above-fold",
+            "--viewport",
+            "desktop",
+        ]
+        if persona:
+            cmd.extend(["--persona", persona])
+        print(f"  capture persona={label} timeout={capture_timeout}s", flush=True)
+        try:
             cap = subprocess.run(
                 cmd,
                 cwd=str(REPO),
                 env=env,
                 capture_output=True,
                 text=True,
-                timeout=600,
+                timeout=capture_timeout,
             )
-            if cap.stdout:
-                print(cap.stdout[-1200:], flush=True)
-            if cap.returncode != 0:
-                print(cap.stderr[-800:] if cap.stderr else "", file=sys.stderr)
-                print(f"FAIL {app}: capture persona={label} exit {cap.returncode}", file=sys.stderr)
-                any_fail = True
-        if any_fail:
+        except subprocess.TimeoutExpired:
+            print(
+                f"FAIL {app}: capture persona={label} timed out after {capture_timeout}s",
+                file=sys.stderr,
+            )
             return 1
-        print(f"OK {app}: capture done", flush=True)
+        if cap.stdout:
+            for line in cap.stdout.splitlines():
+                if (
+                    "screenshots" in line
+                    or "Capturing" in line
+                    or "Waiting" in line
+                    or "failed" in line.lower()
+                    or "FAIL" in line
+                ):
+                    print(f"    {line}", flush=True)
+        if cap.returncode != 0:
+            if cap.stderr:
+                print(cap.stderr[-800:], file=sys.stderr)
+            print(
+                f"FAIL {app}: capture persona={label} exit {cap.returncode}",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"  OK persona={label}", flush=True)
         return 0 if seed_ok else 1
     finally:
-        try:
-            os.killpg(proc.pid, signal.SIGTERM)
-        except (ProcessLookupError, PermissionError, OSError):
-            proc.terminate()
-        try:
-            proc.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError, OSError):
-                proc.kill()
+        _kill_proc(proc)
+        _free_port(port)
+
+
+def _run_app(
+    app: str,
+    *,
+    skip_capture: bool = False,
+    capture_timeout: int = _DEFAULT_CAPTURE_TIMEOUT,
+) -> int:
+    project = REPO / "examples" / app
+    if not (project / "dazzle.toml").is_file():
+        print(f"SKIP {app}: no dazzle.toml", file=sys.stderr)
+        return 0
+
+    idx = SHOWCASE.index(app) if app in SHOWCASE else 0
+    port = _BASE_PORT + idx
+    db = _db_url(app)
+    env = os.environ.copy()
+    env["DATABASE_URL"] = db
+    env["DAZZLE_ENV"] = "development"
+    env["DAZZLE_QA_MODE"] = "1"
+    py = _py()
+
+    print(f"\n=== {app} port={port} db={db} ===", flush=True)
+    personas = _personas_for_app(project)
+    any_fail = False
+    for persona in personas:
+        rc = _capture_persona(
+            app=app,
+            project=project,
+            port=port,
+            db=db,
+            persona=persona,
+            env=env,
+            py=py,
+            capture_timeout=capture_timeout,
+            skip_capture=skip_capture,
+        )
+        if rc != 0:
+            any_fail = True
+    if any_fail:
+        return 1
+    print(f"OK {app}: capture done", flush=True)
+    return 0
 
 
 def main() -> int:
@@ -252,12 +327,22 @@ def main() -> int:
         action="store_true",
         help="Only serve + reset-and-load (debug)",
     )
+    parser.add_argument(
+        "--capture-timeout",
+        type=int,
+        default=_DEFAULT_CAPTURE_TIMEOUT,
+        help=f"Seconds per persona capture (default {_DEFAULT_CAPTURE_TIMEOUT})",
+    )
     args = parser.parse_args()
     apps = [a.strip() for a in args.apps.split(",") if a.strip()]
     results: dict[str, int] = {}
     for app in apps:
         try:
-            results[app] = _run_app(app, skip_capture=args.skip_capture)
+            results[app] = _run_app(
+                app,
+                skip_capture=args.skip_capture,
+                capture_timeout=args.capture_timeout,
+            )
         except Exception as exc:
             print(f"FAIL {app}: {exc}", file=sys.stderr)
             results[app] = 1

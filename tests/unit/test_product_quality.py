@@ -109,6 +109,22 @@ def test_stills_empty_hero_residual(tmp_path: Path) -> None:
     assert "empty_hero" in hero.reason
 
 
+def test_stills_non_trio_hero_floor(tmp_path: Path) -> None:
+    """31 Jul: project board empty-shell stills must residual."""
+    from dazzle.product_quality.stills import HERO_MIN_BYTES
+
+    assert "project_tracker" in HERO_MIN_BYTES
+    shots = tmp_path / ".dazzle" / "qa" / "screenshots"
+    shots.mkdir(parents=True)
+    name = "project_board_manager_desktop_light.png"
+    tiny = shots / name
+    tiny.write_bytes(b"\x89PNG" + b"\x00" * 100)
+    scores = score_stills(tmp_path, "project_tracker")
+    hero = next(s for s in scores if s.name == name)
+    assert hero.residual
+    assert "empty_hero" in hero.reason
+
+
 def test_mcp_handler_score() -> None:
     from dazzle.mcp.server.handlers.product_quality import (
         product_quality_score_handler,

@@ -5,10 +5,12 @@
 **Probe:** `python scripts/demo_fleet_bar.py`
 **Umbrella:** GitHub **#1626** (antagonist bake-off)
 **Docs:** `docs/reference/product-maturity.md` (Antagonist demo bar section)
+**Agent residual queue:** `docs/reference/antagonist-agent-brief-1626.md` (R1–R6)
 
 Agent-first loop for **felt** product quality after structural
 `product_maturity` residual is empty. The probe is necessary but not
-sufficient for commercial bake-off — drain open #1626 P0s with stills + seeds.
+sufficient for commercial bake-off — drain open #1626 residuals with stills +
+seeds. **Human fleet mean ~5.1 (31 Jul); pass ≥5.5 — still short ~0.4.**
 
 ## Machine probe
 
@@ -35,15 +37,18 @@ Checks (machine):
 | P0-6 stills | `stills_platform_only` / `empty_hero:<file>=size<min` |
 | P0-9 desks | `seed_desk_thin:` |
 
-**Open human P0s** (not fully scored by probe — drain via #1626 when residual=0):
+**Open human residuals** (not fully scored by probe — drain via #1626 + agent brief):
 
-| P0 | Action altitude |
-|----|-----------------|
-| P0-5 quality | Story titles, coherent company, queue population (not just row counts) |
-| P0-6 empty hero | Default-workspace still must show rows (invoice Approval Desk) |
-| P0-7 honesty | Rename false domain views (org chart, fake gallery, bullet “timeline”) |
-| P0-8 design_studio | Swatches + thumbnails in stills or demote |
-| P0-9 invoice desks | ≥3 rows per job desk under right tenant/persona |
+| ID | Action altitude | Expected lift |
+|----|-----------------|---------------|
+| **R1** `label_glue` | Framework queue/card meta separators | Likely clears fleet ≥5.5 |
+| **R2** `hero_http_error` | ops Command Center Active Alerts 500 | ops First 10s / Trust |
+| **R3** `cta_add_double` | HR `New Add Person` → `New Person` | small Trust |
+| **R4** `capture_desk_timeout` | pay_desk / my_invoices wait hang; per-persona recapture | invoice P0-9 credit |
+| **R5** P0-8 design | Swatches + thumbnails in stills | design toward 5.5+ |
+| **R6** soft polish | Synthetic metric %; story emails | after R1–R4 |
+
+Full tables + hero still paths: `docs/reference/antagonist-agent-brief-1626.md`.
 
 ## When to pick
 
@@ -72,12 +77,14 @@ APP=$(python scripts/demo_fleet_bar.py --next)
 gh issue view 1626 --json body -q .body | head -80   # open P0 checklist
 ```
 
-If `APP` empty but #1626 still has unchecked P0-5…9:
+If `APP` empty but #1626 human residual remains (fleet &lt; 5.5):
 
-* Prefer **invoice_ops P0-9** (empty approval desk still) or **P0-6** empty-hero
-* Create backlog row: `| N | invoice_ops | demo_fleet | P0-9 empty approval queue | IN_PROGRESS | 0 | #1626 |`
+* Prefer **R1 label glue** (framework) or **R2 ops Active Alerts 500**
+* Read agent brief R-queue; create backlog from residual id
+* Create backlog row: `| N | framework | demo_fleet | R1 label_glue | IN_PROGRESS | 0 | #1626 |`
 
-If both probe residual=0 and P0-5…9 closed → PASS fleet demo mature.
+If both probe residual=0 **and** human re-score fleet ≥5.5 (or maintainers
+explicitly demote fleet claim) → PASS fleet demo mature.
 
 ### 2. ENHANCE
 
@@ -88,12 +95,19 @@ If both probe residual=0 and P0-5…9 closed → PASS fleet demo mature.
 | `stills_platform_only` | Fix capture plan / purge; re-capture product desks |
 | Empty job queue (P0-9) | Seed **status distribution** (submitted→Approval Desk, approved→Pay Desk); tenant scope |
 | Empty hero (P0-6) | Same + re-`qa capture --above-fold` after seed |
+| Label glue (R1) | Framework meta template separators — not per-app string hacks |
+| Ops hero 500 (R2) | Fix Active Alerts region; recapture command_center |
+| CTA `New Add *` (R3) | `human_create_cta_label` + surface title |
+| Capture hang (R4) | Fix wait_for_function; use per-persona recapture script |
 | False view name (P0-7) | Rename workspace/surface titles to honest language |
-| Design studio (P0-8) | Thumbnails/swatches in still or demote from showcase ladder |
+| Design studio (P0-8 / R5) | Thumbnails/swatches in still or demote from showcase ladder |
 
 **Seed + capture recipe** (when Postgres available):
 
 ```bash
+# Fleet recapture (restarts serve per persona; timeout default 600s):
+.venv/bin/python scripts/recapture_demo_fleet_1626.py --apps $APP
+# Or manual:
 # generate fixtures from blueprint
 dazzle demo generate --project examples/$APP --format json --output-dir .dazzle/demo_data
 # serve with DAZZLE_ENV=development DAZZLE_QA_MODE=1 DATABASE_URL=...

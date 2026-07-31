@@ -55,46 +55,45 @@ MIN_ROWS: dict[str, dict[str, int]] = {
 
 PLATFORM_STILL_PREFIX = "_platform_admin_"
 
-# P0-6 ship-gate floors (jobs already recaptured with story data). Expanded
-# felt floors (customer/requester/auditor desks) live only in
-# dazzle.product_quality.stills.HERO_MIN_BYTES — use `dazzle demo quality`.
-# Floors from DazzleAntagonist/AGENT_BRIEF_1626.md (31 Jul re-score) +
-# flagship desks. Bytes are empty-hero floors only — not composite scores.
+# P0-6 ship-gate floors (jobs already recaptured with story data).
+# Keep aligned with dazzle.product_quality.stills.HERO_MIN_BYTES where possible
+# (`dazzle demo quality` uses the module floors for the full felt bar).
+# Absent stills are skipped so CI without gitignored .dazzle/ stills stays green.
 HERO_MIN_BYTES: dict[str, dict[str, int]] = {
-    "invoice_ops": {
-        "approval_desk_approver_desktop_light.png": 80_000,
-        "pay_desk_finance_desktop_light.png": 70_000,
-        "finance_ops_finance_desktop_light.png": 70_000,
-        "my_invoices_requester_desktop_light.png": 60_000,
-    },
-    "support_tickets": {
-        "manager_ops_manager_desktop_light.png": 80_000,
-        "ticket_queue_agent_desktop_light.png": 80_000,
-    },
-    "simple_task": {
-        "task_board_manager_desktop_light.png": 90_000,
-        "my_work_member_desktop_light.png": 60_000,
-    },
-    "project_tracker": {
-        "project_board_manager_desktop_light.png": 120_000,
-    },
-    "contact_manager": {
-        "contacts_user_desktop_light.png": 70_000,
-    },
-    "fieldtest_hub": {
-        "issue_triage_manager_desktop_light.png": 90_000,
-        "device_fleet_manager_desktop_light.png": 70_000,
+    "ops_dashboard": {
+        "incident_review_ops_engineer_desktop_light.png": 90000,
+        "command_center_ops_engineer_desktop_light.png": 80000,
     },
     "hr_records": {
-        "staff_directory_hr_admin_desktop_light.png": 100_000,
+        "staff_directory_hr_admin_desktop_light.png": 100000,
     },
-    "ops_dashboard": {
-        "command_center_ops_engineer_desktop_light.png": 80_000,
-        "incident_review_ops_engineer_desktop_light.png": 80_000,
+    "contact_manager": {
+        "contacts_user_desktop_light.png": 70000,
+    },
+    "invoice_ops": {
+        "my_invoices_requester_desktop_light.png": 60000,
+        "pay_desk_finance_desktop_light.png": 70000,
+        "approval_desk_approver_desktop_light.png": 80000,
+        "finance_ops_finance_desktop_light.png": 70000,
+    },
+    "fieldtest_hub": {
+        "issue_triage_manager_desktop_light.png": 90000,
+        "device_fleet_manager_desktop_light.png": 90000,
+    },
+    "simple_task": {
+        "task_board_manager_desktop_light.png": 90000,
+        "my_work_member_desktop_light.png": 60000,
+    },
+    "support_tickets": {
+        "manager_ops_manager_desktop_light.png": 80000,
+        "ticket_queue_agent_desktop_light.png": 90000,
+    },
+    "project_tracker": {
+        "project_board_manager_desktop_light.png": 120000,
     },
     "design_studio": {
-        "brand_desk_designer_desktop_light.png": 100_000,
-        "asset_catalog_designer_desktop_light.png": 70_000,
+        "asset_catalog_designer_desktop_light.png": 100000,
+        "brand_desk_designer_desktop_light.png": 100000,
     },
 }
 
